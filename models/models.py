@@ -500,70 +500,77 @@ class SatSat(models.Model):
     def action_colocar_en_revision(self):
         """
         Coloca la máquina en estado 'para_revision',
-        registra fecha_para_revision (UTC naive para Odoo),
-        calcula puesto y lista los equipos que están delante.
+        registra fecha_para_revision (UTC, en formato string),
+        calcula el puesto en la cola y lista los equipos que están delante.
         """
         self.ensure_one()
 
-        # Fecha/hora Lima
+        # 1) Fecha/hora Lima -> UTC -> string sin tz (para Odoo)
         peru_dt = self._get_peru_datetime()
         utc_dt = peru_dt.astimezone(pytz.utc)
-        # Odoo quiere string sin tz
         fecha_str = utc_dt.strftime('%Y-%m-%d %H:%M:%S')
 
-        # Cambiar estado y fecha
+        # 2) Cambiar estado y fecha
         self.write({
             'estado_ventas_id': 'para_revision',
             'fecha_para_revision': fecha_str,
         })
 
-        # Cola completa ordenada por fecha de revisión
+        # Asegurar valores frescos del propio registro
+        self.invalidate_cache(['fecha_para_revision', 'estado_ventas_id'])
+
+        # 3) Obtener cola completa (para_revision + en_revision) ordenada
         domain = [
             ('estado_ventas_id', 'in', ['para_revision', 'en_revision']),
             ('fecha_para_revision', '!=', False),
         ]
         cola = self.search(domain, order='fecha_para_revision asc, id asc')
 
-        # Recalcular puesto para este registro
+        # 4) Recalcular puesto de este registro
         self._compute_posicion_cola()
         puesto = self.posicion_cola or 1
 
-        # Máquinas que están antes que esta
+        # 5) Máquinas que están antes que esta
         ahead = cola.filtered(
-            lambda r: r.id != self.id and r.fecha_para_revision and r.fecha_para_revision < self.fecha_para_revision
+            lambda r: r.id != self.id
+            and r.fecha_para_revision
+            and r.fecha_para_revision < self.fecha_para_revision
         )
 
-        # Armar lista detallada (Cliente – Modelo – Serie)
+        # 6) Armar lista (Cliente – Modelo – Serie)
         lineas = []
-        max_items = 5  # máximo de filas a mostrar
+        max_items = 5  # mostrar como máximo 5 equipos
 
         for idx, rec in enumerate(ahead[:max_items], start=1):
             cliente = rec.cliente_id.name or "Sin cliente"
             modelo = rec.name.name if rec.name else "Sin modelo"
             serie = rec.serie_id or "Sin serie"
-            lineas.append(
-                f"• ({idx}) {cliente} – {modelo} – Serie: {serie}"
-            )
+            lineas.append(f"({idx}) {cliente} – {modelo} – Serie: {serie}")
 
-        # Si hay más de 5, indicar cuántas quedan
+        # Si hay más de 5, agregar resumen
         if len(ahead) > max_items:
             restantes = len(ahead) - max_items
-            lineas.append(f"… y {restantes} máquina(s) más por delante.")
+            lineas.append(f"... y {restantes} máquina(s) más por delante.")
 
-        detalle_cola = "<br/>".join(lineas) if lineas else "No hay máquinas antes que esta."
+        # 7) Texto plano para la NOTIFICACIÓN
+        detalle_cola_text = "\n".join(lineas) if lineas else "No hay máquinas antes que esta."
 
-        # Mensaje para la notificación (HTML limpio)
         mensaje_notificacion = (
-            f"<p>La máquina ha sido colocada en la cola de revisión.</p>"
-            f"<p><b>Máquinas antes que esta:</b><br/>{detalle_cola}</p>"
-            f"<p><b>Puesto actual:</b> {puesto}</p>"
+            "La máquina ha sido colocada en la cola de revisión.\n\n"
+            "Máquinas antes que esta:\n"
+            f"{detalle_cola_text}\n\n"
+            f"Puesto actual: {puesto}"
         )
 
-        # Mensaje para el chatter
+        # 8) HTML para el CHATTER
+        detalle_cola_html = "<br/>".join(
+            [f"• {linea}" for linea in lineas]
+        ) if lineas else "No hay máquinas antes que esta."
+
         isidro_partner_id = self.get_isidro_partner_id()
         mensaje_chatter = (
             f"<p><b>Puesto actual:</b> {puesto}</p>"
-            f"<p><b>Máquinas por delante:</b><br/>{detalle_cola}</p>"
+            f"<p><b>Máquinas por delante:</b><br/>{detalle_cola_html}</p>"
         )
 
         self.message_post(
@@ -572,13 +579,13 @@ class SatSat(models.Model):
             subtype_xmlid='mail.mt_comment',
         )
 
-        # Notificación visual
+        # 9) Notificación visual (TEXTO PLANO, SIN HTML)
         return {
             'type': 'ir.actions.client',
             'tag': 'display_notification',
             'params': {
-                'title': _("Máquina en revisión"),
-                'message': mensaje_notificacion,
+                'title': "Máquina en revisión",
+                'message': mensaje_notificacion,  # <-- aquí ya NO hay <p> ni <br/>
                 'type': 'success',
                 'sticky': True,
             }
