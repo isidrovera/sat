@@ -500,19 +500,14 @@ class SatSat(models.Model):
     def action_colocar_en_revision(self):
         """
         Coloca la máquina en estado 'para_revision',
-        registra fecha_para_revision (en UTC, naïve para Odoo)
-        y muestra el puesto en cola.
+        registra fecha_para_revision (UTC naive para Odoo),
+        calcula puesto y lista los equipos que están delante.
         """
         self.ensure_one()
 
-        # Ya NO obligamos a tener tipo_revision/prioridad
-        # Son completamente opcionales ahora.
-
-        # Fecha/hora Lima usando tu helper
+        # Fecha/hora Lima
         peru_dt = self._get_peru_datetime()
-        # Convertimos a UTC
         utc_dt = peru_dt.astimezone(pytz.utc)
-        # Odoo quiere datetime naive o string sin tz -> usamos string como en tu write anterior
         fecha_str = utc_dt.strftime('%Y-%m-%d %H:%M:%S')
 
         # Cambiar estado y fecha
@@ -521,24 +516,55 @@ class SatSat(models.Model):
             'fecha_para_revision': fecha_str,
         })
 
-        # Recalcular puesto en cola
+        # Obtener cola completa ordenada
+        domain = [
+            ('estado_ventas_id', 'in', ['para_revision', 'en_revision']),
+            ('fecha_para_revision', '!=', False)
+        ]
+        cola = self.search(domain, order='fecha_para_revision asc, id asc')
+
+        # Recalcular puesto
         self._compute_posicion_cola()
         puesto = self.posicion_cola or 1
 
-        # Notificación en chatter (similar a lo que tenías en write)
+        # Máquinas que están delante
+        ahead = cola.filtered(lambda r: r.fecha_para_revision < self.fecha_para_revision)
+
+        # Armar lista de equipos por delante
+        lineas = []
+        max_items = 5  # limitar a 5 para no hacer un mensaje gigante
+
+        for idx, rec in enumerate(ahead[:max_items], start=1):
+            cliente = rec.cliente_id.name or "Sin cliente"
+            modelo = rec.name.name if rec.name else "Sin modelo"
+            serie = rec.serie_id or "Sin serie"
+            lineas.append(
+                f"• ({idx}) {cliente} – {modelo} – Serie: {serie}"
+            )
+
+        # Si hay más de 5, informar cuántos más
+        if len(ahead) > max_items:
+            restantes = len(ahead) - max_items
+            lineas.append(f"… y {restantes} máquina(s) más por delante.")
+
+        # Construir mensaje final
+        detalle_cola = "<br/>".join(lineas) if lineas else "No hay máquinas antes que esta."
+
+        mensaje_notificacion = (
+            f"La máquina ha sido colocada en la cola de revisión.<br/>"
+            f"<br/>"
+            f"<b>Máquinas antes que esta:</b><br/>{detalle_cola}<br/><br/>"
+            f"<b>Puesto actual:</b> {puesto}"
+        )
+
+        # Registrar en chatter
         isidro_partner_id = self.get_isidro_partner_id()
-        mensaje_chatter = f"""Se ha colocado una nueva máquina para revisión.
-
-Detalles del equipo:
-- Modelo: {self.name.name if self.name else ''}
-- Serie: {self.serie_id or ''}
-- Fecha de registro: {peru_dt.strftime('%Y-%m-%d %H:%M:%S')} (hora Lima)
-- Puesto en cola: {puesto}
-
-Modificado por: {self.env.user.name}
+        mensaje_chatter = f"""Se colocó máquina en revisión.<br/><br/>
+<b>Puesto actual:</b> {puesto}<br/>
+<b>Máquinas por delante:</b><br/>{detalle_cola}
 """
         self.message_post(
-            body=mensaje_chatter.replace("\n", "<br/>"),
+            body=mensaje_chatter,
             partner_ids=[isidro_partner_id] if isidro_partner_id else None,
             subtype_xmlid='mail.mt_comment',
         )
@@ -549,14 +575,12 @@ Modificado por: {self.env.user.name}
             'tag': 'display_notification',
             'params': {
                 'title': _("Máquina en revisión"),
-                'message': _(
-                    "La máquina ha sido colocada en la cola de revisión.\n"
-                    "Puesto actual: %(puesto)s"
-                ) % {'puesto': puesto},
+                'message': mensaje_notificacion,
                 'type': 'success',
-                'sticky': False,
+                'sticky': True,
             }
         }
+
 
     def action_quitar_de_revision(self):
         """
