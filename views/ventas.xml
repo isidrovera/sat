@@ -113,10 +113,10 @@
         invisible="estado_ventas_id != 'para_revision' or not id"
     />
                 <field name="posicion_cola" readonly="1"/>
-                <field name="tipo_revision" widget="kanban_label_selection" options="{'classes': {'draft': 'default', 'done': 'success'}}" 
+                <!--<field name="tipo_revision" widget="kanban_label_selection" options="{'classes': {'draft': 'default', 'done': 'success'}}" 
                     help="Seleccione el tipo de revisión técnica necesaria. 'Draft' para pendiente, 'Done' para completada."/>
                 <field name="prioridad" widget="selection" 
-                    help="Establezca la prioridad de atención técnica. Alta prioridad implica atención inmediata para equipos críticos o con cliente en espera."/>
+                    help="Establezca la prioridad de atención técnica. Alta prioridad implica atención inmediata para equipos críticos o con cliente en espera."/>-->
               </group>
               <group string="Notificar" style="background-color: #f0f9e8; border-radius: 8px; padding: 15px; border-left: 4px solid #28a745;">
                 <field name="trabajadores_id" widget="many2one_avatar" 

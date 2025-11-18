@@ -500,132 +500,61 @@ class SatSat(models.Model):
     def action_colocar_en_revision(self):
         """
         Coloca la máquina en estado 'para_revision',
-        registra fecha_para_revision (UTC, en formato string),
-        calcula el puesto en la cola y lista los equipos que están delante.
+        registra fecha_para_revision (en UTC, naïve para Odoo)
+        y muestra el puesto en cola.
         """
         self.ensure_one()
 
-        # 1) Fecha/hora Lima -> UTC -> string sin tz (para Odoo)
+        # Ya NO obligamos a tener tipo_revision/prioridad
+        # Son completamente opcionales ahora.
+
+        # Fecha/hora Lima usando tu helper
         peru_dt = self._get_peru_datetime()
+        # Convertimos a UTC
         utc_dt = peru_dt.astimezone(pytz.utc)
+        # Odoo quiere datetime naive o string sin tz -> usamos string como en tu write anterior
         fecha_str = utc_dt.strftime('%Y-%m-%d %H:%M:%S')
 
-        # 2) Cambiar estado y fecha
+        # Cambiar estado y fecha
         self.write({
             'estado_ventas_id': 'para_revision',
             'fecha_para_revision': fecha_str,
         })
 
-        # 3) Obtener cola completa (para_revision + en_revision) ordenada
-        domain = [
-            ('estado_ventas_id', 'in', ['para_revision', 'en_revision']),
-            ('fecha_para_revision', '!=', False),
-        ]
-        cola = self.search(domain, order='fecha_para_revision asc, id asc')
-
-        # 4) Recalcular puesto de este registro
+        # Recalcular puesto en cola
         self._compute_posicion_cola()
         puesto = self.posicion_cola or 1
 
-        # 5) Máquinas que están antes que esta
-        ahead = cola.filtered(
-            lambda r: r.id != self.id
-            and r.fecha_para_revision
-            and r.fecha_para_revision < self.fecha_para_revision
-        )
-
-        # 6) Construir "tabla" para el POPUP (texto plano)
-        lineas_text = []
-        max_items = 5  # máximo que mostramos en detalle
-
-        if ahead:
-            # Cabecera tipo tabla
-            lineas_text.append("N°  | Cliente                      | Modelo              | Serie")
-            lineas_text.append("----+-----------------------------+---------------------+------------------------")
-
-            for idx, rec in enumerate(ahead[:max_items], start=1):
-                cliente = (rec.cliente_id.name or "Sin cliente")[:27]
-                modelo = (rec.name.name if rec.name else "Sin modelo")[:19]
-                serie = (rec.serie_id or "Sin serie")[:22]
-
-                lineas_text.append(
-                    f"{idx:>2}  | {cliente:<27} | {modelo:<19} | {serie:<22}"
-                )
-
-            if len(ahead) > max_items:
-                restantes = len(ahead) - max_items
-                lineas_text.append(f"... y {restantes} máquina(s) más por delante.")
-        else:
-            lineas_text.append("No hay máquinas antes que esta.")
-
-        detalle_cola_text = "\n".join(lineas_text)
-
-        # 7) Construir tabla HTML para el CHATTER
-        if ahead:
-            rows_html = ""
-            for idx, rec in enumerate(ahead[:max_items], start=1):
-                cliente = rec.cliente_id.name or "Sin cliente"
-                modelo = rec.name.name if rec.name else "Sin modelo"
-                serie = rec.serie_id or "Sin serie"
-                rows_html += (
-                    "<tr>"
-                    f"<td>{idx}</td>"
-                    f"<td>{cliente}</td>"
-                    f"<td>{modelo}</td>"
-                    f"<td>{serie}</td>"
-                    "</tr>"
-                )
-            if len(ahead) > max_items:
-                restantes = len(ahead) - max_items
-                rows_html += (
-                    f"<tr><td colspan='4'>… y {restantes} máquina(s) más por delante.</td></tr>"
-                )
-
-            detalle_cola_html = (
-                "<table border='1' cellspacing='0' cellpadding='3'>"
-                "<thead>"
-                "<tr>"
-                "<th>N°</th><th>Cliente</th><th>Modelo</th><th>Serie</th>"
-                "</tr>"
-                "</thead>"
-                "<tbody>"
-                f"{rows_html}"
-                "</tbody>"
-                "</table>"
-            )
-        else:
-            detalle_cola_html = "No hay máquinas antes que esta."
-
-        # 8) Mensaje para la NOTIFICACIÓN (texto plano)
-        mensaje_notificacion = (
-            "La máquina ha sido colocada en la cola de revisión.\n\n"
-            "Máquinas antes que esta:\n"
-            f"{detalle_cola_text}\n\n"
-            f"Puesto actual: {puesto}"
-        )
-
-        # 9) Mensaje para el CHATTER (HTML)
+        # Notificación en chatter (similar a lo que tenías en write)
         isidro_partner_id = self.get_isidro_partner_id()
-        mensaje_chatter = (
-            f"<p><b>Puesto actual:</b> {puesto}</p>"
-            f"<p><b>Máquinas por delante:</b><br/>{detalle_cola_html}</p>"
-        )
+        mensaje_chatter = f"""Se ha colocado una nueva máquina para revisión.
 
+Detalles del equipo:
+- Modelo: {self.name.name if self.name else ''}
+- Serie: {self.serie_id or ''}
+- Fecha de registro: {peru_dt.strftime('%Y-%m-%d %H:%M:%S')} (hora Lima)
+- Puesto en cola: {puesto}
+
+Modificado por: {self.env.user.name}
+"""
         self.message_post(
-            body=mensaje_chatter,
+            body=mensaje_chatter.replace("\n", "<br/>"),
             partner_ids=[isidro_partner_id] if isidro_partner_id else None,
             subtype_xmlid='mail.mt_comment',
         )
 
-        # 10) Notificación visual (texto plano, no sticky -> se cierra sola tras unos segundos)
+        # Notificación visual al usuario
         return {
             'type': 'ir.actions.client',
             'tag': 'display_notification',
             'params': {
-                'title': "Máquina en revisión",
-                'message': mensaje_notificacion,
+                'title': _("Máquina en revisión"),
+                'message': _(
+                    "La máquina ha sido colocada en la cola de revisión.\n"
+                    "Puesto actual: %(puesto)s"
+                ) % {'puesto': puesto},
                 'type': 'success',
-                'sticky': False,  # no pegajosa: Odoo la cierra solo (no podemos fijar exactamente 10s desde Python)
+                'sticky': False,
             }
         }
 
