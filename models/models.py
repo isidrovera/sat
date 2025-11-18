@@ -467,6 +467,131 @@ class SatSat(models.Model):
 
     fecha_para_revision = fields.Datetime(string="Fecha para Revisión", readonly=True, traking=True, store=True)
 
+    posicion_cola = fields.Integer(
+        string="Puesto en cola",
+        compute='_compute_posicion_cola',
+        store=False
+    )
+    def _compute_posicion_cola(self):
+        """
+        Calcula el puesto en la cola de revisión según fecha_para_revision.
+        Solo considera máquinas en estado 'para_revision' o 'en_revision'
+        con fecha_para_revision definida.
+        """
+        for record in self:
+            # Si no está en revisión o no tiene fecha, no tiene puesto
+            if record.estado_ventas_id not in ['para_revision', 'en_revision'] or not record.fecha_para_revision:
+                record.posicion_cola = 0
+                continue
+
+            domain = [
+                ('estado_ventas_id', 'in', ['para_revision', 'en_revision']),
+                ('fecha_para_revision', '!=', False),
+            ]
+            # Ordenamos por fecha de revisión e id para tener un orden estable
+            cola = self.search(domain, order='fecha_para_revision asc, id asc')
+            posicion = 0
+            for idx, rec in enumerate(cola, start=1):
+                if rec.id == record.id:
+                    posicion = idx
+                    break
+
+            record.posicion_cola = posicion
+    def action_colocar_en_revision(self):
+        """
+        Coloca la(s) máquina(s) en estado 'para_revision',
+        registra fecha_para_revision y muestra el puesto en cola.
+        """
+        self.ensure_one()  # normalmente usarás el botón en un registro
+
+        # Validar que tenga tipo_revision y prioridad definidos (opcional pero útil)
+        if not self.tipo_revision or not self.prioridad:
+            raise ValidationError(_(
+                "Debe seleccionar 'Tipo de revisión' y 'Prioridad' antes de colocar la máquina en revisión."
+            ))
+
+        # Fecha/hora Lima
+        peru_dt = self._get_peru_datetime()
+        utc_dt = peru_dt.astimezone(pytz.utc)
+
+        # Cambiar estado y fecha
+        self.write({
+            'estado_ventas_id': 'para_revision',
+            'fecha_para_revision': utc_dt,
+        })
+
+        # Recalcular puesto en cola (usa el compute)
+        self._compute_posicion_cola()
+        puesto = self.posicion_cola or 1
+
+        # Notificación en chatter
+        isidro_partner_id = self.get_isidro_partner_id()
+        mensaje_chatter = f"""Se ha colocado una máquina para revisión.
+
+Detalles del equipo:
+- Modelo: {self.name.name if self.name else ''}
+- Serie: {self.serie_id or ''}
+- Fecha de registro: {peru_dt.strftime('%Y-%m-%d %H:%M:%S')} (hora Lima)
+- Puesto en cola: {puesto}
+
+Modificado por: {self.env.user.name}
+"""
+        self.message_post(
+            body=mensaje_chatter.replace("\n", "<br/>"),
+            partner_ids=[isidro_partner_id] if isidro_partner_id else None,
+            subtype_xmlid='mail.mt_comment',
+        )
+
+        # Notificación en pantalla
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': _("Máquina en revisión"),
+                'message': _(
+                    "La máquina ha sido colocada en la cola de revisión.\n"
+                    "Puesto actual: %(puesto)s"
+                ) % {'puesto': puesto},
+                'type': 'success',
+                'sticky': False,
+            }
+        }
+    def action_quitar_de_revision(self):
+        """
+        Quita la(s) máquina(s) de la cola de revisión,
+        limpia fecha_para_revision y deja el estado en 'sin_revisar'
+        (ajusta si quieres otro estado final).
+        """
+        self.ensure_one()
+
+        vals = {
+            'fecha_para_revision': False,
+        }
+
+        # Solo volver a 'sin_revisar' si actualmente estaba para revisión
+        if self.estado_ventas_id == 'para_revision':
+            vals['estado_ventas_id'] = 'sin_revisar'
+
+        self.write(vals)
+
+        # Mensaje en chatter
+        self.message_post(
+            body=_("La máquina fue retirada de la cola de revisión."),
+            subtype_xmlid='mail.mt_note',
+        )
+
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': _("Revisión cancelada"),
+                'message': _(
+                    "La máquina ha sido retirada de la cola de revisión."
+                ),
+                'type': 'warning',
+                'sticky': False,
+            }
+        }
 
     def get_isidro_partner_id(self):
         isidro_user = self.env['res.users'].search([('name', '=', 'Isidro Vera Polo')], limit=1)
@@ -481,14 +606,8 @@ class SatSat(models.Model):
         return utc_now.astimezone(peru_tz)
 
     def write(self, vals):
-        estados_permitidos_para_cambio = ['sin_revisar', 'para_revision']
         estados_problema = ['con_problemas', 'de_partes']
         estado_final_no_notificar = 'entregada'
-
-        tipo_revision_modificado = 'tipo_revision' in vals
-        prioridad_modificada = 'prioridad' in vals
-
-        isidro_partner_id = self.get_isidro_partner_id()
 
         # 📌 Snapshot ANTES de escribir, para detectar cambios de modelo/tipo/contómetro
         cambios_previos = {}
@@ -500,57 +619,7 @@ class SatSat(models.Model):
                 'fuente_anterior': record.ultima_fuente_actualizacion or '',
             }
 
-        for record in self:
-            estado_actual = record.estado_ventas_id
-            nuevo_estado = vals.get('estado_ventas_id', estado_actual)
-
-            _logger.debug(
-                f"Inicio de write para ID {record.id}. "
-                f"Estado actual: {estado_actual}, Nuevo estado: {nuevo_estado}, Valores: {vals}"
-            )
-
-            # Primera parte: Manejo de tipo_revision y prioridad
-            if estado_actual in estados_permitidos_para_cambio:
-                if tipo_revision_modificado or prioridad_modificada:
-                    if vals.get('tipo_revision') or vals.get('prioridad'):
-                        vals['estado_ventas_id'] = 'para_revision'
-                        # Convertir la hora UTC a hora de Perú al guardar
-                        utc_now = datetime.utcnow()
-                        peru_tz = pytz.timezone('America/Lima')
-                        peru_dt = pytz.utc.localize(utc_now).astimezone(peru_tz)
-                        vals['fecha_para_revision'] = peru_dt.astimezone(pytz.UTC).strftime('%Y-%m-%d %H:%M:%S')
-
-                        _logger.info(
-                            f"Estado cambiado a 'para_revision' para ID {record.id} "
-                            f"por modificación en tipo_revision o prioridad."
-                        )
-
-                        if isidro_partner_id:
-                            user_name = self.env.user.name
-                            record_name = record.name.name
-                            serie = record.serie_id
-                            message = f"""Se ha colocado una nueva máquina para revisión.
-
-    Detalles del equipo:
-    - Nombre: {record_name}
-    - Serie: {serie}
-    - Fecha de registro: {peru_dt.strftime('%Y-%m-%d %H:%M:%S')} (hora Lima)
-
-    Modificado por: {user_name}"""
-                            record.message_post(
-                                body=message,
-                                partner_ids=[isidro_partner_id],
-                                subtype='mail.mt_comment',
-                            )
-                    else:
-                        vals['estado_ventas_id'] = 'sin_revisar'
-                        vals['fecha_para_revision'] = None
-                        _logger.info(
-                            f"Estado regresado a 'sin_revisar' para ID {record.id}."
-                        )
-
         # Segunda parte: Manejo de estados de problema y notificaciones
-        # ⚠️ IMPORTANTE: Este bloque NO debe tener early return para estados problemáticos
         need_problem_notification = False
         need_availability_notification = False
         
@@ -583,7 +652,7 @@ class SatSat(models.Model):
         _logger.debug(f"Finalizando write para registros {self.ids} con valores: {vals}")
         result = super(SatSat, self).write(vals)
 
-        # ✅ DESPUÉS del super().write() hacer las notificaciones y validaciones
+        # ✅ DESPUÉS del super().write() hacer notificaciones y validaciones
         for record in self:
             # Notificaciones de estado
             if need_problem_notification:
@@ -638,7 +707,7 @@ class SatSat(models.Model):
                 contometro_nuevo,
             )
 
-            # 3) 🆕 Notificaciones específicas SNMP si la fuente fue SNMP
+            # 3) Notificaciones específicas SNMP si la fuente fue SNMP
             if fuente_actual == 'snmp':
                 # 3A) Si cambió el modelo
                 if modelo_anterior and modelo_nuevo and modelo_anterior != modelo_nuevo:
@@ -650,7 +719,7 @@ class SatSat(models.Model):
                     except Exception as e:
                         _logger.error(f"Error notificando cambio de modelo SNMP: {e}")
 
-                # 3B) ✅ SOLO notificar contador si hay ANOMALÍA, no cambio normal
+                # 3B) Solo notificar contador si hay ANOMALÍA
                 if contometro_anterior != contometro_nuevo:
                     try:
                         old_digits = re.sub(r'[^\d]', '', contometro_anterior or '0')
@@ -659,7 +728,6 @@ class SatSat(models.Model):
                         old_val = int(old_digits) if old_digits else 0
                         new_val = int(new_digits) if new_digits else 0
                         
-                        # ✅ SOLO notificar si es cambio anormal
                         if record._is_counter_anomaly(old_val, new_val):
                             record.notify_snmp_counter_update(
                                 previous_counter=old_val,
@@ -673,6 +741,7 @@ class SatSat(models.Model):
                         _logger.error(f"Error notificando cambio de contador SNMP: {e}")
 
         return result
+
 
     def _is_counter_anomaly(self, old_val, new_val):
         """

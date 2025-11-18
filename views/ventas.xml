@@ -112,7 +112,21 @@
               
               <group string="Datos para revisión" style="background-color: #fff8f8; border-radius: 8px; padding: 15px; border-left: 4px solid #dc3545;">
                 
-                
+                <button
+        name="action_colocar_en_revision"
+        type="object"
+        string="Colocar en revisión"
+        class="btn-primary"
+        invisible="estado_ventas_id in ['para_revision', 'en_revision'] or not id"
+    />
+
+    <button
+        name="action_quitar_de_revision"
+        type="object"
+        string="Quitar de revisión"
+        invisible="estado_ventas_id not in ['para_revision', 'en_revision'] or not id"
+    />
+    <field name="posicion_cola" readonly="1"/>
                 <field name="tipo_revision" widget="kanban_label_selection" options="{'classes': {'draft': 'default', 'done': 'success'}}" 
                     help="Seleccione el tipo de revisión técnica necesaria. 'Draft' para pendiente, 'Done' para completada."/>
                 <field name="prioridad" widget="selection" 
