@@ -508,6 +508,7 @@ class SatSat(models.Model):
         # Fecha/hora Lima
         peru_dt = self._get_peru_datetime()
         utc_dt = peru_dt.astimezone(pytz.utc)
+        # Odoo quiere string sin tz
         fecha_str = utc_dt.strftime('%Y-%m-%d %H:%M:%S')
 
         # Cambiar estado y fecha
@@ -516,23 +517,25 @@ class SatSat(models.Model):
             'fecha_para_revision': fecha_str,
         })
 
-        # Obtener cola completa ordenada
+        # Cola completa ordenada por fecha de revisión
         domain = [
             ('estado_ventas_id', 'in', ['para_revision', 'en_revision']),
-            ('fecha_para_revision', '!=', False)
+            ('fecha_para_revision', '!=', False),
         ]
         cola = self.search(domain, order='fecha_para_revision asc, id asc')
 
-        # Recalcular puesto
+        # Recalcular puesto para este registro
         self._compute_posicion_cola()
         puesto = self.posicion_cola or 1
 
-        # Máquinas que están delante
-        ahead = cola.filtered(lambda r: r.fecha_para_revision < self.fecha_para_revision)
+        # Máquinas que están antes que esta
+        ahead = cola.filtered(
+            lambda r: r.id != self.id and r.fecha_para_revision and r.fecha_para_revision < self.fecha_para_revision
+        )
 
-        # Armar lista de equipos por delante
+        # Armar lista detallada (Cliente – Modelo – Serie)
         lineas = []
-        max_items = 5  # limitar a 5 para no hacer un mensaje gigante
+        max_items = 5  # máximo de filas a mostrar
 
         for idx, rec in enumerate(ahead[:max_items], start=1):
             cliente = rec.cliente_id.name or "Sin cliente"
@@ -542,22 +545,22 @@ class SatSat(models.Model):
                 f"• ({idx}) {cliente} – {modelo} – Serie: {serie}"
             )
 
-        # Si hay más de 5, informar cuántos más
+        # Si hay más de 5, indicar cuántas quedan
         if len(ahead) > max_items:
             restantes = len(ahead) - max_items
             lineas.append(f"… y {restantes} máquina(s) más por delante.")
 
-        # Construir mensaje final
-                # Construir el mensaje HTML bonito
         detalle_cola = "<br/>".join(lineas) if lineas else "No hay máquinas antes que esta."
 
+        # Mensaje para la notificación (HTML limpio)
         mensaje_notificacion = (
             f"<p>La máquina ha sido colocada en la cola de revisión.</p>"
             f"<p><b>Máquinas antes que esta:</b><br/>{detalle_cola}</p>"
             f"<p><b>Puesto actual:</b> {puesto}</p>"
         )
 
-        # Registrar en chatter con HTML bonito
+        # Mensaje para el chatter
+        isidro_partner_id = self.get_isidro_partner_id()
         mensaje_chatter = (
             f"<p><b>Puesto actual:</b> {puesto}</p>"
             f"<p><b>Máquinas por delante:</b><br/>{detalle_cola}</p>"
@@ -569,7 +572,7 @@ class SatSat(models.Model):
             subtype_xmlid='mail.mt_comment',
         )
 
-        # Notificación HTML limpia en Odoo 18
+        # Notificación visual
         return {
             'type': 'ir.actions.client',
             'tag': 'display_notification',
@@ -580,7 +583,6 @@ class SatSat(models.Model):
                 'sticky': True,
             }
         }
-
 
 
     def action_quitar_de_revision(self):
