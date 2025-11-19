@@ -462,37 +462,31 @@ class WizardAsignarComponentesLinea(models.TransientModel):
         string='Subpartes'
     )
     
-    # 🔥 NUEVA ESTRATEGIA: Crear subpartes después de guardar
-    @api.model_create_multi
-    def create(self, vals_list):
-        """Después de crear, autocargar subpartes"""
-        records = super().create(vals_list)
-        
-        for record in records:
-            if record.tipo_id and not record.subparte_ids:
-                record._cargar_subpartes()
-        
-        return records
+    # 🎯 Campo para mostrar/ocultar botón
+    tiene_subpartes_cargadas = fields.Boolean(
+        compute='_compute_tiene_subpartes',
+        string='Tiene subpartes cargadas'
+    )
     
-    def write(self, vals):
-        """Si cambia el tipo, recargar subpartes"""
-        res = super().write(vals)
-        
-        if 'tipo_id' in vals:
-            for record in self:
-                record._cargar_subpartes()
-        
-        return res
+    @api.depends('subparte_ids')
+    def _compute_tiene_subpartes(self):
+        for record in self:
+            record.tiene_subpartes_cargadas = len(record.subparte_ids) > 0
     
-    def _cargar_subpartes(self):
-        """Método auxiliar para cargar subpartes"""
+    def action_cargar_subpartes(self):
+        """🔥 Botón para cargar/recargar subpartes del tipo seleccionado"""
         self.ensure_one()
         
         if not self.tipo_id:
-            return
-        
-        # Limpiar subpartes existentes
-        self.subparte_ids.unlink()
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': 'Error',
+                    'message': 'Debe seleccionar un Tipo de Componente primero',
+                    'type': 'warning',
+                }
+            }
         
         # Buscar todas las subpartes de este tipo
         subpartes_disponibles = self.env['componente.subparte'].search([
@@ -500,16 +494,43 @@ class WizardAsignarComponentesLinea(models.TransientModel):
             ('active', '=', True)
         ])
         
-        # Crear registros de subpartes
+        if not subpartes_disponibles:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': 'Sin subpartes',
+                    'message': 'No hay subpartes disponibles para este tipo de componente',
+                    'type': 'info',
+                }
+            }
+        
+        # Limpiar subpartes existentes
+        self.subparte_ids.unlink()
+        
+        # 🔥 Crear nuevas subpartes con CREATE explícito
         SubparteModel = self.env['wizard.asignar.componentes.subparte']
+        subpartes_creadas = []
+        
         for subparte in subpartes_disponibles:
-            SubparteModel.create({
+            nueva = SubparteModel.create({
                 'componente_line_id': self.id,
                 'subparte_id': subparte.id,
                 'cantidad': 1.0,
                 'seleccionado': True,
                 'nota': '',
             })
+            subpartes_creadas.append(nueva.id)
+        
+        # 🎯 Recargar la vista para mostrar las subpartes
+        return {
+            'type': 'ir.actions.act_window',
+            'res_model': 'wizard.asignar.componentes.linea',
+            'res_id': self.id,
+            'view_mode': 'form',
+            'target': 'new',
+            'context': self.env.context,
+        }
 
 
 # ===== SUBPARTE DENTRO DE UN COMPONENTE =====
@@ -532,7 +553,6 @@ class WizardAsignarComponentesSubparte(models.TransientModel):
         readonly=True
     )
     
-    # 🔥 Campo sin readonly - se establece al crear
     subparte_id = fields.Many2one(
         'componente.subparte',
         string='Subparte',
