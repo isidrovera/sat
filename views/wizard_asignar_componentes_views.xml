@@ -39,6 +39,16 @@
                                         <!-- Campo informativo -->
                                         <field name="subpartes_info" readonly="1" nolabel="1"/>
                                         
+                                        <!-- Mensaje adicional cuando es registro nuevo -->
+                                        <div class="alert alert-warning" invisible="id" style="margin: 10px 0;">
+                                            ⚠️ <strong>Para cargar las subpartes:</strong>
+                                            <ol style="margin: 5px 0 0 20px;">
+                                                <li>Haz clic en <strong>"Guardar y cerrar"</strong> (abajo)</li>
+                                                <li>Luego vuelve a abrir este componente</li>
+                                                <li>Las subpartes se cargarán automáticamente</li>
+                                            </ol>
+                                        </div>
+                                        
                                         <!-- Botón para cargar subpartes (solo visible si el registro ya está guardado) -->
                                         <button name="action_cargar_subpartes" 
                                                 type="object" 
