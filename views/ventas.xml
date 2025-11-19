@@ -304,31 +304,41 @@
             icon="fa-wrench"
             invisible="estado_ventas_id != 'finalizado'"
             title="Ver Reparaciones" />
-          <button name="action_print_reparacion_pdf"
-            type="object"
-            string="Imprimir reparación"
-            icon="fa-print"
-            class="btn-primary"
-            invisible="reparaciones_count == 0" />
-          <button name="action_open_reparacion_gallery"
-            type="object"
-            string="Ver fotos reparación"
-            icon="fa-images"
-            class="btn-secondary"
-            invisible="reparaciones_count == 0" />
           <button
-            name="action_colocar_en_revision"
-            type="object"
-            string="Colocar en revisión"
-            class="btn-primary"
-            invisible="estado_ventas_id != 'sin_revisar' or not id"
+              name="action_colocar_en_revision"
+              type="object"
+              string="Colocar en revisión"
+              class="btn-primary"
+              icon="fa-search"
+              help="Marca esta reparación para revisión antes de facturar"
+              invisible="estado_ventas_id != 'sin_revisar' or not id"
           />
-         
+
           <button
-            name="action_quitar_de_revision"
-            type="object"
-            string="Quitar de revisión"
-            invisible="estado_ventas_id != 'para_revision' or not id"
+              name="action_quitar_de_revision"
+              type="object"
+              string="Quitar de revisión"
+              icon="fa-check-circle"
+              help="Retira esta reparación del estado de revisión"
+              invisible="estado_ventas_id != 'para_revision' or not id"
+          />
+
+          <!-- Botón para imprimir PDF -->
+          <button
+              name="action_print_reparacion_pdf"
+              type="object"
+              string="PDF"
+              icon="fa-file-pdf-o"
+              help="Imprime la información de la reparación en formato PDF"
+          />
+
+          <!-- Botón para ver galería de fotos -->
+          <button
+              name="action_open_photo_gallery"
+              type="object"
+              string="Fotos"
+              icon="fa-camera"
+              help="Abre el visor de fotos de la reparación"
           />
         </list>
       </field>
