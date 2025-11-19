@@ -334,7 +334,7 @@
 
           <!-- Botón para ver galería de fotos -->
           <button
-              name="action_open_photo_gallery"
+              name="action_open_reparacion_gallery"
               type="object"
               string="Fotos"
               icon="fa-camera"
