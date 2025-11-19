@@ -580,7 +580,7 @@ class WizardAsignarComponentesLinea(models.TransientModel):
         string='Subpartes'
     )
     
-    @api.depends('tipo_id', 'subparte_ids', 'id')
+    @api.depends('tipo_id', 'subparte_ids')
     def _compute_subpartes_info(self):
         """Mostrar información sobre las subpartes disponibles"""
         for record in self:
