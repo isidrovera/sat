@@ -27,6 +27,11 @@
     <field name="code">UI_PCR_CLEAN_SPONGE</field>
     <field name="tipo_id" ref="comp_tipo_ui"/>
 </record>
+<record id="sub_ui_drum_sep_fingers" model="componente.subparte">
+    <field name="name">Uñas de separación del tambor</field>
+    <field name="code">UI_DRUM_SEP_FINGERS</field>
+    <field name="tipo_id" ref="comp_tipo_ui"/>
+</record>
   <record id="sub_ui_seals" model="componente.subparte">
     <field name="name">Sellos / Espumas</field>
     <field name="code">UI_SEALS</field>
@@ -299,11 +304,19 @@
     <field name="code">FUSER_THERMAL_FUSE</field>
     <field name="tipo_id" ref="comp_tipo_fusora"/>
   </record>
-  <record id="sub_fuser_fingers" model="componente.subparte">
-    <field name="name">Uñas de separación</field>
-    <field name="code">FUSER_SEP_FINGERS</field>
+  <!-- Uñas de separación del film/faja superior -->
+<record id="sub_fuser_film_fingers" model="componente.subparte">
+    <field name="name">Uñas de separación del film/faja</field>
+    <field name="code">FUSER_FILM_SEP_FINGERS</field>
     <field name="tipo_id" ref="comp_tipo_fusora"/>
-  </record>
+</record>
+
+<!-- Uñas de separación del rodillo de presión -->
+<record id="sub_fuser_pressure_fingers" model="componente.subparte">
+    <field name="name">Uñas de separación del rodillo de presión</field>
+    <field name="code">FUSER_PRESS_SEP_FINGERS</field>
+    <field name="tipo_id" ref="comp_tipo_fusora"/>
+</record>
   <record id="sub_fuser_bushings" model="componente.subparte">
     <field name="name">Bujes / Cojinetes</field>
     <field name="code">FUSER_BUSHINGS</field>

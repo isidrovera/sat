@@ -30,12 +30,6 @@
         <field name="descripcion">Bandeja de alimentación manual</field>
     </record>
 
-    <record id="acc_tipo_tray_adicional" model="accesorio.tipo">
-        <field name="name">Bandeja Adicional</field>
-        <field name="code">tray_adicional</field>
-        <field name="sequence">30</field>
-        <field name="descripcion">Bandeja de papel adicional (2000+ hojas)</field>
-    </record>
 
     <!-- ========================================== -->
     <!-- ALIMENTADORES AUTOMÁTICOS                 -->
@@ -54,20 +48,7 @@
         <field name="descripcion">Alimentador automático duplex/reversible</field>
     </record>
 
-    <record id="acc_tipo_radf" model="accesorio.tipo">
-        <field name="name">RADF (Reversing ADF)</field>
-        <field name="code">radf</field>
-        <field name="sequence">55</field>
-        <field name="descripcion">Alimentador automático reversible de documentos</field>
-    </record>
-
-    <record id="acc_tipo_spf" model="accesorio.tipo">
-        <field name="name">SPF (Single Pass Feeder)</field>
-        <field name="code">spf</field>
-        <field name="sequence">57</field>
-        <field name="descripcion">Alimentador de un solo paso para escaneo duplex</field>
-    </record>
-
+   
     <!-- ========================================== -->
     <!-- FINALIZADORES Y ACABADO                   -->
     <!-- ========================================== -->
@@ -85,40 +66,6 @@
         <field name="descripcion">Torre finalizadora externa con grapado</field>
     </record>
 
-    <record id="acc_tipo_booklet_finisher" model="accesorio.tipo">
-        <field name="name">Finalizador de Folletos</field>
-        <field name="code">booklet_finisher</field>
-        <field name="sequence">75</field>
-        <field name="descripcion">Creador de folletos con grapado central</field>
-    </record>
-
-    <record id="acc_tipo_stapler" model="accesorio.tipo">
-        <field name="name">Grapadora (Stapler)</field>
-        <field name="code">stapler</field>
-        <field name="sequence">80</field>
-        <field name="descripcion">Módulo grapador independiente</field>
-    </record>
-
-    <record id="acc_tipo_hole_punch" model="accesorio.tipo">
-        <field name="name">Perforadora (Hole Punch)</field>
-        <field name="code">hole_punch</field>
-        <field name="sequence">85</field>
-        <field name="descripcion">Perforadora de documentos (2/3/4 huecos)</field>
-    </record>
-
-    <record id="acc_tipo_folder" model="accesorio.tipo">
-        <field name="name">Plegadora (Folder)</field>
-        <field name="code">folder</field>
-        <field name="sequence">87</field>
-        <field name="descripcion">Unidad de plegado de documentos</field>
-    </record>
-
-    <record id="acc_tipo_trimmer" model="accesorio.tipo">
-        <field name="name">Cortador (Trimmer)</field>
-        <field name="code">trimmer</field>
-        <field name="sequence">89</field>
-        <field name="descripcion">Cortador de bordes para folletos</field>
-    </record>
 
     <!-- ========================================== -->
     <!-- PANELES Y CONTROLES                       -->
@@ -199,20 +146,7 @@
         <field name="descripcion">Disco duro interno para almacenamiento</field>
     </record>
 
-    <record id="acc_tipo_ssd" model="accesorio.tipo">
-        <field name="name">Disco SSD</field>
-        <field name="code">ssd</field>
-        <field name="sequence">145</field>
-        <field name="descripcion">Unidad de estado sólido</field>
-    </record>
-
-    <record id="acc_tipo_ram" model="accesorio.tipo">
-        <field name="name">Memoria RAM Adicional</field>
-        <field name="code">ram_extra</field>
-        <field name="sequence">150</field>
-        <field name="descripcion">Módulo de memoria RAM expandida</field>
-    </record>
-
+ 
     <!-- ========================================== -->
     <!-- SOPORTE Y MOBILIARIO                      -->
     <!-- ========================================== -->
@@ -224,18 +158,13 @@
     </record>
 
     <record id="acc_tipo_ruedas" model="accesorio.tipo">
-        <field name="name">Ruedas/Casters</field>
+        <field name="name">Ruedas/Castereras</field>
         <field name="code">ruedas</field>
         <field name="sequence">165</field>
         <field name="descripcion">Ruedas con freno para movilidad</field>
     </record>
 
-    <record id="acc_tipo_support_leg" model="accesorio.tipo">
-        <field name="name">Patas de Soporte</field>
-        <field name="code">support_leg</field>
-        <field name="sequence">167</field>
-        <field name="descripcion">Patas ajustables de nivelación</field>
-    </record>
+  
 
     <!-- ========================================== -->
     <!-- ALIMENTACIÓN Y CABLES                     -->
@@ -247,26 +176,6 @@
         <field name="descripcion">Cable de alimentación principal</field>
     </record>
 
-    <record id="acc_tipo_ups" model="accesorio.tipo">
-        <field name="name">UPS/Estabilizador</field>
-        <field name="code">ups</field>
-        <field name="sequence">175</field>
-        <field name="descripcion">Sistema de alimentación ininterrumpida</field>
-    </record>
-
-    <record id="acc_tipo_cable_usb" model="accesorio.tipo">
-        <field name="name">Cable USB</field>
-        <field name="code">cable_usb</field>
-        <field name="sequence">177</field>
-        <field name="descripcion">Cable USB tipo A/B para conexión directa</field>
-    </record>
-
-    <record id="acc_tipo_cable_red" model="accesorio.tipo">
-        <field name="name">Cable de Red</field>
-        <field name="code">cable_red</field>
-        <field name="sequence">179</field>
-        <field name="descripcion">Cable Ethernet categoría 5e/6</field>
-    </record>
 
     <!-- ========================================== -->
     <!-- ESPECÍFICOS PARA PLOTTERS                 -->

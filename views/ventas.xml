@@ -310,7 +310,7 @@
               string=""
               class="btn-primary"
               icon="fa-search"
-              help="Marca esta reparación para revisión antes de facturar"
+              help="Marca esta maquina para revisión"
               invisible="estado_ventas_id != 'sin_revisar' or not id"
           />
 
@@ -319,7 +319,7 @@
               type="object"
               string=""
               icon="fa-check-circle"
-              help="Retira esta reparación del estado de revisión"
+              help="Retira esta maquina del estado para revisión"
               invisible="estado_ventas_id != 'para_revision' or not id"
           />
 
