@@ -307,7 +307,7 @@
           <button
               name="action_colocar_en_revision"
               type="object"
-              string="Colocar en revisión"
+              string=""
               class="btn-primary"
               icon="fa-search"
               help="Marca esta reparación para revisión antes de facturar"
@@ -317,7 +317,7 @@
           <button
               name="action_quitar_de_revision"
               type="object"
-              string="Quitar de revisión"
+              string=""
               icon="fa-check-circle"
               help="Retira esta reparación del estado de revisión"
               invisible="estado_ventas_id != 'para_revision' or not id"
