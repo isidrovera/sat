@@ -17,6 +17,16 @@
     <field name="code">UI_PCR</field>
     <field name="tipo_id" ref="comp_tipo_ui"/>
   </record>
+  <record id="sub_ui_drum_lube_bar" model="componente.subparte">
+    <field name="name">Barra lubricante del cilindro</field>
+    <field name="code">UI_DRUM_LUBE_BAR</field>
+    <field name="tipo_id" ref="comp_tipo_ui"/>
+</record>
+  <record id="sub_ui_pcr_cleaning_sponge" model="componente.subparte">
+    <field name="name">Rodillo de esponja de limpieza del PCR</field>
+    <field name="code">UI_PCR_CLEAN_SPONGE</field>
+    <field name="tipo_id" ref="comp_tipo_ui"/>
+</record>
   <record id="sub_ui_seals" model="componente.subparte">
     <field name="name">Sellos / Espumas</field>
     <field name="code">UI_SEALS</field>
@@ -265,7 +275,7 @@
 
   <!-- ====== FUSORA ====== -->
   <record id="sub_fuser_upper" model="componente.subparte">
-    <field name="name">Rodillo/Film superior</field>
+    <field name="name">Faja/Film superior</field>
     <field name="code">FUSER_UPPER</field>
     <field name="tipo_id" ref="comp_tipo_fusora"/>
   </record>
@@ -285,12 +295,12 @@
     <field name="tipo_id" ref="comp_tipo_fusora"/>
   </record>
   <record id="sub_fuser_thermostat" model="componente.subparte">
-    <field name="name">Thermostat / Fusible térmico</field>
+    <field name="name">Thermostato / Fusible térmico</field>
     <field name="code">FUSER_THERMAL_FUSE</field>
     <field name="tipo_id" ref="comp_tipo_fusora"/>
   </record>
   <record id="sub_fuser_fingers" model="componente.subparte">
-    <field name="name">Dedos de separación</field>
+    <field name="name">Uñas de separación</field>
     <field name="code">FUSER_SEP_FINGERS</field>
     <field name="tipo_id" ref="comp_tipo_fusora"/>
   </record>
@@ -305,7 +315,7 @@
     <field name="tipo_id" ref="comp_tipo_fusora"/>
   </record>
   <record id="sub_fuser_clean_web" model="componente.subparte">
-    <field name="name">Web / Fieltro de limpieza</field>
+    <field name="name">Web Roller / Fieltro de limpieza</field>
     <field name="code">FUSER_CLEANING_WEB</field>
     <field name="tipo_id" ref="comp_tipo_fusora"/>
   </record>
@@ -316,17 +326,17 @@
     <field name="code">FUSER_OIL_UNIT</field>
     <field name="tipo_id" ref="comp_tipo_fusora"/>
   </record>
-  <record id="sub_fuser_fixing_belt" model="componente.subparte">
-    <field name="name">Banda de fijación</field>
-    <field name="code">FUSER_FIXING_BELT</field>
-    <field name="tipo_id" ref="comp_tipo_fusora"/>
-  </record>
+  
   <record id="sub_fuser_pressure_springs" model="componente.subparte">
     <field name="name">Resortes de presión</field>
     <field name="code">FUSER_PRESSURE_SPRINGS</field>
     <field name="tipo_id" ref="comp_tipo_fusora"/>
   </record>
-
+<record id="sub_fuser_oil_pad" model="componente.subparte">
+    <field name="name">Almohadilla de aplicación de aceite</field>
+    <field name="code">FUSER_OIL_PAD</field>
+    <field name="tipo_id" ref="comp_tipo_fusora"/>
+</record>
   <!-- ====== ADF ====== -->
   <record id="sub_adf_pickup" model="componente.subparte">
     <field name="name">Pickup roller</field>
