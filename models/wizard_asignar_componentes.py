@@ -415,6 +415,9 @@ class WizardAsignarComponentes(models.TransientModel):
 
 
 # ===== LÍNEA DE COMPONENTE CON SUS SUBPARTES =====
+# models/wizard_asignar_componentes.py
+
+# ===== LÍNEA DE COMPONENTE CON SUS SUBPARTES =====
 class WizardAsignarComponentesLinea(models.TransientModel):
     _name = 'wizard.asignar.componentes.linea'
     _description = 'Línea de componente para asignación masiva'
@@ -459,38 +462,54 @@ class WizardAsignarComponentesLinea(models.TransientModel):
         string='Subpartes'
     )
     
-    # 🎯 Evento cuando cambia el tipo de componente
-    @api.onchange('tipo_id')
-    def _onchange_tipo_id(self):
-        """Autocarga todas las subpartes disponibles para este tipo de componente"""
+    # 🔥 NUEVA ESTRATEGIA: Crear subpartes después de guardar
+    @api.model_create_multi
+    def create(self, vals_list):
+        """Después de crear, autocargar subpartes"""
+        records = super().create(vals_list)
+        
+        for record in records:
+            if record.tipo_id and not record.subparte_ids:
+                record._cargar_subpartes()
+        
+        return records
+    
+    def write(self, vals):
+        """Si cambia el tipo, recargar subpartes"""
+        res = super().write(vals)
+        
+        if 'tipo_id' in vals:
+            for record in self:
+                record._cargar_subpartes()
+        
+        return res
+    
+    def _cargar_subpartes(self):
+        """Método auxiliar para cargar subpartes"""
+        self.ensure_one()
+        
         if not self.tipo_id:
-            self.subparte_ids = [(5, 0, 0)]  # Limpiar
             return
         
-        # Buscar todas las subpartes de este tipo de componente
+        # Limpiar subpartes existentes
+        self.subparte_ids.unlink()
+        
+        # Buscar todas las subpartes de este tipo
         subpartes_disponibles = self.env['componente.subparte'].search([
             ('tipo_id', '=', self.tipo_id.id),
             ('active', '=', True)
         ])
         
-        if not subpartes_disponibles:
-            self.subparte_ids = [(5, 0, 0)]  # Limpiar si no hay
-            return
-        
-        # 🔥 Autocargar todas las subpartes con checkbox pre-seleccionado
-        subparte_lines = [(5, 0, 0)]  # Primero limpiar existentes
+        # Crear registros de subpartes
+        SubparteModel = self.env['wizard.asignar.componentes.subparte']
         for subparte in subpartes_disponibles:
-            subparte_lines.append((0, 0, {
-                'subparte_id': subparte.id,  # 🎯 CRÍTICO: Asegurar que se incluya
+            SubparteModel.create({
+                'componente_line_id': self.id,
+                'subparte_id': subparte.id,
                 'cantidad': 1.0,
                 'seleccionado': True,
                 'nota': '',
-            }))
-        
-        self.subparte_ids = subparte_lines
-        
-        # 🔥 RETORNAR DOMINIO VACÍO PARA EVITAR CONFLICTOS
-        return {}
+            })
 
 
 # ===== SUBPARTE DENTRO DE UN COMPONENTE =====
@@ -505,7 +524,6 @@ class WizardAsignarComponentesSubparte(models.TransientModel):
         ondelete='cascade'
     )
     
-    # 🎯 Campo relacionado para filtrado (NO para mostrar)
     tipo_componente_id = fields.Many2one(
         'componente.tipo',
         related='componente_line_id.tipo_id',
@@ -514,15 +532,13 @@ class WizardAsignarComponentesSubparte(models.TransientModel):
         readonly=True
     )
     
-    # 🔥 Subparte - CRÍTICO: No debe ser readonly en el modelo, solo en la vista
+    # 🔥 Campo sin readonly - se establece al crear
     subparte_id = fields.Many2one(
         'componente.subparte',
         string='Subparte',
-        required=True,
-        # NO poner readonly=True aquí, solo en la vista XML
+        required=True
     )
     
-    # 🎯 Checkbox para seleccionar si se agrega o no
     seleccionado = fields.Boolean(
         string='Agregar',
         default=True,
