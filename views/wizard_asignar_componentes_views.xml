@@ -54,7 +54,7 @@
                                                 type="object" 
                                                 string="🔄 Cargar/Recargar Subpartes" 
                                                 class="btn btn-primary"
-                                                invisible="not id or not tipo_id"
+                                                
                                                 style="margin: 10px 0;"/>
                                         
                                         <!-- Lista de subpartes -->
