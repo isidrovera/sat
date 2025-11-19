@@ -323,7 +323,7 @@
             class="btn-primary"
             invisible="estado_ventas_id != 'sin_revisar' or not id"
           />
-          <!-- Quitar de revisión: SOLO cuando está en para_revision -->
+         
           <button
             name="action_quitar_de_revision"
             type="object"
