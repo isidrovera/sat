@@ -327,7 +327,7 @@
           <button
               name="action_print_reparacion_pdf"
               type="object"
-              string="PDF"
+              string=""
               icon="fa-file-pdf-o"
               help="Imprime la información de la reparación en formato PDF"
           />
@@ -336,7 +336,7 @@
           <button
               name="action_open_reparacion_gallery"
               type="object"
-              string="Fotos"
+              string=""
               icon="fa-camera"
               help="Abre el visor de fotos de la reparación"
           />
