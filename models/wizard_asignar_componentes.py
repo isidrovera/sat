@@ -558,8 +558,7 @@ class WizardAsignarComponentesAccesorio(models.TransientModel):
     tipo_id = fields.Many2one(
         'accesorio.tipo',
         string='Tipo de Accesorio',
-        required=True,
-        readonly=True
+        required=True,   # 👈 requerido, pero SIN readonly aquí
     )
 
     seleccionado = fields.Boolean(
@@ -574,10 +573,3 @@ class WizardAsignarComponentesAccesorio(models.TransientModel):
     )
 
     nota = fields.Char(string='Nota')
-
-    @api.model_create_multi
-    def create(self, vals_list):
-        clean_vals = [v for v in vals_list if v.get('tipo_id')]
-        if not clean_vals:
-            return self.browse()
-        return super().create(clean_vals)
