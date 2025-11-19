@@ -206,17 +206,57 @@ class WizardAsignarComponentes(models.TransientModel):
         return records
 
     def write(self, vals):
-        """Logging al actualizar el wizard"""
+        """Actualizar el wizard y procesar líneas de componentes con subpartes"""
+        # Antes del write, procesar componente_line_ids si están presentes
+        if 'componente_line_ids' in vals:
+            _logger.info("📝 Procesando componente_line_ids antes del write")
+            processed_commands = []
+            
+            for cmd in vals['componente_line_ids']:
+                if cmd[0] == 0:  # Comando create (0, 0, {vals})
+                    cmd_vals = cmd[2]
+                    _logger.info("  → Procesando comando CREATE para componente")
+                    
+                    # Si tiene subparte_ids, procesarlas
+                    if 'subparte_ids' in cmd_vals and cmd_vals['subparte_ids']:
+                        clean_subparte_cmds = []
+                        for sub_cmd in cmd_vals['subparte_ids']:
+                            if sub_cmd[0] == 0 and sub_cmd[2]:
+                                sub_vals = sub_cmd[2]
+                                # Solo incluir si tiene subparte_id
+                                if sub_vals.get('subparte_id'):
+                                    clean_subparte_cmds.append(sub_cmd)
+                                    _logger.info("    ✓ Subparte válida: %s", sub_vals.get('subparte_id'))
+                                else:
+                                    _logger.warning("    ✗ Subparte sin subparte_id - ignorando")
+                            else:
+                                clean_subparte_cmds.append(sub_cmd)
+                        
+                        cmd_vals['subparte_ids'] = clean_subparte_cmds
+                        _logger.info("  → %s subpartes limpias de %s originales",
+                                   len(clean_subparte_cmds), len(cmd_vals.get('subparte_ids', [])))
+                
+                processed_commands.append(cmd)
+            
+            vals['componente_line_ids'] = processed_commands
+        
         result = super().write(vals)
         
-        if 'componente_line_ids' in vals:
-            for record in self:
-                _logger.info("💾 Wizard actualizado ID:%s ahora tiene %s líneas de componentes", 
-                           record.id, len(record.componente_line_ids))
-                for comp_line in record.componente_line_ids:
-                    _logger.info("  📦 Componente: %s con %s subpartes", 
-                               comp_line.tipo_id.name if comp_line.tipo_id else '?',
-                               len(comp_line.subparte_ids))
+        # Después del write, verificar y corregir líneas sin subpartes
+        for record in self:
+            _logger.info("💾 Wizard actualizado ID:%s con %s líneas de componentes", 
+                       record.id, len(record.componente_line_ids))
+            
+            for comp_line in record.componente_line_ids:
+                _logger.info("  📦 Componente: %s (ID:%s) con %s subpartes", 
+                           comp_line.tipo_id.name if comp_line.tipo_id else '?',
+                           comp_line.id,
+                           len(comp_line.subparte_ids))
+                
+                # Si el componente tiene tipo pero no subpartes, crearlas
+                if comp_line.tipo_id and not comp_line.subparte_ids and isinstance(comp_line.id, int):
+                    _logger.info("    ⚠️  Línea sin subpartes - creándolas automáticamente")
+                    comp_line._crear_subpartes_para_tipo()
         
         return result
 
@@ -591,8 +631,8 @@ class WizardAsignarComponentesLinea(models.TransientModel):
         _logger.info("🔍 Cargando %s subpartes para tipo '%s'", 
                    len(subpartes_disponibles), self.tipo_id.name)
 
-        # Si el record ya existe (tiene ID), crear las líneas directamente
-        if self.id and self._origin.id:
+        # Si el record ya existe (tiene ID real, no NewId), crear directamente
+        if self.id and isinstance(self.id, int):
             # Record ya guardado - crear directamente en base de datos
             _logger.info("  📝 Record YA existe (ID:%s) - creando subpartes directamente", self.id)
             
@@ -614,27 +654,29 @@ class WizardAsignarComponentesLinea(models.TransientModel):
                 _logger.info("    ✓ Subparte creada ID:%s → %s", nueva.id, subparte.display_name)
             
             # Refrescar la relación
-            self.subparte_ids = self.env['wizard.asignar.componentes.subparte'].search([
-                ('componente_line_id', '=', self.id)
-            ])
+            self.invalidate_recordset(['subparte_ids'])
         else:
-            # Record nuevo - usar comandos con TODOS los campos explícitos
-            _logger.info("  📝 Record NUEVO (sin ID) - usando comandos One2many mejorados")
-            commands = [(5, 0, 0)]  # Limpiar primero
+            # Record nuevo (NewId) - construir registros virtuales
+            _logger.info("  📝 Record NUEVO (NewId) - creando recordset virtual")
+            
+            # Crear recordset de subpartes virtuales
+            SubparteModel = self.env['wizard.asignar.componentes.subparte']
+            subparte_records = SubparteModel.browse()
             
             for subparte in subpartes_disponibles:
-                # 🎯 CRITICAL: Incluir EXPLÍCITAMENTE el subparte_id en el comando
-                comando = (0, 0, {
-                    'subparte_id': subparte.id,  # ← ESTE ES EL CAMPO CRÍTICO
+                # Crear registro virtual (sin guardar en BD)
+                virtual_record = SubparteModel.new({
+                    'componente_line_id': self.id,
+                    'subparte_id': subparte.id,
                     'cantidad': 1.0,
                     'seleccionado': True,
                     'nota': '',
                 })
-                commands.append(comando)
-                _logger.info("  → Comando para subparte ID:%s - %s", subparte.id, subparte.display_name)
+                subparte_records |= virtual_record
+                _logger.info("  → Registro virtual creado: %s", subparte.display_name)
             
-            self.subparte_ids = commands
-            _logger.info("✓ Total comandos generados: %s", len(commands))
+            self.subparte_ids = subparte_records
+            _logger.info("✓ Total subpartes virtuales: %s", len(subparte_records))
 
     def write(self, vals):
         """Asegurar que las subpartes se persistan correctamente"""
@@ -662,27 +704,71 @@ class WizardAsignarComponentesLinea(models.TransientModel):
 
     @api.model_create_multi
     def create(self, vals_list):
-        """Crear líneas de componente y forzar creación de subpartes"""
+        """Crear líneas de componente"""
         _logger.info("🔨 Creando %s líneas de componente", len(vals_list))
+        
+        # 🎯 CLAVE: Procesar subparte_ids ANTES de crear
+        for vals in vals_list:
+            if 'subparte_ids' in vals and vals['subparte_ids']:
+                # Limpiar comandos que no tienen subparte_id
+                clean_commands = []
+                for cmd in vals['subparte_ids']:
+                    if cmd[0] == 0 and cmd[2] and cmd[2].get('subparte_id'):
+                        # Comando válido con subparte_id
+                        clean_commands.append(cmd)
+                    elif cmd[0] in (1, 2, 3, 4, 5, 6):
+                        # Otros comandos (update, delete, etc.)
+                        clean_commands.append(cmd)
+                
+                vals['subparte_ids'] = clean_commands
+                _logger.info("  📋 Limpiados comandos de subpartes: %s válidos de %s totales",
+                           len(clean_commands), len(vals.get('subparte_ids', [])))
         
         records = super().create(vals_list)
         
-        # 🎯 SOLUCIÓN: Después de crear, si hay tipo_id pero no hay subpartes, crearlas
+        # Verificar después de crear
         for record in records:
             _logger.info("  ✓ Componente creado ID:%s tipo=%s con %s subpartes", 
                        record.id,
                        record.tipo_id.name if record.tipo_id else '?',
                        len(record.subparte_ids))
             
-            # Si tiene tipo pero no subpartes, crear ahora
+            # Solo forzar si NO hay subpartes Y el tipo tiene subpartes disponibles
             if record.tipo_id and not record.subparte_ids:
-                _logger.info("    ⚠️  Componente sin subpartes - forzando creación")
-                record._crear_subpartes_para_tipo()
+                subpartes_disponibles = self.env['componente.subparte'].search([
+                    ('tipo_id', '=', record.tipo_id.id),
+                    ('active', '=', True)
+                ], limit=1)
+                
+                if subpartes_disponibles:
+                    _logger.warning("    ⚠️  Componente sin subpartes pero tipo tiene subpartes disponibles")
+                    _logger.warning("    ⚠️  Esto puede indicar un problema con los comandos One2many")
         
         return records
     
+    def write(self, vals):
+        """Actualizar línea de componente"""
+        # Si se está cambiando tipo_id Y no hay cambios en subparte_ids, limpiar subpartes
+        if 'tipo_id' in vals and 'subparte_ids' not in vals:
+            _logger.info("🔄 Cambiando tipo_id sin cambios en subparte_ids - limpiando")
+            vals['subparte_ids'] = [(5, 0, 0)]
+        
+        result = super().write(vals)
+        
+        # Verificar después del write
+        for record in self:
+            _logger.info("💾 Línea componente ID:%s tipo=%s tiene %s subpartes después del write", 
+                       record.id, 
+                       record.tipo_id.name if record.tipo_id else '?',
+                       len(record.subparte_ids))
+        
+        return result
+    
     def _crear_subpartes_para_tipo(self):
-        """Método helper para crear subpartes basadas en el tipo"""
+        """
+        Método helper para crear subpartes basadas en el tipo.
+        SOLO debe usarse cuando se cambia el tipo en un registro YA guardado.
+        """
         self.ensure_one()
         
         if not self.tipo_id:
