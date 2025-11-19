@@ -70,6 +70,7 @@
                     <page string="Accesorios">
                         <field name="accesorio_line_ids">
                             <list editable="bottom">
+                                <field name="seleccionado" widget="boolean_toggle"/>
                                 <field name="tipo_id"/>
                                 <field name="obligatorio" widget="boolean_toggle"/>
                                 <field name="nota"/>
