@@ -74,3 +74,4 @@ from . import accesorio_subparte
 from . import reparacion_accesorio_evaluacion
 from . import wizard_asignar_componentes
 from . import gemini_config
+from . import modelo_maquina
