@@ -1,5 +1,6 @@
 # models/wizard_asignar_componentes.py
 from odoo import models, fields, api
+from odoo.exceptions import UserError
 from markupsafe import Markup
 import logging
 
@@ -545,6 +546,13 @@ class WizardAsignarComponentesLinea(models.TransientModel):
         string='Tipo de Componente',
         required=True
     )
+    
+    # Campo auxiliar para mostrar info al usuario
+    subpartes_info = fields.Html(
+        string='Información',
+        compute='_compute_subpartes_info',
+        sanitize=False
+    )
 
     prioridad = fields.Selection(
         [('1', 'Crítico'), ('2', 'Medio'), ('3', 'Bajo')],
@@ -571,6 +579,64 @@ class WizardAsignarComponentesLinea(models.TransientModel):
         'componente_line_id',
         string='Subpartes'
     )
+    
+    @api.depends('tipo_id', 'subparte_ids')
+    def _compute_subpartes_info(self):
+        """Mostrar información sobre las subpartes disponibles"""
+        for record in self:
+            if not record.tipo_id:
+                record.subpartes_info = False
+                continue
+            
+            # Si ya hay subpartes cargadas
+            if record.subparte_ids:
+                total = len(record.subparte_ids)
+                seleccionadas = len(record.subparte_ids.filtered(lambda s: s.seleccionado))
+                record.subpartes_info = (
+                    f'<div class="alert alert-success">'
+                    f'✅ <strong>{seleccionadas} de {total}</strong> subpartes seleccionadas'
+                    f'</div>'
+                )
+            else:
+                # Verificar si hay subpartes disponibles
+                disponibles = self.env['componente.subparte'].search_count([
+                    ('tipo_id', '=', record.tipo_id.id),
+                    ('active', '=', True)
+                ])
+                
+                if disponibles > 0:
+                    record.subpartes_info = (
+                        f'<div class="alert alert-info">'
+                        f'ℹ️ Hay <strong>{disponibles} subpartes</strong> disponibles. '
+                        f'Haz clic en "Cargar Subpartes" para verlas.'
+                        f'</div>'
+                    )
+                else:
+                    record.subpartes_info = (
+                        f'<div class="alert alert-warning">'
+                        f'⚠️ No hay subpartes configuradas para este tipo de componente.'
+                        f'</div>'
+                    )
+    
+    def action_cargar_subpartes(self):
+        """Botón para cargar las subpartes manualmente"""
+        self.ensure_one()
+        
+        if not self.tipo_id:
+            raise UserError("Primero debes seleccionar un tipo de componente")
+        
+        # Si ya tiene ID (registro guardado), crear directamente
+        if self.id and isinstance(self.id, int):
+            _logger.info("🔘 Cargando subpartes para línea existente ID:%s", self.id)
+            self._recrear_subpartes()
+        else:
+            # Registro nuevo - necesita guardarse primero
+            raise UserError(
+                "Debes guardar el componente antes de cargar las subpartes.\n"
+                "Haz clic en 'Guardar' y luego vuelve a abrir el formulario."
+            )
+        
+        return {'type': 'ir.actions.do_nothing'}
 
     @api.onchange('tipo_id')
     def _onchange_tipo_id(self):

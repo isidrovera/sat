@@ -36,13 +36,20 @@
                                 </group>
                                 <notebook>
                                     <page string="Subpartes">
-                                        <group string="Nota">
-                                            <div class="alert alert-info" style="margin-bottom: 10px;">
-                                                ℹ️ Las subpartes se cargan automáticamente al seleccionar el tipo de componente. 
-                                                Desmarca las que NO quieras agregar.
-                                            </div>
-                                        </group>
-                                        <field name="subparte_ids">
+                                        <!-- Campo informativo -->
+                                        <field name="subpartes_info" readonly="1" nolabel="1"/>
+                                        
+                                        <!-- Botón para cargar subpartes (solo visible si el registro ya está guardado) -->
+                                        <button name="action_cargar_subpartes" 
+                                                type="object" 
+                                                string="🔄 Cargar/Recargar Subpartes" 
+                                                class="btn btn-primary"
+                                                invisible="not id or not tipo_id"
+                                                style="margin: 10px 0;"/>
+                                        
+                                        <!-- Lista de subpartes -->
+                                        <field name="subparte_ids" 
+                                               invisible="not subparte_ids">
                                             <list editable="bottom" create="false" delete="true">
                                                 <!-- 🎯 Checkbox para seleccionar -->
                                                 <field name="seleccionado" widget="boolean_toggle"/>
@@ -97,6 +104,4 @@
             </form>
         </field>
     </record>
-
-    
 </odoo>
