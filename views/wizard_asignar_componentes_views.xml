@@ -42,14 +42,12 @@
                                                 Desmarca las que NO quieras agregar.
                                             </div>
                                         </group>
-                                        <field name="subparte_ids" 
-                                               context="{'default_seleccionado': True, 'default_cantidad': 1.0}"
-                                               mode="tree">
-                                            <list editable="bottom" create="0" delete="1">
+                                        <field name="subparte_ids">
+                                            <list editable="bottom" create="false" delete="true">
                                                 <!-- 🎯 Checkbox para seleccionar -->
                                                 <field name="seleccionado" widget="boolean_toggle"/>
                                                 <!-- Subparte en modo solo lectura -->
-                                                <field name="subparte_id" readonly="1" required="1"/>
+                                                <field name="subparte_id" readonly="1"/>
                                                 <field name="cantidad"/>
                                                 <field name="nota"/>
                                             </list>
@@ -73,7 +71,7 @@
                         <field name="accesorio_line_ids">
                             <list editable="bottom">
                                 <field name="seleccionado" widget="boolean_toggle"/>
-                                <field name="tipo_id" readonly="1"/>
+                                <field name="tipo_id"/>
                                 <field name="obligatorio" widget="boolean_toggle"/>
                                 <field name="nota"/>
                             </list>
@@ -99,4 +97,6 @@
             </form>
         </field>
     </record>
+
+    
 </odoo>
