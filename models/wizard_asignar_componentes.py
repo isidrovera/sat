@@ -592,37 +592,46 @@ class WizardAsignarComponentesLinea(models.TransientModel):
                    len(subpartes_disponibles), self.tipo_id.name)
 
         # Si el record ya existe (tiene ID), crear las líneas directamente
-        # Si no existe, usar comandos One2many
-        if self.id:
-            # Record ya guardado - crear directamente
+        if self.id and self._origin.id:
+            # Record ya guardado - crear directamente en base de datos
             _logger.info("  📝 Record YA existe (ID:%s) - creando subpartes directamente", self.id)
             
             # Limpiar subpartes existentes
-            self.subparte_ids.unlink()
+            self.env['wizard.asignar.componentes.subparte'].search([
+                ('componente_line_id', '=', self.id)
+            ]).unlink()
             
-            # Crear nuevas
+            # Crear nuevas directamente
             SubparteModel = self.env['wizard.asignar.componentes.subparte']
             for subparte in subpartes_disponibles:
-                SubparteModel.create({
+                nueva = SubparteModel.create({
                     'componente_line_id': self.id,
                     'subparte_id': subparte.id,
                     'cantidad': 1.0,
                     'seleccionado': True,
                     'nota': '',
                 })
-                _logger.info("    ✓ Subparte creada: %s", subparte.display_name)
+                _logger.info("    ✓ Subparte creada ID:%s → %s", nueva.id, subparte.display_name)
+            
+            # Refrescar la relación
+            self.subparte_ids = self.env['wizard.asignar.componentes.subparte'].search([
+                ('componente_line_id', '=', self.id)
+            ])
         else:
-            # Record nuevo - usar comandos
-            _logger.info("  📝 Record NUEVO (sin ID) - usando comandos One2many")
+            # Record nuevo - usar comandos con TODOS los campos explícitos
+            _logger.info("  📝 Record NUEVO (sin ID) - usando comandos One2many mejorados")
             commands = [(5, 0, 0)]  # Limpiar primero
+            
             for subparte in subpartes_disponibles:
-                commands.append((0, 0, {
-                    'subparte_id': subparte.id,
+                # 🎯 CRITICAL: Incluir EXPLÍCITAMENTE el subparte_id en el comando
+                comando = (0, 0, {
+                    'subparte_id': subparte.id,  # ← ESTE ES EL CAMPO CRÍTICO
                     'cantidad': 1.0,
                     'seleccionado': True,
                     'nota': '',
-                }))
-                _logger.info("  → Comando para: %s (ID:%s)", subparte.display_name, subparte.id)
+                })
+                commands.append(comando)
+                _logger.info("  → Comando para subparte ID:%s - %s", subparte.id, subparte.display_name)
             
             self.subparte_ids = commands
             _logger.info("✓ Total comandos generados: %s", len(commands))
@@ -653,18 +662,54 @@ class WizardAsignarComponentesLinea(models.TransientModel):
 
     @api.model_create_multi
     def create(self, vals_list):
-        """Crear líneas de componente con logging"""
+        """Crear líneas de componente y forzar creación de subpartes"""
         _logger.info("🔨 Creando %s líneas de componente", len(vals_list))
         
         records = super().create(vals_list)
         
+        # 🎯 SOLUCIÓN: Después de crear, si hay tipo_id pero no hay subpartes, crearlas
         for record in records:
             _logger.info("  ✓ Componente creado ID:%s tipo=%s con %s subpartes", 
                        record.id,
                        record.tipo_id.name if record.tipo_id else '?',
                        len(record.subparte_ids))
+            
+            # Si tiene tipo pero no subpartes, crear ahora
+            if record.tipo_id and not record.subparte_ids:
+                _logger.info("    ⚠️  Componente sin subpartes - forzando creación")
+                record._crear_subpartes_para_tipo()
         
         return records
+    
+    def _crear_subpartes_para_tipo(self):
+        """Método helper para crear subpartes basadas en el tipo"""
+        self.ensure_one()
+        
+        if not self.tipo_id:
+            return
+        
+        subpartes_disponibles = self.env['componente.subparte'].search([
+            ('tipo_id', '=', self.tipo_id.id),
+            ('active', '=', True)
+        ])
+        
+        if not subpartes_disponibles:
+            _logger.info("      No hay subpartes disponibles para tipo %s", self.tipo_id.name)
+            return
+        
+        _logger.info("      Creando %s subpartes para tipo %s", 
+                   len(subpartes_disponibles), self.tipo_id.name)
+        
+        SubparteModel = self.env['wizard.asignar.componentes.subparte']
+        for subparte in subpartes_disponibles:
+            nueva = SubparteModel.create({
+                'componente_line_id': self.id,
+                'subparte_id': subparte.id,
+                'cantidad': 1.0,
+                'seleccionado': True,
+                'nota': '',
+            })
+            _logger.info("        ✓ Subparte creada ID:%s → %s", nueva.id, subparte.display_name)
 
 
 # ============================================================================
