@@ -39,22 +39,12 @@
                                         <!-- Campo informativo -->
                                         <field name="subpartes_info" readonly="1" nolabel="1"/>
                                         
-                                        <!-- Mensaje adicional cuando es registro nuevo -->
-                                        <div class="alert alert-warning" invisible="id" style="margin: 10px 0;">
-                                            ⚠️ <strong>Para cargar las subpartes:</strong>
-                                            <ol style="margin: 5px 0 0 20px;">
-                                                <li>Haz clic en <strong>"Guardar y cerrar"</strong> (abajo)</li>
-                                                <li>Luego vuelve a abrir este componente</li>
-                                                <li>Las subpartes se cargarán automáticamente</li>
-                                            </ol>
-                                        </div>
-                                        
-                                        <!-- Botón para cargar subpartes (solo visible si el registro ya está guardado) -->
+                                        <!-- Botón para cargar subpartes - SIEMPRE visible si hay tipo -->
                                         <button name="action_cargar_subpartes" 
                                                 type="object" 
-                                                string="🔄 Cargar/Recargar Subpartes" 
+                                                string="🔄 Cargar/Seleccionar Subpartes" 
                                                 class="btn btn-primary"
-                                                
+                                                invisible="not tipo_id"
                                                 style="margin: 10px 0;"/>
                                         
                                         <!-- Lista de subpartes -->
@@ -110,6 +100,41 @@
                             class="btn-secondary" 
                             special="cancel"
                             icon="fa-times"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Vista del wizard de selección de subpartes -->
+    <record id="view_wizard_seleccionar_subpartes_form" model="ir.ui.view">
+        <field name="name">wizard.seleccionar.subpartes.form</field>
+        <field name="model">wizard.seleccionar.subpartes</field>
+        <field name="arch" type="xml">
+            <form string="Seleccionar Subpartes">
+                <group>
+                    <field name="tipo_id" readonly="1"/>
+                    <field name="componente_line_id" invisible="1"/>
+                </group>
+                
+                <group string="✅ Marca las subpartes que deseas agregar:">
+                    <field name="subparte_seleccion_ids" nolabel="1">
+                        <list editable="bottom" create="false" delete="false">
+                            <field name="seleccionado" widget="boolean_toggle"/>
+                            <field name="subparte_id" readonly="1"/>
+                            <field name="cantidad"/>
+                            <field name="nota"/>
+                        </list>
+                    </field>
+                </group>
+                
+                <footer>
+                    <button name="action_aplicar" 
+                            string="✓ Aplicar Selección" 
+                            type="object" 
+                            class="btn-primary"/>
+                    <button string="Cancelar" 
+                            special="cancel" 
+                            class="btn-secondary"/>
                 </footer>
             </form>
         </field>

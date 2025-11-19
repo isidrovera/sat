@@ -580,7 +580,7 @@ class WizardAsignarComponentesLinea(models.TransientModel):
         string='Subpartes'
     )
     
-    @api.depends('tipo_id', 'subparte_ids')
+    @api.depends('tipo_id', 'subparte_ids', 'id')
     def _compute_subpartes_info(self):
         """Mostrar información sobre las subpartes disponibles"""
         for record in self:
@@ -593,8 +593,9 @@ class WizardAsignarComponentesLinea(models.TransientModel):
                 total = len(record.subparte_ids)
                 seleccionadas = len(record.subparte_ids.filtered(lambda s: s.seleccionado))
                 record.subpartes_info = (
-                    f'<div class="alert alert-success">'
-                    f'✅ <strong>{seleccionadas} de {total}</strong> subpartes seleccionadas'
+                    f'<div class="alert alert-success" style="margin: 10px 0;">'
+                    f'✅ <strong>{seleccionadas} de {total}</strong> subpartes seleccionadas. '
+                    f'Puedes desmarcar las que NO quieras agregar.'
                     f'</div>'
                 )
             else:
@@ -606,37 +607,74 @@ class WizardAsignarComponentesLinea(models.TransientModel):
                 
                 if disponibles > 0:
                     record.subpartes_info = (
-                        f'<div class="alert alert-info">'
+                        f'<div class="alert alert-info" style="margin: 10px 0;">'
                         f'ℹ️ Hay <strong>{disponibles} subpartes</strong> disponibles. '
-                        f'Haz clic en "Cargar Subpartes" para verlas.'
+                        f'Haz clic en el botón "Cargar/Seleccionar Subpartes" para elegir cuáles agregar.'
                         f'</div>'
                     )
                 else:
                     record.subpartes_info = (
-                        f'<div class="alert alert-warning">'
+                        f'<div class="alert alert-warning" style="margin: 10px 0;">'
                         f'⚠️ No hay subpartes configuradas para este tipo de componente.'
                         f'</div>'
                     )
     
     def action_cargar_subpartes(self):
-        """Botón para cargar las subpartes manualmente"""
+        """Abrir popup para seleccionar subpartes"""
         self.ensure_one()
         
         if not self.tipo_id:
             raise UserError("Primero debes seleccionar un tipo de componente")
         
-        # Si ya tiene ID (registro guardado), crear directamente
-        if self.id and isinstance(self.id, int):
-            _logger.info("🔘 Cargando subpartes para línea existente ID:%s", self.id)
-            self._recrear_subpartes()
-        else:
-            # Registro nuevo - necesita guardarse primero
-            raise UserError(
-                "Debes guardar el componente antes de cargar las subpartes.\n"
-                "Haz clic en 'Guardar' y luego vuelve a abrir el formulario."
-            )
+        # Buscar subpartes disponibles
+        subpartes_disponibles = self.env['componente.subparte'].search([
+            ('tipo_id', '=', self.tipo_id.id),
+            ('active', '=', True)
+        ])
         
-        return {'type': 'ir.actions.do_nothing'}
+        if not subpartes_disponibles:
+            raise UserError(f"No hay subpartes configuradas para el tipo '{self.tipo_id.name}'")
+        
+        # Si el registro ya está guardado (tiene ID entero real), crear directamente
+        if self.id and isinstance(self.id, int):
+            _logger.info("🔘 Recreando subpartes para línea existente ID:%s", self.id)
+            self._recrear_subpartes()
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': 'Subpartes cargadas',
+                    'message': f'Se cargaron {len(subpartes_disponibles)} subpartes',
+                    'type': 'success',
+                }
+            }
+        
+        # Si es registro nuevo (NewId), abrir wizard de selección
+        _logger.info("🆕 Abriendo wizard de selección para registro nuevo")
+        
+        # Crear wizard de selección
+        wizard = self.env['wizard.seleccionar.subpartes'].create({
+            'componente_line_id': self.id,
+            'tipo_id': self.tipo_id.id,
+        })
+        
+        # Crear líneas de selección
+        for subparte in subpartes_disponibles:
+            self.env['wizard.seleccionar.subpartes.linea'].create({
+                'wizard_id': wizard.id,
+                'subparte_id': subparte.id,
+                'seleccionado': True,
+                'cantidad': 1.0,
+            })
+        
+        return {
+            'name': 'Seleccionar Subpartes',
+            'type': 'ir.actions.act_window',
+            'res_model': 'wizard.seleccionar.subpartes',
+            'res_id': wizard.id,
+            'view_mode': 'form',
+            'target': 'new',
+        }
 
     @api.onchange('tipo_id')
     def _onchange_tipo_id(self):
@@ -897,4 +935,96 @@ class WizardAsignarComponentesAccesorio(models.TransientModel):
         default=False
     )
 
+    nota = fields.Char(string='Nota')
+
+
+# ============================================================================
+# WIZARD AUXILIAR PARA SELECCIONAR SUBPARTES
+# ============================================================================
+class WizardSeleccionarSubpartes(models.TransientModel):
+    _name = 'wizard.seleccionar.subpartes'
+    _description = 'Wizard para seleccionar subpartes a cargar'
+
+    componente_line_id = fields.Many2one(
+        'wizard.asignar.componentes.linea',
+        string='Línea de Componente',
+        required=True
+    )
+    
+    tipo_id = fields.Many2one(
+        'componente.tipo',
+        string='Tipo de Componente',
+        readonly=True
+    )
+    
+    subparte_seleccion_ids = fields.One2many(
+        'wizard.seleccionar.subpartes.linea',
+        'wizard_id',
+        string='Subpartes Disponibles'
+    )
+    
+    def action_aplicar(self):
+        """Aplicar las subpartes seleccionadas a la línea de componente"""
+        self.ensure_one()
+        
+        componente_line = self.componente_line_id
+        
+        # Limpiar subpartes existentes en la línea
+        if componente_line.subparte_ids:
+            componente_line.subparte_ids.unlink()
+        
+        # Crear las subpartes seleccionadas
+        SubparteModel = self.env['wizard.asignar.componentes.subparte']
+        creadas = 0
+        
+        for linea in self.subparte_seleccion_ids.filtered(lambda l: l.seleccionado):
+            SubparteModel.create({
+                'componente_line_id': componente_line.id,
+                'subparte_id': linea.subparte_id.id,
+                'cantidad': linea.cantidad,
+                'seleccionado': True,
+                'nota': linea.nota or '',
+            })
+            creadas += 1
+        
+        _logger.info("✅ Se crearon %s subpartes para componente ID:%s", creadas, componente_line.id)
+        
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': 'Subpartes agregadas',
+                'message': f'Se agregaron {creadas} subpartes al componente',
+                'type': 'success',
+            }
+        }
+
+
+class WizardSeleccionarSubpartesLinea(models.TransientModel):
+    _name = 'wizard.seleccionar.subpartes.linea'
+    _description = 'Línea de subparte para selección'
+
+    wizard_id = fields.Many2one(
+        'wizard.seleccionar.subpartes',
+        required=True,
+        ondelete='cascade'
+    )
+    
+    subparte_id = fields.Many2one(
+        'componente.subparte',
+        string='Subparte',
+        required=True,
+        readonly=True
+    )
+    
+    seleccionado = fields.Boolean(
+        string='Agregar',
+        default=True
+    )
+    
+    cantidad = fields.Float(
+        string='Cantidad',
+        default=1.0
+    )
+    
     nota = fields.Char(string='Nota')
