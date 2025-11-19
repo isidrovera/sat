@@ -88,12 +88,12 @@ class WizardAsignarComponentes(models.TransientModel):
                     else:
                         html += '<li style="margin-left: 20px;">&#8226; %s</li>' % line.tipo_id.name
                     
-                    # Mostrar subpartes
-                    subpartes_count = len(line.subparte_ids)
-                    if subpartes_count:
+                    # Mostrar subpartes SELECCIONADAS
+                    subpartes_seleccionadas = line.subparte_ids.filtered(lambda s: s.seleccionado)
+                    if subpartes_seleccionadas:
                         html += '<ul style="margin-left: 40px; font-size: 0.9em; color: #666;">'
-                        for subparte in line.subparte_ids:
-                            html += '<li>%s (x%s)</li>' % (subparte.subparte_id.name, subparte.cantidad)
+                        for subparte in subpartes_seleccionadas:
+                            html += '<li>&#10004; %s (x%s)</li>' % (subparte.subparte_id.name, subparte.cantidad)
                         html += '</ul>'
             
             # Resumen de accesorios
@@ -117,12 +117,22 @@ class WizardAsignarComponentes(models.TransientModel):
                     # 1 por cada modelo
                     total_componentes += len(wizard.modelo_ids)
             
+            # Contar subpartes seleccionadas
+            total_subpartes = sum(
+                len(line.subparte_ids.filtered(lambda s: s.seleccionado))
+                for line in wizard.componente_line_ids
+            ) * len(wizard.modelo_ids)
+            
             total_accesorios = len(wizard.modelo_ids) * len(wizard.accesorio_line_ids)
             total_registros = total_componentes + total_accesorios
             
             html += '<hr style="margin: 15px 0;"/>'
-            html += '<p><strong>&#128202; Total estimado de registros principales:</strong> %s</p>' % total_registros
-            html += '<p style="font-size: 0.9em; color: #666;">&#8226; Componentes: %s | Accesorios: %s</p>' % (total_componentes, total_accesorios)
+            html += '<p><strong>&#128202; Total estimado:</strong></p>'
+            html += '<ul style="margin: 5px 0; font-size: 0.9em; color: #666;">'
+            html += '<li>Componentes principales: %s</li>' % total_componentes
+            html += '<li>Subpartes: %s</li>' % total_subpartes
+            html += '<li>Accesorios: %s</li>' % total_accesorios
+            html += '</ul>'
             html += '</div>'
             
             wizard.resumen = Markup(html)
@@ -183,8 +193,9 @@ class WizardAsignarComponentes(models.TransientModel):
                             elif result == 'actualizado':
                                 componentes_actualizados += 1
                             
-                            # Agregar subpartes si existen
-                            for subparte_line in comp_line.subparte_ids:
+                            # 🎯 Agregar solo subpartes SELECCIONADAS
+                            subpartes_seleccionadas = comp_line.subparte_ids.filtered(lambda s: s.seleccionado)
+                            for subparte_line in subpartes_seleccionadas:
                                 try:
                                     created = self._crear_subparte(
                                         SubparteModel,
@@ -227,8 +238,9 @@ class WizardAsignarComponentes(models.TransientModel):
                         elif result == 'actualizado':
                             componentes_actualizados += 1
                         
-                        # Agregar subpartes si existen
-                        for subparte_line in comp_line.subparte_ids:
+                        # 🎯 Agregar solo subpartes SELECCIONADAS
+                        subpartes_seleccionadas = comp_line.subparte_ids.filtered(lambda s: s.seleccionado)
+                        for subparte_line in subpartes_seleccionadas:
                             try:
                                 created = self._crear_subparte(
                                     SubparteModel,
@@ -290,7 +302,7 @@ class WizardAsignarComponentes(models.TransientModel):
                 'message': mensaje_simple,
                 'type': 'success' if not errores else 'warning',
                 'sticky': True,
-                'next': {'type': 'ir.actions.act_window_close'},  # 🔥 Cierra el wizard
+                'next': {'type': 'ir.actions.act_window_close'},
             }
         }
     
@@ -418,6 +430,36 @@ class WizardAsignarComponentesLinea(models.TransientModel):
         'componente_line_id',
         string='Subpartes'
     )
+    
+    # 🎯 NUEVO: Evento cuando cambia el tipo de componente
+    @api.onchange('tipo_id')
+    def _onchange_tipo_id(self):
+        """Autocarga todas las subpartes disponibles para este tipo de componente"""
+        if not self.tipo_id:
+            self.subparte_ids = [(5, 0, 0)]
+            return
+        
+        # Buscar todas las subpartes de este tipo de componente
+        subpartes_disponibles = self.env['componente.subparte'].search([
+            ('tipo_id', '=', self.tipo_id.id),
+            ('active', '=', True)
+        ])
+        
+        if not subpartes_disponibles:
+            self.subparte_ids = [(5, 0, 0)]
+            return
+        
+        # 🔥 Autocargar todas las subpartes con checkbox pre-seleccionado
+        subparte_lines = []
+        for subparte in subpartes_disponibles:
+            subparte_lines.append((0, 0, {
+                'subparte_id': subparte.id,
+                'cantidad': 1.0,
+                'seleccionado': True,  # 🎯 Pre-seleccionado por defecto
+                'nota': '',
+            }))
+        
+        self.subparte_ids = subparte_lines
 
 
 # ===== SUBPARTE DENTRO DE UN COMPONENTE =====
@@ -441,12 +483,19 @@ class WizardAsignarComponentesSubparte(models.TransientModel):
         readonly=True
     )
     
-    # 🔥 Filtro dinámico - solo muestra subpartes del tipo seleccionado
+    # 🔥 Subparte (ya no es editable, se carga automáticamente)
     subparte_id = fields.Many2one(
         'componente.subparte',
         string='Subparte',
         required=True,
-        domain="[('tipo_id', '=', tipo_componente_id), ('active', '=', True)]"
+        readonly=True  # Solo lectura porque se autocarga
+    )
+    
+    # 🎯 NUEVO: Checkbox para seleccionar si se agrega o no
+    seleccionado = fields.Boolean(
+        string='Agregar',
+        default=True,
+        help='Marcar para incluir esta subparte en la asignación'
     )
     
     cantidad = fields.Float(
