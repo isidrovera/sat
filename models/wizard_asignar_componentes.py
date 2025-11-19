@@ -499,8 +499,7 @@ class WizardAsignarComponentesSubparte(models.TransientModel):
         required=True,
         ondelete='cascade'
     )
-    
-    # 🎯 Campo relacionado para obtener el tipo desde la línea padre
+
     tipo_componente_id = fields.Many2one(
         'componente.tipo',
         related='componente_line_id.tipo_id',
@@ -508,28 +507,40 @@ class WizardAsignarComponentesSubparte(models.TransientModel):
         store=False,
         readonly=True
     )
-    
-    # 🔥 Subparte (ya no es editable, se carga automáticamente)
+
     subparte_id = fields.Many2one(
         'componente.subparte',
         string='Subparte',
         required=True,
-        readonly=True  # Solo lectura porque se autocarga
+        readonly=True  # esto puede quedarse
     )
-    
-    # 🎯 NUEVO: Checkbox para seleccionar si se agrega o no
+
     seleccionado = fields.Boolean(
         string='Agregar',
         default=True,
         help='Marcar para incluir esta subparte en la asignación'
     )
-    
+
     cantidad = fields.Float(
         string='Cantidad',
         default=1.0
     )
-    
+
     nota = fields.Char(string='Nota')
+
+    # 🔐 Blindaje: NO crear registros sin subparte_id
+    @api.model_create_multi
+    def create(self, vals_list):
+        clean_vals = []
+        for vals in vals_list:
+            if not vals.get('subparte_id'):
+                # Simplemente ignoramos líneas inválidas
+                continue
+            clean_vals.append(vals)
+        if not clean_vals:
+            return self.browse()  # vacío
+        return super().create(clean_vals)
+
 
 
 # ===== LÍNEA DE ACCESORIO CON AUTOCARGA =====
