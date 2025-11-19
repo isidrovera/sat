@@ -83,7 +83,7 @@ class WizardAsignarComponentes(models.TransientModel):
             if wizard.componente_line_ids:
                 html += '<li><strong>Componentes:</strong> %s tipo(s)</li>' % len(wizard.componente_line_ids)
                 for line in wizard.componente_line_ids:
-                    is_color_sensitive = getattr(line.tipo_id, 'is_color_sensitive', False)
+                    is_color_sensitive = line.tipo_id.is_color_sensitive if line.tipo_id else False
 
                     if is_color_sensitive:
                         html += '<li style="margin-left: 20px;">&#8226; %s' % line.tipo_id.name
@@ -105,7 +105,7 @@ class WizardAsignarComponentes(models.TransientModel):
                         html += '<ul style="margin-left: 40px; font-size: 0.9em; color: #666;">'
                         for subparte in subpartes_seleccionadas:
                             html += '<li>&#10004; %s (x%s)</li>' % (
-                                subparte.subparte_id.name,
+                                subparte.subparte_id.display_name if subparte.subparte_id else '?',
                                 subparte.cantidad,
                             )
                         html += '</ul>'
@@ -131,7 +131,7 @@ class WizardAsignarComponentes(models.TransientModel):
             # Totales estimados
             total_componentes = 0
             for line in wizard.componente_line_ids:
-                is_color_sensitive = getattr(line.tipo_id, 'is_color_sensitive', False)
+                is_color_sensitive = line.tipo_id.is_color_sensitive if line.tipo_id else False
                 if is_color_sensitive:
                     total_componentes += len(modelos_mono) * 1
                     total_componentes += len(modelos_color) * 4
@@ -141,7 +141,7 @@ class WizardAsignarComponentes(models.TransientModel):
             total_subpartes = 0
             for line in wizard.componente_line_ids:
                 subpartes_sel = len(line.subparte_ids.filtered(lambda s: s.seleccionado))
-                is_color_sensitive = getattr(line.tipo_id, 'is_color_sensitive', False)
+                is_color_sensitive = line.tipo_id.is_color_sensitive if line.tipo_id else False
                 if is_color_sensitive:
                     total_subpartes += subpartes_sel * (len(modelos_mono) + len(modelos_color) * 4)
                 else:
@@ -209,128 +209,148 @@ class WizardAsignarComponentes(models.TransientModel):
 
         for modelo in self.modelo_ids:
             es_monocromo = modelo.tipo_id == 'monocromatica'
-            _logger.info("Procesando modelo %s (%s)", modelo.name, 'mono' if es_monocromo else 'color')
+            _logger.info("=" * 80)
+            _logger.info("PROCESANDO MODELO: %s (%s)", modelo.name, 'MONO' if es_monocromo else 'COLOR')
+            _logger.info("=" * 80)
 
             # ===== COMPONENTES =====
             for comp_line in self.componente_line_ids:
-                is_color_sensitive = getattr(comp_line.tipo_id, 'is_color_sensitive', False)
-                _logger.info("  Tipo componente %s (sens_color=%s)", comp_line.tipo_id.name, is_color_sensitive)
+                is_color_sensitive = comp_line.tipo_id.is_color_sensitive if comp_line.tipo_id else False
+                _logger.info("  📦 Tipo componente: %s (sensible_color=%s)", 
+                           comp_line.tipo_id.name, is_color_sensitive)
 
-                # Subpartes seleccionadas en el wizard
+                # 🎯 CLAVE: Obtener subpartes seleccionadas del wizard
                 subpartes_sel = comp_line.subparte_ids.filtered(
                     lambda s: s.seleccionado and s.subparte_id
                 )
-                _logger.info(
-                    "    Subpartes seleccionadas en wizard: %s",
-                    [(s.subparte_id.id, s.subparte_id.name, s.cantidad) for s in subpartes_sel]
-                )
+                
+                _logger.info("    📋 Total líneas subparte en wizard: %s", len(comp_line.subparte_ids))
+                _logger.info("    ✅ Subpartes SELECCIONADAS: %s", len(subpartes_sel))
+                
+                for sp in subpartes_sel:
+                    _logger.info("      → %s (ID:%s) - Cant: %s", 
+                               sp.subparte_id.display_name, sp.subparte_id.id, sp.cantidad)
 
                 if is_color_sensitive:
+                    # Componente sensible a color
                     colores = ['k'] if es_monocromo else ['k', 'c', 'm', 'y']
+                    _logger.info("    🎨 Colores a crear: %s", colores)
 
                     for color in colores:
                         try:
                             result, componente = self._crear_o_actualizar_componente(
                                 ComponenteModel, modelo, comp_line, color
                             )
-                            _logger.info(
-                                "    Componente %s (%s) resultado=%s id=%s",
-                                comp_line.tipo_id.name, color, result, componente.id
-                            )
+                            _logger.info("    ✓ Componente %s color=%s → %s (ID:%s)",
+                                       comp_line.tipo_id.name, color.upper(), result, componente.id)
 
                             if result == 'creado':
                                 componentes_creados += 1
                             elif result == 'actualizado':
                                 componentes_actualizados += 1
 
-                            # Subpartes de este componente/color
+                            # 🎯 Crear subpartes para este componente
+                            subpartes_count = 0
                             for subparte_line in subpartes_sel:
                                 try:
                                     created = self._crear_subparte(
                                         SubparteModel, componente, subparte_line
                                     )
-                                    _logger.info(
-                                        "      Subparte %s (comp=%s, color=%s) creada=%s",
-                                        subparte_line.subparte_id.name, componente.id, color, created
-                                    )
                                     if created:
                                         subpartes_creadas += 1
+                                        subpartes_count += 1
+                                        _logger.info("      ✓ Subparte creada: %s → Componente ID:%s",
+                                                   subparte_line.subparte_id.display_name, componente.id)
                                 except Exception as e:
-                                    msg = (
-                                        "Error subparte en %s - %s (%s) - %s: %s"
-                                        % (modelo.name,
-                                           comp_line.tipo_id.name,
-                                           color.upper(),
-                                           subparte_line.subparte_id.name,
-                                           str(e))
+                                    msg = "Error subparte en %s - %s (%s) - %s: %s" % (
+                                        modelo.name, comp_line.tipo_id.name, color.upper(),
+                                        subparte_line.subparte_id.name, str(e)
                                     )
-                                    _logger.error(msg)
+                                    _logger.error("      ✗ %s", msg)
                                     errores.append(msg)
+                            
+                            _logger.info("    📊 Total subpartes creadas para color %s: %s", 
+                                       color.upper(), subpartes_count)
+
                         except Exception as e:
                             msg = "Error en %s - %s (%s): %s" % (
                                 modelo.name, comp_line.tipo_id.name, color.upper(), str(e)
                             )
-                            _logger.error(msg)
+                            _logger.error("    ✗ %s", msg)
                             errores.append(msg)
                 else:
+                    # Componente SIN sensibilidad a color
+                    _logger.info("    🔧 Componente sin color")
                     try:
                         result, componente = self._crear_o_actualizar_componente(
                             ComponenteModel, modelo, comp_line, False
                         )
-                        _logger.info(
-                            "    Componente %s (sin color) resultado=%s id=%s",
-                            comp_line.tipo_id.name, result, componente.id
-                        )
+                        _logger.info("    ✓ Componente %s → %s (ID:%s)",
+                                   comp_line.tipo_id.name, result, componente.id)
 
                         if result == 'creado':
                             componentes_creados += 1
                         elif result == 'actualizado':
                             componentes_actualizados += 1
 
+                        # 🎯 Crear subpartes
+                        subpartes_count = 0
                         for subparte_line in subpartes_sel:
                             try:
                                 created = self._crear_subparte(
                                     SubparteModel, componente, subparte_line
                                 )
-                                _logger.info(
-                                    "      Subparte %s (comp=%s) creada=%s",
-                                    subparte_line.subparte_id.name, componente.id, created
-                                )
                                 if created:
                                     subpartes_creadas += 1
+                                    subpartes_count += 1
+                                    _logger.info("      ✓ Subparte creada: %s → Componente ID:%s",
+                                               subparte_line.subparte_id.display_name, componente.id)
                             except Exception as e:
                                 msg = "Error subparte en %s - %s - %s: %s" % (
-                                    modelo.name,
-                                    comp_line.tipo_id.name,
-                                    subparte_line.subparte_id.name,
-                                    str(e),
+                                    modelo.name, comp_line.tipo_id.name,
+                                    subparte_line.subparte_id.name, str(e)
                                 )
-                                _logger.error(msg)
+                                _logger.error("      ✗ %s", msg)
                                 errores.append(msg)
+                        
+                        _logger.info("    📊 Total subpartes creadas: %s", subpartes_count)
+
                     except Exception as e:
-                        msg = "Error en %s - %s: %s" % (
-                            modelo.name, comp_line.tipo_id.name, str(e)
-                        )
-                        _logger.error(msg)
+                        msg = "Error en %s - %s: %s" % (modelo.name, comp_line.tipo_id.name, str(e))
+                        _logger.error("    ✗ %s", msg)
                         errores.append(msg)
 
             # ===== ACCESORIOS =====
             accesorios_seleccionados = self.accesorio_line_ids.filtered(lambda a: a.seleccionado)
+            if accesorios_seleccionados:
+                _logger.info("  🔧 Procesando %s accesorios", len(accesorios_seleccionados))
+            
             for acc_line in accesorios_seleccionados:
                 try:
-                    result = self._crear_o_actualizar_accesorio(
-                        AccesorioModel, modelo, acc_line
-                    )
+                    result = self._crear_o_actualizar_accesorio(AccesorioModel, modelo, acc_line)
                     if result == 'creado':
                         accesorios_creados += 1
                     elif result == 'actualizado':
                         accesorios_actualizados += 1
+                    _logger.info("    ✓ Accesorio %s → %s", acc_line.tipo_id.name, result)
                 except Exception as e:
                     msg = "Error en %s - %s: %s" % (modelo.name, acc_line.tipo_id.name, str(e))
-                    _logger.error(msg)
+                    _logger.error("    ✗ %s", msg)
                     errores.append(msg)
 
-        # Resumen final
+        # ===== RESUMEN FINAL =====
+        _logger.info("=" * 80)
+        _logger.info("RESUMEN FINAL")
+        _logger.info("=" * 80)
+        _logger.info("✓ Componentes creados: %s", componentes_creados)
+        _logger.info("✓ Componentes actualizados: %s", componentes_actualizados)
+        _logger.info("✓ Subpartes creadas: %s", subpartes_creadas)
+        _logger.info("✓ Accesorios creados: %s", accesorios_creados)
+        _logger.info("✓ Accesorios actualizados: %s", accesorios_actualizados)
+        if errores:
+            _logger.error("✗ Errores: %s", len(errores))
+        _logger.info("=" * 80)
+
         mensaje_partes = [
             "Componentes: %s creados, %s actualizados" % (componentes_creados, componentes_actualizados),
             "Subpartes: %s agregadas" % subpartes_creadas,
@@ -377,8 +397,8 @@ class WizardAsignarComponentes(models.TransientModel):
             'prioridad': comp_line.prioridad,
             'vida_util_paginas': comp_line.vida_util_paginas,
             'vida_util_meses': comp_line.vida_util_meses,
-            'frase_desgaste': comp_line.frase_desgaste,
-            'frase_cambio': comp_line.frase_cambio,
+            'frase_desgaste': comp_line.frase_desgaste or '',
+            'frase_cambio': comp_line.frase_cambio or '',
         }
 
         if existente:
@@ -391,12 +411,20 @@ class WizardAsignarComponentes(models.TransientModel):
             return 'creado', nuevo
 
     def _crear_subparte(self, SubparteModel, componente, subparte_line):
-        """Crea o actualiza una subparte. Retorna True si creó, False si ya existía"""
+        """
+        Crea o actualiza una subparte. 
+        Retorna True si creó, False si ya existía o hubo error.
+        """
         if not subparte_line.subparte_id:
             _logger.warning(
-                "Intento de crear subparte SIN subparte_id (comp=%s, wizard_line=%s)",
+                "⚠️  Intento de crear subparte SIN subparte_id (comp=%s, wizard_line=%s)",
                 componente.id, subparte_line.id
             )
+            return False
+
+        # Verificar que el componente existe
+        if not componente or not componente.id:
+            _logger.error("⚠️  Componente inválido o sin ID: %s", componente)
             return False
 
         domain = [
@@ -410,26 +438,36 @@ class WizardAsignarComponentes(models.TransientModel):
             'componente_id': componente.id,
             'subparte_id': subparte_line.subparte_id.id,
             'cantidad': subparte_line.cantidad,
-            'nota': subparte_line.nota,
+            'nota': subparte_line.nota or '',
         }
 
         if existente:
-            _logger.info(
-                "Subparte ya existente (comp=%s, subparte=%s). sobrescribir=%s",
-                componente.id,
-                subparte_line.subparte_id.id,
-                self.sobrescribir_existentes,
-            )
             if self.sobrescribir_existentes:
                 existente.write(vals)
+                _logger.info(
+                    "      ↻ Subparte ACTUALIZADA (ID:%s, comp:%s, subparte:%s)",
+                    existente.id, componente.id, subparte_line.subparte_id.id
+                )
+            else:
+                _logger.info(
+                    "      ⊘ Subparte YA EXISTE (ID:%s, comp:%s, subparte:%s) - no se sobrescribe",
+                    existente.id, componente.id, subparte_line.subparte_id.id
+                )
             return False
         else:
-            nuevo = SubparteModel.create(vals)
-            _logger.info(
-                "Subparte creada (id=%s, comp=%s, subparte=%s)",
-                nuevo.id, componente.id, subparte_line.subparte_id.id
-            )
-            return True
+            try:
+                nuevo = SubparteModel.create(vals)
+                _logger.info(
+                    "      ✓ Subparte CREADA (ID:%s, comp:%s, subparte:%s, cant:%s)",
+                    nuevo.id, componente.id, subparte_line.subparte_id.id, vals['cantidad']
+                )
+                return True
+            except Exception as e:
+                _logger.error(
+                    "      ✗ ERROR al crear subparte (comp:%s, subparte:%s): %s",
+                    componente.id, subparte_line.subparte_id.id, str(e)
+                )
+                raise
 
     def _crear_o_actualizar_accesorio(self, AccesorioModel, modelo, acc_line):
         """Crea o actualiza un accesorio"""
@@ -444,7 +482,7 @@ class WizardAsignarComponentes(models.TransientModel):
             'modelo_id': modelo.id,
             'tipo_id': acc_line.tipo_id.id,
             'obligatorio': acc_line.obligatorio,
-            'nota': acc_line.nota,
+            'nota': acc_line.nota or '',
         }
 
         if existente:
@@ -507,7 +545,7 @@ class WizardAsignarComponentesLinea(models.TransientModel):
     def _onchange_tipo_id(self):
         """Autocarga todas las subpartes disponibles para este tipo de componente"""
         if not self.tipo_id:
-            self.subparte_ids = False
+            self.subparte_ids = [(5, 0, 0)]  # Limpiar todas
             return
 
         subpartes_disponibles = self.env['componente.subparte'].search([
@@ -516,19 +554,26 @@ class WizardAsignarComponentesLinea(models.TransientModel):
         ])
 
         if not subpartes_disponibles:
-            self.subparte_ids = False
+            self.subparte_ids = [(5, 0, 0)]
+            _logger.info("No hay subpartes disponibles para tipo_id=%s", self.tipo_id.id)
             return
 
-        subparte_lines = []
+        _logger.info("🔍 Cargando %s subpartes para tipo '%s'", 
+                   len(subpartes_disponibles), self.tipo_id.name)
+
+        # Limpiar y agregar nuevas líneas
+        commands = [(5, 0, 0)]  # Limpiar primero
         for subparte in subpartes_disponibles:
-            subparte_lines.append((0, 0, {
+            commands.append((0, 0, {
                 'subparte_id': subparte.id,
                 'cantidad': 1.0,
-                'seleccionado': True,
+                'seleccionado': True,  # 🎯 Por defecto activadas
                 'nota': '',
             }))
+            _logger.info("  → Agregando subparte: %s (ID:%s)", subparte.display_name, subparte.id)
 
-        self.subparte_ids = subparte_lines
+        self.subparte_ids = commands
+        _logger.info("✓ Total comandos generados: %s", len(commands))
 
 
 # ============================================================================
@@ -537,6 +582,7 @@ class WizardAsignarComponentesLinea(models.TransientModel):
 class WizardAsignarComponentesSubparte(models.TransientModel):
     _name = 'wizard.asignar.componentes.subparte'
     _description = 'Subparte de componente para asignación masiva'
+    _rec_name = 'subparte_id'
 
     componente_line_id = fields.Many2one(
         'wizard.asignar.componentes.linea',
@@ -575,10 +621,17 @@ class WizardAsignarComponentesSubparte(models.TransientModel):
 
     @api.model_create_multi
     def create(self, vals_list):
-        """Evitar crear líneas basura sin subparte_id (por glitches de la UI)."""
+        """Evitar crear líneas basura sin subparte_id"""
         clean_vals = [v for v in vals_list if v.get('subparte_id')]
         if not clean_vals:
+            _logger.warning("⚠️  Intento de crear líneas de subparte sin subparte_id - ignorando")
             return self.browse()
+        
+        _logger.info("✓ Creando %s líneas de subparte en wizard", len(clean_vals))
+        for v in clean_vals:
+            _logger.info("  → subparte_id=%s, cantidad=%s, seleccionado=%s", 
+                       v.get('subparte_id'), v.get('cantidad', 1.0), v.get('seleccionado', True))
+        
         return super().create(clean_vals)
 
 
@@ -596,7 +649,6 @@ class WizardAsignarComponentesAccesorio(models.TransientModel):
         ondelete='cascade'
     )
 
-    # OJO: aquí NO readonly en el modelo, sólo en la vista
     tipo_id = fields.Many2one(
         'accesorio.tipo',
         string='Tipo de Accesorio',
