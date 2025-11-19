@@ -417,6 +417,8 @@ class WizardAsignarComponentes(models.TransientModel):
 # ===== LÍNEA DE COMPONENTE CON SUS SUBPARTES =====
 # models/wizard_asignar_componentes.py
 
+# models/wizard_asignar_componentes.py
+
 # ===== LÍNEA DE COMPONENTE CON SUS SUBPARTES =====
 class WizardAsignarComponentesLinea(models.TransientModel):
     _name = 'wizard.asignar.componentes.linea'
