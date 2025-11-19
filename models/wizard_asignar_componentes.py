@@ -464,7 +464,7 @@ class WizardAsignarComponentesLinea(models.TransientModel):
     def _onchange_tipo_id(self):
         """Autocarga todas las subpartes disponibles para este tipo de componente"""
         if not self.tipo_id:
-            self.subparte_ids = [(5, 0, 0)]
+            self.subparte_ids = [(5, 0, 0)]  # Limpiar
             return
         
         # Buscar todas las subpartes de este tipo de componente
@@ -474,20 +474,23 @@ class WizardAsignarComponentesLinea(models.TransientModel):
         ])
         
         if not subpartes_disponibles:
-            self.subparte_ids = [(5, 0, 0)]
+            self.subparte_ids = [(5, 0, 0)]  # Limpiar si no hay
             return
         
         # 🔥 Autocargar todas las subpartes con checkbox pre-seleccionado
-        subparte_lines = []
+        subparte_lines = [(5, 0, 0)]  # Primero limpiar existentes
         for subparte in subpartes_disponibles:
             subparte_lines.append((0, 0, {
-                'subparte_id': subparte.id,
+                'subparte_id': subparte.id,  # 🎯 CRÍTICO: Asegurar que se incluya
                 'cantidad': 1.0,
-                'seleccionado': True,  # 🎯 Pre-seleccionado por defecto
+                'seleccionado': True,
                 'nota': '',
             }))
         
         self.subparte_ids = subparte_lines
+        
+        # 🔥 RETORNAR DOMINIO VACÍO PARA EVITAR CONFLICTOS
+        return {}
 
 
 # ===== SUBPARTE DENTRO DE UN COMPONENTE =====
@@ -502,7 +505,7 @@ class WizardAsignarComponentesSubparte(models.TransientModel):
         ondelete='cascade'
     )
     
-    # 🎯 Campo relacionado para obtener el tipo desde la línea padre
+    # 🎯 Campo relacionado para filtrado (NO para mostrar)
     tipo_componente_id = fields.Many2one(
         'componente.tipo',
         related='componente_line_id.tipo_id',
@@ -511,12 +514,12 @@ class WizardAsignarComponentesSubparte(models.TransientModel):
         readonly=True
     )
     
-    # 🔥 Subparte (solo lectura porque se autocarga)
+    # 🔥 Subparte - CRÍTICO: No debe ser readonly en el modelo, solo en la vista
     subparte_id = fields.Many2one(
         'componente.subparte',
         string='Subparte',
         required=True,
-        readonly=True
+        # NO poner readonly=True aquí, solo en la vista XML
     )
     
     # 🎯 Checkbox para seleccionar si se agrega o no
