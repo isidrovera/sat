@@ -1,97 +1,324 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+
+# ============================================================================
+# SAT (Servicio Técnico)
+# ============================================================================
 access_sat_sat_user,sat.sat_user_access,model_sat_sat,base.group_user,1,1,1,0
-access_reparaciones_reparaciones_user,reparaciones.reparaciones_user_access,model_reparaciones_reparaciones,base.group_user,1,1,0,0
-access_reparaciones_tecnicos,sat.reparaciones_tecnicos_access,model_reparaciones_reparaciones,sat.sat_tecnica_group_user,1,1,0,0
-access_linea_pedidos_user,ticket.alquiler.line_user_access,model_ticket_alquiler_line,base.group_user,1,1,1,0
-access_linea_pedidos_system,ticket.alquiler.line_system_access,model_ticket_alquiler_line,base.group_system,1,1,1,1
-access_sat_dashboard_system,sat.dashboard_system_access,model_sat_dashboard,base.group_system,1,1,1,1
-access_reparacion_autenticacion_wizard,reparacion.autenticacion_wizard_access,model_reparacion_autenticacion_wizard,base.group_user,1,1,1,0
-access_linea_pedidos_tecnico,ticket.alquiler.line_tecnico_access,model_ticket_alquiler_line,sat.sat_tecnica_group_user,1,1,1,0
-access_tipo_maquina_user,tipo.maquina_user_access,model_tipo_maquina,base.group_user,1,1,0,0
-access_tipo_maquina_tecnico,tipo.maquina_tecnico_access,model_tipo_maquina,sat.sat_tecnica_group_user,1,1,0,0
-access_ajustes_user,ajustes.user_access,model_ajustes_ajustes,base.group_user,1,1,0,0
-access_modelo_maquina_user,modelo.maquina_user_access,model_modelo_maquina,base.group_user,1,1,0,0
-access_marca_user,marca.user_access,model_marca_marca,base.group_user,1,1,0,0
-access_repuestos_alquiler_user,repuestos.alquiler_user_access,model_repuestos_alquiler,base.group_user,1,1,0,0
-access_fallas_user,fallas.user_access,model_fallas,base.group_user,1,1,1,0
-access_informes_user,informes.user_access,model_informes,base.group_user,1,1,0,0
-access_alquiler_user,alquiler.user_access,model_alquiler,base.group_user,1,1,1,0
-access_ticket_alquiler_user,ticket.alquiler_user_access,model_ticket_alquiler,base.group_user,1,1,1,0
-access_ticket_alquiler_tecnico,ticket.alquiler_tecnico_access,model_ticket_alquiler,sat.sat_tecnica_group_user,1,1,0,0
 access_sat_user_system,sat.user_system_access,model_sat_sat,base.group_system,1,1,1,1
 access_sat_tecnicos,sat.tecnicos_access,model_sat_sat,sat.sat_tecnica_group_user,1,1,0,0
-access_excel_import_manager,excel.import_manager_access,model_excel_import_model,base.group_system,1,1,1,1
-access_taller_incidencia_system,taller.incidencia_system_access,model_taller_incidencia,base.group_system,1,1,1,1
-access_reparaciones_system,reparaciones.system_access,model_reparaciones_reparaciones,base.group_system,1,1,1,1
-access_tipo_maquina_system,tipo.maquina_system_access,model_tipo_maquina,base.group_system,1,1,1,1
-access_ajustes_system,ajustes.system_access,model_ajustes_ajustes,base.group_system,1,1,1,1
-access_modelo_maquina_system,modelo.maquina_system_access,model_modelo_maquina,base.group_system,1,1,1,1
-access_modelo_maquina_tecnico,modelo.maquina_tecnico_access,model_modelo_maquina,sat.sat_tecnica_group_user,1,1,1,0
-access_marca_system,marca.system_access,model_marca_marca,base.group_system,1,1,1,1
-access_marca_tecnico,marca.tecnico_access,model_marca_marca,sat.sat_tecnica_group_user,1,1,1,0
-access_repuestos_alquiler_system,repuestos.alquiler_system_access,model_repuestos_alquiler,base.group_system,1,1,1,1
-access_fallas_system,fallas.system_access,model_fallas,base.group_system,1,1,1,1
-access_informes_system,informes.system_access,model_informes,base.group_system,1,1,1,1
-access_alquiler_system,alquiler.system_access,model_alquiler,base.group_system,1,1,1,1
-access_ticket_alquiler_system,ticket.alquiler_system_access,model_ticket_alquiler,base.group_system,1,1,1,1
-access_evaluacion_personal_system,evaluacion.personal_system_access,model_evaluacion_personal,base.group_system,1,1,1,1
-access_evaluacion_personal_jefes,evaluacion.personal_jefes_access,model_evaluacion_personal,sat_jefes_group_user,1,1,0,0
 access_sat_ventas,sat.ventas_access,model_sat_sat,sat.Sat_ventas_group_user,1,1,0,0
+access_sat_sat_portal,sat_sat.portal_access,model_sat_sat,base.group_portal,1,0,0,0
+
+# ============================================================================
+# SAT Dashboard
+# ============================================================================
+access_sat_dashboard_system,sat.dashboard_system_access,model_sat_dashboard,base.group_system,1,1,1,1
+access_sat_dashboard_portal,sat_dashboard.portal_access,model_sat_dashboard,base.group_portal,1,0,0,0
+
+# ============================================================================
+# Reparaciones
+# ============================================================================
+access_reparaciones_reparaciones_user,reparaciones.reparaciones_user_access,model_reparaciones_reparaciones,base.group_user,1,1,0,0
+access_reparaciones_tecnicos,sat.reparaciones_tecnicos_access,model_reparaciones_reparaciones,sat.sat_tecnica_group_user,1,1,0,0
+access_reparaciones_system,reparaciones.system_access,model_reparaciones_reparaciones,base.group_system,1,1,1,1
 access_reparaciones_ventas,reparaciones.ventas_access,model_reparaciones_reparaciones,sat.Sat_ventas_group_user,1,1,0,0
-access_tipo_maquina_ventas,tipo.maquina_ventas_access,model_tipo_maquina,sat.Sat_ventas_group_user,1,1,0,0
-access_ajustes_ventas,ajustes.ventas_access,model_ajustes_ajustes,sat.Sat_ventas_group_user,1,1,0,0
-access_modelo_maquina_ventas,modelo.maquina_ventas_access,model_modelo_maquina,sat.Sat_ventas_group_user,1,1,0,0
-access_marca_ventas,marca.ventas_access,model_marca_marca,sat.Sat_ventas_group_user,1,1,0,0
-access_repuestos_alquiler_ventas,repuestos.alquiler_ventas_access,model_repuestos_alquiler,sat.Sat_ventas_group_user,1,1,0,0
-access_fallas_ventas,fallas.ventas_access,model_fallas,sat.Sat_ventas_group_user,1,1,0,0
-access_informes_ventas,informes.ventas_access,model_informes,sat.Sat_ventas_group_user,1,1,0,0
-access_ticket_alquiler_ventas,ticket.alquiler_ventas_access,model_ticket_alquiler,sat.Sat_ventas_group_user,1,1,0,0
+access_reparaciones_reparaciones_portal,reparaciones_reparaciones.portal_access,model_reparaciones_reparaciones,base.group_portal,1,0,0,0
+
+# ============================================================================
+# Reparaciones - Fotos
+# ============================================================================
 access_reparaciones_foto_user,reparaciones.foto_user_access,model_reparaciones_foto,base.group_user,1,1,1,1
 access_reparaciones_foto_system,reparaciones.foto_system_access,model_reparaciones_foto,base.group_system,1,1,1,1
 access_reparaciones_foto_tecnico,reparaciones.foto_tecnico_access,model_reparaciones_foto,sat.sat_tecnica_group_user,1,1,1,1
-access_sale_order_tecnico,sale.order_tecnico_access,model_sale_order,sat.sat_tecnica_group_user,1,1,1,0
-access_sale_order_line_tecnico,sale.order.line_tecnico_access,model_sale_order_line,sat.sat_tecnica_group_user,1,1,1,0
+access_reparaciones_foto_portal,reparaciones_foto.portal_access,model_reparaciones_foto,base.group_portal,1,0,0,0
+
+# ============================================================================
+# Reparaciones - Wizard Autenticación
+# ============================================================================
+access_reparacion_autenticacion_wizard,reparacion.autenticacion_wizard_access,model_reparacion_autenticacion_wizard,base.group_user,1,1,1,0
+access_reparacion_autenticacion_wizard_portal,reparacion_autenticacion_wizard.portal_access,model_reparacion_autenticacion_wizard,base.group_portal,1,0,0,0
+
+# ============================================================================
+# Reparaciones - Subpartes e Intervenciones
+# ============================================================================
+access_reparacion_subparte_user,access.reparacion.subparte.user,model_reparacion_subparte,base.group_user,1,1,1,1
+access_reparacion_intervencion_user,access.reparacion.intervencion.user,model_reparacion_intervencion,base.group_user,1,1,1,1
+access_reparacion_intervencion_detalle_user,access.reparacion.intervencion.detalle.user,model_reparacion_intervencion_detalle,base.group_user,1,1,1,1
+access_reparacion_add_subparts_wizard_user,access.reparacion.add.subparts.wizard.user,model_reparacion_add_subparts_wizard,base.group_user,1,1,1,1
+access_reparacion_add_subparts_wizard_line_user,access.reparacion.add.subparts.wizard.line.user,model_reparacion_add_subparts_wizard_line,base.group_user,1,1,1,1
+
+# ============================================================================
+# Reparaciones - Evaluaciones de Componentes
+# ============================================================================
+access_reparacion_comp_eval_user,reparacion.componente.evaluacion user,model_reparacion_componente_evaluacion,base.group_user,1,1,1,0
+access_reparacion_comp_eval_admin,reparacion.componente.evaluacion admin,model_reparacion_componente_evaluacion,base.group_system,1,1,1,1
+access_reparacion_componente_evaluacion_system,reparacion.componente.evaluacion.system,model_reparacion_componente_evaluacion,base.group_system,1,1,1,1
+
+# ============================================================================
+# Reparaciones - Evaluaciones de Accesorios
+# ============================================================================
+access_reparacion_acc_eval_user,Reparación Acc Evaluación (user),model_reparacion_accesorio_evaluacion,base.group_user,1,1,1,0
+access_reparacion_acc_eval_system,Reparación Acc Evaluación (system),model_reparacion_accesorio_evaluacion,base.group_system,1,1,1,1
+
+# ============================================================================
+# Tipo de Máquina
+# ============================================================================
+access_tipo_maquina_user,tipo.maquina_user_access,model_tipo_maquina,base.group_user,1,1,0,0
+access_tipo_maquina_tecnico,tipo.maquina_tecnico_access,model_tipo_maquina,sat.sat_tecnica_group_user,1,1,0,0
+access_tipo_maquina_system,tipo.maquina_system_access,model_tipo_maquina,base.group_system,1,1,1,1
+access_tipo_maquina_ventas,tipo.maquina_ventas_access,model_tipo_maquina,sat.Sat_ventas_group_user,1,1,0,0
+access_tipo_maquina_portal,tipo_maquina.portal_access,model_tipo_maquina,base.group_portal,1,0,0,0
+
+# ============================================================================
+# Modelo de Máquina
+# ============================================================================
+access_modelo_maquina_user,modelo.maquina_user_access,model_modelo_maquina,base.group_user,1,1,0,0
+access_modelo_maquina_system,modelo.maquina_system_access,model_modelo_maquina,base.group_system,1,1,1,1
+access_modelo_maquina_tecnico,modelo.maquina_tecnico_access,model_modelo_maquina,sat.sat_tecnica_group_user,1,1,1,0
+access_modelo_maquina_ventas,modelo.maquina_ventas_access,model_modelo_maquina,sat.Sat_ventas_group_user,1,1,0,0
+access_modelo_maquina_portal,modelo_maquina.portal_access,model_modelo_maquina,base.group_portal,1,0,0,0
+
+# ============================================================================
+# Marca
+# ============================================================================
+access_marca_user,marca.user_access,model_marca_marca,base.group_user,1,1,0,0
+access_marca_system,marca.system_access,model_marca_marca,base.group_system,1,1,1,1
+access_marca_tecnico,marca.tecnico_access,model_marca_marca,sat.sat_tecnica_group_user,1,1,1,0
+access_marca_ventas,marca.ventas_access,model_marca_marca,sat.Sat_ventas_group_user,1,1,0,0
+access_marca_marca_portal,marca_marca.portal_access,model_marca_marca,base.group_portal,1,1,1,0
+
+# ============================================================================
+# Ajustes
+# ============================================================================
+access_ajustes_user,ajustes.user_access,model_ajustes_ajustes,base.group_user,1,1,0,0
+access_ajustes_system,ajustes.system_access,model_ajustes_ajustes,base.group_system,1,1,1,1
+access_ajustes_ventas,ajustes.ventas_access,model_ajustes_ajustes,sat.Sat_ventas_group_user,1,1,0,0
+access_ajustes_ajustes_portal,ajustes_ajustes.portal_access,model_ajustes_ajustes,base.group_portal,1,0,0,0
+
+# ============================================================================
+# Fallas
+# ============================================================================
+access_fallas_user,fallas.user_access,model_fallas,base.group_user,1,1,1,0
+access_fallas_system,fallas.system_access,model_fallas,base.group_system,1,1,1,1
+access_fallas_ventas,fallas.ventas_access,model_fallas,sat.Sat_ventas_group_user,1,1,0,0
+access_fallas_portal,fallas.portal_access,model_fallas,base.group_portal,1,0,0,0
+
+# ============================================================================
+# Informes
+# ============================================================================
+access_informes_user,informes.user_access,model_informes,base.group_user,1,1,0,0
+access_informes_system,informes.system_access,model_informes,base.group_system,1,1,1,1
+access_informes_ventas,informes.ventas_access,model_informes,sat.Sat_ventas_group_user,1,1,0,0
+access_informes_portal,informes.portal_access,model_informes,base.group_portal,1,0,0,0
+
+# ============================================================================
+# Informe - Reglas
+# ============================================================================
+access_informe_regla_user,informe.regla user,model_informe_regla,base.group_user,1,1,0,0
+access_informe_regla_tecnico,informe.regla tecnico,model_informe_regla,sat.sat_tecnica_group_user,1,1,0,0
+access_informe_regla_ventas,informe.regla ventas,model_informe_regla,sat.Sat_ventas_group_user,1,1,0,0
+access_informe_regla_system,informe.regla system,model_informe_regla,base.group_system,1,1,1,1
+access_informe_regla_portal,informe.regla portal,model_informe_regla,base.group_portal,1,0,0,0
+
+# ============================================================================
+# Alquiler
+# ============================================================================
+access_alquiler_user,alquiler.user_access,model_alquiler,base.group_user,1,1,1,0
+access_alquiler_system,alquiler.system_access,model_alquiler,base.group_system,1,1,1,1
+access_alquiler_portal,alquiler.portal_access,model_alquiler,base.group_portal,1,0,0,0
+
+# ============================================================================
+# Ticket Alquiler
+# ============================================================================
+access_ticket_alquiler_user,ticket.alquiler_user_access,model_ticket_alquiler,base.group_user,1,1,1,0
+access_ticket_alquiler_tecnico,ticket.alquiler_tecnico_access,model_ticket_alquiler,sat.sat_tecnica_group_user,1,1,0,0
+access_ticket_alquiler_system,ticket.alquiler_system_access,model_ticket_alquiler,base.group_system,1,1,1,1
+access_ticket_alquiler_ventas,ticket.alquiler_ventas_access,model_ticket_alquiler,sat.Sat_ventas_group_user,1,1,0,0
+access_ticket_alquiler_portal,ticket_alquiler.portal_access,model_ticket_alquiler,base.group_portal,1,0,0,0
+
+# ============================================================================
+# Ticket Alquiler - Líneas
+# ============================================================================
+access_linea_pedidos_user,ticket.alquiler.line_user_access,model_ticket_alquiler_line,base.group_user,1,1,1,0
+access_linea_pedidos_system,ticket.alquiler.line_system_access,model_ticket_alquiler_line,base.group_system,1,1,1,1
+access_linea_pedidos_tecnico,ticket.alquiler.line_tecnico_access,model_ticket_alquiler_line,sat.sat_tecnica_group_user,1,1,1,0
+access_linea_pedidos_portal,ticket_alquiler_line.portal_access,model_ticket_alquiler_line,base.group_portal,1,0,0,0
+
+# ============================================================================
+# Repuestos Alquiler
+# ============================================================================
+access_repuestos_alquiler_user,repuestos.alquiler_user_access,model_repuestos_alquiler,base.group_user,1,1,0,0
+access_repuestos_alquiler_system,repuestos.alquiler_system_access,model_repuestos_alquiler,base.group_system,1,1,1,1
+access_repuestos_alquiler_ventas,repuestos.alquiler_ventas_access,model_repuestos_alquiler,sat.Sat_ventas_group_user,1,1,0,0
+access_repuestos_alquiler_portal,repuestos_alquiler.portal_access,model_repuestos_alquiler,base.group_portal,1,0,0,0
+
+# ============================================================================
+# Evaluación Personal
+# ============================================================================
+access_evaluacion_personal_system,evaluacion.personal_system_access,model_evaluacion_personal,base.group_system,1,1,1,1
+access_evaluacion_personal_jefes,evaluacion.personal_jefes_access,model_evaluacion_personal,sat_jefes_group_user,1,1,0,0
 access_evaluacion_personal_tecnico,evaluacion.personal_tecnico_access,model_evaluacion_personal,sat.sat_tecnica_group_user,1,1,1,0
+access_evaluacion_personal_portal,evaluacion_personal.portal_access,model_evaluacion_personal,base.group_portal,1,0,0,0
+
+# ============================================================================
+# Taller - Incidencia
+# ============================================================================
+access_taller_incidencia_system,taller.incidencia_system_access,model_taller_incidencia,base.group_system,1,1,1,1
+access_taller_incidencia_portal,taller_incidencia.portal_access,model_taller_incidencia,base.group_portal,1,0,0,0
+
+# ============================================================================
+# Componentes - Tipos
+# ============================================================================
+access_componente_tipo_user,componente.tipo user,model_componente_tipo,base.group_user,1,1,0,0
+access_componente_tipo_tecnico,componente.tipo tecnico,model_componente_tipo,sat.sat_tecnica_group_user,1,1,0,0
+access_componente_tipo_ventas,componente.tipo ventas,model_componente_tipo,sat.Sat_ventas_group_user,1,1,0,0
+access_componente_tipo_system,componente.tipo system,model_componente_tipo,base.group_system,1,1,1,1
+access_componente_tipo_portal,componente.tipo portal,model_componente_tipo,base.group_portal,1,0,0,0
+
+# ============================================================================
+# Componentes - Estados
+# ============================================================================
+access_componente_estado_user,componente.estado user,model_componente_estado,base.group_user,1,0,0,0
+access_componente_estado_manager,componente.estado manager,model_componente_estado,base.group_system,1,1,1,1
+
+# ============================================================================
+# Componentes - Subpartes
+# ============================================================================
+access_componente_subparte_user,componente.subparte user,model_componente_subparte,base.group_user,1,1,0,0
+access_componente_subparte_tecnico,componente.subparte tecnico,model_componente_subparte,sat.sat_tecnica_group_user,1,1,0,0
+access_componente_subparte_ventas,componente.subparte ventas,model_componente_subparte,sat.Sat_ventas_group_user,1,1,0,0
+access_componente_subparte_system,componente.subparte system,model_componente_subparte,base.group_system,1,1,1,1
+access_componente_subparte_portal,componente.subparte portal,model_componente_subparte,base.group_portal,1,0,0,0
+
+# ============================================================================
+# Modelo Máquina - Componentes
+# ============================================================================
+access_modelo_maquina_componente_user,modelo.maquina.componente user,model_modelo_maquina_componente,base.group_user,1,1,0,0
+access_modelo_maquina_componente_tecnico,modelo.maquina.componente tecnico,model_modelo_maquina_componente,sat.sat_tecnica_group_user,1,1,1,0
+access_modelo_maquina_componente_ventas,modelo.maquina.componente ventas,model_modelo_maquina_componente,sat.Sat_ventas_group_user,1,1,0,0
+access_modelo_maquina_componente_system,modelo.maquina.componente system,model_modelo_maquina_componente,base.group_system,1,1,1,1
+access_modelo_maquina_componente_portal,modelo.maquina.componente portal,model_modelo_maquina_componente,base.group_portal,1,0,0,0
+sat_access_modelo_maquina_componente_user,ModeloMaquinaComponente (Usuario),model_modelo_maquina_componente,base.group_user,1,1,1,1
+sat_access_modelo_maquina_componente_admin,ModeloMaquinaComponente (System),model_modelo_maquina_componente,base.group_system,1,1,1,1
+
+# ============================================================================
+# Modelo Máquina - Componente Subparte
+# ============================================================================
+sat_access_modelo_maquina_componente_subparte_admin,ModeloMaquinaComponenteSubparte (System),model_modelo_maquina_componente_subparte,base.group_system,1,1,1,1
+sat_access_modelo_maquina_componente_subparte_user,ModeloMaquinaComponenteSubparte (User),model_modelo_maquina_componente_subparte,base.group_user,1,1,1,1
+
+# ============================================================================
+# Checklist - Componente Map
+# ============================================================================
+access_checklist_map_user,checklist.map user,model_checklist_componente_map,base.group_user,1,1,0,0
+access_checklist_map_tecnico,checklist.map tecnico,model_checklist_componente_map,sat.sat_tecnica_group_user,1,1,0,0
+access_checklist_map_ventas,checklist.map ventas,model_checklist_componente_map,sat.Sat_ventas_group_user,1,1,0,0
+access_checklist_map_system,checklist.map system,model_checklist_componente_map,base.group_system,1,1,1,1
+access_checklist_map_portal,checklist.map portal,model_checklist_componente_map,base.group_portal,1,0,0,0
+
+# ============================================================================
+# Accesorios - Tipos
+# ============================================================================
+access_accesorio_tipo_user,accesorio.tipo user,model_accesorio_tipo,base.group_user,1,0,0,0
+access_accesorio_tipo_manager,accesorio.tipo manager,model_accesorio_tipo,base.group_system,1,1,1,1
+
+# ============================================================================
+# Accesorios - Estados
+# ============================================================================
+access_accesorio_estado_user,accesorio.estado user,model_accesorio_estado,base.group_user,1,0,0,0
+access_accesorio_estado_manager,accesorio.estado manager,model_accesorio_estado,base.group_system,1,1,1,1
+
+# ============================================================================
+# Accesorios - Subpartes
+# ============================================================================
+access_accesorio_subparte_user,accesorio.subparte_user_access,model_accesorio_subparte,base.group_user,1,1,1,0
+access_accesorio_subparte_system,accesorio.subparte_system_access,model_accesorio_subparte,base.group_system,1,1,1,1
+
+# ============================================================================
+# Modelo Máquina - Accesorios
+# ============================================================================
+access_modelo_maquina_accesorio_user,modelo.maquina.accesorio user,model_modelo_maquina_accesorio,base.group_user,1,0,0,0
+access_modelo_maquina_accesorio_manager,modelo.maquina.accesorio manager,model_modelo_maquina_accesorio,base.group_system,1,1,1,1
+access_modelo_maquina_accesorio_system,modelo_maquina_accesorio_system.system,model_modelo_maquina_accesorio,base.group_system,1,1,1,1
+access_modelo_maquina_accesorio_tecnico,modelo.maquina.accesorio tecnico,model_modelo_maquina_accesorio,sat.sat_tecnica_group_user,1,1,1,0
+access_modelo_maquina_accesorio_ventas,modelo.maquina.accesorio ventas,model_modelo_maquina_accesorio,sat.Sat_ventas_group_user,1,1,0,0
+
+# ============================================================================
+# Color Tipo
+# ============================================================================
+access_color_tipo_user,color.tipo user,model_color_tipo,base.group_user,1,1,1,0
+
+# ============================================================================
+# Excel Import
+# ============================================================================
+access_excel_import_manager,excel.import_manager_access,model_excel_import_model,base.group_system,1,1,1,1
+access_excel_import_model_portal,excel_import_model.portal_access,model_excel_import_model,base.group_portal,1,0,0,0
 access_universal_excel_import_user,universal.excel.import.user,model_universal_excel_import,base.group_user,1,1,1,1
+access_universal_excel_import_portal,universal_excel_import.portal_access,model_universal_excel_import,base.group_portal,1,0,0,0
+
+# ============================================================================
+# Evaluación de Servicio al Cliente
+# ============================================================================
 access_client_service_evaluation_user,client.service.evaluation.user,model_client_service_evaluation,base.group_user,1,1,1,0
 access_client_service_evaluation_manager,client.service.evaluation.manager,model_client_service_evaluation,base.group_system,1,1,1,1
+access_client_service_evaluation_portal,client_service_evaluation.portal_access,model_client_service_evaluation,base.group_portal,1,0,0,0
+
+# ============================================================================
+# Inspección - Resultado
+# ============================================================================
 access_inspeccion_resultado_user,inspeccion.resultado.user,model_inspeccion_resultado,base.group_system,1,1,1,1
+access_inspeccion_resultado_portal,inspeccion_resultado.portal_access,model_inspeccion_resultado,base.group_portal,1,0,0,0
+
+# ============================================================================
+# Wizard - Enviar Inspección
+# ============================================================================
 access_wizard_enviar_inspeccion_user,wizard.enviar.inspeccion.user,model_wizard_enviar_inspeccion,base.group_system,1,1,1,1
+access_wizard_enviar_inspeccion_portal,wizard_enviar_inspeccion.portal_access,model_wizard_enviar_inspeccion,base.group_portal,1,0,0,0
+
+# ============================================================================
+# Wizard - Asignar Componentes
+# ============================================================================
+access_wizard_asignar_componentes_user,wizard.asignar.componentes.user,model_wizard_asignar_componentes,base.group_user,1,1,1,1
+access_wizard_asignar_componentes_linea_user,wizard.asignar.componentes.linea.user,model_wizard_asignar_componentes_linea,base.group_user,1,1,1,1
+
+# ============================================================================
+# Solicitud de Partes
+# ============================================================================
 access_parts_request_user,Solicitud de Partes Usuario,model_copier_parts_request,base.group_user,1,1,1,1
 access_parts_request_wizard_user,Wizard Solicitud Partes Usuario,model_copier_parts_request_wizard,base.group_user,1,1,1,1
 access_solicitud_partes_user,solicitud.partes.user,model_solicitud_partes,base.group_user,1,1,1,1
 access_solicitud_partes_linea_user,solicitud.partes.linea.user,model_solicitud_partes_linea,base.group_user,1,1,1,1
-access_equipment_visit_report_user,equipment.visit.report user,model_equipment_visit_report,base.group_user,1,1,1,0
-access_equipment_visit_report_admin,equipment.visit.report admin,model_equipment_visit_report,base.group_system,1,1,1,1
-access_sat_sat_portal,sat_sat.portal_access,model_sat_sat,base.group_portal,1,0,0,0
-access_reparaciones_reparaciones_portal,reparaciones_reparaciones.portal_access,model_reparaciones_reparaciones,base.group_portal,1,0,0,0
-access_ticket_alquiler_line_portal,ticket_alquiler_line.portal_access,model_ticket_alquiler_line,base.group_portal,1,0,0,0
-access_sat_dashboard_portal,sat_dashboard.portal_access,model_sat_dashboard,base.group_portal,1,0,0,0
-access_reparacion_autenticacion_wizard_portal,reparacion_autenticacion_wizard.portal_access,model_reparacion_autenticacion_wizard,base.group_portal,1,0,0,0
-access_tipo_maquina_portal,tipo_maquina.portal_access,model_tipo_maquina,base.group_portal,1,0,0,0
-access_ajustes_ajustes_portal,ajustes_ajustes.portal_access,model_ajustes_ajustes,base.group_portal,1,0,0,0
-access_modelo_maquina_portal,modelo_maquina.portal_access,model_modelo_maquina,base.group_portal,1,0,0,0
-access_marca_marca_portal,marca_marca.portal_access,model_marca_marca,base.group_portal,1,1,1,0
-access_repuestos_alquiler_portal,repuestos_alquiler.portal_access,model_repuestos_alquiler,base.group_portal,1,0,0,0
-access_fallas_portal,fallas.portal_access,model_fallas,base.group_portal,1,0,0,0
-access_informes_portal,informes.portal_access,model_informes,base.group_portal,1,0,0,0
-access_alquiler_portal,alquiler.portal_access,model_alquiler,base.group_portal,1,0,0,0
-access_ticket_alquiler_portal,ticket_alquiler.portal_access,model_ticket_alquiler,base.group_portal,1,0,0,0
-access_excel_import_model_portal,excel_import_model.portal_access,model_excel_import_model,base.group_portal,1,0,0,0
-access_taller_incidencia_portal,taller_incidencia.portal_access,model_taller_incidencia,base.group_portal,1,0,0,0
-access_evaluacion_personal_portal,evaluacion_personal.portal_access,model_evaluacion_personal,base.group_portal,1,0,0,0
-access_reparaciones_foto_portal,reparaciones_foto.portal_access,model_reparaciones_foto,base.group_portal,1,0,0,0
-access_sale_order_portal,sale_order.portal_access,model_sale_order,base.group_portal,1,0,0,0
-access_sale_order_line_portal,sale_order_line.portal_access,model_sale_order_line,base.group_portal,1,0,0,0
-access_universal_excel_import_portal,universal_excel_import.portal_access,model_universal_excel_import,base.group_portal,1,0,0,0
-access_client_service_evaluation_portal,client_service_evaluation.portal_access,model_client_service_evaluation,base.group_portal,1,0,0,0
-access_inspeccion_resultado_portal,inspeccion_resultado.portal_access,model_inspeccion_resultado,base.group_portal,1,0,0,0
-access_wizard_enviar_inspeccion_portal,wizard_enviar_inspeccion.portal_access,model_wizard_enviar_inspeccion,base.group_portal,1,0,0,0
 access_copier_parts_request_portal,copier_parts_request.portal_access,model_copier_parts_request,base.group_portal,1,0,0,0
 access_copier_parts_request_wizard_portal,copier_parts_request_wizard.portal_access,model_copier_parts_request_wizard,base.group_portal,1,0,0,0
 access_solicitud_partes_portal,solicitud_partes.portal_access,model_solicitud_partes,base.group_portal,1,0,0,0
 access_solicitud_partes_linea_portal,solicitud_partes_linea.portal_access,model_solicitud_partes_linea,base.group_portal,1,0,0,0
+
+# ============================================================================
+# Solicitud de Partes - Wizards
+# ============================================================================
+access_solicitud_partes_aprobar_wizard,solicitud.partes.aprobar.wizard,model_solicitud_partes_aprobar_wizard,base.group_user,1,1,1,1
+access_solicitud_partes_retiro_wizard,solicitud.partes.retiro.wizard,model_solicitud_partes_retiro_wizard,base.group_user,1,1,1,1
+access_solicitud_partes_reposicion_wizard,solicitud.partes.reposicion.wizard,model_solicitud_partes_reposicion_wizard,base.group_user,1,1,1,1
+access_solicitud_partes_autorizar_retiro_wizard,solicitud.partes.autorizar.retiro.wizard,model_solicitud_partes_autorizar_retiro_wizard,base.group_user,1,1,1,1
+
+# ============================================================================
+# Equipment Visit Report
+# ============================================================================
+access_equipment_visit_report_user,equipment.visit.report user,model_equipment_visit_report,base.group_user,1,1,1,0
+access_equipment_visit_report_admin,equipment.visit.report admin,model_equipment_visit_report,base.group_system,1,1,1,1
 access_equipment_visit_report_portal,equipment_visit_report.portal_access,model_equipment_visit_report,base.group_portal,1,0,0,0
+
+# ============================================================================
+# Sale Order (Integración con Ventas)
+# ============================================================================
+access_sale_order_tecnico,sale.order_tecnico_access,model_sale_order,sat.sat_tecnica_group_user,1,1,1,0
+access_sale_order_line_tecnico,sale.order.line_tecnico_access,model_sale_order_line,sat.sat_tecnica_group_user,1,1,1,0
+access_sale_order_portal,sale_order.portal_access,model_sale_order,base.group_portal,1,0,0,0
+access_sale_order_line_portal,sale_order_line.portal_access,model_sale_order_line,base.group_portal,1,0,0,0
+
+# ============================================================================
+# Toner - Counter Submission
+# ============================================================================
 access_toner_counter_submission_user,toner.counter.submission.user,model_toner_counter_submission,base.group_user,1,1,1,0
 access_toner_counter_submission_system,toner.counter.submission.system,model_toner_counter_submission,base.group_system,1,1,1,1
 access_toner_counter_submission_tecnico,toner.counter.submission.tecnico,model_toner_counter_submission,sat.sat_tecnica_group_user,1,1,1,1
@@ -99,109 +326,130 @@ access_toner_counter_submission_ventas,toner.counter.submission.ventas,model_ton
 access_toner_counter_submission_jefes,toner.counter.submission.jefes,model_toner_counter_submission,sat_jefes_group_user,1,1,1,0
 access_toner_counter_submission_portal,toner.counter.submission.portal,model_toner_counter_submission,base.group_portal,1,0,0,0
 access_toner_counter_submission_public,toner.counter.submission.public,model_toner_counter_submission,base.group_public,1,1,1,0
+
+# ============================================================================
+# Toner - Delivery Schedule
+# ============================================================================
 access_toner_delivery_schedule_user,toner.delivery.schedule.user,model_toner_delivery_schedule,base.group_user,1,1,1,0
 access_toner_delivery_schedule_system,toner.delivery.schedule.system,model_toner_delivery_schedule,base.group_system,1,1,1,1
 access_toner_delivery_schedule_tecnico,toner.delivery.schedule.tecnico,model_toner_delivery_schedule,sat.sat_tecnica_group_user,1,1,1,1
 access_toner_delivery_schedule_ventas,toner.delivery.schedule.ventas,model_toner_delivery_schedule,sat.Sat_ventas_group_user,1,1,0,0
 access_toner_delivery_schedule_jefes,toner.delivery.schedule.jefes,model_toner_delivery_schedule,sat_jefes_group_user,1,1,1,0
 access_toner_delivery_schedule_portal,toner.delivery.schedule.portal,model_toner_delivery_schedule,base.group_portal,1,0,0,0
+
+# ============================================================================
+# Toner - Delivery Confirmation
+# ============================================================================
 access_toner_delivery_confirmation_user,toner.delivery.confirmation.user,model_toner_delivery_confirmation,base.group_user,1,1,1,0
 access_toner_delivery_confirmation_system,toner.delivery.confirmation.system,model_toner_delivery_confirmation,base.group_system,1,1,1,1
 access_toner_delivery_confirmation_tecnico,toner.delivery.confirmation.tecnico,model_toner_delivery_confirmation,sat.sat_tecnica_group_user,1,1,1,1
 access_toner_delivery_confirmation_ventas,toner.delivery.confirmation.ventas,model_toner_delivery_confirmation,sat.Sat_ventas_group_user,1,1,0,0
 access_toner_delivery_confirmation_jefes,toner.delivery.confirmation.jefes,model_toner_delivery_confirmation,sat_jefes_group_user,1,1,1,0
 access_toner_delivery_confirmation_portal,toner.delivery.confirmation.portal,model_toner_delivery_confirmation,base.group_portal,1,0,0,0
+
+# ============================================================================
+# PrintTracker - Contador Automático
+# ============================================================================
 access_contador_automatico_user,contador.automatico.user,model_contador_automatico,base.group_user,1,0,0,0
 access_contador_automatico_admin,contador.automatico.admin,model_contador_automatico,base.group_system,1,1,1,1
+
+# ============================================================================
+# PrintTracker - Patrón Contador
+# ============================================================================
 access_patron_contador_user,patron.contador.user,model_patron_contador,base.group_user,1,0,0,0
 access_patron_contador_admin,patron.contador.admin,model_patron_contador,base.group_system,1,1,1,1
+
+# ============================================================================
+# PrintTracker - Config
+# ============================================================================
 access_printtracker_config_user,printtracker.config.user,model_printtracker_config,base.group_user,1,0,0,0
 access_printtracker_config_admin,printtracker.config.admin,model_printtracker_config,base.group_system,1,1,1,1
+
+# ============================================================================
+# PrintTracker - Entity
+# ============================================================================
 access_printtracker_entity_user,printtracker.entity.user,model_printtracker_entity,base.group_user,1,0,0,0
 access_printtracker_entity_admin,printtracker.entity.admin,model_printtracker_entity,base.group_system,1,1,1,1
+
+# ============================================================================
+# PrintTracker - Entity Address
+# ============================================================================
 access_printtracker_entity_address_user,printtracker.entity.address.user,model_printtracker_entity_address,base.group_user,1,0,0,0
 access_printtracker_entity_address_admin,printtracker.entity.address.admin,model_printtracker_entity_address,base.group_system,1,1,1,1
+
+# ============================================================================
+# PrintTracker - Entity Label
+# ============================================================================
 access_printtracker_entity_label_user,printtracker.entity.label.user,model_printtracker_entity_label,base.group_user,1,0,0,0
 access_printtracker_entity_label_admin,printtracker.entity.label.admin,model_printtracker_entity_label,base.group_system,1,1,1,1
+
+# ============================================================================
+# PrintTracker - Meter
+# ============================================================================
 access_printtracker_meter_user,printtracker.meter.user,model_printtracker_meter,base.group_user,1,0,0,0
 access_printtracker_meter_admin,printtracker.meter.admin,model_printtracker_meter,base.group_system,1,1,1,1
+
+# ============================================================================
+# PrintTracker - Supply
+# ============================================================================
 access_printtracker_supply_user,printtracker.supply.user,model_printtracker_supply,base.group_user,1,0,0,0
 access_printtracker_supply_admin,printtracker.supply.admin,model_printtracker_supply,base.group_system,1,1,1,1
+
+# ============================================================================
+# PrintTracker - Daily Reading
+# ============================================================================
 access_printtracker_daily_reading_user,printtracker.daily.reading user,model_printtracker_daily_reading,base.group_user,1,0,0,0
 access_printtracker_daily_reading_admin,printtracker.daily.reading admin,model_printtracker_daily_reading,base.group_system,1,1,1,1
+
+# ============================================================================
+# PrintTracker - Alert
+# ============================================================================
 access_printtracker_alert_user,printtracker.alert user,model_printtracker_alert,base.group_user,1,1,0,0
 access_printtracker_alert_admin,printtracker.alert admin,model_printtracker_alert,base.group_system,1,1,1,1
+
+# ============================================================================
+# PrintTracker - Processor (Consolidator)
+# ============================================================================
 access_printtracker_consolidator_user,printtracker.processor user,model_printtracker_processor,base.group_user,1,0,0,0
 access_printtracker_consolidator_admin,printtracker.processor admin,model_printtracker_processor,base.group_system,1,1,1,1
+
+# ============================================================================
+# PrintTracker - Alert Manager
+# ============================================================================
 access_printtracker_alert_manager_user,printtracker.alert.manager user,model_printtracker_alert_manager,base.group_user,1,0,0,0
 access_printtracker_alert_manager_admin,printtracker.alert.manager admin,model_printtracker_alert_manager,base.group_system,1,1,1,1
+
+# ============================================================================
+# Reporte Estado Máquina
+# ============================================================================
 access_reporte_estado_maquina_user,reporte.estado.maquina user,model_reporte_estado_maquina,base.group_user,1,0,0,0
 access_reporte_estado_maquina_admin,reporte.estado.maquina admin,model_reporte_estado_maquina,base.group_system,1,1,1,1
+
+# ============================================================================
+# Reporte Estado Máquina - Parte
+# ============================================================================
 access_reporte_estado_maquina_parte_user,reporte.estado.maquina.parte user,model_reporte_estado_maquina_parte,base.group_user,1,0,0,0
 access_reporte_estado_maquina_parte_admin,reporte.estado.maquina.parte admin,model_reporte_estado_maquina_parte,base.group_system,1,1,1,1
+
+# ============================================================================
+# Reporte Estado Máquina - Alquiler
+# ============================================================================
 access_reporte_estado_maquina_alquiler_user,reporte.estado.maquina.alquiler user,model_reporte_estado_maquina_alquiler,base.group_user,1,0,0,0
 access_reporte_estado_maquina_alquiler_admin,reporte.estado.maquina.alquiler admin,model_reporte_estado_maquina_alquiler,base.group_system,1,1,1,1
+
+# ============================================================================
+# Reporte Estado Máquina - Wizard
+# ============================================================================
 access_reporte_estado_maquina_wizard_user,reporte.estado.maquina.wizard user,model_reporte_estado_maquina_wizard,base.group_user,1,1,1,1
 access_reporte_estado_maquina_wizard_admin,reporte.estado.maquina.wizard admin,model_reporte_estado_maquina_wizard,base.group_system,1,1,1,1
+
+# ============================================================================
+# WhatsApp Notification Wizard
+# ============================================================================
 access_whatsapp_notification_wizard_line_user,access_whatsapp_notification_wizard_line_user,model_whatsapp_notification_wizard_line,base.group_user,1,1,1,0
 access_whatsapp_notification_wizard_line_system,access_whatsapp_notification_wizard_line_system,model_whatsapp_notification_wizard_line,base.group_system,1,1,1,1
-access_componente_tipo_user,componente.tipo user,model_componente_tipo,base.group_user,1,1,0,0
-access_componente_tipo_tecnico,componente.tipo tecnico,model_componente_tipo,sat.sat_tecnica_group_user,1,1,0,0
-access_componente_tipo_ventas,componente.tipo ventas,model_componente_tipo,sat.Sat_ventas_group_user,1,1,0,0
-access_componente_tipo_system,componente.tipo system,model_componente_tipo,base.group_system,1,1,1,1
-access_componente_tipo_portal,componente.tipo portal,model_componente_tipo,base.group_portal,1,0,0,0
-access_componente_subparte_user,componente.subparte user,model_componente_subparte,base.group_user,1,1,0,0
-access_componente_subparte_tecnico,componente.subparte tecnico,model_componente_subparte,sat.sat_tecnica_group_user,1,1,0,0
-access_componente_subparte_ventas,componente.subparte ventas,model_componente_subparte,sat.Sat_ventas_group_user,1,1,0,0
-access_componente_subparte_system,componente.subparte system,model_componente_subparte,base.group_system,1,1,1,1
-access_componente_subparte_portal,componente.subparte portal,model_componente_subparte,base.group_portal,1,0,0,0
-access_modelo_maquina_componente_user,modelo.maquina.componente user,model_modelo_maquina_componente,base.group_user,1,1,0,0
-access_modelo_maquina_componente_tecnico,modelo.maquina.componente tecnico,model_modelo_maquina_componente,sat.sat_tecnica_group_user,1,1,1,0
-access_modelo_maquina_componente_ventas,modelo.maquina.componente ventas,model_modelo_maquina_componente,sat.Sat_ventas_group_user,1,1,0,0
-access_modelo_maquina_componente_system,modelo.maquina.componente system,model_modelo_maquina_componente,base.group_system,1,1,1,1
-access_modelo_maquina_componente_portal,modelo.maquina.componente portal,model_modelo_maquina_componente,base.group_portal,1,0,0,0
-access_informe_regla_user,informe.regla user,model_informe_regla,base.group_user,1,1,0,0
-access_informe_regla_tecnico,informe.regla tecnico,model_informe_regla,sat.sat_tecnica_group_user,1,1,0,0
-access_informe_regla_ventas,informe.regla ventas,model_informe_regla,sat.Sat_ventas_group_user,1,1,0,0
-access_informe_regla_system,informe.regla system,model_informe_regla,base.group_system,1,1,1,1
-access_informe_regla_portal,informe.regla portal,model_informe_regla,base.group_portal,1,0,0,0
-access_checklist_map_user,checklist.map user,model_checklist_componente_map,base.group_user,1,1,0,0
-access_checklist_map_tecnico,checklist.map tecnico,model_checklist_componente_map,sat.sat_tecnica_group_user,1,1,0,0
-access_checklist_map_ventas,checklist.map ventas,model_checklist_componente_map,sat.Sat_ventas_group_user,1,1,0,0
-access_checklist_map_system,checklist.map system,model_checklist_componente_map,base.group_system,1,1,1,1
-access_checklist_map_portal,checklist.map portal,model_checklist_componente_map,base.group_portal,1,0,0,0
-access_reparacion_subparte_user,access.reparacion.subparte.user,model_reparacion_subparte,base.group_user,1,1,1,1
-access_reparacion_intervencion_user,access.reparacion.intervencion.user,model_reparacion_intervencion,base.group_user,1,1,1,1
-access_reparacion_intervencion_detalle_user,access.reparacion.intervencion.detalle.user,model_reparacion_intervencion_detalle,base.group_user,1,1,1,1
-access_reparacion_add_subparts_wizard_user,access.reparacion.add.subparts.wizard.user,model_reparacion_add_subparts_wizard,base.group_user,1,1,1,1
-access_reparacion_add_subparts_wizard_line_user,access.reparacion.add.subparts.wizard.line.user,model_reparacion_add_subparts_wizard_line,base.group_user,1,1,1,1
-access_componente_estado_user,componente.estado user,model_componente_estado,base.group_user,1,0,0,0
-access_componente_estado_manager,componente.estado manager,model_componente_estado,base.group_system,1,1,1,1
-access_accesorio_tipo_user,accesorio.tipo user,model_accesorio_tipo,base.group_user,1,0,0,0
-access_accesorio_tipo_manager,accesorio.tipo manager,model_accesorio_tipo,base.group_system,1,1,1,1
-access_accesorio_estado_user,accesorio.estado user,model_accesorio_estado,base.group_user,1,0,0,0
-access_accesorio_estado_manager,accesorio.estado manager,model_accesorio_estado,base.group_system,1,1,1,1
-access_modelo_maquina_accesorio_user,modelo.maquina.accesorio user,model_modelo_maquina_accesorio,base.group_user,1,0,0,0
-access_modelo_maquina_accesorio_manager,modelo.maquina.accesorio manager,model_modelo_maquina_accesorio,base.group_system,1,1,1,1
-sat_access_modelo_maquina_componente_user,ModeloMaquinaComponente (Usuario),model_modelo_maquina_componente,base.group_user,1,1,1,1
-sat_access_modelo_maquina_componente_admin,ModeloMaquinaComponente (System),model_modelo_maquina_componente,base.group_system,1,1,1,1
-sat_access_modelo_maquina_componente_subparte_admin,ModeloMaquinaComponenteSubparte (System),model_modelo_maquina_componente_subparte,base.group_system,1,1,1,1
-sat_access_modelo_maquina_componente_subparte_user,ModeloMaquinaComponenteSubparte (User),model_modelo_maquina_componente_subparte,base.group_user,1,1,1,1
-access_reparacion_comp_eval_user,reparacion.componente.evaluacion user,model_reparacion_componente_evaluacion,base.group_user,1,1,1,0
-access_color_tipo_user,color.tipo user,model_color_tipo,base.group_user,1,1,1,0
-access_reparacion_comp_eval_admin,reparacion.componente.evaluacion admin,model_reparacion_componente_evaluacion,base.group_system,1,1,1,1
-access_solicitud_partes_aprobar_wizard,solicitud.partes.aprobar.wizard,model_solicitud_partes_aprobar_wizard,base.group_user,1,1,1,1
-access_solicitud_partes_retiro_wizard,solicitud.partes.retiro.wizard,model_solicitud_partes_retiro_wizard,base.group_user,1,1,1,1
-access_solicitud_partes_reposicion_wizard,solicitud.partes.reposicion.wizard,model_solicitud_partes_reposicion_wizard,base.group_user,1,1,1,1
-access_solicitud_partes_autorizar_retiro_wizard,solicitud.partes.autorizar.retiro.wizard,model_solicitud_partes_autorizar_retiro_wizard,base.group_user,1,1,1,1
-access_modelo_maquina_accesorio_system,modelo_maquina_accesorio_system.system,model_modelo_maquina_accesorio,base.group_system,1,1,1,1
-access_reparacion_componente_evaluacion_system,reparacion.componente.evaluacion.system,model_reparacion_componente_evaluacion,base.group_system,1,1,1,1
-access_reparacion_acc_eval_user,Reparación Acc Evaluación (user),model_reparacion_accesorio_evaluacion,base.group_user,1,1,1,0
-access_reparacion_acc_eval_system,Reparación Acc Evaluación (system),model_reparacion_accesorio_evaluacion,base.group_system,1,1,1,1
-access_accesorio_subparte_user,accesorio.subparte_user_access,model_accesorio_subparte,base.group_user,1,1,1,0
-access_accesorio_subparte_system,accesorio.subparte_system_access,model_accesorio_subparte,base.group_system,1,1,1,1
-access_wizard_asignar_componentes_user,wizard.asignar.componentes.user,model_wizard_asignar_componentes,base.group_user,1,1,1,1
-access_wizard_asignar_componentes_linea_user,wizard.asignar.componentes.linea.user,model_wizard_asignar_componentes_linea,base.group_user,1,1,1,1
 
-access_wizard_asignar_componentes_accesorio_user,wizard.asignar.componentes.accesorio.user,model_wizard_asignar_componentes_accesorio,base.group_user,1,1,1,1
+# ============================================================================
+# Gemini - Configuración
+# ============================================================================
 access_gemini_configuracion_user,gemini.configuracion.user,model_gemini_configuracion,base.group_user,1,1,1,1
