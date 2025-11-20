@@ -341,75 +341,262 @@
     </record>
     <!-- Búsqueda -->
     <record id="Sat_search_view" model="ir.ui.view">
-      <field name="name">sat.sat.search</field>
-      <field name="model">sat.sat</field>
-      <field name="arch" type="xml">
-        <search>
-          <!-- Campos de búsqueda -->
-          <field name="tipo_maquina" />
-          <field name="marca" />
-          <field name="name" />
-          <field name="serie_id" />
-          <field name="cliente_id" />
-          <field name="ubicacion_id" />
-          <field name="asesora_id" />
-          <!-- Filtros -->
-          <filter name="filter_disponible"
-            string="Disponibles"
-            domain="[('disponibilidad_id', '=', 'disponible')]" />
-          <filter name="filter_separada"
-            string="Separadas"
-            domain="[('disponibilidad_id', '=', 'separada')]" />
-          <filter name="filter_no_disponible"
-            string="No disponibles"
-            domain="[('disponibilidad_id', '=', 'no_disponible')]" />
-          <separator />
-          <filter name="filter_sin_revisar"
-            string="Sin revisar"
-            domain="[('estado_ventas_id', '=', 'sin_revisar')]" />
-          <filter name="filter_revision"
-            string="En revisión"
-            domain="[('estado_ventas_id', '=', 'en_revision')]" />
-          <filter name="filter_finalizado"
-            string="Finalizado"
-            domain="[('estado_ventas_id', '=', 'finalizado')]" />
-          <filter name="filter_problemas"
-            string="Con problemas"
-            domain="[('estado_ventas_id', '=', 'con_problemas')]" />
-          <filter name="filter_partes"
-            string="De partes"
-            domain="[('estado_ventas_id', '=', 'de_partes')]" />
-          <filter name="filter_entregada"
-            string="Entregada"
-            domain="[('estado_ventas_id', '=', 'entregada')]" />
-          <filter name="filter_stock"
-            string="Stock"
-            domain="[('estado_ventas_id', '!=', 'entregada')]" />
-          <!-- Agrupamiento -->
-          <group expand="0" string="Agrupar Por">
-            <filter name="group_disponibilidad"
-              string="Disponibilidad"
-              context="{'group_by': 'disponibilidad_id'}" />
-            <filter name="group_estado"
-              string="Estado"
-              context="{'group_by': 'estado_ventas_id'}" />
-            <filter name="group_marca"
-              string="Marca"
-              context="{'group_by': 'marca'}" />
-            <filter name="group_ubicacion"
-              string="Ubicación"
-              context="{'group_by': 'ubicacion_id'}" />
-          </group>
-          <!-- <searchpanel>            
-              <field name="estado_ventas_id" string="Estado" icon="fa-hourglass-start" enable_counters="1"
-          colors='{"sin_revisar": "red", "en_revision": "blue", "finalizado": "green", "entregada":
-          "purple"}'/>
-              <field name="disponibilidad_id" string="Disponibilidad" icon="fa-check-circle" enable_counters="1"
-          colors='{"disponible": "green", "separada": "orange", "no_disponible": "red"}'/>                                 
-          </searchpanel>-->
-        </search>
-      </field>
-    </record>
+  <field name="name">sat.sat.search</field>
+  <field name="model">sat.sat</field>
+  <field name="arch" type="xml">
+    <search string="Buscar Máquinas">
+      
+      <!-- ========================================
+           CAMPOS DE BÚSQUEDA
+      ======================================== -->
+      <field name="serie_id" string="Serie"/>
+      <field name="tipo_maquina" string="Tipo de Máquina"/>
+      <field name="marca" string="Marca"/>
+      <field name="name" string="Modelo"/>
+      <field name="cliente_id" string="Cliente"/>
+      <field name="ubicacion_id" string="Ubicación"/>
+      <field name="asesora_id" string="Asesora"/>
+      <field name="importacion" string="Importación"/>
+      <field name="proveedor_id" string="Proveedor"/>
+      <field name="invoice" string="Invoice"/>
+      <field name="contometro" string="Contómetro"/>
+      <field name="trabajadores_id" string="Trabajador"/>
+
+      <!-- ========================================
+           FILTROS POR DISPONIBILIDAD
+      ======================================== -->
+      <separator/>
+      <filter name="filter_disponible"
+              string="Disponibles"
+              domain="[('disponibilidad_id', '=', 'disponible')]"/>
+      <filter name="filter_separada"
+              string="Separadas"
+              domain="[('disponibilidad_id', '=', 'separada')]"/>
+      <filter name="filter_no_disponible"
+              string="No Disponibles"
+              domain="[('disponibilidad_id', '=', 'no_disponible')]"/>
+
+      <!-- ========================================
+           FILTROS POR ESTADO DE VENTAS
+      ======================================== -->
+      <separator/>
+      <filter name="filter_sin_revisar"
+              string="Sin Revisar"
+              domain="[('estado_ventas_id', '=', 'sin_revisar')]"/>
+      <filter name="filter_para_revision"
+              string="Para Revisión"
+              domain="[('estado_ventas_id', '=', 'para_revision')]"/>
+      <filter name="filter_revision"
+              string="En Revisión"
+              domain="[('estado_ventas_id', '=', 'en_revision')]"/>
+      <filter name="filter_finalizado"
+              string="Finalizado"
+              domain="[('estado_ventas_id', '=', 'finalizado')]"/>
+      <filter name="filter_problemas"
+              string="Con Problemas"
+              domain="[('estado_ventas_id', '=', 'con_problemas')]"/>
+      <filter name="filter_partes"
+              string="De Partes"
+              domain="[('estado_ventas_id', '=', 'de_partes')]"/>
+      <filter name="filter_entregada"
+              string="Entregada"
+              domain="[('estado_ventas_id', '=', 'entregada')]"/>
+      <filter name="filter_stock"
+              string="En Stock (No Entregadas)"
+              domain="[('estado_ventas_id', '!=', 'entregada')]"/>
+
+      <!-- ========================================
+           FILTROS POR UBICACIÓN
+      ======================================== -->
+      <separator/>
+      <filter name="filter_primer_piso"
+              string="Primer Piso"
+              domain="[('ubicacion_id', '=', 'primer_piso')]"/>
+      <filter name="filter_tercer_piso"
+              string="Tercer Piso"
+              domain="[('ubicacion_id', '=', 'tercer_piso')]"/>
+      <filter name="filter_segundo_local"
+              string="Segundo Local"
+              domain="[('ubicacion_id', '=', 'segundo_local')]"/>
+      <filter name="filter_covida"
+              string="Covida"
+              domain="[('ubicacion_id', '=', 'covida')]"/>
+
+      <!-- ========================================
+           FILTROS POR TIPO DE MÁQUINA
+      ======================================== -->
+      <separator/>
+      <filter name="filter_color"
+              string="Color"
+              domain="[('tipo_id', '=', 'color')]"/>
+      <filter name="filter_monocromatica"
+              string="Monocromática"
+              domain="[('tipo_id', '=', 'monocromatica')]"/>
+
+      <!-- ========================================
+           FILTROS POR TIPO DE REVISIÓN
+      ======================================== -->
+      <separator/>
+      <filter name="filter_paso_papel"
+              string="Paso Papel"
+              domain="[('tipo_revision', '=', 'paso_papel')]"/>
+      <filter name="filter_regular"
+              string="Regular"
+              domain="[('tipo_revision', '=', 'regular')]"/>
+      <filter name="filter_cliente_final"
+              string="Cliente Final"
+              domain="[('tipo_revision', '=', 'cliente_final')]"/>
+
+      <!-- ========================================
+           FILTROS POR PRIORIDAD
+      ======================================== -->
+      <separator/>
+      <filter name="filter_prioridad_alta"
+              string="Prioridad Alta"
+              domain="[('prioridad', '=', 'alta')]"/>
+      <filter name="filter_prioridad_baja"
+              string="Prioridad Baja"
+              domain="[('prioridad', '=', 'bajaubicacion')]"/>
+
+      <!-- ========================================
+           FILTROS ESPECIALES
+      ======================================== -->
+      <separator/>
+      <filter name="filter_con_cliente"
+              string="Con Cliente Asignado"
+              domain="[('cliente_id', '!=', False)]"/>
+      <filter name="filter_sin_cliente"
+              string="Sin Cliente Asignado"
+              domain="[('cliente_id', '=', False)]"/>
+      <filter name="filter_con_descripcion"
+              string="Con Descripción/Problema"
+              domain="[('descripcion', '!=', False)]"/>
+      <filter name="filter_check_ingreso"
+              string="Con Ingreso Registrado"
+              domain="[('check_ingreso', '=', True)]"/>
+      <filter name="filter_sin_check_ingreso"
+              string="Sin Ingreso Registrado"
+              domain="[('check_ingreso', '=', False)]"/>
+      <filter name="filter_con_reparaciones"
+              string="Con Reparaciones"
+              domain="[('reparaciones_count', '>', 0)]"/>
+      <filter name="filter_separadas_recientemente"
+              string="Separadas Recientemente"
+              domain="[('fecha_separacion', '!=', False)]"/>
+      <filter name="filter_con_token_ubicacion"
+              string="Con Token de Ubicación"
+              domain="[('location_change_token', '!=', False)]"/>
+      <filter name="filter_actualizadas_snmp"
+              string="Actualizadas por SNMP"
+              domain="[('ultima_fuente_actualizacion', '=', 'snmp')]"/>
+
+      <!-- ========================================
+           FILTROS TEMPORALES
+      ======================================== -->
+      <separator/>
+      <filter name="filter_creadas_hoy"
+              string="Creadas Hoy"
+              domain="[('create_date', '&gt;=', datetime.datetime.combine(context_today(), datetime.time(0,0,0))),
+                       ('create_date', '&lt;=', datetime.datetime.combine(context_today(), datetime.time(23,59,59)))]"/>
+      <filter name="filter_creadas_semana"
+              string="Creadas Esta Semana"
+              domain="[('create_date', '&gt;=', (context_today() - datetime.timedelta(days=context_today().weekday())).strftime('%Y-%m-%d')),
+                       ('create_date', '&lt;=', (context_today() + datetime.timedelta(days=6-context_today().weekday())).strftime('%Y-%m-%d'))]"/>
+      <filter name="filter_creadas_mes"
+              string="Creadas Este Mes"
+              domain="[('create_date', '&gt;=', datetime.datetime.now().strftime('%Y-%m-01'))]"/>
+      <filter name="filter_separadas_hoy"
+              string="Separadas Hoy"
+              domain="[('fecha_separacion', '=', context_today())]"/>
+      <filter name="filter_actualizadas_snmp_hoy"
+              string="Actualizadas SNMP Hoy"
+              domain="[('ultima_actualizacion_snmp', '&gt;=', datetime.datetime.combine(context_today(), datetime.time(0,0,0)))]"/>
+
+      <!-- ========================================
+           FILTROS POR ESTADO DE INGRESO
+      ======================================== -->
+      <separator/>
+      <filter name="filter_ingreso_ok_no_obs"
+              string="Ingreso OK (sin obs)"
+              domain="[('ingreso_estado', '=', 'ok_no_obs')]"/>
+      <filter name="filter_ingreso_ok_obs"
+              string="Ingreso OK (con obs)"
+              domain="[('ingreso_estado', '=', 'ok_obs')]"/>
+      <filter name="filter_ingreso_rechazado"
+              string="Ingreso Rechazado"
+              domain="[('ingreso_estado', '=', 'rechazado')]"/>
+
+      <!-- ========================================
+           AGRUPAR POR
+      ======================================== -->
+      <separator/>
+      <group expand="0" string="Agrupar Por">
+        <filter name="group_disponibilidad"
+                string="Disponibilidad"
+                context="{'group_by': 'disponibilidad_id'}"/>
+        <filter name="group_estado"
+                string="Estado de Ventas"
+                context="{'group_by': 'estado_ventas_id'}"/>
+        <filter name="group_marca"
+                string="Marca"
+                context="{'group_by': 'marca'}"/>
+        <filter name="group_modelo"
+                string="Modelo"
+                context="{'group_by': 'name'}"/>
+        <filter name="group_tipo_maquina"
+                string="Tipo de Máquina"
+                context="{'group_by': 'tipo_maquina'}"/>
+        <filter name="group_tipo"
+                string="Tipo (Color/Mono)"
+                context="{'group_by': 'tipo_id'}"/>
+        <filter name="group_ubicacion"
+                string="Ubicación"
+                context="{'group_by': 'ubicacion_id'}"/>
+        <filter name="group_cliente"
+                string="Cliente"
+                context="{'group_by': 'cliente_id'}"/>
+        <filter name="group_asesora"
+                string="Asesora"
+                context="{'group_by': 'asesora_id'}"/>
+        <filter name="group_proveedor"
+                string="Proveedor"
+                context="{'group_by': 'proveedor_id'}"/>
+        <filter name="group_importacion"
+                string="Importación"
+                context="{'group_by': 'importacion'}"/>
+        <filter name="group_trabajador"
+                string="Trabajador Asignado"
+                context="{'group_by': 'trabajadores_id'}"/>
+        <filter name="group_tipo_revision"
+                string="Tipo de Revisión"
+                context="{'group_by': 'tipo_revision'}"/>
+        <filter name="group_prioridad"
+                string="Prioridad"
+                context="{'group_by': 'prioridad'}"/>
+        <filter name="group_fuente_actualizacion"
+                string="Fuente Actualización"
+                context="{'group_by': 'ultima_fuente_actualizacion'}"/>
+        <filter name="group_ingreso_estado"
+                string="Estado de Ingreso"
+                context="{'group_by': 'ingreso_estado'}"/>
+        <separator/>
+        <filter name="group_fecha_creacion"
+                string="Fecha de Creación (Mes)"
+                context="{'group_by': 'create_date:month'}"/>
+        <filter name="group_fecha_creacion_semana"
+                string="Fecha de Creación (Semana)"
+                context="{'group_by': 'create_date:week'}"/>
+        <filter name="group_fecha_separacion"
+                string="Fecha de Separación"
+                context="{'group_by': 'fecha_separacion'}"/>
+        <filter name="group_fecha_entrega"
+                string="Fecha de Entrega"
+                context="{'group_by': 'fecha_entrega'}"/>
+      </group>
+
+    </search>
+  </field>
+</record>
     <!-- Kanban -->
     <record id="maquinas_kanban_view" model="ir.ui.view">
       <field name="name">maquinas.kanban</field>
