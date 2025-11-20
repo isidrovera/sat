@@ -416,15 +416,7 @@
       
       <separator/>
       
-      <!-- FILTROS POR TIPO DE REVISIÓN -->
-      <filter string="Diagnóstico" name="filter_diagnostico" 
-              domain="[('tipo_revision', '=', 'diagnostico')]"/>
-      <filter string="Preventivo" name="filter_preventivo" 
-              domain="[('tipo_revision', '=', 'preventivo')]"/>
-      <filter string="Correctivo" name="filter_correctivo" 
-              domain="[('tipo_revision', '=', 'correctivo')]"/>
-      
-      <separator/>
+     
       
       <!-- FILTROS POR UBICACIÓN -->
       <filter string="Primer Piso" name="filter_primer_piso" 
@@ -462,21 +454,7 @@
       
       <separator/>
       
-      <!-- FILTROS ESPECIALES -->
-      <filter string="Mis Reparaciones" name="filter_mis_reparaciones" 
-              domain="[('responsable_id', '=', uid)]"/>
-      <filter string="Sin Técnico Asignado" name="filter_sin_tecnico" 
-              domain="[('responsable_id', '=', False)]"/>
-      <filter string="Con Informe" name="filter_con_informe" 
-              domain="[('informe', '!=', False)]"/>
-      <filter string="Informe Generado por IA" name="filter_informe_ia" 
-              domain="[('informe_generado_por_ia', '=', True)]"/>
-      <filter string="Autenticación Correcta" name="filter_autenticacion" 
-              domain="[('autenticacion_correcta', '=', True)]"/>
-      <filter string="Con Solicitudes de Partes" name="filter_con_partes" 
-              domain="[('parts_request_count', '>', 0)]"/>
       
-      <separator/>
       
       <!-- AGRUPAR POR -->
       <group expand="0" string="Agrupar Por">
