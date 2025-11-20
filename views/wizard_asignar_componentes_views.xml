@@ -70,7 +70,6 @@
                     <page string="Accesorios">
                         <field name="accesorio_line_ids">
                             <list editable="bottom">
-                                <field name="seleccionado" widget="boolean_toggle"/>
                                 <field name="tipo_id"/>
                                 <field name="obligatorio" widget="boolean_toggle"/>
                                 <field name="nota"/>
@@ -98,5 +97,13 @@
         </field>
     </record>
 
-    
+    <!-- Acción del wizard -->
+    <record id="action_wizard_asignar_componentes" model="ir.actions.act_window">
+        <field name="name">Asignar Componentes/Accesorios</field>
+        <field name="res_model">wizard.asignar.componentes</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="binding_model_id" ref="model_modelo_maquina"/>
+        <field name="binding_view_types">list</field>
+    </record>
 </odoo>
