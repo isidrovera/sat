@@ -40,9 +40,7 @@ class WizardAsignarComponentes(models.TransientModel):
         sanitize=False
     )
     
-    @api.depends('modelo_ids', 'componente_line_ids', 'componente_line_ids.subparte_ids',
-                 'componente_line_ids.subparte_ids.seleccionado', 'accesorio_line_ids',
-                 'accesorio_line_ids.seleccionado')
+    @api.depends('modelo_ids', 'componente_line_ids', 'accesorio_line_ids')
     def _compute_resumen(self):
         for wizard in self:
             html = '<div style="padding: 10px;">'
@@ -90,25 +88,20 @@ class WizardAsignarComponentes(models.TransientModel):
                     else:
                         html += '<li style="margin-left: 20px;">&#8226; %s</li>' % line.tipo_id.name
                     
-                    # Mostrar subpartes SELECCIONADAS
-                    subpartes_seleccionadas = line.subparte_ids.filtered(lambda s: s.seleccionado)
-                    if subpartes_seleccionadas:
+                    # Mostrar subpartes
+                    subpartes_count = len(line.subparte_ids)
+                    if subpartes_count:
                         html += '<ul style="margin-left: 40px; font-size: 0.9em; color: #666;">'
-                        for subparte in subpartes_seleccionadas:
-                            html += '<li>&#10004; %s (x%s)</li>' % (subparte.subparte_id.name, subparte.cantidad)
+                        for subparte in line.subparte_ids:
+                            html += '<li>%s (x%s)</li>' % (subparte.subparte_id.name, subparte.cantidad)
                         html += '</ul>'
             
             # Resumen de accesorios
             if wizard.accesorio_line_ids:
-                accesorios_seleccionados = wizard.accesorio_line_ids.filtered(lambda a: a.seleccionado)
-                total_acc = len(accesorios_seleccionados)
-                html += '<li><strong>Accesorios:</strong> %s seleccionado(s) de %s disponible(s)</li>' % (
-                    total_acc, len(wizard.accesorio_line_ids)
-                )
-                if accesorios_seleccionados:
-                    for line in accesorios_seleccionados:
-                        obligatorio_txt = ' <span style="color: red;">*Obligatorio</span>' if line.obligatorio else ''
-                        html += '<li style="margin-left: 20px;">&#10004; %s%s</li>' % (line.tipo_id.name, obligatorio_txt)
+                html += '<li><strong>Accesorios:</strong> %s tipo(s)</li>' % len(wizard.accesorio_line_ids)
+                for line in wizard.accesorio_line_ids:
+                    obligatorio_txt = ' <span style="color: red;">*Obligatorio</span>' if line.obligatorio else ''
+                    html += '<li style="margin-left: 20px;">&#8226; %s%s</li>' % (line.tipo_id.name, obligatorio_txt)
             
             html += '</ul>'
             
@@ -124,56 +117,25 @@ class WizardAsignarComponentes(models.TransientModel):
                     # 1 por cada modelo
                     total_componentes += len(wizard.modelo_ids)
             
-            # Contar subpartes seleccionadas por modelo
-            total_subpartes = 0
-            for line in wizard.componente_line_ids:
-                subpartes_sel = len(line.subparte_ids.filtered(lambda s: s.seleccionado))
-                is_color_sensitive = getattr(line.tipo_id, 'is_color_sensitive', False)
-                if is_color_sensitive:
-                    # Subpartes por cada color creado
-                    total_subpartes += subpartes_sel * (len(modelos_mono) + len(modelos_color) * 4)
-                else:
-                    total_subpartes += subpartes_sel * len(wizard.modelo_ids)
-            
-            # Contar solo accesorios seleccionados
-            total_accesorios = len(wizard.modelo_ids) * len(wizard.accesorio_line_ids.filtered(lambda a: a.seleccionado))
+            total_accesorios = len(wizard.modelo_ids) * len(wizard.accesorio_line_ids)
+            total_registros = total_componentes + total_accesorios
             
             html += '<hr style="margin: 15px 0;"/>'
-            html += '<p><strong>&#128202; Total estimado:</strong></p>'
-            html += '<ul style="margin: 5px 0; font-size: 0.9em; color: #666;">'
-            html += '<li>Componentes principales: %s</li>' % total_componentes
-            html += '<li>Subpartes: %s</li>' % total_subpartes
-            html += '<li>Accesorios: %s</li>' % total_accesorios
-            html += '</ul>'
+            html += '<p><strong>&#128202; Total estimado de registros principales:</strong> %s</p>' % total_registros
+            html += '<p style="font-size: 0.9em; color: #666;">&#8226; Componentes: %s | Accesorios: %s</p>' % (total_componentes, total_accesorios)
             html += '</div>'
             
             wizard.resumen = Markup(html)
     
     @api.model
     def default_get(self, fields_list):
-        """Obtiene los modelos seleccionados del contexto y autocarga accesorios"""
+        """Obtiene los modelos seleccionados del contexto"""
         res = super().default_get(fields_list)
         
         # Obtener IDs de modelos seleccionados
         modelo_ids = self.env.context.get('active_ids', [])
         if modelo_ids:
             res['modelo_ids'] = [(6, 0, modelo_ids)]
-            
-            # 🔥 AUTOCARGAR TODOS LOS ACCESORIOS DISPONIBLES
-            accesorios_disponibles = self.env['accesorio.tipo'].search([
-                ('active', '=', True)
-            ])
-            
-            if accesorios_disponibles:
-                accesorio_lines = []
-                for accesorio in accesorios_disponibles:
-                    accesorio_lines.append((0, 0, {
-                        'tipo_id': accesorio.id,
-                        'seleccionado': False,  # Por defecto NO seleccionado
-                        'obligatorio': False,
-                        'nota': '',
-                    }))
-                res['accesorio_line_ids'] = accesorio_lines
         
         return res
     
@@ -221,9 +183,8 @@ class WizardAsignarComponentes(models.TransientModel):
                             elif result == 'actualizado':
                                 componentes_actualizados += 1
                             
-                            # 🎯 Agregar solo subpartes SELECCIONADAS
-                            subpartes_seleccionadas = comp_line.subparte_ids.filtered(lambda s: s.seleccionado)
-                            for subparte_line in subpartes_seleccionadas:
+                            # Agregar subpartes si existen
+                            for subparte_line in comp_line.subparte_ids:
                                 try:
                                     created = self._crear_subparte(
                                         SubparteModel,
@@ -266,9 +227,8 @@ class WizardAsignarComponentes(models.TransientModel):
                         elif result == 'actualizado':
                             componentes_actualizados += 1
                         
-                        # 🎯 Agregar solo subpartes SELECCIONADAS
-                        subpartes_seleccionadas = comp_line.subparte_ids.filtered(lambda s: s.seleccionado)
-                        for subparte_line in subpartes_seleccionadas:
+                        # Agregar subpartes si existen
+                        for subparte_line in comp_line.subparte_ids:
                             try:
                                 created = self._crear_subparte(
                                     SubparteModel,
@@ -290,9 +250,7 @@ class WizardAsignarComponentes(models.TransientModel):
                         errores.append("Error en %s - %s: %s" % (modelo.name, comp_line.tipo_id.name, str(e)))
             
             # ===== PROCESAR ACCESORIOS =====
-            # 🎯 Solo procesar accesorios SELECCIONADOS
-            accesorios_seleccionados = self.accesorio_line_ids.filtered(lambda a: a.seleccionado)
-            for acc_line in accesorios_seleccionados:
+            for acc_line in self.accesorio_line_ids:
                 try:
                     result = self._crear_o_actualizar_accesorio(
                         AccesorioModel,
@@ -308,9 +266,11 @@ class WizardAsignarComponentes(models.TransientModel):
         
         # Preparar mensaje de resultado
         mensaje_partes = [
-            "Componentes: %s creados, %s actualizados" % (componentes_creados, componentes_actualizados),
-            "Subpartes: %s agregadas" % subpartes_creadas,
-            "Accesorios: %s creados, %s actualizados" % (accesorios_creados, accesorios_actualizados),
+            "Componentes creados: %s" % componentes_creados,
+            "Componentes actualizados: %s" % componentes_actualizados,
+            "Subpartes agregadas: %s" % subpartes_creadas,
+            "Accesorios creados: %s" % accesorios_creados,
+            "Accesorios actualizados: %s" % accesorios_actualizados,
         ]
         
         if errores:
@@ -330,7 +290,7 @@ class WizardAsignarComponentes(models.TransientModel):
                 'message': mensaje_simple,
                 'type': 'success' if not errores else 'warning',
                 'sticky': True,
-                'next': {'type': 'ir.actions.act_window_close'},
+                'next': {'type': 'ir.actions.act_window_close'},  # 🔥 Cierra el wizard
             }
         }
     
@@ -415,9 +375,6 @@ class WizardAsignarComponentes(models.TransientModel):
 
 
 # ===== LÍNEA DE COMPONENTE CON SUS SUBPARTES =====
-# models/wizard_asignar_componentes.py
-
-# ===== LÍNEA DE COMPONENTE CON SUS SUBPARTES =====
 class WizardAsignarComponentesLinea(models.TransientModel):
     _name = 'wizard.asignar.componentes.linea'
     _description = 'Línea de componente para asignación masiva'
@@ -461,55 +418,6 @@ class WizardAsignarComponentesLinea(models.TransientModel):
         'componente_line_id',
         string='Subpartes'
     )
-    
-    # 🔥 NUEVA ESTRATEGIA: Crear subpartes después de guardar
-    @api.model_create_multi
-    def create(self, vals_list):
-        """Después de crear, autocargar subpartes"""
-        records = super().create(vals_list)
-        
-        for record in records:
-            if record.tipo_id and not record.subparte_ids:
-                record._cargar_subpartes()
-        
-        return records
-    
-    def write(self, vals):
-        """Si cambia el tipo, recargar subpartes"""
-        res = super().write(vals)
-        
-        if 'tipo_id' in vals:
-            for record in self:
-                record._cargar_subpartes()
-        
-        return res
-    
-    def _cargar_subpartes(self):
-        """Método auxiliar para cargar subpartes"""
-        self.ensure_one()
-        
-        if not self.tipo_id:
-            return
-        
-        # Limpiar subpartes existentes
-        self.subparte_ids.unlink()
-        
-        # Buscar todas las subpartes de este tipo
-        subpartes_disponibles = self.env['componente.subparte'].search([
-            ('tipo_id', '=', self.tipo_id.id),
-            ('active', '=', True)
-        ])
-        
-        # Crear registros de subpartes
-        SubparteModel = self.env['wizard.asignar.componentes.subparte']
-        for subparte in subpartes_disponibles:
-            SubparteModel.create({
-                'componente_line_id': self.id,
-                'subparte_id': subparte.id,
-                'cantidad': 1.0,
-                'seleccionado': True,
-                'nota': '',
-            })
 
 
 # ===== SUBPARTE DENTRO DE UN COMPONENTE =====
@@ -524,6 +432,7 @@ class WizardAsignarComponentesSubparte(models.TransientModel):
         ondelete='cascade'
     )
     
+    # 🎯 Campo relacionado para obtener el tipo desde la línea padre
     tipo_componente_id = fields.Many2one(
         'componente.tipo',
         related='componente_line_id.tipo_id',
@@ -532,17 +441,12 @@ class WizardAsignarComponentesSubparte(models.TransientModel):
         readonly=True
     )
     
-    # 🔥 Campo sin readonly - se establece al crear
+    # 🔥 Filtro dinámico - solo muestra subpartes del tipo seleccionado
     subparte_id = fields.Many2one(
         'componente.subparte',
         string='Subparte',
-        required=True
-    )
-    
-    seleccionado = fields.Boolean(
-        string='Agregar',
-        default=True,
-        help='Marcar para incluir esta subparte en la asignación'
+        required=True,
+        domain="[('tipo_id', '=', tipo_componente_id), ('active', '=', True)]"
     )
     
     cantidad = fields.Float(
@@ -553,7 +457,7 @@ class WizardAsignarComponentesSubparte(models.TransientModel):
     nota = fields.Char(string='Nota')
 
 
-# ===== LÍNEA DE ACCESORIO CON AUTOCARGA =====
+# ===== LÍNEA DE ACCESORIO =====
 class WizardAsignarComponentesAccesorio(models.TransientModel):
     _name = 'wizard.asignar.componentes.accesorio'
     _description = 'Línea de accesorio para asignación masiva'
@@ -568,15 +472,7 @@ class WizardAsignarComponentesAccesorio(models.TransientModel):
     tipo_id = fields.Many2one(
         'accesorio.tipo',
         string='Tipo de Accesorio',
-        required=True,
-        readonly=True  # Solo lectura porque se autocarga
-    )
-    
-    # 🎯 Checkbox para seleccionar
-    seleccionado = fields.Boolean(
-        string='Agregar',
-        default=False,
-        help='Marcar para incluir este accesorio en la asignación'
+        required=True
     )
     
     obligatorio = fields.Boolean(
