@@ -1,7 +1,4 @@
-<!-- views/wizard_asignar_componentes_views.xml -->
 <odoo>
-
-    <!-- WIZARD PRINCIPAL -->
     <record id="view_wizard_asignar_componentes_form" model="ir.ui.view">
         <field name="name">wizard.asignar.componentes.form</field>
         <field name="model">wizard.asignar.componentes</field>
@@ -21,7 +18,7 @@
                                 <field name="vida_util_paginas"/>
                                 <field name="vida_util_meses"/>
                             </list>
-                            <form string="Componente">
+                            <form string="Componentes a agregar">
                                 <group>
                                     <group>
                                         <field name="tipo_id"/>
@@ -36,26 +33,17 @@
                                     <field name="frase_desgaste"/>
                                     <field name="frase_cambio"/>
                                 </group>
-                                <notebook>
-                                    <page string="Subpartes">
-                                        <group>
-                                            <!-- Botón para abrir el wizard de selección múltiple -->
-                                            <button name="action_open_subparte_multi_wizard"
-                                                    type="object"
-                                                    string="Agregar múltiples subpartes"
-                                                    class="oe_highlight"/>
-                                        </group>
-                                        <field name="subparte_ids">
-                                            <list editable="bottom">
-                                                <field name="subparte_id"/>
-                                                <field name="cantidad"/>
-                                                <field name="nota"/>
-                                            </list>
-                                        </field>
-                                    </page>
-                                </notebook>
+
+                                <!-- 🔥 Subpartes: selección múltiple directa -->
+                                <group string="Subpartes">
+                                    <!-- Este campo abre el popup "Agregar: Subpartes" con checkboxes -->
+                                    <field name="subparte_ids"/>
+                                    <field name="subparte_cantidad"/>
+                                    <field name="subparte_nota"/>
+                                </group>
                             </form>
                         </field>
+
                         <group string="Nota">
                             <div class="alert alert-info">
                                 ℹ️ Los tipos sensibles a color (tóners) crearán automáticamente 4 registros (K, C, M, Y) con las mismas subpartes.
@@ -65,7 +53,6 @@
 
                     <page string="Accesorios">
                         <group>
-                            <!-- Botón para abrir el wizard de selección múltiple de accesorios -->
                             <button name="action_open_accesorio_multi_wizard"
                                     type="object"
                                     string="Agregar múltiples accesorios"
@@ -95,35 +82,7 @@
         </field>
     </record>
 
-
-    <!-- WIZARD MULTI-SUBPARTES -->
-    <record id="view_wizard_asignar_componentes_subparte_multi_form" model="ir.ui.view">
-        <field name="name">wizard.asignar.componentes.subparte.multi.form</field>
-        <field name="model">wizard.asignar.componentes.subparte.multi</field>
-        <field name="arch" type="xml">
-            <form string="Agregar múltiples subpartes">
-                <group>
-                    <field name="componente_line_id" readonly="1"/>
-                    <field name="tipo_componente_id" readonly="1"/>
-                </group>
-                <group>
-                    <!-- Many2many normal para tener el popup con checkboxes -->
-                    <field name="subparte_ids"/>
-                </group>
-                <group>
-                    <field name="cantidad"/>
-                    <field name="nota"/>
-                </group>
-                <footer>
-                    <button string="Agregar" type="object" name="action_confirm" class="oe_highlight"/>
-                    <button string="Cancelar" special="cancel" class="btn-secondary"/>
-                </footer>
-            </form>
-        </field>
-    </record>
-
-
-    <!-- WIZARD MULTI-ACCESORIOS -->
+    <!-- La vista de wizard de accesorios múltiples sigue igual -->
     <record id="view_wizard_asignar_componentes_accesorio_multi_form" model="ir.ui.view">
         <field name="name">wizard.asignar.componentes.accesorio.multi.form</field>
         <field name="model">wizard.asignar.componentes.accesorio.multi</field>
@@ -133,7 +92,6 @@
                     <field name="wizard_id" readonly="1"/>
                 </group>
                 <group>
-                    <!-- Many2many normal para popup con selección múltiple -->
                     <field name="accesorio_ids"/>
                 </group>
                 <group>
@@ -147,5 +105,4 @@
             </form>
         </field>
     </record>
-
 </odoo>
