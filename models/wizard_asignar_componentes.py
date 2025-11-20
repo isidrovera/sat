@@ -541,6 +541,9 @@ class WizardAsignarComponentesSubparteMulti(models.TransientModel):
 
     subparte_ids = fields.Many2many(
         'componente.subparte',
+        'wiz_comp_subp_multi_rel',   # <--- nombre corto de la tabla M2M
+        'wizard_id',                 # columna que apunta al wizard
+        'subparte_id',               # columna que apunta a componente.subparte
         string='Subpartes',
         domain="[('tipo_id', '=', tipo_componente_id), ('active', '=', True)]"
     )
@@ -555,16 +558,13 @@ class WizardAsignarComponentesSubparteMulti(models.TransientModel):
     )
 
     def action_confirm(self):
-        """Crea múltiples líneas de subpartes en el one2many del componente"""
         SubparteModel = self.env['wizard.asignar.componentes.subparte']
         for wiz in self:
             for subparte in wiz.subparte_ids:
-                # opcional: evitar duplicados en el wizard
                 existente = SubparteModel.search([
                     ('componente_line_id', '=', wiz.componente_line_id.id),
                     ('subparte_id', '=', subparte.id),
                 ], limit=1)
-
                 if not existente:
                     SubparteModel.create({
                         'componente_line_id': wiz.componente_line_id.id,
@@ -572,7 +572,6 @@ class WizardAsignarComponentesSubparteMulti(models.TransientModel):
                         'cantidad': wiz.cantidad,
                         'nota': wiz.nota,
                     })
-
         return {'type': 'ir.actions.act_window_close'}
 
 
@@ -590,6 +589,9 @@ class WizardAsignarComponentesAccesorioMulti(models.TransientModel):
 
     accesorio_ids = fields.Many2many(
         'accesorio.tipo',
+        'wiz_comp_acc_multi_rel',   # <--- nombre corto de la tabla M2M
+        'wizard_id',                # columna al wizard
+        'tipo_id',                  # columna al accesorio.tipo
         string='Tipos de Accesorio'
     )
 
@@ -603,7 +605,6 @@ class WizardAsignarComponentesAccesorioMulti(models.TransientModel):
     )
 
     def action_confirm(self):
-        """Crea múltiples líneas de accesorios en el one2many del wizard"""
         LineModel = self.env['wizard.asignar.componentes.accesorio']
         for wiz in self:
             for acc in wiz.accesorio_ids:
@@ -611,7 +612,6 @@ class WizardAsignarComponentesAccesorioMulti(models.TransientModel):
                     ('wizard_id', '=', wiz.wizard_id.id),
                     ('tipo_id', '=', acc.id),
                 ], limit=1)
-
                 if not existente:
                     LineModel.create({
                         'wizard_id': wiz.wizard_id.id,
@@ -619,5 +619,4 @@ class WizardAsignarComponentesAccesorioMulti(models.TransientModel):
                         'obligatorio': wiz.obligatorio,
                         'nota': wiz.nota,
                     })
-
         return {'type': 'ir.actions.act_window_close'}
