@@ -573,15 +573,8 @@ class WizardAsignarComponentesSubparteMulti(models.TransientModel):
                         'nota': wiz.nota,
                     })
 
-        # 🔥 Reabrir wizard principal
-        main_wizard = self.componente_line_id.wizard_id
-        return {
-            'type': 'ir.actions.act_window',
-            'res_model': 'wizard.asignar.componentes',
-            'view_mode': 'form',
-            'target': 'new',
-            'res_id': main_wizard.id,
-        }
+        # 👇 SOLO cerramos este wizard, volvemos al form de la línea
+        return {'type': 'ir.actions.act_window_close'}
 
 
 # ===== WIZARD MULTI-ACCESORIOS =====
