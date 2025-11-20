@@ -356,14 +356,11 @@
       <field name="model">reparaciones.reparaciones</field>
       <field name="arch" type="xml">
         <list string="Reparaciones" default_order="id desc">
-          <field name="create_date" string="Agendado" widget="remaining_days" width="80%" />
-          <field name="name" />
+          <field name="create_date" string="Agendado" widget="remaining_days" width="80%" />         
           <field name="cliente_id" widget="many2one_avatar" />
           <field name="marca" />
           <field name="maquina_id" />
-          <field name="serie_id" />
-          <field name="prioridad" widget="badge" />
-          <field name="tipo_revision" widget="badge" />
+          <field name="serie_id" />          
           <field name="ubicacion_id" widget="badge" />
           <field name="responsable_id" widget="many2one_avatar" />
           <field name="estado_id" widget="badge" decoration-muted="estado_id == 'en_revision'"
@@ -376,16 +373,148 @@
       </field>
     </record>
     <record id="reparaciones_search_view" model="ir.ui.view">
-      <field name="name">reparaciones.reparaciones.search</field>
-      <field name="model">reparaciones.reparaciones</field>
-      <field name="arch" type="xml">
-        <search string="ModelTitle">
-          <group>
-            <field name="serie_id" />
-          </group>
-        </search>
-      </field>
-    </record>
+  <field name="name">reparaciones.reparaciones.search</field>
+  <field name="model">reparaciones.reparaciones</field>
+  <field name="arch" type="xml">
+    <search string="Buscar Reparaciones">
+      <!-- CAMPOS DE BÚSQUEDA EXISTENTES -->
+      <field name="serie_id" string="Serie"/>
+      <field name="name" string="Número de Reparación"/>
+      <field name="cliente_id" string="Cliente"/>
+      <field name="maquina_id" string="Máquina"/>
+      <field name="marca" string="Marca"/>
+      <field name="responsable_id" string="Técnico"/>
+      <field name="importacion" string="Importación"/>
+      <field name="nombre_maquina" string="Modelo"/>
+
+      <!-- FILTROS POR ESTADO -->
+      <separator/>
+      <filter string="Sin Revisar" name="filter_sin_revisar" 
+              domain="[('estado_id', '=', 'sin_revisar')]"/>
+      <filter string="Para Revisión" name="filter_para_revision" 
+              domain="[('estado_id', '=', 'para_revision')]"/>
+      <filter string="En Revisión" name="filter_en_revision" 
+              domain="[('estado_id', '=', 'en_revision')]"/>
+      <filter string="Finalizadas" name="filter_finalizado" 
+              domain="[('estado_id', '=', 'finalizado')]"/>
+      <filter string="Con Problemas" name="filter_con_problemas" 
+              domain="[('estado_id', '=', 'con_problemas')]"/>
+      <filter string="De Partes" name="filter_de_partes" 
+              domain="[('estado_id', '=', 'de_partes')]"/>
+      <filter string="Entregadas" name="filter_entregada" 
+              domain="[('estado_id', '=', 'entregada')]"/>
+      
+      <separator/>
+      
+      <!-- FILTROS POR PRIORIDAD -->
+      <filter string="Prioridad Alta" name="filter_prioridad_alta" 
+              domain="[('prioridad', '=', 'alta')]"/>
+      <filter string="Prioridad Media" name="filter_prioridad_media" 
+              domain="[('prioridad', '=', 'media')]"/>
+      <filter string="Prioridad Baja" name="filter_prioridad_baja" 
+              domain="[('prioridad', '=', 'baja')]"/>
+      
+      <separator/>
+      
+      <!-- FILTROS POR TIPO DE REVISIÓN -->
+      <filter string="Diagnóstico" name="filter_diagnostico" 
+              domain="[('tipo_revision', '=', 'diagnostico')]"/>
+      <filter string="Preventivo" name="filter_preventivo" 
+              domain="[('tipo_revision', '=', 'preventivo')]"/>
+      <filter string="Correctivo" name="filter_correctivo" 
+              domain="[('tipo_revision', '=', 'correctivo')]"/>
+      
+      <separator/>
+      
+      <!-- FILTROS POR UBICACIÓN -->
+      <filter string="Primer Piso" name="filter_primer_piso" 
+              domain="[('ubicacion_id', '=', 'primer_piso')]"/>
+      <filter string="Segundo Piso" name="filter_segundo_piso" 
+              domain="[('ubicacion_id', '=', 'segundo_piso')]"/>
+      <filter string="Tercer Piso" name="filter_tercer_piso" 
+              domain="[('ubicacion_id', '=', 'tercer_piso')]"/>
+      <filter string="Taller" name="filter_taller" 
+              domain="[('ubicacion_id', '=', 'taller')]"/>
+      <filter string="Bodega" name="filter_bodega" 
+              domain="[('ubicacion_id', '=', 'bodega')]"/>
+      <filter string="Cliente" name="filter_cliente_ubicacion" 
+              domain="[('ubicacion_id', '=', 'cliente')]"/>
+      
+      <separator/>
+      
+      <!-- FILTROS POR TIPO DE MÁQUINA -->
+      <filter string="Color" name="filter_color" 
+              domain="[('tipo_id', '=', 'color')]"/>
+      <filter string="Monocromática" name="filter_monocromatica" 
+              domain="[('tipo_id', '=', 'monocromatica')]"/>
+      
+      <separator/>
+      
+      <!-- FILTROS TEMPORALES -->
+      <filter string="Creadas Hoy" name="filter_hoy" 
+              domain="[('create_date', '&gt;=', datetime.datetime.combine(context_today(), datetime.time(0,0,0))),
+                       ('create_date', '&lt;=', datetime.datetime.combine(context_today(), datetime.time(23,59,59)))]"/>
+      <filter string="Esta Semana" name="filter_semana" 
+              domain="[('create_date', '&gt;=', (context_today() - datetime.timedelta(days=context_today().weekday())).strftime('%Y-%m-%d')),
+                       ('create_date', '&lt;=', (context_today() + datetime.timedelta(days=6-context_today().weekday())).strftime('%Y-%m-%d'))]"/>
+      <filter string="Este Mes" name="filter_mes" 
+              domain="[('create_date', '&gt;=', datetime.datetime.now().strftime('%Y-%m-01'))]"/>
+      
+      <separator/>
+      
+      <!-- FILTROS ESPECIALES -->
+      <filter string="Mis Reparaciones" name="filter_mis_reparaciones" 
+              domain="[('responsable_id', '=', uid)]"/>
+      <filter string="Sin Técnico Asignado" name="filter_sin_tecnico" 
+              domain="[('responsable_id', '=', False)]"/>
+      <filter string="Con Informe" name="filter_con_informe" 
+              domain="[('informe', '!=', False)]"/>
+      <filter string="Informe Generado por IA" name="filter_informe_ia" 
+              domain="[('informe_generado_por_ia', '=', True)]"/>
+      <filter string="Autenticación Correcta" name="filter_autenticacion" 
+              domain="[('autenticacion_correcta', '=', True)]"/>
+      <filter string="Con Solicitudes de Partes" name="filter_con_partes" 
+              domain="[('parts_request_count', '>', 0)]"/>
+      
+      <separator/>
+      
+      <!-- AGRUPAR POR -->
+      <group expand="0" string="Agrupar Por">
+        <filter string="Estado" name="group_estado" 
+                context="{'group_by': 'estado_id'}"/>
+        <filter string="Técnico Responsable" name="group_tecnico" 
+                context="{'group_by': 'responsable_id'}"/>
+        <filter string="Cliente" name="group_cliente" 
+                context="{'group_by': 'cliente_id'}"/>
+        <filter string="Prioridad" name="group_prioridad" 
+                context="{'group_by': 'prioridad'}"/>
+        <filter string="Tipo de Revisión" name="group_tipo_revision" 
+                context="{'group_by': 'tipo_revision'}"/>
+        <filter string="Ubicación" name="group_ubicacion" 
+                context="{'group_by': 'ubicacion_id'}"/>
+        <filter string="Marca" name="group_marca" 
+                context="{'group_by': 'marca'}"/>
+        <filter string="Modelo" name="group_modelo" 
+                context="{'group_by': 'nombre_maquina'}"/>
+        <filter string="Importación" name="group_importacion" 
+                context="{'group_by': 'importacion'}"/>
+        <filter string="Tipo de Máquina" name="group_tipo" 
+                context="{'group_by': 'tipo_id'}"/>
+        <filter string="Proveedor" name="group_proveedor" 
+                context="{'group_by': 'nombre_proveedor'}"/>
+        <separator/>
+        <filter string="Fecha de Creación (Mes)" name="group_fecha_mes" 
+                context="{'group_by': 'create_date:month'}"/>
+        <filter string="Fecha de Creación (Semana)" name="group_fecha_semana" 
+                context="{'group_by': 'create_date:week'}"/>
+        <filter string="Fecha de Creación (Día)" name="group_fecha_dia" 
+                context="{'group_by': 'create_date:day'}"/>
+        <filter string="Fecha de Finalización" name="group_fecha_finalizacion" 
+                context="{'group_by': 'fecha_finalizacion:month'}"/>
+      </group>
+    </search>
+  </field>
+</record>
     <record id="reparaciones_kanban_view" model="ir.ui.view">
       <field name="name">reparaciones.kanban</field>
       <field name="model">reparaciones.reparaciones</field>

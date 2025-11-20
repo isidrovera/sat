@@ -88,11 +88,7 @@
                   widget="many2one_avatar"
                   style="width:100%; font-size: 20px;" options="{'no_create': True}" />
               </h1>
-              <div
-                style="margin-top: 5px; font-size: 13px; color: #6c757d; border-top: 1px dotted #ddd; padding-top: 5px;">
-                <i class="fa fa-info-circle"></i> El cliente seleccionado determina las condiciones
-                comerciales y logísticas aplicables. Verifique que sea el correcto antes de
-                proceder. </div>
+              
             </div>
             <!-- GRUPOS DE DATOS: Mejorando presentación visual e instrucciones -->
             <group>
