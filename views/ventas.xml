@@ -477,9 +477,7 @@
       <filter name="filter_sin_check_ingreso"
               string="Sin Ingreso Registrado"
               domain="[('check_ingreso', '=', False)]"/>
-      <filter name="filter_con_reparaciones"
-              string="Con Reparaciones"
-              domain="[('reparaciones_count', '>', 0)]"/>
+      
       <filter name="filter_separadas_recientemente"
               string="Separadas Recientemente"
               domain="[('fecha_separacion', '!=', False)]"/>
