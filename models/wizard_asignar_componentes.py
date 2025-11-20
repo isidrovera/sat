@@ -541,9 +541,9 @@ class WizardAsignarComponentesSubparteMulti(models.TransientModel):
 
     subparte_ids = fields.Many2many(
         'componente.subparte',
-        'wiz_comp_subp_multi_rel',   # <--- nombre corto de la tabla M2M
-        'wizard_id',                 # columna que apunta al wizard
-        'subparte_id',               # columna que apunta a componente.subparte
+        'wiz_comp_subp_multi_rel',
+        'wizard_id',
+        'subparte_id',
         string='Subpartes',
         domain="[('tipo_id', '=', tipo_componente_id), ('active', '=', True)]"
     )
@@ -572,7 +572,16 @@ class WizardAsignarComponentesSubparteMulti(models.TransientModel):
                         'cantidad': wiz.cantidad,
                         'nota': wiz.nota,
                     })
-        return {'type': 'ir.actions.act_window_close'}
+
+        # 🔥 Reabrir wizard principal
+        main_wizard = self.componente_line_id.wizard_id
+        return {
+            'type': 'ir.actions.act_window',
+            'res_model': 'wizard.asignar.componentes',
+            'view_mode': 'form',
+            'target': 'new',
+            'res_id': main_wizard.id,
+        }
 
 
 # ===== WIZARD MULTI-ACCESORIOS =====
@@ -589,9 +598,9 @@ class WizardAsignarComponentesAccesorioMulti(models.TransientModel):
 
     accesorio_ids = fields.Many2many(
         'accesorio.tipo',
-        'wiz_comp_acc_multi_rel',   # <--- nombre corto de la tabla M2M
-        'wizard_id',                # columna al wizard
-        'tipo_id',                  # columna al accesorio.tipo
+        'wiz_comp_acc_multi_rel',
+        'wizard_id',
+        'tipo_id',
         string='Tipos de Accesorio'
     )
 
@@ -619,4 +628,12 @@ class WizardAsignarComponentesAccesorioMulti(models.TransientModel):
                         'obligatorio': wiz.obligatorio,
                         'nota': wiz.nota,
                     })
-        return {'type': 'ir.actions.act_window_close'}
+
+        # 🔥 En lugar de cerrar sin más, reabrimos el wizard principal
+        return {
+            'type': 'ir.actions.act_window',
+            'res_model': 'wizard.asignar.componentes',
+            'view_mode': 'form',
+            'target': 'new',
+            'res_id': self.wizard_id.id,
+        }
