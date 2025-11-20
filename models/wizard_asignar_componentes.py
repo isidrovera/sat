@@ -405,9 +405,9 @@ class WizardAsignarComponentesLinea(models.TransientModel):
     wizard_id = fields.Many2one(
         'wizard.asignar.componentes',
         string='Wizard',
-        required=True,
         ondelete='cascade'
     )
+
 
     tipo_id = fields.Many2one(
         'componente.tipo',
@@ -501,9 +501,9 @@ class WizardAsignarComponentesAccesorio(models.TransientModel):
     wizard_id = fields.Many2one(
         'wizard.asignar.componentes',
         string='Wizard',
-        required=True,
         ondelete='cascade'
     )
+
 
     tipo_id = fields.Many2one(
         'accesorio.tipo',
