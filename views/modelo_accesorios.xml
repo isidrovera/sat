@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Vista Form -->
+    <record id="view_modelo_maquina_accesorio_form" model="ir.ui.view">
+        <field name="name">modelo.maquina.accesorio.form</field>
+        <field name="model">modelo.maquina.accesorio</field>
+        <field name="arch" type="xml">
+            <form string="Accesorio del Modelo">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="modelo_id" options="{'no_create': True}"/>
+                            <field name="tipo_id" options="{'no_create': True}"/>
+                        </group>
+                        <group>
+                            <field name="estado_predeterminado_id" options="{'no_create': True}"/>
+                            <field name="obligatorio"/>
+                        </group>
+                    </group>
+                    <group>
+                        <field name="nota" placeholder="Nota adicional sobre este accesorio..."/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Vista List -->
+    <record id="view_modelo_maquina_accesorio_list" model="ir.ui.view">
+        <field name="name">modelo.maquina.accesorio.list</field>
+        <field name="model">modelo.maquina.accesorio</field>
+        <field name="arch" type="xml">
+            <list string="Accesorios por Modelo" default_order="tipo_id">
+                <field name="modelo_id"/>
+                <field name="tipo_id"/>
+                <field name="estado_predeterminado_id" optional="show"/>
+                <field name="obligatorio" widget="boolean_toggle"/>
+                <field name="nota" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Búsqueda/Filtros -->
+    <record id="view_modelo_maquina_accesorio_search" model="ir.ui.view">
+        <field name="name">modelo.maquina.accesorio.search</field>
+        <field name="model">modelo.maquina.accesorio</field>
+        <field name="arch" type="xml">
+            <search string="Buscar Accesorios">
+                <field name="modelo_id"/>
+                <field name="tipo_id"/>
+                <field name="estado_predeterminado_id"/>
+                
+                <filter string="Obligatorios" name="filter_obligatorio" 
+                        domain="[('obligatorio', '=', True)]"/>
+                <filter string="Opcionales" name="filter_opcional" 
+                        domain="[('obligatorio', '=', False)]"/>
+                
+                <separator/>
+                <filter string="Con Estado Predeterminado" name="filter_con_estado" 
+                        domain="[('estado_predeterminado_id', '!=', False)]"/>
+                
+                <group expand="0" string="Agrupar Por">
+                    <filter string="Modelo" name="group_modelo" 
+                            context="{'group_by': 'modelo_id'}"/>
+                    <filter string="Tipo de Accesorio" name="group_tipo" 
+                            context="{'group_by': 'tipo_id'}"/>
+                    <filter string="Estado Predeterminado" name="group_estado" 
+                            context="{'group_by': 'estado_predeterminado_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+   
+
+</odoo>
