@@ -36,18 +36,9 @@
                                 </group>
                                 <notebook>
                                     <page string="Subpartes">
-                                        <group string="Nota">
-                                            <div class="alert alert-info" style="margin-bottom: 10px;">
-                                                ℹ️ Las subpartes se cargan automáticamente al seleccionar el tipo de componente. 
-                                                Desmarca las que NO quieras agregar.
-                                            </div>
-                                        </group>
                                         <field name="subparte_ids">
-                                            <list editable="bottom" create="false" delete="true">
-                                                <!-- 🎯 Checkbox para seleccionar -->
-                                                <field name="seleccionado" widget="boolean_toggle"/>
-                                                <!-- Subparte en modo solo lectura -->
-                                                <field name="subparte_id" readonly="1"/>
+                                            <list editable="bottom">
+                                                <field name="subparte_id"/>
                                                 <field name="cantidad"/>
                                                 <field name="nota"/>
                                             </list>
@@ -58,11 +49,7 @@
                         </field>
                         <group string="Nota">
                             <div class="alert alert-info">
-                                ℹ️ Los tipos sensibles a color (tóners, UI, developer) crearán automáticamente:
-                                <ul style="margin: 5px 0 0 20px;">
-                                    <li><strong>Monocromáticas:</strong> Solo negro (K)</li>
-                                    <li><strong>Color:</strong> Todos los colores (K, C, M, Y)</li>
-                                </ul>
+                                ℹ️ Los tipos sensibles a color (tóners) crearán automáticamente 4 registros (K, C, M, Y) con las mismas subpartes.
                             </div>
                         </group>
                     </page>
@@ -71,39 +58,22 @@
                         <field name="accesorio_line_ids">
                             <list editable="bottom">
                                 <field name="tipo_id"/>
-                                <field name="obligatorio" widget="boolean_toggle"/>
+                                <field name="obligatorio"/>
                                 <field name="nota"/>
                             </list>
                         </field>
                     </page>
                     
                     <page string="Resumen">
-                        <field name="resumen" readonly="1" nolabel="1"/>
+                        <field name="resumen" readonly="1"/>
                     </page>
                 </notebook>
                 
                 <footer>
-                    <button name="action_asignar" 
-                            string="Ejecutar Asignación" 
-                            type="object" 
-                            class="btn-primary"
-                            icon="fa-check"/>
-                    <button string="Cancelar" 
-                            class="btn-secondary" 
-                            special="cancel"
-                            icon="fa-times"/>
+                    <button name="action_asignar" string="Ejecutar Asignación" type="object" class="btn-primary"/>
+                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
                 </footer>
             </form>
         </field>
-    </record>
-
-    <!-- Acción del wizard -->
-    <record id="action_wizard_asignar_componentes" model="ir.actions.act_window">
-        <field name="name">Asignar Componentes/Accesorios</field>
-        <field name="res_model">wizard.asignar.componentes</field>
-        <field name="view_mode">form</field>
-        <field name="target">new</field>
-        <field name="binding_model_id" ref="model_modelo_maquina"/>
-        <field name="binding_view_types">list</field>
     </record>
 </odoo>
