@@ -11,17 +11,18 @@ export class SatDashboard extends Component {
     
     setup() {
         this.orm = useService("orm");
+        this.action = useService("action");
         this.state = useState({ 
             data: {
                 total_maquinas: 0,
                 total_disponibles: 0,
                 total_separadas: 0,
                 total_problemas: 0,
+                total_en_revision: 0,
+                total_sin_revisar: 0,
                 company_currency_symbol: '',
-                avg_precio_compra: 0,
-                stock_value_available: 0,
-                ingresadas_7: 0,
-                entregadas_30: 0,
+                top_asesoras: [],
+                top_modelos: [],
             }
         });
         
@@ -38,7 +39,6 @@ export class SatDashboard extends Component {
         try {
             props = props || this.props;
             
-            // Obtener dominio desde el modelo si existe
             let domain = [];
             if (props.model && props.model.root) {
                 domain = props.model.root.domain || [];
@@ -57,6 +57,37 @@ export class SatDashboard extends Component {
             
         } catch (error) {
             console.error("Error cargando dashboard SAT:", error);
+        }
+    }
+
+    filterByState(state) {
+        let domain = [];
+        
+        switch(state) {
+            case 'disponible':
+                domain = [['disponibilidad_id', '=', 'disponible']];
+                break;
+            case 'separada':
+                domain = [['disponibilidad_id', '=', 'separada']];
+                break;
+            case 'con_problemas':
+                domain = [['estado_ventas_id', 'in', ['con_problemas', 'de_partes']]];
+                break;
+            case 'en_revision':
+                domain = [['estado_ventas_id', 'in', ['para_revision', 'en_revision']]];
+                break;
+            case 'sin_revisar':
+                domain = [['estado_ventas_id', '=', 'sin_revisar']];
+                break;
+            case 'all':
+                domain = [];
+                break;
+        }
+
+        // Aplicar el filtro al modelo
+        if (this.props.model && this.props.model.root) {
+            this.props.model.root.domain = domain;
+            this.props.model.load();
         }
     }
 }

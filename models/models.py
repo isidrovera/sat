@@ -1550,6 +1550,46 @@ haga clic en el siguiente enlace: 📍 {self.crear_url_cambio_ubicacion(registro
 
         currency = self.env.company.currency_id
 
+        # Top 5 Asesoras
+        asesoras_data = {}
+        for rec in records:
+            if rec.asesora_id:
+                asesora = rec.asesora_id
+                if asesora not in asesoras_data:
+                    asesoras_data[asesora] = 0
+                asesoras_data[asesora] += 1
+        
+        top_asesoras = sorted(asesoras_data.items(), key=lambda x: x[1], reverse=True)[:5]
+        max_asesora = top_asesoras[0][1] if top_asesoras else 1
+        
+        top_asesoras_list = []
+        for asesora, count in top_asesoras:
+            top_asesoras_list.append({
+                'name': asesora or 'Sin asesora',
+                'count': count,
+                'percentage': (count / max_asesora) * 100 if max_asesora > 0 else 0
+            })
+
+        # Top 5 Modelos
+        modelos_data = {}
+        for rec in records:
+            if rec.name:
+                modelo = rec.name.name
+                if modelo not in modelos_data:
+                    modelos_data[modelo] = 0
+                modelos_data[modelo] += 1
+        
+        top_modelos = sorted(modelos_data.items(), key=lambda x: x[1], reverse=True)[:5]
+        max_modelo = top_modelos[0][1] if top_modelos else 1
+        
+        top_modelos_list = []
+        for modelo, count in top_modelos:
+            top_modelos_list.append({
+                'name': modelo,
+                'count': count,
+                'percentage': (count / max_modelo) * 100 if max_modelo > 0 else 0
+            })
+
         return {
             'company_currency_symbol': currency.symbol or '',
             'total_maquinas': total_maquinas,
@@ -1563,4 +1603,6 @@ haga clic en el siguiente enlace: 📍 {self.crear_url_cambio_ubicacion(registro
             'entregadas_30': entregadas_30,
             'stock_value_available': round(stock_value_available, 2),
             'avg_precio_compra': round(avg_precio_compra, 2),
+            'top_asesoras': top_asesoras_list,
+            'top_modelos': top_modelos_list,
         }
