@@ -168,7 +168,6 @@
             padding: 1rem;
           }
 
-          /* Ajustes para diferentes pantallas */
           @media (min-width: 576px) {
             .photo-grid {
               grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
@@ -480,15 +479,12 @@
                 <!-- Datos de equipo / técnico -->
                 <div class="meta-grid">
                   <div class="meta-pill">
-                   <!-- <b>Equipo</b>-->
                     <span><t t-esc="(reparacion.maquina_id and (reparacion.maquina_id.display_name or reparacion.maquina_id.name)) or '—'"/></span>
                   </div>
                   <div class="meta-pill">
-                    
                     <span><t t-esc="reparacion.serie_id or '—'"/></span>
                   </div>
                   <div class="meta-pill">
-                    
                     <span><t t-esc="reparacion.responsable_id.name or '—'"/></span>
                   </div>
                 </div>
@@ -534,9 +530,23 @@
                     #<t t-esc="f.get('sequence', 0)"/> — <t t-esc="f.get('nombre_foto','Sin nombre')"/>
                   </span>
                   <div class="d-flex gap-2">
-                    <a class="btn btn-sm btn-outline-secondary" t-att-href="'/gallery/download/%s' % f['id']" target="_blank" title="Descargar">
+                    <!-- NUEVO: botón compartir -->
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-outline-secondary btn-share-photo"
+                      t-att-data-download-url="'/gallery/download/%s' % f['id']"
+                      title="Compartir / Copiar enlace">
+                      <i class="fa-solid fa-share-nodes"></i>
+                    </button>
+
+                    <!-- Descargar -->
+                    <a class="btn btn-sm btn-outline-secondary"
+                       t-att-href="'/gallery/download/%s' % f['id']"
+                       target="_blank" title="Descargar">
                       <i class="fa-solid fa-download"></i>
                     </a>
+
+                    <!-- Eliminar -->
                     <button type="button" class="btn btn-sm btn-outline-danger btn-delete-photo" title="Eliminar">
                       <i class="fa-solid fa-trash"></i>
                     </button>

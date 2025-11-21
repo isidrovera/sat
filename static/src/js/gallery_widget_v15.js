@@ -1,5 +1,5 @@
 // sat/static/src/js/gallery_widget_v15.js
-// Galería: cámara continua + lote + pCloud directo + eliminar + visor con zoom
+// Galería: cámara continua + lote + pCloud directo + eliminar + visor con zoom + compartir
 (function () {
   'use strict';
 
@@ -171,8 +171,9 @@
       this.els.sendBatch?.addEventListener('click', () => this.uploadBatch());
       this.els.clearBatch?.addEventListener('click', () => this.clearPending());
 
-      // Visor y eliminar en grid existente
+      // Visor, compartir y eliminar en grid existente
       this.els.photoGrid?.addEventListener('click', (e) => {
+        // Abrir visor
         const cont = e.target.closest('[data-open-viewer="1"]');
         if (cont) {
           const fotoCard = cont.closest('.photo-card');
@@ -181,6 +182,15 @@
           if (downloadUrl) this.openViewer(fotoId, downloadUrl);
           return;
         }
+
+        // Compartir / copiar enlace
+        const shareBtn = e.target.closest('.btn-share-photo');
+        if (shareBtn) {
+          this.handleShareClick(shareBtn);
+          return;
+        }
+
+        // Eliminar
         const delBtn = e.target.closest('.btn-delete-photo');
         if (delBtn) this.handleDeleteClick(e);
       });
@@ -426,6 +436,12 @@
         <div class="photo-info">
           <span>#${f.sequence || 0} — ${this.escapeHtml(f.nombre_foto || '')}</span>
           <div class="d-flex gap-2">
+            <button type="button"
+                    class="btn btn-sm btn-outline-secondary btn-share-photo"
+                    data-download-url="/gallery/download/${f.id}"
+                    title="Compartir / Copiar enlace">
+              <i class="fa-solid fa-share-nodes"></i>
+            </button>
             <a class="btn btn-sm btn-outline-secondary" href="/gallery/download/${f.id}" target="_blank" title="Descargar">
               <i class="fa-solid fa-download"></i>
             </a>
@@ -462,6 +478,44 @@
       } catch (err) {
         console.error('Error eliminando la foto', err);
         alert('Error al intentar eliminar');
+      }
+    },
+
+    // --------------- compartir / copiar url ---------------
+    async handleShareClick(btn) {
+      try {
+        const relUrl = btn.getAttribute('data-download-url');
+        if (!relUrl) return;
+
+        const fullUrl = location.origin + relUrl;
+
+        // Web Share API (móviles / navegadores modernos)
+        if (navigator.share) {
+          await navigator.share({
+            title: 'Foto de la reparación',
+            text: 'Te comparto esta foto de la reparación',
+            url: fullUrl,
+          });
+          return;
+        }
+
+        // Copiar al portapapeles
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(fullUrl);
+          alert('Enlace copiado al portapapeles:\n' + fullUrl);
+        } else {
+          // Fallback básico
+          const temp = document.createElement('input');
+          temp.value = fullUrl;
+          document.body.appendChild(temp);
+          temp.select();
+          document.execCommand('copy');
+          document.body.removeChild(temp);
+          alert('Enlace copiado al portapapeles:\n' + fullUrl);
+        }
+      } catch (err) {
+        console.error('Error al compartir/copiar enlace', err);
+        alert('No se pudo compartir/copiar el enlace.');
       }
     },
 
