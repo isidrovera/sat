@@ -11,18 +11,19 @@ export class SatDashboard extends Component {
     
     setup() {
         this.orm = useService("orm");
-        this.action = useService("action");
         this.state = useState({ 
             data: {
                 total_maquinas: 0,
                 total_disponibles: 0,
                 total_separadas: 0,
-                total_problemas: 0,
-                total_en_revision: 0,
+                total_no_disponibles: 0,
                 total_sin_revisar: 0,
-                company_currency_symbol: '',
-                top_asesoras: [],
-                top_modelos: [],
+                total_para_revision: 0,
+                total_en_revision: 0,
+                total_finalizado: 0,
+                total_problemas: 0,
+                total_de_partes: 0,
+                total_entregada: 0,
             }
         });
         
@@ -39,11 +40,10 @@ export class SatDashboard extends Component {
         try {
             props = props || this.props;
             
+            // Obtener dominio desde el list
             let domain = [];
-            if (props.model && props.model.root) {
-                domain = props.model.root.domain || [];
-            } else if (props.domain) {
-                domain = props.domain;
+            if (props.list && props.list.model && props.list.model.root) {
+                domain = props.list.model.root.domain || [];
             }
             
             const result = await this.orm.call(
@@ -70,24 +70,39 @@ export class SatDashboard extends Component {
             case 'separada':
                 domain = [['disponibilidad_id', '=', 'separada']];
                 break;
-            case 'con_problemas':
-                domain = [['estado_ventas_id', 'in', ['con_problemas', 'de_partes']]];
-                break;
-            case 'en_revision':
-                domain = [['estado_ventas_id', 'in', ['para_revision', 'en_revision']]];
+            case 'no_disponible':
+                domain = [['disponibilidad_id', '=', 'no_disponible']];
                 break;
             case 'sin_revisar':
                 domain = [['estado_ventas_id', '=', 'sin_revisar']];
+                break;
+            case 'para_revision':
+                domain = [['estado_ventas_id', '=', 'para_revision']];
+                break;
+            case 'en_revision':
+                domain = [['estado_ventas_id', '=', 'en_revision']];
+                break;
+            case 'finalizado':
+                domain = [['estado_ventas_id', '=', 'finalizado']];
+                break;
+            case 'con_problemas':
+                domain = [['estado_ventas_id', '=', 'con_problemas']];
+                break;
+            case 'de_partes':
+                domain = [['estado_ventas_id', '=', 'de_partes']];
+                break;
+            case 'entregada':
+                domain = [['estado_ventas_id', '=', 'entregada']];
                 break;
             case 'all':
                 domain = [];
                 break;
         }
 
-        // Aplicar el filtro al modelo
-        if (this.props.model && this.props.model.root) {
-            this.props.model.root.domain = domain;
-            this.props.model.load();
+        // Aplicar el filtro usando el searchModel
+        if (this.props.list && this.props.list.model) {
+            this.props.list.model.root.domain = domain;
+            this.props.list.model.load();
         }
     }
 }

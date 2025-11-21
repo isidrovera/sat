@@ -1508,6 +1508,7 @@ haga clic en el siguiente enlace: 📍 {self.crear_url_cambio_ubicacion(registro
         records = Sat.search(domain)
         total_maquinas = len(records)
 
+        # Disponibilidad
         total_disponibles = Sat.search_count(domain + [
             ('disponibilidad_id', '=', 'disponible')
         ])
@@ -1518,14 +1519,27 @@ haga clic en el siguiente enlace: 📍 {self.crear_url_cambio_ubicacion(registro
             ('disponibilidad_id', '=', 'no_disponible')
         ])
 
-        total_problemas = Sat.search_count(domain + [
-            ('estado_ventas_id', 'in', ['con_problemas', 'de_partes'])
-        ])
-        total_en_revision = Sat.search_count(domain + [
-            ('estado_ventas_id', 'in', ['para_revision', 'en_revision'])
-        ])
+        # Estados de revisión
         total_sin_revisar = Sat.search_count(domain + [
             ('estado_ventas_id', '=', 'sin_revisar')
+        ])
+        total_para_revision = Sat.search_count(domain + [
+            ('estado_ventas_id', '=', 'para_revision')
+        ])
+        total_en_revision = Sat.search_count(domain + [
+            ('estado_ventas_id', '=', 'en_revision')
+        ])
+        total_finalizado = Sat.search_count(domain + [
+            ('estado_ventas_id', '=', 'finalizado')
+        ])
+        total_problemas = Sat.search_count(domain + [
+            ('estado_ventas_id', '=', 'con_problemas')
+        ])
+        total_de_partes = Sat.search_count(domain + [
+            ('estado_ventas_id', '=', 'de_partes')
+        ])
+        total_entregada = Sat.search_count(domain + [
+            ('estado_ventas_id', '=', 'entregada')
         ])
 
         today = fields.Date.context_today(self)
@@ -1550,59 +1564,21 @@ haga clic en el siguiente enlace: 📍 {self.crear_url_cambio_ubicacion(registro
 
         currency = self.env.company.currency_id
 
-        # Top 5 Asesoras
-        asesoras_data = {}
-        for rec in records:
-            if rec.asesora_id:
-                asesora = rec.asesora_id
-                if asesora not in asesoras_data:
-                    asesoras_data[asesora] = 0
-                asesoras_data[asesora] += 1
-        
-        top_asesoras = sorted(asesoras_data.items(), key=lambda x: x[1], reverse=True)[:5]
-        max_asesora = top_asesoras[0][1] if top_asesoras else 1
-        
-        top_asesoras_list = []
-        for asesora, count in top_asesoras:
-            top_asesoras_list.append({
-                'name': asesora or 'Sin asesora',
-                'count': count,
-                'percentage': (count / max_asesora) * 100 if max_asesora > 0 else 0
-            })
-
-        # Top 5 Modelos
-        modelos_data = {}
-        for rec in records:
-            if rec.name:
-                modelo = rec.name.name
-                if modelo not in modelos_data:
-                    modelos_data[modelo] = 0
-                modelos_data[modelo] += 1
-        
-        top_modelos = sorted(modelos_data.items(), key=lambda x: x[1], reverse=True)[:5]
-        max_modelo = top_modelos[0][1] if top_modelos else 1
-        
-        top_modelos_list = []
-        for modelo, count in top_modelos:
-            top_modelos_list.append({
-                'name': modelo,
-                'count': count,
-                'percentage': (count / max_modelo) * 100 if max_modelo > 0 else 0
-            })
-
         return {
             'company_currency_symbol': currency.symbol or '',
             'total_maquinas': total_maquinas,
             'total_disponibles': total_disponibles,
             'total_separadas': total_separadas,
             'total_no_disponibles': total_no_disponibles,
-            'total_problemas': total_problemas,
-            'total_en_revision': total_en_revision,
             'total_sin_revisar': total_sin_revisar,
+            'total_para_revision': total_para_revision,
+            'total_en_revision': total_en_revision,
+            'total_finalizado': total_finalizado,
+            'total_problemas': total_problemas,
+            'total_de_partes': total_de_partes,
+            'total_entregada': total_entregada,
             'ingresadas_7': ingresadas_7,
             'entregadas_30': entregadas_30,
             'stock_value_available': round(stock_value_available, 2),
             'avg_precio_compra': round(avg_precio_compra, 2),
-            'top_asesoras': top_asesoras_list,
-            'top_modelos': top_modelos_list,
         }

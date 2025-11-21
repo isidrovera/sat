@@ -3,10 +3,10 @@
     <!-- Dashboard Component -->
     <t t-name="sat.SatSatDashboard">
         <div class="o_sat_dashboard container-fluid py-2">
-            <!-- Fila de KPIs principales -->
-            <div class="row g-2 mb-2">
+            <!-- Fila de KPIs -->
+            <div class="row g-1">
                 <!-- Total máquinas -->
-                <div class="col-6 col-lg-2">
+                <div class="col-4 col-md-2 col-lg-1">
                     <div class="o_sat_card_kpi" t-on-click="() => this.filterByState('all')">
                         <div class="o_sat_card_icon o_sat_icon_primary o_sat_icon_pulse">
                             <i class="fa fa-cubes"></i>
@@ -21,13 +21,13 @@
                 </div>
                 
                 <!-- Disponibles -->
-                <div class="col-6 col-lg-2">
+                <div class="col-4 col-md-2 col-lg-1">
                     <div class="o_sat_card_kpi" t-on-click="() => this.filterByState('disponible')">
                         <div class="o_sat_card_icon o_sat_icon_success o_sat_icon_bounce">
                             <i class="fa fa-check-circle"></i>
                         </div>
                         <div class="o_sat_card_content">
-                            <div class="o_sat_card_title">Disponibles</div>
+                            <div class="o_sat_card_title">Disponible</div>
                             <div class="o_sat_card_value">
                                 <t t-esc="state.data.total_disponibles"/>
                             </div>
@@ -36,13 +36,13 @@
                 </div>
                 
                 <!-- Separadas -->
-                <div class="col-6 col-lg-2">
+                <div class="col-4 col-md-2 col-lg-1">
                     <div class="o_sat_card_kpi" t-on-click="() => this.filterByState('separada')">
                         <div class="o_sat_card_icon o_sat_icon_warning o_sat_icon_shake">
                             <i class="fa fa-bookmark"></i>
                         </div>
                         <div class="o_sat_card_content">
-                            <div class="o_sat_card_title">Separadas</div>
+                            <div class="o_sat_card_title">Separada</div>
                             <div class="o_sat_card_value">
                                 <t t-esc="state.data.total_separadas"/>
                             </div>
@@ -50,38 +50,8 @@
                     </div>
                 </div>
                 
-                <!-- Con problemas -->
-                <div class="col-6 col-lg-2">
-                    <div class="o_sat_card_kpi" t-on-click="() => this.filterByState('con_problemas')">
-                        <div class="o_sat_card_icon o_sat_icon_danger o_sat_icon_blink">
-                            <i class="fa fa-exclamation-triangle"></i>
-                        </div>
-                        <div class="o_sat_card_content">
-                            <div class="o_sat_card_title">Problemas</div>
-                            <div class="o_sat_card_value">
-                                <t t-esc="state.data.total_problemas"/>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- En revisión -->
-                <div class="col-6 col-lg-2">
-                    <div class="o_sat_card_kpi" t-on-click="() => this.filterByState('en_revision')">
-                        <div class="o_sat_card_icon o_sat_icon_info o_sat_icon_spin">
-                            <i class="fa fa-cog"></i>
-                        </div>
-                        <div class="o_sat_card_content">
-                            <div class="o_sat_card_title">En revisión</div>
-                            <div class="o_sat_card_value">
-                                <t t-esc="state.data.total_en_revision"/>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
                 <!-- Sin revisar -->
-                <div class="col-6 col-lg-2">
+                <div class="col-4 col-md-2 col-lg-1">
                     <div class="o_sat_card_kpi" t-on-click="() => this.filterByState('sin_revisar')">
                         <div class="o_sat_card_icon o_sat_icon_secondary">
                             <i class="fa fa-pause-circle"></i>
@@ -94,70 +64,108 @@
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Fila de gráficos -->
-            <div class="row g-2">
-                <!-- Gráfico por asesoras -->
-                <div class="col-lg-6">
-                    <div class="o_sat_chart_card">
-                        <div class="o_sat_chart_header">
-                            <i class="fa fa-users me-2"></i>
-                            <span>Top 5 Asesoras</span>
+                <!-- Para revisión -->
+                <div class="col-4 col-md-2 col-lg-1">
+                    <div class="o_sat_card_kpi" t-on-click="() => this.filterByState('para_revision')">
+                        <div class="o_sat_card_icon o_sat_icon_info">
+                            <i class="fa fa-clock-o"></i>
                         </div>
-                        <div class="o_sat_chart_body">
-                            <t t-if="state.data.top_asesoras and state.data.top_asesoras.length">
-                                <t t-foreach="state.data.top_asesoras" t-as="asesora" t-key="asesora.name">
-                                    <div class="o_sat_bar_item">
-                                        <div class="o_sat_bar_label">
-                                            <t t-esc="asesora.name"/>
-                                        </div>
-                                        <div class="o_sat_bar_container">
-                                            <div class="o_sat_bar_fill" t-att-style="'width: ' + asesora.percentage + '%'">
-                                                <span class="o_sat_bar_value"><t t-esc="asesora.count"/></span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </t>
-                            </t>
-                            <t t-else="">
-                                <div class="text-center text-muted py-3">
-                                    <i class="fa fa-chart-bar fa-2x mb-2"></i>
-                                    <div>No hay datos disponibles</div>
-                                </div>
-                            </t>
+                        <div class="o_sat_card_content">
+                            <div class="o_sat_card_title">P/Revisión</div>
+                            <div class="o_sat_card_value">
+                                <t t-esc="state.data.total_para_revision"/>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- En revisión -->
+                <div class="col-4 col-md-2 col-lg-1">
+                    <div class="o_sat_card_kpi" t-on-click="() => this.filterByState('en_revision')">
+                        <div class="o_sat_card_icon o_sat_icon_info o_sat_icon_spin">
+                            <i class="fa fa-cog"></i>
+                        </div>
+                        <div class="o_sat_card_content">
+                            <div class="o_sat_card_title">En revisión</div>
+                            <div class="o_sat_card_value">
+                                <t t-esc="state.data.total_en_revision"/>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Gráfico por modelos -->
-                <div class="col-lg-6">
-                    <div class="o_sat_chart_card">
-                        <div class="o_sat_chart_header">
-                            <i class="fa fa-cubes me-2"></i>
-                            <span>Top 5 Modelos</span>
+                <!-- Finalizado -->
+                <div class="col-4 col-md-2 col-lg-1">
+                    <div class="o_sat_card_kpi" t-on-click="() => this.filterByState('finalizado')">
+                        <div class="o_sat_card_icon o_sat_icon_success">
+                            <i class="fa fa-check"></i>
                         </div>
-                        <div class="o_sat_chart_body">
-                            <t t-if="state.data.top_modelos and state.data.top_modelos.length">
-                                <t t-foreach="state.data.top_modelos" t-as="modelo" t-key="modelo.name">
-                                    <div class="o_sat_bar_item">
-                                        <div class="o_sat_bar_label">
-                                            <t t-esc="modelo.name"/>
-                                        </div>
-                                        <div class="o_sat_bar_container">
-                                            <div class="o_sat_bar_fill o_sat_bar_modelo" t-att-style="'width: ' + modelo.percentage + '%'">
-                                                <span class="o_sat_bar_value"><t t-esc="modelo.count"/></span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </t>
-                            </t>
-                            <t t-else="">
-                                <div class="text-center text-muted py-3">
-                                    <i class="fa fa-chart-bar fa-2x mb-2"></i>
-                                    <div>No hay datos disponibles</div>
-                                </div>
-                            </t>
+                        <div class="o_sat_card_content">
+                            <div class="o_sat_card_title">Finalizado</div>
+                            <div class="o_sat_card_value">
+                                <t t-esc="state.data.total_finalizado"/>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Con problemas -->
+                <div class="col-4 col-md-2 col-lg-1">
+                    <div class="o_sat_card_kpi" t-on-click="() => this.filterByState('con_problemas')">
+                        <div class="o_sat_card_icon o_sat_icon_danger o_sat_icon_blink">
+                            <i class="fa fa-exclamation-triangle"></i>
+                        </div>
+                        <div class="o_sat_card_content">
+                            <div class="o_sat_card_title">Problemas</div>
+                            <div class="o_sat_card_value">
+                                <t t-esc="state.data.total_problemas"/>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- De partes -->
+                <div class="col-4 col-md-2 col-lg-1">
+                    <div class="o_sat_card_kpi" t-on-click="() => this.filterByState('de_partes')">
+                        <div class="o_sat_card_icon o_sat_icon_danger">
+                            <i class="fa fa-wrench"></i>
+                        </div>
+                        <div class="o_sat_card_content">
+                            <div class="o_sat_card_title">De partes</div>
+                            <div class="o_sat_card_value">
+                                <t t-esc="state.data.total_de_partes"/>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Entregada -->
+                <div class="col-4 col-md-2 col-lg-1">
+                    <div class="o_sat_card_kpi" t-on-click="() => this.filterByState('entregada')">
+                        <div class="o_sat_card_icon o_sat_icon_primary">
+                            <i class="fa fa-truck"></i>
+                        </div>
+                        <div class="o_sat_card_content">
+                            <div class="o_sat_card_title">Entregada</div>
+                            <div class="o_sat_card_value">
+                                <t t-esc="state.data.total_entregada"/>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- No disponible -->
+                <div class="col-4 col-md-2 col-lg-1">
+                    <div class="o_sat_card_kpi" t-on-click="() => this.filterByState('no_disponible')">
+                        <div class="o_sat_card_icon o_sat_icon_dark">
+                            <i class="fa fa-ban"></i>
+                        </div>
+                        <div class="o_sat_card_content">
+                            <div class="o_sat_card_title">No Disp.</div>
+                            <div class="o_sat_card_value">
+                                <t t-esc="state.data.total_no_disponibles"/>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -168,7 +176,7 @@
     <!-- Custom List View Template -->
     <t t-name="sat.SatListView" t-inherit="web.ListView" t-inherit-mode="primary">
         <xpath expr="//t[@t-component='props.Renderer']" position="before">
-            <SatDashboard model="props.model" domain="props.domain" list="props.list"/>
+            <SatDashboard list="props.list"/>
         </xpath>
     </t>
 </templates>
