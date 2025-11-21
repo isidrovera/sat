@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates xml:space="preserve">
 
-    <!-- Dashboard que se mostrará sobre la lista de sat.sat -->
-    <t t-name="sat.SatSatDashboard" owl="1">
+    <t t-name="sat.SatSatDashboard">
         <div class="o_sat_dashboard o_list_dashboard container-fluid mt-2 mb-2">
             <div class="row">
 
@@ -14,7 +13,7 @@
                             <div class="o_sat_card_kpi text-center">
                                 <div class="o_sat_card_title">Total máquinas</div>
                                 <div class="o_sat_card_value">
-                                    <t t-esc="values['total_maquinas']"/>
+                                    <t t-esc="data.total_maquinas"/>
                                 </div>
                             </div>
                         </div>
@@ -23,7 +22,7 @@
                             <div class="o_sat_card_kpi text-center">
                                 <div class="o_sat_card_title">Disponibles</div>
                                 <div class="o_sat_card_value">
-                                    <t t-esc="values['total_disponibles']"/>
+                                    <t t-esc="data.total_disponibles"/>
                                 </div>
                             </div>
                         </div>
@@ -32,7 +31,7 @@
                             <div class="o_sat_card_kpi text-center">
                                 <div class="o_sat_card_title">Separadas</div>
                                 <div class="o_sat_card_value">
-                                    <t t-esc="values['total_separadas']"/>
+                                    <t t-esc="data.total_separadas"/>
                                 </div>
                             </div>
                         </div>
@@ -41,7 +40,7 @@
                             <div class="o_sat_card_kpi text-center">
                                 <div class="o_sat_card_title">Con problemas</div>
                                 <div class="o_sat_card_value text-danger">
-                                    <t t-esc="values['total_problemas']"/>
+                                    <t t-esc="data.total_problemas"/>
                                 </div>
                             </div>
                         </div>
@@ -49,26 +48,26 @@
                     </div>
                 </div>
 
-                <!-- KPIs tipo tabla (similar Avg Order Value…) -->
+                <!-- KPIs tipo tabla -->
                 <div class="col-md-5 mt-3 mt-md-0">
                     <table class="table table-sm mb-0">
                         <tbody>
                             <tr>
                                 <td class="o_text">
                                     Precio compra promedio
-                                    (<t t-esc="values['company_currency_symbol']"/>)
+                                    (<t t-esc="data.company_currency_symbol"/>)
                                 </td>
                                 <td class="o_kpi_value">
-                                    <t t-esc="values['avg_precio_compra']"/>
+                                    <t t-esc="data.avg_precio_compra"/>
                                 </td>
                             </tr>
                             <tr>
                                 <td class="o_text">
                                     Valor stock disponible
-                                    (<t t-esc="values['company_currency_symbol']"/>)
+                                    (<t t-esc="data.company_currency_symbol"/>)
                                 </td>
                                 <td class="o_kpi_value">
-                                    <t t-esc="values['stock_value_available']"/>
+                                    <t t-esc="data.stock_value_available"/>
                                 </td>
                             </tr>
                             <tr>
@@ -76,7 +75,7 @@
                                     Ingresadas últimos 7 días
                                 </td>
                                 <td class="o_kpi_value">
-                                    <t t-esc="values['ingresadas_7']"/>
+                                    <t t-esc="data.ingresadas_7"/>
                                 </td>
                             </tr>
                             <tr>
@@ -84,7 +83,7 @@
                                     Entregadas últimos 30 días
                                 </td>
                                 <td class="o_kpi_value">
-                                    <t t-esc="values['entregadas_30']"/>
+                                    <t t-esc="data.entregadas_30"/>
                                 </td>
                             </tr>
                         </tbody>

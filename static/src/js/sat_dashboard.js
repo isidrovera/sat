@@ -1,57 +1,43 @@
 /** @odoo-module **/
 
-odoo.define('sat.SatListDashboard', function (require) {
-    "use strict";
+import { ListController } from "@web/views/list/list_controller";
+import { listView } from "@web/views/list/list_view";
+import { registry } from "@web/core/registry";
+import { useService } from "@web/core/utils/hooks";
+import { Component, onWillStart, useState } from "@odoo/owl";
 
-    const ListController = require('web.ListController');
-    const ListView = require('web.ListView');
-    const viewRegistry = require('web.view_registry');
-    const core = require('web.core');
-    const qweb = core.qweb;
+export class SatListController extends ListController {
+    setup() {
+        super.setup();
+        this.orm = useService("orm");
+        this.dashboardData = useState({ values: {} });
+        
+        onWillStart(async () => {
+            await this.loadDashboardData();
+        });
+    }
 
-    const SatListController = ListController.extend({
-        /**
-         * Después de cada actualización del listado, dibujamos el dashboard.
-         */
-        _update: function () {
-            const res = this._super.apply(this, arguments);
-            this._renderSatDashboard();
-            return res;
-        },
+    async loadDashboardData() {
+        const domain = this.model.root.domain || [];
+        const result = await this.orm.call(
+            "sat.sat",
+            "get_sat_dashboard_values",
+            [],
+            { domain: domain }
+        );
+        this.dashboardData.values = result;
+    }
 
-        /**
-         * Llamada RPC al método Python y render del template QWeb.
-         */
-        _renderSatDashboard: function () {
-            const self = this;
-            const state = this.model.get(this.handle);
-            const domain = state && state.domain ? state.domain : [];
+    async onUpdated() {
+        await super.onUpdated(...arguments);
+        await this.loadDashboardData();
+    }
+}
 
-            this._rpc({
-                model: 'sat.sat',
-                method: 'get_sat_dashboard_values',   // método que pusimos en el modelo
-                args: [],
-                kwargs: { domain: domain },
-            }).then(function (result) {
-                // Eliminar dashboards anteriores
-                self.$('.o_sat_dashboard').remove();
+export const satListView = {
+    ...listView,
+    Controller: SatListController,
+    buttonTemplate: "sat.SatSatDashboard",
+};
 
-                // Renderizar nuevo dashboard
-                const $dashboard = $(qweb.render('SatSatDashboard', {
-                    values: result,
-                }));
-                // Insertarlo arriba de la vista lista
-                self.$el.prepend($dashboard);
-            });
-        },
-    });
-
-    const SatListView = ListView.extend({
-        config: Object.assign({}, ListView.prototype.config, {
-            Controller: SatListController,
-        }),
-    });
-
-    // Nombre de vista que usas en js_class del <tree>
-    viewRegistry.add('sat_tree_dashboard', SatListView);
-});
+registry.category("views").add("sat_tree_dashboard", satListView);
