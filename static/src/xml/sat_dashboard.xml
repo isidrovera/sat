@@ -2,14 +2,15 @@
 <templates>
     <!-- Dashboard Component -->
     <t t-name="sat.SatSatDashboard">
-        <div class="o_sat_dashboard container-fluid py-3">
-            <div class="row g-3">
-                <!-- Cards KPI -->
-                <div class="col-lg-7">
-                    <div class="row g-3">
-                        <div class="col-6 col-md-3">
+        <div class="o_sat_dashboard container-fluid py-2">
+            <div class="row g-2">
+                <!-- Cards KPI - Ocupan todo el ancho -->
+                <div class="col-12">
+                    <div class="row g-2">
+                        <!-- Total máquinas -->
+                        <div class="col-6 col-md-2">
                             <div class="o_sat_card_kpi">
-                                <div class="o_sat_card_icon">
+                                <div class="o_sat_card_icon o_sat_icon_primary">
                                     <i class="fa fa-cubes"></i>
                                 </div>
                                 <div class="o_sat_card_content">
@@ -21,9 +22,10 @@
                             </div>
                         </div>
                         
-                        <div class="col-6 col-md-3">
-                            <div class="o_sat_card_kpi o_sat_card_success">
-                                <div class="o_sat_card_icon">
+                        <!-- Disponibles -->
+                        <div class="col-6 col-md-2">
+                            <div class="o_sat_card_kpi">
+                                <div class="o_sat_card_icon o_sat_icon_success">
                                     <i class="fa fa-check-circle"></i>
                                 </div>
                                 <div class="o_sat_card_content">
@@ -35,9 +37,10 @@
                             </div>
                         </div>
                         
-                        <div class="col-6 col-md-3">
-                            <div class="o_sat_card_kpi o_sat_card_warning">
-                                <div class="o_sat_card_icon">
+                        <!-- Separadas -->
+                        <div class="col-6 col-md-2">
+                            <div class="o_sat_card_kpi">
+                                <div class="o_sat_card_icon o_sat_icon_warning">
                                     <i class="fa fa-bookmark"></i>
                                 </div>
                                 <div class="o_sat_card_content">
@@ -49,9 +52,10 @@
                             </div>
                         </div>
                         
-                        <div class="col-6 col-md-3">
-                            <div class="o_sat_card_kpi o_sat_card_danger">
-                                <div class="o_sat_card_icon">
+                        <!-- Con problemas -->
+                        <div class="col-6 col-md-2">
+                            <div class="o_sat_card_kpi">
+                                <div class="o_sat_card_icon o_sat_icon_danger">
                                     <i class="fa fa-exclamation-triangle"></i>
                                 </div>
                                 <div class="o_sat_card_content">
@@ -62,61 +66,43 @@
                                 </div>
                             </div>
                         </div>
-                    </div>
-                </div>
-                
-                <!-- Tabla de métricas -->
-                <div class="col-lg-5">
-                    <div class="o_sat_metrics_table">
-                        <table class="table table-sm mb-0">
-                            <tbody>
-                                <tr>
-                                    <td class="o_metric_label">
-                                        <i class="fa fa-dollar me-2 text-muted"></i>
-                                        Precio compra promedio
-                                    </td>
-                                    <td class="o_metric_value">
-                                        <t t-esc="state.data.company_currency_symbol"/>
-                                        <t t-esc="state.data.avg_precio_compra"/>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td class="o_metric_label">
-                                        <i class="fa fa-warehouse me-2 text-muted"></i>
-                                        Valor stock disponible
-                                    </td>
-                                    <td class="o_metric_value">
-                                        <t t-esc="state.data.company_currency_symbol"/>
-                                        <t t-esc="state.data.stock_value_available"/>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td class="o_metric_label">
-                                        <i class="fa fa-arrow-down me-2 text-muted"></i>
-                                        Ingresadas últimos 7 días
-                                    </td>
-                                    <td class="o_metric_value">
-                                        <t t-esc="state.data.ingresadas_7"/>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td class="o_metric_label">
-                                        <i class="fa fa-check me-2 text-muted"></i>
-                                        Entregadas últimos 30 días
-                                    </td>
-                                    <td class="o_metric_value">
-                                        <t t-esc="state.data.entregadas_30"/>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
+                        
+                        <!-- En revisión -->
+                        <div class="col-6 col-md-2">
+                            <div class="o_sat_card_kpi">
+                                <div class="o_sat_card_icon o_sat_icon_info">
+                                    <i class="fa fa-search"></i>
+                                </div>
+                                <div class="o_sat_card_content">
+                                    <div class="o_sat_card_title">En revisión</div>
+                                    <div class="o_sat_card_value">
+                                        <t t-esc="state.data.total_en_revision"/>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Sin revisar -->
+                        <div class="col-6 col-md-2">
+                            <div class="o_sat_card_kpi">
+                                <div class="o_sat_card_icon o_sat_icon_secondary">
+                                    <i class="fa fa-clock-o"></i>
+                                </div>
+                                <div class="o_sat_card_content">
+                                    <div class="o_sat_card_title">Sin revisar</div>
+                                    <div class="o_sat_card_value">
+                                        <t t-esc="state.data.total_sin_revisar"/>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </t>
 
-    <!-- Custom List View Template - CORRECTED XPATH -->
+    <!-- Custom List View Template -->
     <t t-name="sat.SatListView" t-inherit="web.ListView" t-inherit-mode="primary">
         <xpath expr="//t[@t-component='props.Renderer']" position="before">
             <SatDashboard model="props.model" domain="props.domain"/>
