@@ -4,7 +4,7 @@ import { ListController } from "@web/views/list/list_controller";
 import { listView } from "@web/views/list/list_view";
 import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
-import { Component, onWillStart, useState } from "@odoo/owl";
+import { Component, onWillStart, onWillUpdateProps, useState } from "@odoo/owl";
 
 export class SatDashboard extends Component {
     static template = "sat.SatSatDashboard";
@@ -28,12 +28,23 @@ export class SatDashboard extends Component {
         onWillStart(async () => {
             await this.loadData();
         });
+
+        onWillUpdateProps(async (nextProps) => {
+            await this.loadData(nextProps);
+        });
     }
     
-    async loadData() {
+    async loadData(props) {
         try {
-            // Obtener dominio de forma segura desde props
-            const domain = this.props.domain || [];
+            props = props || this.props;
+            
+            // Obtener dominio desde el modelo si existe
+            let domain = [];
+            if (props.model && props.model.root) {
+                domain = props.model.root.domain || [];
+            } else if (props.domain) {
+                domain = props.domain;
+            }
             
             const result = await this.orm.call(
                 "sat.sat",
@@ -42,7 +53,6 @@ export class SatDashboard extends Component {
                 { domain: domain }
             );
             
-            // Actualizar state con los datos recibidos
             Object.assign(this.state.data, result);
             
         } catch (error) {
@@ -54,17 +64,19 @@ export class SatDashboard extends Component {
 export class SatListController extends ListController {
     setup() {
         super.setup();
-        // No necesitamos hacer nada especial aquí
     }
 }
 
-// Configurar la vista personalizada
+SatListController.components = {
+    ...ListController.components,
+    SatDashboard,
+};
+
+SatListController.template = "sat.SatListView";
+
 export const satListView = {
     ...listView,
     Controller: SatListController,
-    // Agregar el dashboard como banner (aparecerá arriba de la lista)
-    banner: SatDashboard,
 };
 
-// Registrar la vista
 registry.category("views").add("sat_tree_dashboard", satListView);

@@ -1,79 +1,125 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates>
+    <!-- Dashboard Component -->
     <t t-name="sat.SatSatDashboard">
-        <div class="o_sat_dashboard o_list_dashboard container-fluid mt-2 mb-2">
-            <div class="row">
-                <div class="col-md-7">
-                    <div class="row g-2">
+        <div class="o_sat_dashboard container-fluid py-3">
+            <div class="row g-3">
+                <!-- Cards KPI -->
+                <div class="col-lg-7">
+                    <div class="row g-3">
                         <div class="col-6 col-md-3">
-                            <div class="o_sat_card_kpi text-center">
-                                <div class="o_sat_card_title">Total máquinas</div>
-                                <div class="o_sat_card_value">
-                                    <t t-esc="data.total_maquinas"/>
+                            <div class="o_sat_card_kpi">
+                                <div class="o_sat_card_icon">
+                                    <i class="fa fa-cubes"></i>
+                                </div>
+                                <div class="o_sat_card_content">
+                                    <div class="o_sat_card_title">Total máquinas</div>
+                                    <div class="o_sat_card_value">
+                                        <t t-esc="state.data.total_maquinas"/>
+                                    </div>
                                 </div>
                             </div>
                         </div>
+                        
                         <div class="col-6 col-md-3">
-                            <div class="o_sat_card_kpi text-center">
-                                <div class="o_sat_card_title">Disponibles</div>
-                                <div class="o_sat_card_value">
-                                    <t t-esc="data.total_disponibles"/>
+                            <div class="o_sat_card_kpi o_sat_card_success">
+                                <div class="o_sat_card_icon">
+                                    <i class="fa fa-check-circle"></i>
+                                </div>
+                                <div class="o_sat_card_content">
+                                    <div class="o_sat_card_title">Disponibles</div>
+                                    <div class="o_sat_card_value">
+                                        <t t-esc="state.data.total_disponibles"/>
+                                    </div>
                                 </div>
                             </div>
                         </div>
+                        
                         <div class="col-6 col-md-3">
-                            <div class="o_sat_card_kpi text-center">
-                                <div class="o_sat_card_title">Separadas</div>
-                                <div class="o_sat_card_value">
-                                    <t t-esc="data.total_separadas"/>
+                            <div class="o_sat_card_kpi o_sat_card_warning">
+                                <div class="o_sat_card_icon">
+                                    <i class="fa fa-bookmark"></i>
+                                </div>
+                                <div class="o_sat_card_content">
+                                    <div class="o_sat_card_title">Separadas</div>
+                                    <div class="o_sat_card_value">
+                                        <t t-esc="state.data.total_separadas"/>
+                                    </div>
                                 </div>
                             </div>
                         </div>
+                        
                         <div class="col-6 col-md-3">
-                            <div class="o_sat_card_kpi text-center">
-                                <div class="o_sat_card_title">Con problemas</div>
-                                <div class="o_sat_card_value text-danger">
-                                    <t t-esc="data.total_problemas"/>
+                            <div class="o_sat_card_kpi o_sat_card_danger">
+                                <div class="o_sat_card_icon">
+                                    <i class="fa fa-exclamation-triangle"></i>
+                                </div>
+                                <div class="o_sat_card_content">
+                                    <div class="o_sat_card_title">Con problemas</div>
+                                    <div class="o_sat_card_value">
+                                        <t t-esc="state.data.total_problemas"/>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-5 mt-3 mt-md-0">
-                    <table class="table table-sm mb-0">
-                        <tbody>
-                            <tr>
-                                <td class="o_text">
-                                    Precio compra promedio (<t t-esc="data.company_currency_symbol"/>)
-                                </td>
-                                <td class="o_kpi_value">
-                                    <t t-esc="data.avg_precio_compra"/>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td class="o_text">
-                                    Valor stock disponible (<t t-esc="data.company_currency_symbol"/>)
-                                </td>
-                                <td class="o_kpi_value">
-                                    <t t-esc="data.stock_value_available"/>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td class="o_text">Ingresadas últimos 7 días</td>
-                                <td class="o_kpi_value">
-                                    <t t-esc="data.ingresadas_7"/>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td class="o_text">Entregadas últimos 30 días</td>
-                                <td class="o_kpi_value">
-                                    <t t-esc="data.entregadas_30"/>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+                
+                <!-- Tabla de métricas -->
+                <div class="col-lg-5">
+                    <div class="o_sat_metrics_table">
+                        <table class="table table-sm mb-0">
+                            <tbody>
+                                <tr>
+                                    <td class="o_metric_label">
+                                        <i class="fa fa-dollar me-2 text-muted"></i>
+                                        Precio compra promedio
+                                    </td>
+                                    <td class="o_metric_value">
+                                        <t t-esc="state.data.company_currency_symbol"/>
+                                        <t t-esc="state.data.avg_precio_compra"/>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="o_metric_label">
+                                        <i class="fa fa-warehouse me-2 text-muted"></i>
+                                        Valor stock disponible
+                                    </td>
+                                    <td class="o_metric_value">
+                                        <t t-esc="state.data.company_currency_symbol"/>
+                                        <t t-esc="state.data.stock_value_available"/>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="o_metric_label">
+                                        <i class="fa fa-arrow-down me-2 text-muted"></i>
+                                        Ingresadas últimos 7 días
+                                    </td>
+                                    <td class="o_metric_value">
+                                        <t t-esc="state.data.ingresadas_7"/>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="o_metric_label">
+                                        <i class="fa fa-check me-2 text-muted"></i>
+                                        Entregadas últimos 30 días
+                                    </td>
+                                    <td class="o_metric_value">
+                                        <t t-esc="state.data.entregadas_30"/>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
+    </t>
+
+    <!-- Custom List View Template -->
+    <t t-name="sat.SatListView" t-inherit="web.ListView" t-inherit-mode="primary">
+        <xpath expr="//div[hasclass('o_list_view')]" position="before">
+            <SatDashboard model="props.model" domain="props.domain"/>
+        </xpath>
     </t>
 </templates>
