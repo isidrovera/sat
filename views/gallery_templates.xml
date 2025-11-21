@@ -481,15 +481,15 @@
                 <!-- Datos de equipo / técnico -->
                 <div class="meta-grid">
                   <div class="meta-pill">
-                    <b>Equipo</b>
+                   <!-- <b>Equipo</b>-->
                     <span><t t-esc="(reparacion.maquina_id and (reparacion.maquina_id.display_name or reparacion.maquina_id.name)) or '—'"/></span>
                   </div>
                   <div class="meta-pill">
-                    <b>Serie</b>
+                    
                     <span><t t-esc="reparacion.serie_id or '—'"/></span>
                   </div>
                   <div class="meta-pill">
-                    <b>Técnico</b>
+                    
                     <span><t t-esc="reparacion.responsable_id.name or '—'"/></span>
                   </div>
                 </div>
