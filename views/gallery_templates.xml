@@ -23,9 +23,7 @@
             --transition: all 0.3s ease;
           }
 
-          * {
-            box-sizing: border-box;
-          }
+          * { box-sizing: border-box; }
 
           body { 
             background-color: var(--secondary-color);
@@ -48,19 +46,19 @@
             border-radius: var(--border-radius);
             box-shadow: var(--card-shadow);
             margin: 1rem;
-            padding: 1.5rem;
+            padding: 1.25rem 1.5rem;
             border: 1px solid rgba(0,0,0,0.05);
           }
 
           .header-content { 
             display: flex;
             flex-direction: column;
-            gap: 1.25rem;
+            gap: 1rem;
           }
 
           .header-info h2 { 
-            font-size: clamp(1.25rem, 4vw, 1.75rem);
-            margin: 0 0 1rem 0;
+            font-size: clamp(1.2rem, 4vw, 1.7rem);
+            margin: 0 0 0.5rem 0;
             color: var(--primary-color);
             font-weight: 700;
             display: flex;
@@ -70,27 +68,32 @@
 
           .header-info h2::before {
             content: '📸';
-            font-size: 1.5em;
+            font-size: 1.4em;
           }
 
-          /* META GRID - Responsive mejorado */
+          .header-sub { 
+            font-size: 0.85rem;
+            color: var(--text-muted);
+          }
+
+          /* META GRID */
           .meta-grid { 
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
             gap: 0.75rem;
-            margin-top: 0.5rem;
+            margin-top: 0.25rem;
           }
 
           .meta-pill { 
             background: #ffffff;
             border: 1px solid #e9ecef;
             border-radius: 8px;
-            padding: 0.6rem 0.9rem;
-            font-size: 0.9rem;
+            padding: 0.5rem 0.8rem;
+            font-size: 0.85rem;
             transition: var(--transition);
             display: flex;
             flex-direction: column;
-            gap: 0.25rem;
+            gap: 0.15rem;
           }
 
           .meta-pill:hover {
@@ -101,7 +104,7 @@
           .meta-pill b { 
             color: var(--text-muted);
             font-weight: 600;
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             text-transform: uppercase;
             letter-spacing: 0.5px;
           }
@@ -110,67 +113,79 @@
           .action-buttons { 
             display: flex;
             flex-wrap: wrap;
-            gap: 0.75rem;
+            gap: 0.5rem;
             align-items: center;
             justify-content: flex-start;
           }
 
           .btn { 
-            padding: 0.65rem 1.25rem;
+            padding: 0.45rem 0.9rem;
             border-radius: 8px;
             font-weight: 600;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             border: none;
             cursor: pointer;
             transition: var(--transition);
             display: inline-flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 0.35rem;
             white-space: nowrap;
+          }
+
+          .btn i {
+            font-size: 0.9em; /* iconos un poco más pequeños */
+          }
+
+          .btn-main {
+            min-width: 110px;
+            justify-content: center;
           }
 
           .btn-camera { 
             background: linear-gradient(135deg, var(--camera-color) 0%, #e84393 100%);
             color: #fff;
-            box-shadow: 0 4px 12px rgba(253, 121, 168, 0.3);
+            box-shadow: 0 4px 10px rgba(253, 121, 168, 0.25);
           }
 
           .btn-camera:hover { 
-            transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(253, 121, 168, 0.4);
-          }
-
-          .btn-camera:active {
-            transform: translateY(0);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 14px rgba(253, 121, 168, 0.35);
           }
 
           .btn-download-all {
             background: linear-gradient(135deg, var(--success-color) 0%, #00a383 100%);
             color: #fff;
-            box-shadow: 0 4px 12px rgba(0, 184, 148, 0.3);
+            box-shadow: 0 4px 10px rgba(0, 184, 148, 0.25);
           }
 
           .btn-download-all:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(0, 184, 148, 0.4);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 14px rgba(0, 184, 148, 0.35);
             color: #fff;
           }
 
-          .btn-download-all:active {
-            transform: translateY(0);
+          .btn-share-gallery {
+            border: 1px solid #d0d6dc;
+            background: #ffffff;
+            color: var(--text-muted);
           }
 
-          /* PHOTO GRID - Responsive mejorado */
+          .btn-share-gallery:hover {
+            background: #f1f3f5;
+          }
+
+          /* PHOTO GRID */
           .photo-grid { 
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
             gap: 1.25rem;
-            padding: 1rem;
+            padding: 0.9rem;
           }
 
           @media (min-width: 576px) {
             .photo-grid {
               grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+              padding: 1rem;
             }
           }
 
@@ -187,7 +202,7 @@
 
             .photo-grid {
               grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-              padding: 1.5rem;
+              padding: 1.25rem;
             }
           }
 
@@ -209,7 +224,7 @@
 
           .photo-card:hover {
             box-shadow: var(--card-shadow-hover);
-            transform: translateY(-4px);
+            transform: translateY(-2px);
           }
 
           .photo-container { 
@@ -230,32 +245,32 @@
           }
 
           .photo-container:hover img { 
-            transform: scale(1.08);
+            transform: scale(1.06);
           }
 
           .photo-badge { 
             position: absolute;
-            top: 10px;
-            right: 10px;
-            background: rgba(0,0,0,0.75);
-            backdrop-filter: blur(8px);
+            top: 8px;
+            right: 8px;
+            background: rgba(0,0,0,0.72);
+            backdrop-filter: blur(6px);
             color: #fff;
-            padding: 4px 10px;
-            border-radius: 6px;
-            font-size: 0.75rem;
+            padding: 3px 9px;
+            border-radius: 999px;
+            font-size: 0.7rem;
             font-weight: 600;
             z-index: 10;
           }
 
           .photo-info { 
-            padding: 0.85rem;
+            padding: 0.75rem;
             border-top: 1px solid #f1f3f5;
-            font-size: 0.875rem;
+            font-size: 0.83rem;
             color: var(--text-color);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            gap: 0.75rem;
+            gap: 0.6rem;
             flex-wrap: wrap;
           }
 
@@ -269,8 +284,8 @@
           }
 
           .btn-sm {
-            padding: 0.4rem 0.75rem;
-            font-size: 0.875rem;
+            padding: 0.3rem 0.55rem;
+            font-size: 0.8rem;
             border-radius: 6px;
           }
 
@@ -312,7 +327,7 @@
 
           .slideshow-modal.show { 
             display: flex;
-            animation: fadeIn 0.3s ease;
+            animation: fadeIn 0.25s ease;
           }
 
           @keyframes fadeIn {
@@ -354,25 +369,25 @@
             backdrop-filter: blur(10px);
             color: #fff;
             border: 2px solid rgba(255,255,255,0.3);
-            width: 50px;
-            height: 50px;
+            width: 46px;
+            height: 46px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
             transition: var(--transition);
-            font-size: 1.25rem;
+            font-size: 1.1rem;
           }
 
           .slideshow-close:hover, .slideshow-prev:hover, .slideshow-next:hover {
             background: rgba(255,255,255,0.25);
-            transform: scale(1.1);
+            transform: scale(1.05);
           }
 
           .slideshow-close { 
-            top: 20px;
-            right: 20px;
+            top: 18px;
+            right: 18px;
           }
 
           .slideshow-prev, .slideshow-next { 
@@ -380,8 +395,8 @@
             transform: translateY(-50%);
           }
 
-          .slideshow-prev { left: 20px; }
-          .slideshow-next { right: 20px; }
+          .slideshow-prev { left: 18px; }
+          .slideshow-next { right: 18px; }
 
           /* LOADING OVERLAY */
           #loadingOverlay {
@@ -391,11 +406,12 @@
             transform: translate(-50%, -50%);
             background: rgba(0,0,0,0.9);
             color: white;
-            padding: 1.5rem 2.5rem;
+            padding: 1.2rem 2rem;
             border-radius: 12px;
             font-weight: 600;
             z-index: 9999;
             box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+            font-size: 0.95rem;
           }
 
           .hidden { 
@@ -404,26 +420,116 @@
 
           #pendingStrip { 
             border-top: 2px dashed #dee2e6;
-            margin-top: 1rem;
-            padding-top: 1rem;
+            margin-top: 0.75rem;
+            padding-top: 0.75rem;
+          }
+
+          /* APP MODAL (para alertas / confirmaciones) */
+          .app-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 11000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,0.45);
+            backdrop-filter: blur(3px);
+          }
+
+          .app-modal.show {
+            display: flex;
+            animation: fadeIn 0.2s ease;
+          }
+
+          .app-modal-dialog {
+            background: #ffffff;
+            border-radius: 14px;
+            padding: 1.5rem 1.75rem 1.25rem;
+            max-width: 420px;
+            width: 92vw;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.25);
+            text-align: center;
+          }
+
+          .app-modal-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            margin: 0 auto 0.9rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.6rem;
+          }
+
+          .app-modal-icon.success { 
+            background: rgba(0, 184, 148, 0.12);
+            color: #00b894;
+            border: 2px solid rgba(0, 184, 148, 0.5);
+          }
+
+          .app-modal-icon.error {
+            background: rgba(214, 48, 49, 0.12);
+            color: #d63031;
+            border: 2px solid rgba(214, 48, 49, 0.5);
+          }
+
+          .app-modal-icon.warning {
+            background: rgba(251, 197, 49, 0.12);
+            color: #e1a500;
+            border: 2px solid rgba(241, 196, 15, 0.5);
+          }
+
+          .app-modal-title {
+            margin: 0 0 0.35rem;
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--text-color);
+          }
+
+          .app-modal-message {
+            margin: 0 0 1rem;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+          }
+
+          .app-modal-actions {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+          }
+
+          .app-modal-actions .btn {
+            min-width: 90px;
+            font-size: 0.85rem;
+          }
+
+          .btn-primary-soft {
+            background: var(--primary-color);
+            color: #fff;
+          }
+
+          .btn-primary-soft:hover {
+            background: var(--primary-dark);
           }
 
           /* MOBILE OPTIMIZATIONS */
           @media (max-width: 575px) {
             .header-card {
-              margin: 0.75rem;
-              padding: 1rem;
+              margin: 0.6rem;
+              padding: 0.9rem;
             }
 
             .photo-grid {
-              padding: 0.75rem;
-              gap: 1rem;
+              padding: 0.6rem;
+              gap: 0.9rem;
             }
 
             .photo-info {
               flex-direction: column;
               align-items: flex-start;
-              gap: 0.5rem;
+              gap: 0.4rem;
             }
 
             .photo-info > span {
@@ -439,6 +545,10 @@
             .slideshow-prev { left: 10px; }
             .slideshow-next { right: 10px; }
             .slideshow-close { top: 10px; right: 10px; }
+
+            .app-modal-dialog {
+              padding: 1.2rem 1.2rem 1rem;
+            }
           }
 
           /* SCROLLBAR STYLING */
@@ -479,31 +589,42 @@
                 <!-- Datos de equipo / técnico -->
                 <div class="meta-grid">
                   <div class="meta-pill">
-                    <span><t t-esc="(reparacion.maquina_id and (reparacion.maquina_id.display_name or reparacion.maquina_id.name)) or '—'"/></span>
+                    <b>Modelo</b>
+                    <span>
+                      <t t-esc="(reparacion.maquina_id and (reparacion.maquina_id.display_name or reparacion.maquina_id.name)) or '—'"/>
+                    </span>
                   </div>
                   <div class="meta-pill">
+                    <b>Serie</b>
                     <span><t t-esc="reparacion.serie_id or '—'"/></span>
                   </div>
                   <div class="meta-pill">
+                    <b>Técnico</b>
                     <span><t t-esc="reparacion.responsable_id.name or '—'"/></span>
                   </div>
                 </div>
               </div>
 
               <div class="action-buttons">
+                <!-- BOTÓN COMPARTIR GALERÍA -->
+                <button id="shareGalleryBtn" class="btn btn-main btn-share-gallery">
+                  <i class="fa-solid fa-share-nodes"></i>
+                  <span>Compartir</span>
+                </button>
+
                 <!-- BOTÓN CÁMARA -->
-                <button id="cameraBtn" class="btn btn-camera">
+                <button id="cameraBtn" class="btn btn-main btn-camera">
                   <i class="fa-solid fa-camera"></i> 
-                  <span>Tomar foto</span>
+                  <span>Tomar Foto</span>
                 </button>
                 
                 <!-- BOTÓN DESCARGAR TODAS -->
                 <t t-if="fotos and len(fotos) > 0">
                   <a t-attf-href="/gallery/download_all/#{reparacion.id}" 
-                     class="btn btn-download-all"
+                     class="btn btn-main btn-download-all"
                      title="Descargar todas las fotos en ZIP">
                     <i class="fa-solid fa-download"></i>
-                    <span>Descargar todas (<t t-esc="len(fotos)"/>)</span>
+                    <span>Descargar Todas (<t t-esc="len(fotos)"/>)</span>
                   </a>
                 </t>
                 
@@ -530,7 +651,7 @@
                     #<t t-esc="f.get('sequence', 0)"/> — <t t-esc="f.get('nombre_foto','Sin nombre')"/>
                   </span>
                   <div class="d-flex gap-2">
-                    <!-- NUEVO: botón compartir -->
+                    <!-- botón compartir foto -->
                     <button
                       type="button"
                       class="btn btn-sm btn-outline-secondary btn-share-photo"
@@ -572,6 +693,21 @@
             <button class="slideshow-next" id="slideshowNext" title="Siguiente" aria-label="Foto siguiente">
               <i class="fa-solid fa-chevron-right"></i>
             </button>
+          </div>
+        </div>
+
+        <!-- Modal genérico para alertas / confirmaciones -->
+        <div id="appModal" class="app-modal" aria-hidden="true">
+          <div class="app-modal-dialog">
+            <div id="appModalIcon" class="app-modal-icon success">
+              <i class="fa-solid fa-check"></i>
+            </div>
+            <h3 id="appModalTitle" class="app-modal-title">Título</h3>
+            <p id="appModalMessage" class="app-modal-message">Mensaje</p>
+            <div class="app-modal-actions">
+              <button type="button" id="appModalCancel" class="btn btn-sm btn-outline-secondary">Cancelar</button>
+              <button type="button" id="appModalOk" class="btn btn-sm btn-primary-soft">Aceptar</button>
+            </div>
           </div>
         </div>
 

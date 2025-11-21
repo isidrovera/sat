@@ -1,5 +1,5 @@
 // sat/static/src/js/gallery_widget_v15.js
-// Galería: cámara continua + lote + pCloud directo + eliminar + visor con zoom + compartir
+// Galería: cámara continua + lote + pCloud directo + eliminar + visor con zoom + compartir + modales propios
 (function () {
   'use strict';
 
@@ -31,16 +31,24 @@
     },
 
     qs() {
-      this.els.cameraBtn   = document.getElementById('cameraBtn');
-      this.els.cameraInput = document.getElementById('cameraCapture');
-      this.els.photoGrid   = document.getElementById('photoGrid');
-      this.els.loading     = document.getElementById('loadingOverlay');
+      this.els.cameraBtn        = document.getElementById('cameraBtn');
+      this.els.cameraInput      = document.getElementById('cameraCapture');
+      this.els.photoGrid        = document.getElementById('photoGrid');
+      this.els.loading          = document.getElementById('loadingOverlay');
+      this.els.shareGalleryBtn  = document.getElementById('shareGalleryBtn');
       // modal visor
       this.els.modal       = document.getElementById('slideshowModal');
       this.els.modalImg    = document.getElementById('slideshowImage');
       this.els.modalClose  = document.getElementById('slideshowClose');
       this.els.modalPrev   = document.getElementById('slideshowPrev');
       this.els.modalNext   = document.getElementById('slideshowNext');
+      // modal genérico
+      this.els.appModal        = document.getElementById('appModal');
+      this.els.appModalIcon    = document.getElementById('appModalIcon');
+      this.els.appModalTitle   = document.getElementById('appModalTitle');
+      this.els.appModalMessage = document.getElementById('appModalMessage');
+      this.els.appModalOk      = document.getElementById('appModalOk');
+      this.els.appModalCancel  = document.getElementById('appModalCancel');
     },
 
     ensureAuxUI() {
@@ -115,7 +123,7 @@
       }
       this.els.pendingStrip = strip;
 
-      // Si el template NO trae modal, creamos uno
+      // Si el template NO trae modal de visor, lo creamos
       if (!this.els.modal) {
         const m = document.createElement('div');
         m.id = 'slideshowModal';
@@ -154,6 +162,11 @@
         this.els.cameraInput.setAttribute('capture', 'environment');
         this.els.cameraInput.addEventListener('change', (e) => this.handleCameraCapture(e));
       }
+
+      // Compartir galería
+      if (this.els.shareGalleryBtn) {
+        this.els.shareGalleryBtn.addEventListener('click', () => this.handleShareGallery());
+      }
       
       // Toggle continuo
       if (this.els.toggleContinuous) {
@@ -183,7 +196,7 @@
           return;
         }
 
-        // Compartir / copiar enlace
+        // Compartir / copiar enlace de foto
         const shareBtn = e.target.closest('.btn-share-photo');
         if (shareBtn) {
           this.handleShareClick(shareBtn);
@@ -195,7 +208,7 @@
         if (delBtn) this.handleDeleteClick(e);
       });
 
-      // Controles del modal
+      // Controles del modal de visor
       this.els.modalClose?.addEventListener('click', () => this.closeViewer());
       this.els.modalPrev ?.addEventListener('click', () => this.navigateViewer(-1));
       this.els.modalNext ?.addEventListener('click', () => this.navigateViewer(1));
@@ -263,7 +276,11 @@
         this.enqueue(compressed);
       } catch (error) {
         console.error('Error comprimiendo imagen:', error);
-        alert('Error al procesar la imagen');
+        await this.showModal({
+          title: 'Error',
+          message: 'Ocurrió un problema al procesar la imagen.',
+          variant: 'error',
+        });
       } finally {
         this.showLoading(false);
       }
@@ -362,11 +379,22 @@
           await this.uploadOneDirectToPcloud(item.file);
         }
         this.clearPending();
+
+        await this.showModal({
+          title: 'Lote subido',
+          message: 'Las fotos fueron subidas correctamente.',
+          variant: 'success',
+        });
+
         // Recargar para ver las nuevas fotos
-        setTimeout(() => window.location.reload(), 500);
+        setTimeout(() => window.location.reload(), 400);
       } catch (e) {
         console.error('Error en subida por lotes', e);
-        alert('Ocurrió un error subiendo el lote: ' + (e.message || e));
+        await this.showModal({
+          title: 'Error al subir',
+          message: 'Ocurrió un error subiendo el lote: ' + (e.message || e),
+          variant: 'error',
+        });
       } finally {
         this.uploadingBatch = false;
         this.updateBatchUI();
@@ -457,12 +485,17 @@
     async handleDeleteClick(e) {
       if (!(await this.ensureAuthOrRedirect())) return;
 
-      const btn = e.target.closest('.btn-delete-photo');
       const card = e.target.closest('.photo-card');
       const fotoId = card?.getAttribute('data-foto-id');
       if (!fotoId) return;
 
-      if (!confirm('¿Eliminar esta foto?')) return;
+      const confirm = await this.showModal({
+        title: 'Eliminar foto',
+        message: '¿Seguro que deseas eliminar esta foto?',
+        variant: 'warning',
+        showCancel: true,
+      });
+      if (!confirm) return;
 
       try {
         const res = await fetch(`/gallery/delete/${fotoId}`, {
@@ -472,16 +505,70 @@
         const j = await res.json().catch(() => null);
         if (j?.success) {
           card.remove();
+          await this.showModal({
+            title: 'Foto eliminada',
+            message: 'La foto se eliminó correctamente.',
+            variant: 'success',
+          });
         } else {
-          alert(j?.error || 'No se pudo eliminar');
+          await this.showModal({
+            title: 'No se pudo eliminar',
+            message: j?.error || 'Ocurrió un error al eliminar la foto.',
+            variant: 'error',
+          });
         }
       } catch (err) {
         console.error('Error eliminando la foto', err);
-        alert('Error al intentar eliminar');
+        await this.showModal({
+          title: 'Error',
+          message: 'Error al intentar eliminar la foto.',
+          variant: 'error',
+        });
       }
     },
 
-    // --------------- compartir / copiar url ---------------
+    // --------------- compartir galería ---------------
+    async handleShareGallery() {
+      const url = location.href.split('#')[0];
+      try {
+        // Web Share API donde esté disponible
+        if (navigator.share) {
+          await navigator.share({
+            title: document.title || 'Galería de Fotos',
+            text: 'Te comparto la galería de fotos.',
+            url: url,
+          });
+          return;
+        }
+
+        // Copiar al portapapeles
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(url);
+        } else {
+          const temp = document.createElement('input');
+          temp.value = url;
+          document.body.appendChild(temp);
+          temp.select();
+          document.execCommand('copy');
+          document.body.removeChild(temp);
+        }
+
+        await this.showModal({
+          title: 'URL Copiada',
+          message: 'El enlace de la galería ha sido copiado al portapapeles.',
+          variant: 'success',
+        });
+      } catch (err) {
+        console.error('Error al compartir galería', err);
+        await this.showModal({
+          title: 'Error',
+          message: 'No se pudo compartir/copiar la URL de la galería.',
+          variant: 'error',
+        });
+      }
+    },
+
+    // --------------- compartir / copiar url de foto ---------------
     async handleShareClick(btn) {
       try {
         const relUrl = btn.getAttribute('data-download-url');
@@ -493,7 +580,7 @@
         if (navigator.share) {
           await navigator.share({
             title: 'Foto de la reparación',
-            text: 'Te comparto esta foto de la reparación',
+            text: 'Te comparto esta foto de la reparación.',
             url: fullUrl,
           });
           return;
@@ -502,7 +589,6 @@
         // Copiar al portapapeles
         if (navigator.clipboard && navigator.clipboard.writeText) {
           await navigator.clipboard.writeText(fullUrl);
-          alert('Enlace copiado al portapapeles:\n' + fullUrl);
         } else {
           // Fallback básico
           const temp = document.createElement('input');
@@ -511,11 +597,20 @@
           temp.select();
           document.execCommand('copy');
           document.body.removeChild(temp);
-          alert('Enlace copiado al portapapeles:\n' + fullUrl);
         }
+
+        await this.showModal({
+          title: 'URL Copiada',
+          message: 'El enlace de la foto ha sido copiado al portapapeles.',
+          variant: 'success',
+        });
       } catch (err) {
         console.error('Error al compartir/copiar enlace', err);
-        alert('No se pudo compartir/copiar el enlace.');
+        await this.showModal({
+          title: 'Error',
+          message: 'No se pudo compartir/copiar el enlace de la foto.',
+          variant: 'error',
+        });
       }
     },
 
@@ -643,6 +738,73 @@
     },
 
     _resetZoom() {},
+
+    // --------------- modal genérico ---------------
+    /**
+     * options: { title, message, variant: 'success'|'error'|'warning'|'info', showCancel: bool }
+     * return: Promise<boolean>  -> true = aceptar, false = cancelar/cerrar
+     */
+    showModal(options) {
+      const modal = this.els.appModal;
+      if (!modal) {
+        // fallback muy básico si algo falla
+        if (options.showCancel) {
+          const result = window.confirm(options.title + '\n\n' + options.message);
+          return Promise.resolve(!!result);
+        } else {
+          window.alert(options.title + '\n\n' + options.message);
+          return Promise.resolve(true);
+        }
+      }
+
+      const icon = this.els.appModalIcon;
+      const titleEl = this.els.appModalTitle;
+      const msgEl = this.els.appModalMessage;
+      const okBtn = this.els.appModalOk;
+      const cancelBtn = this.els.appModalCancel;
+
+      const variant = options.variant || 'info';
+      icon.classList.remove('success', 'error', 'warning');
+      if (variant === 'success') icon.classList.add('success');
+      else if (variant === 'error') icon.classList.add('error');
+      else if (variant === 'warning') icon.classList.add('warning');
+      else icon.classList.add('success'); // por defecto
+
+      titleEl.textContent = options.title || '';
+      msgEl.textContent = options.message || '';
+
+      if (options.showCancel) {
+        cancelBtn.style.display = 'inline-flex';
+      } else {
+        cancelBtn.style.display = 'none';
+      }
+
+      return new Promise((resolve) => {
+        const close = (value) => {
+          modal.classList.remove('show');
+          modal.setAttribute('aria-hidden', 'true');
+          okBtn.removeEventListener('click', onOk);
+          cancelBtn.removeEventListener('click', onCancel);
+          modal.removeEventListener('click', onBackdrop);
+          resolve(value);
+        };
+
+        const onOk = () => close(true);
+        const onCancel = () => close(false);
+        const onBackdrop = (e) => {
+          if (e.target === modal && options.showCancel) {
+            close(false);
+          }
+        };
+
+        okBtn.addEventListener('click', onOk);
+        cancelBtn.addEventListener('click', onCancel);
+        modal.addEventListener('click', onBackdrop);
+
+        modal.classList.add('show');
+        modal.setAttribute('aria-hidden', 'false');
+      });
+    },
 
     // --------------- util ---------------
     escapeHtml(str) {
