@@ -116,9 +116,9 @@
         </div>
     </t>
 
-    <!-- Custom List View Template -->
+    <!-- Custom List View Template - CORRECTED XPATH -->
     <t t-name="sat.SatListView" t-inherit="web.ListView" t-inherit-mode="primary">
-        <xpath expr="//div[hasclass('o_list_view')]" position="before">
+        <xpath expr="//t[@t-component='props.Renderer']" position="before">
             <SatDashboard model="props.model" domain="props.domain"/>
         </xpath>
     </t>
