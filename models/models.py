@@ -1495,3 +1495,72 @@ haga clic en el siguiente enlace: 📍 {self.crear_url_cambio_ubicacion(registro
 
         # Reusa la acción ya definida en reparaciones.reparaciones
         return reparacion.action_open_gallery()
+
+
+        # ===============================
+    #   DASHBOARD LISTA sat.sat
+    # ===============================
+    @api.model
+    def get_sat_dashboard_values(self, domain=False):
+        domain = domain or []
+        Sat = self.env['sat.sat']
+
+        records = Sat.search(domain)
+        total_maquinas = len(records)
+
+        total_disponibles = Sat.search_count(domain + [
+            ('disponibilidad_id', '=', 'disponible')
+        ])
+        total_separadas = Sat.search_count(domain + [
+            ('disponibilidad_id', '=', 'separada')
+        ])
+        total_no_disponibles = Sat.search_count(domain + [
+            ('disponibilidad_id', '=', 'no_disponible')
+        ])
+
+        total_problemas = Sat.search_count(domain + [
+            ('estado_ventas_id', 'in', ['con_problemas', 'de_partes'])
+        ])
+        total_en_revision = Sat.search_count(domain + [
+            ('estado_ventas_id', 'in', ['para_revision', 'en_revision'])
+        ])
+        total_sin_revisar = Sat.search_count(domain + [
+            ('estado_ventas_id', '=', 'sin_revisar')
+        ])
+
+        today = fields.Date.context_today(self)
+        last_7 = today - timedelta(days=7)
+        last_30 = today - timedelta(days=30)
+
+        ingresadas_7 = Sat.search_count(domain + [
+            ('create_date', '>=', last_7)
+        ])
+        entregadas_30 = Sat.search_count(domain + [
+            ('estado_ventas_id', '=', 'entregada'),
+            ('fecha_entrega', '>=', last_30)
+        ])
+
+        disponibles_records = Sat.search(domain + [
+            ('disponibilidad_id', '=', 'disponible')
+        ])
+        stock_value_available = sum(disponibles_records.mapped('precio_compra'))
+
+        precios = [r.precio_compra for r in records if r.precio_compra]
+        avg_precio_compra = sum(precios) / len(precios) if precios else 0.0
+
+        currency = self.env.company.currency_id
+
+        return {
+            'company_currency_symbol': currency.symbol or '',
+            'total_maquinas': total_maquinas,
+            'total_disponibles': total_disponibles,
+            'total_separadas': total_separadas,
+            'total_no_disponibles': total_no_disponibles,
+            'total_problemas': total_problemas,
+            'total_en_revision': total_en_revision,
+            'total_sin_revisar': total_sin_revisar,
+            'ingresadas_7': ingresadas_7,
+            'entregadas_30': entregadas_30,
+            'stock_value_available': round(stock_value_available, 2),
+            'avg_precio_compra': round(avg_precio_compra, 2),
+        }

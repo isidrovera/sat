@@ -231,7 +231,7 @@
       <field name="model">sat.sat</field>
       <field name="type">list</field>
       <field name="arch" type="xml">
-        <list default_order="id desc">
+        <list default_order="id desc" js_class="sat_tree_dashboard">
           <field name="importacion" optional="hide" />
           <field name="proveedor_id" optional="hide" />
           <field name="descripcion" optional="hide" />
