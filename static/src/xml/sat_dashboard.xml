@@ -1,100 +1,98 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<odoo>
-  <templates id="template" xml:space="preserve">
+<templates xml:space="preserve">
 
     <!-- Dashboard que se mostrará sobre la lista de sat.sat -->
-    <t t-name="SatSatDashboard">
-      <div class="o_sat_dashboard o_list_dashboard container-fluid mt-2 mb-2">
-        <div class="row">
+    <t t-name="sat.SatSatDashboard" owl="1">
+        <div class="o_sat_dashboard o_list_dashboard container-fluid mt-2 mb-2">
+            <div class="row">
 
-          <!-- Bloques tipo “cards” -->
-          <div class="col-md-7">
-            <div class="row g-2">
+                <!-- Bloques tipo "cards" -->
+                <div class="col-md-7">
+                    <div class="row g-2">
 
-              <div class="col-6 col-md-3">
-                <div class="o_sat_card_kpi text-center">
-                  <div class="o_sat_card_title">Total máquinas</div>
-                  <div class="o_sat_card_value">
-                    <t t-esc="values['total_maquinas']"/>
-                  </div>
+                        <div class="col-6 col-md-3">
+                            <div class="o_sat_card_kpi text-center">
+                                <div class="o_sat_card_title">Total máquinas</div>
+                                <div class="o_sat_card_value">
+                                    <t t-esc="values['total_maquinas']"/>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-6 col-md-3">
+                            <div class="o_sat_card_kpi text-center">
+                                <div class="o_sat_card_title">Disponibles</div>
+                                <div class="o_sat_card_value">
+                                    <t t-esc="values['total_disponibles']"/>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-6 col-md-3">
+                            <div class="o_sat_card_kpi text-center">
+                                <div class="o_sat_card_title">Separadas</div>
+                                <div class="o_sat_card_value">
+                                    <t t-esc="values['total_separadas']"/>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-6 col-md-3">
+                            <div class="o_sat_card_kpi text-center">
+                                <div class="o_sat_card_title">Con problemas</div>
+                                <div class="o_sat_card_value text-danger">
+                                    <t t-esc="values['total_problemas']"/>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
                 </div>
-              </div>
 
-              <div class="col-6 col-md-3">
-                <div class="o_sat_card_kpi text-center">
-                  <div class="o_sat_card_title">Disponibles</div>
-                  <div class="o_sat_card_value">
-                    <t t-esc="values['total_disponibles']"/>
-                  </div>
+                <!-- KPIs tipo tabla (similar Avg Order Value…) -->
+                <div class="col-md-5 mt-3 mt-md-0">
+                    <table class="table table-sm mb-0">
+                        <tbody>
+                            <tr>
+                                <td class="o_text">
+                                    Precio compra promedio
+                                    (<t t-esc="values['company_currency_symbol']"/>)
+                                </td>
+                                <td class="o_kpi_value">
+                                    <t t-esc="values['avg_precio_compra']"/>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="o_text">
+                                    Valor stock disponible
+                                    (<t t-esc="values['company_currency_symbol']"/>)
+                                </td>
+                                <td class="o_kpi_value">
+                                    <t t-esc="values['stock_value_available']"/>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="o_text">
+                                    Ingresadas últimos 7 días
+                                </td>
+                                <td class="o_kpi_value">
+                                    <t t-esc="values['ingresadas_7']"/>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="o_text">
+                                    Entregadas últimos 30 días
+                                </td>
+                                <td class="o_kpi_value">
+                                    <t t-esc="values['entregadas_30']"/>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
-              </div>
-
-              <div class="col-6 col-md-3">
-                <div class="o_sat_card_kpi text-center">
-                  <div class="o_sat_card_title">Separadas</div>
-                  <div class="o_sat_card_value">
-                    <t t-esc="values['total_separadas']"/>
-                  </div>
-                </div>
-              </div>
-
-              <div class="col-6 col-md-3">
-                <div class="o_sat_card_kpi text-center">
-                  <div class="o_sat_card_title">Con problemas</div>
-                  <div class="o_sat_card_value text-danger">
-                    <t t-esc="values['total_problemas']"/>
-                  </div>
-                </div>
-              </div>
 
             </div>
-          </div>
-
-          <!-- KPIs tipo tabla (similar Avg Order Value…) -->
-          <div class="col-md-5 mt-3 mt-md-0">
-            <table class="table table-sm mb-0">
-              <tbody>
-                <tr>
-                  <td class="o_text">
-                    Precio compra promedio
-                    (<t t-esc="values['company_currency_symbol']"/>)
-                  </td>
-                  <td class="o_kpi_value">
-                    <t t-esc="values['avg_precio_compra']"/>
-                  </td>
-                </tr>
-                <tr>
-                  <td class="o_text">
-                    Valor stock disponible
-                    (<t t-esc="values['company_currency_symbol']"/>)
-                  </td>
-                  <td class="o_kpi_value">
-                    <t t-esc="values['stock_value_available']"/>
-                  </td>
-                </tr>
-                <tr>
-                  <td class="o_text">
-                    Ingresadas últimos 7 días
-                  </td>
-                  <td class="o_kpi_value">
-                    <t t-esc="values['ingresadas_7']"/>
-                  </td>
-                </tr>
-                <tr>
-                  <td class="o_text">
-                    Entregadas últimos 30 días
-                  </td>
-                  <td class="o_kpi_value">
-                    <t t-esc="values['entregadas_30']"/>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
         </div>
-      </div>
     </t>
 
-  </templates>
-</odoo>
+</templates>
