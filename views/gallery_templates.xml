@@ -488,6 +488,10 @@
                     <b>Serie</b>
                     <span><t t-esc="reparacion.serie_id or '—'"/></span>
                   </div>
+                  <div class="meta-pill">
+                    <b>Técnico</b>
+                    <span><t t-esc="reparacion.responsable_id.name or '—'"/></span>
+                  </div>
                 </div>
               </div>
 
