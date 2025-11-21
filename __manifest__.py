@@ -194,6 +194,7 @@
             
             # SCSS existente
             '/sat/static/src/scss/list_dashboard.scss',
+            'sat/static/src/scss/sat_dashboard.scss',
             
             
             # XML existente
