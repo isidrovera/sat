@@ -83,6 +83,49 @@
             gap: 0.75rem;
             margin-top: 0.25rem;
           }
+          /* Línea compacta: modelo / serie / técnico */
+.meta-inline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.25rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.meta-item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.25rem;
+}
+
+.meta-label {
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.meta-value {
+  color: var(--text-color);
+  font-weight: 500;
+}
+
+.meta-separator {
+  opacity: 0.5;
+}
+
+/* En pantallas muy pequeñas que pueda bajar a 2–3 líneas sin romperse */
+@media (max-width: 575px) {
+  .meta-inline {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.2rem;
+  }
+}
+
 
           .meta-pill { 
             background: #ffffff;
@@ -585,49 +628,53 @@
                     <t t-esc="reparacion.id"/>
                   </t>
                 </h2>
-
                 <!-- Datos de equipo / técnico -->
-                <div class="meta-grid">
-                  <div class="meta-pill">
-                    <b>Modelo</b>
-                    <span>
+                <!-- Datos de equipo / técnico en una sola línea -->
+                <div class="meta-inline">
+                  <div class="meta-item">
+                    <span class="meta-label">MODELO:</span>
+                    <span class="meta-value">
                       <t t-esc="(reparacion.maquina_id and (reparacion.maquina_id.display_name or reparacion.maquina_id.name)) or '—'"/>
                     </span>
                   </div>
-                  <div class="meta-pill">
-                    <b>Serie</b>
-                    <span><t t-esc="reparacion.serie_id or '—'"/></span>
+                  <div class="meta-separator">•</div>
+                  <div class="meta-item">
+                    <span class="meta-label">SERIE:</span>
+                    <span class="meta-value">
+                      <t t-esc="reparacion.serie_id or '—'"/>
+                    </span>
                   </div>
-                  <div class="meta-pill">
-                    <b>Técnico</b>
-                    <span><t t-esc="reparacion.responsable_id.name or '—'"/></span>
+                  <div class="meta-separator">•</div>
+                  <div class="meta-item">
+                    <span class="meta-label">TÉCNICO:</span>
+                    <span class="meta-value">
+                      <t t-esc="reparacion.responsable_id.name or '—'"/>
+                    </span>
                   </div>
                 </div>
               </div>
-
               <div class="action-buttons">
                 <!-- BOTÓN COMPARTIR GALERÍA -->
                 <button id="shareGalleryBtn" class="btn btn-main btn-share-gallery">
                   <i class="fa-solid fa-share-nodes"></i>
                   <span>Compartir</span>
                 </button>
-
                 <!-- BOTÓN CÁMARA -->
                 <button id="cameraBtn" class="btn btn-main btn-camera">
-                  <i class="fa-solid fa-camera"></i> 
+                  <i class="fa-solid fa-camera"></i>
                   <span>Tomar Foto</span>
                 </button>
-                
                 <!-- BOTÓN DESCARGAR TODAS -->
                 <t t-if="fotos and len(fotos) > 0">
                   <a t-attf-href="/gallery/download_all/#{reparacion.id}" 
                      class="btn btn-main btn-download-all"
                      title="Descargar todas las fotos en ZIP">
                     <i class="fa-solid fa-download"></i>
-                    <span>Descargar Todas (<t t-esc="len(fotos)"/>)</span>
+                    <span>Descargar Todas (
+                      <t t-esc="len(fotos)"/>)
+                    </span>
                   </a>
                 </t>
-                
                 <input id="cameraCapture" type="file" accept="image/*" capture="environment" style="display:none"/>
                 <div id="loadingOverlay" class="hidden">
                   <i class="fa-solid fa-spinner fa-spin"></i> Subiendo...
@@ -635,7 +682,6 @@
               </div>
             </div>
           </div>
-
           <!-- GRID DE FOTOS -->
           <div id="photoGrid" class="photo-grid">
             <t t-foreach="fotos" t-as="f">
@@ -648,7 +694,9 @@
                 </div>
                 <div class="photo-info">
                   <span>
-                    #<t t-esc="f.get('sequence', 0)"/> — <t t-esc="f.get('nombre_foto','Sin nombre')"/>
+                    #
+                    <t t-esc="f.get('sequence', 0)"/> —
+                    <t t-esc="f.get('nombre_foto','Sin nombre')"/>
                   </span>
                   <div class="d-flex gap-2">
                     <!-- botón compartir foto -->
@@ -659,14 +707,12 @@
                       title="Compartir / Copiar enlace">
                       <i class="fa-solid fa-share-nodes"></i>
                     </button>
-
                     <!-- Descargar -->
                     <a class="btn btn-sm btn-outline-secondary"
                        t-att-href="'/gallery/download/%s' % f['id']"
                        target="_blank" title="Descargar">
                       <i class="fa-solid fa-download"></i>
                     </a>
-
                     <!-- Eliminar -->
                     <button type="button" class="btn btn-sm btn-outline-danger btn-delete-photo" title="Eliminar">
                       <i class="fa-solid fa-trash"></i>
@@ -677,7 +723,6 @@
             </t>
           </div>
         </div>
-
         <!-- Modal visor -->
         <div id="slideshowModal" class="slideshow-modal" aria-hidden="true">
           <div class="slideshow-content">
@@ -695,7 +740,6 @@
             </button>
           </div>
         </div>
-
         <!-- Modal genérico para alertas / confirmaciones -->
         <div id="appModal" class="app-modal" aria-hidden="true">
           <div class="app-modal-dialog">
@@ -710,7 +754,6 @@
             </div>
           </div>
         </div>
-
         <script src="/sat/static/src/js/gallery_widget_v15.js"></script>
       </body>
     </html>
