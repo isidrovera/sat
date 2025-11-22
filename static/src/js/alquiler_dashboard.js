@@ -61,7 +61,9 @@ export class AlquilerDashboard extends Component {
         }
     }
 
-    filterByState(state) {
+    async filterByState(state) {
+        console.log("🔍 Filtrando alquiler por estado:", state);
+        
         let domain = [];
         
         switch(state) {
@@ -94,9 +96,32 @@ export class AlquilerDashboard extends Component {
                 break;
         }
 
+        console.log("📋 Dominio a aplicar:", domain);
+
+        // Método que SÍ funciona en Odoo 18
         const model = this.props.model;
         if (model && model.root) {
-            model.root.setDomain(domain);
+            try {
+                // Usar replaceWith para cambiar completamente el dominio
+                await model.root.replaceWith({
+                    ...model.root,
+                    domain: domain,
+                });
+                console.log("✅ Filtro aplicado exitosamente");
+            } catch (error) {
+                console.error("❌ Error al aplicar filtro:", error);
+                
+                // Fallback: Intentar con load
+                try {
+                    model.root.domain = domain;
+                    await model.root.load();
+                    console.log("✅ Filtro aplicado con load()");
+                } catch (error2) {
+                    console.error("❌ Error con load():", error2);
+                }
+            }
+        } else {
+            console.error("❌ No se encontró el modelo");
         }
     }
 }
