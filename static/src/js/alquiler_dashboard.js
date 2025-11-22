@@ -6,25 +6,28 @@ import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
 import { Component, onWillStart, onWillUpdateProps, useState } from "@odoo/owl";
 
-export class AlquilerDashboard extends Component {
-    static template = "alquiler.AlquilerDashboard";
+export class SatDashboard extends Component {
+    static template = "sat.SatSatDashboard";
     static props = {
         "*": true,
     };
     
     setup() {
         this.orm = useService("orm");
+        this.action = useService("action");
         this.state = useState({ 
             data: {
-                total_equipos: 0,
+                total_maquinas: 0,
+                total_disponibles: 0,
+                total_separadas: 0,
+                total_no_disponibles: 0,
                 total_sin_revisar: 0,
-                total_revisada: 0,
-                total_lista: 0,
-                total_alquilada: 0,
-                total_con_problemas: 0,
-                total_partes: 0,
-                total_externo: 0,
-                total_vendida: 0,
+                total_para_revision: 0,
+                total_en_revision: 0,
+                total_finalizado: 0,
+                total_problemas: 0,
+                total_de_partes: 0,
+                total_entregada: 0,
             }
         });
         
@@ -48,8 +51,8 @@ export class AlquilerDashboard extends Component {
             }
             
             const result = await this.orm.call(
-                "alquiler",
-                "get_alquiler_dashboard_values",
+                "sat.sat",
+                "get_sat_dashboard_values",
                 [],
                 { domain: domain }
             );
@@ -57,91 +60,82 @@ export class AlquilerDashboard extends Component {
             Object.assign(this.state.data, result);
             
         } catch (error) {
-            console.error("Error cargando dashboard Alquiler:", error);
+            console.error("Error cargando dashboard SAT:", error);
         }
     }
 
-    async filterByState(state) {
-        console.log("🔍 Filtrando alquiler por estado:", state);
+    filterByState(state) {
+        console.log("🔍 Filtrando SAT por estado:", state);
         
         let domain = [];
         
         switch(state) {
+            case 'disponible':
+                domain = [['disponibilidad_id', '=', 'disponible'], ['estado_ventas_id', '!=', 'entregada']];
+                break;
+            case 'separada':
+                domain = [['disponibilidad_id', '=', 'separada'], ['estado_ventas_id', '!=', 'entregada']];
+                break;
+            case 'no_disponible':
+                domain = [['disponibilidad_id', '=', 'no_disponible'], ['estado_ventas_id', '!=', 'entregada']];
+                break;
             case 'sin_revisar':
-                domain = [['estado_alquiler_id', '=', 'sin_revisar']];
+                domain = [['estado_ventas_id', '=', 'sin_revisar']];
                 break;
-            case 'revisada':
-                domain = [['estado_alquiler_id', '=', 'revisada']];
+            case 'para_revision':
+                domain = [['estado_ventas_id', '=', 'para_revision']];
                 break;
-            case 'lista':
-                domain = [['estado_alquiler_id', '=', 'lista']];
+            case 'en_revision':
+                domain = [['estado_ventas_id', '=', 'en_revision']];
                 break;
-            case 'alquilada':
-                domain = [['estado_alquiler_id', '=', 'alquilada']];
+            case 'finalizado':
+                domain = [['estado_ventas_id', '=', 'finalizado']];
                 break;
             case 'con_problemas':
-                domain = [['estado_alquiler_id', '=', 'con_problemas']];
+                domain = [['estado_ventas_id', '=', 'con_problemas']];
                 break;
-            case 'partes':
-                domain = [['estado_alquiler_id', '=', 'partes']];
+            case 'de_partes':
+                domain = [['estado_ventas_id', '=', 'de_partes']];
                 break;
-            case 'externo':
-                domain = [['estado_alquiler_id', '=', 'externo']];
-                break;
-            case 'vendida':
-                domain = [['estado_alquiler_id', '=', 'vendida']];
+            case 'entregada':
+                domain = [['estado_ventas_id', '=', 'entregada']];
                 break;
             case 'all':
-                domain = [['estado_alquiler_id', '!=', 'vendida']];
+                domain = [['estado_ventas_id', '!=', 'entregada']];
                 break;
         }
 
         console.log("📋 Dominio a aplicar:", domain);
 
-        // Método que SÍ funciona en Odoo 18
-        const model = this.props.model;
-        if (model && model.root) {
-            try {
-                // Usar replaceWith para cambiar completamente el dominio
-                await model.root.replaceWith({
-                    ...model.root,
-                    domain: domain,
-                });
-                console.log("✅ Filtro aplicado exitosamente");
-            } catch (error) {
-                console.error("❌ Error al aplicar filtro:", error);
-                
-                // Fallback: Intentar con load
-                try {
-                    model.root.domain = domain;
-                    await model.root.load();
-                    console.log("✅ Filtro aplicado con load()");
-                } catch (error2) {
-                    console.error("❌ Error con load():", error2);
-                }
-            }
-        } else {
-            console.error("❌ No se encontró el modelo");
-        }
+        // Recargar la acción completa
+        this.action.doAction({
+            type: 'ir.actions.act_window',
+            res_model: 'sat.sat',
+            name: 'Máquinas SAT',
+            views: [[false, 'list'], [false, 'form']],
+            domain: domain,
+            context: {},
+            target: 'current',
+        });
     }
 }
 
-export class AlquilerListController extends ListController {
+export class SatListController extends ListController {
     setup() {
         super.setup();
     }
 }
 
-AlquilerListController.components = {
+SatListController.components = {
     ...ListController.components,
-    AlquilerDashboard,
+    SatDashboard,
 };
 
-AlquilerListController.template = "alquiler.AlquilerListView";
+SatListController.template = "sat.SatListView";
 
-export const alquilerListView = {
+export const satListView = {
     ...listView,
-    Controller: AlquilerListController,
+    Controller: SatListController,
 };
 
-registry.category("views").add("alquiler_tree_dashboard", alquilerListView);
+registry.category("views").add("sat_tree_dashboard", satListView);
