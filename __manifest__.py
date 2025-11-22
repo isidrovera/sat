@@ -195,6 +195,7 @@
             # SCSS existente
             '/sat/static/src/scss/list_dashboard.scss',
             'sat/static/src/scss/sat_dashboard.scss',
+            'sat/static/src/scss/alquiler_dashboard.scss',
             
             
             # XML existente
@@ -203,6 +204,7 @@
             'sat/static/src/xml/list_view.xml',
             'sat/static/src/xml/selection_subparts_template.xml',
             'sat/static/src/xml/sat_dashboard.xml',
+            'sat/static/src/xml/alquiler_dashboard.xml',
             
             # JS Files existentes
             'sat/static/src/js/selection_subparts.js',

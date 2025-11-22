@@ -1,0 +1,158 @@
+.o_alquiler_dashboard {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 6px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin: 0 8px 8px 8px;
+    padding: 8px !important;
+}
+
+.o_alquiler_card_kpi {
+    background: white;
+    border-radius: 4px;
+    padding: 0.4rem;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    height: 100%;
+    border-left: 2px solid #667eea;
+    cursor: pointer;
+    
+    &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+        border-left-width: 3px;
+    }
+
+    &:active {
+        transform: translateY(0);
+    }
+}
+
+.o_alquiler_card_icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    
+    i {
+        color: white;
+        font-size: 14px;
+    }
+    
+    &.o_alquiler_icon_primary {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+    }
+    
+    &.o_alquiler_icon_success {
+        background: linear-gradient(135deg, #28a745, #20c997);
+    }
+    
+    &.o_alquiler_icon_warning {
+        background: linear-gradient(135deg, #ffc107, #fd7e14);
+    }
+    
+    &.o_alquiler_icon_danger {
+        background: linear-gradient(135deg, #dc3545, #c82333);
+    }
+    
+    &.o_alquiler_icon_info {
+        background: linear-gradient(135deg, #17a2b8, #138496);
+    }
+    
+    &.o_alquiler_icon_secondary {
+        background: linear-gradient(135deg, #6c757d, #5a6268);
+    }
+}
+
+// Animaciones
+@keyframes alquiler-pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.08); }
+}
+
+@keyframes alquiler-bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-3px); }
+}
+
+@keyframes alquiler-shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-2px); }
+    75% { transform: translateX(2px); }
+}
+
+@keyframes alquiler-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.o_alquiler_icon_pulse {
+    animation: alquiler-pulse 2s ease-in-out infinite;
+}
+
+.o_alquiler_icon_bounce {
+    animation: alquiler-bounce 1.5s ease-in-out infinite;
+}
+
+.o_alquiler_icon_shake {
+    animation: alquiler-shake 2s ease-in-out infinite;
+}
+
+.o_alquiler_icon_blink {
+    animation: alquiler-blink 1.5s ease-in-out infinite;
+}
+
+.o_alquiler_card_content {
+    flex: 1;
+    min-width: 0;
+}
+
+.o_alquiler_card_title {
+    font-size: 0.6rem;
+    color: #6c757d;
+    margin-bottom: 0.15rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.o_alquiler_card_value {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #212529;
+    line-height: 1;
+}
+
+// Responsive
+@media (max-width: 1199px) {
+    .o_alquiler_card_value {
+        font-size: 1.1rem;
+    }
+
+    .o_alquiler_card_icon {
+        width: 24px;
+        height: 24px;
+        
+        i {
+            font-size: 12px;
+        }
+    }
+}
+
+@media (max-width: 991px) {
+    .o_alquiler_card_title {
+        font-size: 0.55rem;
+    }
+
+    .o_alquiler_card_value {
+        font-size: 1rem;
+    }
+}

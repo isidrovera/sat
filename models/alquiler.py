@@ -518,3 +518,55 @@ class UnidadAlquiler(models.Model):
             'type': 'ir.actions.act_window',
             'domain': [('equipo_id', '=', self.id)],
         }
+
+    @api.model
+    def get_alquiler_dashboard_values(self, domain=False):
+        """Obtiene valores para el dashboard de alquiler"""
+        domain = domain or []
+        Alquiler = self.env['alquiler']
+
+        # Excluir equipos vendidos del conteo general
+        domain_sin_vendidos = domain + [('estado_alquiler_id', '!=', 'vendida')]
+        
+        records = Alquiler.search(domain_sin_vendidos)
+        total_equipos = len(records)
+
+        # Estados de alquiler (sin vendidos)
+        total_sin_revisar = Alquiler.search_count(domain_sin_vendidos + [
+            ('estado_alquiler_id', '=', 'sin_revisar')
+        ])
+        total_revisada = Alquiler.search_count(domain_sin_vendidos + [
+            ('estado_alquiler_id', '=', 'revisada')
+        ])
+        total_lista = Alquiler.search_count(domain_sin_vendidos + [
+            ('estado_alquiler_id', '=', 'lista')
+        ])
+        total_alquilada = Alquiler.search_count(domain_sin_vendidos + [
+            ('estado_alquiler_id', '=', 'alquilada')
+        ])
+        total_con_problemas = Alquiler.search_count(domain_sin_vendidos + [
+            ('estado_alquiler_id', '=', 'con_problemas')
+        ])
+        total_partes = Alquiler.search_count(domain_sin_vendidos + [
+            ('estado_alquiler_id', '=', 'partes')
+        ])
+        total_externo = Alquiler.search_count(domain_sin_vendidos + [
+            ('estado_alquiler_id', '=', 'externo')
+        ])
+        
+        # Vendidos: solo para mostrar en su propio botón
+        total_vendida = Alquiler.search_count(domain + [
+            ('estado_alquiler_id', '=', 'vendida')
+        ])
+
+        return {
+            'total_equipos': total_equipos,
+            'total_sin_revisar': total_sin_revisar,
+            'total_revisada': total_revisada,
+            'total_lista': total_lista,
+            'total_alquilada': total_alquilada,
+            'total_con_problemas': total_con_problemas,
+            'total_partes': total_partes,
+            'total_externo': total_externo,
+            'total_vendida': total_vendida,
+        }

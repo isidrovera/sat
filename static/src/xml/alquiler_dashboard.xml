@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates>
+    <!-- Dashboard Component -->
+    <t t-name="alquiler.AlquilerDashboard">
+        <div class="o_alquiler_dashboard container-fluid py-2">
+            <!-- Fila de KPIs -->
+            <div class="row g-1">
+                <!-- Total equipos (SIN vendidos) -->
+                <div class="col-4 col-md-2 col-lg-1">
+                    <div class="o_alquiler_card_kpi" t-on-click="() => this.filterByState('all')">
+                        <div class="o_alquiler_card_icon o_alquiler_icon_primary o_alquiler_icon_pulse">
+                            <i class="fa fa-cubes"></i>
+                        </div>
+                        <div class="o_alquiler_card_content">
+                            <div class="o_alquiler_card_title">Total</div>
+                            <div class="o_alquiler_card_value">
+                                <t t-esc="state.data.total_equipos"/>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Sin revisar -->
+                <div class="col-4 col-md-2 col-lg-1">
+                    <div class="o_alquiler_card_kpi" t-on-click="() => this.filterByState('sin_revisar')">
+                        <div class="o_alquiler_card_icon o_alquiler_icon_secondary">
+                            <i class="fa fa-pause-circle"></i>
+                        </div>
+                        <div class="o_alquiler_card_content">
+                            <div class="o_alquiler_card_title">Sin revisar</div>
+                            <div class="o_alquiler_card_value">
+                                <t t-esc="state.data.total_sin_revisar"/>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Revisada -->
+                <div class="col-4 col-md-2 col-lg-1">
+                    <div class="o_alquiler_card_kpi" t-on-click="() => this.filterByState('revisada')">
+                        <div class="o_alquiler_card_icon o_alquiler_icon_info">
+                            <i class="fa fa-check-circle-o"></i>
+                        </div>
+                        <div class="o_alquiler_card_content">
+                            <div class="o_alquiler_card_title">Revisada</div>
+                            <div class="o_alquiler_card_value">
+                                <t t-esc="state.data.total_revisada"/>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Lista -->
+                <div class="col-4 col-md-2 col-lg-1">
+                    <div class="o_alquiler_card_kpi" t-on-click="() => this.filterByState('lista')">
+                        <div class="o_alquiler_card_icon o_alquiler_icon_success o_alquiler_icon_bounce">
+                            <i class="fa fa-check-circle"></i>
+                        </div>
+                        <div class="o_alquiler_card_content">
+                            <div class="o_alquiler_card_title">Lista</div>
+                            <div class="o_alquiler_card_value">
+                                <t t-esc="state.data.total_lista"/>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Alquilada -->
+                <div class="col-4 col-md-2 col-lg-1">
+                    <div class="o_alquiler_card_kpi" t-on-click="() => this.filterByState('alquilada')">
+                        <div class="o_alquiler_card_icon o_alquiler_icon_warning o_alquiler_icon_shake">
+                            <i class="fa fa-handshake-o"></i>
+                        </div>
+                        <div class="o_alquiler_card_content">
+                            <div class="o_alquiler_card_title">Alquilada</div>
+                            <div class="o_alquiler_card_value">
+                                <t t-esc="state.data.total_alquilada"/>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Con problemas -->
+                <div class="col-4 col-md-2 col-lg-1">
+                    <div class="o_alquiler_card_kpi" t-on-click="() => this.filterByState('con_problemas')">
+                        <div class="o_alquiler_card_icon o_alquiler_icon_danger o_alquiler_icon_blink">
+                            <i class="fa fa-exclamation-triangle"></i>
+                        </div>
+                        <div class="o_alquiler_card_content">
+                            <div class="o_alquiler_card_title">Problemas</div>
+                            <div class="o_alquiler_card_value">
+                                <t t-esc="state.data.total_con_problemas"/>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- De partes -->
+                <div class="col-4 col-md-2 col-lg-1">
+                    <div class="o_alquiler_card_kpi" t-on-click="() => this.filterByState('partes')">
+                        <div class="o_alquiler_card_icon o_alquiler_icon_danger">
+                            <i class="fa fa-wrench"></i>
+                        </div>
+                        <div class="o_alquiler_card_content">
+                            <div class="o_alquiler_card_title">De Partes</div>
+                            <div class="o_alquiler_card_value">
+                                <t t-esc="state.data.total_partes"/>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Externo -->
+                <div class="col-4 col-md-2 col-lg-1">
+                    <div class="o_alquiler_card_kpi" t-on-click="() => this.filterByState('externo')">
+                        <div class="o_alquiler_card_icon o_alquiler_icon_info">
+                            <i class="fa fa-external-link"></i>
+                        </div>
+                        <div class="o_alquiler_card_content">
+                            <div class="o_alquiler_card_title">Externo</div>
+                            <div class="o_alquiler_card_value">
+                                <t t-esc="state.data.total_externo"/>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Vendida -->
+                <div class="col-4 col-md-2 col-lg-1">
+                    <div class="o_alquiler_card_kpi" t-on-click="() => this.filterByState('vendida')">
+                        <div class="o_alquiler_card_icon o_alquiler_icon_primary">
+                            <i class="fa fa-dollar"></i>
+                        </div>
+                        <div class="o_alquiler_card_content">
+                            <div class="o_alquiler_card_title">Vendida</div>
+                            <div class="o_alquiler_card_value">
+                                <t t-esc="state.data.total_vendida"/>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </t>
+
+    <!-- Custom List View Template -->
+    <t t-name="alquiler.AlquilerListView" t-inherit="web.ListView" t-inherit-mode="primary">
+        <xpath expr="//t[@t-component='props.Renderer']" position="before">
+            <AlquilerDashboard model="props.model"/>
+        </xpath>
+    </t>
+</templates>

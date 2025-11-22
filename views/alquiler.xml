@@ -1073,7 +1073,7 @@
                     decoration-success="estado_alquiler_id == 'lista'"
                     decoration-muted="estado_alquiler_id == 'vendida'"
                     multi_edit="1"
-                    sample="1">
+                    sample="1" js_class="alquiler_tree_dashboard">
 
                     <!-- Campos principales -->
                     <field name="cliente_id" widget="many2one_avatar_user" />
