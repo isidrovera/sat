@@ -11,6 +11,7 @@ export class SatDashboard extends Component {
     
     setup() {
         this.orm = useService("orm");
+        this.action = useService("action");
         this.state = useState({ 
             data: {
                 total_maquinas: 0,
@@ -40,7 +41,6 @@ export class SatDashboard extends Component {
         try {
             props = props || this.props;
             
-            // Obtener dominio desde el list
             let domain = [];
             if (props.list && props.list.model && props.list.model.root) {
                 domain = props.list.model.root.domain || [];
@@ -61,17 +61,19 @@ export class SatDashboard extends Component {
     }
 
     filterByState(state) {
+        console.log("Filtrando por estado:", state);
+        
         let domain = [];
         
         switch(state) {
             case 'disponible':
-                domain = [['disponibilidad_id', '=', 'disponible']];
+                domain = [['disponibilidad_id', '=', 'disponible'], ['estado_ventas_id', '!=', 'entregada']];
                 break;
             case 'separada':
-                domain = [['disponibilidad_id', '=', 'separada']];
+                domain = [['disponibilidad_id', '=', 'separada'], ['estado_ventas_id', '!=', 'entregada']];
                 break;
             case 'no_disponible':
-                domain = [['disponibilidad_id', '=', 'no_disponible']];
+                domain = [['disponibilidad_id', '=', 'no_disponible'], ['estado_ventas_id', '!=', 'entregada']];
                 break;
             case 'sin_revisar':
                 domain = [['estado_ventas_id', '=', 'sin_revisar']];
@@ -95,14 +97,35 @@ export class SatDashboard extends Component {
                 domain = [['estado_ventas_id', '=', 'entregada']];
                 break;
             case 'all':
-                domain = [];
+                domain = [['estado_ventas_id', '!=', 'entregada']];
                 break;
         }
 
-        // Aplicar el filtro usando el searchModel
-        if (this.props.list && this.props.list.model) {
-            this.props.list.model.root.domain = domain;
-            this.props.list.model.load();
+        console.log("Dominio aplicado:", domain);
+
+        // Método 1: Intentar con action.doAction
+        try {
+            this.action.doAction({
+                type: 'ir.actions.act_window',
+                res_model: 'sat.sat',
+                name: 'Máquinas',
+                views: [[false, 'list'], [false, 'form']],
+                domain: domain,
+                context: {},
+                target: 'current',
+            });
+        } catch (error) {
+            console.error("Error al aplicar filtro con doAction:", error);
+            
+            // Método 2: Fallback - actualizar el modelo directamente
+            try {
+                if (this.props.list && this.props.list.model && this.props.list.model.root) {
+                    this.props.list.model.root.domain = domain;
+                    this.props.list.model.root.load();
+                }
+            } catch (error2) {
+                console.error("Error al aplicar filtro con model.load:", error2);
+            }
         }
     }
 }

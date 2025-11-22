@@ -5,7 +5,7 @@
         <div class="o_sat_dashboard container-fluid py-2">
             <!-- Fila de KPIs -->
             <div class="row g-1">
-                <!-- Total máquinas -->
+                <!-- Total máquinas (SIN entregadas) -->
                 <div class="col-4 col-md-2 col-lg-1">
                     <div class="o_sat_card_kpi" t-on-click="() => this.filterByState('all')">
                         <div class="o_sat_card_icon o_sat_icon_primary o_sat_icon_pulse">
@@ -20,7 +20,7 @@
                     </div>
                 </div>
                 
-                <!-- Disponibles -->
+                <!-- Resto de botones igual... -->
                 <div class="col-4 col-md-2 col-lg-1">
                     <div class="o_sat_card_kpi" t-on-click="() => this.filterByState('disponible')">
                         <div class="o_sat_card_icon o_sat_icon_success o_sat_icon_bounce">
@@ -35,7 +35,6 @@
                     </div>
                 </div>
                 
-                <!-- Separadas -->
                 <div class="col-4 col-md-2 col-lg-1">
                     <div class="o_sat_card_kpi" t-on-click="() => this.filterByState('separada')">
                         <div class="o_sat_card_icon o_sat_icon_warning o_sat_icon_shake">
@@ -50,7 +49,6 @@
                     </div>
                 </div>
                 
-                <!-- Sin revisar -->
                 <div class="col-4 col-md-2 col-lg-1">
                     <div class="o_sat_card_kpi" t-on-click="() => this.filterByState('sin_revisar')">
                         <div class="o_sat_card_icon o_sat_icon_secondary">
@@ -65,7 +63,6 @@
                     </div>
                 </div>
 
-                <!-- Para revisión -->
                 <div class="col-4 col-md-2 col-lg-1">
                     <div class="o_sat_card_kpi" t-on-click="() => this.filterByState('para_revision')">
                         <div class="o_sat_card_icon o_sat_icon_info">
@@ -80,7 +77,6 @@
                     </div>
                 </div>
                 
-                <!-- En revisión -->
                 <div class="col-4 col-md-2 col-lg-1">
                     <div class="o_sat_card_kpi" t-on-click="() => this.filterByState('en_revision')">
                         <div class="o_sat_card_icon o_sat_icon_info o_sat_icon_spin">
@@ -95,7 +91,6 @@
                     </div>
                 </div>
 
-                <!-- Finalizado -->
                 <div class="col-4 col-md-2 col-lg-1">
                     <div class="o_sat_card_kpi" t-on-click="() => this.filterByState('finalizado')">
                         <div class="o_sat_card_icon o_sat_icon_success">
@@ -110,7 +105,6 @@
                     </div>
                 </div>
 
-                <!-- Con problemas -->
                 <div class="col-4 col-md-2 col-lg-1">
                     <div class="o_sat_card_kpi" t-on-click="() => this.filterByState('con_problemas')">
                         <div class="o_sat_card_icon o_sat_icon_danger o_sat_icon_blink">
@@ -125,7 +119,6 @@
                     </div>
                 </div>
 
-                <!-- De partes -->
                 <div class="col-4 col-md-2 col-lg-1">
                     <div class="o_sat_card_kpi" t-on-click="() => this.filterByState('de_partes')">
                         <div class="o_sat_card_icon o_sat_icon_danger">
@@ -140,7 +133,6 @@
                     </div>
                 </div>
 
-                <!-- Entregada -->
                 <div class="col-4 col-md-2 col-lg-1">
                     <div class="o_sat_card_kpi" t-on-click="() => this.filterByState('entregada')">
                         <div class="o_sat_card_icon o_sat_icon_primary">
@@ -155,7 +147,6 @@
                     </div>
                 </div>
 
-                <!-- No disponible -->
                 <div class="col-4 col-md-2 col-lg-1">
                     <div class="o_sat_card_kpi" t-on-click="() => this.filterByState('no_disponible')">
                         <div class="o_sat_card_icon o_sat_icon_dark">
@@ -176,7 +167,7 @@
     <!-- Custom List View Template -->
     <t t-name="sat.SatListView" t-inherit="web.ListView" t-inherit-mode="primary">
         <xpath expr="//t[@t-component='props.Renderer']" position="before">
-            <SatDashboard list="props.list"/>
+            <SatDashboard model="props.model"/>
         </xpath>
     </t>
 </templates>

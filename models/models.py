@@ -1505,39 +1505,44 @@ haga clic en el siguiente enlace: 📍 {self.crear_url_cambio_ubicacion(registro
         domain = domain or []
         Sat = self.env['sat.sat']
 
-        records = Sat.search(domain)
+        # IMPORTANTE: Excluir máquinas entregadas del conteo general
+        domain_sin_entregadas = domain + [('estado_ventas_id', '!=', 'entregada')]
+        
+        records = Sat.search(domain_sin_entregadas)
         total_maquinas = len(records)
 
-        # Disponibilidad
-        total_disponibles = Sat.search_count(domain + [
+        # Disponibilidad (sin entregadas)
+        total_disponibles = Sat.search_count(domain_sin_entregadas + [
             ('disponibilidad_id', '=', 'disponible')
         ])
-        total_separadas = Sat.search_count(domain + [
+        total_separadas = Sat.search_count(domain_sin_entregadas + [
             ('disponibilidad_id', '=', 'separada')
         ])
-        total_no_disponibles = Sat.search_count(domain + [
+        total_no_disponibles = Sat.search_count(domain_sin_entregadas + [
             ('disponibilidad_id', '=', 'no_disponible')
         ])
 
-        # Estados de revisión
-        total_sin_revisar = Sat.search_count(domain + [
+        # Estados de revisión (sin entregadas)
+        total_sin_revisar = Sat.search_count(domain_sin_entregadas + [
             ('estado_ventas_id', '=', 'sin_revisar')
         ])
-        total_para_revision = Sat.search_count(domain + [
+        total_para_revision = Sat.search_count(domain_sin_entregadas + [
             ('estado_ventas_id', '=', 'para_revision')
         ])
-        total_en_revision = Sat.search_count(domain + [
+        total_en_revision = Sat.search_count(domain_sin_entregadas + [
             ('estado_ventas_id', '=', 'en_revision')
         ])
-        total_finalizado = Sat.search_count(domain + [
+        total_finalizado = Sat.search_count(domain_sin_entregadas + [
             ('estado_ventas_id', '=', 'finalizado')
         ])
-        total_problemas = Sat.search_count(domain + [
+        total_problemas = Sat.search_count(domain_sin_entregadas + [
             ('estado_ventas_id', '=', 'con_problemas')
         ])
-        total_de_partes = Sat.search_count(domain + [
+        total_de_partes = Sat.search_count(domain_sin_entregadas + [
             ('estado_ventas_id', '=', 'de_partes')
         ])
+        
+        # Entregadas: solo para mostrar en su propio botón si se necesita
         total_entregada = Sat.search_count(domain + [
             ('estado_ventas_id', '=', 'entregada')
         ])
@@ -1546,7 +1551,7 @@ haga clic en el siguiente enlace: 📍 {self.crear_url_cambio_ubicacion(registro
         last_7 = today - timedelta(days=7)
         last_30 = today - timedelta(days=30)
 
-        ingresadas_7 = Sat.search_count(domain + [
+        ingresadas_7 = Sat.search_count(domain_sin_entregadas + [
             ('create_date', '>=', last_7)
         ])
         entregadas_30 = Sat.search_count(domain + [
@@ -1554,7 +1559,7 @@ haga clic en el siguiente enlace: 📍 {self.crear_url_cambio_ubicacion(registro
             ('fecha_entrega', '>=', last_30)
         ])
 
-        disponibles_records = Sat.search(domain + [
+        disponibles_records = Sat.search(domain_sin_entregadas + [
             ('disponibilidad_id', '=', 'disponible')
         ])
         stock_value_available = sum(disponibles_records.mapped('precio_compra'))
