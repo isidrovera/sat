@@ -6,28 +6,23 @@ import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
 import { Component, onWillStart, onWillUpdateProps, useState } from "@odoo/owl";
 
-export class SatDashboard extends Component {
-    static template = "sat.SatSatDashboard";
-    static props = {
-        "*": true,
-    };
+export class AlquilerDashboard extends Component {
+    static template = "alquiler.AlquilerDashboard";
     
     setup() {
         this.orm = useService("orm");
         this.action = useService("action");
         this.state = useState({ 
             data: {
-                total_maquinas: 0,
-                total_disponibles: 0,
-                total_separadas: 0,
-                total_no_disponibles: 0,
+                total_equipos: 0,
                 total_sin_revisar: 0,
-                total_para_revision: 0,
-                total_en_revision: 0,
-                total_finalizado: 0,
-                total_problemas: 0,
-                total_de_partes: 0,
-                total_entregada: 0,
+                total_revisada: 0,
+                total_lista: 0,
+                total_alquilada: 0,
+                total_con_problemas: 0,
+                total_partes: 0,
+                total_externo: 0,
+                total_vendida: 0,
             }
         });
         
@@ -45,14 +40,13 @@ export class SatDashboard extends Component {
             props = props || this.props;
             
             let domain = [];
-            const model = props.model;
-            if (model && model.root) {
-                domain = model.root.domain || [];
+            if (props.list && props.list.model && props.list.model.root) {
+                domain = props.list.model.root.domain || [];
             }
             
             const result = await this.orm.call(
-                "sat.sat",
-                "get_sat_dashboard_values",
+                "alquiler",
+                "get_alquiler_dashboard_values",
                 [],
                 { domain: domain }
             );
@@ -60,82 +54,90 @@ export class SatDashboard extends Component {
             Object.assign(this.state.data, result);
             
         } catch (error) {
-            console.error("Error cargando dashboard SAT:", error);
+            console.error("Error cargando dashboard Alquiler:", error);
         }
     }
 
     filterByState(state) {
-        console.log("🔍 Filtrando SAT por estado:", state);
+        console.log("Filtrando por estado:", state);
         
         let domain = [];
         
         switch(state) {
-            case 'disponible':
-                domain = [['disponibilidad_id', '=', 'disponible'], ['estado_ventas_id', '!=', 'entregada']];
-                break;
-            case 'separada':
-                domain = [['disponibilidad_id', '=', 'separada'], ['estado_ventas_id', '!=', 'entregada']];
-                break;
-            case 'no_disponible':
-                domain = [['disponibilidad_id', '=', 'no_disponible'], ['estado_ventas_id', '!=', 'entregada']];
-                break;
             case 'sin_revisar':
-                domain = [['estado_ventas_id', '=', 'sin_revisar']];
+                domain = [['estado_alquiler_id', '=', 'sin_revisar']];
                 break;
-            case 'para_revision':
-                domain = [['estado_ventas_id', '=', 'para_revision']];
+            case 'revisada':
+                domain = [['estado_alquiler_id', '=', 'revisada']];
                 break;
-            case 'en_revision':
-                domain = [['estado_ventas_id', '=', 'en_revision']];
+            case 'lista':
+                domain = [['estado_alquiler_id', '=', 'lista']];
                 break;
-            case 'finalizado':
-                domain = [['estado_ventas_id', '=', 'finalizado']];
+            case 'alquilada':
+                domain = [['estado_alquiler_id', '=', 'alquilada']];
                 break;
             case 'con_problemas':
-                domain = [['estado_ventas_id', '=', 'con_problemas']];
+                domain = [['estado_alquiler_id', '=', 'con_problemas']];
                 break;
-            case 'de_partes':
-                domain = [['estado_ventas_id', '=', 'de_partes']];
+            case 'partes':
+                domain = [['estado_alquiler_id', '=', 'partes']];
                 break;
-            case 'entregada':
-                domain = [['estado_ventas_id', '=', 'entregada']];
+            case 'externo':
+                domain = [['estado_alquiler_id', '=', 'externo']];
+                break;
+            case 'vendida':
+                domain = [['estado_alquiler_id', '=', 'vendida']];
                 break;
             case 'all':
-                domain = [['estado_ventas_id', '!=', 'entregada']];
+                domain = [['estado_alquiler_id', '!=', 'vendida']];
                 break;
         }
 
-        console.log("📋 Dominio a aplicar:", domain);
+        console.log("Dominio aplicado:", domain);
 
-        // Recargar la acción completa
-        this.action.doAction({
-            type: 'ir.actions.act_window',
-            res_model: 'sat.sat',
-            name: 'Máquinas SAT',
-            views: [[false, 'list'], [false, 'form']],
-            domain: domain,
-            context: {},
-            target: 'current',
-        });
+        // Método 1: Intentar con action.doAction
+        try {
+            this.action.doAction({
+                type: 'ir.actions.act_window',
+                res_model: 'alquiler',
+                name: 'Equipos en Alquiler',
+                views: [[false, 'list'], [false, 'form']],
+                domain: domain,
+                context: {},
+                target: 'current',
+            });
+        } catch (error) {
+            console.error("Error al aplicar filtro con doAction:", error);
+            
+            // Método 2: Fallback - actualizar el modelo directamente
+            try {
+                if (this.props.list && this.props.list.model && this.props.list.model.root) {
+                    this.props.list.model.root.domain = domain;
+                    this.props.list.model.root.load();
+                }
+            } catch (error2) {
+                console.error("Error al aplicar filtro con model.load:", error2);
+            }
+        }
     }
 }
 
-export class SatListController extends ListController {
+export class AlquilerListController extends ListController {
     setup() {
         super.setup();
     }
 }
 
-SatListController.components = {
+AlquilerListController.components = {
     ...ListController.components,
-    SatDashboard,
+    AlquilerDashboard,
 };
 
-SatListController.template = "sat.SatListView";
+AlquilerListController.template = "alquiler.AlquilerListView";
 
-export const satListView = {
+export const alquilerListView = {
     ...listView,
-    Controller: SatListController,
+    Controller: AlquilerListController,
 };
 
-registry.category("views").add("sat_tree_dashboard", satListView);
+registry.category("views").add("alquiler_tree_dashboard", alquilerListView);
