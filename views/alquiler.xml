@@ -1217,11 +1217,7 @@
                             context="{'group_by': 'marca'}" />
                     </group>
 
-                    <searchpanel>
-                        <field name="estado_alquiler_id" string="Estado" enable_counters="1"
-                            icon="fa-tasks" />
-
-                    </searchpanel>
+                   
                 </search>
             </field>
         </record>
