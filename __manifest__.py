@@ -68,7 +68,7 @@
         'data/email_templates_consolidated.xml',
         'data/componente_color_data.xml', 
         'data/color_tipo_data.xml',
-        'data/accesorio_tipo_data.xml',
+        #'data/accesorio_tipo_data.xml',
         'data/componente_tipo_data.xml',
         'data/componente_subparte_data.xml',
         'data/componente_estado_data.xml',
