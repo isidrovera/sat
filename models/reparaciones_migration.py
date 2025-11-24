@@ -344,3 +344,38 @@ class Reparaciones(models.Model):
                 'type': 'success',
             }
         }
+        
+    def action_reset_all_migration_finalizados(self):
+        """Resetea el estado de migración de TODOS los registros finalizados del sistema."""
+        
+        registros_finalizados = self.search([('estado_id', '=', 'finalizado')])
+        
+        if not registros_finalizados:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': 'Sin registros',
+                    'message': 'No hay registros finalizados en el sistema',
+                    'type': 'warning',
+                }
+            }
+        
+        registros_finalizados.write({
+            'migration_status': 'pending',
+            'migration_date': False,
+            'migration_count': 0
+        })
+        
+        _logger.info(f"Reseteados TODOS los {len(registros_finalizados)} registros finalizados del sistema")
+        
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': 'Migración Reseteada',
+                'message': f'Se resetearon {len(registros_finalizados)} registros finalizados en todo el sistema',
+                'type': 'success',
+                'sticky': True,
+            }
+        }
