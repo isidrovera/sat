@@ -234,8 +234,8 @@
     <field name="name">🚨 SNMP - Mismatch de modelo (cambio automático)</field>
     <field name="model_id" ref="model_sat_sat"/>
     <field name="email_from">soporte@andescopiers.com.pe</field>
-    <field name="email_to">verapolo@icloud.com</field>
-    <field name="email_cc"></field>
+    <field name="email_to">lincoln@corapsac.com</field>
+    <field name="email_cc">logistica@corapsac.com</field>
     <field name="subject">
         <![CDATA[🚨 Modelo cambiado automáticamente por SNMP: {{ object.serie_id }}]]>
     </field>
@@ -371,10 +371,7 @@
                 </a>
             </div>
 
-            <div style="margin-top:25px;font-size:12px;color:#999999;border-top:1px solid #e5e7eb;padding-top:15px;text-align:center;">
-                Este correo se generó automáticamente desde el sistema SNMP.<br/>
-                Para reclamaciones al proveedor, adjunte este correo como evidencia del cambio detectado.
-            </div>
+            
         </div>
     </div>
 </body>
@@ -496,9 +493,7 @@
                 </a>
             </div>
 
-            <div style="margin-top:25px;font-size:12px;color:#999999;border-top:1px solid #e5e7eb;padding-top:15px;text-align:center;">
-                Este correo se generó automáticamente desde el sistema SNMP.
-            </div>
+            
         </div>
     </div>
 </body>
@@ -511,8 +506,8 @@
     <field name="name">📊 SNMP - Actualización de contómetro</field>
     <field name="model_id" ref="model_sat_sat"/>
     <field name="email_from">soporte@andescopiers.com.pe</field>
-    <field name="email_to">lincoln@corapsac.com</field>
-    <field name="email_cc">logistica@corapsac.com</field>
+    <field name="email_to">verapolo@icloud.com</field>
+    <field name="email_cc"></field>
     <field name="subject">
         <![CDATA[📊 Contómetro actualizado: {{ object.serie_id }}]]>
     </field>
