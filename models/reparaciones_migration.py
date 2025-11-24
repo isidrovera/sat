@@ -54,12 +54,12 @@ class Reparaciones(models.Model):
         Estado = self.env['componente.estado']
         Color = self.env['color.tipo']
         Eval = self.env['reparacion.componente.evaluacion']
-
+    
         # ===== MODELOS PARA ACCESORIOS =====
         AccesorioTipo = self.env['accesorio.tipo']
         AccesorioEstado = self.env['accesorio.estado']
         AccesorioEval = self.env['reparacion.accesorio.evaluacion']
-
+    
         # ========================================
         # MAPEO COMPLETO DE COMPONENTES
         # ========================================
@@ -108,9 +108,9 @@ class Reparaciones(models.Model):
             'developerc_id': ('DEVELOPER',   'c', 'Revelador Cyan'),
             'developery_id': ('DEVELOPER',   'y', 'Revelador Amarillo'),
         }
-
+    
         # ========================================
-        # MAPEO DE VALORES A ESTADOS (COMPONENTES)
+        # MAPEO DE VALORES A ESTADOS (COMPONENTES GENERALES)
         # ========================================
         VAL_TO_ESTADO = {
             # === ESTADOS GENERALES DE COMPONENTES ===
@@ -129,16 +129,32 @@ class Reparaciones(models.Model):
             'sin_probar': 'sin_probar',
             'falla': 'falla',
             
-            # === ESTADOS ESPECÍFICOS DE TÓNERS ===
-            'vacio': 'vacio',
-            'bajo': 'bajo',
-            'sin_botella': 'sin_botella',
-            
             # === NORMALIZACIÓN PARA CAMPOS SÍ/NO ===
             'si': 'revisado',
             'no': 'sin_revisar',
         }
-
+        
+        # ========================================
+        # MAPEO ESPECÍFICO PARA TÓNERS
+        # ========================================
+        VAL_TO_ESTADO_TONER = {
+            'nuevo': 'toner_100',
+            'regular': 'toner_50',
+            'bajo': 'toner_25',
+            'vacio': 'toner_vacio',
+            'sin_botella': 'toner_sin_contenedor',
+        }
+        
+        # ========================================
+        # CAMPOS QUE SON TÓNERS (para usar el mapeo específico)
+        # ========================================
+        TONER_FIELDS = {
+            'toner_black_id', 
+            'toner_magenta_id', 
+            'toner_cyan_id', 
+            'toner_yellow_id'
+        }
+    
         # ========================================
         # MAPEO DE ACCESORIOS
         # ========================================
@@ -156,7 +172,7 @@ class Reparaciones(models.Model):
             'wi_fi_id': 'wifi',
             'cable_poder_id': 'cable_poder',
         }
-
+    
         # ========================================
         # MAPEO DE VALORES A ESTADOS (ACCESORIOS)
         # ========================================
@@ -165,10 +181,10 @@ class Reparaciones(models.Model):
             'no': 'no_instalado',
             'no_aplica': 'no_aplica',
         }
-
+    
         migrated_count = 0
         error_count = 0
-
+    
         for rec in records_to_migrate:
             try:
                 _logger.info(f"Migrando reparación ID: {rec.id}")
@@ -184,12 +200,19 @@ class Reparaciones(models.Model):
                     value = getattr(rec, field_name, False)
                     if not value:
                         continue
-
-                    estado_code = VAL_TO_ESTADO.get(value)
+    
+                    # ✅ SELECCIONAR EL MAPEO CORRECTO SEGÚN EL CAMPO
+                    if field_name in TONER_FIELDS:
+                        estado_code = VAL_TO_ESTADO_TONER.get(value)
+                        _logger.debug(f"Campo tóner {field_name}: valor='{value}' -> estado_code='{estado_code}'")
+                    else:
+                        estado_code = VAL_TO_ESTADO.get(value)
+                        _logger.debug(f"Campo componente {field_name}: valor='{value}' -> estado_code='{estado_code}'")
+                    
                     if not estado_code:
                         _logger.warning(f"Estado no reconocido '{value}' para campo {field_name}")
                         continue
-
+    
                     tipo = Tipo.search([('code', '=', tipo_code)], limit=1)
                     if not tipo:
                         _logger.warning(f"Tipo no encontrado: {tipo_code}")
@@ -197,14 +220,14 @@ class Reparaciones(models.Model):
                     
                     estado = Estado.search([('code', '=', estado_code)], limit=1)
                     if not estado:
-                        _logger.warning(f"Estado no encontrado: {estado_code}")
+                        _logger.warning(f"Estado no encontrado: {estado_code} (campo: {field_name}, valor original: {value})")
                         continue
-
+    
                     color_id = False
                     if color_code:
                         color = Color.search([('code', '=', color_code)], limit=1)
                         color_id = color.id if color else False
-
+    
                     # Evitar duplicados exactos (mismo tipo/color)
                     dup_domain = [
                         ('reparacion_id', '=', rec.id),
@@ -218,8 +241,9 @@ class Reparaciones(models.Model):
                         exists.estado_id = estado.id
                         if obs and not exists.observaciones:
                             exists.observaciones = obs
+                        _logger.debug(f"Actualizada evaluación existente: tipo={tipo.name}, estado={estado.name}")
                         continue
-
+    
                     componentes_vals.append({
                         'reparacion_id': rec.id,
                         'componente_tipo_id': tipo.id,
@@ -227,14 +251,15 @@ class Reparaciones(models.Model):
                         'color_id': color_id,
                         'observaciones': obs or False,
                     })
-
+                    _logger.debug(f"Preparada nueva evaluación: tipo={tipo.name}, estado={estado.name}")
+    
                 # CREAR EVALUACIONES DE COMPONENTES
                 componentes_creados = 0
                 if componentes_vals:
                     created_evals = Eval.create(componentes_vals)
                     componentes_creados = len(created_evals)
                     _logger.info(f"Creadas {componentes_creados} evaluaciones de componentes para reparación {rec.id}")
-
+    
                 # ========================================
                 # PARTE 2: MIGRAR ACCESORIOS
                 # ========================================
@@ -277,14 +302,14 @@ class Reparaciones(models.Model):
                         'tipo_id': tipo.id,
                         'estado_id': estado.id,
                     })
-
+    
                 # CREAR EVALUACIONES DE ACCESORIOS
                 accesorios_creados = 0
                 if accesorios_vals:
                     created_accs = AccesorioEval.create(accesorios_vals)
                     accesorios_creados = len(created_accs)
                     _logger.info(f"Creadas {accesorios_creados} evaluaciones de accesorios para reparación {rec.id}")
-
+    
                 # ========================================
                 # MARCAR COMO MIGRADO
                 # ========================================
@@ -299,14 +324,14 @@ class Reparaciones(models.Model):
                 migrated_count += 1
                 
             except Exception as e:
-                _logger.error(f"Error migrando reparación {rec.id}: {e}")
+                _logger.error(f"Error migrando reparación {rec.id}: {e}", exc_info=True)
                 # MARCAR COMO ERROR
                 rec.write({
                     'migration_status': 'error',
                     'migration_date': fields.Datetime.now(),
                 })
                 error_count += 1
-
+    
         # ========================================
         # RESULTADO FINAL
         # ========================================
