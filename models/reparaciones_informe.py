@@ -293,10 +293,13 @@ class ReparacionesInforme(models.Model):
             html_parts.append('<p><strong>Los siguientes componentes requieren cambio:</strong></p>')
             html_parts.append(subpartes_html)
         
-        # Componentes con desgaste (SIN subpartes, solo nombres)
+        # Componentes con desgaste (CON VIÑETAS)
         if f['desgaste']:
-            lista = ', '.join(f['desgaste'])
-            html_parts.append(f'<p>Se recomienda cambio preventivo de: {lista}.</p>')
+            html_parts.append('<p><strong>Se recomienda cambio preventivo de:</strong></p>')
+            html_parts.append('<ul style="margin:5px 0 10px 20px;">')
+            for comp in f['desgaste']:
+                html_parts.append(f'<li>{comp}</li>')
+            html_parts.append('</ul>')
         
         # Conclusión
         if calidad == 'mala':
@@ -317,7 +320,7 @@ class ReparacionesInforme(models.Model):
         return html, calidad
 
     def _generar_subpartes_estructuradas(self):
-        """Genera HTML estructurado de componentes y sus subpartes SOLO para los que requieren cambio"""
+        """Genera HTML con viñetas de componentes y sus subpartes SOLO para los que requieren cambio"""
         if not self.intervencion_ids:
             return ""
 
@@ -330,6 +333,7 @@ class ReparacionesInforme(models.Model):
             return ""
 
         html_parts = []
+        html_parts.append('<ul style="margin:5px 0 10px 20px; list-style-type: disc;">')
         
         for intervencion in intervenciones_cambio:
             # Obtener nombre del componente
@@ -340,16 +344,19 @@ class ReparacionesInforme(models.Model):
             subpartes = [d.subparte_id.name for d in intervencion.detalle_ids if d.subparte_id]
             
             if subpartes:
-                # Componente como título
-                html_parts.append(f'<p style="margin:10px 0 5px 0;"><strong>{componente_nombre}:</strong></p>')
+                # Componente como item de lista
+                html_parts.append(f'<li style="margin-bottom:8px;"><strong>{componente_nombre}:</strong>')
                 
-                # Lista de subpartes
-                html_parts.append('<ul style="margin:0 0 10px 20px;">')
+                # Sub-lista de subpartes
+                html_parts.append('<ul style="margin:3px 0 0 20px; list-style-type: circle;">')
                 for subparte in subpartes:
                     html_parts.append(f'<li>{subparte}</li>')
                 html_parts.append('</ul>')
+                html_parts.append('</li>')
         
-        if not html_parts:
+        html_parts.append('</ul>')
+        
+        if len(html_parts) == 2:  # Solo etiquetas de apertura/cierre, sin contenido
             return ""
         
         return ''.join(html_parts)
