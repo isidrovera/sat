@@ -218,7 +218,7 @@
   
   <field name="evaluacion_ids" nolabel="1">
     <list editable="bottom" 
-          create="false" 
+          create="true" 
           delete="true"
           decoration-success="estado_id"
           decoration-warning="not estado_id">
