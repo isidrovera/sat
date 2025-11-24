@@ -142,24 +142,37 @@ class ReparacionAddSubpartsWizard(models.TransientModel):
                 'nota': wline.nota,
             })
 
-        # Si viene desde generar informe, regenerar el informe automáticamente
-        if self.env.context.get('from_generar_informe'):
-            repar = self.reparacion_id
+        repar = self.reparacion_id
+        from_action = self.env.context.get('from_action')
+        auto_finalize = self.env.context.get('auto_finalize')
+        from_generar_informe = self.env.context.get('from_generar_informe')
+
+        # 🔁 Caso 1: venimos de FINALIZAR y queremos auto-finalizar
+        if auto_finalize and from_action == 'finalizar_reparacion' and repar:
+            return repar.action_finalizar_reparacion()
+
+        # 📝 Caso 2: venimos de GENERAR INFORME -> regenerar informe
+        if from_generar_informe and repar:
             try:
                 html, calidad = repar._rep__build_informe_html()
-                repar.write({'informe': html, 'calidad_id': calidad})
+                vals = {'informe': html}
+                # si usas calidad_id como selección/char, lo dejas así; si es M2O, ya lo manejas en tu otra lógica
+                if 'calidad_id' in repar._fields:
+                    vals['calidad_id'] = calidad
+                repar.write(vals)
                 repar.message_post(body=_("Informe técnico actualizado con subpartes especificadas."))
                 
                 return {
                     'type': 'ir.actions.client',
                     'tag': 'display_notification',
                     'params': {
-                        'title': _('Informe actualizado'), 
-                        'message': _('Las subpartes han sido guardadas y el informe regenerado.'), 
+                        'title': _('Informe actualizado'),
+                        'message': _('Las subpartes han sido guardadas y el informe regenerado.'),
                         'type': 'success'
                     }
                 }
             except Exception as e:
                 repar.message_post(body=_("Error regenerando informe: %s") % str(e))
 
+        # 🎯 Caso 3: cualquier otro origen -> solo cerrar
         return {'type': 'ir.actions.act_window_close'}

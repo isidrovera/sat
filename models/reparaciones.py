@@ -1002,64 +1002,199 @@ class Reparaciones(models.Model):
     def action_finalizar_reparacion(self):
         """
         Finaliza la reparación validando todos los requisitos necesarios.
-        
-        Validaciones realizadas:
-        - Campos básicos: informe y calidad
-        - Evaluaciones de componentes completadas
-        - Evaluaciones de accesorios completadas
-        - Contómetro actualizado y validado
-        - Mínimo de fotos requeridas
-        - Autenticación del usuario
+
+        Orden de validaciones:
+        1) Campos básicos (informe, calidad, etc.)
+        2) Evaluaciones de componentes y accesorios
+        3) Contómetros
+        4) Fotos mínimas
+        5) Subpartes para componentes en 'requiere_cambio'
+        6) Autenticación del usuario
+        6.1) Generación / actualización de informe (IA o automático)
+        7) Cambio de estado, QR, notificaciones, siguiente reparación
         """
         self.ensure_one()
-        
-        _logger.info(f"Iniciando proceso de finalización para reparación ID: {self.id}")
-        
-        # ====== VALIDACIONES DE CAMPOS BÁSICOS ======
+        _logger.info(
+            "[action_finalizar_reparacion] >>> INICIO para reparación ID: %s",
+            self.id
+        )
+
+        # ====== 1) VALIDACIÓN DE CAMPOS BÁSICOS ======
         self._validar_campos_basicos()
-        
-        # ====== VALIDACIONES DE EVALUACIONES ======
+
+        # ====== 2) VALIDACIONES DE EVALUACIONES ======
         self._validar_evaluaciones_componentes()
         self._validar_evaluaciones_accesorios()
-        
-        # ====== VALIDACIÓN DE AUTENTICACIÓN ======
-        if not self._validar_autenticacion():
-            return self._abrir_wizard_autenticacion()
-        
-        # ====== VALIDACIÓN DE CONTÓMETRO ======
+
+        # ====== 3) VALIDACIÓN DE CONTÓMETRO ======
         self._validar_contometro()
-        
-        # ====== VALIDACIÓN DE FOTOS ======
+
+        # ====== 4) VALIDACIÓN DE FOTOS ======
         self._validar_fotos_minimas()
-        
-        # ====== PROCESO DE FINALIZACIÓN ======
-        _logger.info(f"Todas las validaciones pasaron. Procediendo con la finalización.")
-        
-        # Usar sudo() solo para operaciones específicas
+
+        # ====== 5) SUBPARTES PARA COMPONENTES EN 'requiere_cambio' ======
+        # Si faltan subpartes, abrimos wizard y NO seguimos.
+        # El wizard, al confirmar, volverá a llamar esta acción
+        # cuando el contexto tenga auto_finalize=True.
+        action_sub = self._handle_subpartes_pendientes(
+            origen_accion='finalizar_reparacion',
+            auto_finalize=True,
+        )
+        if action_sub:
+            _logger.info(
+                "[action_finalizar_reparacion] rep.id=%s -> Wizard de subpartes abierto (faltan)",
+                self.id
+            )
+            return action_sub
+
+        # ====== 6) VALIDACIÓN DE AUTENTICACIÓN ======
+        if not self._validar_autenticacion():
+            _logger.info(
+                "[action_finalizar_reparacion] rep.id=%s -> Abriendo wizard de autenticación",
+                self.id
+            )
+            return self._abrir_wizard_autenticacion()
+
+        # ====== 6.1) GENERAR / ACTUALIZAR INFORME (IA O AUTOMÁTICO) ======
+        # - Si el técnico YA escribió un informe manual (no vacío y no autogen),
+        #   se respeta y NO se toca.
+        # - Si no hay informe o es autogenerado/vacío, se genera aquí.
+        try:
+            informe_actual = getattr(self, 'informe', False)
+
+            if (
+                informe_actual
+                and not self._rep__html_is_empty(informe_actual)
+                and not self._rep__is_autogen_informe()
+            ):
+                # Informe manual existente
+                _logger.info(
+                    "[action_finalizar_reparacion] rep.id=%s -> Informe manual existente, no se sobrescribe.",
+                    self.id
+                )
+            else:
+                # No hay informe o es autogen → regenerar
+                _logger.info(
+                    "[action_finalizar_reparacion] rep.id=%s -> Generando informe antes de finalizar.",
+                    self.id
+                )
+
+                # Elegir modo: IA o automático
+                if getattr(self, 'modo_generacion_informe', False) == 'ia':
+                    html, calidad, justificacion = self._generar_informe_con_ia()
+                else:
+                    html, calidad = self._rep__build_informe_html()
+                    justificacion = ''
+
+                vals = {
+                    'informe': html,
+                    'informe_generado_por_ia': (getattr(self, 'modo_generacion_informe', False) == 'ia'),
+                    'calidad_justificacion': justificacion,
+                }
+
+                # Seteo robusto de calidad si el campo existe
+                if 'calidad_id' in self._fields:
+                    field = self._fields['calidad_id']
+                    try:
+                        # Si es Selection/Char, guardar el texto directamente
+                        if isinstance(field, fields.Selection) or isinstance(field, fields.Char):
+                            vals['calidad_id'] = calidad
+                        else:
+                            # Si es M2O, buscar en modelo reparacion.calidad
+                            Calidad = self.env.get('reparacion.calidad')
+                            if Calidad:
+                                cal = (
+                                    Calidad.search([('code', '=', calidad)], limit=1)
+                                    or Calidad.search([('name', 'ilike', calidad)], limit=1)
+                                )
+                                if cal:
+                                    vals['calidad_id'] = cal.id
+                                    _logger.debug(
+                                        "[action_finalizar_reparacion] calidad M2O=%s",
+                                        cal.id
+                                    )
+                    except Exception as fex:
+                        _logger.warning(
+                            "[action_finalizar_reparacion] No se pudo setear calidad_id (%s)",
+                            fex
+                        )
+
+                self.write(vals)
+
+                # Mensaje en chatter
+                if getattr(self, 'modo_generacion_informe', False) == 'ia':
+                    self.message_post(body=_("✨ Informe técnico generado con IA al finalizar."))
+                else:
+                    self.message_post(body=_("Informe técnico generado automáticamente al finalizar."))
+
+                _logger.info(
+                    "[action_finalizar_reparacion] rep.id=%s -> Informe generado/actualizado correctamente.",
+                    self.id
+                )
+
+        except Exception as e:
+            # No bloqueamos la finalización por error de informe;
+            # solo dejamos trazas y aviso al usuario.
+            _logger.exception(
+                "[action_finalizar_reparacion] Error generando/actualizando informe rep.id=%s: %s",
+                self.id, e
+            )
+            self.message_post(
+                body=_("⚠️ No se pudo generar/actualizar el informe automáticamente al finalizar: %s") % e
+            )
+
+        # ====== 7) PROCESO DE FINALIZACIÓN (YA TODO OK) ======
+        _logger.info(
+            "[action_finalizar_reparacion] Todas las validaciones pasaron para rep.id=%s",
+            self.id
+        )
+
         self_sudo = self.sudo()
-        
-        # Generar reporte QR (no crítico si falla)
-        self._generar_reporte_qr()
-        
-        # Enviar notificaciones (registrar errores pero no detener)
-        self._enviar_notificaciones()
-        
+
+        # Generar reporte QR (no crítico)
+        try:
+            self._generar_reporte_qr()
+        except Exception as e:
+            _logger.error(
+                "[action_finalizar_reparacion] Error generando QR rep.id=%s: %s",
+                self.id, e
+            )
+
+        # Enviar notificaciones (si falla, solo log)
+        try:
+            self._enviar_notificaciones()
+        except Exception as e:
+            _logger.error(
+                "[action_finalizar_reparacion] Error enviando notificaciones rep.id=%s: %s",
+                self.id, e
+            )
+
         # Cambiar estado a finalizado
-        _logger.info(f"Cambiando estado a 'finalizado' para reparación ID: {self.id}")
+        _logger.info(
+            "[action_finalizar_reparacion] Cambiando estado a 'finalizado' rep.id=%s",
+            self.id
+        )
         self_sudo.estado_id = "finalizado"
-        _logger.info(f"Estado cambiado exitosamente a 'finalizado'")
-        
+
         # Crear siguiente reparación
         try:
-            _logger.info(f"Creando siguiente reparación para reparación ID: {self.id}")
+            _logger.info(
+                "[action_finalizar_reparacion] Creando siguiente reparación para rep.id=%s",
+                self.id
+            )
             self_sudo._create_next_reparacion()
-            _logger.info(f"Siguiente reparación creada exitosamente")
         except Exception as e:
-            _logger.error(f"Error creando siguiente reparación para ID {self.id}: {e}")
-        
-        _logger.info(f"Proceso de finalización completado exitosamente para reparación ID: {self.id}")
-        
-        # Retornar a la vista de lista
+            _logger.error(
+                "[action_finalizar_reparacion] Error creando siguiente reparación rep.id=%s: %s",
+                self.id, e
+            )
+
+        _logger.info(
+            "[action_finalizar_reparacion] <<< FIN OK para rep.id=%s",
+            self.id
+        )
+
+        # Volver a la vista de lista
         return {
             'type': 'ir.actions.act_window',
             'view_mode': 'list',
