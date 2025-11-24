@@ -257,7 +257,7 @@
                     <field name="toner_magenta_id" invisible="tipo_id != 'color'"/>
                     <field name="toner_cyan_id" invisible="tipo_id != 'color'"/>
                     <field name="toner_yellow_id" invisible="tipo_id != 'color'"/>
-                    <field name="black_id" widget="selection_subparts"/>
+                    <field name="black_id"/>
                     <field name="magenta_id" invisible="tipo_id != 'color'"/>
                     <field name="cyan_id" invisible="tipo_id != 'color'"/>
                     <field name="yellow_id" invisible="tipo_id != 'color'"/>
