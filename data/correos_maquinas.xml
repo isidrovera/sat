@@ -511,8 +511,8 @@
     <field name="name">📊 SNMP - Actualización de contómetro</field>
     <field name="model_id" ref="model_sat_sat"/>
     <field name="email_from">soporte@andescopiers.com.pe</field>
-    <field name="email_to">verapolo@icloud.com</field>
-    <field name="email_cc"></field>
+    <field name="email_to">lincoln@corapsac.com</field>
+    <field name="email_cc">logistica@corapsac.com</field>
     <field name="subject">
         <![CDATA[📊 Contómetro actualizado: {{ object.serie_id }}]]>
     </field>
@@ -637,9 +637,7 @@
                 </a>
             </div>
 
-            <div style="margin-top:25px;font-size:12px;color:#999999;border-top:1px solid #e5e7eb;padding-top:15px;text-align:center;">
-                Este correo se generó automáticamente desde el sistema SNMP.
-            </div>
+            
         </div>
     </div>
 </body>
@@ -652,8 +650,8 @@
     <field name="name">⚠️ SNMP - Anomalía de contómetro</field>
     <field name="model_id" ref="model_sat_sat"/>
     <field name="email_from">soporte@andescopiers.com.pe</field>
-    <field name="email_to">verapolo@icloud.com</field>
-    <field name="email_cc"></field>
+    <field name="email_to">lincoln@corapsac.com</field>
+    <field name="email_cc">logistica@corapsac.com</field>
     <field name="subject">
         <![CDATA[⚠️ Anomalía en contómetro: {{ object.serie_id }}]]>
     </field>
@@ -799,10 +797,7 @@
                 </a>
             </div>
 
-            <div style="margin-top:25px;font-size:12px;color:#999999;border-top:1px solid #e5e7eb;padding-top:15px;text-align:center;">
-                <strong>⚠️ Este correo requiere acción inmediata.</strong><br/>
-                Adjunte este correo como evidencia para reclamos al proveedor si es necesario.
-            </div>
+            
         </div>
     </div>
 </body>
@@ -818,7 +813,7 @@
     <field name="email_to">verapolo@icloud.com</field>
     <field name="email_cc"></field>
     <field name="subject">
-        <![CDATA[💡 Modelo sugerido por SNMP: {{ object.serie_id }}]]>
+        <![CDATA[💡 Modelo sugerido por : {{ object.serie_id }}]]>
     </field>
     <field name="auto_delete" eval="True"/>
 
@@ -905,9 +900,7 @@
                 </a>
             </div>
 
-            <div style="margin-top:25px;font-size:12px;color:#999999;border-top:1px solid #e5e7eb;padding-top:15px;text-align:center;">
-                Este correo se generó automáticamente desde el sistema SNMP.
-            </div>
+            
         </div>
     </div>
 </body>
