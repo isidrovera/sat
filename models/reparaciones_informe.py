@@ -546,68 +546,150 @@ class ReparacionesInforme(models.Model):
     # GENERACIÓN CON IA
     # ========================================
     def _generar_informe_con_ia(self):
-        """Genera informe con IA (NUEVA SINTAXIS)"""
+        """
+        Llamada robusta a Gemini:
+        - Logea la respuesta cruda para depuración.
+        - Intenta varios accesos al contenido devuelto por la API.
+        - Si hay error, devuelve el informe automático como fallback (y registra por qué).
+        """
         self.ensure_one()
-        
         if not GEMINI_AVAILABLE:
             raise UserError("google-genai no instalado")
-        
+
         _logger.info("[_generar_informe_con_ia] Iniciando para id=%s", self.id)
-        
+
         try:
             # 1) Configuración
             config_gemini = self.env['gemini.configuracion'].get_config_activa()
             gemini_setup = self._init_gemini_model(config_gemini)
-            
-            # 2) Preparar datos
+
+            # 2) Preparar datos y prompt
             datos = self._preparar_datos_para_ia()
-            
-            # 3) Construir prompt
             prompt = self._construir_prompt_ia(datos)
-            
             _logger.debug("[_generar_informe_con_ia] Prompt len=%s", len(prompt))
-            
-            # 4) Llamar API (NUEVA SINTAXIS)
-            _logger.info("[_generar_informe_con_ia] Llamando Gemini...")
-            
+
+            # 3) Llamar API (registrar la llamada)
+            _logger.info("[_generar_informe_con_ia] Llamando Gemini modelo=%s temperature=%s max_tokens=%s",
+                        gemini_setup.get('modelo'),
+                        gemini_setup.get('temperature'),
+                        gemini_setup.get('max_output_tokens') or gemini_setup.get('max_tokens'))
+
+            # Nota: usar keys exactas según tu gemini_setup
+            cfg_max_tokens = gemini_setup.get('max_output_tokens') or gemini_setup.get('max_tokens')
+            cfg_temperature = min(float(gemini_setup.get('temperature', 0.0)), 0.2)
+
             response = gemini_setup['client'].models.generate_content(
                 model=gemini_setup['modelo'],
                 contents=prompt,
                 config=types.GenerateContentConfig(
-                    temperature=gemini_setup['temperature'],
-                    max_output_tokens=gemini_setup['max_tokens'],
-                    response_mime_type='application/json',  # Forzar JSON
+                    temperature=cfg_temperature,
+                    max_output_tokens=int(cfg_max_tokens) if cfg_max_tokens else None,
+                    response_mime_type='application/json',
                 )
             )
-            
-            # 5) Parsear respuesta
-            resultado = self._parsear_respuesta_ia(response.text)
-            
-            # 6) Registrar uso
-            config_gemini.incrementar_contador()
-            
-            # 7) Log
+
+            # 4) Loguear la respuesta cruda (para depuración)
+            # response puede ser objeto; intentamos leer atributos comunes
+            raw_text = None
+            try:
+                # muchos SDK colocan el resultado en response.text o response.result or response.output
+                if hasattr(response, 'text'):
+                    raw_text = response.text
+                elif hasattr(response, 'result'):
+                    raw_text = getattr(response, 'result')
+                elif hasattr(response, 'output'):
+                    raw_text = getattr(response, 'output')
+                else:
+                    # fallback a str()
+                    raw_text = str(response)
+            except Exception as e:
+                raw_text = str(response)
+
+            _logger.debug("[_generar_informe_con_ia] Respuesta cruda Gemini (truncada): %s", (raw_text or '')[:4000])
+
+            # 5) Normalizar texto recibido para parsear JSON
+            texto_limpio = raw_text or ''
+            if isinstance(texto_limpio, bytes):
+                try:
+                    texto_limpio = texto_limpio.decode('utf-8', errors='ignore')
+                except Exception:
+                    texto_limpio = str(texto_limpio)
+
+            texto_limpio = texto_limpio.strip()
+            # quitar fences si vienen en triple backticks
+            if texto_limpio.startswith('```'):
+                # quitar la línea de apertura
+                try:
+                    # Si es ```json\n{...}\n```
+                    texto_limpio = texto_limpio.split('```', 1)[1]
+                except Exception:
+                    texto_limpio = texto_limpio[3:]
+            if texto_limpio.endswith('```'):
+                texto_limpio = texto_limpio[:-3]
+            texto_limpio = texto_limpio.strip()
+
+            _logger.debug("[_generar_informe_con_ia] Texto limpio para JSON (truncado): %s", texto_limpio[:2000])
+
+            # 6) Intentar parsear como JSON estándar
+            resultado = None
+            try:
+                resultado = json.loads(texto_limpio)
+            except Exception as json_err:
+                _logger.warning("[_generar_informe_con_ia] JSONDecodeError: %s", json_err)
+                # intentar extraer un objeto JSON dentro del texto con regex
+                import re
+                m = re.search(r'\\{.*\\}', texto_limpio, flags=re.S)
+                if m:
+                    try:
+                        resultado = json.loads(m.group(0))
+                    except Exception as inner_err:
+                        _logger.warning("[_generar_informe_con_ia] fallo parseo JSON interno: %s", inner_err)
+                        resultado = None
+
+            # 7) Si no logramos parsear, lanzar excepción para fallback controlado
+            if not resultado or 'informe_html' not in resultado:
+                _logger.error("[_generar_informe_con_ia] Respuesta IA inválida o faltan campos requeridos. Se usará fallback.")
+                _logger.debug("[_generar_informe_con_ia] Respuesta cruda completa: %s", texto_limpio[:8000])
+                raise ValueError("Respuesta IA inválida o incompleta")
+
+            # 8) Registrar uso
+            try:
+                config_gemini.incrementar_contador()
+            except Exception as incr_err:
+                _logger.warning("[_generar_informe_con_ia] No se pudo incrementar contador uso: %s", incr_err)
+
+            # 9) Mensaje y retorno
+            informe_html = resultado.get('informe_html', '')
+            calidad = resultado.get('calidad', 'regular')
+            justificacion = resultado.get('justificacion_calidad', '')
             self.message_post(
-                body=f"<b>✨ Informe generado con IA</b><br/>"
-                    f"Modelo: {gemini_setup['modelo']}<br/>"
-                    f"Calidad: <b>{resultado['calidad'].upper()}</b><br/>"
-                    f"Justificación: {resultado['justificacion_calidad']}"
+                body=(
+                    "<b>✨ Informe generado con IA</b><br/>"
+                    f"Modelo: {gemini_setup.get('modelo')}<br/>"
+                    f"Calidad sugerida por IA: <b>{calidad.upper()}</b><br/>"
+                    f"Justificación: {justificacion}"
+                )
             )
-            
-            _logger.info("[_generar_informe_con_ia] ✅ Éxito. Calidad=%s", resultado['calidad'])
-            
-            return (
-                resultado['informe_html'],
-                resultado['calidad'],
-                resultado['justificacion_calidad']
-            )
-            
+            _logger.info("[_generar_informe_con_ia] Éxito. Calidad_sugerida=%s", calidad)
+            return informe_html, calidad, justificacion
+
         except Exception as e:
-            _logger.error("[_generar_informe_con_ia] ❌ Error: %s", str(e))
-            # Fallback
-            _logger.warning("Usando método automático como fallback")
-            html, calidad = self._rep__build_informe_html()
-            return (html, calidad, 'Generado automáticamente (error en IA)')
+            # Registrar detalle del error y usar el informe automático como fallback
+            _logger.exception("[_generar_informe_con_ia] Error llamando a Gemini o parseando respuesta: %s", e)
+            # Intentar fallback automático (tu método existente)
+            try:
+                html, calidad = self._rep__build_informe_html()
+                return html, calidad, 'Generado automáticamente (error en IA)'
+            except Exception as inner_fallback_err:
+                _logger.exception("[_generar_informe_con_ia] Error en fallback automático: %s", inner_fallback_err)
+                # Último recurso: devolver texto mínimo
+                html = (
+                    '<div data-autogen="1" style="font-family: Arial; line-height:1.5;">'
+                    '<p>Resumen del trabajo: no fue posible generar el detalle automáticamente.</p>'
+                    '</div>'
+                )
+                return html, 'regular', 'Generado automáticamente (error en IA y fallo en fallback)'
+
     
     def _init_gemini_model(self, config):
         """Inicializa cliente de Gemini (NUEVA SINTAXIS)"""
