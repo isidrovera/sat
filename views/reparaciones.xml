@@ -6,9 +6,11 @@
       <field name="model">reparaciones.reparaciones</field>
       <field name="arch" type="xml">
         <form string="Gestión de Reparaciones">
+          <!-- CRÍTICO: Cargar estado_id ANTES para evaluaciones de invisible -->
+          <field name="estado_id" invisible="1"/>
+          
           <!-- HEADER: Con botones mejorados e iconos modernos -->
           <header>
-            <field name="estado_id" invisible="1" />
             <button name="action_generar_informe"
               type="object"
               string="Generar Informe Técnico"
@@ -20,7 +22,6 @@
               class="btn-success"
               help="Completa el proceso de reparación. Solo use este botón cuando TODAS las verificaciones hayan sido completadas satisfactoriamente y el equipo esté operativo 100%."
               icon="fa-check-circle"
-              decoration-info="estado_id == 'en_revision'"
               invisible="estado_id != 'en_revision'" />
             <button string="Asignar Técnico"
               name="enviar_mensaje_whatsapp_reparaciones"
@@ -29,7 +30,6 @@
               help="Asigna este equipo a un técnico especializado. Automáticamente enviará una notificación por WhatsApp con los detalles de la asignación."
               icon="fa-user-plus"
               groups="base.group_system"
-              decoration-info="estado_id in ('para_revision', 'sin_revisar')"
               invisible="estado_id not in ('para_revision', 'sin_revisar')" />
             <button string="Generar QR"
               name="imprimir_reporte_qr"
@@ -37,7 +37,6 @@
               class="btn-info"
               help="Genera e imprime un código QR único para este equipo. Útil para seguimiento y control de inventario durante el proceso de reparación."
               icon="fa-qrcode"
-              decoration-info="estado_id == 'en_revision'"
               invisible="estado_id != 'en_revision'" />
             <button name="action_open_gallery"
               type="object"
@@ -45,17 +44,16 @@
               class="btn-secondary"
               help="Visualiza todas las fotografías tomadas durante el diagnóstico y proceso de reparación del equipo."
               icon="fa-camera"
-              decoration-info="estado_id in ('en_revision', 'para_revision', 'finalizado', 'entregada')"
               invisible="estado_id not in ('en_revision', 'para_revision', 'finalizado', 'entregada')" />
-              <button name="action_print_reparacion_pdf"
-        type="object"
-        string="Imprimir PDF"
-        class="btn-primary"/>
-        <button name="action_reset_all_migration_finalizados" 
-        string="Resetear Migración (Finalizados)"
-        type="object"
-        class="btn-warning"
-        confirm="¿Está seguro de resetear la migración de todos los registros finalizados seleccionados?"/>
+            <button name="action_print_reparacion_pdf"
+              type="object"
+              string="Imprimir PDF"
+              class="btn-primary"/>
+            <button name="action_reset_all_migration_finalizados" 
+              string="Resetear Migración (Finalizados)"
+              type="object"
+              class="btn-warning"
+              confirm="¿Está seguro de resetear la migración de todos los registros finalizados seleccionados?"/>
 
             <field name="estado_id" widget="statusbar" statusbar_visible="true" />
             <button
@@ -76,8 +74,8 @@
               <h1>
                 <field name="name" placeholder="Número/ID de Reparación" style="font-size: 20px;" />
               </h1>
-
             </div>
+            
             <!-- CLIENTE -->
             <div class="oe_title">
               <label for="cliente_id" style="font-size: 16px; color: #212529;">Cliente</label>
@@ -85,8 +83,8 @@
                 <field name="cliente_id" placeholder="Seleccione el cliente"
                   widget="many2one_avatar" style="font-size: 20px;" />
               </h1>
-
             </div>
+            
             <!-- DATOS PRINCIPALES EN GRUPOS -->
             <group>
               <!-- GRUPO: DATOS PARA REVISIÓN -->
@@ -104,8 +102,8 @@
                   help="Técnico responsable asignado a esta reparación. Este técnico será el único autorizado para actualizar el estado de la reparación." />
                 <field name="responsable_mobile_clean"
                   help="Número de contacto directo del técnico para coordinaciones urgentes." />
-
               </group>
+              
               <!-- GRUPO: DATOS DEL EQUIPO -->
               <group string="Datos del equipo"
                 style="background-color: #f8f9fa; border-radius: 8px; padding: 15px; border-left: 4px solid #495057;">
@@ -130,27 +128,25 @@
                   help="Contador interno de impresiones/copias, ubicado en configuración o menú de información del equipo." />
                 <field name="contometro_inicial"
                   help="Lectura inicial del contómetro al momento de iniciar la reparación. Sirve como referencia para pruebas técnicas." />
-                <field name="nombre_maquina" invisible='True' />
-                <field name="nombre_proveedor" invisible='True' />
-                <field name="autorizacion_cambio_digitos" invisible="True" />
-                <field name="autenticacion_correcta" invisible="True" />
-
+                <field name="nombre_maquina" invisible="1" />
+                <field name="nombre_proveedor" invisible="1" />
+                <field name="autorizacion_cambio_digitos" invisible="1" />
+                <field name="autenticacion_correcta" invisible="1" />
               </group>
             </group>
+            
             <notebook>
               <!-- PESTAÑA: INFORME TÉCNICO -->
               <page string="Informe Técnico">
-                
-                <group 
-                >
-                <group >
-                  <field name="informe"
-                    widget="html"
-                    readonly="0"
-                    placeholder="El informe se generará aquí cuando presiones el botón 'Generar Informe'..."
-                    nolabel="1"
-                    options="{'style-inline': true, 'resizable': true}" />
-                </group>
+                <group>
+                  <group>
+                    <field name="informe"
+                      widget="html"
+                      readonly="0"
+                      placeholder="El informe se generará aquí cuando presiones el botón 'Generar Informe'..."
+                      nolabel="1"
+                      options="{'style-inline': true, 'resizable': true}" />
+                  </group>
                   <group>
                     <field name="calidad_id"
                       decoration-success="calidad_id == 'buena'"
@@ -163,6 +159,7 @@
                       invisible="calidad_justificacion == False" />
                   </group>
                 </group>
+                
                 <!-- Configuración de generación -->
                 <group string="⚙️ Configuración">
                   <group>
@@ -193,193 +190,185 @@
 
                 <separator />
 
-                <!-- Resultado de calidad -->
-
-
-                <separator />
-
-
                 <!-- Información de auditoría -->
                 <group invisible="informe_generado_por_ia == False">
                   <div class="alert alert-info" role="alert" style="margin-bottom: 0px;">
                     <i class="fa fa-info-circle" /> 
-            <strong>Este informe fue generado con
-                    Inteligencia Artificial</strong> basándose en las evaluaciones técnicas del
-                    checklist. Puedes editarlo manualmente si es necesario. </div>
+                    <strong>Este informe fue generado con Inteligencia Artificial</strong> basándose en las evaluaciones técnicas del checklist. Puedes editarlo manualmente si es necesario.
+                  </div>
                 </group>
               </page>
+              
+              <!-- PÁGINAS DEL CHECKLIST ANTIGUO - SOLO VISIBLES CUANDO FINALIZADO -->
               <page string="Accesorios (Checklist Antiguo)" invisible="estado_id != 'finalizado'">
-  <group>
-    <group>
-      <field name="tray_id"/>
-      <field name="adf_simple_id"/>
-      <field name="adf_dual_id"/>
-      <field name="finalizador_interno_id"/>
-      <field name="finalizador_externo_id"/>
-      <field name="mueble_id"/>
-      <field name="lct_id"/>
-    </group>
-    <group>
-      <field name="wi_fi_id"/>
-      <field name="cable_poder_id"/>
-      <field name="panel_normal_id"/>
-      <field name="panel_smart_id"/>
-      <field name="ot_id"/>
-      <field name="hdd_id"/>
-    </group>
-  </group>
-</page>
+                <group>
+                  <group>
+                    <field name="tray_id"/>
+                    <field name="adf_simple_id"/>
+                    <field name="adf_dual_id"/>
+                    <field name="finalizador_interno_id"/>
+                    <field name="finalizador_externo_id"/>
+                    <field name="mueble_id"/>
+                    <field name="lct_id"/>
+                  </group>
+                  <group>
+                    <field name="wi_fi_id"/>
+                    <field name="cable_poder_id"/>
+                    <field name="panel_normal_id"/>
+                    <field name="panel_smart_id"/>
+                    <field name="ot_id"/>
+                    <field name="hdd_id"/>
+                  </group>
+                </group>
+              </page>
 
-<page string="Check List (Antiguo)" invisible="estado_id != 'finalizado'">
-  <group>
-    <group string="Funciones">
-      <field name="copia_id"/>
-      <field name="impresion_id"/>
-      <field name="impresion_usb_id"/>
-      <field name="scaner_smb_id"/>
-      <field name="scaner_usb_id"/>
-      <field name="scaner_ftp_id"/>
-      <field name="scaner_mail_id"/>
-    </group>
-    <group string="Componentes Mecánicos">
-      <field name="bypass_id"/>
-      <field name="tray1_id"/>
-      <field name="tray2_id"/>
-      <field name="tray3_id"/>
-      <field name="tray4_id"/>
-      <field name="adf_id"/>
-      <field name="finalizador_id"/>
-      <field name="tacho_id"/>
-    </group>
-  </group>
-  <group>
-    <group string="Componentes de Impresión">
-      <field name="fusora_id"/>
-      <field name="rodillo_id"/>
-      <field name="calor_id"/>
-      <field name="transfer_id"/>
-      <field name="optico_id"/>
-    </group>
-    <group string="Consumibles">
-      <field name="toner_black_id"/>
-      <field name="toner_magenta_id" invisible="tipo_id != 'color'"/>
-      <field name="toner_cyan_id" invisible="tipo_id != 'color'"/>
-      <field name="toner_yellow_id" invisible="tipo_id != 'color'"/>
-      <field name="black_id" widget="selection_subparts"/>
-      <field name="magenta_id" invisible="tipo_id != 'color'"/>
-      <field name="cyan_id" invisible="tipo_id != 'color'"/>
-      <field name="yellow_id" invisible="tipo_id != 'color'"/>
-      <field name="developerk_id"/>
-      <field name="developerm_id" invisible="tipo_id != 'color'"/>
-      <field name="developerc_id" invisible="tipo_id != 'color'"/>
-      <field name="developery_id" invisible="tipo_id != 'color'"/>
-    </group>
-  </group>
-</page>
+              <page string="Check List (Antiguo)" invisible="estado_id != 'finalizado'">
+                <group>
+                  <group string="Funciones">
+                    <field name="copia_id"/>
+                    <field name="impresion_id"/>
+                    <field name="impresion_usb_id"/>
+                    <field name="scaner_smb_id"/>
+                    <field name="scaner_usb_id"/>
+                    <field name="scaner_ftp_id"/>
+                    <field name="scaner_mail_id"/>
+                  </group>
+                  <group string="Componentes Mecánicos">
+                    <field name="bypass_id"/>
+                    <field name="tray1_id"/>
+                    <field name="tray2_id"/>
+                    <field name="tray3_id"/>
+                    <field name="tray4_id"/>
+                    <field name="adf_id"/>
+                    <field name="finalizador_id"/>
+                    <field name="tacho_id"/>
+                  </group>
+                </group>
+                <group>
+                  <group string="Componentes de Impresión">
+                    <field name="fusora_id"/>
+                    <field name="rodillo_id"/>
+                    <field name="calor_id"/>
+                    <field name="transfer_id"/>
+                    <field name="optico_id"/>
+                  </group>
+                  <group string="Consumibles">
+                    <field name="toner_black_id"/>
+                    <field name="toner_magenta_id" invisible="tipo_id != 'color'"/>
+                    <field name="toner_cyan_id" invisible="tipo_id != 'color'"/>
+                    <field name="toner_yellow_id" invisible="tipo_id != 'color'"/>
+                    <field name="black_id" widget="selection_subparts"/>
+                    <field name="magenta_id" invisible="tipo_id != 'color'"/>
+                    <field name="cyan_id" invisible="tipo_id != 'color'"/>
+                    <field name="yellow_id" invisible="tipo_id != 'color'"/>
+                    <field name="developerk_id"/>
+                    <field name="developerm_id" invisible="tipo_id != 'color'"/>
+                    <field name="developerc_id" invisible="tipo_id != 'color'"/>
+                    <field name="developery_id" invisible="tipo_id != 'color'"/>
+                  </group>
+                </group>
+              </page>
+              
+              <!-- PESTAÑA: CHECK LIST NUEVO -->
               <page string="Check List" name="evaluaciones">
-  
-  <div style="margin: 10px 0; padding: 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 10px; color: white; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
-    <h4 style="margin-top: 0; font-size: 18px; color: white; font-weight: 600;">
-      <i class="fa fa-cogs"></i> Sistema de Evaluación por Componentes
-    </h4>
-    <p style="margin-bottom: 0; font-size: 14px; opacity: 0.95;">
-      ✅ <b>Importante:</b> Debe completar el ESTADO de TODOS los componentes antes de finalizar
-    </p>
-  </div>
+                <div style="margin: 10px 0; padding: 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 10px; color: white; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
+                  <h4 style="margin-top: 0; font-size: 18px; color: white; font-weight: 600;">
+                    <i class="fa fa-cogs"></i> Sistema de Evaluación por Componentes
+                  </h4>
+                  <p style="margin-bottom: 0; font-size: 14px; opacity: 0.95;">
+                    ✅ <b>Importante:</b> Debe completar el ESTADO de TODOS los componentes antes de finalizar
+                  </p>
+                </div>
 
-  <separator string="📋 Componentes Evaluados"/>
-  
-  <field name="evaluacion_ids" nolabel="1">
-    <list editable="bottom" 
-          create="true" 
-          delete="true"
-          decoration-success="estado_id"
-          decoration-warning="not estado_id">
-      
-      <field name="componente_tipo_id" 
-             readonly="1"
-             string="🔧 Componente"
-             options="{'no_create': True, 'no_open': True}"/>
-      
-      <field name="color_id" 
-             readonly="1" 
-             optional="show"
-             string="🎨 Color"
-             options="{'no_create': True, 'no_open': True}"/>
-      
-      <field name="estado_id" 
-             string="⭐ ESTADO (Obligatorio)"
-             placeholder="⚠️ SELECCIONAR ESTADO"
-             options="{'no_create': True, 'no_open': True}"/>
-      
-      <field name="observaciones" 
-             optional="show"
-             string="📝 Observaciones"
-             placeholder="Detalles técnicos..."/>
-      
-    </list>
-  </field>
-  
-  <div class="alert alert-info" role="alert" style="margin-top: 15px; border-left: 4px solid #667eea;">
-    <i class="fa fa-info-circle"></i>
-    <b>Guía Visual:</b> Filas <span style="background-color: #fff3cd; padding: 2px 8px; border-radius: 3px;">amarillas</span> necesitan estado. 
-    Filas <span style="background-color: #d4edda; padding: 2px 8px; border-radius: 3px;">verdes</span> están completas.
-  </div>
-
-</page>
-
-<page string="Accesorios" name="accesorios_eval">
-
-  <div style="margin: 10px 0; padding: 15px; background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); border-radius: 10px; color: white; box-shadow: 0 4px 15px rgba(17, 153, 142, 0.3);">
-    <h4 style="margin-top: 0; font-size: 18px; color: white; font-weight: 600;">
-      <i class="fa fa-puzzle-piece"></i> Evaluación de Accesorios
-    </h4>
-    <p style="margin-bottom: 0; font-size: 14px; opacity: 0.95;">
-      ✅ Evalúe los accesorios opcionales instalados
-    </p>
-  </div>
-
-  <separator string="🔌 Accesorios Evaluados"/>
-  
-  <field name="accesorio_eval_ids" nolabel="1">
-    <list editable="bottom" 
-          create="false"
-          delete="true"
-          decoration-success="estado_id"
-          decoration-warning="not estado_id">
-      
-      <field name="tipo_id" 
-             readonly="1"
-             string="🔌 Accesorio"/>
-      
-      <field name="estado_id"
-             string="⭐ ESTADO (Obligatorio)"
-             placeholder="⚠️ SELECCIONAR ESTADO"
-             options="{'no_create': True, 'no_open': True}"/>
-      
-      <field name="subparte_ids" 
-             widget="many2many_tags"
-             string="🔩 Subpartes"
-             options="{'no_create': True}"
-             optional="show"/>
-      
-      <field name="observaciones" 
-             optional="show"
-             string="📝 Notas"
-             placeholder="Detalles..."/>
-      
-    </list>
-  </field>
-
-  <div class="alert alert-success" role="alert" style="margin-top: 15px; border-left: 4px solid #38ef7d;">
-    <i class="fa fa-lightbulb-o"></i>
-    <b>Tip:</b> Si un accesorio no aplica al modelo, márquelo como "No Aplica"
-  </div>
-
-</page>
-
-              <page string="Detalle de falla proveedor">
+                <separator string="📋 Componentes Evaluados"/>
                 
+                <field name="evaluacion_ids" nolabel="1">
+                  <list editable="bottom" 
+                        create="true" 
+                        delete="true"
+                        decoration-success="estado_id"
+                        decoration-warning="not estado_id">
+                    
+                    <field name="componente_tipo_id" 
+                           readonly="1"
+                           string="🔧 Componente"
+                           options="{'no_create': True, 'no_open': True}"/>
+                    
+                    <field name="color_id" 
+                           readonly="1" 
+                           optional="show"
+                           string="🎨 Color"
+                           options="{'no_create': True, 'no_open': True}"/>
+                    
+                    <field name="estado_id" 
+                           string="⭐ ESTADO (Obligatorio)"
+                           placeholder="⚠️ SELECCIONAR ESTADO"
+                           options="{'no_create': True, 'no_open': True}"/>
+                    
+                    <field name="observaciones" 
+                           optional="show"
+                           string="📝 Observaciones"
+                           placeholder="Detalles técnicos..."/>
+                  </list>
+                </field>
+                
+                <div class="alert alert-info" role="alert" style="margin-top: 15px; border-left: 4px solid #667eea;">
+                  <i class="fa fa-info-circle"></i>
+                  <b>Guía Visual:</b> Filas <span style="background-color: #fff3cd; padding: 2px 8px; border-radius: 3px;">amarillas</span> necesitan estado. 
+                  Filas <span style="background-color: #d4edda; padding: 2px 8px; border-radius: 3px;">verdes</span> están completas.
+                </div>
+              </page>
+
+              <!-- PESTAÑA: ACCESORIOS -->
+              <page string="Accesorios" name="accesorios_eval">
+                <div style="margin: 10px 0; padding: 15px; background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); border-radius: 10px; color: white; box-shadow: 0 4px 15px rgba(17, 153, 142, 0.3);">
+                  <h4 style="margin-top: 0; font-size: 18px; color: white; font-weight: 600;">
+                    <i class="fa fa-puzzle-piece"></i> Evaluación de Accesorios
+                  </h4>
+                  <p style="margin-bottom: 0; font-size: 14px; opacity: 0.95;">
+                    ✅ Evalúe los accesorios opcionales instalados
+                  </p>
+                </div>
+
+                <separator string="🔌 Accesorios Evaluados"/>
+                
+                <field name="accesorio_eval_ids" nolabel="1">
+                  <list editable="bottom" 
+                        create="false"
+                        delete="true"
+                        decoration-success="estado_id"
+                        decoration-warning="not estado_id">
+                    
+                    <field name="tipo_id" 
+                           readonly="1"
+                           string="🔌 Accesorio"/>
+                    
+                    <field name="estado_id"
+                           string="⭐ ESTADO (Obligatorio)"
+                           placeholder="⚠️ SELECCIONAR ESTADO"
+                           options="{'no_create': True, 'no_open': True}"/>
+                    
+                    <field name="subparte_ids" 
+                           widget="many2many_tags"
+                           string="🔩 Subpartes"
+                           options="{'no_create': True}"
+                           optional="show"/>
+                    
+                    <field name="observaciones" 
+                           optional="show"
+                           string="📝 Notas"
+                           placeholder="Detalles..."/>
+                  </list>
+                </field>
+
+                <div class="alert alert-success" role="alert" style="margin-top: 15px; border-left: 4px solid #38ef7d;">
+                  <i class="fa fa-lightbulb-o"></i>
+                  <b>Tip:</b> Si un accesorio no aplica al modelo, márquelo como "No Aplica"
+                </div>
+              </page>
+
+              <!-- PESTAÑA: DETALLE DE FALLA PROVEEDOR -->
+              <page string="Detalle de falla proveedor">
                 <group>
                   <group>
                     <field name="falla_proveedor"
@@ -388,13 +377,12 @@
                   </group>
                   <group>
                     <field name="foto_problema" widget="image" />
-                    
                   </group>
                 </group>
               </page>
+              
               <!-- PESTAÑA: DETALLE FALLA VENTAS -->
               <page string="Detalle falla ventas">
-                
                 <group>
                   <group>
                     <field name="falla_ventas"
@@ -402,21 +390,17 @@
                       style="min-height: 120px; font-family: 'Courier New', monospace; padding: 10px; background-color: #fffbf0;" />
                   </group>
                   <group>
-                    
                   </group>
                 </group>
               </page>
+              
               <!-- PESTAÑA: GALERÍA DE FOTOS -->
               <page string="Galería de Fotos" name="fotos" groups="base.group_system">
-
                 <!-- Galería de imágenes -->
                 <div style="margin: 15px 0;">
                   <field name="fotos_ids" widget="gallery_widget" />
                 </div>
-
               </page>
-
-
             </notebook>
           </sheet>
 
@@ -424,8 +408,10 @@
         </form>
       </field>
     </record>
+    
+    <!-- VISTA LISTA (TREE) -->
     <record id="reparaciones_tree_view" model="ir.ui.view">
-      <field name="name">reparaciones.reparaciones.tree</field>
+      <field name="name">reparaciones.reparaciones.list</field>
       <field name="model">reparaciones.reparaciones</field>
       <field name="arch" type="xml">
         <list string="Reparaciones" default_order="id desc">
@@ -436,136 +422,136 @@
           <field name="serie_id" />          
           <field name="ubicacion_id" widget="badge" />
           <field name="responsable_id" widget="many2one_avatar" />
-          <field name="estado_id" widget="badge" decoration-muted="estado_id == 'en_revision'"
+          <field name="estado_id" widget="badge" 
+            decoration-muted="estado_id == 'en_revision'"
             decoration-info="estado_id == 'en_revision'"
             decoration-success="estado_id == 'finalizado'"
             decoration-danger="estado_id not in ('sin_revisar','en_revision','finalizado','entregada')"
             decoration-warning="estado_id == 'entregada'" />
         </list>
-        <!-- Aplicar el dominio solo para el grupo técnico -->
       </field>
     </record>
+    
+    <!-- VISTA BÚSQUEDA -->
     <record id="reparaciones_search_view" model="ir.ui.view">
-  <field name="name">reparaciones.reparaciones.search</field>
-  <field name="model">reparaciones.reparaciones</field>
-  <field name="arch" type="xml">
-    <search string="Buscar Reparaciones">
-      <!-- CAMPOS DE BÚSQUEDA EXISTENTES -->
-      <field name="serie_id" string="Serie"/>
-      <field name="name" string="Número de Reparación"/>
-      <field name="cliente_id" string="Cliente"/>
-      <field name="maquina_id" string="Máquina"/>
-      <field name="marca" string="Marca"/>
-      <field name="responsable_id" string="Técnico"/>
-      <field name="importacion" string="Importación"/>
-      <field name="nombre_maquina" string="Modelo"/>
+      <field name="name">reparaciones.reparaciones.search</field>
+      <field name="model">reparaciones.reparaciones</field>
+      <field name="arch" type="xml">
+        <search string="Buscar Reparaciones">
+          <!-- CAMPOS DE BÚSQUEDA EXISTENTES -->
+          <field name="serie_id" string="Serie"/>
+          <field name="name" string="Número de Reparación"/>
+          <field name="cliente_id" string="Cliente"/>
+          <field name="maquina_id" string="Máquina"/>
+          <field name="marca" string="Marca"/>
+          <field name="responsable_id" string="Técnico"/>
+          <field name="importacion" string="Importación"/>
+          <field name="nombre_maquina" string="Modelo"/>
 
-      <!-- FILTROS POR ESTADO -->
-      <separator/>
-      <filter string="Sin Revisar" name="filter_sin_revisar" 
-              domain="[('estado_id', '=', 'sin_revisar')]"/>
-      <filter string="Para Revisión" name="filter_para_revision" 
-              domain="[('estado_id', '=', 'para_revision')]"/>
-      <filter string="En Revisión" name="filter_en_revision" 
-              domain="[('estado_id', '=', 'en_revision')]"/>
-      <filter string="Finalizadas" name="filter_finalizado" 
-              domain="[('estado_id', '=', 'finalizado')]"/>
-      <filter string="Con Problemas" name="filter_con_problemas" 
-              domain="[('estado_id', '=', 'con_problemas')]"/>
-      <filter string="De Partes" name="filter_de_partes" 
-              domain="[('estado_id', '=', 'de_partes')]"/>
-      <filter string="Entregadas" name="filter_entregada" 
-              domain="[('estado_id', '=', 'entregada')]"/>
-      
-      <separator/>
-      
-      <!-- FILTROS POR PRIORIDAD -->
-      <filter string="Prioridad Alta" name="filter_prioridad_alta" 
-              domain="[('prioridad', '=', 'alta')]"/>
-      <filter string="Prioridad Media" name="filter_prioridad_media" 
-              domain="[('prioridad', '=', 'media')]"/>
-      <filter string="Prioridad Baja" name="filter_prioridad_baja" 
-              domain="[('prioridad', '=', 'baja')]"/>
-      
-      <separator/>
-      
-     
-      
-      <!-- FILTROS POR UBICACIÓN -->
-      <filter string="Primer Piso" name="filter_primer_piso" 
-              domain="[('ubicacion_id', '=', 'primer_piso')]"/>
-      <filter string="Segundo Piso" name="filter_segundo_piso" 
-              domain="[('ubicacion_id', '=', 'segundo_piso')]"/>
-      <filter string="Tercer Piso" name="filter_tercer_piso" 
-              domain="[('ubicacion_id', '=', 'tercer_piso')]"/>
-      <filter string="Taller" name="filter_taller" 
-              domain="[('ubicacion_id', '=', 'taller')]"/>
-      <filter string="Bodega" name="filter_bodega" 
-              domain="[('ubicacion_id', '=', 'bodega')]"/>
-      <filter string="Cliente" name="filter_cliente_ubicacion" 
-              domain="[('ubicacion_id', '=', 'cliente')]"/>
-      
-      <separator/>
-      
-      <!-- FILTROS POR TIPO DE MÁQUINA -->
-      <filter string="Color" name="filter_color" 
-              domain="[('tipo_id', '=', 'color')]"/>
-      <filter string="Monocromática" name="filter_monocromatica" 
-              domain="[('tipo_id', '=', 'monocromatica')]"/>
-      
-      <separator/>
-      
-      <!-- FILTROS TEMPORALES -->
-      <filter string="Creadas Hoy" name="filter_hoy" 
-              domain="[('create_date', '&gt;=', datetime.datetime.combine(context_today(), datetime.time(0,0,0))),
-                       ('create_date', '&lt;=', datetime.datetime.combine(context_today(), datetime.time(23,59,59)))]"/>
-      <filter string="Esta Semana" name="filter_semana" 
-              domain="[('create_date', '&gt;=', (context_today() - datetime.timedelta(days=context_today().weekday())).strftime('%Y-%m-%d')),
-                       ('create_date', '&lt;=', (context_today() + datetime.timedelta(days=6-context_today().weekday())).strftime('%Y-%m-%d'))]"/>
-      <filter string="Este Mes" name="filter_mes" 
-              domain="[('create_date', '&gt;=', datetime.datetime.now().strftime('%Y-%m-01'))]"/>
-      
-      <separator/>
-      
-      
-      
-      <!-- AGRUPAR POR -->
-      <group expand="0" string="Agrupar Por">
-        <filter string="Estado" name="group_estado" 
-                context="{'group_by': 'estado_id'}"/>
-        <filter string="Técnico Responsable" name="group_tecnico" 
-                context="{'group_by': 'responsable_id'}"/>
-        <filter string="Cliente" name="group_cliente" 
-                context="{'group_by': 'cliente_id'}"/>
-        <filter string="Prioridad" name="group_prioridad" 
-                context="{'group_by': 'prioridad'}"/>
-        <filter string="Tipo de Revisión" name="group_tipo_revision" 
-                context="{'group_by': 'tipo_revision'}"/>
-        <filter string="Ubicación" name="group_ubicacion" 
-                context="{'group_by': 'ubicacion_id'}"/>
-        <filter string="Marca" name="group_marca" 
-                context="{'group_by': 'marca'}"/>
-        <filter string="Modelo" name="group_modelo" 
-                context="{'group_by': 'nombre_maquina'}"/>
-        <filter string="Importación" name="group_importacion" 
-                context="{'group_by': 'importacion'}"/>
-        <filter string="Tipo de Máquina" name="group_tipo" 
-                context="{'group_by': 'tipo_id'}"/>
-        <filter string="Proveedor" name="group_proveedor" 
-                context="{'group_by': 'nombre_proveedor'}"/>
-        <separator/>
-        <filter string="Fecha de Creación (Mes)" name="group_fecha_mes" 
-                context="{'group_by': 'create_date:month'}"/>
-        <filter string="Fecha de Creación (Semana)" name="group_fecha_semana" 
-                context="{'group_by': 'create_date:week'}"/>
-        <filter string="Fecha de Creación (Día)" name="group_fecha_dia" 
-                context="{'group_by': 'create_date:day'}"/>
-        <filter string="Fecha de Finalización" name="group_fecha_finalizacion" 
-                context="{'group_by': 'fecha_finalizacion:month'}"/>
-      </group>
-    </search>
-  </field>
-</record>
+          <!-- FILTROS POR ESTADO -->
+          <separator/>
+          <filter string="Sin Revisar" name="filter_sin_revisar" 
+                  domain="[('estado_id', '=', 'sin_revisar')]"/>
+          <filter string="Para Revisión" name="filter_para_revision" 
+                  domain="[('estado_id', '=', 'para_revision')]"/>
+          <filter string="En Revisión" name="filter_en_revision" 
+                  domain="[('estado_id', '=', 'en_revision')]"/>
+          <filter string="Finalizadas" name="filter_finalizado" 
+                  domain="[('estado_id', '=', 'finalizado')]"/>
+          <filter string="Con Problemas" name="filter_con_problemas" 
+                  domain="[('estado_id', '=', 'con_problemas')]"/>
+          <filter string="De Partes" name="filter_de_partes" 
+                  domain="[('estado_id', '=', 'de_partes')]"/>
+          <filter string="Entregadas" name="filter_entregada" 
+                  domain="[('estado_id', '=', 'entregada')]"/>
+          
+          <separator/>
+          
+          <!-- FILTROS POR PRIORIDAD -->
+          <filter string="Prioridad Alta" name="filter_prioridad_alta" 
+                  domain="[('prioridad', '=', 'alta')]"/>
+          <filter string="Prioridad Media" name="filter_prioridad_media" 
+                  domain="[('prioridad', '=', 'media')]"/>
+          <filter string="Prioridad Baja" name="filter_prioridad_baja" 
+                  domain="[('prioridad', '=', 'baja')]"/>
+          
+          <separator/>
+          
+          <!-- FILTROS POR UBICACIÓN -->
+          <filter string="Primer Piso" name="filter_primer_piso" 
+                  domain="[('ubicacion_id', '=', 'primer_piso')]"/>
+          <filter string="Segundo Piso" name="filter_segundo_piso" 
+                  domain="[('ubicacion_id', '=', 'segundo_piso')]"/>
+          <filter string="Tercer Piso" name="filter_tercer_piso" 
+                  domain="[('ubicacion_id', '=', 'tercer_piso')]"/>
+          <filter string="Taller" name="filter_taller" 
+                  domain="[('ubicacion_id', '=', 'taller')]"/>
+          <filter string="Bodega" name="filter_bodega" 
+                  domain="[('ubicacion_id', '=', 'bodega')]"/>
+          <filter string="Cliente" name="filter_cliente_ubicacion" 
+                  domain="[('ubicacion_id', '=', 'cliente')]"/>
+          
+          <separator/>
+          
+          <!-- FILTROS POR TIPO DE MÁQUINA -->
+          <filter string="Color" name="filter_color" 
+                  domain="[('tipo_id', '=', 'color')]"/>
+          <filter string="Monocromática" name="filter_monocromatica" 
+                  domain="[('tipo_id', '=', 'monocromatica')]"/>
+          
+          <separator/>
+          
+          <!-- FILTROS TEMPORALES -->
+          <filter string="Creadas Hoy" name="filter_hoy" 
+                  domain="[('create_date', '&gt;=', datetime.datetime.combine(context_today(), datetime.time(0,0,0))),
+                           ('create_date', '&lt;=', datetime.datetime.combine(context_today(), datetime.time(23,59,59)))]"/>
+          <filter string="Esta Semana" name="filter_semana" 
+                  domain="[('create_date', '&gt;=', (context_today() - datetime.timedelta(days=context_today().weekday())).strftime('%Y-%m-%d')),
+                           ('create_date', '&lt;=', (context_today() + datetime.timedelta(days=6-context_today().weekday())).strftime('%Y-%m-%d'))]"/>
+          <filter string="Este Mes" name="filter_mes" 
+                  domain="[('create_date', '&gt;=', datetime.datetime.now().strftime('%Y-%m-01'))]"/>
+          
+          <separator/>
+          
+          <!-- AGRUPAR POR -->
+          <group expand="0" string="Agrupar Por">
+            <filter string="Estado" name="group_estado" 
+                    context="{'group_by': 'estado_id'}"/>
+            <filter string="Técnico Responsable" name="group_tecnico" 
+                    context="{'group_by': 'responsable_id'}"/>
+            <filter string="Cliente" name="group_cliente" 
+                    context="{'group_by': 'cliente_id'}"/>
+            <filter string="Prioridad" name="group_prioridad" 
+                    context="{'group_by': 'prioridad'}"/>
+            <filter string="Tipo de Revisión" name="group_tipo_revision" 
+                    context="{'group_by': 'tipo_revision'}"/>
+            <filter string="Ubicación" name="group_ubicacion" 
+                    context="{'group_by': 'ubicacion_id'}"/>
+            <filter string="Marca" name="group_marca" 
+                    context="{'group_by': 'marca'}"/>
+            <filter string="Modelo" name="group_modelo" 
+                    context="{'group_by': 'nombre_maquina'}"/>
+            <filter string="Importación" name="group_importacion" 
+                    context="{'group_by': 'importacion'}"/>
+            <filter string="Tipo de Máquina" name="group_tipo" 
+                    context="{'group_by': 'tipo_id'}"/>
+            <filter string="Proveedor" name="group_proveedor" 
+                    context="{'group_by': 'nombre_proveedor'}"/>
+            <separator/>
+            <filter string="Fecha de Creación (Mes)" name="group_fecha_mes" 
+                    context="{'group_by': 'create_date:month'}"/>
+            <filter string="Fecha de Creación (Semana)" name="group_fecha_semana" 
+                    context="{'group_by': 'create_date:week'}"/>
+            <filter string="Fecha de Creación (Día)" name="group_fecha_dia" 
+                    context="{'group_by': 'create_date:day'}"/>
+            <filter string="Fecha de Finalización" name="group_fecha_finalizacion" 
+                    context="{'group_by': 'fecha_finalizacion:month'}"/>
+          </group>
+        </search>
+      </field>
+    </record>
+    
+    <!-- VISTA KANBAN -->
     <record id="reparaciones_kanban_view" model="ir.ui.view">
       <field name="name">reparaciones.kanban</field>
       <field name="model">reparaciones.reparaciones</field>
@@ -593,13 +579,13 @@
             <t t-name="card">
               <div class="oe_kanban_global_click position-relative shadow-sm rounded">
                 <!-- Header con número de reparación -->
-                <div
-                  class="d-flex justify-content-between align-items-center p-2 bg-light border-bottom">
+                <div class="d-flex justify-content-between align-items-center p-2 bg-light border-bottom">
                   <div class="d-flex align-items-center">
                     <i class="fa fa-file-invoice text-primary me-2" title="Número de Reparación" />
                     <field name="name" class="fw-bold" />
                   </div>
                 </div>
+                
                 <!-- Contenido principal -->
                 <div class="p-3">
                   <!-- Cliente y Asesora -->
@@ -613,45 +599,51 @@
                     <span class="text-muted me-1">Asesora:</span>
                     <field name="asesora_id" />
                   </div>
+                  
                   <!-- Marca -->
                   <div class="d-flex align-items-center mb-2">
                     <i class="fa fa-copyright text-success me-2" title="Marca" />
                     <span class="text-muted me-1">Marca:</span>
                     <field name="marca" />
                   </div>
+                  
                   <!-- Modelo -->
                   <div class="d-flex align-items-center mb-2">
                     <i class="fa fa-print text-primary me-2" title="Modelo" />
                     <span class="text-muted me-1">Modelo:</span>
                     <field name="maquina_id" />
                   </div>
+                  
                   <!-- Serie -->
                   <div class="d-flex align-items-center mb-2">
                     <i class="fa fa-qrcode text-secondary me-2" title="Serie" />
                     <span class="text-muted me-1">Serie:</span>
                     <field name="serie_id" />
                   </div>
+                  
                   <!-- Contómetro -->
                   <div class="d-flex align-items-center mb-2">
                     <i class="fa fa-calculator text-purple me-2" title="Contómetro" />
                     <span class="text-muted me-1">Contómetro:</span>
                     <field name="contometrok_id" />
                   </div>
+                  
                   <!-- Observaciones -->
                   <div class="d-flex align-items-center mb-2">
                     <i class="fa fa-question-circle text-danger me-2" title="Observaciones" />
                     <span class="text-muted me-1">Obs:</span>
                     <field name="falla_ventas" class="text-truncate" />
                   </div>
+                  
                   <!-- Importación -->
                   <div class="d-flex align-items-center mb-2">
                     <i class="fa fa-plane text-success me-2" title="Importación" />
                     <span class="text-muted me-1">Import.:</span>
                     <field name="importacion" />
                   </div>
+                  
                   <!-- Estado y Tipo de revisión -->
-                  <div
-                    class="d-flex justify-content-between align-items-center mb-2 border-top pt-2">
+                  <div class="d-flex justify-content-between align-items-center mb-2 border-top pt-2">
                     <div class="d-flex align-items-center">
                       <i class="fa fa-check-circle text-warning me-1" title="Estado" />
                       <field name="estado_id" widget="badge"
@@ -664,6 +656,7 @@
                       <field name="tipo_revision" widget="badge" />
                     </div>
                   </div>
+                  
                   <!-- Ubicación y Prioridad -->
                   <div class="d-flex justify-content-between align-items-center mb-2">
                     <div class="d-flex align-items-center">
@@ -675,6 +668,7 @@
                       <field name="prioridad" widget="priority" />
                     </div>
                   </div>
+                  
                   <!-- Footer con técnico -->
                   <div class="pt-2 border-top">
                     <div class="d-flex align-items-center">
@@ -684,6 +678,7 @@
                     </div>
                   </div>
                 </div>
+                
                 <!-- Indicador lateral de estado -->
                 <div
                   t-attf-class="position-absolute top-0 start-0 h-100 w-1 
