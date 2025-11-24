@@ -1102,16 +1102,11 @@ RESPONDE SOLO CON EL JSON, SIN TEXTO ADICIONAL.
         titulo = f"Subpartes para: {', '.join(nombres)}"
         _logger.info("[_abrir_wizard_multiple_componentes] wizard id=%s titulo='%s'", wizard.id, titulo)
 
-        return {
-            'type': 'ir.actions.act_window',
-            'name': titulo,
-            'res_model': 'reparacion.add.subparts.wizard',
-            'res_id': wizard.id,
-            'view_mode': 'form',
-            'view_id': self.env.ref('sat.view_reparacion_add_subparts_wizard_form').id,
-            'target': 'new',
-            'context': {'from_generar_informe': True},
-        }
+        return self._abrir_wizard_multiple_componentes_con_contexto(
+            componentes_pendientes,
+            origen_accion='generar_informe',
+            auto_finalize=False
+        )
     def _buscar_componentes_modelo_por_evaluacion(self, modelo_maquina, comp_info):
         """
         Busca componentes del catálogo para poblar el wizard de subpartes con
@@ -1328,3 +1323,224 @@ RESPONDE SOLO CON EL JSON, SIN TEXTO ADICIONAL.
             nombre = f"{nombre} ({color_display})"
         
         return nombre
+
+
+
+    def _handle_subpartes_pendientes(self, origen_accion='generar_informe', auto_finalize=False):
+        """
+        Verifica si hay componentes con 'requiere_cambio' que NO tienen subpartes.
+        Si los hay, abre el wizard para que el usuario las agregue.
+        
+        Args:
+            origen_accion: 'generar_informe' o 'finalizar_reparacion'
+            auto_finalize: Si True, después de confirmar el wizard se ejecutará
+                        automáticamente action_finalizar_reparacion()
+        
+        Returns:
+            - dict (acción del wizard) si hay pendientes
+            - False si NO hay pendientes (puede continuar)
+        """
+        self.ensure_one()
+        _logger.info(
+            "[_handle_subpartes_pendientes] rep.id=%s origen=%s auto_finalize=%s",
+            self.id, origen_accion, auto_finalize
+        )
+        
+        # Si ya viene del wizard confirmado, no volver a abrir
+        if self.env.context.get('skip_subpartes_validation'):
+            _logger.info(
+                "[_handle_subpartes_pendientes] rep.id=%s -> skip_subpartes_validation=True",
+                self.id
+            )
+            return False
+        
+        # Buscar componentes pendientes (sin duplicados)
+        componentes_pendientes = self._check_campos_requieren_cambio_sin_intervencion()
+        
+        if not componentes_pendientes:
+            _logger.info(
+                "[_handle_subpartes_pendientes] rep.id=%s -> No hay pendientes",
+                self.id
+            )
+            return False
+        
+        # Hay pendientes → abrir wizard
+        _logger.info(
+            "[_handle_subpartes_pendientes] rep.id=%s -> %s componentes pendientes, abriendo wizard",
+            self.id, len(componentes_pendientes)
+        )
+        
+        return self._abrir_wizard_multiple_componentes_con_contexto(
+            componentes_pendientes,
+            origen_accion=origen_accion,
+            auto_finalize=auto_finalize
+        )
+
+
+    def _abrir_wizard_multiple_componentes_con_contexto(self, componentes_pendientes, 
+                                                        origen_accion='generar_informe', 
+                                                        auto_finalize=False):
+        """
+        Abre el wizard de subpartes con contexto adicional para saber qué hacer al confirmar.
+        
+        Args:
+            componentes_pendientes: Lista de dicts con info de componentes
+            origen_accion: De dónde se llamó ('generar_informe' o 'finalizar_reparacion')
+            auto_finalize: Si True, al confirmar wizard se finalizará automáticamente
+        """
+        self.ensure_one()
+        _logger.info(
+            "[_abrir_wizard_multiple_componentes_con_contexto] id=%s count=%s origen=%s auto_finalize=%s",
+            self.id, len(componentes_pendientes), origen_accion, auto_finalize
+        )
+        
+        if not componentes_pendientes:
+            return False
+
+        wizard = self.env['reparacion.add.subparts.wizard'].create({
+            'reparacion_id': self.id
+        })
+
+        modelo_maquina = self.maquina_id
+        if not modelo_maquina:
+            _logger.error(
+                "[_abrir_wizard_multiple_componentes_con_contexto] Máquina sin modelo id=%s",
+                self.id
+            )
+            raise UserError(_("La máquina no tiene modelo asignado"))
+
+        # Poblar líneas del wizard
+        for comp_info in componentes_pendientes:
+            componente_code = comp_info['componente_code']
+
+            # Crear/obtener intervención
+            intervencion = self._ensure_intervencion_for_component(componente_code)
+
+            # Evitar duplicados
+            ya_existentes = set(intervencion.detalle_ids.mapped('subparte_id').ids)
+            agregadas = set()
+
+            # Buscar componentes del modelo
+            componentes_modelo = self._buscar_componentes_modelo_por_evaluacion(
+                modelo_maquina, comp_info
+            )
+            _logger.debug(
+                "[_abrir_wizard_multiple_componentes_con_contexto] comp=%s encontró %s componentes modelo",
+                componente_code, len(componentes_modelo)
+            )
+
+            total_lineas = 0
+
+            # 1) Subpartes detalladas del modelo
+            for componente_modelo in componentes_modelo:
+                if not getattr(componente_modelo, 'detalle_ids', False):
+                    continue
+
+                for detalle in componente_modelo.detalle_ids:
+                    sid = detalle.subparte_id.id
+                    if not sid:
+                        continue
+
+                    if sid in ya_existentes or sid in agregadas:
+                        continue
+
+                    self.env['reparacion.add.subparts.wizard.line'].create({
+                        'wizard_id': wizard.id,
+                        'componente': 'otro',
+                        'componente_code': componente_code,
+                        'intervencion_id': intervencion.id,
+                        'subparte_id': sid,
+                        'selected': False,
+                        'accion_sub': 'cambiado',
+                        'cantidad': detalle.cantidad or 1.0,
+                    })
+
+                    agregadas.add(sid)
+                    total_lineas += 1
+
+            # 2) Fallback genérico por tipo
+            if total_lineas == 0:
+                genericas = self._fallback_subpartes_por_tipo(comp_info['tipo_id'])
+                if genericas:
+                    _logger.warning(
+                        "[_abrir_wizard_multiple_componentes_con_contexto] sin detalle_ids; "
+                        "usando %s subpartes genéricas por tipo.",
+                        len(genericas)
+                    )
+                    for sp in genericas:
+                        sid = sp.id
+                        if not sid or sid in ya_existentes or sid in agregadas:
+                            continue
+
+                        self.env['reparacion.add.subparts.wizard.line'].create({
+                            'wizard_id': wizard.id,
+                            'componente': 'otro',
+                            'componente_code': componente_code,
+                            'intervencion_id': intervencion.id,
+                            'subparte_id': sid,
+                            'selected': False,
+                            'accion_sub': 'cambiado',
+                            'cantidad': 1.0,
+                        })
+
+                        agregadas.add(sid)
+                        total_lineas += 1
+
+            # 3) Notificación si no se pudo encontrar nada
+            if total_lineas == 0:
+                self.message_post(body=_(
+                    "No se hallaron subpartes para <b>%(nombre)s</b> %(color)s. "
+                    "Completa el catálogo de <i>modelo.maquina.componente</i> o "
+                    "defínelas en <i>componente.subparte</i>.",
+                ) % {
+                    'nombre': self.env['componente.tipo'].browse(comp_info['tipo_id']).name,
+                    'color': comp_info.get('color_code') and f"({comp_info['color_code'].upper()})" or "",
+                })
+
+        # Título dinámico del wizard
+        nombres = []
+        for comp in componentes_pendientes:
+            eval_rec = self.env['reparacion.componente.evaluacion'].browse(
+                comp['evaluacion_id']
+            )
+            nombre = eval_rec.componente_tipo_id.name
+            if comp.get('color_code'):
+                nombre = f"{nombre} ({comp['color_code'].upper()})"
+            nombres.append(nombre)
+
+        titulo = f"Subpartes requeridas para: {', '.join(nombres)}"
+        
+        # Mensaje contextual según origen
+        if origen_accion == 'finalizar_reparacion':
+            mensaje = (
+                "Estos componentes requieren cambio pero no tienen subpartes especificadas.\n"
+                "Por favor, selecciona las subpartes necesarias antes de finalizar."
+            )
+        else:
+            mensaje = (
+                "Estos componentes requieren cambio pero no tienen subpartes especificadas.\n"
+                "Por favor, selecciona las subpartes necesarias para generar el informe."
+            )
+        
+        _logger.info(
+            "[_abrir_wizard_multiple_componentes_con_contexto] wizard id=%s titulo='%s'",
+            wizard.id, titulo
+        )
+
+        # Contexto para que el wizard sepa qué hacer al confirmar
+        context = {
+            'from_generar_informe': (origen_accion == 'generar_informe'),
+            'from_finalizar_reparacion': (origen_accion == 'finalizar_reparacion'),
+            'auto_finalize': auto_finalize,
+        }
+
+        return {
+            'type': 'ir.actions.act_window',
+            'name': titulo,
+            'res_model': 'reparacion.add.subparts.wizard',
+            'res_id': wizard.id,
+            'view_mode': 'form',
+            'view_id': self.env.ref('sat.view_reparacion_add_subparts_wizard_form').id,
+            'target': 'new',
+            'context': context,
+        }
