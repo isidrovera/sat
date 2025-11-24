@@ -324,7 +324,7 @@
               name="action_print_reparacion_pdf"
               type="object"
               string=""
-              icon="fa-file-pdf-o"
+              icon="fa-file-pdf-o" invisible="estado_ventas_id != 'finalizado'"
               help="Imprime la información de la reparación en formato PDF"
           />
 
@@ -333,7 +333,7 @@
               name="action_open_reparacion_gallery"
               type="object"
               string=""
-              icon="fa-camera"
+              icon="fa-camera" invisible="estado_ventas_id != 'finalizado'"
               help="Abre el visor de fotos de la reparación"
           />
         </list>
