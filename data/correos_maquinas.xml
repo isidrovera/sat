@@ -217,12 +217,7 @@
                     </a>
                 </div>
     
-                <!-- Pie de página -->
-                <div style="text-align: center; margin-top: 30px; color: #777777; font-size: 12px;">
-                    <div style="border-top: 1px solid #eeeeee; padding-top: 20px;">
-                        Este es un mensaje automático generado por el sistema de soporte técnico.
-                    </div>
-                </div>
+               
             </div>
         </div>
     </body>
@@ -237,7 +232,7 @@
     <field name="email_to">lincoln@corapsac.com</field>
     <field name="email_cc">logistica@corapsac.com</field>
     <field name="subject">
-        <![CDATA[🚨 Modelo cambiado automáticamente por SNMP: {{ object.serie_id }}]]>
+        Modelo cambiado automáticamente por SNMP: {{ object.serie_id }}
     </field>
     <field name="auto_delete" eval="True"/>
 
@@ -387,7 +382,7 @@
     <field name="email_to">verapolo@icloud.com</field>
     <field name="email_cc"></field>
     <field name="subject">
-        <![CDATA[✅ Modelo actualizado por SNMP: {{ object.serie_id }}]]>
+        Modelo actualizado por SNMP: {{ object.serie_id }}
     </field>
     <field name="auto_delete" eval="True"/>
 
@@ -509,7 +504,7 @@
     <field name="email_to">verapolo@icloud.com</field>
     <field name="email_cc"></field>
     <field name="subject">
-        <![CDATA[📊 Contómetro actualizado: {{ object.serie_id }}]]>
+        Contómetro actualizado: {{ object.serie_id }}
     </field>
     <field name="auto_delete" eval="True"/>
 
@@ -648,7 +643,7 @@
     <field name="email_to">lincoln@corapsac.com</field>
     <field name="email_cc">logistica@corapsac.com</field>
     <field name="subject">
-        <![CDATA[⚠️ Anomalía en contómetro: {{ object.serie_id }}]]>
+        Anomalía en contómetro: {{ object.serie_id }}
     </field>
     <field name="auto_delete" eval="True"/>
 
@@ -808,7 +803,7 @@
     <field name="email_to">verapolo@icloud.com</field>
     <field name="email_cc"></field>
     <field name="subject">
-        <![CDATA[💡 Modelo sugerido por : {{ object.serie_id }}]]>
+        Modelo sugerido por : {{ object.serie_id }}
     </field>
     <field name="auto_delete" eval="True"/>
 
