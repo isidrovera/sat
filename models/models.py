@@ -851,7 +851,14 @@ class SatSat(models.Model):
             lineas.append(f"• Posible cambio de velocidad (núcleo): <b>{detalle_velocidad}</b>")
 
         if cambio_tipo:
-            sel_tipo = dict(record._fields['tipo_id'].selection)
+            # Obtener el selection de tipo_id de forma segura,
+            # soportando tanto lista/tupla como función.
+            try:
+                field_info = record.fields_get(['tipo_id'])['tipo_id']
+                sel_tipo = dict(field_info.get('selection', []))
+            except Exception:
+                sel_tipo = {}
+
             txt_old = sel_tipo.get(tipo_anterior, tipo_anterior)
             txt_new = sel_tipo.get(tipo_nuevo, tipo_nuevo)
             lineas.append(f"• Cambio de tipo: <b>{txt_old}</b> → <b>{txt_new}</b>")
