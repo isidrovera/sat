@@ -1305,7 +1305,7 @@ class ReparacionesInforme(models.Model):
                     rec.modo_generacion_informe,
                 )
 
-                # 1) Juntar TODOS los que requieren cambio y no tienen subpartes
+                # 1) Juntar TODOS los que requieren cambio y no tienen intervención (primer uso)
                 campos_pendientes = rec._check_campos_requieren_cambio_sin_intervencion()
                 if campos_pendientes:
                     _logger.info(
@@ -1313,7 +1313,7 @@ class ReparacionesInforme(models.Model):
                         rec.id,
                         len(campos_pendientes),
                     )
-                    # aquí puedes seguir usando tu versión simple o la que tiene contexto
+                    # Versión con contexto (ya la tienes implementada)
                     return rec._abrir_wizard_multiple_componentes_con_contexto(
                         campos_pendientes,
                         origen_accion='generar_informe',
@@ -1370,6 +1370,12 @@ class ReparacionesInforme(models.Model):
                 rec.message_post(body=_("❌ No se pudo generar el informe: %s") % e)
 
         _logger.info("[action_generar_informe] <<< FIN. generados=%s", len(acciones))
+
+        # ⚠️ NUEVO: si se llamó desde action_finalizar_reparacion, no devolver notificación
+        if self.env.context.get('from_finalizar_reparacion'):
+            return False
+
+        # Comportamiento normal del botón "Generar informe"
         return {
             'type': 'ir.actions.client',
             'tag': 'display_notification',
