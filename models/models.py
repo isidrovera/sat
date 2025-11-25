@@ -525,20 +525,22 @@ class SatSat(models.Model):
         self._compute_posicion_cola()
         puesto = self.posicion_cola or 1
 
-        # Notificación en chatter (similar a lo que tenías en write)
+        # Notificación en chatter - usar formato HTML correcto
         isidro_partner_id = self.get_isidro_partner_id()
-        mensaje_chatter = f"""Se ha colocado una nueva máquina para revisión.
-
-Detalles del equipo:
-- Modelo: {self.name.name if self.name else ''}
-- Serie: {self.serie_id or ''}
-- Fecha de registro: {peru_dt.strftime('%Y-%m-%d %H:%M:%S')} (hora Lima)
-- Puesto en cola: {puesto}
-
-Modificado por: {self.env.user.name}
-"""
+        mensaje_chatter = f"""
+            <p>Se ha colocado una nueva máquina para revisión.</p>
+            <p><strong>Detalles del equipo:</strong></p>
+            <ul>
+                <li><strong>Modelo:</strong> {self.name.name if self.name else ''}</li>
+                <li><strong>Serie:</strong> {self.serie_id or ''}</li>
+                <li><strong>Fecha de registro:</strong> {peru_dt.strftime('%Y-%m-%d %H:%M:%S')} (hora Lima)</li>
+                <li><strong>Puesto en cola:</strong> {puesto}</li>
+            </ul>
+            <p><strong>Modificado por:</strong> {self.env.user.name}</p>
+        """
+        
         self.message_post(
-            body=mensaje_chatter.replace("\n", "<br/>"),
+            body=mensaje_chatter,
             partner_ids=[isidro_partner_id] if isidro_partner_id else None,
             subtype_xmlid='mail.mt_comment',
         )
@@ -557,7 +559,6 @@ Modificado por: {self.env.user.name}
                 'sticky': False,
             }
         }
-
 
     def action_quitar_de_revision(self):
         """
