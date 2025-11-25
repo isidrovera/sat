@@ -1442,23 +1442,23 @@ class Reparaciones(models.Model):
         
         _logger.info(f"[Validación Contador] ✅ Validación completada exitosamente")
         return True
-
     def _validar_fotos_minimas(self):
-        """Valida que haya suficientes fotos documentadas"""
         self.ensure_one()
-        
-        FOTOS_MINIMAS = 10
-        cantidad_fotos = len(self.fotos_ids)
-        
-        if cantidad_fotos < FOTOS_MINIMAS:
+        min_fotos = 10
+        fotos_actuales = len(self.foto_ids)
+
+        if fotos_actuales < min_fotos:
+            faltan = min_fotos - fotos_actuales
             raise UserError(_(
-                "❗ <b>Error en la Documentación Fotográfica</b>\n\n"
-                "Se requieren al menos <b>%s fotos</b> para finalizar la reparación.\n"
-                "Actualmente hay <b>%s fotos</b> adjuntas.\n\n"
-                "Por favor, agregue %s fotos más."
-            ) % (FOTOS_MINIMAS, cantidad_fotos, FOTOS_MINIMAS - cantidad_fotos))
-        
-        _logger.info(f"Validación de fotos completada: {cantidad_fotos} fotos documentadas")
+                "Error en la documentación fotográfica\n\n"
+                "Se requieren al menos %(min)d fotos para finalizar la reparación.\n"
+                "Actualmente hay %(actual)d foto(s) adjuntas.\n\n"
+                "Por favor, agregue %(faltan)d foto(s) más."
+            ) % {
+                'min': min_fotos,
+                'actual': fotos_actuales,
+                'faltan': faltan,
+            })
 
 
     def _generar_reporte_qr(self):
