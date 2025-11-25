@@ -1443,9 +1443,15 @@ class Reparaciones(models.Model):
         _logger.info(f"[Validación Contador] ✅ Validación completada exitosamente")
         return True
     def _validar_fotos_minimas(self):
+        """
+        Valida que la reparación tenga el mínimo de fotos requeridas
+        antes de poder finalizar.
+        """
         self.ensure_one()
-        min_fotos = 10
-        fotos_actuales = len(self.foto_ids)
+
+        min_fotos = 10  # o el número que uses
+        # 👇 CORREGIDO: usar el nombre real del campo: fotos_ids
+        fotos_actuales = len(self.fotos_ids) if hasattr(self, 'fotos_ids') else 0
 
         if fotos_actuales < min_fotos:
             faltan = min_fotos - fotos_actuales
