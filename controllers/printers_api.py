@@ -380,10 +380,10 @@ def find_and_update_model(env, model_snmp, brand_name, core_snmp, tipo_color_snm
        - Luego buscar el nombre exacto que envía SNMP
     2. SIMILAR: Busca por núcleo + marca + color, si encuentra UNO que coincide 
        con buen score, lo MODIFICA (renombra al nombre comercial o al SNMP)
-    3. CREAR: Si no encuentra ninguno, crea nuevo
+    3. SIN MODELO CONFIABLE: No crea nada, delega a intervención manual.
 
     Retorna: (modelo, acción, modificado)
-    acción ∈ {'exact', 'updated', 'created', 'failed'}
+    acción ∈ {'exact', 'updated', 'failed'}
     modificado = True si se renombró el modelo existente
     """
     Mod = env['modelo.maquina'].sudo()
@@ -525,42 +525,15 @@ def find_and_update_model(env, model_snmp, brand_name, core_snmp, tipo_color_snm
         )
 
     # ==========================
-    # PASO 3: CREAR NUEVO MODELO
+    # PASO 3: SIN CREACIÓN AUTOMÁTICA
     # ==========================
-    _logger.info("[SNMP Match] Paso 3: Intentando CREAR nuevo modelo")
+    _logger.warning(
+        "[SNMP Match] ⚠️ No se encontró modelo exacto ni similar con score suficiente. "
+        "Se requiere intervención manual, no se creará modelo automáticamente."
+    )
 
-    brand_id = ensure_brand(env, brand_name) if brand_name else False
-    tipo_maquina_id = get_default_tipo_maquina(env)
-    precio = get_default_precio(env)
-
-    if not tipo_maquina_id:
-        _logger.error(
-            "[SNMP Match] ❌ Falta tipo de máquina por defecto "
-            "(parámetro 'snmp.default_tipo_maquina_id' o tipo 'Fotocopiadora') - no se puede crear"
-        )
-        return None, 'failed', False
-
-    nombre_creacion = commercial_name or model_snmp
-
-    vals = {
-        'name': nombre_creacion,
-        'marca_id': brand_id or False,
-        'tipo_id': tipo_color_snmp,
-        'precio_venta': precio,
-        'tipo_maquina_id': tipo_maquina_id,
-    }
-
-    try:
-        created = Mod.create(vals)
-        _logger.info(
-            "[SNMP Match] ✅ Modelo CREADO: %s (ID: %s)",
-            created.name, created.id
-        )
-        return created, 'created', False
-    except Exception as e:
-        _logger.error("[SNMP Match] ❌ Error creando modelo: %s", e)
-        _logger.exception("[SNMP Match] Traceback:")
-        return None, 'failed', False
+    # No crear modelo; se delega al caller (snmp_intake) para que llame a _suggest_model
+    return None, 'failed', False
 
 
 class SNMPPublicController(http.Controller):
@@ -753,6 +726,8 @@ class SNMPPublicController(http.Controller):
                 _logger.warning(
                     "[SNMP] ⚠️ Mismatch de núcleo pero no se pudo determinar/crear modelo destino"
                 )
+                # 👉 NUEVO: también sugerimos modelo para intervención manual
+                self._suggest_model(sat, model_snmp)
 
             # 5.3) Notificar por plantilla (sat.sat) incluyendo modelo nuevo si lo hay
             self._notify_core_mismatch(
