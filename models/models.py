@@ -527,17 +527,16 @@ class SatSat(models.Model):
 
         # Notificación en chatter - usar formato HTML correcto
         isidro_partner_id = self.get_isidro_partner_id()
-        mensaje_chatter = f"""
-            <p>Se ha colocado una nueva máquina para revisión.</p>
-            <p><strong>Detalles del equipo:</strong></p>
-            <ul>
-                <li><strong>Modelo:</strong> {self.name.name if self.name else ''}</li>
-                <li><strong>Serie:</strong> {self.serie_id or ''}</li>
-                <li><strong>Fecha de registro:</strong> {peru_dt.strftime('%Y-%m-%d %H:%M:%S')} (hora Lima)</li>
-                <li><strong>Puesto en cola:</strong> {puesto}</li>
-            </ul>
-            <p><strong>Modificado por:</strong> {self.env.user.name}</p>
-        """
+        mensaje_chatter = (
+            "Se ha colocado una nueva máquina para revisión.\n\n"
+            "Detalles del equipo:\n"
+            f"- Modelo: {self.name.name if self.name else ''}\n"
+            f"- Serie: {self.serie_id or ''}\n"
+            f"- Fecha de registro: {peru_dt.strftime('%Y-%m-%d %H:%M:%S')} (hora Lima)\n"
+            f"- Puesto en cola: {puesto}\n\n"
+            f"Modificado por: {self.env.user.name}"
+        )
+
         
         self.message_post(
             body=mensaje_chatter,
