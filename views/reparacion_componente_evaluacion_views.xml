@@ -33,7 +33,7 @@
       <form string="Evaluación de Componente">
         <sheet>
           <group>
-            <field name="reparacion_id" readonly="1"/>
+            <field name="reparacion_id" />
             <field name="componente_tipo_id"/>
             <field name="color_id" placeholder="Seleccione si aplica (K/C/M/Y)"/>
             <field name="estado_id"/>
