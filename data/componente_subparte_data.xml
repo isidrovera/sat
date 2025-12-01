@@ -289,6 +289,11 @@
     <field name="code">FUSER_LOWER</field>
     <field name="tipo_id" ref="comp_tipo_fusora"/>
   </record>
+  <record id="sub_fuser_upr" model="componente.subparte">
+    <field name="name">Rodillo de calor</field>
+    <field name="code">FUSER_UPR</field>
+    <field name="tipo_id" ref="comp_tipo_fusora"/>
+  </record>
   <record id="sub_fuser_lamp" model="componente.subparte">
     <field name="name">Lámpara / Calentador</field>
     <field name="code">FUSER_LAMP</field>
