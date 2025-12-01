@@ -235,7 +235,7 @@ class SoporteMensajes(models.Model):
             mensaje += f"\n⚠️ Se ha programado asistencia directa para todos estos equipos."
             
             # Enviar al gerente
-            tickets_directos[0].send_whatsapp_message('51922541085', mensaje)
+            tickets_directos[0].send_whatsapp_message('17862826794', mensaje)
             _logger.info(f"✅ Notificación consolidada de asistencia directa enviada al gerente para {cantidad} tickets")
             
         except Exception as e:
@@ -598,7 +598,7 @@ Para finalizar rápidamente un ticket, ingresa a Odoo y usa la opción "Finaliza
             )
             try:
                 _logger.info("Enviando notificación de visita directa al gerente")
-                self.send_whatsapp_message('51922541085', msg_gerente)
+                self.send_whatsapp_message('17862826794', msg_gerente)
             except Exception as e:
                 _logger.error("Error al enviar mensaje al gerente. Detalles: %s", str(e))
 
