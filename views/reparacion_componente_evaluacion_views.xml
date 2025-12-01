@@ -6,7 +6,7 @@
     <field name="model">reparacion.componente.evaluacion</field>
     <field name="arch" type="xml">
       <list string="Evaluaciones de Componentes"
-            editable="bottom"
+            
             decoration-danger="estado_id.prioridad == 1"
             decoration-warning="estado_id.prioridad == 2"
             decoration-muted="estado_id.code == 'no_aplica'">
