@@ -69,6 +69,7 @@
           </header>
 
           <sheet>
+            <div class="oe_button_box" name="button_box">
             <button name="action_view_component_evaluations"
                 type="object"
                 class="oe_stat_button"
@@ -97,6 +98,7 @@
                    string="Partes"
                    widget="statinfo"/>
         </button>
+        </div>
             <!-- TÍTULO DE LA REPARACIÓN -->
             <div class="oe_title">
               <label for="name" style="font-size: 16px; color: #212529;">Referencia de Reparación</label>
