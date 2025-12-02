@@ -65,6 +65,10 @@
               help="Crea una solicitud formal de partes necesarias para completar la reparación. Complete primero el diagnóstico técnico antes de solicitar partes."
               options="{'no_required_fields_validation': true}"
             />
+            
+          </header>
+
+          <sheet>
             <button name="action_view_component_evaluations"
                 type="object"
                 class="oe_stat_button"
@@ -93,10 +97,6 @@
                    string="Partes"
                    widget="statinfo"/>
         </button>
-          </header>
-
-          <sheet>
-            
             <!-- TÍTULO DE LA REPARACIÓN -->
             <div class="oe_title">
               <label for="name" style="font-size: 16px; color: #212529;">Referencia de Reparación</label>
