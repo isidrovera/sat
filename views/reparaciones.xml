@@ -68,6 +68,28 @@
           </header>
 
           <sheet>
+            <button name="action_view_component_evaluations"
+            type="action"
+            class="oe_stat_button"
+            icon="fa-cogs">
+        <field name="componente_eval_count" string="Componentes" widget="statinfo"/>
+    </button>
+
+    <!-- Accesorios -->
+    <button name="action_view_accessory_evaluations"
+            type="action"
+            class="oe_stat_button"
+            icon="fa-puzzle-piece">
+        <field name="accesorio_eval_count" string="Accesorios" widget="statinfo"/>
+    </button>
+
+    <!-- Solicitudes de Partes (usa lo que ya tienes) -->
+    <button name="action_view_parts_requests"
+            type="action"
+            class="oe_stat_button"
+            icon="fa-truck">
+        <field name="parts_request_count" string="Partes" widget="statinfo"/>
+    </button>
             <!-- TÍTULO DE LA REPARACIÓN -->
             <div class="oe_title">
               <label for="name" style="font-size: 16px; color: #212529;">Referencia de Reparación</label>

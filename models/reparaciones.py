@@ -1583,6 +1583,67 @@ class Reparaciones(models.Model):
             'domain': [('reparacion_id', '=', self.id)],
             'context': {'default_reparacion_id': self.id, 'default_maquina_id': self.maquina_id.id}
         }
+        # --- SMART BUTTONS: Componentes y Accesorios ---
+
+    componente_eval_ids = fields.One2many(
+        'reparacion.componente.evaluacion',
+        'reparacion_id',
+        string='Evaluaciones de Componentes'
+    )
+
+    componente_eval_count = fields.Integer(
+        string='Componentes',
+        compute='_compute_componente_eval_count'
+    )
+
+    accesorio_eval_ids = fields.One2many(
+        'reparacion.accesorio.evaluacion',
+        'reparacion_id',
+        string='Evaluaciones de Accesorios'
+    )
+
+    accesorio_eval_count = fields.Integer(
+        string='Accesorios',
+        compute='_compute_accesorio_eval_count'
+    )
+    @api.depends('componente_eval_ids')
+    def _compute_componente_eval_count(self):
+        for record in self:
+            record.componente_eval_count = len(record.componente_eval_ids)
+
+    @api.depends('accesorio_eval_ids')
+    def _compute_accesorio_eval_count(self):
+        for record in self:
+            record.accesorio_eval_count = len(record.accesorio_eval_ids)
+
+    def action_view_component_evaluations(self):
+        """Abrir las evaluaciones de componentes relacionadas a esta reparación."""
+        self.ensure_one()
+        return {
+            'name': 'Evaluación de Componentes',
+            'type': 'ir.actions.act_window',
+            'res_model': 'reparacion.componente.evaluacion',
+            'view_mode': 'list,form',
+            'domain': [('reparacion_id', '=', self.id)],
+            'context': {
+                'default_reparacion_id': self.id,
+            },
+        }
+
+    def action_view_accessory_evaluations(self):
+        """Abrir las evaluaciones de accesorios relacionadas a esta reparación."""
+        self.ensure_one()
+        return {
+            'name': 'Evaluación de Accesorios',
+            'type': 'ir.actions.act_window',
+            'res_model': 'reparacion.accesorio.evaluacion',
+            'view_mode': 'list,form',
+            'domain': [('reparacion_id', '=', self.id)],
+            'context': {
+                'default_reparacion_id': self.id,
+            },
+        }
+
 
 
 
