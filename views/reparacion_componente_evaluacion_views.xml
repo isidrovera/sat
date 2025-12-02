@@ -10,7 +10,7 @@
             decoration-danger="estado_id.prioridad == 1"
             decoration-warning="estado_id.prioridad == 2"
             decoration-muted="estado_id.code == 'no_aplica'">
-        <field name="reparacion_id" invisible="1"/>
+        <field name="reparacion_id"/>
         <field name="componente_tipo_id"/>
         <!-- Dejamos color visible; el constraint del servidor fuerza si es necesario -->
         <field name="color_id" optional="show"/>

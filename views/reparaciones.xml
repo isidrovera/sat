@@ -40,17 +40,17 @@
               invisible="estado_id != 'en_revision'" />
             <button name="action_open_gallery"
               type="object"
-              string="Galería de Fotos"
+              string="Fotos"
               class="btn-secondary"
               help="Visualiza todas las fotografías tomadas durante el diagnóstico y proceso de reparación del equipo."
               icon="fa-camera"
               invisible="estado_id not in ('en_revision', 'para_revision', 'finalizado', 'entregada')" />
             <button name="action_print_reparacion_pdf"
               type="object"
-              string="Imprimir PDF"
+              string="Imprimir"
               class="btn-primary"/>
             <button name="action_reset_all_migration_finalizados" 
-              string="Resetear Migración (Finalizados)"
+              string="Resetear Migración"
               type="object"
               class="btn-warning"
               confirm="¿Está seguro de resetear la migración de todos los registros finalizados seleccionados?"/>
