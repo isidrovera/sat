@@ -466,7 +466,8 @@ Recibirá confirmación de la fecha de entrega.
                 'subject': f"🚫 Solicitud Tóner Rechazada - {datos_formulario['modelo_maquina']}",
                 'body_html': body_html,
                 'email_from': 'soporte@andescopiers.com.pe',
-                'email_to': 'jamilet.roggero@andescopiers.com.pe',
+                'email_to': 'comercial01@andescopiers.com.pe',
+                'email_cc': 'comercial@andescopiers.com.pe',
                 'mail_server_id': mail_server.id if mail_server else False,
             }
             
@@ -496,8 +497,8 @@ Recibirá confirmación de la fecha de entrega.
                 'subject': f"✅ Solicitud Tóner Aprobada - {creation_result['secuencia']}",
                 'body_html': body_html,
                 'email_from': 'soporte@andescopiers.com.pe',
-                'email_to': 'jamilet.roggero@andescopiers.com.pe',
-                'email_cc': 'comercial@andescopiers.com.pe, alquiler@andescopiers.com.pe',
+                'email_to': 'comercial01@andescopiers.com.pe',
+                'email_cc': 'comercial@andescopiers.com.pe',
                 'mail_server_id': mail_server.id if mail_server else False,
             }
             
