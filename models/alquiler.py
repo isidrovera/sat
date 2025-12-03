@@ -40,6 +40,30 @@ class UnidadAlquiler(models.Model):
     contador_color = fields.Integer(string="Contador Color", tracking=True)
     contador_scan = fields.Integer(string="Contador Escáner", tracking=True)
     fecha_ultima_actualizacion = fields.Datetime(string="Fecha de última actualización")
+
+    has_auto_counters = fields.Boolean(
+        string='Tiene contadores automáticos',
+        compute='_compute_has_auto_counters',
+        store=False,
+        help='Indica si el equipo tiene contadores recientes provenientes de sistemas automáticos'
+    )
+
+    @api.depends('contador_bn', 'contador_color', 'fecha_ultima_actualizacion', 'pt_last_sync', 'tipo_maquina_id')
+    def _compute_has_auto_counters(self):
+        """Determina si el equipo tiene contadores automáticos confiables."""
+        for rec in self:
+            # Consideramos que hay contador si hay valor > 0
+            has_bn = bool(rec.contador_bn and rec.contador_bn > 0)
+            # Para monocromática no exigimos color
+            if rec.tipo_maquina_id == 'color':
+                has_color = bool(rec.contador_color and rec.contador_color > 0)
+            else:
+                has_color = True
+
+            # Consideramos "reciente" si existe alguna de estas fechas
+            has_recent_date = bool(rec.fecha_ultima_actualizacion or rec.pt_last_sync)
+
+            rec.has_auto_counters = bool((has_bn or has_color) and has_recent_date)
     # En la clase UnidadAlquiler, agregar este método
     
     @api.model

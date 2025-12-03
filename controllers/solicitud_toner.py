@@ -63,8 +63,12 @@ class TonerRequestController(http.Controller):
                 # Si el acceso es por QR, phone_number será vacío y el usuario debe ingresar manualmente
                 phone_number = ''
 
-            # ✅ NUEVA FUNCIONALIDAD: Obtener estado actual del stock
+            # ✅ Info de stock actual
             stock_info = self._get_equipment_stock_info(registro)
+
+            # ✅ Contadores efectivos (se usarán también en backend si no se manda nada desde el form)
+            contador_bn = registro.contador_bn or 0
+            contador_color = registro.contador_color or 0
 
             values = {
                 'id_registro': registro.id,
@@ -75,10 +79,12 @@ class TonerRequestController(http.Controller):
                 'celular': phone_number,
                 'ubicacion_instalacion': registro.ubicacion_instalacion,
                 'tipo_maquina_id': registro.tipo_maquina_id,
-                'stock_info': stock_info,  # ✅ NUEVO: Info del stock actual
-                'contador_actual_bn': registro.contador_actual_black or 0,
-                'contador_actual_color': registro.contador_actual_color or 0,
+                'stock_info': stock_info,
+                'contador_actual_bn': contador_bn,
+                'contador_actual_color': contador_color,
                 'gestion_automatica': stock_info.get('gestion_automatica', True),
+                # ✅ NUEVO: bandera para decidir si mostrar/ocultar contadores
+                'has_auto_counters': registro.has_auto_counters,
             }
 
             _logger.info(f"Formulario de tóner preparado con los siguientes valores: {values}")
@@ -87,6 +93,7 @@ class TonerRequestController(http.Controller):
         except Exception as e:
             _logger.exception(f"Error al mostrar el formulario de solicitud de tóner: {str(e)}")
             return request.redirect('/pagina_error')
+
 
     def _get_equipment_stock_info(self, equipment):
         """Obtiene información del stock actual del equipo"""
@@ -187,12 +194,17 @@ class TonerRequestController(http.Controller):
             _logger.info(f"=== INICIANDO PROCESAMIENTO DE SOLICITUD DE TÓNER ===")
             _logger.info(f"Datos recibidos: {post}")
             
-            # Validar campos obligatorios básicos
-            required_fields = ['id_registro', 'cliente', 'nombre', 'celular', 'contometro_black']
+            # Validar campos obligatorios básicos (SIN contometro_black)
+            required_fields = ['id_registro', 'cliente', 'nombre', 'celular']
             missing_fields = [field for field in required_fields if not post.get(field)]
             
             if missing_fields:
                 _logger.error(f"Campos obligatorios faltantes: {missing_fields}")
+                return request.redirect('/pagina_error')
+
+            equipo = request.env['alquiler'].sudo().browse(int(post.get('id_registro')))
+            if not equipo.exists():
+                _logger.error("Equipo no encontrado para la solicitud de tóner")
                 return request.redirect('/pagina_error')
             
             # Verificar que al menos un tóner esté solicitado
@@ -207,6 +219,31 @@ class TonerRequestController(http.Controller):
                 _logger.error("No se solicitó ningún tóner")
                 return self._handle_no_toner_selected(post)
             
+            # ✅ Obtener contadores: si el usuario no los envía, usar los del equipo
+            raw_bn = post.get('contometro_black')
+            raw_color = post.get('contometro_color')
+
+            if raw_bn:
+                counter_bn = int(raw_bn)
+            else:
+                counter_bn = equipo.contador_bn or 0
+
+            if equipo.tipo_maquina_id == 'color':
+                if raw_color:
+                    counter_color = int(raw_color)
+                else:
+                    counter_color = equipo.contador_color or 0
+            else:
+                counter_color = 0
+
+            _logger.info(f"Contadores efectivos para envío: BN={counter_bn}, COLOR={counter_color}, has_auto_counters={equipo.has_auto_counters}")
+
+            # Si NO hay contadores automáticos y el usuario tampoco llenó nada (0),
+            # podemos considerar esto como error de datos.
+            if not equipo.has_auto_counters and counter_bn <= 0:
+                _logger.error("No hay contadores automáticos ni lectura manual válida de B/N")
+                return request.redirect('/pagina_error')
+
             # ✅ VALIDACIÓN INTELIGENTE
             validation_data = {
                 'equipment_id': post.get('id_registro'),
@@ -214,8 +251,8 @@ class TonerRequestController(http.Controller):
                 'toner_cyan': bool(post.get('toner_cyan')),
                 'toner_magenta': bool(post.get('toner_magenta')),
                 'toner_yellow': bool(post.get('toner_yellow')),
-                'counter_bn': int(post.get('contometro_black', 0)),
-                'counter_color': int(post.get('contometro_color', 0)),
+                'counter_bn': counter_bn,
+                'counter_color': counter_color,
             }
             
             # Validar la solicitud
@@ -247,6 +284,7 @@ class TonerRequestController(http.Controller):
         except Exception as e:
             _logger.exception(f"Error al enviar la solicitud de tóner: {str(e)}")
             return request.redirect('/pagina_error')
+
 
     def _handle_no_toner_selected(self, post_data):
         """Maneja cuando no se seleccionó ningún tóner"""
