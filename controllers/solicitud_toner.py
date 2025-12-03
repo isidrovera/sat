@@ -471,15 +471,20 @@ Recibirá confirmación de la fecha de entrega.
                 'mail_server_id': mail_server.id if mail_server else False,
             }
             
-            request.env['mail.mail'].sudo().create(mail_values)
-            
+            # 🔴 ANTES: solo create(...)
+            # request.env['mail.mail'].sudo().create(mail_values)
+
+            # ✅ AHORA: crear y ENVIAR con sudo()
+            mail = request.env['mail.mail'].sudo().create(mail_values)
+            mail.sudo().send()
+
         except Exception as e:
             _logger.exception(f"Error notificando rechazo al equipo: {str(e)}")
+
 
     def _notify_internal_team_approval(self, datos_formulario, creation_result):
         """Notifica al equipo interno sobre solicitud aprobada"""
         try:
-            # Usar el método existente pero con información del sistema
             summary = creation_result.get('validation_details', {})
             mail_server = self._get_office_mail_server()
             body_html = f"""
@@ -502,10 +507,16 @@ Recibirá confirmación de la fecha de entrega.
                 'mail_server_id': mail_server.id if mail_server else False,
             }
             
-            request.env['mail.mail'].sudo().create(mail_values)
-            
+            # 🔴 ANTES:
+            # request.env['mail.mail'].sudo().create(mail_values)
+
+            # ✅ AHORA:
+            mail = request.env['mail.mail'].sudo().create(mail_values)
+            mail.sudo().send()
+
         except Exception as e:
             _logger.exception(f"Error notificando aprobación al equipo: {str(e)}")
+
 
     @http.route('/pagina_confirmacion_toner', type='http', auth="public", website=True)
     def pagina_confirmacion(self, **kw):
