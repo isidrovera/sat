@@ -8,7 +8,7 @@
                 <div class="text-center mb-4">
                     <h2 class="font-weight-bold">
                         <i class="fa fa-print text-primary"></i>
-                        &nbsp;Solicitud de Tóner
+                        &#160;Solicitud de Tóner
                     </h2>
                     <p class="text-muted mb-0">
                         Complete la información para solicitar suministros de su equipo.
@@ -20,7 +20,7 @@
                     <div class="card-header bg-primary text-white text-center">
                         <h3 class="mb-0">
                             <i class="fa fa-desktop"></i>
-                            &nbsp;Información del Equipo
+                            &#160;Información del Equipo
                         </h3>
                     </div>
                     <div class="card-body">
@@ -85,7 +85,7 @@
                         <div class="card-header bg-info text-white d-flex align-items-center">
                             <h5 class="mb-0">
                                 <i class="fa fa-boxes"></i>
-                                &nbsp;Stock Actual de Tóner
+                                &#160;Stock Actual de Tóner
                             </h5>
                         </div>
                         <div class="card-body">
@@ -195,7 +195,7 @@
                     <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">
                             <i class="fa fa-edit"></i>
-                            &nbsp;Datos de la Solicitud
+                            &#160;Datos de la Solicitud
                         </h5>
                         <small class="text-light">
                             Los campos marcados con <strong>*</strong> son obligatorios.
@@ -299,7 +299,7 @@
                                             <strong>B/N:</strong>
                                             <span t-esc="values.get('contador_actual_bn', 'N/D')"/>
                                             <t t-if="values['tipo_maquina_id'] == 'color'">
-                                                &nbsp;&nbsp;|&nbsp;&nbsp;
+                                                &#160;&#160;|&#160;&#160;
                                                 <strong>Color:</strong>
                                                 <span t-esc="values.get('contador_actual_color', 'N/D')"/>
                                             </t>
@@ -453,20 +453,20 @@
                                         class="btn btn-outline-secondary mr-2"
                                         onclick="goBack()">
                                     <i class="fa fa-arrow-left"></i>
-                                    &nbsp;Volver
+                                    &#160;Volver
                                 </button>
                                 <button type="button"
                                         id="validateBtn"
                                         class="btn btn-warning mr-2"
                                         style="display: none;">
                                     <i class="fa fa-check-circle"></i>
-                                    &nbsp;Validar Solicitud
+                                    &#160;Validar Solicitud
                                 </button>
                                 <button class="btn btn-primary"
                                         type="submit"
                                         id="submitBtn">
                                     <i class="fa fa-paper-plane"></i>
-                                    &nbsp;Enviar Solicitud
+                                    &#160;Enviar Solicitud
                                 </button>
                             </div>
                         </form>
@@ -655,7 +655,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <div class="card-header bg-warning text-dark text-center">
                                 <h3 class="mb-0">
                                     <i class="fa fa-exclamation-triangle"></i>
-                                    &nbsp;Solicitud No Aprobada
+                                    &#160;Solicitud No Aprobada
                                 </h3>
                             </div>
                             <div class="card-body">
@@ -715,7 +715,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                                     <strong>
                                                         <span t-esc="blocked['color'].title()"/>:
                                                     </strong>
-                                                    &nbsp;<span t-esc="blocked['reason']"/>
+                                                    &#160;<span t-esc="blocked['reason']"/>
                                                 </li>
                                             </t>
                                         </ul>
@@ -740,11 +740,11 @@ document.addEventListener('DOMContentLoaded', function() {
                                     </p>
                                     <a href="tel:+51924894829" class="btn btn-primary mr-2">
                                         <i class="fa fa-phone"></i>
-                                        &nbsp;+51 924 894 829
+                                        &#160;+51 924 894 829
                                     </a>
                                     <a href="mailto:soporte@andescopiers.com.pe" class="btn btn-outline-primary">
                                         <i class="fa fa-envelope"></i>
-                                        &nbsp;soporte@andescopiers.com.pe
+                                        &#160;soporte@andescopiers.com.pe
                                     </a>
                                 </div>
                             </div>
@@ -765,7 +765,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <div class="card-header bg-success text-white text-center">
                                 <h3 class="mb-0">
                                     <i class="fa fa-check-circle"></i>
-                                    &nbsp;Solicitud Aprobada
+                                    &#160;Solicitud Aprobada
                                 </h3>
                             </div>
                             <div class="card-body">
@@ -864,11 +864,11 @@ document.addEventListener('DOMContentLoaded', function() {
                                     </p>
                                     <a href="tel:+51924894829" class="btn btn-success mr-2">
                                         <i class="fa fa-phone"></i>
-                                        &nbsp;+51 924 894 829
+                                        &#160;+51 924 894 829
                                     </a>
                                     <a href="mailto:soporte@andescopiers.com.pe" class="btn btn-outline-success">
                                         <i class="fa fa-envelope"></i>
-                                        &nbsp;soporte@andescopiers.com.pe
+                                        &#160;soporte@andescopiers.com.pe
                                     </a>
                                 </div>
                             </div>
@@ -889,7 +889,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <div class="card-header bg-danger text-white text-center">
                                 <h3 class="mb-0">
                                     <i class="fa fa-times-circle"></i>
-                                    &nbsp;Error en Solicitud
+                                    &#160;Error en Solicitud
                                 </h3>
                             </div>
                             <div class="card-body">
@@ -957,11 +957,11 @@ document.addEventListener('DOMContentLoaded', function() {
                                             class="btn btn-primary mr-2"
                                             onclick="goBack()">
                                         <i class="fa fa-arrow-left"></i>
-                                        &nbsp;Volver al formulario
+                                        &#160;Volver al formulario
                                     </button>
                                     <a href="tel:+51924894829" class="btn btn-outline-primary">
                                         <i class="fa fa-phone"></i>
-                                        &nbsp;Contactar soporte
+                                        &#160;Contactar soporte
                                     </a>
                                 </div>
                             </div>
