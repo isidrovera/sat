@@ -609,10 +609,38 @@ class SatSat(models.Model):
         return utc_now.astimezone(peru_tz)
 
     def write(self, vals):
+        """
+        WRITE PROTEGIDO:
+        - Protege campos de ingreso scanner para que NO se pierdan
+        - Agrega logs para rastrear qué llega y qué queda guardado
+        - Mantiene tu lógica actual (notificaciones + anomalías SNMP/modelo/contador)
+        """
+        # ---------------------------
+        # 1) Clonar vals (NO mutar original)
+        # ---------------------------
+        vals = dict(vals or {})
+
+        INGRESO_FIELDS = {
+            "check_ingreso",
+            "ingreso_estado",
+            "ingreso_fecha",
+            "ingreso_fuente",
+        }
+
+        # Guardar cualquier update de ingreso que venga desde API/scanner
+        vals_ingreso_in = {k: vals.get(k) for k in INGRESO_FIELDS if k in vals}
+
+        _logger.error(
+            "SAT.WRITE → ENTRANDO | IDS=%s | VALS=%s | INGRESO_IN=%s",
+            self.ids, vals, vals_ingreso_in
+        )
+
         estados_problema = ['con_problemas', 'de_partes']
         estado_final_no_notificar = 'entregada'
 
-        # 📌 Snapshot ANTES de escribir, para detectar cambios de modelo/tipo/contómetro
+        # ---------------------------
+        # 2) Snapshot ANTES (para anomalías de modelo/contador)
+        # ---------------------------
         cambios_previos = {}
         for record in self:
             cambios_previos[record.id] = {
@@ -620,12 +648,19 @@ class SatSat(models.Model):
                 'tipo_anterior': record.tipo_id,
                 'contometro_anterior': record.contometro or '0',
                 'fuente_anterior': record.ultima_fuente_actualizacion or '',
+                # ingreso antes
+                'check_ingreso': bool(record.check_ingreso),
+                'ingreso_estado': record.ingreso_estado,
+                'ingreso_fecha': record.ingreso_fecha,
+                'ingreso_fuente': record.ingreso_fuente,
             }
 
-        # Segunda parte: Manejo de estados de problema y notificaciones
+        # ---------------------------
+        # 3) Flags de notificación (tu lógica)
+        # ---------------------------
         need_problem_notification = False
         need_availability_notification = False
-        
+
         for record in self:
             if 'estado_ventas_id' in vals:
                 estado_actual = record.estado_ventas_id
@@ -633,12 +668,10 @@ class SatSat(models.Model):
 
                 # Si cambia a estado de problema
                 if nuevo_estado in estados_problema:
-                    _logger.debug(
-                        f"Cambiando a estado de problema para ID {record.id}."
-                    )
+                    _logger.debug(f"Cambiando a estado de problema para ID {record.id}.")
                     need_problem_notification = True
 
-                # Si cambia de un estado problemático a otro no problemático
+                # Si sale de estados de problema -> limpiar descripción (tu lógica)
                 elif estado_actual in estados_problema and nuevo_estado not in estados_problema:
                     _logger.debug(
                         f"Saliendo de estado de problema para ID {record.id}. "
@@ -647,15 +680,45 @@ class SatSat(models.Model):
                     vals['descripcion'] = False
                     vals['activador'] = 'no'
 
-                # Verificar si necesita notificación de disponibilidad
+                # Notificación de disponibilidad
                 if estado_actual in estados_problema and nuevo_estado != estado_final_no_notificar:
                     need_availability_notification = True
 
-        # Ejecutar la escritura final después de todas las validaciones
-        _logger.debug(f"Finalizando write para registros {self.ids} con valores: {vals}")
+        # ---------------------------
+        # 4) PROTECCIÓN FINAL: reinyectar ingreso justo antes del super()
+        #    (por si tu lógica tocó vals y borró algo)
+        # ---------------------------
+        if vals_ingreso_in:
+            vals.update(vals_ingreso_in)
+
+        _logger.error(
+            "SAT.WRITE → ANTES SUPER | IDS=%s | VALS=%s | INGRESO_REAPPLY=%s",
+            self.ids, vals, vals_ingreso_in
+        )
+
+        # ---------------------------
+        # 5) Ejecutar escritura real
+        # ---------------------------
         result = super(SatSat, self).write(vals)
 
-        # ✅ DESPUÉS del super().write() hacer notificaciones y validaciones
+        # Asegurar cache actualizado
+        try:
+            self.invalidate_cache()
+        except Exception:
+            pass
+
+        _logger.error(
+            "SAT.WRITE → DESPUÉS SUPER | IDS=%s | check=%s estado=%s fecha=%s fuente=%s",
+            self.ids,
+            self.mapped("check_ingreso"),
+            self.mapped("ingreso_estado"),
+            self.mapped("ingreso_fecha"),
+            self.mapped("ingreso_fuente"),
+        )
+
+        # ---------------------------
+        # 6) Post-procesos (tu lógica actual)
+        # ---------------------------
         for record in self:
             # Notificaciones de estado
             if need_problem_notification:
@@ -673,16 +736,18 @@ class SatSat(models.Model):
                     _logger.error(f"Error al enviar notificación de disponibilidad para ID {record.id}: {e}")
 
             # Mensaje de limpieza de descripción si aplica
-            if 'descripcion' in vals and vals.get('descripcion') == False:
+            if 'descripcion' in vals and vals.get('descripcion') is False:
                 estado_actual = record.estado_ventas_id
                 nuevo_estado = vals.get('estado_ventas_id', estado_actual)
+                # Solo log/nota cuando realmente hubo transición desde problema
+                # (mantengo tu intención original)
                 if estado_actual in estados_problema and nuevo_estado not in estados_problema:
                     message = _(
                         "Se limpió la descripción al cambiar el estado de '%s' a '%s'"
                     ) % (estado_actual, nuevo_estado)
                     record.message_post(body=message)
 
-            # 🔍 Revisar anomalías de modelo y contómetro
+            # Revisar anomalías de modelo y contómetro
             prev = cambios_previos.get(record.id) or {}
             modelo_anterior = prev.get('modelo_anterior', '')
             tipo_anterior = prev.get('tipo_anterior')
@@ -694,7 +759,7 @@ class SatSat(models.Model):
             contometro_nuevo = record.contometro or '0'
             fuente_actual = record.ultima_fuente_actualizacion or ''
 
-            # 1) Cambios raros de modelo (velocidad / color)
+            # 1) Cambios raros de modelo
             record._check_model_anomalies(
                 record,
                 modelo_anterior,
@@ -727,10 +792,10 @@ class SatSat(models.Model):
                     try:
                         old_digits = re.sub(r'[^\d]', '', contometro_anterior or '0')
                         new_digits = re.sub(r'[^\d]', '', contometro_nuevo or '0')
-                        
+
                         old_val = int(old_digits) if old_digits else 0
                         new_val = int(new_digits) if new_digits else 0
-                        
+
                         if record._is_counter_anomaly(old_val, new_val):
                             record.notify_snmp_counter_update(
                                 previous_counter=old_val,
@@ -743,7 +808,27 @@ class SatSat(models.Model):
                     except Exception as e:
                         _logger.error(f"Error notificando cambio de contador SNMP: {e}")
 
+            # ---------------------------
+            # 7) LOG EXTRA: verificar si ingreso se perdió en algún punto
+            # ---------------------------
+            if vals_ingreso_in:
+                try:
+                    record.invalidate_cache()
+                except Exception:
+                    pass
+
+                _logger.error(
+                    "SAT.WRITE → CHECK INGRESO POST | ID=%s | IN=%s | NOW=(check=%s estado=%s fecha=%s fuente=%s)",
+                    record.id,
+                    vals_ingreso_in,
+                    bool(record.check_ingreso),
+                    record.ingreso_estado,
+                    record.ingreso_fecha,
+                    record.ingreso_fuente,
+                )
+
         return result
+
 
 
     def _is_counter_anomaly(self, old_val, new_val):
