@@ -28,13 +28,11 @@ class SatApiController(http.Controller):
         csrf=False,
     )
     def sat_checkin(self, **kwargs):
-        # ---------------- Leer JSON del body ----------------
         try:
             payload = request.httprequest.get_json(force=True, silent=True) or {}
         except Exception:
             payload = {}
 
-        # Contexto útil para logs
         dbname = getattr(request.env.cr, "dbname", "unknown_db")
         uid = request.env.user.id
         ip = request.httprequest.remote_addr
@@ -55,25 +53,34 @@ class SatApiController(http.Controller):
 
         Sat = request.env["sat.sat"].sudo()
 
+        # ✅ SOLO “SIN REVISAR” y AÚN NO MARCADO
+        def _domain_validos():
+            return [
+                ("estado_ventas_id", "=", "sin_revisar"),
+                ("check_ingreso", "=", False),
+            ]
+
         def _serialize_record(record):
-            ingreso_fuente_selection = dict(record._fields["ingreso_fuente"].selection)
-            ingreso_fuente_display = ingreso_fuente_selection.get(record.ingreso_fuente, "")
+            ingreso_fuente_display = ""
+            if "ingreso_fuente" in record._fields and record._fields["ingreso_fuente"].selection:
+                ingreso_fuente_selection = dict(record._fields["ingreso_fuente"].selection)
+                ingreso_fuente_display = ingreso_fuente_selection.get(record.ingreso_fuente, "")
 
             return {
                 "id": record.id,
-                "serie": record.serie_id,
-                "modelo": record.name.name if record.name else "",
-                "marca": record.marca or "",
-                "contometro": record.contometro or "",
-                "estado_ventas": record.estado_ventas_id or "",
-                "disponibilidad": record.disponibilidad_id or "",
-                "ubicacion": record.ubicacion_id or "",
-                "check_ingreso": bool(record.check_ingreso),
-                "ingreso_estado": record.ingreso_estado or "",
+                "serie": getattr(record, "serie_id", "") or "",
+                "modelo": record.name.name if getattr(record, "name", False) else "",
+                "marca": getattr(record, "marca", "") or "",
+                "contometro": getattr(record, "contometro", "") or "",
+                "estado_ventas": getattr(record, "estado_ventas_id", "") or "",
+                "disponibilidad": getattr(record, "disponibilidad_id", "") or "",
+                "ubicacion": getattr(record, "ubicacion_id", "") or "",
+                "check_ingreso": bool(getattr(record, "check_ingreso", False)),
+                "ingreso_estado": getattr(record, "ingreso_estado", "") or "",
                 "ingreso_fecha": record.ingreso_fecha and fields.Datetime.to_string(record.ingreso_fecha) or "",
-                "ingreso_fuente": record.ingreso_fuente or "",
+                "ingreso_fuente": getattr(record, "ingreso_fuente", "") or "",
                 "ingreso_fuente_display": ingreso_fuente_display,
-                "descripcion": record.descripcion or "",
+                "descripcion": getattr(record, "descripcion", "") or "",
                 "write_date": record.write_date and fields.Datetime.to_string(record.write_date) or "",
             }
 
@@ -83,9 +90,8 @@ class SatApiController(http.Controller):
                 is_partial = (search_mode == "partial") or (len(serial) <= 4)
 
                 if is_partial:
-                    domain = [
+                    domain = _domain_validos() + [
                         ("serie_id", "like", "%%%s" % serial),
-                        ("check_ingreso", "=", False),
                     ]
                     records = Sat.search(domain, limit=50)
                     _logger.info("[CHECKIN][LOOKUP][PARTIAL] serial=%s count=%s", serial, len(records))
@@ -95,7 +101,7 @@ class SatApiController(http.Controller):
                             {
                                 "ok": False,
                                 "code": "serial_not_found",
-                                "message": "No se encontraron equipos con esos dígitos.",
+                                "message": "No se encontraron equipos SIN REVISAR pendientes con esos dígitos.",
                                 "serial": serial,
                                 "raw_value": raw_value,
                                 "source": source,
@@ -108,7 +114,7 @@ class SatApiController(http.Controller):
                         {
                             "ok": True,
                             "code": "lookup_partial_ok",
-                            "message": "Equipos encontrados por búsqueda parcial.",
+                            "message": "Equipos SIN REVISAR pendientes encontrados por búsqueda parcial.",
                             "serial": serial,
                             "raw_value": raw_value,
                             "source": source,
@@ -119,7 +125,9 @@ class SatApiController(http.Controller):
                         status=200,
                     )
 
-                record = Sat.search([("serie_id", "=", serial)], limit=1)
+                # exact
+                domain = _domain_validos() + [("serie_id", "=", serial)]
+                record = Sat.search(domain, limit=1)
                 _logger.info("[CHECKIN][LOOKUP][EXACT] serial=%s found=%s id=%s", serial, bool(record), record.id if record else None)
 
                 if not record:
@@ -127,7 +135,7 @@ class SatApiController(http.Controller):
                         {
                             "ok": False,
                             "code": "serial_not_found",
-                            "message": "Serie no encontrada.",
+                            "message": "Serie no encontrada (o ya revisada / ya marcada).",
                             "serial": serial,
                             "raw_value": raw_value,
                             "source": source,
@@ -139,7 +147,7 @@ class SatApiController(http.Controller):
                     {
                         "ok": True,
                         "code": "lookup_ok",
-                        "message": "Serie encontrada.",
+                        "message": "Serie encontrada (SIN REVISAR pendiente).",
                         "serial": serial,
                         "raw_value": raw_value,
                         "source": source,
@@ -150,7 +158,8 @@ class SatApiController(http.Controller):
 
             # ===== CONFIRM =====
             if action == "confirm":
-                record = Sat.search([("serie_id", "=", serial)], limit=1)
+                domain = _domain_validos() + [("serie_id", "=", serial)]
+                record = Sat.search(domain, limit=1)
                 _logger.info("[CHECKIN][CONFIRM] serial=%s found=%s id=%s", serial, bool(record), record.id if record else None)
 
                 if not record:
@@ -158,7 +167,7 @@ class SatApiController(http.Controller):
                         {
                             "ok": False,
                             "code": "serial_not_found",
-                            "message": "Serie no encontrada para confirmar ingreso.",
+                            "message": "Serie no encontrada para confirmar (o ya revisada / ya marcada).",
                             "serial": serial,
                             "raw_value": raw_value,
                             "source": source,
@@ -169,53 +178,43 @@ class SatApiController(http.Controller):
                 status_flag = (payload.get("status") or "ok").strip().lower()
                 observation = (payload.get("observation") or "").strip()
 
-                before = _serialize_record(record)
-                _logger.info("[CHECKIN][CONFIRM][BEFORE] %s", before)
-
                 vals = {
                     "check_ingreso": True,
                     "ingreso_fecha": fields.Datetime.now(),
                 }
 
-                if source in ("qr", "ocr", "manual"):
+                if "ingreso_fuente" in record._fields and source in ("qr", "ocr", "manual"):
                     vals["ingreso_fuente"] = source
 
-                if status_flag == "ok" and not observation:
-                    vals["ingreso_estado"] = "ok_no_obs"
-
-                elif status_flag in ("ok", "obs") and observation:
-                    vals["ingreso_estado"] = "ok_obs"
+                # si hay observación -> ok_obs, si no -> ok_no_obs
+                if observation:
+                    vals["ingreso_estado"] = "ok_obs" if status_flag in ("ok", "obs") else "rechazado"
 
                     tz_dt = fields.Datetime.context_timestamp(record, fields.Datetime.now())
                     stamp = tz_dt.strftime("%d/%m/%Y %H:%M")
                     prefix = f"[Ingreso scanner {source.upper()} {stamp}] "
                     new_line = prefix + observation
 
-                    desc_old = (record.descripcion or "").strip()
-                    vals["descripcion"] = (desc_old + "\n\n" + new_line) if desc_old else new_line
+                    if "descripcion" in record._fields:
+                        desc_old = (record.descripcion or "").strip()
+                        vals["descripcion"] = (desc_old + "\n\n" + new_line) if desc_old else new_line
                 else:
-                    vals["ingreso_estado"] = "rechazado"
+                    vals["ingreso_estado"] = "ok_no_obs" if status_flag in ("ok", "obs", "") else "rechazado"
 
                 _logger.info("[CHECKIN][CONFIRM][WRITE] id=%s vals=%s", record.id, vals)
 
-                # Ejecutar write
                 record.write(vals)
 
-                # Verificación post-write leyendo nuevamente
                 record2 = Sat.browse(record.id)
-                after = _serialize_record(record2)
-                _logger.info("[CHECKIN][CONFIRM][AFTER] %s", after)
-
-                # Si algo raro: no cambió check_ingreso => devolver error explícito
                 if not record2.check_ingreso:
                     _logger.error("[CHECKIN][CONFIRM] WRITE NO EFECTIVO id=%s serial=%s", record.id, serial)
                     return _json_response(
                         {
                             "ok": False,
                             "code": "write_not_effective",
-                            "message": "No se pudo registrar el check (write no efectivo). Revisa logs/instancia/base.",
+                            "message": "No se pudo registrar el check (write no efectivo).",
                             "serial": serial,
-                            "record": after,
+                            "record": _serialize_record(record2),
                         },
                         status=500,
                     )
@@ -228,7 +227,7 @@ class SatApiController(http.Controller):
                         "serial": serial,
                         "raw_value": raw_value,
                         "source": source,
-                        "record": after,
+                        "record": _serialize_record(record2),
                     },
                     status=200,
                 )
