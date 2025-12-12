@@ -32,19 +32,27 @@ class SatApiController(http.Controller):
         """
         Endpoint de check de ingreso para el scanner.
 
-        Espera un JSON en el body, por ejemplo:
-
-        LOOKUP:
+        LOOKUP EXACTO (serie completa):
         {
           "serial": "2RK07735",
           "source": "qr" | "ocr" | "manual",
           "raw_value": "2RK07735",
-          "action": "lookup"
+          "action": "lookup",
+          "search_mode": "exact"   # opcional, por defecto
+        }
+
+        LOOKUP PARCIAL (ej. últimos 4 dígitos, lista de equipos no descargados):
+        {
+          "serial": "7735",
+          "source": "manual",
+          "raw_value": "7735",
+          "action": "lookup",
+          "search_mode": "partial"   # o dejar que el backend detecte por longitud
         }
 
         CONFIRM:
         {
-          "serial": "2RK07735",
+          "serial": "2RK07735",      # serie completa ya elegida
           "source": "qr" | "ocr" | "manual",
           "raw_value": "2RK07735",
           "action": "confirm",
@@ -64,6 +72,7 @@ class SatApiController(http.Controller):
         source = (payload.get("source") or "qr").strip().lower()
         raw_value = (payload.get("raw_value") or "").strip()
         action = (payload.get("action") or "lookup").strip().lower()
+        search_mode = (payload.get("search_mode") or "exact").strip().lower()
 
         if not serial:
             return _json_response(
@@ -75,51 +84,98 @@ class SatApiController(http.Controller):
                 status=400,
             )
 
-        # ---------------- Buscar máquina por serie ----------------
         Sat = request.env["sat.sat"].sudo()
-        record = Sat.search([("serie_id", "=", serial)], limit=1)
 
-        if not record:
-            return _json_response(
-                {
-                    "ok": False,
-                    "code": "serial_not_found",
-                    "message": "Serie no encontrada.",
-                    "serial": serial,
-                    "raw_value": raw_value,
-                    "source": source,
-                },
-                status=200,
-            )
+        # Helper para serializar un registro sat.sat
+        def _serialize_record(record):
+            ingreso_fuente_selection = dict(record._fields["ingreso_fuente"].selection)
+            ingreso_fuente_display = ingreso_fuente_selection.get(record.ingreso_fuente, "")
 
-        # Mapeo de selección para mostrar texto legible
-        ingreso_fuente_selection = dict(record._fields["ingreso_fuente"].selection)
-        ingreso_fuente_display = ingreso_fuente_selection.get(record.ingreso_fuente, "")
+            return {
+                "id": record.id,
+                "serie": record.serie_id,
+                "modelo": record.name.name if record.name else "",
+                "marca": record.marca or "",
+                "tipo_maquina": record.tipo_maquina or "",
+                "tipo": record.tipo_id or "",
+                "contometro": record.contometro or "",
+                "estado_ventas": record.estado_ventas_id or "",
+                "disponibilidad": record.disponibilidad_id or "",
+                "ubicacion": record.ubicacion_id or "",
+                # nuevos campos de ingreso
+                "check_ingreso": bool(record.check_ingreso),
+                "ingreso_estado": record.ingreso_estado or "",
+                "ingreso_fecha": record.ingreso_fecha
+                and fields.Datetime.to_string(record.ingreso_fecha)
+                or "",
+                "ingreso_fuente": record.ingreso_fuente or "",
+                "ingreso_fuente_display": ingreso_fuente_display,
+            }
 
-        # Info básica del registro para devolver al frontend
-        record_data = {
-            "id": record.id,
-            "serie": record.serie_id,
-            "modelo": record.name.name if record.name else "",
-            "marca": record.marca or "",
-            "tipo_maquina": record.tipo_maquina or "",
-            "tipo": record.tipo_id or "",
-            "contometro": record.contometro or "",
-            "estado_ventas": record.estado_ventas_id or "",
-            "disponibilidad": record.disponibilidad_id or "",
-            "ubicacion": record.ubicacion_id or "",
-            # nuevos campos de ingreso
-            "check_ingreso": bool(record.check_ingreso),
-            "ingreso_estado": record.ingreso_estado or "",
-            "ingreso_fecha": record.ingreso_fecha
-            and fields.Datetime.to_string(record.ingreso_fecha)
-            or "",
-            "ingreso_fuente": record.ingreso_fuente or "",
-            "ingreso_fuente_display": ingreso_fuente_display,
-        }
-
-        # ---------------- Acción: solo consulta (lookup) ----------------
+        # ======= ACCIÓN LOOKUP (consulta) =======
         if action == "lookup":
+            # Heurística: si el frontend indica "partial" o si solo envía <= 4 chars
+            is_partial = search_mode == "partial" or len(serial) <= 4
+
+            if is_partial:
+                # BÚSQUEDA PARCIAL (ej. últimos 4 dígitos) y SOLO no descargados
+                domain = [
+                    ("serie_id", "like", "%%%s" % serial),
+                    ("check_ingreso", "=", False),
+                ]
+                # si quieres además excluir entregadas:
+                # domain.append(("estado_ventas_id", "!=", "entregada"))
+
+                records = Sat.search(domain, limit=50)
+                if not records:
+                    return _json_response(
+                        {
+                            "ok": False,
+                            "code": "serial_not_found",
+                            "message": "No se encontraron equipos con esos dígitos.",
+                            "serial": serial,
+                            "raw_value": raw_value,
+                            "source": source,
+                            "search_mode": "partial",
+                        },
+                        status=200,
+                    )
+
+                records_data = [_serialize_record(r) for r in records]
+
+                return _json_response(
+                    {
+                        "ok": True,
+                        "code": "lookup_partial_ok",
+                        "message": "Equipos encontrados por búsqueda parcial.",
+                        "serial": serial,
+                        "raw_value": raw_value,
+                        "source": source,
+                        "search_mode": "partial",
+                        "count": len(records_data),
+                        "records": records_data,
+                    },
+                    status=200,
+                )
+
+            # BÚSQUEDA EXACTA (serie completa, como tenías antes)
+            record = Sat.search([("serie_id", "=", serial)], limit=1)
+
+            if not record:
+                return _json_response(
+                    {
+                        "ok": False,
+                        "code": "serial_not_found",
+                        "message": "Serie no encontrada.",
+                        "serial": serial,
+                        "raw_value": raw_value,
+                        "source": source,
+                    },
+                    status=200,
+                )
+
+            record_data = _serialize_record(record)
+
             return _json_response(
                 {
                     "ok": True,
@@ -133,8 +189,24 @@ class SatApiController(http.Controller):
                 status=200,
             )
 
-        # ---------------- Acción: confirmación de ingreso ----------------
+        # ======= ACCIÓN CONFIRM (confirmación de ingreso) =======
         if action == "confirm":
+            # Aquí seguimos asumiendo serie EXACTA y única
+            record = Sat.search([("serie_id", "=", serial)], limit=1)
+
+            if not record:
+                return _json_response(
+                    {
+                        "ok": False,
+                        "code": "serial_not_found",
+                        "message": "Serie no encontrada para confirmar ingreso.",
+                        "serial": serial,
+                        "raw_value": raw_value,
+                        "source": source,
+                    },
+                    status=200,
+                )
+
             status_flag = (payload.get("status") or "ok").strip().lower()
             observation = (payload.get("observation") or "").strip()
 
@@ -180,23 +252,8 @@ class SatApiController(http.Controller):
             record.write(vals)
 
             # Recalcular display de ingreso_fuente después del write
-            ingreso_fuente_display = ingreso_fuente_selection.get(
-                record.ingreso_fuente, ""
-            )
-
-            # refrescamos algunos campos en el dict de respuesta
-            record_data.update(
-                {
-                    "check_ingreso": bool(record.check_ingreso),
-                    "ingreso_estado": record.ingreso_estado or "",
-                    "ingreso_fecha": record.ingreso_fecha
-                    and fields.Datetime.to_string(record.ingreso_fecha)
-                    or "",
-                    "ingreso_fuente": record.ingreso_fuente or "",
-                    "ingreso_fuente_display": ingreso_fuente_display,
-                    "descripcion": record.descripcion or "",
-                }
-            )
+            record_data = _serialize_record(record)
+            record_data["descripcion"] = record.descripcion or ""
 
             return _json_response(
                 {
