@@ -265,6 +265,7 @@
             string=" "
             invisible="activador == 'no'"
             class="text-danger fs-5" />
+            <field name="check_ingreso" readonly="1" string=" " icon="fa-caret-square-o-down" widget='boolean_button'/>
           <!-- Campos Opcionales -->
           <field name="create_date" string="Ingreso" widget="remaining_days" optional="hide" />
           <field name="fecha_separacion" string="Separada" widget="remaining_days"
