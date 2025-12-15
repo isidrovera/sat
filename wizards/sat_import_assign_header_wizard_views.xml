@@ -11,7 +11,7 @@
             <group col="4">
               <field name="importacion"/>
               <field name="invoice"/>
-              <field name="proveedor_id"/>
+              <field name="proveedor_id" domain="[('tipo_cliente','=','proveedor')]"/>
             </group>
 
             <footer>

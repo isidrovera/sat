@@ -7,12 +7,13 @@
       <field name="name">sat.import.line.list</field>
       <field name="model">sat.import.line</field>
       <field name="arch" type="xml">
-        <list string="Carga rápida (staging)" editable="bottom" create="1" delete="1">
+        <list string="Carga rápida (staging)" editable="top" create="1" delete="1">
           <field name="state" widget="badge"/>
           <field name="modelo_id"/>
           <field name="serie_id"/>
           <field name="contometro"/>
-          <field name="precio_compra"/>
+          <field name="precio_compra" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+        <field name="currency_id" invisible="1"/>
 
           <field name="importacion"/>
           <field name="invoice"/>

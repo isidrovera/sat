@@ -34,6 +34,12 @@ class SatImportLine(models.Model):
         ("error", "Error"),
         ("cancel", "Cancelado"),
     ], string="Estado", default="draft", index=True, tracking=True)
+    currency_id = fields.Many2one(
+        "res.currency",
+        string="Moneda",
+        default=lambda self: self.env.company.currency_id.id,
+        required=True
+    )
 
     error_msg = fields.Char(string="Detalle de error")
     sat_id = fields.Many2one("sat.sat", string="SAT creado", readonly=True, index=True)
