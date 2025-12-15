@@ -205,3 +205,7 @@ access_reporte_estado_maquina_wizard_admin,reporte.estado.maquina.wizard admin,m
 access_whatsapp_notification_wizard_line_user,access_whatsapp_notification_wizard_line_user,model_whatsapp_notification_wizard_line,base.group_user,1,1,1,0
 access_whatsapp_notification_wizard_line_system,access_whatsapp_notification_wizard_line_system,model_whatsapp_notification_wizard_line,base.group_system,1,1,1,1
 access_gemini_configuracion_user,gemini.configuracion.user,model_gemini_configuracion,base.group_user,1,1,1,1
+access_sat_import_line_user,sat.import.line user,model_sat_import_line,base.group_user,1,1,1,0
+access_sat_import_line_admin,sat.import.line admin,model_sat_import_line,base.group_system,1,1,1,1
+access_sat_import_assign_header_wizard_user,sat.import.assign.header.wizard user,model_sat_import_assign_header_wizard,base.group_user,1,1,1,0
+access_sat_import_assign_header_wizard_admin,sat.import.assign.header.wizard admin,model_sat_import_assign_header_wizard,base.group_system,1,1,1,1

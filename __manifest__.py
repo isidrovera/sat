@@ -148,7 +148,9 @@
         'views/reparacion_accesorio_evaluacion_views.xml',
         'views/wizard_asignar_componentes_views.xml',
         'views/gemini_config_views.xml',
-        'views/modelo_accesorios.xml',   
+        'views/modelo_accesorios.xml',
+        'views/sat_import_line_views.xml',
+        'wizards/sat_import_assign_header_wizard_views.xml',
         'views/acciones_menus.xml',
     ],
     

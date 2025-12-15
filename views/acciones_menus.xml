@@ -867,6 +867,12 @@
               parent="sat.ajustes"
               action="action_gemini_configuracion"
               sequence="163"/>
+
+    <menuitem id="menu_sat_import_line"
+          name="Carga rápida"
+          parent="sat.ajustes"
+          action="action_sat_import_line"
+          sequence="164"/>
   <record id="action_accesorio_tipo" model="ir.actions.act_window">
     <field name="name">Tipos de accesorio</field>
     <field name="res_model">accesorio.tipo</field>
@@ -988,6 +994,29 @@
     <field name="search_view_id" ref="view_reparacion_comp_eval_search_v18"/>
     <field name="context">{}</field>
   </record>
+  <!-- Acción contextual: abre el wizard -->
+    <record id="action_assign_header_from_import_line" model="ir.actions.act_window">
+      <field name="name">Asignar Importación/Invoice/Proveedor</field>
+      <field name="res_model">sat.import.assign.header.wizard</field>
+      <field name="view_mode">form</field>
+      <field name="target">new</field>
+
+      <!-- para que salga en Acciones del list -->
+      <field name="binding_model_id" ref="model_sat_import_line"/>
+      <field name="binding_view_types">list</field>
+    </record>
+
+    <!-- Acción contextual: exportar a sat.sat (sin wizard) -->
+    <record id="server_action_sat_import_create_sat" model="ir.actions.server">
+      <field name="name">Crear en SAT</field>
+      <field name="model_id" ref="model_sat_import_line"/>
+      <field name="binding_model_id" ref="model_sat_import_line"/>
+      <field name="binding_view_types">list</field>
+      <field name="state">code</field>
+      <field name="code">
+action = env["sat.import.line"].browse(env.context.get("active_ids", [])).action_create_sat()
+      </field>
+    </record>
   <menuitem id="menu_checklist" name="Chech" parent="menu_accesorios_root" action="action_reparacion_comp_eval_v18" sequence="80"/>
     
   </data>

@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <data>
+
+    <!-- LIST (Odoo 18) -->
+    <record id="view_sat_import_line_list" model="ir.ui.view">
+      <field name="name">sat.import.line.list</field>
+      <field name="model">sat.import.line</field>
+      <field name="arch" type="xml">
+        <list string="Carga rápida (staging)" editable="bottom" create="1" delete="1">
+          <field name="state" widget="badge"/>
+          <field name="modelo_id"/>
+          <field name="serie_id"/>
+          <field name="contometro"/>
+          <field name="precio_compra"/>
+
+          <field name="importacion"/>
+          <field name="invoice"/>
+          <field name="proveedor_id"/>
+
+          <field name="sat_id" optional="hide"/>
+          <field name="error_msg" optional="hide"/>
+          <field name="active" invisible="1"/>
+        </list>
+      </field>
+    </record>
+
+    <!-- SEARCH -->
+    <record id="view_sat_import_line_search" model="ir.ui.view">
+      <field name="name">sat.import.line.search</field>
+      <field name="model">sat.import.line</field>
+      <field name="arch" type="xml">
+        <search string="Buscar carga rápida">
+          <field name="serie_id"/>
+          <field name="importacion"/>
+          <field name="invoice"/>
+          <field name="proveedor_id"/>
+          <field name="modelo_id"/>
+
+          <filter string="Pendientes" name="flt_pending"
+                  domain="[('active','=',True), ('state','in',('draft','ready','error'))]"/>
+          <filter string="Listos" name="flt_ready"
+                  domain="[('active','=',True), ('state','=','ready')]"/>
+          <filter string="Errores" name="flt_error"
+                  domain="[('active','=',True), ('state','=','error')]"/>
+          <filter string="Histórico (done)" name="flt_done"
+                  domain="[('state','=','done')]"/>
+          <filter string="Archivados" name="flt_archived"
+                  domain="[('active','=',False)]"/>
+
+          <group expand="0" string="Agrupar">
+            <filter string="Proveedor" name="grp_proveedor" context="{'group_by':'proveedor_id'}"/>
+            <filter string="Importación" name="grp_importacion" context="{'group_by':'importacion'}"/>
+            <filter string="Invoice" name="grp_invoice" context="{'group_by':'invoice'}"/>
+            <filter string="Modelo" name="grp_modelo" context="{'group_by':'modelo_id'}"/>
+            <filter string="Estado" name="grp_state" context="{'group_by':'state'}"/>
+          </group>
+        </search>
+      </field>
+    </record>
+
+    <!-- FORM (opcional, útil para ver error_msg largo) -->
+    <record id="view_sat_import_line_form" model="ir.ui.view">
+      <field name="name">sat.import.line.form</field>
+      <field name="model">sat.import.line</field>
+      <field name="arch" type="xml">
+        <form string="Carga rápida">
+          <sheet>
+            <group>
+              <field name="state" widget="statusbar" statusbar_visible="draft,ready,done,error,cancel"/>
+              <field name="active"/>
+            </group>
+
+            <group string="Datos de línea" col="4">
+              <field name="modelo_id"/>
+              <field name="serie_id"/>
+              <field name="contometro"/>
+              <field name="precio_compra"/>
+            </group>
+
+            <group string="Cabecera" col="4">
+              <field name="importacion"/>
+              <field name="invoice"/>
+              <field name="proveedor_id"/>
+              <field name="sat_id" readonly="1"/>
+            </group>
+
+            <group string="Errores">
+              <field name="error_msg" readonly="1"/>
+            </group>
+          </sheet>
+        </form>
+      </field>
+    </record>
+
+    <!-- Acción (si la necesitas; si ya la tienes, omítela) -->
+    <record id="action_sat_import_line" model="ir.actions.act_window">
+      <field name="name">Carga rápida</field>
+      <field name="res_model">sat.import.line</field>
+      <field name="view_mode">list,form</field>
+      <field name="search_view_id" ref="view_sat_import_line_search"/>
+      <field name="context">{'search_default_flt_pending': 1}</field>
+    </record>
+
+  </data>
+</odoo>
