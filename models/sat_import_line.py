@@ -37,9 +37,18 @@ class SatImportLine(models.Model):
     currency_id = fields.Many2one(
         "res.currency",
         string="Moneda",
-        default=lambda self: self.env.company.currency_id.id,
-        required=True
+        required=True,
+        default=lambda self: self._default_currency_id(),
     )
+
+    @api.model
+    def _default_currency_id(self):
+        # Primero intenta USD
+        usd = self.env["res.currency"].search([("name", "=", "USD")], limit=1)
+        if usd:
+            return usd.id
+        # Fallback: moneda de la compañía
+        return self.env.company.currency_id.id
 
     error_msg = fields.Char(string="Detalle de error")
     sat_id = fields.Many2one("sat.sat", string="SAT creado", readonly=True, index=True)

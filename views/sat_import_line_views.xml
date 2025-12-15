@@ -8,13 +8,12 @@
       <field name="model">sat.import.line</field>
       <field name="arch" type="xml">
         <list string="Carga rápida (staging)" editable="top" create="1" delete="1">
-          <field name="state" widget="badge"/>
+          
           <field name="modelo_id"/>
           <field name="serie_id"/>
           <field name="contometro"/>
           <field name="precio_compra" widget="monetary" options="{'currency_field': 'currency_id'}"/>
-        <field name="currency_id" invisible="1"/>
-
+        
           <field name="importacion"/>
           <field name="invoice"/>
           <field name="proveedor_id"/>
@@ -22,6 +21,8 @@
           <field name="sat_id" optional="hide"/>
           <field name="error_msg" optional="hide"/>
           <field name="active" invisible="1"/>
+          <field name="currency_id" options="{'no_create': True}"/>
+          <field name="state" widget="badge"/>
         </list>
       </field>
     </record>
