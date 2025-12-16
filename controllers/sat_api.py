@@ -45,20 +45,17 @@ class SatApiController(http.Controller):
         action = (payload.get("action") or "lookup").strip().lower()
         search_mode = (payload.get("search_mode") or "exact").strip().lower()
 
-        if not serial:
-            return _json_response(
-                {"ok": False, "code": "missing_serial", "message": "No se recibió número de serie."},
-                status=400,
-            )
-
         Sat = request.env["sat.sat"].sudo()
 
-        # ✅ SOLO “SIN REVISAR” y AÚN NO MARCADO
+        # ✅ PENDIENTES: sin_revisar + para_revision y aún no marcado
         def _domain_validos():
             return [
                 ("estado_ventas_id", "in", ["sin_revisar", "para_revision"]),
                 ("check_ingreso", "=", False),
             ]
+
+        def _pendientes_count():
+            return Sat.search_count(_domain_validos())
 
         def _serialize_record(record):
             ingreso_fuente_display = ""
@@ -85,14 +82,73 @@ class SatApiController(http.Controller):
             }
 
         try:
+            # ===== COUNT (solo contador) =====
+            if action == "count":
+                return _json_response(
+                    {
+                        "ok": True,
+                        "code": "count_ok",
+                        "pendientes_count": _pendientes_count(),
+                    },
+                    status=200,
+                )
+
+            # ===== LIST PENDING (lista ligera: modelo + serie) =====
+            if action == "list_pending":
+                limit = int(payload.get("limit") or 200)   # default 200
+                offset = int(payload.get("offset") or 0)   # paginación simple
+
+                # Orden opcional (más recientes primero). Ajusta si deseas por serie/modelo.
+                order = payload.get("order") or "write_date desc, id desc"
+
+                # search_read para traer solo lo necesario
+                rows = Sat.search_read(
+                    _domain_validos(),
+                    fields=["serie_id", "name"],
+                    limit=limit,
+                    offset=offset,
+                    order=order,
+                )
+
+                items = []
+                for r in rows:
+                    name_val = r.get("name")
+                    # Many2one en search_read viene como [id, display_name]
+                    modelo = name_val[1] if isinstance(name_val, (list, tuple)) and len(name_val) >= 2 else (name_val or "")
+                    items.append(
+                        {
+                            "id": r.get("id"),
+                            "serie": r.get("serie_id") or "",
+                            "modelo": modelo or "",
+                        }
+                    )
+
+                return _json_response(
+                    {
+                        "ok": True,
+                        "code": "list_pending_ok",
+                        "pendientes_count": _pendientes_count(),
+                        "count": len(items),
+                        "limit": limit,
+                        "offset": offset,
+                        "items": items,
+                    },
+                    status=200,
+                )
+
+            # ===== Para lookup/confirm exigimos serie =====
+            if not serial:
+                return _json_response(
+                    {"ok": False, "code": "missing_serial", "message": "No se recibió número de serie."},
+                    status=400,
+                )
+
             # ===== LOOKUP =====
             if action == "lookup":
                 is_partial = (search_mode == "partial") or (len(serial) <= 4)
 
                 if is_partial:
-                    domain = _domain_validos() + [
-                        ("serie_id", "like", "%%%s" % serial),
-                    ]
+                    domain = _domain_validos() + [("serie_id", "like", "%%%s" % serial)]
                     records = Sat.search(domain, limit=50)
                     _logger.info("[CHECKIN][LOOKUP][PARTIAL] serial=%s count=%s", serial, len(records))
 
@@ -101,11 +157,12 @@ class SatApiController(http.Controller):
                             {
                                 "ok": False,
                                 "code": "serial_not_found",
-                                "message": "No se encontraron equipos SIN REVISAR pendientes con esos dígitos.",
+                                "message": "No se encontraron equipos pendientes con esos dígitos.",
                                 "serial": serial,
                                 "raw_value": raw_value,
                                 "source": source,
                                 "search_mode": "partial",
+                                "pendientes_count": _pendientes_count(),
                             },
                             status=200,
                         )
@@ -114,11 +171,12 @@ class SatApiController(http.Controller):
                         {
                             "ok": True,
                             "code": "lookup_partial_ok",
-                            "message": "Equipos SIN REVISAR pendientes encontrados por búsqueda parcial.",
+                            "message": "Equipos pendientes encontrados por búsqueda parcial.",
                             "serial": serial,
                             "raw_value": raw_value,
                             "source": source,
                             "search_mode": "partial",
+                            "pendientes_count": _pendientes_count(),
                             "count": len(records),
                             "records": [_serialize_record(r) for r in records],
                         },
@@ -139,6 +197,7 @@ class SatApiController(http.Controller):
                             "serial": serial,
                             "raw_value": raw_value,
                             "source": source,
+                            "pendientes_count": _pendientes_count(),
                         },
                         status=200,
                     )
@@ -147,10 +206,11 @@ class SatApiController(http.Controller):
                     {
                         "ok": True,
                         "code": "lookup_ok",
-                        "message": "Serie encontrada (SIN REVISAR pendiente).",
+                        "message": "Serie encontrada (pendiente).",
                         "serial": serial,
                         "raw_value": raw_value,
                         "source": source,
+                        "pendientes_count": _pendientes_count(),
                         "record": _serialize_record(record),
                     },
                     status=200,
@@ -171,6 +231,7 @@ class SatApiController(http.Controller):
                             "serial": serial,
                             "raw_value": raw_value,
                             "source": source,
+                            "pendientes_count": _pendientes_count(),
                         },
                         status=200,
                     )
@@ -186,10 +247,8 @@ class SatApiController(http.Controller):
                 if "ingreso_fuente" in record._fields and source in ("qr", "ocr", "manual"):
                     vals["ingreso_fuente"] = source
 
-                # si hay observación -> ok_obs, si no -> ok_no_obs
                 if observation:
                     vals["ingreso_estado"] = "ok_obs" if status_flag in ("ok", "obs") else "rechazado"
-
                     tz_dt = fields.Datetime.context_timestamp(record, fields.Datetime.now())
                     stamp = tz_dt.strftime("%d/%m/%Y %H:%M")
                     prefix = f"[Ingreso scanner {source.upper()} {stamp}] "
@@ -227,13 +286,14 @@ class SatApiController(http.Controller):
                         "serial": serial,
                         "raw_value": raw_value,
                         "source": source,
+                        "pendientes_count": _pendientes_count(),
                         "record": _serialize_record(record2),
                     },
                     status=200,
                 )
 
             return _json_response(
-                {"ok": False, "code": "invalid_action", "message": "Acción no soportada. Usa 'lookup' o 'confirm'."},
+                {"ok": False, "code": "invalid_action", "message": "Acción no soportada. Usa 'lookup', 'confirm', 'count' o 'list_pending'."},
                 status=400,
             )
 
