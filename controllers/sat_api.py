@@ -56,7 +56,7 @@ class SatApiController(http.Controller):
         # ✅ SOLO “SIN REVISAR” y AÚN NO MARCADO
         def _domain_validos():
             return [
-                ("estado_ventas_id", "=", "sin_revisar"),
+                ("estado_ventas_id", "in", ["sin_revisar", "para_revision"]),
                 ("check_ingreso", "=", False),
             ]
 
