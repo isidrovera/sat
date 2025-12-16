@@ -2,6 +2,7 @@
 import json
 import logging
 import traceback
+import time
 
 from odoo import http, fields
 from odoo.http import request
@@ -28,16 +29,27 @@ class SatApiController(http.Controller):
         csrf=False,
     )
     def sat_checkin(self, **kwargs):
+        t0 = time.time()
+
+        # ---------- parse payload ----------
         try:
             payload = request.httprequest.get_json(force=True, silent=True) or {}
-        except Exception:
+        except Exception as e:
+            _logger.warning("[CHECKIN][PAYLOAD] JSON parse failed: %s", e)
             payload = {}
 
+        # ---------- request context ----------
         dbname = getattr(request.env.cr, "dbname", "unknown_db")
         uid = request.env.user.id
         ip = request.httprequest.remote_addr
+        ua = request.httprequest.headers.get("User-Agent", "-")
+        origin = request.httprequest.headers.get("Origin", "-")
+        referer = request.httprequest.headers.get("Referer", "-")
 
-        _logger.info("[CHECKIN] db=%s uid=%s ip=%s payload=%s", dbname, uid, ip, payload)
+        _logger.info(
+            "[CHECKIN][IN] db=%s uid=%s ip=%s origin=%s referer=%s ua=%s payload=%s",
+            dbname, uid, ip, origin, referer, ua, payload
+        )
 
         serial = (payload.get("serial") or "").strip()
         source = (payload.get("source") or "qr").strip().lower()
@@ -45,17 +57,32 @@ class SatApiController(http.Controller):
         action = (payload.get("action") or "lookup").strip().lower()
         search_mode = (payload.get("search_mode") or "exact").strip().lower()
 
+        _logger.info(
+            "[CHECKIN][ARGS] action=%s serial=%s search_mode=%s source=%s raw_value=%s",
+            action, serial, search_mode, source, raw_value
+        )
+
         Sat = request.env["sat.sat"].sudo()
+        _logger.info("[CHECKIN][MODEL] model=sat.sat sudo=True")
 
         # ✅ PENDIENTES: sin_revisar + para_revision y aún no marcado
         def _domain_validos():
-            return [
+            d = [
                 ("estado_ventas_id", "in", ["sin_revisar", "para_revision"]),
                 ("check_ingreso", "=", False),
             ]
+            return d
 
         def _pendientes_count():
-            return Sat.search_count(_domain_validos())
+            d = _domain_validos()
+            t = time.time()
+            try:
+                c = Sat.search_count(d)
+                _logger.info("[CHECKIN][COUNT] domain=%s -> %s (%.1fms)", d, c, (time.time() - t) * 1000)
+                return c
+            except Exception as e:
+                _logger.exception("[CHECKIN][COUNT][ERR] domain=%s err=%s", d, e)
+                raise
 
         def _serialize_record(record):
             ingreso_fuente_display = ""
@@ -63,7 +90,7 @@ class SatApiController(http.Controller):
                 ingreso_fuente_selection = dict(record._fields["ingreso_fuente"].selection)
                 ingreso_fuente_display = ingreso_fuente_selection.get(record.ingreso_fuente, "")
 
-            return {
+            data = {
                 "id": record.id,
                 "serie": getattr(record, "serie_id", "") or "",
                 "modelo": record.name.name if getattr(record, "name", False) else "",
@@ -80,35 +107,47 @@ class SatApiController(http.Controller):
                 "descripcion": getattr(record, "descripcion", "") or "",
                 "write_date": record.write_date and fields.Datetime.to_string(record.write_date) or "",
             }
+            return data
 
         try:
             # ===== COUNT (solo contador) =====
             if action == "count":
+                _logger.info("[CHECKIN][ACTION] count")
+                c = _pendientes_count()
+                dt = (time.time() - t0) * 1000
+                _logger.info("[CHECKIN][OUT] action=count ok=True pendientes_count=%s (%.1fms)", c, dt)
                 return _json_response(
-                    {
-                        "ok": True,
-                        "code": "count_ok",
-                        "pendientes_count": _pendientes_count(),
-                    },
+                    {"ok": True, "code": "count_ok", "pendientes_count": c},
                     status=200,
                 )
 
             # ===== LIST PENDING (lista ligera: modelo + serie) =====
             if action == "list_pending":
-                limit = int(payload.get("limit") or 200)   # default 200
-                offset = int(payload.get("offset") or 0)   # paginación simple
+                _logger.info("[CHECKIN][ACTION] list_pending")
 
-                # Orden opcional (más recientes primero). Ajusta si deseas por serie/modelo.
+                try:
+                    limit = int(payload.get("limit") or 200)
+                except Exception:
+                    limit = 200
+                try:
+                    offset = int(payload.get("offset") or 0)
+                except Exception:
+                    offset = 0
+
                 order = payload.get("order") or "write_date desc, id desc"
 
-                # search_read para traer solo lo necesario
+                d = _domain_validos()
+                _logger.info("[CHECKIN][LIST] domain=%s limit=%s offset=%s order=%s", d, limit, offset, order)
+
+                t = time.time()
                 rows = Sat.search_read(
-                    _domain_validos(),
+                    d,
                     fields=["serie_id", "name"],
                     limit=limit,
                     offset=offset,
                     order=order,
                 )
+                _logger.info("[CHECKIN][LIST] search_read rows=%s (%.1fms)", len(rows), (time.time() - t) * 1000)
 
                 items = []
                 for r in rows:
@@ -123,11 +162,18 @@ class SatApiController(http.Controller):
                         }
                     )
 
+                c = _pendientes_count()
+                dt = (time.time() - t0) * 1000
+                _logger.info(
+                    "[CHECKIN][OUT] action=list_pending ok=True pendientes_count=%s items=%s limit=%s offset=%s (%.1fms)",
+                    c, len(items), limit, offset, dt
+                )
+
                 return _json_response(
                     {
                         "ok": True,
                         "code": "list_pending_ok",
-                        "pendientes_count": _pendientes_count(),
+                        "pendientes_count": c,
                         "count": len(items),
                         "limit": limit,
                         "offset": offset,
@@ -138,6 +184,7 @@ class SatApiController(http.Controller):
 
             # ===== Para lookup/confirm exigimos serie =====
             if not serial:
+                _logger.warning("[CHECKIN][VALIDATION] missing_serial action=%s payload=%s", action, payload)
                 return _json_response(
                     {"ok": False, "code": "missing_serial", "message": "No se recibió número de serie."},
                     status=400,
@@ -146,13 +193,20 @@ class SatApiController(http.Controller):
             # ===== LOOKUP =====
             if action == "lookup":
                 is_partial = (search_mode == "partial") or (len(serial) <= 4)
+                _logger.info("[CHECKIN][ACTION] lookup is_partial=%s", is_partial)
 
                 if is_partial:
                     domain = _domain_validos() + [("serie_id", "like", "%%%s" % serial)]
+                    _logger.info("[CHECKIN][LOOKUP][PARTIAL] domain=%s", domain)
+
+                    t = time.time()
                     records = Sat.search(domain, limit=50)
-                    _logger.info("[CHECKIN][LOOKUP][PARTIAL] serial=%s count=%s", serial, len(records))
+                    _logger.info("[CHECKIN][LOOKUP][PARTIAL] serial=%s found=%s (%.1fms)", serial, len(records), (time.time() - t) * 1000)
 
                     if not records:
+                        c = _pendientes_count()
+                        dt = (time.time() - t0) * 1000
+                        _logger.info("[CHECKIN][OUT] lookup_partial not_found pendientes_count=%s (%.1fms)", c, dt)
                         return _json_response(
                             {
                                 "ok": False,
@@ -162,11 +216,14 @@ class SatApiController(http.Controller):
                                 "raw_value": raw_value,
                                 "source": source,
                                 "search_mode": "partial",
-                                "pendientes_count": _pendientes_count(),
+                                "pendientes_count": c,
                             },
                             status=200,
                         )
 
+                    c = _pendientes_count()
+                    dt = (time.time() - t0) * 1000
+                    _logger.info("[CHECKIN][OUT] lookup_partial ok count=%s pendientes_count=%s (%.1fms)", len(records), c, dt)
                     return _json_response(
                         {
                             "ok": True,
@@ -176,7 +233,7 @@ class SatApiController(http.Controller):
                             "raw_value": raw_value,
                             "source": source,
                             "search_mode": "partial",
-                            "pendientes_count": _pendientes_count(),
+                            "pendientes_count": c,
                             "count": len(records),
                             "records": [_serialize_record(r) for r in records],
                         },
@@ -185,10 +242,19 @@ class SatApiController(http.Controller):
 
                 # exact
                 domain = _domain_validos() + [("serie_id", "=", serial)]
+                _logger.info("[CHECKIN][LOOKUP][EXACT] domain=%s", domain)
+
+                t = time.time()
                 record = Sat.search(domain, limit=1)
-                _logger.info("[CHECKIN][LOOKUP][EXACT] serial=%s found=%s id=%s", serial, bool(record), record.id if record else None)
+                _logger.info(
+                    "[CHECKIN][LOOKUP][EXACT] serial=%s found=%s id=%s (%.1fms)",
+                    serial, bool(record), record.id if record else None, (time.time() - t) * 1000
+                )
 
                 if not record:
+                    c = _pendientes_count()
+                    dt = (time.time() - t0) * 1000
+                    _logger.info("[CHECKIN][OUT] lookup_exact not_found pendientes_count=%s (%.1fms)", c, dt)
                     return _json_response(
                         {
                             "ok": False,
@@ -197,11 +263,14 @@ class SatApiController(http.Controller):
                             "serial": serial,
                             "raw_value": raw_value,
                             "source": source,
-                            "pendientes_count": _pendientes_count(),
+                            "pendientes_count": c,
                         },
                         status=200,
                     )
 
+                c = _pendientes_count()
+                dt = (time.time() - t0) * 1000
+                _logger.info("[CHECKIN][OUT] lookup_exact ok id=%s pendientes_count=%s (%.1fms)", record.id, c, dt)
                 return _json_response(
                     {
                         "ok": True,
@@ -210,7 +279,7 @@ class SatApiController(http.Controller):
                         "serial": serial,
                         "raw_value": raw_value,
                         "source": source,
-                        "pendientes_count": _pendientes_count(),
+                        "pendientes_count": c,
                         "record": _serialize_record(record),
                     },
                     status=200,
@@ -218,11 +287,22 @@ class SatApiController(http.Controller):
 
             # ===== CONFIRM =====
             if action == "confirm":
+                _logger.info("[CHECKIN][ACTION] confirm")
+
                 domain = _domain_validos() + [("serie_id", "=", serial)]
+                _logger.info("[CHECKIN][CONFIRM] domain=%s", domain)
+
+                t = time.time()
                 record = Sat.search(domain, limit=1)
-                _logger.info("[CHECKIN][CONFIRM] serial=%s found=%s id=%s", serial, bool(record), record.id if record else None)
+                _logger.info(
+                    "[CHECKIN][CONFIRM] serial=%s found=%s id=%s (%.1fms)",
+                    serial, bool(record), record.id if record else None, (time.time() - t) * 1000
+                )
 
                 if not record:
+                    c = _pendientes_count()
+                    dt = (time.time() - t0) * 1000
+                    _logger.info("[CHECKIN][OUT] confirm not_found pendientes_count=%s (%.1fms)", c, dt)
                     return _json_response(
                         {
                             "ok": False,
@@ -231,13 +311,18 @@ class SatApiController(http.Controller):
                             "serial": serial,
                             "raw_value": raw_value,
                             "source": source,
-                            "pendientes_count": _pendientes_count(),
+                            "pendientes_count": c,
                         },
                         status=200,
                     )
 
                 status_flag = (payload.get("status") or "ok").strip().lower()
                 observation = (payload.get("observation") or "").strip()
+
+                _logger.info(
+                    "[CHECKIN][CONFIRM][INPUT] status_flag=%s observation_len=%s",
+                    status_flag, len(observation or "")
+                )
 
                 vals = {
                     "check_ingreso": True,
@@ -249,6 +334,7 @@ class SatApiController(http.Controller):
 
                 if observation:
                     vals["ingreso_estado"] = "ok_obs" if status_flag in ("ok", "obs") else "rechazado"
+
                     tz_dt = fields.Datetime.context_timestamp(record, fields.Datetime.now())
                     stamp = tz_dt.strftime("%d/%m/%Y %H:%M")
                     prefix = f"[Ingreso scanner {source.upper()} {stamp}] "
@@ -262,9 +348,13 @@ class SatApiController(http.Controller):
 
                 _logger.info("[CHECKIN][CONFIRM][WRITE] id=%s vals=%s", record.id, vals)
 
+                t = time.time()
                 record.write(vals)
+                _logger.info("[CHECKIN][CONFIRM][WRITE] done (%.1fms)", (time.time() - t) * 1000)
 
                 record2 = Sat.browse(record.id)
+                _logger.info("[CHECKIN][CONFIRM][VERIFY] id=%s check_ingreso=%s", record2.id, bool(record2.check_ingreso))
+
                 if not record2.check_ingreso:
                     _logger.error("[CHECKIN][CONFIRM] WRITE NO EFECTIVO id=%s serial=%s", record.id, serial)
                     return _json_response(
@@ -278,6 +368,9 @@ class SatApiController(http.Controller):
                         status=500,
                     )
 
+                c = _pendientes_count()
+                dt = (time.time() - t0) * 1000
+                _logger.info("[CHECKIN][OUT] confirm ok id=%s pendientes_count=%s (%.1fms)", record2.id, c, dt)
                 return _json_response(
                     {
                         "ok": True,
@@ -286,19 +379,26 @@ class SatApiController(http.Controller):
                         "serial": serial,
                         "raw_value": raw_value,
                         "source": source,
-                        "pendientes_count": _pendientes_count(),
+                        "pendientes_count": c,
                         "record": _serialize_record(record2),
                     },
                     status=200,
                 )
 
+            # ===== invalid action =====
+            _logger.warning("[CHECKIN][VALIDATION] invalid_action=%s payload=%s", action, payload)
             return _json_response(
-                {"ok": False, "code": "invalid_action", "message": "Acción no soportada. Usa 'lookup', 'confirm', 'count' o 'list_pending'."},
+                {
+                    "ok": False,
+                    "code": "invalid_action",
+                    "message": "Acción no soportada. Usa 'lookup', 'confirm', 'count' o 'list_pending'.",
+                },
                 status=400,
             )
 
         except Exception as e:
-            _logger.exception("[CHECKIN][FATAL] error=%s", e)
+            dt = (time.time() - t0) * 1000
+            _logger.exception("[CHECKIN][FATAL] (%.1fms) error=%s payload=%s", dt, e, payload)
             return _json_response(
                 {
                     "ok": False,
