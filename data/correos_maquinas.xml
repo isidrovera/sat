@@ -231,9 +231,7 @@
     <field name="email_from">soporte@andescopiers.com.pe</field>
     <field name="email_to">lincoln@corapsac.com</field>
     <field name="email_cc">logistica@corapsac.com</field>
-    <field name="subject">
-        Modelo cambiado automáticamente por SNMP: {{ object.serie_id }}
-    </field>
+    <field name="subject">Modelo cambiado automáticamente por SNMP: {{ object.serie_id }}</field>
     <field name="auto_delete" eval="True"/>
 
     <field name="body_html"><![CDATA[
@@ -379,11 +377,8 @@
     <field name="name">✅ SNMP - Actualización de modelo</field>
     <field name="model_id" ref="model_sat_sat"/>
     <field name="email_from">soporte@andescopiers.com.pe</field>
-    <field name="email_to">verapolo@icloud.com</field>
-    <field name="email_cc"></field>
-    <field name="subject">
-        Modelo actualizado por SNMP: {{ object.serie_id }}
-    </field>
+    <field name="email_to">verapolo@icloud.com</field>    
+    <field name="subject">Modelo actualizado por SNMP: {{ object.serie_id }}</field>
     <field name="auto_delete" eval="True"/>
 
     <field name="body_html"><![CDATA[
@@ -502,11 +497,8 @@
     <field name="model_id" ref="model_sat_sat"/>
     <field name="email_from">soporte@andescopiers.com.pe</field>
     <field name="email_to">lincoln@corapsac.com</field>
-    <field name="email_cc">logistica@corapsac.com</field>
-    <field name="email_cc"></field>
-    <field name="subject">
-        Contómetro actualizado: {{ object.serie_id }}
-    </field>
+    <field name="email_cc">logistica@corapsac.com</field>    
+    <field name="subject">Contómetro actualizado: {{ object.serie_id }}</field>
     <field name="auto_delete" eval="True"/>
 
     <field name="body_html"><![CDATA[
@@ -643,9 +635,8 @@
     <field name="email_from">soporte@andescopiers.com.pe</field>
     <field name="email_to">lincoln@corapsac.com</field>
     <field name="email_cc">logistica@corapsac.com</field>
-    <field name="subject">
-        Anomalía en contómetro: {{ object.serie_id }}
-    </field>
+    <field name="subject">Anomalía en contómetro: {{ object.serie_id }}</field>
+    
     <field name="auto_delete" eval="True"/>
 
     <field name="body_html"><![CDATA[
@@ -801,11 +792,8 @@
     <field name="name">💡 SNMP - Sugerencia de modelo nuevo</field>
     <field name="model_id" ref="model_sat_sat"/>
     <field name="email_from">soporte@andescopiers.com.pe</field>
-    <field name="email_to">verapolo@icloud.com</field>
-    <field name="email_cc"></field>
-    <field name="subject">
-        Modelo sugerido por : {{ object.serie_id }}
-    </field>
+    <field name="email_to">verapolo@icloud.com</field>    
+    <field name="subject">Modelo sugerido por : {{ object.serie_id }}</field>
     <field name="auto_delete" eval="True"/>
 
     <field name="body_html"><![CDATA[
