@@ -317,6 +317,126 @@ class SatSat(models.Model):
         ('snmp', 'SNMP'),
         ('reparacion', 'Reparación'),
     ], string='Última Fuente', readonly=True, default='manual', copy=False)
+
+    contometro_proveedor = fields.Char(
+        string='Contómetro proveedor (llegada)',
+        tracking=True,
+        help='Valor declarado por el proveedor/hoja al recibir el equipo. No debe ser sobrescrito por SNMP.'
+    )
+
+    alerta_proveedor_snmp_enviada = fields.Boolean(
+        string='Alerta proveedor vs SNMP enviada',
+        default=False,
+        copy=False
+    )
+    last_snmp_counter_whatsapp = fields.Char(
+        string='Último contómetro notificado por WhatsApp (SNMP)',
+        readonly=True,
+        copy=False
+    )
+
+    last_snmp_whatsapp_at = fields.Datetime(
+        string='Última alerta WhatsApp SNMP',
+        readonly=True,
+        copy=False
+    )
+    def _send_whatsapp_message_boot(self, phone, message):
+        """Envía WhatsApp usando la API BOOT externa."""
+        url = 'https://boot.andessolutioncopiers.com/api/send-message'
+        data = {'to': phone, 'message': message}
+        headers = {
+            'Content-Type': 'application/json',
+            'x-api-key': 'sk_2312cac15276b4a3ca124e66a78fdde6428c626eb7184f26d3fa62037aaae816'
+        }
+
+        try:
+            resp = requests.post(url, headers=headers, json=data, timeout=30)
+            _logger.info("[WA BOOT] status=%s body=%s", resp.status_code, resp.text)
+
+            try:
+                js = resp.json()
+            except Exception:
+                js = {}
+
+            if resp.status_code == 200 and js.get('success'):
+                return True
+
+            _logger.warning("[WA BOOT] No success. phone=%s resp=%s", phone, js or resp.text)
+            return False
+
+        except requests.exceptions.Timeout:
+            _logger.error("[WA BOOT] Timeout enviando a %s", phone)
+            return False
+        except requests.exceptions.RequestException as e:
+            _logger.error("[WA BOOT] Error de red enviando a %s: %s", phone, e)
+            return False
+        except Exception as e:
+            _logger.error("[WA BOOT] Error inesperado: %s", e)
+            return False
+
+
+    def _get_reparacion_activa_para_alerta_snmp(self):
+        """Retorna la reparación activa (en_revision) más reciente para esta máquina."""
+        self.ensure_one()
+        Reparacion = self.env['reparaciones.reparaciones']
+        rep = Reparacion.search([
+            ('maquina_id', '=', self.id),
+            ('estado_id', '=', 'en_revision'),
+        ], order='create_date desc, id desc', limit=1)
+        return rep or False
+
+
+    def _notify_tecnico_guardar_hoja_contometro_snmp(self, old_val, new_val):
+        """
+        Disparador: cuando SNMP actualiza el contómetro en sat.sat.
+        Acción: WhatsApp SOLO al JEFE TÉCNICO (tú) para guardar hoja/sustento.
+        Anti-spam: si ya notificó el mismo new_val, no reenvía.
+        """
+        self.ensure_one()
+
+        # ✅ JEFE ÁREA TÉCNICA (fijo)
+        boss_phone = "51975399303"  # 975399303 con prefijo 51
+
+        # Anti-spam por valor notificado
+        last_sent = (self.last_snmp_counter_whatsapp or '').strip()
+        try:
+            if last_sent and int(last_sent) == int(new_val):
+                _logger.debug("[SNMP->WA] Ya notificado new_val=%s para sat.sat ID=%s", new_val, self.id)
+                return False
+        except Exception:
+            pass
+
+        # Link al equipo (si existe generate_record_url en sat.sat)
+        try:
+            url_equipo = self.generate_record_url(self)
+        except Exception:
+            url_equipo = ""
+
+        modelo_txt = self.name.name if self.name and hasattr(self.name, 'name') else (self.name or 'NA')
+
+        msg = (
+            f"📌 *ALERTA SNMP (Contómetro actualizado)*\n"
+            f"Equipo: *{modelo_txt}*\n"
+            f"Serie: *{self.serie_id or 'NA'}*\n"
+            f"Contómetro SNMP: *{old_val:,} → {new_val:,}*\n\n"
+            f"✅ *Acción requerida (Jefatura Técnica):*\n"
+            f"Guardar la *hoja / sustento del contómetro* enviado por el proveedor.\n\n"
+            f"🔗 Odoo: {url_equipo}"
+        )
+
+        ok = self._send_whatsapp_message_boot(boss_phone, msg)
+
+        if ok:
+            self.sudo().write({
+                'last_snmp_counter_whatsapp': str(int(new_val)),
+                'last_snmp_whatsapp_at': fields.Datetime.now(),
+            })
+
+        return ok
+
+
+
+
     marca = fields.Char(string='Marca', related='name.marca_id.name', readonly=True, store=True, tracking=True
                         )
     precio_venta = fields.Float(string='Precio de venta', related='name.precio_venta', readonly=True, tracking=True)
@@ -614,6 +734,7 @@ class SatSat(models.Model):
         - Protege campos de ingreso scanner para que NO se pierdan
         - Agrega logs para rastrear qué llega y qué queda guardado
         - Mantiene tu lógica actual (notificaciones + anomalías SNMP/modelo/contador)
+        - NUEVO: Si SNMP cambia contometro -> WhatsApp al técnico (guardar hoja/sustento)
         """
         # ---------------------------
         # 1) Clonar vals (NO mutar original)
@@ -740,7 +861,6 @@ class SatSat(models.Model):
                 estado_actual = record.estado_ventas_id
                 nuevo_estado = vals.get('estado_ventas_id', estado_actual)
                 # Solo log/nota cuando realmente hubo transición desde problema
-                # (mantengo tu intención original)
                 if estado_actual in estados_problema and nuevo_estado not in estados_problema:
                     message = _(
                         "Se limpió la descripción al cambiar el estado de '%s' a '%s'"
@@ -787,7 +907,8 @@ class SatSat(models.Model):
                     except Exception as e:
                         _logger.error(f"Error notificando cambio de modelo SNMP: {e}")
 
-                # 3B) Solo notificar contador si hay ANOMALÍA
+                # 3B) WhatsApp SIEMPRE que cambie contometro por SNMP
+                #     + tu notificación de anomalía se mantiene (solo si _is_counter_anomaly)
                 if contometro_anterior != contometro_nuevo:
                     try:
                         old_digits = re.sub(r'[^\d]', '', contometro_anterior or '0')
@@ -796,6 +917,13 @@ class SatSat(models.Model):
                         old_val = int(old_digits) if old_digits else 0
                         new_val = int(new_digits) if new_digits else 0
 
+                        # ✅ NUEVO: ALERTA WHATSAPP AL TÉCNICO (guardar hoja)
+                        try:
+                            record._notify_tecnico_guardar_hoja_contometro_snmp(old_val, new_val)
+                        except Exception as e:
+                            _logger.error("[SNMP->WA] Error alertando al técnico: %s", e)
+
+                        # ✅ TU LÓGICA: notificar por anomalía (correo/chatter)
                         if record._is_counter_anomaly(old_val, new_val):
                             record.notify_snmp_counter_update(
                                 previous_counter=old_val,
@@ -803,10 +931,11 @@ class SatSat(models.Model):
                             )
                         else:
                             _logger.debug(
-                                f"[SNMP] Cambio normal de contador {old_val} → {new_val}, no se notifica"
+                                f"[SNMP] Cambio normal de contador {old_val} → {new_val}, sin correo"
                             )
+
                     except Exception as e:
-                        _logger.error(f"Error notificando cambio de contador SNMP: {e}")
+                        _logger.error(f"Error procesando cambio de contador SNMP: {e}")
 
             # ---------------------------
             # 7) LOG EXTRA: verificar si ingreso se perdió en algún punto
