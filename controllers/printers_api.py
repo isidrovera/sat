@@ -544,6 +544,7 @@ class SNMPPublicController(http.Controller):
         Endpoint público para recibir datos SNMP.
         Espera JSON con: serial, model, brand, total_counter
         """
+
         # ==========================
         # 0) Parseo del payload
         # ==========================
@@ -569,14 +570,8 @@ class SNMPPublicController(http.Controller):
         brand = _norm(payload.get('brand'))
         total_counter = payload.get('total_counter')
 
-        # ✅ Limpiar marca del modelo
+        # Limpiar marca del modelo
         model_snmp = clean_brand_from_model(model_snmp_raw, brand)
-
-        if model_snmp != model_snmp_raw:
-            _logger.info(
-                "[SNMP INTAKE] Modelo limpiado: '%s' → '%s'",
-                model_snmp_raw, model_snmp
-            )
 
         _logger.info(
             "[SNMP INTAKE] Serial: %s | Modelo: %s | Marca: %s | Contador: %s",
@@ -590,28 +585,25 @@ class SNMPPublicController(http.Controller):
         Sat = request.env['sat.sat'].sudo()
 
         # ==========================
-        # 1) Buscar equipo por serie
+        # 1) Buscar y BLOQUEAR equipo
         # ==========================
-        _logger.info("[SNMP] Buscando equipo con serie: %s", serial)
         sat = Sat.search([('serie_id', '=', serial)], limit=1)
 
         if not sat:
-            _logger.warning("[SNMP] ❌ Serie '%s' NO encontrada", serial)
-            return {'ok': True, 'skipped': 'sat.sat no encontrado por serie'}
+            _logger.warning("[SNMP] Serie '%s' no encontrada", serial)
+            return {'ok': True, 'skipped': 'sat no encontrado por serie'}
+
+        # 🔒 BLOQUEO PARA EVITAR CONCURRENCIA
+        sat = sat.with_lock()
 
         _logger.info(
-            "[SNMP] ✅ Equipo encontrado: %s (ID: %s)",
+            "[SNMP] Equipo encontrado: %s (ID: %s)",
             sat.display_name, sat.id
-        )
-        _logger.info(
-            "[SNMP] Modelo actual: %s",
-            sat.name.name if sat.name else 'SIN MODELO'
         )
 
         # ==========================
         # 2) Parsear modelo SNMP
         # ==========================
-        _logger.info("[SNMP] Parseando modelo SNMP: %s", model_snmp)
         fam_snmp, core_snmp, var_snmp = parse_model(model_snmp)
 
         if sat.name:
@@ -620,135 +612,26 @@ class SNMPPublicController(http.Controller):
             core_cur = None
 
         # ==========================
-        # 3) Validar núcleo
-        # ==========================
-        if not core_snmp:
-            _logger.warning(
-                "[SNMP] ⚠️ No se pudo extraer núcleo: %s",
-                model_snmp
-            )
-            self._safe_update_counters(sat, total_counter)
-            sat.message_post(
-                body=_(
-                    "SNMP recibido sin núcleo identificable. Modelo: %s"
-                ) % (model_snmp or '—')
-            )
-            return {
-                'ok': True,
-                'updated_counters': True,
-                'note': 'modelo no parseable'
-            }
-
-        _logger.info(
-            "[SNMP] Núcleo SNMP: %s | Núcleo actual: %s",
-            core_snmp, core_cur or 'N/A'
-        )
-
-        # ==========================
-        # 4) Detectar tipo de color
+        # 3) Detectar tipo de color
         # ==========================
         tipo_color_snmp = infer_tipo_color(model_snmp)
-        _logger.info("[SNMP] Tipo detectado: %s", tipo_color_snmp.upper())
 
         # ==========================
-        # 4.1) Canon: generar nombre comercial (DX)
+        # 4) Canon: nombre comercial DX
         # ==========================
         commercial_name = None
         brand_upper = (brand or '').upper()
 
         if brand_upper == 'CANON' and core_snmp:
-            # Solo agregamos DX si el modelo actual en SAT ya tenía DX
             has_dx_current = bool(sat.name and sat.name.name and 'DX' in sat.name.name.upper())
-
             if has_dx_current:
                 if tipo_color_snmp == 'color':
                     commercial_name = f"iR-ADV DX C{core_snmp}"
                 else:
                     commercial_name = f"iR-ADV DX {core_snmp}"
 
-                _logger.info(
-                    "[SNMP Canon] Nombre comercial sugerido: %s",
-                    commercial_name
-                )
-
         # ==========================
-        # 5) Verificar mismatch de núcleo
-        # ==========================
-        if sat.name and core_cur and (core_cur != core_snmp):
-            _logger.warning("[SNMP] 🚨 MISMATCH DE NÚCLEO!")
-            _logger.warning(
-                "[SNMP] Actual: %s (%s) | SNMP: %s (%s)",
-                sat.name.name, core_cur, model_snmp, core_snmp
-            )
-
-            # 5.1) Actualizar contador igual
-            self._safe_update_counters(sat, total_counter)
-
-            # 5.2) Intentar ENCONTRAR/CREAR el modelo correcto igual que en el flujo normal
-            target_model, action, modified = find_and_update_model(
-                request.env,
-                model_snmp=model_snmp,
-                brand_name=brand,
-                core_snmp=core_snmp,
-                tipo_color_snmp=tipo_color_snmp,
-                commercial_name=commercial_name,
-            )
-
-            new_model_name = None
-            previous_model_name = sat.name.name if sat.name else 'Sin modelo'
-
-            if target_model:
-                # Si el modelo objetivo es distinto, CAMBIAR el modelo en el SAT
-                if not sat.name or sat.name.id != target_model.id:
-                    sat.write({'name': target_model.id})
-                    new_model_name = target_model.name
-
-                    sat.message_post(
-                        body=_(
-                            "⚠️ <b>Modelo cambiado automáticamente por SNMP (mismatch de núcleo)</b><br/>"
-                            "Modelo anterior: <b>%s</b><br/>"
-                            "Modelo nuevo: <b>%s</b><br/>"
-                            "Origen: SNMP (%s)"
-                        ) % (previous_model_name, new_model_name, model_snmp)
-                    )
-
-                    _logger.info(
-                        "[SNMP] ✅ Modelo corregido por mismatch: %s → %s",
-                        previous_model_name, new_model_name
-                    )
-                else:
-                    new_model_name = target_model.name
-                    _logger.info(
-                        "[SNMP] ℹ️ Mismatch pero el SAT ya tenía el modelo destino: %s",
-                        new_model_name
-                    )
-            else:
-                _logger.warning(
-                    "[SNMP] ⚠️ Mismatch de núcleo pero no se pudo determinar/crear modelo destino"
-                )
-                # 👉 NUEVO: también sugerimos modelo para intervención manual
-                self._suggest_model(sat, model_snmp)
-
-            # 5.3) Notificar por plantilla (sat.sat) incluyendo modelo nuevo si lo hay
-            self._notify_core_mismatch(
-                sat,
-                snmp_model=model_snmp,
-                current_model=previous_model_name,
-                new_model=new_model_name,
-            )
-
-            return {
-                'ok': True,
-                'warning': 'core_mismatch',
-                'current_model': previous_model_name,
-                'snmp_model': model_snmp,
-                'assigned_model': new_model_name,
-                'action': action if target_model else 'none',
-                'modified_model_registry': modified if target_model else False,
-            }
-
-        # ==========================
-        # 6) Buscar/Actualizar/Crear modelo (flujo normal)
+        # 5) Flujo NORMAL de modelo
         # ==========================
         target_model, action, modified = find_and_update_model(
             request.env,
@@ -760,7 +643,7 @@ class SNMPPublicController(http.Controller):
         )
 
         if not target_model:
-            _logger.warning("[SNMP] ⚠️ No se pudo procesar el modelo")
+            _logger.warning("[SNMP] No se pudo determinar modelo, solo se actualiza contador")
             self._safe_update_counters(sat, total_counter)
             self._suggest_model(sat, model_snmp)
             return {
@@ -770,127 +653,71 @@ class SNMPPublicController(http.Controller):
             }
 
         # ==========================
-        # 7) Actualizar contador
+        # 6) Asignar modelo si cambia
+        # ==========================
+        if not sat.name or sat.name.id != target_model.id:
+            modelo_anterior = sat.name.name if sat.name else 'Sin modelo'
+            sat.write({'name': target_model.id})
+
+            sat.message_post(
+                body=_(
+                    "Modelo asignado por SNMP: <b>%s</b> (desde: %s)"
+                ) % (target_model.name, modelo_anterior)
+            )
+
+        # ==========================
+        # 7) ACTUALIZAR CONTADOR (ÚNICA VEZ)
         # ==========================
         self._safe_update_counters(sat, total_counter)
-
-        # ==========================
-        # 8) Asignar modelo al equipo si es necesario
-        # ==========================
-        if sat.name and sat.name.id == target_model.id:
-            _logger.info(
-                "[SNMP] ℹ️ Modelo ya asignado: %s",
-                target_model.name
-            )
-            return {
-                'ok': True,
-                'assigned': 'unchanged',
-                'model': target_model.name,
-                'action': action,
-                'modified': modified
-            }
-
-        modelo_anterior = sat.name.name if sat.name else 'Sin modelo'
-        sat.write({'name': target_model.id})
-        _logger.info(
-            "[SNMP] ✅ Modelo ASIGNADO: %s -> %s",
-            modelo_anterior, target_model.name
-        )
-
-        msg_action = {
-            'exact': 'encontrado exacto',
-            'updated': 'actualizado de nombre anterior',
-            'created': 'creado nuevo'
-        }
-
-        sat.message_post(
-            body=_(
-                "Modelo %s por SNMP: <b>%s</b> (desde: %s)"
-            ) % (
-                msg_action.get(action, action),
-                target_model.name,
-                modelo_anterior
-            )
-        )
 
         _logger.info("=" * 80)
 
         return {
             'ok': True,
-            'assigned': action,
             'model': target_model.name,
-            'previous_model': modelo_anterior,
-            'modified': modified
+            'contador': total_counter,
+            'action': action,
+            'modified': modified,
         }
 
+
     def _safe_update_counters(self, sat, total_counter):
-        """Actualiza contador con registro de historial SNMP"""
+        """Actualiza contador SNMP de forma segura (SIN notificar)"""
+
         if total_counter is None:
             return
 
         try:
+            # Limpiar valores a solo dígitos
             contador_actual_str = str(sat.contometro or '0')
             contador_nuevo_str = str(total_counter)
 
-            contador_actual = int(re.sub(r'[^\d]', '', contador_actual_str))
-            contador_nuevo = int(re.sub(r'[^\d]', '', contador_nuevo_str))
+            contador_actual = int(re.sub(r'[^\d]', '', contador_actual_str) or 0)
+            contador_nuevo = int(re.sub(r'[^\d]', '', contador_nuevo_str) or 0)
 
             _logger.info(
                 "[SNMP Contador] Actual: %s | Nuevo: %s",
                 contador_actual, contador_nuevo
             )
 
-            if contador_actual > 0 and contador_nuevo < contador_actual:
-                diferencia = contador_actual - contador_nuevo
-                _logger.warning(
-                    "[SNMP] ⚠️ CONTADOR DECRECIÓ: %s -> %s (-%s)",
-                    contador_actual, contador_nuevo, diferencia
-                )
+            # 🛑 DEDUP: si es el mismo valor, no hacer nada
+            if contador_actual == contador_nuevo:
+                _logger.info("[SNMP] Contador sin cambios, se ignora")
+                return
 
-                sat.message_post(
-                    body=_(
-                        "⚠️ <b>Contador decreció por SNMP</b><br/>"
-                        "Anterior: <b>%s</b><br/>"
-                        "Nuevo: <b>%s</b><br/>"
-                        "Diferencia: <b>-%s</b>"
-                    ) % (
-                        f"{contador_actual:,}",
-                        f"{contador_nuevo:,}",
-                        f"{diferencia:,}"
-                    )
-                )
-
-                usr = find_logistics_user(request.env)
-                if usr:
-                    try:
-                        request.env['mail.activity'].sudo().create({
-                            'res_model_id': request.env['ir.model']._get_id('sat.sat'),
-                            'res_id': sat.id,
-                            'user_id': usr.id,
-                            'summary': _("Revisar contador decreciente (SNMP)"),
-                            'note': _(
-                                "Contador disminuyó de %s a %s (-%s copias)"
-                            ) % (
-                                f"{contador_actual:,}",
-                                f"{contador_nuevo:,}",
-                                f"{diferencia:,}"
-                            ),
-                            'activity_type_id': request.env.ref(
-                                'mail.mail_activity_data_todo'
-                            ).id,
-                        })
-                    except Exception as e:
-                        _logger.error("[SNMP] Error creando actividad: %s", e)
-
+            # ==========================
+            # SOLO ESCRIBIR
+            # ==========================
             vals = {
                 'contometro': contador_nuevo_str,
                 'contador_antes_snmp': contador_actual_str,
                 'ultima_actualizacion_snmp': fields.Datetime.now(),
-                'total_actualizaciones_snmp': sat.total_actualizaciones_snmp + 1,
+                'total_actualizaciones_snmp': (sat.total_actualizaciones_snmp or 0) + 1,
                 'ultima_fuente_actualizacion': 'snmp',
             }
 
             sat.sudo().write(vals)
+
             _logger.info(
                 "[SNMP] ✅ Contador actualizado: %s -> %s",
                 contador_actual, contador_nuevo
@@ -899,6 +726,7 @@ class SNMPPublicController(http.Controller):
         except Exception as e:
             _logger.error("[SNMP] ❌ Error actualizando contador: %s", e)
             _logger.exception("[SNMP] Traceback:")
+
 
     def _notify_core_mismatch(self, sat, snmp_model, current_model, new_model=None):
         """Notifica diferencia de núcleo/modelo usando método del modelo sat.sat."""
