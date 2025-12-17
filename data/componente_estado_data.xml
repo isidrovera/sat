@@ -6,11 +6,7 @@
     <field name="color">1</field><field name="prioridad">1</field>
     <field name="descripcion">Reemplazo urgente antes de entrega.</field>
   </record>
-  <record id="estado_cambio_repuestos" model="componente.estado">
-    <field name="name">Cambio de repuestos</field>
-    <field name="code">cambio_de_repuestos</field>
-    <field name="color">1</field><field name="prioridad">1</field>
-  </record>
+  
 
   <!-- Medios / desgaste -->
   <record id="estado_regular" model="componente.estado">
