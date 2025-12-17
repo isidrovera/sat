@@ -388,14 +388,11 @@ class SatSat(models.Model):
 
     def _notify_tecnico_guardar_hoja_contometro_snmp(self, old_val, new_val):
         """
-        Disparador: cuando SNMP actualiza el contómetro en sat.sat.
-        Acción: WhatsApp SOLO al JEFE TÉCNICO (tú) para guardar hoja/sustento.
-        Anti-spam: si ya notificó el mismo new_val, no reenvía.
+        Se dispara cuando SNMP actualiza el contómetro.
+        Envía WhatsApp al técnico responsable (si hay reparación activa en_revision).
+        Anti-spam: no reenvía si ya notificó el mismo new_val.
         """
         self.ensure_one()
-
-        # ✅ JEFE ÁREA TÉCNICA (fijo)
-        boss_phone = "51975399303"  # 975399303 con prefijo 51
 
         # Anti-spam por valor notificado
         last_sent = (self.last_snmp_counter_whatsapp or '').strip()
@@ -406,7 +403,17 @@ class SatSat(models.Model):
         except Exception:
             pass
 
-        # Link al equipo (si existe generate_record_url en sat.sat)
+        rep = self._get_reparacion_activa_para_alerta_snmp()
+        if not rep:
+            _logger.debug("[SNMP->WA] No hay reparación activa en_revision para sat.sat ID=%s", self.id)
+            return False
+
+        phone = (rep.responsable_mobile_clean or '').strip()
+        if not phone:
+            _logger.warning("[SNMP->WA] Reparación %s sin responsable_mobile_clean", rep.id)
+            return False
+
+        # URL del equipo (si tienes generate_record_url en sat.sat)
         try:
             url_equipo = self.generate_record_url(self)
         except Exception:
@@ -419,12 +426,12 @@ class SatSat(models.Model):
             f"Equipo: *{modelo_txt}*\n"
             f"Serie: *{self.serie_id or 'NA'}*\n"
             f"Contómetro SNMP: *{old_val:,} → {new_val:,}*\n\n"
-            f"✅ *Acción requerida (Jefatura Técnica):*\n"
-            f"Guardar la *hoja / sustento del contómetro* enviado por el proveedor.\n\n"
+            f"✅ *Acción requerida:*\n"
+            f"Guarda la *hoja / sustento del contómetro* enviado por el proveedor.\n\n"
             f"🔗 Odoo: {url_equipo}"
         )
 
-        ok = self._send_whatsapp_message_boot(boss_phone, msg)
+        ok = self._send_whatsapp_message_boot(phone, msg)
 
         if ok:
             self.sudo().write({
@@ -432,8 +439,19 @@ class SatSat(models.Model):
                 'last_snmp_whatsapp_at': fields.Datetime.now(),
             })
 
-        return ok
+            # Registrar nota en chatter de la reparación (opcional pero recomendado)
+            try:
+                rep.message_post(
+                    body=(
+                        "📩 WhatsApp enviado al técnico por actualización SNMP del contómetro.<br/>"
+                        f"Anterior: <b>{old_val:,}</b> → Nuevo: <b>{new_val:,}</b>"
+                    ),
+                    subtype_xmlid='mail.mt_note'
+                )
+            except Exception as e:
+                _logger.warning("No se pudo registrar message_post en reparación %s: %s", rep.id, e)
 
+        return ok
 
 
 
