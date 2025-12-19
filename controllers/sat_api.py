@@ -109,6 +109,65 @@ class SatApiController(http.Controller):
             }
             return data
 
+        # ✅ NUEVA FUNCIÓN: Búsqueda inteligente por últimos 4 dígitos
+        def _search_by_last_digits(digits):
+            """
+            Busca equipos donde serie_id termine con los dígitos especificados.
+            Usa SQL directo para mayor eficiencia con RIGHT() o similar.
+            """
+            if not digits:
+                return Sat.browse()
+            
+            # Validar que sean solo dígitos
+            if not digits.isdigit():
+                _logger.warning("[CHECKIN][SEARCH] digits not numeric: %s", digits)
+                return Sat.browse()
+            
+            domain_base = _domain_validos()
+            
+            # Opción 1: PostgreSQL con RIGHT() - más eficiente
+            try:
+                query = """
+                    SELECT id 
+                    FROM sat_sat 
+                    WHERE RIGHT(serie_id, %s) = %s
+                      AND estado_ventas_id IN ('sin_revisar', 'para_revision')
+                      AND (check_ingreso IS NULL OR check_ingreso = FALSE)
+                    ORDER BY write_date DESC, id DESC
+                    LIMIT 50
+                """
+                request.env.cr.execute(query, (len(digits), digits))
+                ids = [row[0] for row in request.env.cr.fetchall()]
+                
+                _logger.info(
+                    "[CHECKIN][SEARCH][SQL] RIGHT(serie_id,%s)=%s found=%s ids=%s",
+                    len(digits), digits, len(ids), ids[:10]
+                )
+                
+                return Sat.browse(ids)
+                
+            except Exception as e:
+                _logger.warning("[CHECKIN][SEARCH][SQL] error: %s, fallback to domain", e)
+                
+                # Opción 2: Fallback con domain LIKE (menos preciso pero funciona)
+                # Busca series que contengan los dígitos
+                domain = domain_base + [("serie_id", "like", "%%%s" % digits)]
+                records = Sat.search(domain, limit=50)
+                
+                # Filtrar manualmente por últimos N dígitos
+                filtered = Sat.browse()
+                for rec in records:
+                    serie = (rec.serie_id or "").strip()
+                    if serie and serie.endswith(digits):
+                        filtered |= rec
+                
+                _logger.info(
+                    "[CHECKIN][SEARCH][FALLBACK] digits=%s found=%s filtered=%s",
+                    digits, len(records), len(filtered)
+                )
+                
+                return filtered
+
         try:
             # ===== COUNT (solo contador) =====
             if action == "count":
@@ -192,16 +251,23 @@ class SatApiController(http.Controller):
 
             # ===== LOOKUP =====
             if action == "lookup":
-                is_partial = (search_mode == "partial") or (len(serial) <= 4)
-                _logger.info("[CHECKIN][ACTION] lookup is_partial=%s", is_partial)
+                # ✅ LÓGICA MEJORADA: detectar si son 1-4 dígitos numéricos
+                is_numeric_short = serial.isdigit() and 1 <= len(serial) <= 4
+                is_partial = (search_mode == "partial") or is_numeric_short
+                
+                _logger.info(
+                    "[CHECKIN][ACTION] lookup serial=%s len=%s is_numeric=%s is_numeric_short=%s is_partial=%s",
+                    serial, len(serial), serial.isdigit(), is_numeric_short, is_partial
+                )
 
                 if is_partial:
-                    domain = _domain_validos() + [("serie_id", "like", "%%%s" % serial)]
-                    _logger.info("[CHECKIN][LOOKUP][PARTIAL] domain=%s", domain)
-
+                    # ✅ Usar búsqueda por últimos N dígitos
                     t = time.time()
-                    records = Sat.search(domain, limit=50)
-                    _logger.info("[CHECKIN][LOOKUP][PARTIAL] serial=%s found=%s (%.1fms)", serial, len(records), (time.time() - t) * 1000)
+                    records = _search_by_last_digits(serial)
+                    _logger.info(
+                        "[CHECKIN][LOOKUP][PARTIAL] serial=%s (last %s digits) found=%s (%.1fms)",
+                        serial, len(serial), len(records), (time.time() - t) * 1000
+                    )
 
                     if not records:
                         c = _pendientes_count()
@@ -211,7 +277,7 @@ class SatApiController(http.Controller):
                             {
                                 "ok": False,
                                 "code": "serial_not_found",
-                                "message": "No se encontraron equipos pendientes con esos dígitos.",
+                                "message": f"No se encontraron equipos pendientes que terminen con '{serial}'.",
                                 "serial": serial,
                                 "raw_value": raw_value,
                                 "source": source,
@@ -228,7 +294,7 @@ class SatApiController(http.Controller):
                         {
                             "ok": True,
                             "code": "lookup_partial_ok",
-                            "message": "Equipos pendientes encontrados por búsqueda parcial.",
+                            "message": f"Equipos pendientes encontrados (terminan con '{serial}').",
                             "serial": serial,
                             "raw_value": raw_value,
                             "source": source,
@@ -240,7 +306,7 @@ class SatApiController(http.Controller):
                         status=200,
                     )
 
-                # exact
+                # ✅ BÚSQUEDA EXACTA (serie completa)
                 domain = _domain_validos() + [("serie_id", "=", serial)]
                 _logger.info("[CHECKIN][LOOKUP][EXACT] domain=%s", domain)
 
