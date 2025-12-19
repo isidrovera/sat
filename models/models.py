@@ -752,18 +752,13 @@ class SatSat(models.Model):
         - Protege campos de ingreso scanner para que NO se pierdan
         - Agrega logs para rastrear qué llega y qué queda guardado
         - Mantiene tu lógica actual (notificaciones + anomalías SNMP/modelo/contador)
-        - NUEVO: SNMP + Proveedor
+        - SNMP + Proveedor
             * ALERTA Proveedor vs SNMP (WhatsApp + Correo) SOLO 1 VEZ
             * Mantiene anomalías técnicas old->new (decremento/x10/dígitos) como antes
         """
         # ---------------------------
-        # 0) ANTI-RECURSIÓN / ANTI-SPAM (NUEVO)
+        # 0) ANTI-RECURSIÓN / ANTI-SPAM
         # ---------------------------
-        # Hay métodos internos que hacen self.sudo().write({...}) dentro del flujo SNMP
-        # (por ejemplo: marcar alerta_proveedor_snmp_enviada o last_snmp_counter_whatsapp).
-        # Eso re-entra a write() y puede duplicar notificaciones.
-        #
-        # Si esta llamada SOLO actualiza flags internos SNMP/WhatsApp, salimos directo al super().
         INTERNAL_ONLY_FIELDS = {
             'alerta_proveedor_snmp_enviada',
             'last_snmp_counter_whatsapp',
@@ -792,10 +787,9 @@ class SatSat(models.Model):
             self.ids, vals, vals_ingreso_in
         )
 
-        # ✅ NUEVO: si corrigen el contador del proveedor, permitir alertar de nuevo
+        # ✅ Si corrigen el contador del proveedor, permitir alertar de nuevo
         if 'contometro_proveedor' in vals:
             vals.setdefault('alerta_proveedor_snmp_enviada', False)
-            # (Opcional) reiniciar marcas anti-spam WA si deseas “nuevo ciclo”
             vals.setdefault('last_snmp_counter_whatsapp', False)
             vals.setdefault('last_snmp_whatsapp_at', False)
 
@@ -835,7 +829,7 @@ class SatSat(models.Model):
                     _logger.debug(f"Cambiando a estado de problema para ID {record.id}.")
                     need_problem_notification = True
 
-                # Si sale de estados de problema -> limpiar descripción (tu lógica)
+                # Si sale de estados de problema -> limpiar descripción
                 elif estado_actual in estados_problema and nuevo_estado not in estados_problema:
                     _logger.debug(
                         f"Saliendo de estado de problema para ID {record.id}. "
@@ -902,7 +896,6 @@ class SatSat(models.Model):
             if 'descripcion' in vals and vals.get('descripcion') is False:
                 estado_actual = record.estado_ventas_id
                 nuevo_estado = vals.get('estado_ventas_id', estado_actual)
-                # Solo log/nota cuando realmente hubo transición desde problema
                 if estado_actual in estados_problema and nuevo_estado not in estados_problema:
                     message = _(
                         "Se limpió la descripción al cambiar el estado de '%s' a '%s'"
@@ -959,9 +952,8 @@ class SatSat(models.Model):
                         new_val = int(new_digits) if new_digits else 0
 
                         # =====================================================
-                        # ✅ NUEVO: ALERTA Proveedor vs SNMP (WhatsApp + Correo)
+                        # ✅ ALERTA Proveedor vs SNMP (WhatsApp + Correo)
                         #     SOLO 1 VEZ aunque SNMP llegue cada 5 min
-                        #     + EVITA DUPLICAR CORREO con old->new en el mismo ciclo
                         # =====================================================
                         prov_val = 0
                         try:
@@ -970,8 +962,9 @@ class SatSat(models.Model):
                             prov_val = 0
 
                         ya_alertado = bool(record.alerta_proveedor_snmp_enviada)
-                        prov_alert_sent_this_cycle = False  # (NUEVO) evita doble correo en el mismo write()
+                        prov_alert_sent_this_cycle = False
 
+                        # CASO 1: Alerta Proveedor vs SNMP (si aplica y no se ha alertado antes)
                         if prov_val and record._is_proveedor_vs_snmp_alert(prov_val, new_val):
                             if not ya_alertado:
                                 _logger.info(
@@ -981,14 +974,12 @@ class SatSat(models.Model):
 
                                 # 1) WhatsApp técnico (guardar hoja/sustento)
                                 try:
-                                    # enviamos proveedor -> snmp (no old->new)
                                     record._notify_tecnico_guardar_hoja_contometro_snmp(prov_val, new_val)
                                 except Exception as e:
                                     _logger.error("[SNMP->WA] Error alertando al técnico: %s", e)
 
-                                # 2) Correo / chatter (mismo evento) => MISMA REGLA que WhatsApp
+                                # 2) Correo (proveedor -> snmp)
                                 try:
-                                    # también proveedor -> snmp
                                     record.notify_snmp_counter_update(
                                         previous_counter=prov_val,
                                         new_counter=new_val
@@ -998,9 +989,8 @@ class SatSat(models.Model):
 
                                 prov_alert_sent_this_cycle = True
 
-                                # 3) Marcar como alertado para NO repetir en siguientes SNMP
+                                # 3) Marcar como alertado
                                 try:
-                                    # (ANTI-RECURSIÓN) este write vuelve a entrar, pero arriba lo cortamos por INTERNAL_ONLY_FIELDS
                                     record.sudo().write({'alerta_proveedor_snmp_enviada': True})
                                 except Exception as e:
                                     _logger.error("[SNMP ALERT] Error marcando alerta_proveedor_snmp_enviada: %s", e)
@@ -1016,21 +1006,25 @@ class SatSat(models.Model):
                             )
 
                         # =====================================================
-                        # ✅ TU LÓGICA EXISTENTE: anomalías técnicas old->new
-                        # (decremento, salto x10, diferencia dígitos, etc.)
-                        #
-                        # PERO (NUEVO): si ya mandamos la alerta Proveedor->SNMP en este ciclo,
-                        # no volvemos a mandar otro correo por old->new para evitar duplicado.
+                        # ✅ CASO 2: Anomalías técnicas old->new
+                        # SOLO si NO se envió alerta Proveedor->SNMP en este ciclo
+                        # Y SOLO si realmente es una anomalía técnica
                         # =====================================================
                         if not prov_alert_sent_this_cycle:
+                            # Evaluar si el cambio old->new es anómalo
                             if record._is_counter_anomaly(old_val, new_val):
+                                _logger.info(
+                                    "[SNMP ANOMALY] Detectada anomalía técnica old->new: %s → %s | ID=%s",
+                                    old_val, new_val, record.id
+                                )
                                 record.notify_snmp_counter_update(
                                     previous_counter=old_val,
                                     new_counter=new_val
                                 )
                             else:
                                 _logger.debug(
-                                    f"[SNMP] Cambio normal de contador {old_val} → {new_val}, sin correo técnico"
+                                    "[SNMP] Cambio normal de contador %s → %s, sin correo técnico | ID=%s",
+                                    old_val, new_val, record.id
                                 )
                         else:
                             _logger.info(
