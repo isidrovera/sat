@@ -748,13 +748,16 @@ class SatSat(models.Model):
 
     def write(self, vals):
         """
-        WRITE PROTEGIDO:
+        WRITE PROTEGIDO CON LÓGICA CORREGIDA:
         - Protege campos de ingreso scanner para que NO se pierdan
         - Agrega logs para rastrear qué llega y qué queda guardado
         - Mantiene tu lógica actual (notificaciones + anomalías SNMP/modelo/contador)
-        - SNMP + Proveedor
+        - SNMP + Proveedor:
             * ALERTA Proveedor vs SNMP (WhatsApp + Correo) SOLO 1 VEZ
-            * Mantiene anomalías técnicas old->new (decremento/x10/dígitos) como antes
+            * Anomalías técnicas old->new SOLO INCREMENTOS para reclamar:
+                - Más dígitos (aunque sea +1)
+                - Mismos dígitos pero incremento ≥ 20,000
+            * NO notifica decrementos ni menos dígitos (no tiene sentido reclamar)
         """
         # ---------------------------
         # 0) ANTI-RECURSIÓN / ANTI-SPAM
@@ -923,7 +926,7 @@ class SatSat(models.Model):
                 tipo_nuevo,
             )
 
-            # 2) Saltos raros de contómetro (tu lógica técnica)
+            # 2) Saltos raros de contómetro (SOLO INCREMENTOS para reclamar)
             record._check_counter_anomalies(
                 record,
                 contometro_anterior,
@@ -952,7 +955,7 @@ class SatSat(models.Model):
                         new_val = int(new_digits) if new_digits else 0
 
                         # =====================================================
-                        # ✅ ALERTA Proveedor vs SNMP (WhatsApp + Correo)
+                        # ✅ CASO 1: ALERTA Proveedor vs SNMP (WhatsApp + Correo)
                         #     SOLO 1 VEZ aunque SNMP llegue cada 5 min
                         # =====================================================
                         prov_val = 0
@@ -964,7 +967,6 @@ class SatSat(models.Model):
                         ya_alertado = bool(record.alerta_proveedor_snmp_enviada)
                         prov_alert_sent_this_cycle = False
 
-                        # CASO 1: Alerta Proveedor vs SNMP (si aplica y no se ha alertado antes)
                         if prov_val and record._is_proveedor_vs_snmp_alert(prov_val, new_val):
                             if not ya_alertado:
                                 _logger.info(
@@ -1008,10 +1010,10 @@ class SatSat(models.Model):
                         # =====================================================
                         # ✅ CASO 2: Anomalías técnicas old->new
                         # SOLO si NO se envió alerta Proveedor->SNMP en este ciclo
-                        # Y SOLO si realmente es una anomalía técnica
+                        # Y SOLO si es un INCREMENTO anómalo (para reclamar)
                         # =====================================================
                         if not prov_alert_sent_this_cycle:
-                            # Evaluar si el cambio old->new es anómalo
+                            # Evaluar si el cambio old->new es anómalo (SOLO incrementos)
                             if record._is_counter_anomaly(old_val, new_val):
                                 _logger.info(
                                     "[SNMP ANOMALY] Detectada anomalía técnica old->new: %s → %s | ID=%s",
@@ -1058,47 +1060,77 @@ class SatSat(models.Model):
 
     def _is_counter_anomaly(self, old_val, new_val):
         """
-        Determina si un cambio de contador es una anomalía que debe notificarse.
+        Detecta si un cambio de contador es anómalo para RECLAMAR al proveedor.
         
-        ANOMALÍAS:
-        - Contador decrece (ej: 10,000 → 5,000)
-        - Salto x10 o mayor (ej: 10,000 → 100,000)
-        - Diferencia de 2+ dígitos (ej: 545 → 152,128)
+        Maneja CUALQUIER valor de contador (desde 1 hasta millones).
         
-        NO ES ANOMALÍA (cambio normal):
-        - Incremento normal < x10 (ej: 40,000 → 42,000)
-        - Mismo número de dígitos y cambio razonable
+        NOTIFICA cuando (SOLO INCREMENTOS):
+        1. SNMP tiene MÁS dígitos (aunque sea +1 dígito) → SIEMPRE RECLAMAR
+        2. Mismos dígitos pero incremento ≥ 20,000 → RECLAMAR
+        
+        NO notifica cuando:
+        - Decremento (contador baja) → No tiene sentido reclamar
+        - SNMP tiene MENOS dígitos → No tiene sentido reclamar
+        - Incremento normal < 20,000 con mismos dígitos → Uso normal
+        
+        Ejemplos:
+        - 40,000 → 35,000 (decremento) → ❌ NO
+        - 40,000 → 4,000 (menos dígitos) → ❌ NO
+        - 40,000 → 42,000 (+2,000) → ❌ NO
+        - 40,000 → 60,000 (+20,000) → ✅ SÍ (RECLAMAR)
+        - 40,000 → 400,000 (más dígitos) → ✅ SÍ (RECLAMAR)
+        - 99 → 100 (+1 dígito) → ✅ SÍ (RECLAMAR)
         """
-        # Si alguno es cero, no evaluamos
+        # Si alguno es 0 o negativo, no evaluar
         if old_val <= 0 or new_val <= 0:
+            _logger.debug(
+                "[SNMP Anomaly] Valores inválidos: old=%s new=%s, NO evaluar",
+                old_val, new_val
+            )
             return False
         
-        # 1) Contador DECRECIÓ - SIEMPRE es anomalía
+        # 1) DECREMENTO → NO notificar (no reclamar)
         if new_val < old_val:
+            _logger.debug(
+                "[SNMP Anomaly] Decremento detectado %s → %s, NO notificar (no reclamar)",
+                old_val, new_val
+            )
+            return False
+        
+        # 2) Contar dígitos
+        old_digits = len(str(int(old_val)))
+        new_digits = len(str(int(new_val)))
+        
+        # 3) MENOS dígitos → NO notificar (no reclamar)
+        if new_digits < old_digits:
+            _logger.debug(
+                "[SNMP Anomaly] Menos dígitos %s → %s (%d → %d dígitos), NO notificar (no reclamar)",
+                old_val, new_val, old_digits, new_digits
+            )
+            return False
+        
+        # 4) MÁS dígitos (aunque sea +1) → SÍ notificar (RECLAMAR)
+        if new_digits > old_digits:
             _logger.info(
-                f"[SNMP Anomaly] Contador decreció: {old_val:,} → {new_val:,}"
+                "[SNMP Anomaly] ✅ MÁS dígitos detectado: %s → %s (%d → %d dígitos) - RECLAMAR AL PROVEEDOR",
+                old_val, new_val, old_digits, new_digits
             )
             return True
         
-        # 2) Diferencia de dígitos >= 2 (ej: 545 → 152,128)
-        digit_diff = abs(len(str(old_val)) - len(str(new_val)))
-        if digit_diff >= 2:
+        # 5) MISMOS dígitos → Verificar si incremento ≥ 20,000
+        diferencia = new_val - old_val
+        
+        if diferencia >= 20000:
             _logger.info(
-                f"[SNMP Anomaly] Diferencia de {digit_diff} dígitos: {old_val:,} → {new_val:,}"
+                "[SNMP Anomaly] ✅ Mismos dígitos pero incremento ≥ 20,000: %s → %s (+%s) - RECLAMAR AL PROVEEDOR",
+                old_val, new_val, diferencia
             )
             return True
         
-        # 3) Incremento x10 o mayor
-        ratio = new_val / float(old_val) if old_val > 0 else 0.0
-        if ratio >= 10.0:
-            _logger.info(
-                f"[SNMP Anomaly] Salto x{ratio:.1f}: {old_val:,} → {new_val:,}"
-            )
-            return True
-        
-        # 4) Cambio normal (ej: 40,000 → 42,000)
+        # 6) Cambio normal (incremento pequeño)
         _logger.debug(
-            f"[SNMP Normal] Cambio normal de contador: {old_val:,} → {new_val:,} (x{ratio:.2f})"
+            "[SNMP] Cambio normal: %s → %s (+%s, %d dígitos), NO notificar",
+            old_val, new_val, diferencia, old_digits
         )
         return False
 
@@ -1233,11 +1265,16 @@ class SatSat(models.Model):
 
     def _check_counter_anomalies(self, record, contometro_anterior, contometro_nuevo):
         """
-        Detecta variaciones sospechosas en el contómetro, por ejemplo:
-        - 2,000  → 20,000  (x10)
-        - 2,000  → 2,000,000 (muchos más dígitos)
-        y NO molesta si es algo normal, como:
-        - 40,000 → 42,000
+        Detecta variaciones sospechosas en el contómetro PARA RECLAMAR AL PROVEEDOR.
+        
+        SOLO notifica INCREMENTOS anómalos:
+        - Más dígitos (ej: 40,000 → 400,000)
+        - Mismos dígitos pero +20,000 o más (ej: 40,000 → 60,000)
+        
+        NO notifica:
+        - Decrementos (no tiene sentido reclamar)
+        - Menos dígitos (no tiene sentido reclamar)
+        - Incrementos normales < 20,000
         """
 
         # Limpiar a solo dígitos
@@ -1250,33 +1287,37 @@ class SatSat(models.Model):
         except Exception:
             return
 
-        # Usar el mismo método de detección de anomalía
+        # Usar el método de detección de anomalía (ya corregido)
         if not record._is_counter_anomaly(old_val, new_val):
             return
 
+        # Si llegamos aquí, es un incremento anómalo para RECLAMAR
         incremento = new_val - old_val
         isidro_partner_id = record.get_isidro_partner_id()
         url = record.generate_record_url(record)
 
-        if new_val < old_val:
-            # Decremento
+        old_digit_count = len(str(old_val))
+        new_digit_count = len(str(new_val))
+
+        if new_digit_count > old_digit_count:
+            # Más dígitos
             lineas = [
-                "⚠️ Se detectó que el contómetro DECRECIÓ:",
-                f"• Valor anterior: <b>{old_val:,}</b>",
-                f"• Valor nuevo: <b>{new_val:,}</b>",
-                f"• Diferencia: <b>{incremento:,}</b>",
+                "⚠️ <b>ALERTA: Incremento sospechoso de dígitos en el contómetro</b>",
+                f"• Valor anterior: <b>{old_val:,}</b> ({old_digit_count} dígitos)",
+                f"• Valor nuevo: <b>{new_val:,}</b> ({new_digit_count} dígitos)",
+                f"• Incremento: <b>+{incremento:,}</b>",
+                f"• <b>Acción sugerida:</b> Revisar y reclamar al proveedor",
                 f"• Equipo: <b>{record.name.name if record.name else ''}</b> / Serie: <b>{record.serie_id}</b>",
                 f"• Enlace al equipo: {url}",
             ]
         else:
-            # Salto grande
-            ratio = new_val / float(old_val) if old_val else 0.0
+            # Mismo número de dígitos pero +20,000 o más
             lineas = [
-                "⚠️ Se detectó una variación inusual en el contómetro:",
+                "⚠️ <b>ALERTA: Incremento inusual en el contómetro</b>",
                 f"• Valor anterior: <b>{old_val:,}</b>",
                 f"• Valor nuevo: <b>{new_val:,}</b>",
-                f"• Incremento: <b>{incremento:,}</b>",
-                f"• Multiplicador aproximado: <b>x{ratio:.1f}</b>",
+                f"• Incremento: <b>+{incremento:,}</b>",
+                f"• <b>Acción sugerida:</b> Revisar y reclamar al proveedor",
                 f"• Equipo: <b>{record.name.name if record.name else ''}</b> / Serie: <b>{record.serie_id}</b>",
                 f"• Enlace al equipo: {url}",
             ]
@@ -1288,7 +1329,6 @@ class SatSat(models.Model):
             subtype_xmlid='mail.mt_note',
             partner_ids=[isidro_partner_id] if isidro_partner_id else None,
         )
-
 
 
     
