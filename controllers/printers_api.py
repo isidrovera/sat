@@ -824,64 +824,31 @@ class SNMPPublicController(http.Controller):
         }
 
     def _safe_update_counters(self, sat, total_counter):
-        """Actualiza contador con registro de historial SNMP"""
+        """
+        Actualiza contador con registro de historial SNMP.
+        
+        IMPORTANTE: Este método SOLO actualiza los campos.
+        Toda la lógica de detección de anomalías y notificaciones
+        se maneja automáticamente en sat.sat.write()
+        """
         if total_counter is None:
+            _logger.debug("[SNMP Contador] No se recibió contador, saltando actualización")
             return
 
         try:
             contador_actual_str = str(sat.contometro or '0')
             contador_nuevo_str = str(total_counter)
 
+            # Limpiar y convertir a enteros para logging
             contador_actual = int(re.sub(r'[^\d]', '', contador_actual_str))
             contador_nuevo = int(re.sub(r'[^\d]', '', contador_nuevo_str))
 
             _logger.info(
-                "[SNMP Contador] Actual: %s | Nuevo: %s",
-                contador_actual, contador_nuevo
+                "[SNMP Contador] Actualizando equipo ID %s | Actual: %s | Nuevo: %s",
+                sat.id, contador_actual, contador_nuevo
             )
 
-            if contador_actual > 0 and contador_nuevo < contador_actual:
-                diferencia = contador_actual - contador_nuevo
-                _logger.warning(
-                    "[SNMP] ⚠️ CONTADOR DECRECIÓ: %s -> %s (-%s)",
-                    contador_actual, contador_nuevo, diferencia
-                )
-
-                sat.message_post(
-                    body=_(
-                        "⚠️ <b>Contador decreció por SNMP</b><br/>"
-                        "Anterior: <b>%s</b><br/>"
-                        "Nuevo: <b>%s</b><br/>"
-                        "Diferencia: <b>-%s</b>"
-                    ) % (
-                        f"{contador_actual:,}",
-                        f"{contador_nuevo:,}",
-                        f"{diferencia:,}"
-                    )
-                )
-
-                usr = find_logistics_user(request.env)
-                if usr:
-                    try:
-                        request.env['mail.activity'].sudo().create({
-                            'res_model_id': request.env['ir.model']._get_id('sat.sat'),
-                            'res_id': sat.id,
-                            'user_id': usr.id,
-                            'summary': _("Revisar contador decreciente (SNMP)"),
-                            'note': _(
-                                "Contador disminuyó de %s a %s (-%s copias)"
-                            ) % (
-                                f"{contador_actual:,}",
-                                f"{contador_nuevo:,}",
-                                f"{diferencia:,}"
-                            ),
-                            'activity_type_id': request.env.ref(
-                                'mail.mail_activity_data_todo'
-                            ).id,
-                        })
-                    except Exception as e:
-                        _logger.error("[SNMP] Error creando actividad: %s", e)
-
+            # Preparar valores a actualizar
             vals = {
                 'contometro': contador_nuevo_str,
                 'contador_antes_snmp': contador_actual_str,
@@ -890,15 +857,29 @@ class SNMPPublicController(http.Controller):
                 'ultima_fuente_actualizacion': 'snmp',
             }
 
+            # Actualizar usando sudo() - el write() de sat.sat se encargará de:
+            # 1. Detectar anomalías (decremento, saltos x10, cambios de dígitos)
+            # 2. Comparar con contometro_proveedor si existe
+            # 3. Enviar notificaciones WhatsApp/Correo según corresponda
+            # 4. Registrar en chatter
             sat.sudo().write(vals)
+            
             _logger.info(
-                "[SNMP] ✅ Contador actualizado: %s -> %s",
-                contador_actual, contador_nuevo
+                "[SNMP] ✅ Contador actualizado correctamente: %s → %s (ID: %s)",
+                contador_actual, contador_nuevo, sat.id
             )
 
+        except ValueError as e:
+            _logger.error(
+                "[SNMP] ❌ Error convirtiendo valores del contador: %s | Actual: %s | Nuevo: %s",
+                e, contador_actual_str, contador_nuevo_str
+            )
         except Exception as e:
-            _logger.error("[SNMP] ❌ Error actualizando contador: %s", e)
-            _logger.exception("[SNMP] Traceback:")
+            _logger.error(
+                "[SNMP] ❌ Error inesperado actualizando contador para equipo ID %s: %s",
+                sat.id if sat else 'N/A', e
+            )
+            _logger.exception("[SNMP] Traceback completo:")
 
     def _notify_core_mismatch(self, sat, snmp_model, current_model, new_model=None):
         """Notifica diferencia de núcleo/modelo usando método del modelo sat.sat."""
