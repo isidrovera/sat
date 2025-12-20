@@ -622,7 +622,8 @@ class TicketInformeMixin(models.AbstractModel):
 
     def _build_informe_html_mejorado(self):
         """
-        Genera un informe técnico completo con lenguaje natural y profesional
+        Genera un informe técnico resumido y natural (estilo humano)
+        Solo conclusiones, sin listas ni checklist detallado
         
         Returns:
             tuple: (html_completo, calidad)
@@ -633,83 +634,158 @@ class TicketInformeMixin(models.AbstractModel):
         # 2. Determinar calidad automática
         if analisis['score_gravedad'] >= 50:
             calidad = 'mala'
+            estado_texto = 'CRÍTICO'
         elif analisis['score_gravedad'] >= 25:
             calidad = 'regular'
+            estado_texto = 'REGULAR'
+        elif analisis['score_gravedad'] >= 10:
+            calidad = 'buena'
+            estado_texto = 'BUENO'
         else:
             calidad = 'buena'
+            estado_texto = 'ÓPTIMO'
         
-        # 3. Construir el informe en secciones
-        secciones = []
+        # 3. Construir el informe como texto natural
+        frases = []
         
-        # Encabezado con contexto
-        if hasattr(self, 'agenda') and self.agenda:
-            fecha_servicio = self.agenda.strftime('%d de %B de %Y')
+        # FRASE 1: Tipo de servicio completado
+        tipos_servicio_texto = {
+            'instalacion': 'Instalación completada',
+            'retiro': 'Retiro de equipo completado',
+            'mantenimiento_preventivo': 'Mantenimiento preventivo completado',
+            'mantenimiento_correctivo': 'Mantenimiento correctivo realizado',
+            'cambio_repuestos': 'Cambio de repuestos completado',
+            'remoto': 'Asistencia remota realizada',
+            'revision': 'Revisión técnica completada',
+            'alquiler': 'Equipo preparado para alquiler',
+        }
+        
+        tipo_servicio = self.tipo_servicio_id if hasattr(self, 'tipo_servicio_id') else 'revision'
+        frases.append(tipos_servicio_texto.get(tipo_servicio, 'Servicio técnico completado'))
+        
+        # FRASE 2: Estado general
+        frases.append(f"Estado general: {estado_texto}.")
+        
+        # FRASE 3: Resumen de funciones o problemas críticos
+        if analisis['tiene_problemas_graves']:
+            # Si hay problemas graves, mencionarlos
+            problemas = []
+            
+            if analisis['funciones_criticas_fallando']:
+                if any('impresión' in str(f).lower() for f in analisis['funciones_criticas_fallando']):
+                    problemas.append('impresión inoperativa')
+                if any('copia' in str(f).lower() or 'copiado' in str(f).lower() for f in analisis['funciones_criticas_fallando']):
+                    problemas.append('función de copia inoperativa')
+                if any('escaneo' in str(f).lower() or 'scanner' in str(f).lower() for f in analisis['funciones_criticas_fallando']):
+                    problemas.append('escaneo inoperativo')
+            
+            if analisis['componentes_criticos_falla']:
+                if any('fusora' in str(f).lower() for f in analisis['componentes_criticos_falla']):
+                    problemas.append('fusora dañada')
+                if any('adf' in str(f).lower() for f in analisis['componentes_criticos_falla']):
+                    problemas.append('ADF inoperativo')
+            
+            if analisis['componentes_cambio_urgente']:
+                if any('fusora' in str(f).lower() for f in analisis['componentes_cambio_urgente']):
+                    if 'fusora dañada' not in problemas:
+                        problemas.append('fusora requiere cambio urgente')
+                if any('drum' in str(f).lower() or 'imagen' in str(f).lower() for f in analisis['componentes_cambio_urgente']):
+                    problemas.append('unidad de imagen requiere reemplazo')
+            
+            if problemas:
+                frases.append(' '.join(problemas).capitalize() + '.')
+            else:
+                frases.append('Equipo presenta fallas que requieren atención.')
+        
+        elif analisis['componentes_desgaste'] or analisis['funciones_secundarias_fallando']:
+            # Si hay desgaste pero no es crítico
+            desgastes = []
+            
+            if any('fusora' in str(f).lower() for f in analisis['componentes_desgaste']):
+                desgastes.append('fusora con desgaste')
+            if any('adf' in str(f).lower() for f in analisis['componentes_desgaste']):
+                desgastes.append('ADF con desgaste')
+            if any('drum' in str(f).lower() or 'imagen' in str(f).lower() for f in analisis['componentes_desgaste']):
+                desgastes.append('unidades de imagen con desgaste')
+            
+            if desgastes:
+                frases.append(f"Se detectó {', '.join(desgastes)}.")
+            
+            # Mencionar funciones operativas
+            frases.append('Funciones principales operativas.')
+        
         else:
-            fecha_servicio = datetime.now().strftime('%d de %B de %Y')
+            # Todo OK
+            funciones_ok = []
+            if hasattr(self, 'copia_id') and self.copia_id == 'si':
+                funciones_ok.append('copia')
+            if hasattr(self, 'impresion_id') and self.impresion_id == 'si':
+                funciones_ok.append('impresión')
+            if hasattr(self, 'scaner_smb_id') and self.scaner_smb_id == 'si':
+                funciones_ok.append('escaneo')
+            
+            if funciones_ok:
+                frases.append(f"Funciones principales operativas ({'/'.join(funciones_ok)}).")
+            else:
+                frases.append('Funciones principales operativas.')
         
-        # SECCIÓN 1: Introducción
-        intro = self._generar_intro_servicio()
-        secciones.append(f"<p>{intro}</p>")
+        # FRASE 4: Estado de consumibles
+        if analisis['toners_criticos']:
+            if any('negro' in str(t).lower() or 'black' in str(t).lower() for t in analisis['toners_criticos']):
+                if any('vacío' in str(t) or 'vacio' in str(t) for t in analisis['toners_criticos']):
+                    frases.append('Tóner negro vacío.')
+                else:
+                    frases.append('Tóner negro sin botella instalada.')
+            
+            # Para equipos color
+            if hasattr(self, 'tipo_id') and self.tipo_id == 'color':
+                colores_vacios = []
+                for t in analisis['toners_criticos']:
+                    if 'cyan' in str(t).lower() or 'cian' in str(t).lower():
+                        colores_vacios.append('cyan')
+                    elif 'magenta' in str(t).lower():
+                        colores_vacios.append('magenta')
+                    elif 'yellow' in str(t).lower() or 'amarillo' in str(t).lower():
+                        colores_vacios.append('amarillo')
+                
+                if colores_vacios:
+                    frases.append(f"Tóner {'/'.join(colores_vacios)} vacío.")
         
-        # SECCIÓN 2: Descripción del problema reportado (si existe)
-        if hasattr(self, 'description') and self.description and hasattr(self, 'tipo_servicio_id') and self.tipo_servicio_id in ['mantenimiento_correctivo', 'revision', 'cambio_repuestos']:
-            secciones.append(
-                f"<h5 style='margin:16px 0 8px; color:#1976d2;'>🔍 Problema Reportado</h5>"
-                f"<p style='background:#f5f5f5; padding:12px; border-left:4px solid #1976d2; margin:8px 0;'>"
-                f"<em>\"{self.description}\"</em></p>"
-            )
+        elif analisis['toners_medios']:
+            niveles = []
+            if any('negro' in str(t).lower() or 'black' in str(t).lower() for t in analisis['toners_medios']):
+                niveles.append('negro al 50%')
+            
+            if niveles:
+                frases.append(f"Tóner {', '.join(niveles)}.")
+            else:
+                frases.append('Consumibles en nivel medio.')
         
-        # SECCIÓN 3: Trabajo realizado y hallazgos
-        secciones.append("<h5 style='margin:16px 0 8px; color:#1976d2;'>🔧 Trabajo Realizado y Hallazgos</h5>")
+        else:
+            frases.append('Consumibles OK.')
         
-        hallazgos_html = self._generar_seccion_hallazgos(analisis)
-        secciones.append(hallazgos_html)
+        # FRASE 5: Hallazgos y recomendaciones
+        if analisis['tiene_problemas_graves']:
+            if tipo_servicio == 'mantenimiento_correctivo':
+                frases.append('Se requiere cotización para reparación.')
+            else:
+                frases.append('Equipo requiere intervención urgente.')
         
-        # SECCIÓN 4: Contadores (si aplica)
-        if hasattr(self, 'tipo_servicio_id') and self.tipo_servicio_id not in ['retiro', 'alquiler']:
-            contadores_html = self._generar_contadores_info()
-            if contadores_html:
-                secciones.append("<h5 style='margin:16px 0 8px; color:#1976d2;'>📊 Lecturas de Contadores</h5>")
-                secciones.append(contadores_html)
+        elif analisis['componentes_desgaste']:
+            frases.append('Programar reemplazo preventivo de componentes con desgaste.')
         
-        # SECCIÓN 5: Pruebas realizadas (si no hay fallas críticas)
-        if not analisis['tiene_problemas_graves'] and hasattr(self, 'tipo_servicio_id') and self.tipo_servicio_id in ['instalacion', 'mantenimiento_preventivo', 'cambio_repuestos']:
-            pruebas_texto = [
-                "Se realizaron pruebas exhaustivas de todas las funciones del equipo",
-                "Se ejecutaron pruebas de funcionamiento en todos los módulos operativos",
-                "Se verificó el correcto funcionamiento mediante pruebas de impresión, copia y escaneo",
-            ]
-            secciones.append(
-                f"<p><strong>Pruebas de funcionamiento:</strong> {self._pick_random(pruebas_texto)}. "
-                f"Los resultados fueron satisfactorios.</p>"
-            )
+        elif not analisis['toners_criticos'] and not analisis['componentes_desgaste']:
+            frases.append('Sin hallazgos críticos.')
         
-        # SECCIÓN 6: Conclusiones y Recomendaciones
-        secciones.append("<h5 style='margin:16px 0 8px; color:#1976d2;'>📋 Conclusiones y Recomendaciones</h5>")
-        conclusiones_html = self._generar_conclusiones_personalizadas(analisis)
-        secciones.append(conclusiones_html)
+        # Unir todas las frases
+        informe_texto = ' '.join(frases)
         
-        # SECCIÓN 7: Información del técnico
-        if hasattr(self, 'responsable') and self.responsable:
-            secciones.append(
-                f"<p style='margin-top:20px; padding-top:12px; border-top:1px solid #e0e0e0; color:#666; font-size:13px;'>"
-                f"<strong>Técnico responsable:</strong> {self.responsable.name}<br>"
-                f"<strong>Fecha del servicio:</strong> {fecha_servicio}</p>"
-            )
-        
-        # SECCIÓN 8: Pie de página
-        secciones.append(
-            "<p style='color:#999; font-size:11px; margin-top:16px; padding-top:8px; border-top:1px solid #e0e0e0;'>"
-            "<em>* Informe técnico generado automáticamente basado en la evaluación del checklist de servicio. "
-            "Para consultas o aclaraciones sobre este informe, por favor contacte a nuestro departamento de soporte técnico.</em></p>"
-        )
-        
-        # Unir todas las secciones
+        # Generar HTML simple
         html_completo = f"""
-<div data-autogen="1" style="font-family: 'Segoe UI', Arial, sans-serif; line-height:1.6; color:#333; max-width:800px;">
-    {''.join(secciones)}
-</div>
-"""
+    <div data-autogen="1" style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <p>{informe_texto}</p>
+    </div>
+    """
         
         return html_completo, calidad
 
@@ -755,24 +831,8 @@ class TicketInformeMixin(models.AbstractModel):
                 }
             }
         
-        if self.informe_id and not self._is_autogen_informe():
-            # Advertir si el informe fue editado manualmente
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'title': _('⚠️ Advertencia'),
-                    'message': _(
-                        'Este informe parece haber sido editado manualmente. '
-                        'Regenerarlo eliminará los cambios personalizados. '
-                        'Si desea proceder, use primero el botón "Limpiar Informe".'
-                    ),
-                    'type': 'warning',
-                    'sticky': True,
-                }
-            }
-        
-        # Regenerar informe
+        # Generar informe sin validaciones previas
+        _logger.info(f"🤖 Generando informe manual para {self._name}[{self.id}]")
         html, calidad = self._build_informe_html_mejorado()
         
         valores = {'informe_id': html}
@@ -787,9 +847,9 @@ class TicketInformeMixin(models.AbstractModel):
             'type': 'ir.actions.client',
             'tag': 'display_notification',
             'params': {
-                'title': _('✅ Informe Regenerado'),
+                'title': _('✅ Informe Generado'),
                 'message': _(
-                    f'El informe técnico ha sido regenerado exitosamente. '
+                    f'El informe técnico ha sido generado exitosamente.\n'
                     f'Estado del equipo: {calidad_texto}'
                 ),
                 'type': 'success',

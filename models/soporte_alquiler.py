@@ -1099,30 +1099,8 @@ class ticket_alquiler(models.Model):
                 record.color = 1  # Rojo - Para tickets cancelados
             else:
                 record.color = 0  # Color por defecto
-    # ✅ MANTENER el @api.onchange para llamar al mixin
-    @api.onchange(
-        'tipo_servicio_id',
-        'tipo_id',
-        'description',
-        # Funciones
-        'copia_id', 'impresion_id', 'impresion_usb_id',
-        'scaner_smb_id', 'scaner_usb_id', 'scaner_ftp_id', 'scaner_mail_id',
-        # Módulos
-        'adf_id', 'bypass_id', 'finalizador_id',
-        'tray1_id', 'tray2_id', 'tray3_id', 'tray4_id',
-        # Componentes críticos
-        'tacho_id', 'fusora_id', 'transfer_id', 'optico_id',
-        'black_id', 'magenta_id', 'cyan_id', 'yellow_id',
-        # Tóner
-        'toner_black_id', 'toner_cyan_id', 'toner_magenta_id', 'toner_yellow_id',
-        # Contadores
-        'contometrok_id', 'contometroc_id', 'contometros_id',
-    )
-    def _onchange_autoinforme(self):
-        """Regenera el informe cuando cambia el checklist"""
-        for rec in self:
-            rec._autofill_informe_si_corresponde()  # ← Llama al método del mixin
-
+   
+   
             
 class ReportTicketAlquiler(models.AbstractModel):
     _name = 'report.sat.ticket_alquiler'
