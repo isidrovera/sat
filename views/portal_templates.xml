@@ -178,31 +178,17 @@
 
                                                     <!-- Mantenimiento (campo opcional, no rompe si no existe) -->
                                                     <td class="text-nowrap">
-    <t t-if="'fecha_recurrente' in equipo._fields and equipo.fecha_recurrente">
-        <t t-set="hoy" t-value="fields.Date.today()"/>
-        <t t-if="equipo.fecha_recurrente &lt; hoy">
-            <span class="badge bg-danger">
-                <i class="fa fa-exclamation-triangle me-1"></i>
-                <t t-esc="equipo.fecha_recurrente.strftime('%d/%m/%Y')"/> (Vencido)
-            </span>
-        </t>
-        <t t-elif="equipo.fecha_recurrente == hoy">
-            <span class="badge bg-warning text-dark">
-                <i class="fa fa-bell me-1"></i>
-                Hoy
-            </span>
-        </t>
-        <t t-else="">
-            <span class="badge bg-info text-dark">
-                <i class="fa fa-calendar-check me-1"></i>
-                <t t-esc="equipo.fecha_recurrente.strftime('%d/%m/%Y')"/>
-            </span>
-        </t>
-    </t>
-    <t t-else="">
-        <span class="text-muted">No programado</span>
-    </t>
-</td>
+                                                        <t t-if="'fecha_recurrente' in equipo._fields and equipo.fecha_recurrente">
+                                                            <span class="badge bg-info text-dark">
+                                                                <i class="fa fa-calendar-check me-1"></i>
+                                                                <t t-esc="equipo.fecha_recurrente.strftime('%d/%m/%Y')"/>
+                                                            </span>
+                                                        </t>
+                                                        <t t-else="">
+                                                            <span class="text-muted">No programado</span>
+                                                        </t>
+                                                    </td>
+
 
 
                                                     <!-- Bloqueado (campo opcional) -->
