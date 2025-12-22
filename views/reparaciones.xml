@@ -152,13 +152,13 @@
                   options="{'no_create': True}" readonly="estado_id == 'en_revision'"
                   style="user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none;"
                   help="Modelo específico del equipo. Esta información es crucial para la identificación de partes compatibles." />
-                <field name="serie_id" readonly="True"
+                <field name="serie_id" readonly="1"
                   style="user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none;"
                   help="NÚMERO DE SERIE ÚNICO. Verifique física y visualmente que coincida con lo que aparece en la etiqueta del equipo." />
                 <field name="contometrok_id"
                   help="Contador interno de impresiones/copias, ubicado en configuración o menú de información del equipo." />
                 <field name="contometro_inicial"
-                  help="Lectura inicial del contómetro al momento de iniciar la reparación. Sirve como referencia para pruebas técnicas." />
+                  help="Lectura inicial del contómetro al momento de iniciar la reparación. Sirve como referencia para pruebas técnicas." invisible="1"/>
                 <field name="nombre_maquina" invisible="1" />
                 <field name="nombre_proveedor" invisible="1" />
                 <field name="autorizacion_cambio_digitos" invisible="1" />
