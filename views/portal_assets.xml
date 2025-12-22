@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- CSS Personalizado para el Portal -->
+    <template id="portal_sat_assets_frontend" name="Portal SAT Assets" inherit_id="web.assets_frontend">
+        <xpath expr="." position="inside">
+            <style type="text/css">
+                /* Efectos hover para cards */
+                .hover-card {
+                    transition: transform 0.3s ease, box-shadow 0.3s ease;
+                }
+                .hover-card:hover {
+                    transform: translateY(-5px);
+                    box-shadow: 0 8px 16px rgba(0,0,0,0.15) !important;
+                }
+
+                /* Counter boxes */
+                .counter-box {
+                    background-color: #f8f9fa;
+                    transition: background-color 0.3s ease;
+                }
+                .counter-box:hover {
+                    background-color: #e9ecef;
+                }
+
+                /* Badges personalizados */
+                .badge {
+                    font-weight: 500;
+                    padding: 0.35em 0.65em;
+                }
+
+                /* Table responsive improvements */
+                .table-responsive {
+                    border-radius: 0.375rem;
+                }
+
+                /* Card headers */
+                .card-header {
+                    font-weight: 600;
+                }
+
+                /* Breadcrumb styling */
+                .breadcrumb {
+                    background-color: transparent;
+                    padding: 0;
+                }
+
+                /* Alert improvements */
+                .alert i.fa {
+                    margin-right: 0.5rem;
+                }
+
+                /* Button improvements for actions */
+                .btn-lg {
+                    padding: 0.75rem 1.25rem;
+                    font-size: 1rem;
+                }
+
+                /* Status indicators */
+                .status-indicator {
+                    width: 10px;
+                    height: 10px;
+                    border-radius: 50%;
+                    display: inline-block;
+                    margin-right: 5px;
+                }
+                .status-nuevo { background-color: #17a2b8; }
+                .status-proceso { background-color: #ffc107; }
+                .status-finalizado { background-color: #28a745; }
+
+                /* Mobile responsiveness */
+                @media (max-width: 768px) {
+                    .card-body {
+                        padding: 1rem;
+                    }
+                    h2 {
+                        font-size: 1.5rem;
+                    }
+                    .btn-lg {
+                        padding: 0.5rem 1rem;
+                        font-size: 0.9rem;
+                    }
+                }
+
+                /* Loading animation */
+                @keyframes pulse {
+                    0% { opacity: 1; }
+                    50% { opacity: 0.5; }
+                    100% { opacity: 1; }
+                }
+                .loading-pulse {
+                    animation: pulse 1.5s ease-in-out infinite;
+                }
+            </style>
+        </xpath>
+    </template>
+</odoo>

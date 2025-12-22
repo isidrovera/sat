@@ -14,3 +14,4 @@ from . import api_contometros
 from . import solicitud_toner
 from . import printers_api
 from . import sat_api
+from . import portal
