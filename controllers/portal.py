@@ -17,6 +17,7 @@ class PortalAlquiler(CustomerPortal):
         values = super()._prepare_home_portal_values(counters)
         partner = request.env.user.partner_id
         
+        # IMPORTANTE: Filtrar por partner_id (empresa del usuario)
         if 'equipo_count' in counters:
             values['equipo_count'] = request.env['alquiler'].search_count([
                 ('cliente_id', '=', partner.id)
@@ -56,8 +57,11 @@ class PortalAlquiler(CustomerPortal):
         partner = request.env.user.partner_id
         Alquiler = request.env['alquiler']
         
-        # Dominio base: solo equipos del cliente
+        # Dominio base: solo equipos donde cliente_id = empresa del usuario
         domain = [('cliente_id', '=', partner.id)]
+        
+        _logger.info(f"🔍 Portal Equipos - Usuario: {request.env.user.name}, Partner: {partner.name} (ID: {partner.id})")
+        _logger.info(f"🔍 Dominio de búsqueda: {domain}")
         
         # Opciones de ordenamiento
         searchbar_sortings = {
@@ -106,6 +110,8 @@ class PortalAlquiler(CustomerPortal):
         # Contar total de equipos
         equipo_count = Alquiler.search_count(domain)
         
+        _logger.info(f"📊 Total equipos encontrados: {equipo_count}")
+        
         # Paginación
         pager = portal_pager(
             url="/my/equipos",
@@ -147,32 +153,32 @@ class PortalAlquiler(CustomerPortal):
         except (AccessError, MissingError):
             return request.redirect('/my')
         
-        # Verificar que el equipo pertenece al cliente
+        # Verificar que el equipo pertenece a la empresa del usuario
         if equipo_sudo.cliente_id.id != request.env.user.partner_id.id:
+            _logger.warning(f"⚠️ Acceso denegado - Usuario: {request.env.user.name}, "
+                          f"Partner usuario: {request.env.user.partner_id.name}, "
+                          f"Cliente del equipo: {equipo_sudo.cliente_id.name}")
             return request.redirect('/my')
         
-        # Obtener tickets relacionados
+        _logger.info(f"✅ Acceso permitido - Equipo: {equipo_sudo.serie}, "
+                    f"Cliente: {equipo_sudo.cliente_id.name}")
+        
+        # Obtener tickets relacionados al equipo Y a la empresa
         tickets = request.env['ticket.alquiler'].search([
             ('product_alquiler', '=', equipo_id),
             ('partner_id', '=', request.env.user.partner_id.id)
         ], order='create_date desc', limit=10)
         
-        # Obtener pedidos relacionados
+        # Obtener pedidos relacionados al equipo Y a la empresa
         pedidos = request.env['sale.order'].search([
             ('equipo_id', '=', equipo_id),
             ('partner_id', '=', request.env.user.partner_id.id)
         ], order='create_date desc', limit=5)
         
-        # Obtener contadores automáticos recientes
-        contadores = request.env['contador.automatico'].search([
-            ('equipo_id', '=', equipo_id)
-        ], order='fecha desc', limit=5)
-        
         values = {
             'equipo': equipo_sudo,
             'tickets': tickets,
             'pedidos': pedidos,
-            'contadores': contadores,
             'page_name': 'equipo_detail',
             'user': request.env.user,
         }
@@ -190,8 +196,10 @@ class PortalAlquiler(CustomerPortal):
         partner = request.env.user.partner_id
         Ticket = request.env['ticket.alquiler']
         
-        # Dominio base: solo tickets del cliente
+        # Dominio base: solo tickets donde partner_id = empresa del usuario
         domain = [('partner_id', '=', partner.id)]
+        
+        _logger.info(f"🎫 Portal Tickets - Usuario: {request.env.user.name}, Partner: {partner.name} (ID: {partner.id})")
         
         # Opciones de ordenamiento
         searchbar_sortings = {
@@ -224,6 +232,8 @@ class PortalAlquiler(CustomerPortal):
         
         # Contar tickets
         ticket_count = Ticket.search_count(domain)
+        
+        _logger.info(f"📊 Total tickets encontrados: {ticket_count}")
         
         # Paginación
         pager = portal_pager(
@@ -263,8 +273,11 @@ class PortalAlquiler(CustomerPortal):
         except (AccessError, MissingError):
             return request.redirect('/my')
         
-        # Verificar que el ticket pertenece al cliente
+        # Verificar que el ticket pertenece a la empresa del usuario
         if ticket_sudo.partner_id.id != request.env.user.partner_id.id:
+            _logger.warning(f"⚠️ Acceso denegado a ticket - Usuario: {request.env.user.name}, "
+                          f"Partner usuario: {request.env.user.partner_id.name}, "
+                          f"Cliente del ticket: {ticket_sudo.partner_id.name}")
             return request.redirect('/my')
         
         values = {
