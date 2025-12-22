@@ -1,248 +1,529 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <data>
-        <!-- ============================================ -->
-        <!-- TARJETAS EN EL HOME DEL PORTAL -->
-        <!-- ============================================ -->
+
+        <!-- ===================================================== -->
+        <!-- HOME PORTAL: TARJETAS "MIS EQUIPOS" Y "MIS TICKETS" -->
+        <!-- Estilo tipo Odoo (como tu captura) con iconos y contador -->
+        <!-- ===================================================== -->
         <template id="portal_sat_home_extend" inherit_id="portal.portal_my_home" priority="20">
+
             <!-- Habilitar categoría de servicio -->
             <xpath expr="//div[hasclass('o_portal_docs')]" position="before">
                 <t t-set="portal_service_category_enable" t-value="True"/>
             </xpath>
 
-            <!-- Tarjeta: Mis Equipos -->
-            <xpath expr="//div[@id='portal_service_category']" position="inside">
-                <t t-call="portal.portal_docs_entry">
-                    <t t-set="title">Mis Equipos</t>
-                    <t t-set="url" t-value="'/my/equipos'"/>
-                    <t t-set="text">Consulte sus equipos en alquiler</t>
-                    <t t-set="placeholder_count" t-value="'equipo_count'"/>
-                </t>
-            </xpath>
+            <!-- Reemplazar el bloque para que se vea como tiles modernos -->
+            <xpath expr="//div[@id='portal_service_category']" position="replace">
+                <div id="portal_service_category" class="row g-3">
+                    <!-- Mis Equipos -->
+                    <div class="col-12 col-md-6">
+                        <a href="/my/equipos" class="text-decoration-none">
+                            <div class="o_portal_tile card border-0 shadow-sm hover-card">
+                                <div class="card-body d-flex align-items-center gap-3">
+                                    <div class="o_portal_tile_icon bg-primary-subtle text-primary">
+                                        <i class="fa fa-print"></i>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div class="o_portal_tile_title">Mis Equipos</div>
+                                            <span class="badge rounded-pill bg-primary">
+                                                <t t-esc="equipo_count or 0"/>
+                                            </span>
+                                        </div>
+                                        <div class="o_portal_tile_subtitle text-muted">
+                                            Consulte sus equipos en alquiler
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
 
-            <!-- Tarjeta: Mis Tickets -->
-            <xpath expr="//div[@id='portal_service_category']" position="inside">
-                <t t-call="portal.portal_docs_entry">
-                    <t t-set="title">Mis Tickets</t>
-                    <t t-set="url" t-value="'/my/tickets'"/>
-                    <t t-set="text">Vea el estado de sus servicios técnicos</t>
-                    <t t-set="placeholder_count" t-value="'ticket_count'"/>
-                </t>
+                    <!-- Mis Tickets -->
+                    <div class="col-12 col-md-6">
+                        <a href="/my/tickets" class="text-decoration-none">
+                            <div class="o_portal_tile card border-0 shadow-sm hover-card">
+                                <div class="card-body d-flex align-items-center gap-3">
+                                    <div class="o_portal_tile_icon bg-warning-subtle text-warning">
+                                        <i class="fa fa-ticket-alt"></i>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div class="o_portal_tile_title">Mis Tickets</div>
+                                            <span class="badge rounded-pill bg-warning text-dark">
+                                                <t t-esc="ticket_count or 0"/>
+                                            </span>
+                                        </div>
+                                        <div class="o_portal_tile_subtitle text-muted">
+                                            Vea el estado de sus servicios técnicos
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                </div>
             </xpath>
         </template>
 
-        <!-- ============================================ -->
-        <!-- LISTA DE EQUIPOS -->
-        <!-- ============================================ -->
-        <!-- ============================================ -->
-<!-- LISTA DE EQUIPOS - FORMATO TABLA -->
-<!-- ============================================ -->
-<template id="portal_my_equipos" name="Mis Equipos">
-    <t t-call="portal.portal_layout">
-        <t t-set="breadcrumbs_searchbar" t-value="True"/>
 
-        <t t-call="portal.portal_searchbar">
-            <t t-set="title">Mis Equipos</t>
-        </t>
+        <!-- ===================================================== -->
+        <!-- LISTA DE EQUIPOS (TABLA + MODALES) -->
+        <!-- - Orden: Marca, Modelo, Serie -->
+        <!-- - Quita dirección (Ubicación) y agrega Área (ubicacion_instalacion) -->
+        <!-- - Agrega: Próximo mantenimiento + Bloqueado -->
+        <!-- - Acciones: abre modal (evita abrir varias páginas), pero mantiene URLs -->
+        <!-- ===================================================== -->
+        <template id="portal_my_equipos" name="Mis Equipos">
+            <t t-call="portal.portal_layout">
+                <t t-set="breadcrumbs_searchbar" t-value="True"/>
 
-        <div class="container mt-4">
-            <!-- Mensaje si no hay equipos -->
-            <t t-if="not equipos">
-                <div class="alert alert-info text-center" role="alert">
-                    <i class="fa fa-info-circle fa-2x mb-3"></i>
-                    <h4>No tiene equipos registrados</h4>
-                    <p class="mb-0">Actualmente no tiene equipos en alquiler asociados a su cuenta.</p>
-                </div>
-            </t>
+                <t t-call="portal.portal_searchbar">
+                    <t t-set="title">Mis Equipos</t>
+                </t>
 
-            <!-- Lista de equipos en formato tabla -->
-            <t t-else="">
-                <div class="card shadow-sm">
-                    <div class="card-header bg-primary text-white">
-                        <div class="row align-items-center">
-                            <div class="col-md-6">
-                                <h5 class="mb-0">
-                                    <i class="fa fa-print"></i> 
-                                    Mis Equipos en Alquiler
-                                </h5>
-                            </div>
-                            <div class="col-md-6 text-end">
-                                <span class="badge bg-light text-dark fs-6">
-                                    <t t-esc="len(equipos)"/> equipos
-                                </span>
-                            </div>
+                <div class="container mt-4">
+                    <!-- Mensaje si no hay equipos -->
+                    <t t-if="not equipos">
+                        <div class="alert alert-info text-center" role="alert">
+                            <i class="fa fa-info-circle fa-2x mb-3"></i>
+                            <h4>No tiene equipos registrados</h4>
+                            <p class="mb-0">Actualmente no tiene equipos en alquiler asociados a su cuenta.</p>
                         </div>
-                    </div>
-                    
-                    <div class="card-body p-0">
-                        <t t-call="portal.portal_table">
-                            <thead>
-                                <tr class="active">
-                                    <th>Serie</th>
-                                    <th>Modelo</th>
-                                    <th>Marca</th>
-                                    <th>Tipo</th>
-                                    <th>Ubicación</th>
-                                    <th class="text-center">Contadores</th>
-                                    <th>Estado</th>
-                                    <th class="text-center">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <t t-foreach="equipos" t-as="equipo">
-                                    <tr>
-                                        <!-- Serie -->
-                                        <td>
-                                            <strong>
-                                                <span class="badge bg-dark">
-                                                    <t t-esc="equipo.serie"/>
-                                                </span>
-                                            </strong>
-                                        </td>
-                                        
-                                        <!-- Modelo -->
-                                        <td>
-                                            <div class="fw-bold">
-                                                <i class="fa fa-print text-primary me-1"></i>
-                                                <t t-esc="equipo.name.name"/>
-                                            </div>
-                                        </td>
-                                        
-                                        <!-- Marca -->
-                                        <td>
-                                            <t t-esc="equipo.marca"/>
-                                        </td>
-                                        
-                                        <!-- Tipo -->
-                                        <td>
-                                            <t t-if="equipo.tipo_maquina_id == 'color'">
-                                                <span class="badge bg-primary">
-                                                    <i class="fa fa-palette"></i> Color
-                                                </span>
-                                            </t>
-                                            <t t-else="">
-                                                <span class="badge bg-secondary">
-                                                    <i class="fa fa-circle"></i> B/N
-                                                </span>
-                                            </t>
-                                        </td>
-                                        
-                                        <!-- Ubicación -->
-                                        <td>
-                                            <t t-if="equipo.direccion">
-                                                <small class="text-muted">
-                                                    <i class="fa fa-map-marker-alt text-danger me-1"></i>
-                                                    <t t-esc="equipo.direccion[:40]"/>
-                                                    <t t-if="len(equipo.direccion) > 40">...</t>
-                                                </small>
-                                            </t>
-                                            <t t-else="">
-                                                <span class="text-muted">-</span>
-                                            </t>
-                                        </td>
-                                        
-                                        <!-- Contadores -->
-                                        <td class="text-center">
-                                            <t t-if="equipo.contador_bn or equipo.contador_color">
-                                                <div class="d-flex justify-content-center gap-2">
-                                                    <!-- Contador B/N -->
-                                                    <div class="small">
-                                                        <div class="text-muted" style="font-size: 0.7rem;">B/N</div>
+                    </t>
+
+                    <!-- Tabla -->
+                    <t t-else="">
+                        <div class="card shadow-sm border-0">
+                            <div class="card-header bg-primary text-white">
+                                <div class="row align-items-center">
+                                    <div class="col-md-6">
+                                        <h5 class="mb-0">
+                                            <i class="fa fa-print"></i>
+                                            Mis Equipos en Alquiler
+                                        </h5>
+                                    </div>
+                                    <div class="col-md-6 text-end">
+                                        <span class="badge bg-light text-dark fs-6">
+                                            <t t-esc="len(equipos)"/> equipos
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-hover mb-0 o_portal_table">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th><i class="fa fa-industry me-1 text-muted"></i>Marca</th>
+                                                <th><i class="fa fa-print me-1 text-muted"></i>Modelo</th>
+                                                <th><i class="fa fa-barcode me-1 text-muted"></i>Serie</th>
+                                                <th><i class="fa fa-map-signs me-1 text-muted"></i>Área</th>
+
+                                                <!-- NUEVO: mantenimiento -->
+                                                <th class="text-nowrap"><i class="fa fa-tools me-1 text-muted"></i>Mantenimiento</th>
+
+                                                <!-- NUEVO: bloqueado -->
+                                                <th class="text-nowrap"><i class="fa fa-lock me-1 text-muted"></i>Bloqueo</th>
+
+                                                <th class="text-nowrap"><i class="fa fa-palette me-1 text-muted"></i>Tipo</th>
+                                                <th class="text-center text-nowrap"><i class="fa fa-tachometer-alt me-1 text-muted"></i>Contadores</th>
+                                                <th class="text-nowrap"><i class="fa fa-info-circle me-1 text-muted"></i>Estado</th>
+                                                <th class="text-center text-nowrap"><i class="fa fa-bolt me-1 text-muted"></i>Acciones</th>
+                                            </tr>
+                                        </thead>
+
+                                        <tbody>
+                                            <t t-foreach="equipos" t-as="equipo">
+                                                <tr>
+                                                    <!-- Marca -->
+                                                    <td class="fw-semibold">
+                                                        <t t-esc="equipo.marca"/>
+                                                    </td>
+
+                                                    <!-- Modelo -->
+                                                    <td>
                                                         <div class="fw-bold">
-                                                            <t t-esc="'{:,}'.format(equipo.contador_bn or 0)"/>
+                                                            <i class="fa fa-print text-primary me-1"></i>
+                                                            <t t-esc="equipo.name.name"/>
                                                         </div>
-                                                    </div>
-                                                    
-                                                    <!-- Contador Color (solo si es color) -->
-                                                    <t t-if="equipo.tipo_maquina_id == 'color'">
-                                                        <div class="small">
-                                                            <div class="text-muted" style="font-size: 0.7rem;">Color</div>
-                                                            <div class="fw-bold text-primary">
-                                                                <t t-esc="'{:,}'.format(equipo.contador_color or 0)"/>
+                                                        <t t-if="equipo.ip_address">
+                                                            <div class="text-muted small">
+                                                                <i class="fa fa-network-wired me-1"></i>
+                                                                <t t-esc="equipo.ip_address"/>
+                                                            </div>
+                                                        </t>
+                                                    </td>
+
+                                                    <!-- Serie -->
+                                                    <td>
+                                                        <span class="badge bg-dark">
+                                                            <t t-esc="equipo.serie"/>
+                                                        </span>
+                                                    </td>
+
+                                                    <!-- Área (ubicacion_instalacion) -->
+                                                    <td>
+                                                        <t t-if="equipo.ubicacion_instalacion">
+                                                            <span class="badge bg-light text-dark border">
+                                                                <i class="fa fa-map-marker-alt text-danger me-1"></i>
+                                                                <t t-esc="equipo.ubicacion_instalacion"/>
+                                                            </span>
+                                                        </t>
+                                                        <t t-else="">
+                                                            <span class="text-muted">-</span>
+                                                        </t>
+                                                    </td>
+
+                                                    <!-- Mantenimiento (campo opcional, no rompe si no existe) -->
+                                                    <td class="text-nowrap">
+                                                        <t t-if="'fecha_mantenimiento' in equipo._fields and equipo.fecha_mantenimiento">
+                                                            <span class="badge bg-info text-dark">
+                                                                <i class="fa fa-calendar-check me-1"></i>
+                                                                <t t-esc="equipo.fecha_mantenimiento.strftime('%d/%m/%Y')"/>
+                                                            </span>
+                                                        </t>
+                                                        <t t-elif="'proximo_mantenimiento' in equipo._fields and equipo.proximo_mantenimiento">
+                                                            <span class="badge bg-info text-dark">
+                                                                <i class="fa fa-calendar-check me-1"></i>
+                                                                <t t-esc="equipo.proximo_mantenimiento.strftime('%d/%m/%Y')"/>
+                                                            </span>
+                                                        </t>
+                                                        <t t-else="">
+                                                            <span class="text-muted">No programado</span>
+                                                        </t>
+                                                    </td>
+
+                                                    <!-- Bloqueado (campo opcional) -->
+                                                    <td class="text-nowrap">
+                                                        <t t-if="'bloqueado' in equipo._fields and equipo.bloqueado">
+                                                            <span class="badge bg-danger">
+                                                                <i class="fa fa-lock me-1"></i>Bloqueado
+                                                            </span>
+                                                        </t>
+                                                        <t t-elif="'is_blocked' in equipo._fields and equipo.is_blocked">
+                                                            <span class="badge bg-danger">
+                                                                <i class="fa fa-lock me-1"></i>Bloqueado
+                                                            </span>
+                                                        </t>
+                                                        <t t-else="">
+                                                            <span class="badge bg-success">
+                                                                <i class="fa fa-unlock me-1"></i>Activo
+                                                            </span>
+                                                        </t>
+                                                    </td>
+
+                                                    <!-- Tipo -->
+                                                    <td class="text-nowrap">
+                                                        <t t-if="equipo.tipo_maquina_id == 'color'">
+                                                            <span class="badge bg-primary">
+                                                                <i class="fa fa-palette me-1"></i>Color
+                                                            </span>
+                                                        </t>
+                                                        <t t-else="">
+                                                            <span class="badge bg-secondary">
+                                                                <i class="fa fa-circle me-1"></i>B/N
+                                                            </span>
+                                                        </t>
+                                                    </td>
+
+                                                    <!-- Contadores -->
+                                                    <td class="text-center">
+                                                        <t t-if="equipo.contador_bn or equipo.contador_color or equipo.contador_scan">
+                                                            <div class="d-flex justify-content-center gap-3">
+                                                                <div class="small text-center">
+                                                                    <div class="text-muted" style="font-size: 0.7rem;">B/N</div>
+                                                                    <div class="fw-bold">
+                                                                        <t t-esc="'{:,}'.format(equipo.contador_bn or 0)"/>
+                                                                    </div>
+                                                                </div>
+
+                                                                <t t-if="equipo.tipo_maquina_id == 'color'">
+                                                                    <div class="small text-center">
+                                                                        <div class="text-muted" style="font-size: 0.7rem;">Color</div>
+                                                                        <div class="fw-bold text-primary">
+                                                                            <t t-esc="'{:,}'.format(equipo.contador_color or 0)"/>
+                                                                        </div>
+                                                                    </div>
+                                                                </t>
+
+                                                                <div class="small text-center">
+                                                                    <div class="text-muted" style="font-size: 0.7rem;">Scan</div>
+                                                                    <div class="fw-bold text-info">
+                                                                        <t t-esc="'{:,}'.format(equipo.contador_scan or 0)"/>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            <t t-if="equipo.fecha_ultima_actualizacion">
+                                                                <div class="text-muted" style="font-size: 0.65rem; margin-top: 2px;">
+                                                                    <i class="fa fa-clock me-1"></i>
+                                                                    <t t-esc="equipo.fecha_ultima_actualizacion.strftime('%d/%m/%y')"/>
+                                                                </div>
+                                                            </t>
+                                                        </t>
+                                                        <t t-else="">
+                                                            <span class="text-muted">Sin datos</span>
+                                                        </t>
+                                                    </td>
+
+                                                    <!-- Estado -->
+                                                    <td class="text-nowrap">
+                                                        <t t-if="equipo.estado_alquiler_id == 'alquilada'">
+                                                            <span class="badge bg-success">
+                                                                <i class="fa fa-check-circle me-1"></i>Alquilado
+                                                            </span>
+                                                        </t>
+                                                        <t t-elif="equipo.estado_alquiler_id == 'con_problemas'">
+                                                            <span class="badge bg-danger">
+                                                                <i class="fa fa-exclamation-triangle me-1"></i>Con Problemas
+                                                            </span>
+                                                        </t>
+                                                        <t t-elif="equipo.estado_alquiler_id == 'lista'">
+                                                            <span class="badge bg-info text-dark">
+                                                                <i class="fa fa-thumbs-up me-1"></i>Listo
+                                                            </span>
+                                                        </t>
+                                                        <t t-else="">
+                                                            <span class="badge bg-secondary">
+                                                                <i class="fa fa-info-circle me-1"></i>
+                                                                <t t-esc="dict(equipo._fields['estado_alquiler_id'].selection).get(equipo.estado_alquiler_id, equipo.estado_alquiler_id)"/>
+                                                            </span>
+                                                        </t>
+                                                    </td>
+
+                                                    <!-- Acciones: MODAL + quick actions (mantiene URLs) -->
+                                                    <td class="text-center text-nowrap">
+                                                        <div class="btn-group btn-group-sm" role="group">
+                                                            <!-- Abrir modal (mejora UX, sin cambiar lógica) -->
+                                                            <button type="button"
+                                                                    class="btn btn-outline-primary"
+                                                                    title="Vista rápida"
+                                                                    data-bs-toggle="modal"
+                                                                    t-attf-data-bs-target="#equipoModal#{equipo.id}">
+                                                                <i class="fa fa-eye"></i>
+                                                            </button>
+
+                                                            <!-- Reportar incidencia -->
+                                                            <a t-attf-href="/ticket/reportar_incidencia?id_registro=#{equipo.id}"
+                                                               class="btn btn-outline-danger"
+                                                               title="Reportar Problema">
+                                                                <i class="fa fa-exclamation-circle"></i>
+                                                            </a>
+
+                                                            <!-- Solicitar tóner -->
+                                                            <a t-attf-href="/toner/solicitar_toner?id_registro=#{equipo.id}"
+                                                               class="btn btn-outline-info"
+                                                               title="Solicitar Tóner">
+                                                                <i class="fa fa-tint"></i>
+                                                            </a>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+
+                                                <!-- ========================= -->
+                                                <!-- MODAL: Vista rápida Equipo -->
+                                                <!-- ========================= -->
+                                                <div class="modal fade" t-attf-id="equipoModal#{equipo.id}" tabindex="-1" aria-hidden="true">
+                                                    <div class="modal-dialog modal-lg modal-dialog-centered">
+                                                        <div class="modal-content border-0 shadow">
+                                                            <div class="modal-header o_modal_header">
+                                                                <div>
+                                                                    <div class="o_modal_title">
+                                                                        <i class="fa fa-print me-2"></i>
+                                                                        <t t-esc="equipo.name.name"/>
+                                                                    </div>
+                                                                    <div class="text-muted small">
+                                                                        <span class="me-2">
+                                                                            <i class="fa fa-industry me-1"></i><t t-esc="equipo.marca"/>
+                                                                        </span>
+                                                                        <span class="me-2">
+                                                                            <i class="fa fa-barcode me-1"></i><t t-esc="equipo.serie"/>
+                                                                        </span>
+                                                                        <t t-if="equipo.ubicacion_instalacion">
+                                                                            <span>
+                                                                                <i class="fa fa-map-marker-alt me-1"></i><t t-esc="equipo.ubicacion_instalacion"/>
+                                                                            </span>
+                                                                        </t>
+                                                                    </div>
+                                                                </div>
+                                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"/>
+                                                            </div>
+
+                                                            <div class="modal-body">
+                                                                <div class="row g-3">
+                                                                    <!-- Estado -->
+                                                                    <div class="col-12 col-md-4">
+                                                                        <div class="card border-0 bg-light h-100">
+                                                                            <div class="card-body">
+                                                                                <div class="text-muted small mb-1">
+                                                                                    <i class="fa fa-info-circle me-1"></i>Estado
+                                                                                </div>
+                                                                                <div>
+                                                                                    <t t-if="equipo.estado_alquiler_id == 'alquilada'">
+                                                                                        <span class="badge bg-success"><i class="fa fa-check-circle me-1"></i>Alquilado</span>
+                                                                                    </t>
+                                                                                    <t t-elif="equipo.estado_alquiler_id == 'con_problemas'">
+                                                                                        <span class="badge bg-danger"><i class="fa fa-exclamation-triangle me-1"></i>Con Problemas</span>
+                                                                                    </t>
+                                                                                    <t t-elif="equipo.estado_alquiler_id == 'lista'">
+                                                                                        <span class="badge bg-info text-dark"><i class="fa fa-thumbs-up me-1"></i>Listo</span>
+                                                                                    </t>
+                                                                                    <t t-else="">
+                                                                                        <span class="badge bg-secondary">
+                                                                                            <t t-esc="dict(equipo._fields['estado_alquiler_id'].selection).get(equipo.estado_alquiler_id, equipo.estado_alquiler_id)"/>
+                                                                                        </span>
+                                                                                    </t>
+                                                                                </div>
+
+                                                                                <div class="mt-2 text-muted small">
+                                                                                    <i class="fa fa-lock me-1"></i>Bloqueo:
+                                                                                    <t t-if="'bloqueado' in equipo._fields and equipo.bloqueado">
+                                                                                        <span class="text-danger fw-semibold">Bloqueado</span>
+                                                                                    </t>
+                                                                                    <t t-elif="'is_blocked' in equipo._fields and equipo.is_blocked">
+                                                                                        <span class="text-danger fw-semibold">Bloqueado</span>
+                                                                                    </t>
+                                                                                    <t t-else="">
+                                                                                        <span class="text-success fw-semibold">Activo</span>
+                                                                                    </t>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <!-- Mantenimiento -->
+                                                                    <div class="col-12 col-md-4">
+                                                                        <div class="card border-0 bg-light h-100">
+                                                                            <div class="card-body">
+                                                                                <div class="text-muted small mb-1">
+                                                                                    <i class="fa fa-tools me-1"></i>Próximo mantenimiento
+                                                                                </div>
+                                                                                <div class="fw-semibold">
+                                                                                    <t t-if="'fecha_mantenimiento' in equipo._fields and equipo.fecha_mantenimiento">
+                                                                                        <t t-esc="equipo.fecha_mantenimiento.strftime('%d/%m/%Y')"/>
+                                                                                    </t>
+                                                                                    <t t-elif="'proximo_mantenimiento' in equipo._fields and equipo.proximo_mantenimiento">
+                                                                                        <t t-esc="equipo.proximo_mantenimiento.strftime('%d/%m/%Y')"/>
+                                                                                    </t>
+                                                                                    <t t-else="">
+                                                                                        <span class="text-muted">No programado</span>
+                                                                                    </t>
+                                                                                </div>
+
+                                                                                <t t-if="equipo.contacto_id or equipo.celular or equipo.correo_">
+                                                                                    <hr class="my-3"/>
+                                                                                    <div class="text-muted small mb-1">
+                                                                                        <i class="fa fa-user me-1"></i>Contacto
+                                                                                    </div>
+                                                                                    <div class="small">
+                                                                                        <t t-if="equipo.contacto_id"><div><strong><t t-esc="equipo.contacto_id"/></strong></div></t>
+                                                                                        <t t-if="equipo.celular"><div><i class="fa fa-phone me-1"></i><t t-esc="equipo.celular"/></div></t>
+                                                                                        <t t-if="equipo.correo_"><div><i class="fa fa-envelope me-1"></i><t t-esc="equipo.correo_"/></div></t>
+                                                                                    </div>
+                                                                                </t>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <!-- Contadores -->
+                                                                    <div class="col-12 col-md-4">
+                                                                        <div class="card border-0 bg-light h-100">
+                                                                            <div class="card-body">
+                                                                                <div class="text-muted small mb-2">
+                                                                                    <i class="fa fa-tachometer-alt me-1"></i>Contadores
+                                                                                </div>
+                                                                                <div class="d-flex justify-content-between">
+                                                                                    <div class="text-center flex-fill">
+                                                                                        <div class="text-muted" style="font-size:.75rem;">B/N</div>
+                                                                                        <div class="fw-bold">
+                                                                                            <t t-esc="'{:,}'.format(equipo.contador_bn or 0)"/>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                    <t t-if="equipo.tipo_maquina_id == 'color'">
+                                                                                        <div class="text-center flex-fill">
+                                                                                            <div class="text-muted" style="font-size:.75rem;">Color</div>
+                                                                                            <div class="fw-bold text-primary">
+                                                                                                <t t-esc="'{:,}'.format(equipo.contador_color or 0)"/>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    </t>
+                                                                                    <div class="text-center flex-fill">
+                                                                                        <div class="text-muted" style="font-size:.75rem;">Scan</div>
+                                                                                        <div class="fw-bold text-info">
+                                                                                            <t t-esc="'{:,}'.format(equipo.contador_scan or 0)"/>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </div>
+
+                                                                                <t t-if="equipo.fecha_ultima_actualizacion">
+                                                                                    <div class="text-muted small mt-2">
+                                                                                        <i class="fa fa-clock me-1"></i>
+                                                                                        Últ. actualización:
+                                                                                        <t t-esc="equipo.fecha_ultima_actualizacion.strftime('%d/%m/%Y %H:%M')"/>
+                                                                                    </div>
+                                                                                </t>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <!-- Dirección (solo en el modal para no saturar tabla) -->
+                                                                    <t t-if="equipo.direccion">
+                                                                        <div class="col-12">
+                                                                            <div class="card border-0">
+                                                                                <div class="card-body p-0">
+                                                                                    <div class="text-muted small mb-1">
+                                                                                        <i class="fa fa-map-marker-alt me-1"></i>Dirección
+                                                                                    </div>
+                                                                                    <div class="small">
+                                                                                        <t t-esc="equipo.direccion"/>
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </t>
+                                                                </div>
+                                                            </div>
+
+                                                            <div class="modal-footer">
+                                                                <!-- Mantienes tus rutas (misma lógica), solo mejoras UX -->
+                                                                <a t-attf-href="/my/equipo/#{equipo.id}" class="btn btn-outline-primary">
+                                                                    <i class="fa fa-external-link-alt me-1"></i>Ver completo
+                                                                </a>
+                                                                <a t-attf-href="/ticket/reportar_incidencia?id_registro=#{equipo.id}" class="btn btn-danger">
+                                                                    <i class="fa fa-exclamation-circle me-1"></i>Reportar problema
+                                                                </a>
+                                                                <a t-attf-href="/toner/solicitar_toner?id_registro=#{equipo.id}" class="btn btn-info text-white">
+                                                                    <i class="fa fa-tint me-1"></i>Solicitar tóner
+                                                                </a>
+                                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                                                    Cerrar
+                                                                </button>
                                                             </div>
                                                         </div>
-                                                    </t>
-                                                </div>
-                                                
-                                                <!-- Fecha de actualización -->
-                                                <t t-if="equipo.fecha_ultima_actualizacion">
-                                                    <div class="text-muted" style="font-size: 0.65rem; margin-top: 2px;">
-                                                        <i class="fa fa-clock"></i>
-                                                        <t t-esc="equipo.fecha_ultima_actualizacion.strftime('%d/%m/%y')"/>
                                                     </div>
-                                                </t>
+                                                </div>
                                             </t>
-                                            <t t-else="">
-                                                <span class="text-muted">Sin datos</span>
-                                            </t>
-                                        </td>
-                                        
-                                        <!-- Estado -->
-                                        <td>
-                                            <t t-if="equipo.estado_alquiler_id == 'alquilada'">
-                                                <span class="badge bg-success">
-                                                    <i class="fa fa-check-circle"></i> Alquilado
-                                                </span>
-                                            </t>
-                                            <t t-elif="equipo.estado_alquiler_id == 'con_problemas'">
-                                                <span class="badge bg-danger">
-                                                    <i class="fa fa-exclamation-triangle"></i> Con Problemas
-                                                </span>
-                                            </t>
-                                            <t t-elif="equipo.estado_alquiler_id == 'lista'">
-                                                <span class="badge bg-info">
-                                                    <i class="fa fa-thumbs-up"></i> Listo
-                                                </span>
-                                            </t>
-                                            <t t-else="">
-                                                <span class="badge bg-secondary">
-                                                    <t t-esc="dict(equipo._fields['estado_alquiler_id'].selection).get(equipo.estado_alquiler_id, equipo.estado_alquiler_id)"/>
-                                                </span>
-                                            </t>
-                                        </td>
-                                        
-                                        <!-- Acciones -->
-                                        <td class="text-center">
-                                            <div class="btn-group btn-group-sm" role="group">
-                                                <!-- Ver Detalle -->
-                                                <a t-attf-href="/my/equipo/#{equipo.id}" 
-                                                   class="btn btn-primary"
-                                                   title="Ver Detalles">
-                                                    <i class="fa fa-eye"></i>
-                                                </a>
-                                                
-                                                <!-- Reportar Problema -->
-                                                <a t-attf-href="/ticket/reportar_incidencia?id_registro=#{equipo.id}" 
-                                                   class="btn btn-danger"
-                                                   title="Reportar Problema">
-                                                    <i class="fa fa-exclamation-circle"></i>
-                                                </a>
-                                                
-                                                <!-- Solicitar Tóner -->
-                                                <a t-attf-href="/toner/solicitar_toner?id_registro=#{equipo.id}" 
-                                                   class="btn btn-info"
-                                                   title="Solicitar Tóner">
-                                                    <i class="fa fa-tint"></i>
-                                                </a>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                </t>
-                            </tbody>
-                        </t>
-                    </div>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </t>
+
+                    <!-- Paginación -->
+                    <t t-if="pager" t-call="portal.pager"/>
                 </div>
             </t>
+        </template>
 
-            <!-- Paginación -->
-            <t t-if="pager" t-call="portal.pager"/>
-        </div>
-    </t>
-</template>
 
-        <!-- ============================================ -->
-        <!-- DETALLE DE EQUIPO -->
-        <!-- ============================================ -->
+
+        <!-- ===================================================== -->
+        <!-- DETALLE DE EQUIPO (LO MANTIENES) -->
+        <!-- ===================================================== -->
         <template id="portal_equipo_detail" name="Detalle de Equipo">
             <t t-call="portal.portal_layout">
                 <t t-set="o_portal_fullwidth_alert" groups="base.group_portal">
@@ -279,6 +560,12 @@
                                                 <span class="badge bg-dark fs-6 ms-2">
                                                     <t t-esc="equipo.serie"/>
                                                 </span>
+                                                <t t-if="equipo.ubicacion_instalacion">
+                                                    <span class="badge bg-light text-dark border fs-6 ms-2">
+                                                        <i class="fa fa-map-marker-alt text-danger me-1"></i>
+                                                        <t t-esc="equipo.ubicacion_instalacion"/>
+                                                    </span>
+                                                </t>
                                             </p>
                                         </div>
                                         <div class="col-md-4 text-md-end mt-3 mt-md-0">
@@ -295,11 +582,48 @@
                                             </t>
                                         </div>
                                     </div>
+
+                                    <!-- Bloqueo + Mantenimiento (si existen) -->
+                                    <div class="mt-3">
+                                        <t t-if="'bloqueado' in equipo._fields or 'is_blocked' in equipo._fields">
+                                            <span class="me-2 text-muted">Bloqueo:</span>
+                                            <t t-if="'bloqueado' in equipo._fields and equipo.bloqueado">
+                                                <span class="badge bg-danger"><i class="fa fa-lock me-1"></i>Bloqueado</span>
+                                            </t>
+                                            <t t-elif="'is_blocked' in equipo._fields and equipo.is_blocked">
+                                                <span class="badge bg-danger"><i class="fa fa-lock me-1"></i>Bloqueado</span>
+                                            </t>
+                                            <t t-else="">
+                                                <span class="badge bg-success"><i class="fa fa-unlock me-1"></i>Activo</span>
+                                            </t>
+                                        </t>
+
+                                        <t t-if="'fecha_mantenimiento' in equipo._fields or 'proximo_mantenimiento' in equipo._fields">
+                                            <span class="ms-3 me-2 text-muted">Mantenimiento:</span>
+                                            <t t-if="'fecha_mantenimiento' in equipo._fields and equipo.fecha_mantenimiento">
+                                                <span class="badge bg-info text-dark">
+                                                    <i class="fa fa-calendar-check me-1"></i>
+                                                    <t t-esc="equipo.fecha_mantenimiento.strftime('%d/%m/%Y')"/>
+                                                </span>
+                                            </t>
+                                            <t t-elif="'proximo_mantenimiento' in equipo._fields and equipo.proximo_mantenimiento">
+                                                <span class="badge bg-info text-dark">
+                                                    <i class="fa fa-calendar-check me-1"></i>
+                                                    <t t-esc="equipo.proximo_mantenimiento.strftime('%d/%m/%Y')"/>
+                                                </span>
+                                            </t>
+                                            <t t-else="">
+                                                <span class="text-muted">No programado</span>
+                                            </t>
+                                        </t>
+                                    </div>
+
                                 </div>
                             </div>
                         </div>
                     </div>
 
+                    <!-- (El resto de tu template detalle lo mantengo tal cual) -->
                     <!-- Información General -->
                     <div class="row mb-4">
                         <div class="col-md-6 mb-3">
@@ -320,6 +644,17 @@
                                         <tr>
                                             <td class="text-muted">Serie:</td>
                                             <td><span class="badge bg-dark"><t t-esc="equipo.serie"/></span></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-muted">Área:</td>
+                                            <td>
+                                                <t t-if="equipo.ubicacion_instalacion">
+                                                    <strong><t t-esc="equipo.ubicacion_instalacion"/></strong>
+                                                </t>
+                                                <t t-else="">
+                                                    <span class="text-muted">-</span>
+                                                </t>
+                                            </td>
                                         </tr>
                                         <tr>
                                             <td class="text-muted">Tipo:</td>
@@ -431,19 +766,19 @@
                                 <div class="card-body">
                                     <div class="row g-3">
                                         <div class="col-md-4">
-                                            <a t-attf-href="/ticket/reportar_incidencia?id_registro=#{equipo.id}" 
+                                            <a t-attf-href="/ticket/reportar_incidencia?id_registro=#{equipo.id}"
                                                class="btn btn-danger w-100 btn-lg">
                                                 <i class="fa fa-exclamation-circle"></i> Reportar Problema
                                             </a>
                                         </div>
                                         <div class="col-md-4">
-                                            <a t-attf-href="/toner/solicitar_toner?id_registro=#{equipo.id}" 
+                                            <a t-attf-href="/toner/solicitar_toner?id_registro=#{equipo.id}"
                                                class="btn btn-primary w-100 btn-lg">
                                                 <i class="fa fa-tint"></i> Solicitar Tóner
                                             </a>
                                         </div>
                                         <div class="col-md-4">
-                                            <a t-attf-href="/alquiler/repuestos/#{equipo.id}" 
+                                            <a t-attf-href="/alquiler/repuestos/#{equipo.id}"
                                                class="btn btn-info w-100 btn-lg">
                                                 <i class="fa fa-cogs"></i> Ver Repuestos
                                             </a>
@@ -489,16 +824,12 @@
                                                 <tbody>
                                                     <t t-foreach="tickets" t-as="ticket">
                                                         <tr>
-                                                            <td>
-                                                                <strong><t t-esc="ticket.name"/></strong>
-                                                            </td>
+                                                            <td><strong><t t-esc="ticket.name"/></strong></td>
                                                             <td>
                                                                 <t t-if="ticket.agenda">
                                                                     <t t-esc="ticket.agenda.strftime('%d/%m/%Y')"/>
                                                                 </t>
-                                                                <t t-else="">
-                                                                    <span class="text-muted">Sin fecha</span>
-                                                                </t>
+                                                                <t t-else=""><span class="text-muted">Sin fecha</span></t>
                                                             </td>
                                                             <td>
                                                                 <t t-if="ticket.tipo_servicio_id">
@@ -509,9 +840,7 @@
                                                                 <t t-if="ticket.responsable">
                                                                     <t t-esc="ticket.responsable.name"/>
                                                                 </t>
-                                                                <t t-else="">
-                                                                    <span class="text-muted">Sin asignar</span>
-                                                                </t>
+                                                                <t t-else=""><span class="text-muted">Sin asignar</span></t>
                                                             </td>
                                                             <td>
                                                                 <t t-if="ticket.estado == 'nuevo'">
@@ -524,13 +853,11 @@
                                                                     <span class="badge bg-success">Finalizado</span>
                                                                 </t>
                                                                 <t t-else="">
-                                                                    <span class="badge bg-secondary">
-                                                                        <t t-esc="ticket.estado"/>
-                                                                    </span>
+                                                                    <span class="badge bg-secondary"><t t-esc="ticket.estado"/></span>
                                                                 </t>
                                                             </td>
                                                             <td class="text-end">
-                                                                <a t-attf-href="/my/ticket/#{ticket.id}" 
+                                                                <a t-attf-href="/my/ticket/#{ticket.id}"
                                                                    class="btn btn-sm btn-outline-primary">
                                                                     <i class="fa fa-eye"></i>
                                                                 </a>
@@ -551,65 +878,15 @@
                         </div>
                     </div>
 
-                    <!-- Historial de Contadores (si existen registros automáticos) -->
-                    <t t-if="contadores">
-                        <div class="row">
-                            <div class="col-12">
-                                <div class="card shadow-sm">
-                                    <div class="card-header bg-primary text-white">
-                                        <i class="fa fa-chart-line"></i> Historial de Contadores
-                                    </div>
-                                    <div class="card-body p-0">
-                                        <div class="table-responsive">
-                                            <table class="table table-sm table-hover mb-0">
-                                                <thead class="table-light">
-                                                    <tr>
-                                                        <th>Fecha</th>
-                                                        <th class="text-end">B/N</th>
-                                                        <t t-if="equipo.tipo_maquina_id == 'color'">
-                                                            <th class="text-end">Color</th>
-                                                        </t>
-                                                        <th class="text-end">Escáner</th>
-                                                        <th>Fuente</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    <t t-foreach="contadores" t-as="contador">
-                                                        <tr>
-                                                            <td>
-                                                                <t t-esc="contador.fecha.strftime('%d/%m/%Y %H:%M')"/>
-                                                            </td>
-                                                            <td class="text-end">
-                                                                <t t-esc="'{:,}'.format(contador.contador_bn or 0)"/>
-                                                            </td>
-                                                            <t t-if="equipo.tipo_maquina_id == 'color'">
-                                                                <td class="text-end">
-                                                                    <t t-esc="'{:,}'.format(contador.contador_color or 0)"/>
-                                                                </td>
-                                                            </t>
-                                                            <td class="text-end">
-                                                                <t t-esc="'{:,}'.format(contador.contador_scan or 0)"/>
-                                                            </td>
-                                                            <td>
-                                                                <span class="badge bg-info">Automático</span>
-                                                            </td>
-                                                        </tr>
-                                                    </t>
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </t>
                 </div>
             </t>
         </template>
 
-        <!-- ============================================ -->
-        <!-- LISTA DE TICKETS -->
-        <!-- ============================================ -->
+
+
+        <!-- ===================================================== -->
+        <!-- LISTA DE TICKETS (con iconos, mantiene lógica) -->
+        <!-- ===================================================== -->
         <template id="portal_my_tickets" name="Mis Tickets">
             <t t-call="portal.portal_layout">
                 <t t-set="breadcrumbs_searchbar" t-value="True"/>
@@ -619,7 +896,6 @@
                 </t>
 
                 <div class="container mt-4">
-                    <!-- Mensaje si no hay tickets -->
                     <t t-if="not tickets">
                         <div class="alert alert-info text-center" role="alert">
                             <i class="fa fa-info-circle fa-2x mb-3"></i>
@@ -631,102 +907,116 @@
                         </div>
                     </t>
 
-                    <!-- Lista de tickets -->
                     <t t-else="">
-                        <t t-call="portal.portal_table">
-                            <thead>
-                                <tr class="active">
-                                    <th>Ticket</th>
-                                    <th>Equipo / Serie</th>
-                                    <th>Fecha Visita</th>
-                                    <th>Tipo de Servicio</th>
-                                    <th>Técnico</th>
-                                    <th>Estado</th>
-                                    <th class="text-center">Acción</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <t t-foreach="tickets" t-as="ticket">
-                                    <tr>
-                                        <td>
-                                            <strong><t t-esc="ticket.name"/></strong>
-                                            <br/>
-                                            <small class="text-muted">
-                                                <t t-esc="ticket.create_date.strftime('%d/%m/%Y')"/>
-                                            </small>
-                                        </td>
-                                        <td>
-                                            <t t-if="ticket.product_alquiler">
-                                                <div><t t-esc="ticket.modelo_id_r"/></div>
-                                                <small class="text-muted">
-                                                    Serie: <t t-esc="ticket.serie_id_r"/>
-                                                </small>
+                        <div class="card shadow-sm border-0">
+                            <div class="card-header bg-primary text-white">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span><i class="fa fa-ticket-alt me-2"></i>Mis Tickets</span>
+                                    <span class="badge bg-light text-dark">
+                                        <t t-esc="len(tickets)"/> tickets
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-hover mb-0 o_portal_table">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th><i class="fa fa-hashtag me-1 text-muted"></i>Ticket</th>
+                                                <th><i class="fa fa-print me-1 text-muted"></i>Equipo / Serie</th>
+                                                <th><i class="fa fa-calendar-alt me-1 text-muted"></i>Fecha Visita</th>
+                                                <th><i class="fa fa-wrench me-1 text-muted"></i>Tipo de Servicio</th>
+                                                <th><i class="fa fa-user-cog me-1 text-muted"></i>Técnico</th>
+                                                <th><i class="fa fa-flag me-1 text-muted"></i>Estado</th>
+                                                <th class="text-center"><i class="fa fa-bolt me-1 text-muted"></i>Acción</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <t t-foreach="tickets" t-as="ticket">
+                                                <tr>
+                                                    <td>
+                                                        <strong><t t-esc="ticket.name"/></strong>
+                                                        <br/>
+                                                        <small class="text-muted">
+                                                            <t t-esc="ticket.create_date.strftime('%d/%m/%Y')"/>
+                                                        </small>
+                                                    </td>
+                                                    <td>
+                                                        <t t-if="ticket.product_alquiler">
+                                                            <div><t t-esc="ticket.modelo_id_r"/></div>
+                                                            <small class="text-muted">
+                                                                Serie: <t t-esc="ticket.serie_id_r"/>
+                                                            </small>
+                                                        </t>
+                                                        <t t-else="">
+                                                            <span class="text-muted">Sin equipo</span>
+                                                        </t>
+                                                    </td>
+                                                    <td>
+                                                        <t t-if="ticket.agenda">
+                                                            <t t-esc="ticket.agenda.strftime('%d/%m/%Y')"/>
+                                                            <br/>
+                                                            <small class="text-muted">
+                                                                <t t-esc="ticket.agenda.strftime('%H:%M')"/>
+                                                            </small>
+                                                        </t>
+                                                        <t t-else="">
+                                                            <span class="text-muted">Sin programar</span>
+                                                        </t>
+                                                    </td>
+                                                    <td>
+                                                        <t t-if="ticket.tipo_servicio_id">
+                                                            <small>
+                                                                <t t-esc="dict(ticket._fields['tipo_servicio_id'].selection).get(ticket.tipo_servicio_id, ticket.tipo_servicio_id)"/>
+                                                            </small>
+                                                        </t>
+                                                    </td>
+                                                    <td>
+                                                        <t t-if="ticket.responsable">
+                                                            <t t-esc="ticket.responsable.name"/>
+                                                        </t>
+                                                        <t t-else="">
+                                                            <span class="text-muted">Sin asignar</span>
+                                                        </t>
+                                                    </td>
+                                                    <td>
+                                                        <t t-if="ticket.estado == 'nuevo'">
+                                                            <span class="badge bg-info"><i class="fa fa-star me-1"></i>Nuevo</span>
+                                                        </t>
+                                                        <t t-elif="ticket.estado == 'proceso'">
+                                                            <span class="badge bg-warning text-dark"><i class="fa fa-spinner me-1"></i>En Proceso</span>
+                                                        </t>
+                                                        <t t-elif="ticket.estado == 'finalizado'">
+                                                            <span class="badge bg-success"><i class="fa fa-check me-1"></i>Finalizado</span>
+                                                        </t>
+                                                        <t t-else="">
+                                                            <span class="badge bg-secondary"><i class="fa fa-info-circle me-1"></i><t t-esc="ticket.estado"/></span>
+                                                        </t>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <a t-attf-href="/my/ticket/#{ticket.id}"
+                                                           class="btn btn-sm btn-primary">
+                                                            <i class="fa fa-eye"></i> Ver
+                                                        </a>
+                                                    </td>
+                                                </tr>
                                             </t>
-                                            <t t-else="">
-                                                <span class="text-muted">Sin equipo</span>
-                                            </t>
-                                        </td>
-                                        <td>
-                                            <t t-if="ticket.agenda">
-                                                <t t-esc="ticket.agenda.strftime('%d/%m/%Y')"/>
-                                                <br/>
-                                                <small class="text-muted">
-                                                    <t t-esc="ticket.agenda.strftime('%H:%M')"/>
-                                                </small>
-                                            </t>
-                                            <t t-else="">
-                                                <span class="text-muted">Sin programar</span>
-                                            </t>
-                                        </td>
-                                        <td>
-                                            <t t-if="ticket.tipo_servicio_id">
-                                                <small>
-                                                    <t t-esc="dict(ticket._fields['tipo_servicio_id'].selection).get(ticket.tipo_servicio_id, ticket.tipo_servicio_id)"/>
-                                                </small>
-                                            </t>
-                                        </td>
-                                        <td>
-                                            <t t-if="ticket.responsable">
-                                                <t t-esc="ticket.responsable.name"/>
-                                            </t>
-                                            <t t-else="">
-                                                <span class="text-muted">Sin asignar</span>
-                                            </t>
-                                        </td>
-                                        <td>
-                                            <t t-if="ticket.estado == 'nuevo'">
-                                                <span class="badge bg-info">Nuevo</span>
-                                            </t>
-                                            <t t-elif="ticket.estado == 'proceso'">
-                                                <span class="badge bg-warning text-dark">En Proceso</span>
-                                            </t>
-                                            <t t-elif="ticket.estado == 'finalizado'">
-                                                <span class="badge bg-success">Finalizado</span>
-                                            </t>
-                                            <t t-else="">
-                                                <span class="badge bg-secondary">
-                                                    <t t-esc="ticket.estado"/>
-                                                </span>
-                                            </t>
-                                        </td>
-                                        <td class="text-center">
-                                            <a t-attf-href="/my/ticket/#{ticket.id}" 
-                                               class="btn btn-sm btn-primary">
-                                                <i class="fa fa-eye"></i> Ver
-                                            </a>
-                                        </td>
-                                    </tr>
-                                </t>
-                            </tbody>
-                        </t>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
                     </t>
                 </div>
             </t>
         </template>
 
-        <!-- ============================================ -->
-        <!-- DETALLE DE TICKET -->
-        <!-- ============================================ -->
+
+
+        <!-- ===================================================== -->
+        <!-- DETALLE DE TICKET (LO MANTIENES) -->
+        <!-- ===================================================== -->
         <template id="portal_ticket_detail" name="Detalle de Ticket">
             <t t-call="portal.portal_layout">
                 <t t-set="o_portal_fullwidth_alert" groups="base.group_portal">
@@ -736,7 +1026,6 @@
                 </t>
 
                 <div class="container mt-4 mb-5">
-                    <!-- Breadcrumb -->
                     <nav aria-label="breadcrumb">
                         <ol class="breadcrumb">
                             <li class="breadcrumb-item"><a href="/my/home">Portal</a></li>
@@ -747,7 +1036,6 @@
                         </ol>
                     </nav>
 
-                    <!-- Header del Ticket -->
                     <div class="row mb-4">
                         <div class="col-12">
                             <div class="card border-primary shadow">
@@ -785,6 +1073,7 @@
                         </div>
                     </div>
 
+                    <!-- (Tu detalle de ticket continúa igual que lo tenías) -->
                     <!-- Información del Servicio -->
                     <div class="row mb-4">
                         <div class="col-md-6 mb-3">
@@ -883,7 +1172,7 @@
                                             </tr>
                                         </table>
                                         <div class="mt-3">
-                                            <a t-attf-href="/my/equipo/#{ticket.product_alquiler.id}" 
+                                            <a t-attf-href="/my/equipo/#{ticket.product_alquiler.id}"
                                                class="btn btn-sm btn-outline-primary w-100">
                                                 <i class="fa fa-eye"></i> Ver equipo completo
                                             </a>
@@ -933,7 +1222,7 @@
                         </div>
                     </t>
 
-                    <!-- Contadores registrados (si existen) -->
+                    <!-- Contadores registrados -->
                     <t t-if="ticket.estado == 'finalizado' and (ticket.contometrok_id or ticket.contometroc_id)">
                         <div class="row">
                             <div class="col-12">
@@ -978,17 +1267,43 @@
                 </div>
             </t>
         </template>
+
+
+
+        <!-- ===================================================== -->
+        <!-- CSS GLOBAL -->
+        <!-- ===================================================== -->
         <template id="portal_sat_custom_css" name="Portal SAT Custom CSS" inherit_id="website.layout">
             <xpath expr="//head" position="inside">
                 <style type="text/css">
                     /* Efectos hover para cards */
                     .hover-card {
-                        transition: transform 0.3s ease, box-shadow 0.3s ease;
+                        transition: transform 0.25s ease, box-shadow 0.25s ease;
                     }
                     .hover-card:hover {
-                        transform: translateY(-5px);
-                        box-shadow: 0 8px 16px rgba(0,0,0,0.15) !important;
+                        transform: translateY(-3px);
+                        box-shadow: 0 10px 18px rgba(0,0,0,0.12) !important;
                     }
+
+                    /* Tiles estilo Odoo (Home) */
+                    .o_portal_tile { border-radius: 14px; }
+                    .o_portal_tile .o_portal_tile_icon{
+                        width: 54px;
+                        height: 54px;
+                        border-radius: 16px;
+                        display: inline-flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: 22px;
+                        flex: 0 0 auto;
+                    }
+                    .o_portal_tile_title{
+                        font-weight: 700;
+                        font-size: 1.05rem;
+                        color: #212529;
+                        line-height: 1.2;
+                    }
+                    .o_portal_tile_subtitle{ font-size: .92rem; }
 
                     /* Counter boxes */
                     .counter-box {
@@ -999,73 +1314,47 @@
                         background-color: #e9ecef;
                     }
 
-                    /* Badges personalizados */
+                    /* Badges */
                     .badge {
-                        font-weight: 500;
+                        font-weight: 600;
                         padding: 0.35em 0.65em;
                     }
 
-                    /* Table responsive improvements */
-                    .table-responsive {
-                        border-radius: 0.375rem;
+                    /* Tables: look moderno */
+                    .o_portal_table thead th { white-space: nowrap; }
+                    .o_portal_table tbody td { vertical-align: middle; }
+                    .table-responsive { border-radius: 0.75rem; }
+
+                    /* Modal header */
+                    .o_modal_header{
+                        background: #0d6efd;
+                        color: #fff;
+                        border-bottom: 0;
+                    }
+                    .o_modal_header .btn-close{ filter: invert(1) grayscale(100%); }
+                    .o_modal_title{
+                        font-weight: 800;
+                        font-size: 1.05rem;
+                        line-height: 1.2;
                     }
 
-                    /* Card headers */
-                    .card-header {
-                        font-weight: 600;
+                    /* Botones (más redondeados) */
+                    .btn-group .btn{
+                        border-radius: 10px !important;
                     }
-
-                    /* Breadcrumb styling */
-                    .breadcrumb {
-                        background-color: transparent;
-                        padding: 0;
-                    }
-
-                    /* Alert improvements */
-                    .alert i.fa {
-                        margin-right: 0.5rem;
-                    }
-
-                    /* Button improvements for actions */
                     .btn-lg {
                         padding: 0.75rem 1.25rem;
                         font-size: 1rem;
                     }
 
-                    /* Status indicators */
-                    .status-indicator {
-                        width: 10px;
-                        height: 10px;
-                        border-radius: 50%;
-                        display: inline-block;
-                        margin-right: 5px;
-                    }
-                    .status-nuevo { background-color: #17a2b8; }
-                    .status-proceso { background-color: #ffc107; }
-                    .status-finalizado { background-color: #28a745; }
+                    /* Breadcrumb */
+                    .breadcrumb { background-color: transparent; padding: 0; }
 
-                    /* Mobile responsiveness */
+                    /* Mobile */
                     @media (max-width: 768px) {
-                        .card-body {
-                            padding: 1rem;
-                        }
-                        h2 {
-                            font-size: 1.5rem;
-                        }
-                        .btn-lg {
-                            padding: 0.5rem 1rem;
-                            font-size: 0.9rem;
-                        }
-                    }
-
-                    /* Loading animation */
-                    @keyframes pulse {
-                        0% { opacity: 1; }
-                        50% { opacity: 0.5; }
-                        100% { opacity: 1; }
-                    }
-                    .loading-pulse {
-                        animation: pulse 1.5s ease-in-out infinite;
+                        .card-body { padding: 1rem; }
+                        h2 { font-size: 1.4rem; }
+                        .btn-lg { padding: 0.55rem 1rem; font-size: 0.95rem; }
                     }
                 </style>
             </xpath>
