@@ -129,8 +129,7 @@
                                                 <th class="text-nowrap"><i class="fa fa-lock me-1 text-muted"></i>Bloqueo</th>
 
                                                 <th class="text-nowrap"><i class="fa fa-palette me-1 text-muted"></i>Tipo</th>
-                                                <th class="text-center text-nowrap"><i class="fa fa-tachometer-alt me-1 text-muted"></i>Contadores</th>
-                                                <th class="text-nowrap"><i class="fa fa-info-circle me-1 text-muted"></i>Estado</th>
+                                                <th class="text-center text-nowrap"><i class="fa fa-tachometer-alt me-1 text-muted"></i>Contadores</th>                                                
                                                 <th class="text-center text-nowrap"><i class="fa fa-bolt me-1 text-muted"></i>Acciones</th>
                                             </tr>
                                         </thead>
@@ -179,22 +178,32 @@
 
                                                     <!-- Mantenimiento (campo opcional, no rompe si no existe) -->
                                                     <td class="text-nowrap">
-                                                        <t t-if="'fecha_mantenimiento' in equipo._fields and equipo.fecha_mantenimiento">
-                                                            <span class="badge bg-info text-dark">
-                                                                <i class="fa fa-calendar-check me-1"></i>
-                                                                <t t-esc="equipo.fecha_mantenimiento.strftime('%d/%m/%Y')"/>
-                                                            </span>
-                                                        </t>
-                                                        <t t-elif="'proximo_mantenimiento' in equipo._fields and equipo.proximo_mantenimiento">
-                                                            <span class="badge bg-info text-dark">
-                                                                <i class="fa fa-calendar-check me-1"></i>
-                                                                <t t-esc="equipo.proximo_mantenimiento.strftime('%d/%m/%Y')"/>
-                                                            </span>
-                                                        </t>
-                                                        <t t-else="">
-                                                            <span class="text-muted">No programado</span>
-                                                        </t>
-                                                    </td>
+    <t t-if="'fecha_recurrente' in equipo._fields and equipo.fecha_recurrente">
+        <t t-set="hoy" t-value="fields.Date.today()"/>
+        <t t-if="equipo.fecha_recurrente &lt; hoy">
+            <span class="badge bg-danger">
+                <i class="fa fa-exclamation-triangle me-1"></i>
+                <t t-esc="equipo.fecha_recurrente.strftime('%d/%m/%Y')"/> (Vencido)
+            </span>
+        </t>
+        <t t-elif="equipo.fecha_recurrente == hoy">
+            <span class="badge bg-warning text-dark">
+                <i class="fa fa-bell me-1"></i>
+                Hoy
+            </span>
+        </t>
+        <t t-else="">
+            <span class="badge bg-info text-dark">
+                <i class="fa fa-calendar-check me-1"></i>
+                <t t-esc="equipo.fecha_recurrente.strftime('%d/%m/%Y')"/>
+            </span>
+        </t>
+    </t>
+    <t t-else="">
+        <span class="text-muted">No programado</span>
+    </t>
+</td>
+
 
                                                     <!-- Bloqueado (campo opcional) -->
                                                     <td class="text-nowrap">
@@ -269,30 +278,7 @@
                                                         </t>
                                                     </td>
 
-                                                    <!-- Estado -->
-                                                    <td class="text-nowrap">
-                                                        <t t-if="equipo.estado_alquiler_id == 'alquilada'">
-                                                            <span class="badge bg-success">
-                                                                <i class="fa fa-check-circle me-1"></i>Alquilado
-                                                            </span>
-                                                        </t>
-                                                        <t t-elif="equipo.estado_alquiler_id == 'con_problemas'">
-                                                            <span class="badge bg-danger">
-                                                                <i class="fa fa-exclamation-triangle me-1"></i>Con Problemas
-                                                            </span>
-                                                        </t>
-                                                        <t t-elif="equipo.estado_alquiler_id == 'lista'">
-                                                            <span class="badge bg-info text-dark">
-                                                                <i class="fa fa-thumbs-up me-1"></i>Listo
-                                                            </span>
-                                                        </t>
-                                                        <t t-else="">
-                                                            <span class="badge bg-secondary">
-                                                                <i class="fa fa-info-circle me-1"></i>
-                                                                <t t-esc="dict(equipo._fields['estado_alquiler_id'].selection).get(equipo.estado_alquiler_id, equipo.estado_alquiler_id)"/>
-                                                            </span>
-                                                        </t>
-                                                    </td>
+                                                   
 
                                                     <!-- Acciones: MODAL + quick actions (mantiene URLs) -->
                                                     <td class="text-center text-nowrap">
