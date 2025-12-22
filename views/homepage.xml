@@ -1,0 +1,534 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="andes_homepage_inherit" inherit_id="website.homepage" name="Home Andes SAT - Portal">
+        <!-- Reemplazamos el contenido principal de la home -->
+        <xpath expr="//main" position="replace">
+            <main id="wrap" class="andes-home">
+
+                <!-- HERO -->
+                <section class="andes-hero">
+                    <div class="container">
+                        <div class="row align-items-center">
+                            <div class="col-lg-6 py-4">
+                                <h1 class="andes-title">
+                                    Soporte técnico y mantenimiento de fotocopiadoras
+                                </h1>
+                                <p class="andes-subtitle">
+                                    Taller, reparaciones, mantenimiento preventivo y correctivo, y suministro de tóner para empresas.
+                                </p>
+
+                                <div class="d-flex gap-2 flex-wrap mt-4">
+                                    <!-- Si está logueado, mostrar acceso al portal -->
+                                    <t t-if="request.env.user.id != request.env.ref('base.public_user').id">
+                                        <a href="/my/equipos" class="btn btn-primary btn-lg andes-btn">
+                                            🖨️ Mis Equipos
+                                        </a>
+                                        <a href="/my/tickets" class="btn btn-outline-primary btn-lg andes-btn">
+                                            📋 Mis Tickets
+                                        </a>
+                                    </t>
+                                    <!-- Si NO está logueado, mostrar opciones generales -->
+                                    <t t-else="">
+                                        <a href="#servicio" class="btn btn-primary btn-lg andes-btn">
+                                            🔧 Solicitar Servicio
+                                        </a>
+                                        <a href="#toner" class="btn btn-outline-primary btn-lg andes-btn">
+                                            🖨️ Solicitar Tóner
+                                        </a>
+                                        <a href="/web/login" class="btn btn-light btn-lg andes-btn">
+                                            👤 Iniciar Sesión
+                                        </a>
+                                    </t>
+                                </div>
+
+                                <div class="andes-badges mt-4">
+                                    <span class="badge rounded-pill text-bg-light">✔ Atención rápida</span>
+                                    <span class="badge rounded-pill text-bg-light">🛠 Taller / Campo</span>
+                                    <span class="badge rounded-pill text-bg-light">📊 Seguimiento</span>
+                                </div>
+                            </div>
+
+                            <div class="col-lg-6 py-4">
+                                <img class="img-fluid rounded-4 shadow-sm"
+                                     src="/sat/static/src/img/hero_copier.png"
+                                     alt="Soporte fotocopiadoras"
+                                     onerror="this.style.display='none'"/>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ¿QUÉ HACEMOS? -->
+                <section class="andes-section">
+                    <div class="container">
+                        <h2 class="andes-h2 text-center mb-4">¿Qué hacemos?</h2>
+
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <div class="andes-card">
+                                    <div class="andes-icon">🔧</div>
+                                    <div class="andes-card-title">Reparaciones</div>
+                                    <div class="andes-card-text">Diagnóstico y reparación en taller o campo.</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="andes-card">
+                                    <div class="andes-icon">🛠️</div>
+                                    <div class="andes-card-title">Mantenimiento</div>
+                                    <div class="andes-card-text">Preventivo y correctivo con evidencias.</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="andes-card">
+                                    <div class="andes-icon">🖨️</div>
+                                    <div class="andes-card-title">Tóner y consumibles</div>
+                                    <div class="andes-card-text">Entrega y control de insumos.</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="andes-card">
+                                    <div class="andes-icon">📊</div>
+                                    <div class="andes-card-title">Gestión de equipos</div>
+                                    <div class="andes-card-text">Historial, reportes y seguimiento.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ACCESO RÁPIDO - Solo para usuarios autenticados -->
+                <t t-if="request.env.user.id != request.env.ref('base.public_user').id">
+                    <section class="andes-section andes-soft">
+                        <div class="container">
+                            <h2 class="andes-h2 mb-4">
+                                👋 Bienvenido, <t t-esc="request.env.user.name"/>
+                            </h2>
+
+                            <div class="row g-3">
+                                <!-- Panel de Equipos -->
+                                <div class="col-lg-6">
+                                    <div class="andes-panel">
+                                        <h3 class="andes-h3">🖨️ Mis Equipos</h3>
+                                        <p class="andes-muted">
+                                            Gestione sus equipos en alquiler
+                                        </p>
+
+                                        <div class="d-grid gap-2">
+                                            <a href="/my/equipos" class="btn btn-primary btn-lg">
+                                                📋 Ver mis equipos
+                                            </a>
+                                            <a href="/my/equipos?filterby=con_problemas" class="btn btn-outline-danger btn-lg">
+                                                ⚠️ Equipos con problemas
+                                            </a>
+                                        </div>
+
+                                        <!-- Contador de equipos -->
+                                        <t t-set="equipo_count" t-value="request.env['alquiler'].search_count([('cliente_id', '=', request.env.user.partner_id.id)])"/>
+                                        <div class="text-center mt-3">
+                                            <span class="badge bg-primary fs-6">
+                                                <t t-esc="equipo_count"/> equipos registrados
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Panel de Tickets -->
+                                <div class="col-lg-6">
+                                    <div class="andes-panel">
+                                        <h3 class="andes-h3">🎫 Mis Tickets</h3>
+                                        <p class="andes-muted">
+                                            Seguimiento de servicios técnicos
+                                        </p>
+
+                                        <div class="d-grid gap-2">
+                                            <a href="/my/tickets" class="btn btn-success btn-lg">
+                                                📋 Ver todos mis tickets
+                                            </a>
+                                            <a href="/my/tickets?filterby=proceso" class="btn btn-outline-warning btn-lg">
+                                                ⏱️ Tickets en proceso
+                                            </a>
+                                        </div>
+
+                                        <!-- Contador de tickets -->
+                                        <t t-set="ticket_count" t-value="request.env['ticket.alquiler'].search_count([('partner_id', '=', request.env.user.partner_id.id)])"/>
+                                        <t t-set="ticket_proceso" t-value="request.env['ticket.alquiler'].search_count([('partner_id', '=', request.env.user.partner_id.id), ('estado', '=', 'proceso')])"/>
+                                        <div class="text-center mt-3">
+                                            <span class="badge bg-success fs-6 me-2">
+                                                <t t-esc="ticket_count"/> tickets totales
+                                            </span>
+                                            <span class="badge bg-warning text-dark fs-6">
+                                                <t t-esc="ticket_proceso"/> en proceso
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Acciones Rápidas para Clientes Autenticados -->
+                            <div class="row g-3 mt-3">
+                                <div class="col-12">
+                                    <div class="andes-panel">
+                                        <h3 class="andes-h3">⚡ Acciones Rápidas</h3>
+                                        <div class="row g-2">
+                                            <div class="col-md-3">
+                                                <a href="#servicio" class="btn btn-outline-primary w-100">
+                                                    ➕ Reportar Problema
+                                                </a>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <a href="#toner" class="btn btn-outline-success w-100">
+                                                    🖨️ Solicitar Tóner
+                                                </a>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <a href="/my/tickets?filterby=nuevo" class="btn btn-outline-info w-100">
+                                                    🔍 Tickets Nuevos
+                                                </a>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <a href="/web/session/logout?redirect=/" class="btn btn-outline-secondary w-100">
+                                                    🚪 Cerrar Sesión
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </t>
+
+                <!-- ACCESO RÁPIDO - Para usuarios NO autenticados -->
+                <t t-else="">
+                    <section class="andes-section andes-soft">
+                        <div class="container">
+                            <h2 class="andes-h2 mb-4">Acceso rápido</h2>
+
+                            <div class="row g-3">
+                                <div class="col-lg-6">
+                                    <div class="andes-panel">
+                                        <h3 class="andes-h3">👤 Clientes</h3>
+                                        <p class="andes-muted">Crea solicitudes sin llamadas ni correos.</p>
+
+                                        <div class="d-grid gap-2">
+                                            <a href="#servicio" class="btn btn-success btn-lg">➕ Crear solicitud</a>
+                                            <a href="#toner" class="btn btn-primary btn-lg">🖨️ Solicitar tóner</a>
+                                            <a href="/web/login" class="btn btn-outline-primary btn-lg">
+                                                👤 Iniciar Sesión para Ver Estado
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-lg-6">
+                                    <div class="andes-panel">
+                                        <h3 class="andes-h3">🧑‍🔧 Trabajadores</h3>
+                                        <p class="andes-muted">Acceso al sistema de gestión.</p>
+
+                                        <div class="d-grid gap-2">
+                                            <a href="/web/login" class="btn btn-dark btn-lg">🔐 Acceder al Sistema</a>
+                                            <a href="/web" class="btn btn-outline-dark btn-lg">📋 Ver órdenes asignadas</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </t>
+
+                <!-- FORM: SERVICIO - Siempre visible -->
+                <section id="servicio" class="andes-section">
+                    <div class="container">
+                        <h2 class="andes-h2 mb-2">🔧 Solicitar servicio</h2>
+                        <p class="andes-muted mb-4">
+                            Describe el problema y registramos tu solicitud.
+                            <t t-if="request.env.user.id != request.env.ref('base.public_user').id">
+                                También puedes hacerlo desde 
+                                <a href="/my/equipos" class="fw-bold">tus equipos</a>.
+                            </t>
+                        </p>
+
+                        <div class="andes-form">
+                            <!-- INFO: Este formulario puede redirigir a tu controlador existente -->
+                            <div class="alert alert-info">
+                                <i class="fa fa-info-circle"></i>
+                                <strong>Opción 1:</strong> 
+                                <a href="/ticket/reportar_incidencia?id_registro=0" class="alert-link">
+                                    Usar formulario de reporte de incidencia →
+                                </a>
+                            </div>
+
+                            <!-- O mantener tu formulario aquí -->
+                            <form class="row g-3" method="post" action="/website/form/">
+                                <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                
+                                <div class="col-md-6">
+                                    <label class="form-label">Empresa / Cliente</label>
+                                    <input class="form-control" name="partner_name" 
+                                           t-att-value="request.env.user.partner_id.name if request.env.user.id != request.env.ref('base.public_user').id else ''"
+                                           placeholder="Ej: Andes Solution" required="required"/>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Contacto</label>
+                                    <input class="form-control" name="contact_name"
+                                           t-att-value="request.env.user.name if request.env.user.id != request.env.ref('base.public_user').id else ''"
+                                           placeholder="Nombre de quien reporta" required="required"/>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Teléfono / Celular</label>
+                                    <input class="form-control" type="tel" name="phone" 
+                                           placeholder="Ej: 999999999" required="required"/>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">N° de serie del equipo</label>
+                                    <input class="form-control" name="serial" 
+                                           placeholder="Ej: ABC12345"/>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">Problema / Detalle</label>
+                                    <textarea class="form-control" name="description" rows="4"
+                                              placeholder="Describa detalladamente el problema que está experimentando..." 
+                                              required="required"></textarea>
+                                </div>
+                                <div class="col-12">
+                                    <button type="submit" class="btn btn-primary btn-lg">
+                                        <i class="fa fa-paper-plane"></i> Enviar solicitud
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- FORM: TONER - Siempre visible -->
+                <section id="toner" class="andes-section andes-soft">
+                    <div class="container">
+                        <h2 class="andes-h2 mb-2">🖨️ Solicitar tóner</h2>
+                        <p class="andes-muted mb-4">
+                            Pedido rápido de consumibles.
+                            <t t-if="request.env.user.id != request.env.ref('base.public_user').id">
+                                O solicita desde 
+                                <a href="/my/equipos" class="fw-bold">tus equipos</a>.
+                            </t>
+                        </p>
+
+                        <div class="andes-form">
+                            <div class="alert alert-info">
+                                <i class="fa fa-info-circle"></i>
+                                <strong>Opción 1:</strong> 
+                                <a href="/toner/solicitar_toner?id_registro=0" class="alert-link">
+                                    Usar formulario de solicitud de tóner →
+                                </a>
+                            </div>
+
+                            <!-- O formulario básico -->
+                            <form class="row g-3" method="post" action="/website/form/">
+                                <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                
+                                <div class="col-md-6">
+                                    <label class="form-label">Cliente</label>
+                                    <input class="form-control" name="toner_cliente"
+                                           t-att-value="request.env.user.partner_id.name if request.env.user.id != request.env.ref('base.public_user').id else ''"
+                                           placeholder="Nombre de empresa" required="required"/>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Modelo del equipo</label>
+                                    <input class="form-control" name="toner_machine_model" 
+                                           placeholder="Ej: Sharp MX-2651" required="required"/>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Color</label>
+                                    <select class="form-select" name="toner_color">
+                                        <option value="black" selected="selected">Negro</option>
+                                        <option value="cyan">Cyan</option>
+                                        <option value="magenta">Magenta</option>
+                                        <option value="yellow">Amarillo</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Cantidad</label>
+                                    <input class="form-control" type="number" min="1" name="qty" 
+                                           value="1" required="required"/>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Teléfono</label>
+                                    <input class="form-control" type="tel" name="toner_phone" 
+                                           placeholder="999999999" required="required"/>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">Dirección de entrega</label>
+                                    <input class="form-control" name="address" 
+                                           placeholder="Ej: Av. ... / Referencia ..." required="required"/>
+                                </div>
+                                <div class="col-12">
+                                    <button type="submit" class="btn btn-success btn-lg">
+                                        <i class="fa fa-check"></i> Solicitar tóner
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- FOOTER SIMPLE -->
+                <section class="andes-footer">
+                    <div class="container">
+                        <div class="row g-3 align-items-center">
+                            <div class="col-md-4">
+                                <strong>Soporte Técnico</strong><br/>
+                                <small>Lunes a viernes 8:00 – 18:00</small>
+                            </div>
+                            <div class="col-md-4 text-center">
+                                <a href="tel:+51924894829" class="text-decoration-none">
+                                    📱 +51 924 894 829
+                                </a>
+                            </div>
+                            <div class="col-md-4 text-md-end">
+                                <a href="mailto:soporte@andescopiers.com.pe" class="text-decoration-none">
+                                    ✉️ soporte@andescopiers.com.pe
+                                </a>
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-12 text-center">
+                                <small class="text-muted">
+                                    © 2024 Andes Copiers - Soporte Técnico Especializado
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+            </main>
+        </xpath>
+    </template>
+
+    <!-- CSS PERSONALIZADO PARA LA HOME -->
+    <template id="andes_home_assets" inherit_id="website.layout">
+        <xpath expr="//head" position="inside">
+            <style type="text/css">
+                /* Hero Section */
+                .andes-hero {
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                    padding: 60px 0;
+                }
+                .andes-title {
+                    font-size: 2.5rem;
+                    font-weight: 700;
+                    margin-bottom: 1rem;
+                }
+                .andes-subtitle {
+                    font-size: 1.2rem;
+                    opacity: 0.95;
+                }
+                .andes-btn {
+                    border-radius: 50px;
+                    padding: 12px 30px;
+                    font-weight: 600;
+                }
+                .andes-badges .badge {
+                    margin-right: 8px;
+                    padding: 8px 16px;
+                    font-weight: 500;
+                }
+
+                /* Sections */
+                .andes-section {
+                    padding: 60px 0;
+                }
+                .andes-soft {
+                    background-color: #f8f9fa;
+                }
+                .andes-h2 {
+                    font-size: 2rem;
+                    font-weight: 700;
+                    color: #2d3748;
+                }
+                .andes-h3 {
+                    font-size: 1.5rem;
+                    font-weight: 600;
+                    color: #2d3748;
+                    margin-bottom: 0.5rem;
+                }
+                .andes-muted {
+                    color: #718096;
+                }
+
+                /* Cards */
+                .andes-card {
+                    background: white;
+                    border-radius: 12px;
+                    padding: 30px 20px;
+                    text-align: center;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                    transition: transform 0.3s ease, box-shadow 0.3s ease;
+                    height: 100%;
+                }
+                .andes-card:hover {
+                    transform: translateY(-5px);
+                    box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+                }
+                .andes-icon {
+                    font-size: 3rem;
+                    margin-bottom: 1rem;
+                }
+                .andes-card-title {
+                    font-size: 1.2rem;
+                    font-weight: 600;
+                    margin-bottom: 0.5rem;
+                    color: #2d3748;
+                }
+                .andes-card-text {
+                    color: #718096;
+                    font-size: 0.95rem;
+                }
+
+                /* Panel */
+                .andes-panel {
+                    background: white;
+                    border-radius: 12px;
+                    padding: 30px;
+                    box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+                    height: 100%;
+                }
+
+                /* Forms */
+                .andes-form {
+                    background: white;
+                    border-radius: 12px;
+                    padding: 30px;
+                    box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+                    max-width: 800px;
+                    margin: 0 auto;
+                }
+
+                /* Footer */
+                .andes-footer {
+                    background: #2d3748;
+                    color: white;
+                    padding: 30px 0;
+                }
+                .andes-footer a {
+                    color: white;
+                }
+                .andes-footer a:hover {
+                    color: #cbd5e0;
+                }
+
+                /* Responsive */
+                @media (max-width: 768px) {
+                    .andes-title {
+                        font-size: 2rem;
+                    }
+                    .andes-subtitle {
+                        font-size: 1rem;
+                    }
+                    .andes-h2 {
+                        font-size: 1.5rem;
+                    }
+                }
+            </style>
+        </xpath>
+    </template>
+</odoo>

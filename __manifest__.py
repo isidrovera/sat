@@ -150,7 +150,8 @@
         'views/gemini_config_views.xml',
         'views/modelo_accesorios.xml',
         'views/sat_import_line_views.xml',
-        'views/portal_templates.xml',        
+        'views/portal_templates.xml',
+        'views/homepage.xml',        
         'wizards/sat_import_assign_header_wizard_views.xml',
         'views/acciones_menus.xml',
     ],
@@ -199,6 +200,7 @@
             '/sat/static/src/scss/list_dashboard.scss',
             'sat/static/src/scss/sat_dashboard.scss',
             'sat/static/src/scss/alquiler_dashboard.scss',
+            'sat/static/src/scss/andes_home.scss',
             
             
             # XML existente
