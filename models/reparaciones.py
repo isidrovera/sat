@@ -1216,15 +1216,26 @@ class Reparaciones(models.Model):
 
 
     def _abrir_wizard_autenticacion(self):
-        """Abre el wizard de autenticación"""
+        """Abre el wizard de autenticación SIN precargar serie/modelo."""
+        self.ensure_one()
         _logger.info(f"Abriendo wizard de autenticación para usuario {self.env.user.name}")
+
         return {
             'type': 'ir.actions.act_window',
             'res_model': 'reparacion.autenticacion.wizard',
             'view_mode': 'form',
             'target': 'new',
-            'context': {'default_reparacion_id': self.id},
+            # 👇 NO mandes defaults de serie/modelo
+            # 👇 Deja active_id para que el wizard valide contra esta reparación
+            'context': {
+                'active_model': 'reparaciones.reparaciones',
+                'active_id': self.id,
+                'active_ids': [self.id],
+                # ✅ bandera para que el wizard sepa que se abrió desde finalizar
+                'from_finalizar_reparacion': True,
+            },
         }
+
 
 
     def _normalizar_contometro(self, valor):
