@@ -367,16 +367,6 @@
             </t>
         </template>
 
-        <!-- REEMPLAZAR LA HOMEPAGE ORIGINAL -->
-        <record id="website.homepage" model="ir.ui.view">
-            <field name="name">Homepage</field>
-            <field name="key">website.homepage</field>
-            <field name="type">qweb</field>
-            <field name="arch" type="xml">
-                <t t-call="sat.andes_homepage"/>
-            </field>
-        </record>
-
         <!-- CSS PERSONALIZADO -->
         <template id="andes_home_assets" inherit_id="website.layout">
             <xpath expr="//head" position="inside">
