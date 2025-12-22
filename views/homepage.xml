@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <template id="andes_homepage_inherit" inherit_id="website.homepage" name="Home Andes SAT - Portal">
-        <!-- Reemplazamos el contenido principal de la home -->
-        <xpath expr="//main" position="replace">
-            <main id="wrap" class="andes-home">
+        <!-- Reemplazamos el contenido del wrap -->
+        <xpath expr="//div[@id='wrap']" position="replace">
+            <div id="wrap" class="andes-home">
 
                 <!-- HERO -->
                 <section class="andes-hero">
@@ -19,16 +19,7 @@
 
                                 <div class="d-flex gap-2 flex-wrap mt-4">
                                     <!-- Si está logueado, mostrar acceso al portal -->
-                                    <t t-if="request.env.user.id != request.env.ref('base.public_user').id">
-                                        <a href="/my/equipos" class="btn btn-primary btn-lg andes-btn">
-                                            🖨️ Mis Equipos
-                                        </a>
-                                        <a href="/my/tickets" class="btn btn-outline-primary btn-lg andes-btn">
-                                            📋 Mis Tickets
-                                        </a>
-                                    </t>
-                                    <!-- Si NO está logueado, mostrar opciones generales -->
-                                    <t t-else="">
+                                    <t t-if="request.env.user._is_public()">
                                         <a href="#servicio" class="btn btn-primary btn-lg andes-btn">
                                             🔧 Solicitar Servicio
                                         </a>
@@ -37,6 +28,15 @@
                                         </a>
                                         <a href="/web/login" class="btn btn-light btn-lg andes-btn">
                                             👤 Iniciar Sesión
+                                        </a>
+                                    </t>
+                                    <!-- Si está logueado -->
+                                    <t t-else="">
+                                        <a href="/my/equipos" class="btn btn-primary btn-lg andes-btn">
+                                            🖨️ Mis Equipos
+                                        </a>
+                                        <a href="/my/tickets" class="btn btn-outline-primary btn-lg andes-btn">
+                                            📋 Mis Tickets
                                         </a>
                                     </t>
                                 </div>
@@ -52,6 +52,7 @@
                                 <img class="img-fluid rounded-4 shadow-sm"
                                      src="/sat/static/src/img/hero_copier.png"
                                      alt="Soporte fotocopiadoras"
+                                     style="max-height: 400px; object-fit: cover;"
                                      onerror="this.style.display='none'"/>
                             </div>
                         </div>
@@ -97,7 +98,7 @@
                 </section>
 
                 <!-- ACCESO RÁPIDO - Solo para usuarios autenticados -->
-                <t t-if="request.env.user.id != request.env.ref('base.public_user').id">
+                <t t-if="not request.env.user._is_public()">
                     <section class="andes-section andes-soft">
                         <div class="container">
                             <h2 class="andes-h2 mb-4">
@@ -199,7 +200,7 @@
                 </t>
 
                 <!-- ACCESO RÁPIDO - Para usuarios NO autenticados -->
-                <t t-else="">
+                <t t-if="request.env.user._is_public()">
                     <section class="andes-section andes-soft">
                         <div class="container">
                             <h2 class="andes-h2 mb-4">Acceso rápido</h2>
@@ -242,60 +243,16 @@
                         <h2 class="andes-h2 mb-2">🔧 Solicitar servicio</h2>
                         <p class="andes-muted mb-4">
                             Describe el problema y registramos tu solicitud.
-                            <t t-if="request.env.user.id != request.env.ref('base.public_user').id">
-                                También puedes hacerlo desde 
-                                <a href="/my/equipos" class="fw-bold">tus equipos</a>.
-                            </t>
                         </p>
 
                         <div class="andes-form">
-                            <!-- INFO: Este formulario puede redirigir a tu controlador existente -->
                             <div class="alert alert-info">
                                 <i class="fa fa-info-circle"></i>
-                                <strong>Opción 1:</strong> 
-                                <a href="/ticket/reportar_incidencia?id_registro=0" class="alert-link">
-                                    Usar formulario de reporte de incidencia →
+                                <strong>Usa nuestro formulario completo:</strong> 
+                                <a href="/api/escanear_qr" class="alert-link fw-bold">
+                                    Ir al formulario de reporte →
                                 </a>
                             </div>
-
-                            <!-- O mantener tu formulario aquí -->
-                            <form class="row g-3" method="post" action="/website/form/">
-                                <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
-                                
-                                <div class="col-md-6">
-                                    <label class="form-label">Empresa / Cliente</label>
-                                    <input class="form-control" name="partner_name" 
-                                           t-att-value="request.env.user.partner_id.name if request.env.user.id != request.env.ref('base.public_user').id else ''"
-                                           placeholder="Ej: Andes Solution" required="required"/>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Contacto</label>
-                                    <input class="form-control" name="contact_name"
-                                           t-att-value="request.env.user.name if request.env.user.id != request.env.ref('base.public_user').id else ''"
-                                           placeholder="Nombre de quien reporta" required="required"/>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Teléfono / Celular</label>
-                                    <input class="form-control" type="tel" name="phone" 
-                                           placeholder="Ej: 999999999" required="required"/>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">N° de serie del equipo</label>
-                                    <input class="form-control" name="serial" 
-                                           placeholder="Ej: ABC12345"/>
-                                </div>
-                                <div class="col-12">
-                                    <label class="form-label">Problema / Detalle</label>
-                                    <textarea class="form-control" name="description" rows="4"
-                                              placeholder="Describa detalladamente el problema que está experimentando..." 
-                                              required="required"></textarea>
-                                </div>
-                                <div class="col-12">
-                                    <button type="submit" class="btn btn-primary btn-lg">
-                                        <i class="fa fa-paper-plane"></i> Enviar solicitud
-                                    </button>
-                                </div>
-                            </form>
                         </div>
                     </div>
                 </section>
@@ -306,66 +263,16 @@
                         <h2 class="andes-h2 mb-2">🖨️ Solicitar tóner</h2>
                         <p class="andes-muted mb-4">
                             Pedido rápido de consumibles.
-                            <t t-if="request.env.user.id != request.env.ref('base.public_user').id">
-                                O solicita desde 
-                                <a href="/my/equipos" class="fw-bold">tus equipos</a>.
-                            </t>
                         </p>
 
                         <div class="andes-form">
                             <div class="alert alert-info">
                                 <i class="fa fa-info-circle"></i>
-                                <strong>Opción 1:</strong> 
-                                <a href="/toner/solicitar_toner?id_registro=0" class="alert-link">
-                                    Usar formulario de solicitud de tóner →
+                                <strong>Usa nuestro formulario completo:</strong> 
+                                <a href="/api/escanear_qr" class="alert-link fw-bold">
+                                    Ir al formulario de solicitud →
                                 </a>
                             </div>
-
-                            <!-- O formulario básico -->
-                            <form class="row g-3" method="post" action="/website/form/">
-                                <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
-                                
-                                <div class="col-md-6">
-                                    <label class="form-label">Cliente</label>
-                                    <input class="form-control" name="toner_cliente"
-                                           t-att-value="request.env.user.partner_id.name if request.env.user.id != request.env.ref('base.public_user').id else ''"
-                                           placeholder="Nombre de empresa" required="required"/>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Modelo del equipo</label>
-                                    <input class="form-control" name="toner_machine_model" 
-                                           placeholder="Ej: Sharp MX-2651" required="required"/>
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Color</label>
-                                    <select class="form-select" name="toner_color">
-                                        <option value="black" selected="selected">Negro</option>
-                                        <option value="cyan">Cyan</option>
-                                        <option value="magenta">Magenta</option>
-                                        <option value="yellow">Amarillo</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Cantidad</label>
-                                    <input class="form-control" type="number" min="1" name="qty" 
-                                           value="1" required="required"/>
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Teléfono</label>
-                                    <input class="form-control" type="tel" name="toner_phone" 
-                                           placeholder="999999999" required="required"/>
-                                </div>
-                                <div class="col-12">
-                                    <label class="form-label">Dirección de entrega</label>
-                                    <input class="form-control" name="address" 
-                                           placeholder="Ej: Av. ... / Referencia ..." required="required"/>
-                                </div>
-                                <div class="col-12">
-                                    <button type="submit" class="btn btn-success btn-lg">
-                                        <i class="fa fa-check"></i> Solicitar tóner
-                                    </button>
-                                </div>
-                            </form>
                         </div>
                     </div>
                 </section>
@@ -379,12 +286,12 @@
                                 <small>Lunes a viernes 8:00 – 18:00</small>
                             </div>
                             <div class="col-md-4 text-center">
-                                <a href="tel:+51924894829" class="text-decoration-none">
+                                <a href="tel:+51924894829" class="text-decoration-none text-white">
                                     📱 +51 924 894 829
                                 </a>
                             </div>
                             <div class="col-md-4 text-md-end">
-                                <a href="mailto:soporte@andescopiers.com.pe" class="text-decoration-none">
+                                <a href="mailto:soporte@andescopiers.com.pe" class="text-decoration-none text-white">
                                     ✉️ soporte@andescopiers.com.pe
                                 </a>
                             </div>
@@ -399,7 +306,7 @@
                     </div>
                 </section>
 
-            </main>
+            </div>
         </xpath>
     </template>
 
