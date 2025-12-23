@@ -29,19 +29,19 @@
               class="btn-secondary"
               invisible="reparaciones_count == 0" />
               <button name="action_cargar_contometro_proveedor"
-            string="Cargar contómetro proveedor"
-            type="object"
-            class="oe_highlight"
-            groups="base.group_system"
-            help="Carga el valor actual del contómetro al campo contometro_proveedor (para migración de datos antiguos)"/>
-    
-    <button name="action_test_snmp_notification"
-            string="🧪 TEST: Simular SNMP"
-            type="object"
-            class="btn-warning"
-            groups="base.group_system"
-            help="SOLO PARA PRUEBAS: Simula un cambio de contómetro por SNMP para probar las alertas"/>
-</header>
+                    string="Cargar contómetro proveedor"
+                    type="object"
+                    class="oe_highlight"
+                    groups="base.group_system"
+                    help="Carga el valor actual del contómetro al campo contometro_proveedor (para migración de datos antiguos)"/>
+            
+            <button name="action_test_snmp_notification"
+                    string="🧪 TEST: Simular SNMP"
+                    type="object"
+                    class="btn-warning"
+                    groups="base.group_system"
+                    help="SOLO PARA PRUEBAS: Simula un cambio de contómetro por SNMP para probar las alertas"/>
+
             <!--<button
             name="action_crear_reparaciones" string="Crear Reparaciones Masivas" 
                 type="object" class="btn-primary" icon="fa-cogs"
