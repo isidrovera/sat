@@ -28,7 +28,7 @@
               icon="fa-images"
               class="btn-secondary"
               invisible="reparaciones_count == 0" />
-              <button name="action_cargar_contometro_proveedor"
+              <button name="action_cargar_contometro_proveedor_masivo"
                     string="Cargar contómetro proveedor"
                     type="object"
                     class="oe_highlight"

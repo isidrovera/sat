@@ -57,35 +57,81 @@ class SatSat(models.Model):
         return record
 
 
-    def action_cargar_contometro_proveedor(self):
+    @api.model
+    def action_cargar_contometro_proveedor_masivo(self):
         """
-        Carga el valor actual del contómetro al campo contometro_proveedor
-        para registros que no lo tienen (migración de datos antiguos).
+        Carga el contómetro proveedor para TODOS los registros que no lo tienen.
+        Ejecutar UNA SOLA VEZ para migración de datos antiguos.
         """
-        for record in self:
-            if not record.contometro_proveedor and record.contometro:
+        # Buscar todos los registros sin contometro_proveedor
+        records = self.search([
+            ('contometro_proveedor', '=', False),
+            ('contometro', '!=', False)
+        ])
+        
+        total = len(records)
+        
+        if not records:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Sin registros'),
+                    'message': _('No hay registros que requieran carga de contómetro proveedor.'),
+                    'type': 'info',
+                    'sticky': False,
+                }
+            }
+        
+        _logger.info(
+            "[MIGRACIÓN MASIVA] Iniciando carga de contómetro proveedor para %s registros",
+            total
+        )
+        
+        contador_exitosos = 0
+        contador_errores = 0
+        
+        for record in records:
+            try:
                 record.sudo().write({
                     'contometro_proveedor': record.contometro,
                 })
-                _logger.info(
-                    "[MIGRACIÓN] Contómetro proveedor cargado para ID %s: %s",
+                contador_exitosos += 1
+                
+                _logger.debug(
+                    "[MIGRACIÓN MASIVA] OK - ID %s: %s",
                     record.id, record.contometro
                 )
                 
-                # Mensaje en chatter
-                record.message_post(
-                    body=f"Se cargó el contómetro proveedor con el valor actual: <b>{record.contometro}</b>",
-                    subtype_xmlid='mail.mt_note'
+            except Exception as e:
+                contador_errores += 1
+                _logger.error(
+                    "[MIGRACIÓN MASIVA] ERROR - ID %s: %s",
+                    record.id, e
                 )
+        
+        # Mensaje final
+        mensaje = _(
+            'Migración completada:\n'
+            '✅ Exitosos: %(ok)s\n'
+            '❌ Errores: %(err)s\n'
+            '📊 Total procesados: %(total)s'
+        ) % {
+            'ok': contador_exitosos,
+            'err': contador_errores,
+            'total': total
+        }
+        
+        _logger.info("[MIGRACIÓN MASIVA] Finalizada - %s", mensaje)
         
         return {
             'type': 'ir.actions.client',
             'tag': 'display_notification',
             'params': {
-                'title': _('Contómetro proveedor cargado'),
-                'message': _('Se ha cargado el contómetro proveedor para los registros seleccionados.'),
-                'type': 'success',
-                'sticky': False,
+                'title': _('Migración masiva completada'),
+                'message': mensaje,
+                'type': 'success' if contador_errores == 0 else 'warning',
+                'sticky': True,
             }
         }
 
