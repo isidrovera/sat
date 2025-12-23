@@ -37,7 +37,160 @@ class SatSat(models.Model):
             if len(items) >= 1:
                 raise ValidationError(_("El número de serie debe ser único."))
 
+    @api.model
+    def create(self, vals):
+        """
+        Al crear un nuevo registro, copia automáticamente el contómetro 
+        al campo contometro_proveedor (valor inicial del proveedor).
+        """
+        # Si viene contómetro pero no contometro_proveedor, copiar automáticamente
+        if vals.get('contometro') and not vals.get('contometro_proveedor'):
+            vals['contometro_proveedor'] = vals['contometro']
+            _logger.info(
+                "[CREATE] Copiando contómetro → contometro_proveedor: %s",
+                vals['contometro']
+            )
+        
+        # Crear el registro normalmente
+        record = super(SatSat, self).create(vals)
+        
+        return record
 
+
+    def action_cargar_contometro_proveedor(self):
+        """
+        Carga el valor actual del contómetro al campo contometro_proveedor
+        para registros que no lo tienen (migración de datos antiguos).
+        """
+        for record in self:
+            if not record.contometro_proveedor and record.contometro:
+                record.sudo().write({
+                    'contometro_proveedor': record.contometro,
+                })
+                _logger.info(
+                    "[MIGRACIÓN] Contómetro proveedor cargado para ID %s: %s",
+                    record.id, record.contometro
+                )
+                
+                # Mensaje en chatter
+                record.message_post(
+                    body=f"Se cargó el contómetro proveedor con el valor actual: <b>{record.contometro}</b>",
+                    subtype_xmlid='mail.mt_note'
+                )
+        
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': _('Contómetro proveedor cargado'),
+                'message': _('Se ha cargado el contómetro proveedor para los registros seleccionados.'),
+                'type': 'success',
+                'sticky': False,
+            }
+        }
+
+
+    def action_test_snmp_notification(self):
+        """
+        FUNCIÓN DE PRUEBA: Simula un cambio de contómetro por SNMP
+        para probar las notificaciones de alertas.
+        
+        ⚠️ SOLO PARA DESARROLLO/TESTING
+        """
+        self.ensure_one()
+        
+        # Verificar que tenga contometro_proveedor
+        if not self.contometro_proveedor:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Error'),
+                    'message': _('Esta máquina no tiene contómetro proveedor. Usa el botón "Cargar contómetro proveedor" primero.'),
+                    'type': 'danger',
+                    'sticky': True,
+                }
+            }
+        
+        # Obtener valores actuales
+        old_digits = re.sub(r'[^\d]', '', self.contometro or '0')
+        old_val = int(old_digits) if old_digits else 0
+        
+        # Simular un cambio anómalo (agregar un dígito)
+        new_val = old_val * 10 + 59  # Ej: 6624 → 66259
+        
+        _logger.error(
+            "=" * 80 + "\n"
+            "[TEST SNMP] INICIANDO PRUEBA DE NOTIFICACIÓN\n"
+            "ID: %s | Serie: %s\n"
+            "Contómetro proveedor: %s\n"
+            "Contómetro actual: %s (%s)\n"
+            "Valor simulado nuevo: %s\n" +
+            "=" * 80,
+            self.id, self.serie_id,
+            self.contometro_proveedor,
+            self.contometro, old_val,
+            new_val
+        )
+        
+        # Guardar valor anterior para restaurar después
+        contometro_original = self.contometro
+        
+        try:
+            # Simular actualización SNMP
+            self.sudo().write({
+                'contometro': str(new_val),
+                'ultima_fuente_actualizacion': 'snmp',
+                'contador_antes_snmp': str(old_val),
+                'ultima_actualizacion_snmp': fields.Datetime.now(),
+                'total_actualizaciones_snmp': self.total_actualizaciones_snmp + 1,
+            })
+            
+            _logger.error("[TEST SNMP] ✅ Actualización simulada exitosa")
+            
+            # Restaurar valor original después de 5 segundos (opcional)
+            # Puedes comentar esto si quieres mantener el cambio
+            """
+            import threading
+            def restaurar():
+                import time
+                time.sleep(5)
+                try:
+                    self.sudo().write({'contometro': contometro_original})
+                    _logger.error("[TEST SNMP] Valor restaurado a: %s", contometro_original)
+                except Exception as e:
+                    _logger.error("[TEST SNMP] Error restaurando: %s", e)
+            
+            threading.Thread(target=restaurar, daemon=True).start()
+            """
+            
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Prueba ejecutada'),
+                    'message': _(
+                        'Se simuló cambio SNMP: %(old)s → %(new)s\n'
+                        'Revisa el log y tu correo para ver si llegó la alerta.'
+                    ) % {'old': f'{old_val:,}', 'new': f'{new_val:,}'},
+                    'type': 'warning',
+                    'sticky': True,
+                }
+            }
+            
+        except Exception as e:
+            _logger.error("[TEST SNMP] ❌ Error en prueba: %s", e, exc_info=True)
+            
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Error en prueba'),
+                    'message': str(e),
+                    'type': 'danger',
+                    'sticky': True,
+                }
+            }
     reparaciones_count = fields.Integer(string='Reparaciones', compute='_compute_reparaciones_count')
 
     reparaciones_ids = fields.One2many('reparaciones.reparaciones', 'maquina_id')
