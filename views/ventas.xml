@@ -155,6 +155,7 @@
                   help="Fecha programada para la próxima revisión técnica. Establecer con al menos 48 horas de anticipación." />
                 <field name="autorizacion_cambio_digitos"
                   help="Marque esta casilla si se ha autorizado modificación de dígitos o configuración especial del equipo." />
+                <field name="contometro_proveedor"/>
               </group>
             </group>
             <!-- PESTAÑAS: Con instrucciones mejoradas -->
