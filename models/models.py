@@ -853,7 +853,7 @@ class SatSat(models.Model):
                     _logger.debug(f"Cambiando a estado de problema para ID {record.id}.")
                     need_problem_notification = True
 
-                # Si sale de estados de problema -> limpiar descripción
+                # Si sale de estados de problema → limpiar descripción
                 elif estado_actual in estados_problema and nuevo_estado not in estados_problema:
                     _logger.debug(
                         f"Saliendo de estado de problema para ID {record.id}. "
@@ -975,6 +975,11 @@ class SatSat(models.Model):
                         old_val = int(old_digits) if old_digits else 0
                         new_val = int(new_digits) if new_digits else 0
 
+                        _logger.error(
+                            "[SNMP DEBUG] ID=%s | old_val=%s new_val=%s | fuente=%s",
+                            record.id, old_val, new_val, fuente_actual
+                        )
+
                         # =====================================================
                         # ✅ CASO 1: ALERTA Proveedor vs SNMP (WhatsApp + Correo)
                         #     SOLO 1 VEZ aunque SNMP llegue cada 5 min
@@ -982,16 +987,22 @@ class SatSat(models.Model):
                         prov_val = 0
                         try:
                             prov_val = record._to_int_digits(record.contometro_proveedor)
-                        except Exception:
+                        except Exception as e:
+                            _logger.error("[SNMP DEBUG] Error obteniendo prov_val: %s", e)
                             prov_val = 0
 
                         ya_alertado = bool(record.alerta_proveedor_snmp_enviada)
                         prov_alert_sent_this_cycle = False
 
+                        _logger.error(
+                            "[SNMP DEBUG] prov_val=%s | ya_alertado=%s | contometro_proveedor='%s'",
+                            prov_val, ya_alertado, record.contometro_proveedor
+                        )
+
                         if prov_val and record._is_proveedor_vs_snmp_alert(prov_val, new_val):
                             if not ya_alertado:
-                                _logger.info(
-                                    "[SNMP ALERT] Proveedor vs SNMP ANORMAL (1ra vez). prov=%s snmp=%s | ID=%s",
+                                _logger.error(
+                                    "[SNMP ALERT] ✅ ENVIANDO alerta Proveedor vs SNMP. prov=%s snmp=%s | ID=%s",
                                     prov_val, new_val, record.id
                                 )
 
@@ -1001,11 +1012,12 @@ class SatSat(models.Model):
                                 except Exception as e:
                                     _logger.error("[SNMP->WA] Error alertando al técnico: %s", e)
 
-                                # 2) Correo (proveedor -> snmp)
+                                # 2) Correo (ES ANOMALÍA - proveedor vs SNMP)
                                 try:
                                     record.notify_snmp_counter_update(
                                         previous_counter=prov_val,
-                                        new_counter=new_val
+                                        new_counter=new_val,
+                                        is_anomaly=True  # ✅ MARCAR COMO ANOMALÍA
                                     )
                                 except Exception as e:
                                     _logger.error("[SNMP->MAIL] Error enviando correo proveedor vs SNMP: %s", e)
@@ -1018,13 +1030,13 @@ class SatSat(models.Model):
                                 except Exception as e:
                                     _logger.error("[SNMP ALERT] Error marcando alerta_proveedor_snmp_enviada: %s", e)
                             else:
-                                _logger.debug(
-                                    "[SNMP ALERT] Ya alertado antes. prov=%s snmp=%s -> NO repetir | ID=%s",
-                                    prov_val, new_val, record.id
+                                _logger.error(
+                                    "[SNMP ALERT] ❌ Ya alertado antes. NO repetir | ID=%s",
+                                    record.id
                                 )
                         else:
-                            _logger.debug(
-                                "[SNMP] Proveedor vs SNMP normal o sin proveedor. prov=%s snmp=%s | ID=%s",
+                            _logger.error(
+                                "[SNMP] ℹ️ Proveedor vs SNMP normal o sin proveedor. prov=%s snmp=%s | ID=%s",
                                 prov_val, new_val, record.id
                             )
 
@@ -1033,30 +1045,48 @@ class SatSat(models.Model):
                         # SOLO si NO se envió alerta Proveedor->SNMP en este ciclo
                         # Y SOLO si es un INCREMENTO anómalo (para reclamar)
                         # =====================================================
+                        _logger.error(
+                            "[SNMP DEBUG] Evaluando CASO 2 | prov_alert_sent=%s",
+                            prov_alert_sent_this_cycle
+                        )
+
                         if not prov_alert_sent_this_cycle:
                             # Evaluar si el cambio old->new es anómalo (SOLO incrementos)
-                            if record._is_counter_anomaly(old_val, new_val):
-                                _logger.info(
-                                    "[SNMP ANOMALY] Detectada anomalía técnica old->new: %s → %s | ID=%s",
+                            is_anomaly = record._is_counter_anomaly(old_val, new_val)
+                            
+                            _logger.error(
+                                "[SNMP DEBUG] _is_counter_anomaly(%s, %s) = %s",
+                                old_val, new_val, is_anomaly
+                            )
+                            
+                            if is_anomaly:
+                                _logger.error(
+                                    "[SNMP ANOMALY] ✅ ENVIANDO correo técnico old->new: %s → %s | ID=%s",
                                     old_val, new_val, record.id
                                 )
-                                record.notify_snmp_counter_update(
-                                    previous_counter=old_val,
-                                    new_counter=new_val
-                                )
+                                
+                                try:
+                                    record.notify_snmp_counter_update(
+                                        previous_counter=old_val,
+                                        new_counter=new_val,
+                                        is_anomaly=True  # ✅ MARCAR COMO ANOMALÍA
+                                    )
+                                    _logger.error("[SNMP ANOMALY] ✅ Correo enviado exitosamente")
+                                except Exception as e:
+                                    _logger.error("[SNMP ANOMALY] ❌ Error enviando correo: %s", e)
                             else:
-                                _logger.debug(
-                                    "[SNMP] Cambio normal de contador %s → %s, sin correo técnico | ID=%s",
+                                _logger.error(
+                                    "[SNMP] ℹ️ Cambio normal %s → %s, sin correo | ID=%s",
                                     old_val, new_val, record.id
                                 )
                         else:
-                            _logger.info(
-                                "[SNMP] Omitiendo correo old->new porque ya se notificó Proveedor->SNMP en este ciclo | ID=%s",
+                            _logger.error(
+                                "[SNMP] ℹ️ Omitiendo CASO 2 porque ya se envió alerta Proveedor | ID=%s",
                                 record.id
                             )
 
                     except Exception as e:
-                        _logger.error(f"Error procesando cambio de contador SNMP: {e}")
+                        _logger.error(f"[SNMP ERROR] Error procesando contador: {e}", exc_info=True)
 
             # ---------------------------
             # 7) LOG EXTRA: verificar si ingreso se perdió en algún punto
@@ -1507,15 +1537,25 @@ class SatSat(models.Model):
             }
         )
 
-    def notify_snmp_counter_update(self, previous_counter, new_counter):
+    def notify_snmp_counter_update(self, previous_counter, new_counter, is_anomaly=False):
         """
         Notifica cuando SNMP actualizó el contómetro.
-        Solo notifica si hay cambio significativo (no ruido).
+        
+        Args:
+            previous_counter: Valor anterior del contador
+            new_counter: Valor nuevo del contador
+            is_anomaly: True si es una anomalía (para enviar correo de alerta)
         """
         self.ensure_one()
         
+        _logger.error(
+            "[CORREO SNMP] INICIANDO notify_snmp_counter_update | ID=%s | prev=%s new=%s | anomaly=%s",
+            self.id, previous_counter, new_counter, is_anomaly
+        )
+        
         # Solo notificar si hay cambio real
         if previous_counter == new_counter:
+            _logger.error("[CORREO SNMP] ❌ Valores iguales, abortando")
             return
         
         url = self.generate_record_url(self)
@@ -1524,45 +1564,99 @@ class SatSat(models.Model):
         # Formatear con comas para mejor lectura
         prev_formatted = f"{previous_counter:,}"
         new_formatted = f"{new_counter:,}"
-        inc_formatted = f"{incremento:,}"
+        inc_formatted = f"{abs(incremento):,}"
         
-        if incremento < 0:
-            emoji = "⚠️"
-            tipo = "decreció"
+        # Determinar qué plantilla usar
+        if is_anomaly:
+            # 🚨 ANOMALÍA: Usar plantilla de alerta
+            template_xmlid = 'sat.email_template_snmp_counter_anomaly'
+            
+            # Determinar razón de la anomalía
+            if incremento < 0:
+                reason = 'decremento'
+                emoji = "⬇️"
+                tipo = "decreció"
+            else:
+                reason = 'salto_grande'
+                emoji = "⬆️"
+                tipo = "aumentó de forma anormal"
+            
+            body = _(
+                "%(emoji)s <b>⚠️ ANOMALÍA: Contómetro %(tipo)s</b><br/>"
+                "• Anterior: <b>%(prev)s</b><br/>"
+                "• Nuevo: <b>%(new)s</b><br/>"
+                "• Cambio: <b>%(inc)s</b><br/>"
+                "• Modelo: <b>%(model)s</b><br/>"
+                "• Serie: <b>%(serie)s</b><br/>"
+                "• Enlace: %(url)s<br/><br/>"
+                "<span style='color:red;'>⚠️ Se requiere verificación inmediata del equipo.</span>"
+            ) % {
+                'emoji': emoji,
+                'tipo': tipo,
+                'prev': prev_formatted,
+                'new': new_formatted,
+                'inc': inc_formatted,
+                'model': self.name.name if self.name else '—',
+                'serie': self.serie_id or '—',
+                'url': url,
+            }
+            
+            # Contexto para plantilla de anomalía
+            mail_context = {
+                'snmp_old_counter': prev_formatted,
+                'snmp_new_counter': new_formatted,
+                'snmp_reason': reason,
+            }
+            
         else:
-            emoji = "✅"
-            tipo = "aumentó"
-        
-        body = _(
-            "%(emoji)s <b>Contómetro %(tipo)s por SNMP</b><br/>"
-            "• Anterior: <b>%(prev)s</b><br/>"
-            "• Nuevo: <b>%(new)s</b><br/>"
-            "• Cambio: <b>%(inc)s</b><br/>"
-            "• Modelo: <b>%(model)s</b><br/>"
-            "• Serie: <b>%(serie)s</b><br/>"
-            "• Enlace: %(url)s"
-        ) % {
-            'emoji': emoji,
-            'tipo': tipo,
-            'prev': prev_formatted,
-            'new': new_formatted,
-            'inc': inc_formatted,
-            'model': self.name.name if self.name else '—',
-            'serie': self.serie_id or '—',
-            'url': url,
-        }
-
-        self.message_post(body=body)
-
-        self._send_snmp_mail(
-            'sat.email_template_snmp_counter_update',
-            {
+            # ✅ NORMAL: Usar plantilla de actualización normal
+            template_xmlid = 'sat.email_template_snmp_counter_update'
+            
+            if incremento < 0:
+                emoji = "⚠️"
+                tipo = "decreció"
+            else:
+                emoji = "✅"
+                tipo = "aumentó"
+            
+            body = _(
+                "%(emoji)s <b>Contómetro %(tipo)s por SNMP</b><br/>"
+                "• Anterior: <b>%(prev)s</b><br/>"
+                "• Nuevo: <b>%(new)s</b><br/>"
+                "• Cambio: <b>%(inc)s</b><br/>"
+                "• Modelo: <b>%(model)s</b><br/>"
+                "• Serie: <b>%(serie)s</b><br/>"
+                "• Enlace: %(url)s"
+            ) % {
+                'emoji': emoji,
+                'tipo': tipo,
+                'prev': prev_formatted,
+                'new': new_formatted,
+                'inc': inc_formatted,
+                'model': self.name.name if self.name else '—',
+                'serie': self.serie_id or '—',
+                'url': url,
+            }
+            
+            # Contexto para plantilla normal
+            mail_context = {
                 'snmp_previous_counter': prev_formatted,
                 'snmp_new_counter': new_formatted,
                 'snmp_increment': inc_formatted,
                 'record_url': url,
             }
-        )
+
+        # Mensaje en chatter
+        self.message_post(body=body)
+
+        # Enviar correo con la plantilla correcta
+        _logger.error("[CORREO SNMP] Llamando _send_snmp_mail con template: %s", template_xmlid)
+        
+        result = self._send_snmp_mail(template_xmlid, mail_context)
+        
+        _logger.error("[CORREO SNMP] Resultado _send_snmp_mail: %s", result)
+        
+        return result
 
     def notify_snmp_model_suggestion(self, snmp_model):
         """
