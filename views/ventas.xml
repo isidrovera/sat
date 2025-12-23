@@ -29,12 +29,12 @@
               class="btn-secondary"
               invisible="reparaciones_count == 0" />
               <button name="action_cargar_contometro_proveedor_masivo"
-                    string="Cargar contómetro proveedor"
-                    type="object"
-                    class="oe_highlight"
-                    groups="base.group_system"
-                    help="Carga el valor actual del contómetro al campo contometro_proveedor (para migración de datos antiguos)"/>
-            
+            string="🔄 Migración masiva (TODOS)"
+            type="object"
+            class="btn-warning"
+            groups="base.group_system"
+            confirm="¿Estás seguro? Esto procesará TODOS los registros sin contómetro proveedor. Esta acción no se puede deshacer."
+            help="Carga el contómetro proveedor para TODOS los registros que no lo tienen"/>
             <button name="action_test_snmp_notification"
                     string="🧪 TEST: Simular SNMP"
                     type="object"
