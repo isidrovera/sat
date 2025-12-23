@@ -57,14 +57,13 @@ class SatSat(models.Model):
         return record
 
 
-    @api.model
-    def action_cargar_contometro_proveedor_masivo(self):
+    def action_cargar_contometro_proveedor_masivo(self):  # ✅ SIN @api.model
         """
         Carga el contómetro proveedor para TODOS los registros que no lo tienen.
         Ejecutar UNA SOLA VEZ para migración de datos antiguos.
         """
         # Buscar todos los registros sin contometro_proveedor
-        records = self.search([
+        records = self.env['sat.sat'].search([
             ('contometro_proveedor', '=', False),
             ('contometro', '!=', False)
         ])
@@ -134,7 +133,6 @@ class SatSat(models.Model):
                 'sticky': True,
             }
         }
-
 
     def action_test_snmp_notification(self):
         """
