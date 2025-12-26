@@ -142,12 +142,9 @@ class ReparacionesMensajes(models.Model):
     *Marca:* {self.marca if self.marca else 'NA'}
     *Modelo:* {self.maquina_id.name.name if self.maquina_id.name and self.maquina_id.name.name else 'NA'}
     *Serie:* {self.serie_id if self.serie_id else 'NA'}
-    *Estado:* {selection_labels.get('estado_id', 'NA')}
-    *Tipo de revisión:* {selection_labels.get('tipo_revision', 'NA')}
-    *Prioridad:* {selection_labels.get('prioridad', 'NA')}
+    *Estado:* {selection_labels.get('estado_id', 'NA')}    
     *Ubicación:* {selection_labels.get('ubicacion_id', 'NA')}
     *Asesora:* {self.maquina_id.asesora_id if self.maquina_id.asesora_id else 'NA'}
-
     *Enlaces:*
     - Acceso al registro: {record_url}
     - Galería de fotos: {gallery_url}"""
@@ -177,7 +174,6 @@ class ReparacionesMensajes(models.Model):
             *Contómetro:* {self.contometrok_id if self.contometrok_id else 'NA'}
             *Estado:* {self.obtener_estado_legible() if self.obtener_estado_legible() else 'NA'}
             *Técnico:* {self.responsable_id.name if self.responsable_id.name else 'NA'}
-
             *Enlaces:*
             Reporte: {pdf_url}
             Fotos: {gallery_url}

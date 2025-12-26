@@ -215,9 +215,7 @@
                       <li>Marca: <strong><t t-out="object.marca"></strong><br/></li>
                       <li>Modelo: <strong><t t-out="object.maquina_id.name.name"></strong><br/></li>
                       <li>Serie: <strong><t t-out="object.serie_id"></strong><br/></li>
-                      <li>Estado: <strong><t t-out="object.obtener_estado_legible()"></strong><br/></li>
-                      <li>Tipo de revisión: <strong><t t-out="object.obtener_tipo_revision_legible()"></strong><br/></li>
-                      <li>Prioridad: <strong><t t-out="object.obtener_prioridad_legible()"></strong><br/></li>
+                      <li>Estado: <strong><t t-out="object.obtener_estado_legible()"></strong><br/></li>                      
                       <li>Ubicación: <strong><t t-out="object.obtener_ubicacion_legible()"></strong><br/></li>
                       <li>Asesora de ventas: <strong><t t-out="object.maquina_id.asesora_id"></strong><br/><br/></li>
                   </ul>
@@ -288,9 +286,7 @@
                   <li>Marca: <strong><t t-out="object.marca"></strong><br/></li>
                   <li>Modelo: <strong><t t-out="object.maquina_id.name.name"></strong><br/></li>
                   <li>Serie: <strong><t t-out="object.serie_id"></strong><br/></li>
-                  <li>Estado: <strong><t t-out="object.obtener_estado_legible()"></strong><br/></li>
-                  <li>Tipo de revisión: <strong><t t-out="object.obtener_tipo_revision_legible()"></strong><br/></li>
-                  <li>Prioridad: <strong><t t-out="object.obtener_prioridad_legible()"></strong><br/></li>
+                  <li>Estado: <strong><t t-out="object.obtener_estado_legible()"></strong><br/></li>       
                   <li>Ubicación: <strong><t t-out="object.obtener_ubicacion_legible()"></strong><br/></li>
                 </ul>
                 <p>Gracias por su paciencia y comprensión.</p>

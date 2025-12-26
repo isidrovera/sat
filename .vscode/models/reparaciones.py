@@ -336,9 +336,7 @@ class Reparaciones(models.Model):
             self.marca if self.marca else 'NA',
             self.maquina_id.name.name if self.maquina_id.name and self.maquina_id.name.name else 'NA',
             self.serie_id if self.serie_id else 'NA',
-            selection_labels.get('estado_id', 'NA'),
-            selection_labels.get('tipo_revision', 'NA'),
-            selection_labels.get('prioridad', 'NA'),
+            selection_labels.get('estado_id', 'NA'),            
             selection_labels.get('ubicacion_id', 'NA'),        
             self.maquina_id.asesora_id if self.maquina_id.asesora_id else 'NA'
         )
