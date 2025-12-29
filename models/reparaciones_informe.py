@@ -300,14 +300,6 @@ class ReparacionesInforme(models.Model):
             )
             html_parts.append(subpartes_html)
 
-        # Componentes con desgaste (cambio preventivo recomendado)
-        if f['desgaste']:
-            html_parts.append('<p><strong>Se recomienda cambio preventivo de:</strong></p>')
-            html_parts.append('<ul style="margin:5px 0 10px 20px;">')
-            for comp in f['desgaste']:
-                html_parts.append(f'<li>{comp}</li>')
-            html_parts.append('</ul>')
-
         # Funciones con falla (si las hay)
         if funciones_no:
             html_parts.append('<p><strong>Funciones con incidencia detectada:</strong></p>')
