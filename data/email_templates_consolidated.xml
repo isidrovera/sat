@@ -137,7 +137,7 @@
             <field name="name">Tickets Consolidados - Técnico</field>
             <field name="subject">Asignación - {{ ctx.get('cantidad_tickets') or 1 }} Ticket(s)</field>
             <field name="model_id" ref="model_ticket_alquiler" />
-            <field name="auto_delete" eval="False" />
+            <field name="auto_delete" eval="True" />
             <field name="email_from">soporte@andescopiers.com.pe</field>
             <field name="email_to">{{ (ctx.get('tecnico_principal') or object.responsable).email }}</field>
             <field name="body_html"><![CDATA[

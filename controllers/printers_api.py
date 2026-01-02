@@ -802,6 +802,8 @@ class SNMPPublicController(http.Controller):
             }
 
         modelo_anterior = sat.name.name if sat.name else 'Sin modelo'
+        tipo_anterior = sat.tipo_id if sat.name else None  # 🆕 CAPTURAR TIPO ANTERIOR
+        
         sat.write({'name': target_model.id})
         _logger.info(
             "[SNMP] ✅ Modelo ASIGNADO: %s -> %s",
@@ -824,6 +826,62 @@ class SNMPPublicController(http.Controller):
             )
         )
 
+        # 🔥 NUEVO: Notificar cambio de modelo
+        try:
+            sat.notify_snmp_model_change(
+                previous_model=modelo_anterior,
+                new_model=target_model.name
+            )
+            _logger.info("[SNMP] ✅ Correo de cambio de modelo enviado")
+        except Exception as e:
+            _logger.error("[SNMP] ❌ Error enviando correo de cambio: %s", e)
+
+        # 🔥 NUEVO: Detectar cambio de TIPO (color/mono) - CRÍTICO PARA COSTOS
+        tipo_nuevo = target_model.tipo_id if target_model else None
+
+        if tipo_anterior and tipo_nuevo and tipo_anterior != tipo_nuevo:
+            _logger.warning(
+                "[SNMP] 🚨 CAMBIO DE TIPO DETECTADO: %s → %s",
+                tipo_anterior, tipo_nuevo
+            )
+            
+            # Notificar como ANOMALÍA a gerencia/logística
+            try:
+                sat.notify_snmp_model_mismatch(
+                    snmp_model=model_snmp,
+                    current_model=modelo_anterior,
+                    new_model=target_model.name
+                )
+                _logger.info("[SNMP] ✅ Alerta de cambio de tipo enviada a gerencia")
+            except Exception as e:
+                _logger.error("[SNMP] ❌ Error enviando alerta de tipo: %s", e)
+            
+            # También notificar en chatter con énfasis
+            try:
+                tipo_anterior_display = dict(sat._fields['tipo_id'].selection).get(tipo_anterior, tipo_anterior)
+                tipo_nuevo_display = dict(sat._fields['tipo_id'].selection).get(tipo_nuevo, tipo_nuevo)
+                
+                sat.message_post(
+                    body=_(
+                        "🚨 <b>ALERTA: Cambio de tipo detectado (impacto en costos)</b><br/>"
+                        "• Tipo anterior: <b>%s</b><br/>"
+                        "• Tipo nuevo: <b>%s</b><br/>"
+                        "• Modelo anterior: <b>%s</b><br/>"
+                        "• Modelo nuevo: <b>%s</b><br/>"
+                        "• Origen: SNMP (%s)<br/>"
+                        "<span style='color:red;'>⚠️ Requiere verificación de gerencia/logística</span>"
+                    ) % (
+                        tipo_anterior_display,
+                        tipo_nuevo_display,
+                        modelo_anterior,
+                        target_model.name,
+                        model_snmp
+                    ),
+                    subtype_xmlid='mail.mt_note'
+                )
+            except Exception as e:
+                _logger.error("[SNMP] ❌ Error posteando mensaje de alerta en chatter: %s", e)
+
         _logger.info("=" * 80)
 
         return {
@@ -831,7 +889,8 @@ class SNMPPublicController(http.Controller):
             'assigned': action,
             'model': target_model.name,
             'previous_model': modelo_anterior,
-            'modified': modified
+            'modified': modified,
+            'tipo_changed': tipo_anterior != tipo_nuevo if (tipo_anterior and tipo_nuevo) else False  # 🆕
         }
 
     def _safe_update_counters(self, sat, total_counter):
