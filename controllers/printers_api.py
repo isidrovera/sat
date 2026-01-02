@@ -716,6 +716,17 @@ class SNMPPublicController(http.Controller):
                         "[SNMP] ✅ Modelo corregido por mismatch: %s → %s",
                         previous_model_name, new_model_name
                     )
+                    
+                    # 🔥 NUEVO: Notificar cambio exitoso de modelo por correo
+                    try:
+                        sat.notify_snmp_model_change(
+                            previous_model=previous_model_name,
+                            new_model=new_model_name
+                        )
+                        _logger.info("[SNMP] ✅ Correo de cambio de modelo enviado")
+                    except Exception as e:
+                        _logger.error("[SNMP] ❌ Error enviando correo de cambio: %s", e)
+                        
                 else:
                     new_model_name = target_model.name
                     _logger.info(
