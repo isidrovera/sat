@@ -329,76 +329,7 @@
                   <b>Tip:</b> Si un accesorio no aplica al modelo, márquelo como "No Aplica"
                 </div>
               </page>
-               <!-- PÁGINAS DEL CHECKLIST ANTIGUO - SOLO VISIBLES CUANDO FINALIZADO -->
-              <page string="Accesorios (Checklist Antiguo)" invisible="estado_id != 'finalizado'">
-                <group>
-                  <group>
-                    <field name="tray_id"/>
-                    <field name="adf_simple_id"/>
-                    <field name="adf_dual_id"/>
-                    <field name="finalizador_interno_id"/>
-                    <field name="finalizador_externo_id"/>
-                    <field name="mueble_id"/>
-                    <field name="lct_id"/>
-                  </group>
-                  <group>
-                    <field name="wi_fi_id"/>
-                    <field name="cable_poder_id"/>
-                    <field name="panel_normal_id"/>
-                    <field name="panel_smart_id"/>
-                    <field name="ot_id"/>
-                    <field name="hdd_id"/>
-                  </group>
-                </group>
-              </page>
-
-              <page string="Check List (Antiguo)" invisible="estado_id != 'finalizado'">
-                <group>
-                  <group string="Funciones">
-                    <field name="copia_id"/>
-                    <field name="impresion_id"/>
-                    <field name="impresion_usb_id"/>
-                    <field name="scaner_smb_id"/>
-                    <field name="scaner_usb_id"/>
-                    <field name="scaner_ftp_id"/>
-                    <field name="scaner_mail_id"/>
-                  </group>
-                  <group string="Componentes Mecánicos">
-                    <field name="bypass_id"/>
-                    <field name="tray1_id"/>
-                    <field name="tray2_id"/>
-                    <field name="tray3_id"/>
-                    <field name="tray4_id"/>
-                    <field name="adf_id"/>
-                    <field name="finalizador_id"/>
-                    <field name="tacho_id"/>
-                  </group>
-                </group>
-                <group>
-                  <group string="Componentes de Impresión">
-                    <field name="fusora_id"/>
-                    <field name="rodillo_id"/>
-                    <field name="calor_id"/>
-                    <field name="transfer_id"/>
-                    <field name="optico_id"/>
-                  </group>
-                  <group string="Consumibles">
-                    <field name="toner_black_id"/>
-                    <field name="toner_magenta_id" invisible="tipo_id != 'color'"/>
-                    <field name="toner_cyan_id" invisible="tipo_id != 'color'"/>
-                    <field name="toner_yellow_id" invisible="tipo_id != 'color'"/>
-                    <field name="black_id"/>
-                    <field name="magenta_id" invisible="tipo_id != 'color'"/>
-                    <field name="cyan_id" invisible="tipo_id != 'color'"/>
-                    <field name="yellow_id" invisible="tipo_id != 'color'"/>
-                    <field name="developerk_id"/>
-                    <field name="developerm_id" invisible="tipo_id != 'color'"/>
-                    <field name="developerc_id" invisible="tipo_id != 'color'"/>
-                    <field name="developery_id" invisible="tipo_id != 'color'"/>
-                  </group>
-                </group>
-              </page>
-
+              
               <!-- PESTAÑA: DETALLE DE FALLA PROVEEDOR -->
               <page string="Detalle de falla proveedor">
                 <group>
