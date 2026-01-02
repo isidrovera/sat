@@ -361,39 +361,7 @@ class SatSat(models.Model):
         readonly=True,
         copy=False
     )
-    def _send_whatsapp_message_boot(self, phone, message):
-        """Envía WhatsApp usando la API BOOT externa."""
-        url = 'https://boot.andessolutioncopiers.com/api/send-message'
-        data = {'to': phone, 'message': message}
-        headers = {
-            'Content-Type': 'application/json',
-            'x-api-key': 'sk_2312cac15276b4a3ca124e66a78fdde6428c626eb7184f26d3fa62037aaae816'
-        }
-
-        try:
-            resp = requests.post(url, headers=headers, json=data, timeout=30)
-            _logger.info("[WA BOOT] status=%s body=%s", resp.status_code, resp.text)
-
-            try:
-                js = resp.json()
-            except Exception:
-                js = {}
-
-            if resp.status_code == 200 and js.get('success'):
-                return True
-
-            _logger.warning("[WA BOOT] No success. phone=%s resp=%s", phone, js or resp.text)
-            return False
-
-        except requests.exceptions.Timeout:
-            _logger.error("[WA BOOT] Timeout enviando a %s", phone)
-            return False
-        except requests.exceptions.RequestException as e:
-            _logger.error("[WA BOOT] Error de red enviando a %s: %s", phone, e)
-            return False
-        except Exception as e:
-            _logger.error("[WA BOOT] Error inesperado: %s", e)
-            return False
+    
 
 
     def _get_reparacion_activa_para_alerta_snmp(self):
@@ -407,74 +375,7 @@ class SatSat(models.Model):
         return rep or False
 
 
-    def _notify_tecnico_guardar_hoja_contometro_snmp(self, old_val, new_val):
-        """
-        Se dispara cuando SNMP actualiza el contómetro.
-        Envía WhatsApp al técnico responsable (si hay reparación activa en_revision).
-        Anti-spam: no reenvía si ya notificó el mismo new_val.
-        """
-        self.ensure_one()
-
-        # Anti-spam por valor notificado
-        last_sent = (self.last_snmp_counter_whatsapp or '').strip()
-        try:
-            if last_sent and int(last_sent) == int(new_val):
-                _logger.debug("[SNMP->WA] Ya notificado new_val=%s para sat.sat ID=%s", new_val, self.id)
-                return False
-        except Exception:
-            pass
-
-        rep = self._get_reparacion_activa_para_alerta_snmp()
-        if not rep:
-            _logger.debug("[SNMP->WA] No hay reparación activa en_revision para sat.sat ID=%s", self.id)
-            return False
-
-        phone = (rep.responsable_mobile_clean or '').strip()
-        if not phone:
-            _logger.warning("[SNMP->WA] Reparación %s sin responsable_mobile_clean", rep.id)
-            return False
-
-        # URL del equipo (si tienes generate_record_url en sat.sat)
-        try:
-            url_equipo = self.generate_record_url(self)
-        except Exception:
-            url_equipo = ""
-
-        modelo_txt = self.name.name if self.name and hasattr(self.name, 'name') else (self.name or 'NA')
-
-        msg = (
-            f"📌 *ALERTA SNMP (Contómetro actualizado)*\n"
-            f"Equipo: *{modelo_txt}*\n"
-            f"Serie: *{self.serie_id or 'NA'}*\n"
-            f"Contómetro SNMP: *{old_val:,} → {new_val:,}*\n\n"
-            f"✅ *Acción requerida:*\n"
-            f"Guarda la *hoja / sustento del contómetro* enviado por el proveedor.\n\n"
-            f"🔗 Odoo: {url_equipo}"
-        )
-
-        ok = self._send_whatsapp_message_boot(phone, msg)
-
-        if ok:
-            self.sudo().write({
-                'last_snmp_counter_whatsapp': str(int(new_val)),
-                'last_snmp_whatsapp_at': fields.Datetime.now(),
-            })
-
-            # Registrar nota en chatter de la reparación (opcional pero recomendado)
-            try:
-                rep.message_post(
-                    body=(
-                        "📩 WhatsApp enviado al técnico por actualización SNMP del contómetro.<br/>"
-                        f"Anterior: <b>{old_val:,}</b> → Nuevo: <b>{new_val:,}</b>"
-                    ),
-                    subtype_xmlid='mail.mt_note'
-                )
-            except Exception as e:
-                _logger.warning("No se pudo registrar message_post en reparación %s: %s", rep.id, e)
-
-        return ok
-
-
+    
 
     marca = fields.Char(string='Marca', related='name.marca_id.name', readonly=True, store=True, tracking=True
                         )
@@ -1688,53 +1589,7 @@ class SatSat(models.Model):
             }
         )
 
-    def enviar_mensaje_problema_asesora(self):
-        """Envía mensaje WhatsApp (si hay cliente y asesora) y siempre intenta enviar correo electrónico."""
-        
-        url = self.generate_record_url(self)
-        estado_actual = dict(self._fields['estado_ventas_id'].selection).get(self.estado_ventas_id)
-
-        mensaje = f"""*¡Atención! Máquina con problemas*
-        *Cliente:* {self.cliente_id.name if self.cliente_id else 'No asignado'}
-        *Marca:* {self.marca}
-        *Modelo:* {self.name.name}
-        *Serie:* {self.serie_id}
-        *Estado:* {estado_actual}
-        *Descripción:* {self.descripcion or 'Sin descripción'}
-
-        Para ver más detalles, ingrese al siguiente enlace:
-        {url}"""
-
-        # Enviar mensaje por WhatsApp si hay cliente y asesora
-        if self.cliente_id and self.asesora_mobile_clean:
-            try:
-                self.enviar_mensaje_whatsapp(self.asesora_mobile_clean, mensaje)
-                self.message_post(
-                    body=f"Se envió notificación WhatsApp a la asesora {self.cliente_id.asesora_id.name}",
-                    message_type='notification',
-                    subtype_xmlid='mail.mt_note'
-                )
-            except Exception as e:
-                _logger.error(f"Error al enviar WhatsApp: {str(e)}")
-        else:
-            _logger.warning(f"No se envió WhatsApp porque no hay cliente o asesora para ID {self.id}")
-
-        # Enviar correo electrónico siempre
-        template = self.env.ref('sat.email_template_maquinas_problema', raise_if_not_found=False)
-        if template:
-            try:
-                template.sudo().send_mail(self.id, force_send=True)
-                self.message_post(
-                    body="Correo electrónico enviado notificando problema en la máquina.",
-                    message_type='notification',
-                    subtype_xmlid='mail.mt_note'
-                )
-            except Exception as e:
-                _logger.error(f"Error al enviar correo electrónico: {str(e)}")
-        else:
-            _logger.warning(f"No se encontró la plantilla de correo para ID {self.id}")
-
-        return True
+    
     location_change_token = fields.Char(string="Token de cambio de ubicación", copy=False, readonly=True)
     def generate_location_change_token(self, force=False):
         """Genera un token nuevo si no existe, o si se forza regeneración."""
@@ -1754,64 +1609,7 @@ class SatSat(models.Model):
                 _logger.error(f"[TOKEN AUTO] FALLO al guardar token para ID {record.id}. Esperado: {token}, Leído: {token_verificado}")
 
 
-    def enviar_notificacion_disponibilidad(self):
-        """Envía notificación de disponibilidad cuando se resuelve un problema de la máquina."""
-        # Generar la URL del registro
-        url = self.generate_record_url(self)
-        estado_actual = dict(self._fields['estado_ventas_id'].selection).get(self.estado_ventas_id)
-
-        # Construcción del mensaje de WhatsApp
-        mensaje = f"""*¡Notificación! Problema resuelto en la máquina*
-        *Cliente:* {self.cliente_id.name if self.cliente_id else 'No asignado'}
-        *Marca:* {self.marca}
-        *Modelo:* {self.name.name}
-        *Serie:* {self.serie_id}
-        *Estado anterior:* {estado_actual}
-        *Nuevo estado:* {estado_actual}
-
-        Para ver más detalles, ingrese al siguiente enlace:
-        {url}"""
-
-        # Enviar mensaje por WhatsApp solo si hay cliente y asesora
-        if self.cliente_id and self.asesora_mobile_clean:
-            try:
-                self.enviar_mensaje_whatsapp(self.asesora_mobile_clean, mensaje)
-                self.message_post(
-                    body="Notificación enviada por WhatsApp indicando que se corrigió el problema.",
-                    message_type='notification',
-                    subtype_xmlid='mail.mt_note'
-                )
-            except Exception as e:
-                self.message_post(
-                    body=f"Error al enviar WhatsApp: {str(e)}.",
-                    message_type='notification',
-                    subtype_xmlid='mail.mt_note'
-                )
-        else:
-            _logger.warning(f"No se envió WhatsApp porque no hay cliente o asesora para ID {self.id}")
-
-        # Enviar correo electrónico siempre, incluso si no hay cliente
-        template = self.env.ref('sat.email_template_maquinas_disponible', raise_if_not_found=False)
-        if template:
-            try:
-                template.sudo().send_mail(self.id, force_send=True)
-                self.message_post(
-                    body="Correo electrónico enviado indicando que se corrigió el problema.",
-                    message_type='notification',
-                    subtype_xmlid='mail.mt_note'
-                )
-            except Exception as e:
-                _logger.error(f"Error al enviar correo electrónico: {str(e)}")
-                self.message_post(
-                    body=f"Error al enviar correo electrónico: {str(e)}.",
-                    message_type='notification',
-                    subtype_xmlid='mail.mt_note'
-                )
-        else:
-            _logger.warning(f"No se encontró la plantilla de correo para ID {self.id}")
-
-        return True
-
+    
     @api.onchange('disponibilidad_id', 'ubicacion_id')
     def _onchange_disponibilidad_ubicacion(self):
         if self.disponibilidad_id == 'separada' and self.ubicacion_id in ['segundo_local', 'covida']:
@@ -1819,38 +1617,8 @@ class SatSat(models.Model):
             self.enviar_mensaje_transportistas()
             return self._notify_vendedora()
 
-    def enviar_mensaje_transportistas(self):
-        transportista_numeros = ['51924894872']
-        mensaje = f"""Estimado transportista,
-
-Por favor, traer la siguiente máquina:
-
-Modelo: {self.name.name}
-Serie: {self.serie_id}
-Ubicación actual: {self.ubicacion_id}
-
-Para registrar el cambio de ubicación a primer piso cuando llegue la máquina, 
-haga clic en el siguiente enlace: 📍 {self.crear_url_cambio_ubicacion(self)}"""
-
-        _logger.debug(f"Enviando mensaje a transportistas: {mensaje}")
-
-        for numero in transportista_numeros:
-            self.enviar_mensaje_whatsapp(numero, mensaje)
-
-    def enviar_mensaje_whatsapp(self, phone, message):
-        url = 'https://whatsapp.andessolutioncopiers.com/api/message'
-        data = {
-            'phone': phone,
-            'message': message
-        }
-        headers = {'Content-Type': 'application/json'}
-        try:
-            response = requests.post(url, headers=headers, json=data, timeout=10)
-            response.raise_for_status()
-            _logger.info(f"Mensaje enviado exitosamente a {phone}")
-        except requests.exceptions.RequestException as e:
-            _logger.error(f"Error al enviar mensaje de WhatsApp a {phone}: {e}")
-
+    
+    
     def crear_url_cambio_ubicacion(self, record):
         import secrets
         base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
@@ -1925,8 +1693,15 @@ haga clic en el siguiente enlace: 📍 {self.crear_url_cambio_ubicacion(self)}""
         self.evaluar_registros_diarios()
 
     def evaluar_registros_diarios(self):
-        registros_primer_piso = self.search([('ubicacion_id', '=', 'primer_piso'), ('estado_ventas_id', '=', 'sin_revisar')])
-        registros_tercer_piso = self.search([('ubicacion_id', '=', 'tercer_piso'), ('estado_ventas_id', '=', 'sin_revisar')])
+        """Evalúa diariamente si hay que traer máquinas del segundo local o Covida."""
+        registros_primer_piso = self.search([
+            ('ubicacion_id', '=', 'primer_piso'), 
+            ('estado_ventas_id', '=', 'sin_revisar')
+        ])
+        registros_tercer_piso = self.search([
+            ('ubicacion_id', '=', 'tercer_piso'), 
+            ('estado_ventas_id', '=', 'sin_revisar')
+        ])
 
         if not registros_primer_piso and not registros_tercer_piso:
             registros_a_traer = self.search([
@@ -1934,28 +1709,92 @@ haga clic en el siguiente enlace: 📍 {self.crear_url_cambio_ubicacion(self)}""
                 ('estado_ventas_id', '=', 'sin_revisar')
             ], limit=8)
             
-            _logger.debug(f"Máquinas a traer: {registros_a_traer}")
+            _logger.info(f"Cron diario: Se encontraron {len(registros_a_traer)} máquinas para traer")
             
             if registros_a_traer:
                 transportista_numeros = ['51924894872']
+                exitos = 0
+                fallos = 0
+                
                 for registro in registros_a_traer:
-                    mensaje = f"""Estimado transportista,
+                    try:
+                        # Obtener el display name de la ubicación
+                        ubicacion_display = dict(registro._fields['ubicacion_id'].selection).get(
+                            registro.ubicacion_id, 
+                            registro.ubicacion_id
+                        )
+                        
+                        mensaje = f"""*Solicitud de traslado de máquina*
 
-Por favor, traer la siguiente máquina:
+    📦 *Detalles del equipo:*
+    - Modelo: *{registro.name.name}*
+    - Serie: *{registro.serie_id}*
+    - Ubicación actual: *{ubicacion_display}*
 
-Modelo: {registro.name.name}
-Serie: {registro.serie_id}
-Ubicación actual: {registro.ubicacion_id}
+    📍 *Destino:* Primer piso
 
-Para registrar el cambio de ubicación a primer piso cuando llegue la máquina, 
-haga clic en el siguiente enlace: 📍 {self.crear_url_cambio_ubicacion(registro)}"""
+    Para registrar el cambio de ubicación cuando llegue la máquina, 
+    haga clic en el siguiente enlace:
+    {self.crear_url_cambio_ubicacion(registro)}"""
 
-                    _logger.debug(f"Enviando mensaje para la máquina {registro.name.name} con serie {registro.serie_id}")
+                        _logger.info(f"Enviando mensaje para la máquina {registro.name.name} con serie {registro.serie_id}")
 
-                    for numero in transportista_numeros:
-                        self.enviar_mensaje_whatsapp(numero, mensaje)
-                    
-                    _logger.info(f"Mensaje enviado para la máquina {registro.name.name} con serie {registro.serie_id}")
+                        # Enviar a cada transportista
+                        mensaje_enviado = False
+                        for numero in transportista_numeros:
+                            try:
+                                # 🔥 CAMBIO: Usar API BOOT
+                                resultado = registro._send_whatsapp_message_boot(numero, mensaje)
+                                
+                                if resultado:
+                                    _logger.info(f"✅ Mensaje enviado exitosamente a {numero} para máquina {registro.serie_id}")
+                                    mensaje_enviado = True
+                                else:
+                                    _logger.warning(f"⚠️ Fallo al enviar mensaje a {numero} para máquina {registro.serie_id}")
+                                    
+                            except Exception as e:
+                                _logger.error(f"❌ Error al enviar mensaje a {numero} para máquina {registro.serie_id}: {e}")
+                        
+                        if mensaje_enviado:
+                            exitos += 1
+                            # Registrar en el chatter del equipo
+                            registro.message_post(
+                                body=f"✅ Notificación enviada a transportistas en evaluación diaria.",
+                                message_type='notification',
+                                subtype_xmlid='mail.mt_note'
+                            )
+                        else:
+                            fallos += 1
+                            # Registrar fallo en el chatter
+                            registro.message_post(
+                                body=f"⚠️ No se pudo enviar notificación a transportistas en evaluación diaria.",
+                                message_type='notification',
+                                subtype_xmlid='mail.mt_note'
+                            )
+                            
+                    except Exception as e:
+                        fallos += 1
+                        _logger.error(f"❌ Error procesando máquina {registro.serie_id}: {e}", exc_info=True)
+                        try:
+                            registro.message_post(
+                                body=f"❌ Error al procesar notificación de transporte: {str(e)}",
+                                message_type='notification',
+                                subtype_xmlid='mail.mt_note'
+                            )
+                        except:
+                            pass
+                
+                _logger.info(
+                    f"Cron diario completado: {exitos} éxitos, {fallos} fallos "
+                    f"de {len(registros_a_traer)} máquinas procesadas"
+                )
+            else:
+                _logger.info("Cron diario: No hay máquinas para traer")
+        else:
+            _logger.info(
+                f"Cron diario: Hay stock suficiente "
+                f"(Primer piso: {len(registros_primer_piso)}, Tercer piso: {len(registros_tercer_piso)})"
+            )
     def action_crear_reparaciones(self):
         """ Crea una reparación para cada registro seleccionado en el modelo 'sat.sat'. """
         

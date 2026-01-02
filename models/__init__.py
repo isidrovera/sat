@@ -76,3 +76,4 @@ from . import wizard_asignar_componentes
 from . import gemini_config
 from . import modelo_maquina
 from . import sat_import_line
+from . import hereda_sat_notificaciones
