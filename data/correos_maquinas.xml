@@ -224,14 +224,14 @@
     </html>
         ]]></field>
         </record> 
-        <!-- 1️⃣ CAMBIO AUTOMÁTICO DE MODELO POR MISMATCH DE NÚCLEO -->
+        <!-- 1️⃣ CAMBIO AUTOMÁTICO DE MODELO POR MISMATCH DE NÚCLEO O TIPO -->
 <record id="email_template_snmp_model_mismatch" model="mail.template">
     <field name="name">🚨 SNMP - Mismatch de modelo (cambio automático)</field>
     <field name="model_id" ref="model_sat_sat"/>
     <field name="email_from">soporte@andescopiers.com.pe</field>
     <field name="email_to">lincoln@corapsac.com</field>
     <field name="email_cc">logistica@corapsac.com</field>
-    <field name="subject">Modelo cambiado automáticamente por SNMP: {{ object.serie_id }}</field>
+    <field name="subject">⚠️ ALERTA: Cambio de modelo detectado - {{ object.serie_id }}</field>
     <field name="auto_delete" eval="True"/>
 
     <field name="body_html"><![CDATA[
@@ -246,10 +246,10 @@
         <!-- Encabezado -->
         <div style="background-color:#dc2626;padding:20px;text-align:center;">
             <div style="color:#ffffff;font-size:24px;font-weight:bold;">
-                🚨 Mismatch de modelo detectado
+                🚨 Diferencia de modelo detectada
             </div>
             <div style="color:#fee2e2;font-size:14px;margin-top:8px;">
-                El modelo se cambió automáticamente
+                El modelo fue cambiado automáticamente por el sistema
             </div>
         </div>
 
@@ -260,8 +260,8 @@
             </p>
             
             <p style="margin-top:15px;color:#555555;">
-                El sistema SNMP detectó que el <strong>núcleo del modelo NO coincide</strong> 
-                con lo registrado en el sistema. El modelo se actualizó automáticamente.
+                El sistema SNMP detectó una <strong>discrepancia entre el modelo registrado y el modelo real del equipo</strong>. 
+                El cambio se realizó automáticamente en el sistema.
             </p>
 
             <!-- Información del equipo -->
@@ -280,6 +280,10 @@
                     <tr>
                         <td style="padding:8px 0;color:#666;"><strong>Cliente/Ubicación:</strong></td>
                         <td style="padding:8px 0;color:#333;"><t t-out="object.cliente_id.name or 'N/A'"/></td>
+                    </tr>
+                    <tr>
+                        <td style="padding:8px 0;color:#666;"><strong>Proveedor:</strong></td>
+                        <td style="padding:8px 0;color:#333;"><t t-out="object.proveedor_id.name or 'N/A'"/></td>
                     </tr>
                 </table>
             </div>
@@ -310,40 +314,49 @@
                 </table>
             </div>
 
-            <!-- Razón del cambio -->
+            <!-- Posibles causas -->
             <div style="margin:20px 0;padding:15px;background-color:#fffbeb;border-left:4px solid #f59e0b;">
-                <p style="margin:0;color:#92400e;font-size:14px;">
-                    <strong>⚠️ Motivo:</strong> El núcleo del modelo (velocidad) detectado por SNMP 
-                    no coincide con el modelo registrado. Esto puede indicar:
-                </p>
-                <ul style="margin:10px 0 0 20px;color:#92400e;font-size:14px;">
-                    <li>Cambio de equipo físico</li>
-                    <li>Error en el registro inicial</li>
-                    <li>Proveedor entregó modelo diferente al cotizado</li>
+                <p style="margin:0 0 10px 0;color:#92400e;font-weight:bold;">⚠️ Posibles Causas de la Discrepancia:</p>
+                <ul style="margin:5px 0 0 20px;color:#92400e;font-size:14px;line-height:1.8;">
+                    <li><strong>Cambio de velocidad:</strong> El núcleo del modelo es diferente (ej: 650 vs 750, 4525 vs 4535)</li>
+                    <li><strong>Cambio de tipo:</strong> El equipo cambió de color a monocromo o viceversa (ej: C650i → 650i)</li>
+                    <li><strong>Error de registro inicial:</strong> El modelo se ingresó incorrectamente al sistema</li>
+                    <li><strong>Cambio físico del equipo:</strong> El proveedor entregó un modelo diferente al cotizado</li>
+                    <li><strong>Sustitución no documentada:</strong> El equipo fue reemplazado sin actualizar el sistema</li>
                 </ul>
             </div>
 
-            <!-- Acciones recomendadas -->
-            <div style="margin:20px 0;padding:15px;background-color:#eff6ff;border-left:4px solid #3b82f6;">
-                <p style="margin:0 0 10px 0;color:#1e40af;font-weight:bold;">📌 Acciones Recomendadas:</p>
-                <ol style="margin:5px 0 0 20px;color:#1e3a8a;font-size:14px;line-height:1.6;">
-                    <li><strong>Verificar físicamente</strong> el equipo y su placa de serie</li>
-                    <li><strong>Revisar documentos del proveedor</strong> (guía, factura, garantía)</li>
-                    <li><strong>Contactar al proveedor</strong> si hubo cambio no autorizado</li>
-                    <li><strong>Actualizar cotizaciones/contratos</strong> si aplica</li>
-                </ol>
+            <!-- Impacto -->
+            <div style="margin:20px 0;padding:15px;background-color:#fef2f2;border-left:4px solid #ef4444;">
+                <p style="margin:0 0 10px 0;color:#991b1b;font-weight:bold;">💰 Impacto Potencial:</p>
+                <ul style="margin:5px 0 0 20px;color:#991b1b;font-size:14px;line-height:1.8;">
+                    <li><strong>Costos:</strong> Los equipos color tienen mayor valor que los monocromos</li>
+                    <li><strong>Contratos:</strong> Puede afectar precios de renta o venta acordados</li>
+                    <li><strong>Garantía:</strong> El modelo registrado debe coincidir con la garantía del proveedor</li>
+                    <li><strong>Inventario:</strong> El valor del stock puede verse afectado</li>
+                    <li><strong>Reclamos:</strong> Sirve como evidencia si el proveedor entregó modelo diferente</li>
+                </ul>
             </div>
 
             <!-- Información adicional -->
             <div style="margin:20px 0;padding:15px;background-color:#f3f4f6;border-radius:6px;">
+                <p style="margin:0 0 10px 0;color:#374151;font-weight:bold;">📊 Datos Adicionales del Equipo:</p>
                 <table style="width:100%;border-collapse:collapse;font-size:13px;">
                     <tr>
-                        <td style="padding:5px 0;color:#666;width:40%;"><strong>Contómetro actual:</strong></td>
+                        <td style="padding:5px 0;color:#666;width:45%;"><strong>Contómetro actual:</strong></td>
                         <td style="padding:5px 0;color:#333;"><t t-out="object.contometro or '0'"/></td>
                     </tr>
                     <tr>
-                        <td style="padding:5px 0;color:#666;"><strong>Estado:</strong></td>
+                        <td style="padding:5px 0;color:#666;"><strong>Contómetro proveedor (llegada):</strong></td>
+                        <td style="padding:5px 0;color:#333;"><t t-out="object.contometro_proveedor or '0'"/></td>
+                    </tr>
+                    <tr>
+                        <td style="padding:5px 0;color:#666;"><strong>Estado de revisión:</strong></td>
                         <td style="padding:5px 0;color:#333;"><t t-out="object.estado_ventas_id or 'N/A'"/></td>
+                    </tr>
+                    <tr>
+                        <td style="padding:5px 0;color:#666;"><strong>Importación:</strong></td>
+                        <td style="padding:5px 0;color:#333;"><t t-out="object.importacion or 'N/A'"/></td>
                     </tr>
                     <tr>
                         <td style="padding:5px 0;color:#666;"><strong>Última actualización SNMP:</strong></td>
@@ -364,6 +377,13 @@
                 </a>
             </div>
 
+            <!-- Nota final -->
+            <div style="margin:20px 0;padding:12px;background-color:#f0f9ff;border:1px solid #bae6fd;border-radius:4px;">
+                <p style="margin:0;color:#075985;font-size:13px;text-align:center;">
+                    ℹ️ Este correo se genera automáticamente cuando SNMP detecta diferencias en el modelo del equipo. 
+                    El cambio ya fue aplicado en el sistema.
+                </p>
+            </div>
             
         </div>
     </div>
@@ -371,7 +391,6 @@
 </html>
     ]]></field>
 </record>
-
 <!-- 2️⃣ CAMBIO NORMAL DE MODELO POR SNMP -->
 <record id="email_template_snmp_model_change" model="mail.template">
     <field name="name">✅ SNMP - Actualización de modelo</field>
