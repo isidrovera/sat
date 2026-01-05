@@ -1121,26 +1121,7 @@
                         decoration-muted="estado_bloqueo == 'no_accesible'"
                         decoration-success="estado_bloqueo == 'activo'" />
                     
-                    <button string="Tickets"
-                        type="object"
-                        name="get_ticket"
-                        icon="fa-wrench"
-                        class="btn-link text-info"
-                        title="Ver tickets relacionados" />
-
-                    <button string="Pedidos"
-                        type="object"
-                        name="get_pedidos"
-                        icon="fa-shopping-cart"
-                        class="btn-link text-success"
-                        title="Ver pedidos relacionados" />
-
-                    <button string="Repuestos"
-                        type="object"
-                        name="get_repuestos"
-                        icon="fa-cogs"
-                        class="btn-link text-warning"
-                        title="Ver repuestos relacionados" />
+                   
                 </list>
             </field>
         </record>
