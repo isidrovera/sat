@@ -1085,7 +1085,7 @@
                     <field name="contador_bn" />
                     <field name="contador_color" />
                     <field name="contador_scan" />
-                    <field name="fecha_ultima_actualizacion" />
+                    <field name="fecha_ultima_actualizacion" widget="remaining_days" />
                     <field name="direccion" optional="hide"/>
                     <field name="contacto_id" optional="hide" />
                     <field name="celular" widget="phone" optional="hide" />
