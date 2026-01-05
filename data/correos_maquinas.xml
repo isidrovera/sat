@@ -326,17 +326,7 @@
                 </ul>
             </div>
 
-            <!-- Impacto -->
-            <div style="margin:20px 0;padding:15px;background-color:#fef2f2;border-left:4px solid #ef4444;">
-                <p style="margin:0 0 10px 0;color:#991b1b;font-weight:bold;">💰 Impacto Potencial:</p>
-                <ul style="margin:5px 0 0 20px;color:#991b1b;font-size:14px;line-height:1.8;">
-                    <li><strong>Costos:</strong> Los equipos color tienen mayor valor que los monocromos</li>
-                    <li><strong>Contratos:</strong> Puede afectar precios de renta o venta acordados</li>
-                    <li><strong>Garantía:</strong> El modelo registrado debe coincidir con la garantía del proveedor</li>
-                    <li><strong>Inventario:</strong> El valor del stock puede verse afectado</li>
-                    <li><strong>Reclamos:</strong> Sirve como evidencia si el proveedor entregó modelo diferente</li>
-                </ul>
-            </div>
+           
 
             <!-- Información adicional -->
             <div style="margin:20px 0;padding:15px;background-color:#f3f4f6;border-radius:6px;">
