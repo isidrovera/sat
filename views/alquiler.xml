@@ -1077,18 +1077,18 @@
 
                     <!-- Campos principales -->
                     <field name="cliente_id" widget="many2one_avatar_user" />
-                    <field name="tipo_maquina_id" column_invisible="1" />
-                    <field name="tipo_maquina" column_invisible="1" />
-                    <field name="marca" column_invisible="1" />
+                    <field name="tipo_maquina_id" optional="hide"/>
+                    <field name="tipo_maquina" optional="hide"/>
+                    <field name="marca" optional="hide" />
                     <field name="name" string="Modelo" required="1" />
                     <field name="serie" />
                     <field name="contador_bn" />
                     <field name="contador_color" />
                     <field name="contador_scan" />
                     <field name="fecha_ultima_actualizacion" />
-                    <field name="direccion" column_invisible="1" />
-                    <field name="contacto_id" column_invisible="1" />
-                    <field name="celular" widget="phone" column_invisible="1" />
+                    <field name="direccion" optional="hide"/>
+                    <field name="contacto_id" optional="hide" />
+                    <field name="celular" widget="phone" optional="hide" />
 
                     <!-- Fecha con widget mejorado -->
                     <field name="fecha_recurrente"
@@ -1122,27 +1122,7 @@
                         decoration-success="estado_bloqueo == 'activo'" />
                     <field name="qr_image" widget="binary" />
 
-                    <!-- Contadores con suma -->
-                    <field name="ticket_count"
-                        string="Tickets"
-                        sum="Total Tickets"
-                        column_invisible="0" />
-                    <field name="pedidos_count"
-                        string="Pedidos"
-                        sum="Total Pedidos"
-                        column_invisible="0" />
-                    <field name="repuestos_count"
-                        string="Repuestos"
-                        sum="Total Repuestos"
-                        column_invisible="0" />
-
-                    <!-- Botones de acción modernizados -->
-                    <button string="Generar QR"
-                        type="object"
-                        name="generate_qr_code"
-                        icon="fa-qrcode"
-                        class="btn-link text-primary"
-                        title="Generar código QR" />
+                  
 
                     <button string="Tickets"
                         type="object"
