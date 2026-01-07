@@ -127,7 +127,7 @@ class WhatsappNotificationWizard(models.TransientModel):
 • Ticket #: {self.ticket_id.name}
 • Cliente: {self.cliente_name or 'No especificado'}
 • Dirección: {self.direccion or 'No especificada'}
-• Fecha y hora: {self.agenda_local or 'No programada'}
+• Fecha y hora: {self.fecha_visita_ticket or 'No programada'}
 • Técnico: {self.tecnico_name or 'No asignado'}
 
 *EQUIPO*
