@@ -181,7 +181,7 @@
         <field name="auto_delete" eval="True"/>
         <field name="email_from">soporte@andescopiers.com.pe</field>
         <field name="email_to">campuero@corapsac.com.pe</field>
-        <field name="email_cc">lincoln@corapsac.com</field>
+        <field name="email_cc">lincoln@corapsac.com, asistentecontable@corapsac.com</field>
         <field name="body_html"><![CDATA[
 <!DOCTYPE html>
 <html>
