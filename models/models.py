@@ -560,19 +560,25 @@ class SatSat(models.Model):
     def action_colocar_en_revision(self):
         """
         Coloca la máquina en estado 'para_revision',
-        registra fecha_para_revision (en UTC, naïve para Odoo)
-        y muestra el puesto en cola.
+        SOLO si ya fue descargada (check_ingreso = True).
         """
         self.ensure_one()
 
+        # 🚫 BLOQUEO: no permitir si no está descargada
+        if not self.check_ingreso:
+            raise ValidationError(_(
+                "No se puede colocar a revisión porque el equipo aún no se descarga."
+            ))
+
+        # ---------------------------
         # Ya NO obligamos a tener tipo_revision/prioridad
-        # Son completamente opcionales ahora.
+        # ---------------------------
 
         # Fecha/hora Lima usando tu helper
         peru_dt = self._get_peru_datetime()
         # Convertimos a UTC
         utc_dt = peru_dt.astimezone(pytz.utc)
-        # Odoo quiere datetime naive o string sin tz -> usamos string como en tu write anterior
+        # Odoo quiere datetime naive
         fecha_str = utc_dt.strftime('%Y-%m-%d %H:%M:%S')
 
         # Cambiar estado y fecha
@@ -585,7 +591,7 @@ class SatSat(models.Model):
         self._compute_posicion_cola()
         puesto = self.posicion_cola or 1
 
-        # Notificación en chatter - usar formato HTML correcto
+        # Notificación en chatter
         isidro_partner_id = self.get_isidro_partner_id()
         mensaje_chatter = (
             "Se ha colocado una nueva máquina para revisión.\n\n"
@@ -597,14 +603,13 @@ class SatSat(models.Model):
             f"Modificado por: {self.env.user.name}"
         )
 
-        
         self.message_post(
             body=mensaje_chatter,
             partner_ids=[isidro_partner_id] if isidro_partner_id else None,
             subtype_xmlid='mail.mt_comment',
         )
 
-        # Notificación visual al usuario
+        # Notificación visual
         return {
             'type': 'ir.actions.client',
             'tag': 'display_notification',
