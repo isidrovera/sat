@@ -1002,93 +1002,77 @@ class Reparaciones(models.Model):
     def action_finalizar_reparacion(self):
         """
         Finaliza la reparación validando todos los requisitos necesarios.
-        
-        Validaciones realizadas:
-        - Generación/validación del informe (reutilizando action_generar_informe)
-        - Campos básicos: informe y calidad
-        - Evaluaciones de componentes completadas
-        - Evaluaciones de accesorios completadas
-        - Contómetro actualizado y validado
-        - Mínimo de fotos requeridas
-        - Autenticación del usuario
         """
         self.ensure_one()
         
-        _logger.info(f"[action_finalizar_reparacion] Iniciando proceso de finalización para reparación ID: {self.id}")
+        _logger.info(
+            "[action_finalizar_reparacion] Iniciando proceso de finalización para reparación ID: %s",
+            self.id,
+        )
 
         # ==========================================================
-        # 0) REUTILIZAR LÓGICA DE GENERAR INFORME + WIZARD SUBPARTES
-        #    - Si hay componentes 'requiere_cambio' sin intervención, se abre wizard.
-        #    - Si el informe está vacío/autogenerado, se genera uno nuevo.
-        #    - Si el informe es manual, no se toca.
-        #    - Desde aquí NO se muestra popup de notificación (context flag).
+        # 0) Reutilizar lógica de generar informe / wizard subpartes
         # ==========================================================
         res = self.with_context(from_finalizar_reparacion=True).action_generar_informe()
         if res:
-            # Si action_generar_informe devuelve una acción (por ejemplo, el wizard),
-            # la devolvemos directamente y detenemos la finalización.
             _logger.info(
                 "[action_finalizar_reparacion] ID %s -> Se devuelve acción de generar_informe (probable wizard)",
                 self.id,
             )
             return res
 
-        # En este punto:
-        # - O ya no hay componentes 'requiere_cambio' sin intervención
-        # - Y/o ya existe informe (manual o autogenerado)
-        # Seguimos con las validaciones estándar.
-
-        # ====== VALIDACIONES DE CAMPOS BÁSICOS ======
+        # ====== VALIDACIONES ======
         self._validar_campos_basicos()
-        
-        # ====== VALIDACIONES DE EVALUACIONES ======
         self._validar_evaluaciones_componentes()
         self._validar_evaluaciones_accesorios()
-        
-        # ====== VALIDACIÓN DE AUTENTICACIÓN ======
+
         if not self._validar_autenticacion():
             _logger.info(
                 "[action_finalizar_reparacion] ID %s -> Autenticación pendiente, abriendo wizard.",
                 self.id,
             )
             return self._abrir_wizard_autenticacion()
-        
-        # ====== VALIDACIÓN DE CONTÓMETRO ======
+
         self._validar_contometro()
-        
-        # ====== VALIDACIÓN DE FOTOS ======
         self._validar_fotos_minimas()
-        
-        # ====== PROCESO DE FINALIZACIÓN ======
+
         _logger.info(
             "[action_finalizar_reparacion] Todas las validaciones pasaron. Procediendo con la finalización para ID: %s",
             self.id,
         )
-        
-        # Usar sudo() solo para operaciones específicas
+
+        # Trabajar con sudo solo para escrituras críticas
         self_sudo = self.sudo()
-        
-        # Generar reporte QR (no crítico si falla)
+
+        # ====== OPERACIONES NO CRÍTICAS ======
         self._generar_reporte_qr()
-        
-        # Enviar notificaciones (registrar errores pero no detener)
         self._enviar_notificaciones()
-        
-        # Cambiar estado a finalizado
+
+        # ====== CAMBIO DE ESTADO (CORRECCIÓN CLAVE) ======
         _logger.info(
-            "[action_finalizar_reparacion] Cambiando estado a 'finalizado' para reparación ID: %s",
+            "[action_finalizar_reparacion] Cambiando estado de la máquina a 'finalizado' para reparación ID: %s",
             self.id,
         )
-        self_sudo.estado_id = "finalizado"
+
+        # Escribir en el campo REAL del modelo sat.sat (no en el related)
+        self_sudo.maquina_id.write({
+            'estado_ventas_id': 'finalizado'
+        })
+
+        # Guardar fecha de finalización en la reparación
+        self_sudo.write({
+            'fecha_finalizacion': fields.Datetime.now()
+        })
+
         _logger.info(
-            "[action_finalizar_reparacion] Estado cambiado exitosamente a 'finalizado' para ID: %s",
+            "[action_finalizar_reparacion] Estado actualizado y fecha de finalización registrada para ID: %s",
             self.id,
         )
-        
-        # Crear siguiente reparación
+
+        # ====== CREAR SIGUIENTE REPARACIÓN ======
         try:
             _logger.info(
-                "[action_finalizar_reparacion] Creando siguiente reparación para reparación ID: %s",
+                "[action_finalizar_reparacion] Creando siguiente reparación para ID: %s",
                 self.id,
             )
             self_sudo._create_next_reparacion()
@@ -1102,12 +1086,12 @@ class Reparaciones(models.Model):
                 self.id,
                 e,
             )
-        
+
         _logger.info(
             "[action_finalizar_reparacion] Proceso de finalización completado exitosamente para reparación ID: %s",
             self.id,
         )
-        
+
         # Retornar a la vista de lista
         return {
             'type': 'ir.actions.act_window',
