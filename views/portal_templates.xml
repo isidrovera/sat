@@ -1780,131 +1780,478 @@
         <!-- LISTA DE TICKETS (con iconos, mantiene lógica) -->
         <!-- ===================================================== -->
         <template id="portal_my_tickets" name="Mis Tickets">
-            <t t-call="portal.portal_layout">
-                <t t-set="breadcrumbs_searchbar" t-value="True"/>
+    <t t-call="portal.portal_layout">
+        <t t-set="breadcrumbs_searchbar" t-value="True"/>
 
-                <t t-call="portal.portal_searchbar">
-                    <t t-set="title">Mis Tickets</t>
+        <t t-call="portal.portal_searchbar">
+            <t t-set="title">Mis Tickets</t>
+        </t>
+
+        <!-- Custom CSS -->
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap');
+            
+            .tickets-container {
+                font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+                background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+                min-height: 100vh;
+                padding: 2rem 0;
+            }
+            
+            .tickets-hero {
+                background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+                border-radius: 24px;
+                padding: 2.5rem;
+                margin-bottom: 2rem;
+                box-shadow: 0 20px 60px rgba(245, 158, 11, 0.2);
+                position: relative;
+                overflow: hidden;
+            }
+            
+            .tickets-hero::before {
+                content: '';
+                position: absolute;
+                top: -50%;
+                right: -20%;
+                width: 400px;
+                height: 400px;
+                background: radial-gradient(circle, rgba(254, 243, 199, 0.15) 0%, transparent 70%);
+                border-radius: 50%;
+            }
+            
+            .tickets-hero h2 {
+                color: #fff;
+                font-weight: 700;
+                font-size: 2rem;
+                margin: 0 0 0.5rem 0;
+                letter-spacing: -0.5px;
+                position: relative;
+                z-index: 1;
+            }
+            
+            .tickets-hero-subtitle {
+                color: rgba(255,255,255,0.85);
+                font-size: 1rem;
+                margin: 0;
+                position: relative;
+                z-index: 1;
+            }
+            
+            .tickets-count {
+                display: inline-flex;
+                align-items: center;
+                gap: 0.5rem;
+                background: rgba(255,255,255,0.2);
+                backdrop-filter: blur(10px);
+                padding: 0.5rem 1.25rem;
+                border-radius: 50px;
+                color: #fff;
+                font-weight: 600;
+                font-size: 1rem;
+                border: 1px solid rgba(255,255,255,0.3);
+                position: relative;
+                z-index: 1;
+            }
+            
+            .ticket-card {
+                background: #fff;
+                border-radius: 16px;
+                border: 1px solid #e9ecef;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                margin-bottom: 1.25rem;
+                overflow: hidden;
+            }
+            
+            .ticket-card:hover {
+                transform: translateY(-4px);
+                box-shadow: 0 12px 40px rgba(0,0,0,0.1);
+                border-color: #f59e0b;
+            }
+            
+            .ticket-header {
+                display: flex;
+                align-items: center;
+                gap: 1rem;
+                padding: 1.5rem;
+                background: linear-gradient(135deg, #f8f9fa 0%, #fff 100%);
+                border-bottom: 1px solid #e9ecef;
+            }
+            
+            .ticket-icon {
+                width: 56px;
+                height: 56px;
+                background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+                border-radius: 14px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+                box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+            }
+            
+            .ticket-icon i {
+                color: #fff;
+                font-size: 1.5rem;
+            }
+            
+            .ticket-title {
+                flex: 1;
+            }
+            
+            .ticket-title h3 {
+                margin: 0 0 0.25rem 0;
+                font-size: 1.25rem;
+                font-weight: 700;
+                color: #1a1f3a;
+                letter-spacing: -0.3px;
+            }
+            
+            .ticket-meta {
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+                font-size: 0.875rem;
+                color: #6c757d;
+                font-family: 'JetBrains Mono', monospace;
+            }
+            
+            .ticket-body {
+                padding: 1.5rem;
+            }
+            
+            .info-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 1rem;
+                margin-bottom: 1.5rem;
+            }
+            
+            .info-item {
+                background: #f8f9fa;
+                padding: 1rem;
+                border-radius: 12px;
+                border-left: 3px solid #f59e0b;
+            }
+            
+            .info-label {
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+                font-size: 0.75rem;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                color: #6c757d;
+                margin-bottom: 0.5rem;
+                font-weight: 600;
+            }
+            
+            .info-value {
+                font-size: 1rem;
+                font-weight: 600;
+                color: #1a1f3a;
+            }
+            
+            .status-badge {
+                display: inline-flex;
+                align-items: center;
+                gap: 0.4rem;
+                padding: 0.5rem 1rem;
+                border-radius: 50px;
+                font-size: 0.875rem;
+                font-weight: 600;
+                border: 2px solid;
+            }
+            
+            .status-nuevo {
+                background: #dbeafe;
+                color: #1e40af;
+                border-color: #3b82f6;
+            }
+            
+            .status-proceso {
+                background: #fef3c7;
+                color: #92400e;
+                border-color: #fbbf24;
+            }
+            
+            .status-finalizado {
+                background: #d1fae5;
+                color: #065f46;
+                border-color: #10b981;
+            }
+            
+            .status-default {
+                background: #f3f4f6;
+                color: #374151;
+                border-color: #9ca3af;
+            }
+            
+            .btn-view-ticket {
+                background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+                color: #fff;
+                border: none;
+                border-radius: 12px;
+                padding: 0.875rem 1.5rem;
+                font-weight: 700;
+                font-size: 0.95rem;
+                transition: all 0.2s;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 0.5rem;
+                text-decoration: none;
+                width: 100%;
+            }
+            
+            .btn-view-ticket:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 8px 20px rgba(245, 158, 11, 0.3);
+                color: #fff;
+            }
+            
+            .empty-state {
+                text-align: center;
+                padding: 4rem 2rem;
+                background: #fff;
+                border-radius: 24px;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            }
+            
+            .empty-state i {
+                font-size: 4rem;
+                color: #e5e7eb;
+                margin-bottom: 1.5rem;
+            }
+            
+            .empty-state h3 {
+                font-size: 1.5rem;
+                font-weight: 700;
+                color: #1a1f3a;
+                margin-bottom: 0.5rem;
+            }
+            
+            .empty-state p {
+                color: #6c757d;
+                font-size: 1rem;
+                margin-bottom: 2rem;
+            }
+            
+            .btn-equipos {
+                background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+                color: #fff;
+                border: none;
+                border-radius: 12px;
+                padding: 1rem 2rem;
+                font-weight: 700;
+                font-size: 1rem;
+                transition: all 0.2s;
+                display: inline-flex;
+                align-items: center;
+                gap: 0.5rem;
+                text-decoration: none;
+            }
+            
+            .btn-equipos:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 12px 24px rgba(99, 102, 241, 0.3);
+                color: #fff;
+            }
+            
+            @media (max-width: 768px) {
+                .tickets-hero {
+                    padding: 2rem 1.5rem;
+                }
+                
+                .tickets-hero h2 {
+                    font-size: 1.75rem;
+                }
+                
+                .ticket-header {
+                    flex-direction: column;
+                    align-items: flex-start;
+                }
+                
+                .info-grid {
+                    grid-template-columns: 1fr;
+                }
+            }
+        </style>
+
+        <div class="tickets-container">
+            <div class="container">
+                
+                <!-- Hero Section -->
+                <div class="tickets-hero">
+                    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+                        <div>
+                            <h2>
+                                <i class="fa fa-ticket-alt me-2"></i>
+                                Mis Tickets de Servicio
+                            </h2>
+                            <p class="tickets-hero-subtitle mb-0">
+                                Seguimiento de tus solicitudes de servicio técnico
+                            </p>
+                        </div>
+                        <t t-if="tickets">
+                            <div class="tickets-count">
+                                <i class="fa fa-layer-group"></i>
+                                <span><t t-esc="len(tickets)"/> tickets registrados</span>
+                            </div>
+                        </t>
+                    </div>
+                </div>
+
+                <!-- Empty State -->
+                <t t-if="not tickets">
+                    <div class="empty-state">
+                        <i class="fa fa-inbox"></i>
+                        <h3>No tiene tickets registrados</h3>
+                        <p>Actualmente no tiene tickets de servicio técnico</p>
+                        <a href="/my/equipos" class="btn-equipos">
+                            <i class="fa fa-print"></i>
+                            <span>Ver mis equipos</span>
+                        </a>
+                    </div>
                 </t>
 
-                <div class="container mt-4">
-                    <t t-if="not tickets">
-                        <div class="alert alert-info text-center" role="alert">
-                            <i class="fa fa-info-circle fa-2x mb-3"></i>
-                            <h4>No tiene tickets registrados</h4>
-                            <p class="mb-3">Actualmente no tiene tickets de servicio técnico.</p>
-                            <a href="/my/equipos" class="btn btn-primary">
-                                <i class="fa fa-print"></i> Ver mis equipos
-                            </a>
-                        </div>
-                    </t>
+                <!-- Ticket Cards -->
+                <t t-else="">
+                    <div class="tickets-list">
+                        <t t-foreach="tickets" t-as="ticket">
+                            <div class="ticket-card">
+                                <!-- Header -->
+                                <div class="ticket-header">
+                                    <div class="ticket-icon">
+                                        <i class="fa fa-ticket-alt"></i>
+                                    </div>
+                                    
+                                    <div class="ticket-title">
+                                        <h3><t t-esc="ticket.name"/></h3>
+                                        <div class="ticket-meta">
+                                            <i class="fa fa-calendar-plus"></i>
+                                            <span>Creado: <t t-esc="ticket.create_date.strftime('%d/%m/%Y')"/></span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div>
+                                        <t t-if="ticket.estado == 'nuevo'">
+                                            <div class="status-badge status-nuevo">
+                                                <i class="fa fa-star"></i>
+                                                Nuevo
+                                            </div>
+                                        </t>
+                                        <t t-elif="ticket.estado == 'proceso'">
+                                            <div class="status-badge status-proceso">
+                                                <i class="fa fa-clock"></i>
+                                                En Proceso
+                                            </div>
+                                        </t>
+                                        <t t-elif="ticket.estado == 'finalizado'">
+                                            <div class="status-badge status-finalizado">
+                                                <i class="fa fa-check-circle"></i>
+                                                Finalizado
+                                            </div>
+                                        </t>
+                                        <t t-else="">
+                                            <div class="status-badge status-default">
+                                                <i class="fa fa-info-circle"></i>
+                                                <t t-esc="ticket.estado"/>
+                                            </div>
+                                        </t>
+                                    </div>
+                                </div>
 
-                    <t t-else="">
-                        <div class="card shadow-sm border-0">
-                            <div class="card-header bg-primary text-white">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <span><i class="fa fa-ticket-alt me-2"></i>Mis Tickets</span>
-                                    <span class="badge bg-light text-dark">
-                                        <t t-esc="len(tickets)"/> tickets
-                                    </span>
+                                <!-- Body -->
+                                <div class="ticket-body">
+                                    <!-- Info Grid -->
+                                    <div class="info-grid">
+                                        <!-- Equipo -->
+                                        <div class="info-item">
+                                            <div class="info-label">
+                                                <i class="fa fa-print"></i>
+                                                Equipo
+                                            </div>
+                                            <div class="info-value">
+                                                <t t-if="ticket.product_alquiler">
+                                                    <div><t t-esc="ticket.modelo_id_r"/></div>
+                                                    <div style="font-size: 0.875rem; color: #6b7280; font-weight: 500; margin-top: 0.25rem;">
+                                                        Serie: <t t-esc="ticket.serie_id_r"/>
+                                                    </div>
+                                                </t>
+                                                <t t-else="">
+                                                    <span class="text-muted">Sin equipo</span>
+                                                </t>
+                                            </div>
+                                        </div>
+
+                                        <!-- Fecha de Visita -->
+                                        <div class="info-item">
+                                            <div class="info-label">
+                                                <i class="fa fa-calendar-check"></i>
+                                                Fecha de Visita
+                                            </div>
+                                            <div class="info-value">
+                                                <t t-if="ticket.agenda">
+                                                    <div><t t-esc="ticket.agenda.strftime('%d/%m/%Y')"/></div>
+                                                    <div style="font-size: 0.875rem; color: #6b7280; font-weight: 500; margin-top: 0.25rem;">
+                                                        <i class="fa fa-clock"></i>
+                                                        <t t-esc="ticket.agenda.strftime('%H:%M')"/>
+                                                    </div>
+                                                </t>
+                                                <t t-else="">
+                                                    <span class="text-muted">Sin programar</span>
+                                                </t>
+                                            </div>
+                                        </div>
+
+                                        <!-- Tipo de Servicio -->
+                                        <div class="info-item">
+                                            <div class="info-label">
+                                                <i class="fa fa-wrench"></i>
+                                                Tipo de Servicio
+                                            </div>
+                                            <div class="info-value">
+                                                <t t-if="ticket.tipo_servicio_id">
+                                                    <t t-esc="dict(ticket._fields['tipo_servicio_id'].selection).get(ticket.tipo_servicio_id, ticket.tipo_servicio_id)"/>
+                                                </t>
+                                                <t t-else="">
+                                                    <span class="text-muted">No especificado</span>
+                                                </t>
+                                            </div>
+                                        </div>
+
+                                        <!-- Técnico -->
+                                        <div class="info-item">
+                                            <div class="info-label">
+                                                <i class="fa fa-user-cog"></i>
+                                                Técnico Asignado
+                                            </div>
+                                            <div class="info-value">
+                                                <t t-if="ticket.responsable">
+                                                    <t t-esc="ticket.responsable.name"/>
+                                                </t>
+                                                <t t-else="">
+                                                    <span class="text-muted">Sin asignar</span>
+                                                </t>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Action Button -->
+                                    <a t-attf-href="/my/ticket/#{ticket.id}"
+                                       class="btn-view-ticket">
+                                        <i class="fa fa-eye"></i>
+                                        <span>Ver Detalles del Ticket</span>
+                                    </a>
                                 </div>
                             </div>
-
-                            <div class="card-body p-0">
-                                <div class="table-responsive">
-                                    <table class="table table-hover mb-0 o_portal_table">
-                                        <thead class="table-light">
-                                            <tr>
-                                                <th><i class="fa fa-hashtag me-1 text-muted"></i>Ticket</th>
-                                                <th><i class="fa fa-print me-1 text-muted"></i>Equipo / Serie</th>
-                                                <th><i class="fa fa-calendar-alt me-1 text-muted"></i>Fecha Visita</th>
-                                                <th><i class="fa fa-wrench me-1 text-muted"></i>Tipo de Servicio</th>
-                                                <th><i class="fa fa-user-cog me-1 text-muted"></i>Técnico</th>
-                                                <th><i class="fa fa-flag me-1 text-muted"></i>Estado</th>
-                                                <th class="text-center"><i class="fa fa-bolt me-1 text-muted"></i>Acción</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <t t-foreach="tickets" t-as="ticket">
-                                                <tr>
-                                                    <td>
-                                                        <strong><t t-esc="ticket.name"/></strong>
-                                                        <br/>
-                                                        <small class="text-muted">
-                                                            <t t-esc="ticket.create_date.strftime('%d/%m/%Y')"/>
-                                                        </small>
-                                                    </td>
-                                                    <td>
-                                                        <t t-if="ticket.product_alquiler">
-                                                            <div><t t-esc="ticket.modelo_id_r"/></div>
-                                                            <small class="text-muted">
-                                                                Serie: <t t-esc="ticket.serie_id_r"/>
-                                                            </small>
-                                                        </t>
-                                                        <t t-else="">
-                                                            <span class="text-muted">Sin equipo</span>
-                                                        </t>
-                                                    </td>
-                                                    <td>
-                                                        <t t-if="ticket.agenda">
-                                                            <t t-esc="ticket.agenda.strftime('%d/%m/%Y')"/>
-                                                            <br/>
-                                                            <small class="text-muted">
-                                                                <t t-esc="ticket.agenda.strftime('%H:%M')"/>
-                                                            </small>
-                                                        </t>
-                                                        <t t-else="">
-                                                            <span class="text-muted">Sin programar</span>
-                                                        </t>
-                                                    </td>
-                                                    <td>
-                                                        <t t-if="ticket.tipo_servicio_id">
-                                                            <small>
-                                                                <t t-esc="dict(ticket._fields['tipo_servicio_id'].selection).get(ticket.tipo_servicio_id, ticket.tipo_servicio_id)"/>
-                                                            </small>
-                                                        </t>
-                                                    </td>
-                                                    <td>
-                                                        <t t-if="ticket.responsable">
-                                                            <t t-esc="ticket.responsable.name"/>
-                                                        </t>
-                                                        <t t-else="">
-                                                            <span class="text-muted">Sin asignar</span>
-                                                        </t>
-                                                    </td>
-                                                    <td>
-                                                        <t t-if="ticket.estado == 'nuevo'">
-                                                            <span class="badge bg-info"><i class="fa fa-star me-1"></i>Nuevo</span>
-                                                        </t>
-                                                        <t t-elif="ticket.estado == 'proceso'">
-                                                            <span class="badge bg-warning text-dark"><i class="fa fa-spinner me-1"></i>En Proceso</span>
-                                                        </t>
-                                                        <t t-elif="ticket.estado == 'finalizado'">
-                                                            <span class="badge bg-success"><i class="fa fa-check me-1"></i>Finalizado</span>
-                                                        </t>
-                                                        <t t-else="">
-                                                            <span class="badge bg-secondary"><i class="fa fa-info-circle me-1"></i><t t-esc="ticket.estado"/></span>
-                                                        </t>
-                                                    </td>
-                                                    <td class="text-center">
-                                                        <a t-attf-href="/my/ticket/#{ticket.id}"
-                                                           class="btn btn-sm btn-primary">
-                                                            <i class="fa fa-eye"></i> Ver
-                                                        </a>
-                                                    </td>
-                                                </tr>
-                                            </t>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                    </t>
-                </div>
-            </t>
-        </template>
-
-
+                        </t>
+                    </div>
+                </t>
+            </div>
+        </div>
+    </t>
+</template>
 
         <!-- ===================================================== -->
         <!-- DETALLE DE TICKET (LO MANTIENES) -->
