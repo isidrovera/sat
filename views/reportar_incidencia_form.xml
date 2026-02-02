@@ -2,312 +2,152 @@
 <odoo>
   <template id="reportar_incidencia_form" name="Reportar Incidencia">
     <t t-call="website.layout">
+
       <div id="wrap" class="oe_structure">
-        <!-- Hero Section -->
-        <section class="bg-gradient-to-r from-blue-600 to-purple-700 text-white py-5 py-md-6 mb-4 mb-md-5">
+
+        <!-- HERO -->
+        <section class="bg-primary text-white py-4 py-md-5 mb-4">
           <div class="container">
             <div class="row justify-content-center">
-              <div class="col-xl-8 col-lg-9 col-md-10 text-center">
-                <h1 class="fw-bold mb-3 hero-title">
-                  <i class="fa fa-headset me-2 me-md-3"></i>
+              <div class="col-12 col-md-10 col-lg-8 text-center">
+                <h1 class="fw-bold mb-2">
+                  <i class="fa fa-headset me-2"></i>
                   Reportar un Problema
                 </h1>
-                <p class="lead mb-0 hero-subtitle">
-                  Estamos aquí para ayudarte. Describe tu problema y nuestro equipo técnico te contactará pronto.
+                <p class="mb-0 opacity-75">
+                  Describe tu problema y nuestro equipo técnico te contactará pronto.
                 </p>
               </div>
             </div>
           </div>
         </section>
 
-        <!-- Main Form Section -->
+        <!-- FORM -->
         <div class="container mb-5">
           <div class="row justify-content-center">
-            <div class="col-xl-7 col-lg-8 col-md-10">
-              <!-- Card Container -->
-              <div class="card shadow-lg border-0 rounded-4 responsive-card">
-                <div class="card-body p-4 p-md-5">
-                  <!-- Form: LOGICA ORIGINAL CONSERVADA -->
-                  <form id="ticket_form" action="/ticket/reportar_incidencia" method="post" enctype="multipart/form-data">
-                    <!-- CSRF + hidden originales -->
+            <div class="col-12 col-md-10 col-lg-8 col-xl-7">
+
+              <div class="card shadow-sm border-0 rounded-3">
+                <div class="card-body p-3 p-md-4 p-lg-5">
+
+                  <form id="ticket_form"
+                        action="/ticket/reportar_incidencia"
+                        method="post"
+                        enctype="multipart/form-data">
+
+                    <!-- Hidden -->
                     <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
-                    <input type="hidden" id="partner_id" name="partner_id" t-att-value="partner_id"/>
-                    <input type="hidden" id="direccion" name="direccion" t-att-value="direccion"/>
-                    <input type="hidden" id="correo" name="correo" t-att-value="correo"/>
-                    <input type="hidden" id="product_id" name="product_id" t-att-value="product_id"/>
+                    <input type="hidden" name="partner_id" t-att-value="partner_id"/>
+                    <input type="hidden" name="direccion" t-att-value="direccion"/>
+                    <input type="hidden" name="correo" t-att-value="correo"/>
+                    <input type="hidden" name="product_id" t-att-value="product_id"/>
 
-                    <!-- Bloque: Información del Reportante -->
-                    <div class="mb-4 mb-md-5">
-                      <div class="d-flex align-items-center mb-3 mb-md-4 flex-wrap">
-                        <div class="bg-primary rounded-circle p-2 me-3 mb-2 mb-md-0">
-                          <i class="fa fa-user text-white"></i>
-                        </div>
-                        <div>
-                          <h3 class="mb-0 text-primary fw-semibold section-title">
-                            Tus Datos
-                          </h3>
-                          <small class="text-muted d-block mt-1">
-                            Estos datos nos ayudarán a contactarte rápidamente.
-                          </small>
-                        </div>
-                      </div>
+                    <!-- DATOS -->
+                    <div class="mb-4">
+                      <h5 class="fw-semibold text-primary mb-3">
+                        <i class="fa fa-user me-2"></i>Tus Datos
+                      </h5>
 
-                      <div class="row g-3 g-md-4">
+                      <div class="row g-3">
                         <div class="col-12 col-md-6">
-                          <div class="form-floating">
-                            <input type="text"
-                                   id="reporter_name"
-                                   name="reporter_name"
-                                   class="form-control bg-light"
-                                   t-att-value="contacto_id"
-                                   placeholder="Ingresa tu nombre"
-                                   required="required"
-                                   autocomplete="name"/>
-                            <label for="reporter_name">
-                              <i class="fa fa-id-badge me-2 text-primary"></i>
-                              Nombre
-                            </label>
-                          </div>
+                          <label class="form-label">Nombre</label>
+                          <input type="text"
+                                 name="reporter_name"
+                                 class="form-control"
+                                 t-att-value="contacto_id"
+                                 required="required"/>
                         </div>
+
                         <div class="col-12 col-md-6">
-                          <div class="form-floating">
-                            <input type="tel"
-                                   id="reporter_phone"
-                                   name="reporter_phone"
-                                   class="form-control bg-light"
-                                   t-att-value="celular"
-                                   placeholder="Ingresa tu número de celular"
-                                   required="required"
-                                   autocomplete="tel"
-                                   pattern="[0-9+\-\s]{6,}"
-                                   maxlength="20"/>
-                            <label for="reporter_phone">
-                              <i class="fa fa-phone me-2 text-primary"></i>
-                              Celular
-                            </label>
-                          </div>
-                          <div class="form-text mt-1">
-                            <small>
-                              <i class="fa fa-info-circle me-1"></i>
-                              Incluye código de área si es necesario.
-                            </small>
-                          </div>
+                          <label class="form-label">Celular</label>
+                          <input type="tel"
+                                 name="reporter_phone"
+                                 class="form-control"
+                                 t-att-value="celular"
+                                 required="required"/>
                         </div>
                       </div>
                     </div>
 
-                    <!-- Bloque: Descripción del Problema -->
-                    <div class="mb-4 mb-md-5">
-                      <div class="d-flex align-items-center mb-3 mb-md-4 flex-wrap">
-                        <div class="bg-warning rounded-circle p-2 me-3 mb-2 mb-md-0">
-                          <i class="fa fa-exclamation-triangle text-white"></i>
-                        </div>
-                        <div>
-                          <h3 class="mb-0 text-warning fw-semibold section-title">
-                            Descripción del Problema
-                          </h3>
-                          <small class="text-muted d-block mt-1">
-                            Mientras más detalles, más rápido podremos ayudarte.
-                          </small>
-                        </div>
-                      </div>
+                    <!-- DESCRIPCION -->
+                    <div class="mb-4">
+                      <h5 class="fw-semibold text-warning mb-3">
+                        <i class="fa fa-exclamation-triangle me-2"></i>
+                        Descripción del Problema
+                      </h5>
 
-                      <div class="form-floating">
-                        <textarea id="description"
-                                  name="description"
-                                  class="form-control"
-                                  placeholder="Describa detalladamente el problema que está experimentando..."
-                                  style="height: 160px;"
-                                  required="required"></textarea>
-                        <label for="description">
-                          <i class="fa fa-edit me-2 text-warning"></i>
-                          Describa detalladamente el problema
-                        </label>
-                      </div>
+                      <textarea name="description"
+                                class="form-control"
+                                rows="5"
+                                required="required"
+                                placeholder="Describe detalladamente el problema..."></textarea>
 
-                      <div class="form-text mt-2 small">
-                        <i class="fa fa-info-circle me-1"></i>
-                        Incluya detalles como: cuándo ocurrió, qué estaba haciendo, códigos de error, sonidos extraños, luces encendidas, etc.
-                      </div>
+                      <small class="text-muted d-block mt-2">
+                        Incluye detalles como sonidos, mensajes, luces o cuándo ocurrió.
+                      </small>
                     </div>
 
-                    <!-- Bloque: Foto del Problema -->
-                    <div class="mb-4 mb-md-5">
-                      <div class="d-flex align-items-center mb-3 flex-wrap">
-                        <div class="bg-secondary rounded-circle p-2 me-3 mb-2 mb-md-0">
-                          <i class="fa fa-camera text-white"></i>
-                        </div>
-                        <div>
-                          <h4 class="mb-0 text-secondary fw-semibold section-title-sm">
-                            Evidencia (opcional)
-                          </h4>
-                          <small class="text-muted d-block mt-1">
-                            Una foto clara acelera el diagnóstico del técnico.
-                          </small>
-                        </div>
-                      </div>
+                    <!-- FOTO -->
+                    <div class="mb-4">
+                      <h6 class="fw-semibold mb-2">
+                        <i class="fa fa-camera me-2"></i>Evidencia (opcional)
+                      </h6>
 
-                      <div class="form-group">
-                        <input type="file"
-                               id="problem_photo"
-                               name="problem_photo"
-                               class="form-control"
-                               accept="image/*"
-                               capture="environment"/>
-                        <small class="text-muted d-block mt-2">
-                          <i class="fa fa-image me-1"></i>
-                          Formatos permitidos: imágenes (JPG, PNG, HEIC, etc.). Puedes usar la cámara de tu dispositivo.
-                        </small>
-                      </div>
+                      <input type="file"
+                             name="problem_photo"
+                             class="form-control"
+                             accept="image/*"/>
                     </div>
 
-                    <!-- Acciones -->
-                    <div class="d-flex flex-column flex-md-row justify-content-center gap-2 mt-3">
-                      <button type="button"
-                              class="btn btn-outline-secondary rounded-pill px-4 py-2 btn-action w-100 w-md-auto"
-                              onclick="goBack()">
-                        <i class="fa fa-arrow-left me-2"></i>Volver
-                      </button>
-                      <button id="submit_btn"
-                              type="submit"
-                              class="btn btn-primary rounded-pill px-4 py-2 fw-bold btn-action w-100 w-md-auto">
-                        <i class="fa fa-paper-plane me-2"></i>Enviar Reporte
-                      </button>
+                    <!-- ACCIONES -->
+                    <div class="row g-2 mt-4">
+                      <div class="col-12 col-md-6">
+                        <button type="button"
+                                onclick="window.history.back()"
+                                class="btn btn-outline-secondary w-100">
+                          <i class="fa fa-arrow-left me-1"></i> Volver
+                        </button>
+                      </div>
+
+                      <div class="col-12 col-md-6">
+                        <button id="submit_btn"
+                                type="submit"
+                                class="btn btn-primary w-100 fw-bold">
+                          <i class="fa fa-paper-plane me-1"></i> Enviar Reporte
+                        </button>
+                      </div>
                     </div>
 
                     <div class="text-center mt-4">
                       <small class="text-muted">
-                        <i class="fa fa-clock me-1"></i>
                         Tiempo de respuesta estimado: 2–4 horas laborales.
                       </small>
                     </div>
+
                   </form>
+
                 </div>
               </div>
+
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- Custom CSS -->
-      <style>
-        .bg-gradient-to-r {
-          background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
-        }
+        <!-- JS -->
+        <script>
+          document.addEventListener('DOMContentLoaded', function () {
+            const form = document.getElementById('ticket_form');
+            const submitBtn = document.getElementById('submit_btn');
 
-        .card {
-          background: rgba(255, 255, 255, 0.97);
-          backdrop-filter: blur(10px);
-        }
-
-        .rounded-4 {
-          border-radius: 1rem !important;
-        }
-
-        .btn-primary {
-          background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-          border: none;
-          transition: all 0.3s ease;
-        }
-
-        .btn-primary:hover,
-        .btn-primary:focus {
-          background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
-          transform: translateY(-1px);
-          box-shadow: 0 8px 25px rgba(59,130,246,0.4);
-        }
-
-        .btn-action {
-          min-height: 44px; /* mejor para tacto */
-        }
-
-        .hero-title {
-          font-size: 1.8rem;
-        }
-
-        .hero-subtitle {
-          font-size: 1rem;
-        }
-
-        .section-title {
-          font-size: 1.25rem;
-        }
-
-        .section-title-sm {
-          font-size: 1.1rem;
-        }
-
-        .responsive-card {
-          border-radius: 1rem;
-        }
-
-        /* Mejora visual para form-floating */
-        .form-floating &gt; .form-control:focus ~ label,
-        .form-floating &gt; .form-control:not(:placeholder-shown) ~ label,
-        .form-floating &gt; textarea.form-control:focus ~ label,
-        .form-floating &gt; textarea.form-control:not(:placeholder-shown) ~ label {
-          opacity: 0.85;
-          transform: scale(0.85) translateY(-0.5rem) translateX(0.15rem);
-        }
-
-        /* RESPONSIVE: ajustar para móviles */
-        @media (min-width: 768px) {
-          .hero-title {
-            font-size: 2.2rem;
-          }
-          .hero-subtitle {
-            font-size: 1.1rem;
-          }
-        }
-
-        @media (min-width: 992px) {
-          .hero-title {
-            font-size: 2.5rem;
-          }
-          .hero-subtitle {
-            font-size: 1.15rem;
-          }
-        }
-
-        @media (max-width: 575.98px) {
-          .card-body {
-            padding: 1.5rem !important;
-          }
-          .section-title,
-          .section-title-sm {
-            font-size: 1.05rem;
-          }
-        }
-      </style>
-
-      <!-- JavaScript -->
-      <script>
-        function goBack() {
-          if (document.referrer) {
-            window.location.href = document.referrer;
-          } else {
-            window.history.back();
-          }
-        }
-
-        document.addEventListener('DOMContentLoaded', function () {
-          const form = document.getElementById('ticket_form');
-          const description = document.getElementById('description');
-          const submitBtn = document.getElementById('submit_btn');
-
-          form.addEventListener('submit', function (e) {
-            if (description.value.trim().length &lt; 10) {
-              e.preventDefault();
-              alert('Por favor, proporcione una descripción más detallada del problema (mínimo 10 caracteres).');
-              description.focus();
-              return;
-            }
-            // Evita doble envío
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fa fa-spinner fa-spin me-2"></i>Enviando...';
+            form.addEventListener('submit', function () {
+              submitBtn.disabled = true;
+              submitBtn.innerHTML =
+                '<i class="fa fa-spinner fa-spin me-2"></i>Enviando...';
+            });
           });
-        });
-      </script>
+        </script>
+
+      </div>
     </t>
   </template>
 </odoo>
