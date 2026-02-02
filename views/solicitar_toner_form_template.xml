@@ -476,34 +476,99 @@
 
             <!-- ESTILOS PERSONALIZADOS -->
             <style>
-                .toner-card {
-                    border: 2px solid #e9ecef;
-                    transition: all 0.25s ease-in-out;
-                    cursor: pointer;
-                    border-radius: .75rem;
-                }
-                .toner-card:hover {
-                    border-color: #007bff;
-                    box-shadow: 0 0.5rem 1rem rgba(0, 123, 255, 0.25);
-                    transform: translateY(-2px);
-                }
-                .toner-card.selected {
-                    border-color: #28a745;
-                    background-color: #f8fff9;
-                    box-shadow: 0 0.8rem 1.6rem rgba(40, 167, 69, 0.25);
-                }
-                .stock-item {
-                    text-align: center;
-                    padding: 12px;
-                    border: 1px solid #e9ecef;
-                    border-radius: .75rem;
-                    background-color: #f8f9fa;
-                    font-size: 0.9rem;
-                }
-                .badge-success { background-color: #28a745; }
-                .badge-warning { background-color: #ffc107; color: #212529; }
-                .badge-danger { background-color: #dc3545; }
-            </style>
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap');
+
+.ticket-container {
+  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  min-height: 100vh;
+  padding: 2rem 0;
+}
+
+/* HERO */
+.ticket-hero {
+  background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+  border-radius: 24px;
+  padding: 3rem 2rem;
+  margin-bottom: 2.5rem;
+  box-shadow: 0 20px 60px rgba(37,99,235,.25);
+  color: #fff;
+  text-align: center;
+}
+
+.ticket-hero h1 {
+  font-weight: 700;
+  font-size: 2.25rem;
+  margin-bottom: .5rem;
+}
+
+.ticket-hero-subtitle {
+  opacity: .9;
+  font-size: 1.05rem;
+}
+
+/* CARDS */
+.ticket-container .card {
+  border-radius: 20px;
+  border: none;
+  box-shadow: 0 4px 20px rgba(0,0,0,.08);
+}
+
+.ticket-container .card-header {
+  border-radius: 20px 20px 0 0;
+  font-weight: 700;
+}
+
+/* INPUTS */
+.ticket-container .form-control {
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  padding: .85rem 1rem;
+  background: #f9fafb;
+}
+
+.ticket-container .form-control:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 4px rgba(99,102,241,.15);
+  background: #fff;
+}
+
+/* BOTONES */
+.ticket-container .btn-primary {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  border: none;
+  border-radius: 12px;
+  font-weight: 700;
+}
+
+.ticket-container .btn-outline-secondary,
+.ticket-container .btn-outline-primary {
+  border-radius: 12px;
+  font-weight: 600;
+}
+
+/* ALERTS */
+.ticket-container .alert {
+  border-radius: 14px;
+}
+
+/* STOCK ITEMS */
+.stock-item {
+  border-radius: 16px;
+  background: #f9fafb;
+}
+
+/* TONER CARDS (se integran al estilo) */
+.toner-card {
+  border-radius: 18px;
+  transition: all .25s ease;
+}
+
+.toner-card:hover {
+  transform: translateY(-4px);
+}
+</style>
+
 
             <!-- JAVASCRIPT -->
             <script>
