@@ -49,24 +49,45 @@ class TonerRequestController(http.Controller):
             user_name = kw.get('user_name')
             phone_number = kw.get('phone_number')
 
-            _logger.info(f"Solicitud de formulario de tóner recibida. id_registro={id_registro}, user_name={user_name}, phone_number={phone_number}")
+            _logger.info(
+                f"Solicitud de formulario de tóner recibida. "
+                f"id_registro={id_registro}, user_name={user_name}, phone_number={phone_number}"
+            )
 
-            registro = request.env['alquiler'].sudo().search([('id', '=', int(id_registro))], limit=1)
+            registro = request.env['alquiler'].sudo().search(
+                [('id', '=', int(id_registro))], limit=1
+            )
             if not registro:
                 _logger.error(f"No se encontró registro con id {id_registro}")
                 return request.redirect('/pagina_error')
 
-            # Limpiar y agregar el prefijo '51' si no está
-            if phone_number:
-                phone_number = self.clean_phone_number(phone_number)
-            else:
-                # Si el acceso es por QR, phone_number será vacío y el usuario debe ingresar manualmente
-                phone_number = ''
+            # =====================================================
+            # 🔧 MEJORA SOLICITADA (SIN ALTERAR LÓGICA EXISTENTE)
+            # =====================================================
+            is_whatsapp = bool(user_name or phone_number)
+            is_logged_user = request.env.user and not request.env.user._is_public()
 
-            # ✅ Info de stock actual
+            if is_whatsapp:
+                # Igual que antes
+                nombre = user_name or ""
+                celular = self.clean_phone_number(phone_number) if phone_number else ""
+            elif is_logged_user:
+                # NUEVO: usuario logueado en portal
+                partner = request.env.user.partner_id
+                nombre = partner.name or ""
+                celular = self.clean_phone_number(
+                    partner.mobile or partner.phone or ""
+                )
+            else:
+                # QR público (igual que antes)
+                nombre = ""
+                celular = ""
+
+            # =====================================================
+            # RESTO DEL CÓDIGO ORIGINAL (SIN CAMBIOS)
+            # =====================================================
             stock_info = self._get_equipment_stock_info(registro)
 
-            # ✅ Contadores efectivos (se usarán también en backend si no se manda nada desde el form)
             contador_bn = registro.contador_bn or 0
             contador_color = registro.contador_color or 0
 
@@ -75,15 +96,14 @@ class TonerRequestController(http.Controller):
                 'cliente': registro.cliente_id.name if registro.cliente_id else "",
                 'modelo_maquina': registro.name.name if registro.name else "",
                 'serie': registro.serie if registro else "",
-                'nombre': user_name or "",  # Puede venir precargado desde WhatsApp
-                'celular': phone_number,
+                'nombre': nombre,
+                'celular': celular,
                 'ubicacion_instalacion': registro.ubicacion_instalacion,
                 'tipo_maquina_id': registro.tipo_maquina_id,
                 'stock_info': stock_info,
                 'contador_actual_bn': contador_bn,
                 'contador_actual_color': contador_color,
                 'gestion_automatica': stock_info.get('gestion_automatica', True),
-                # ✅ NUEVO: bandera para decidir si mostrar/ocultar contadores
                 'has_auto_counters': registro.has_auto_counters,
             }
 
@@ -93,7 +113,6 @@ class TonerRequestController(http.Controller):
         except Exception as e:
             _logger.exception(f"Error al mostrar el formulario de solicitud de tóner: {str(e)}")
             return request.redirect('/pagina_error')
-
 
     def _get_equipment_stock_info(self, equipment):
         """Obtiene información del stock actual del equipo"""
@@ -137,6 +156,7 @@ class TonerRequestController(http.Controller):
         except Exception as e:
             _logger.exception(f"Error obteniendo info de stock: {str(e)}")
             return {}
+
 
     @http.route('/toner/validate_request_http', type='http', auth="public", methods=['POST'], csrf=False)
     def validate_toner_request_http(self, **post):
