@@ -58,7 +58,9 @@ class PortalAlquiler(CustomerPortal):
         Alquiler = request.env['alquiler']
         
         # Dominio base: solo equipos donde cliente_id = empresa del usuario
-        domain = [('cliente_id', '=', partner.id)]
+        domain = [('cliente_id', '=', partner.id),
+                  ('estado_alquiler_id', '=', 'alquilada')
+                  ]
         
         _logger.info(f"🔍 Portal Equipos - Usuario: {request.env.user.name}, Partner: {partner.name} (ID: {partner.id})")
         _logger.info(f"🔍 Dominio de búsqueda: {domain}")
