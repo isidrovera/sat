@@ -55,49 +55,58 @@ class TonerRequestController(http.Controller):
             )
 
             registro = request.env['alquiler'].sudo().search(
-                [('id', '=', int(id_registro))], limit=1
+                [('id', '=', int(id_registro))],
+                limit=1
             )
             if not registro:
                 _logger.error(f"No se encontró registro con id {id_registro}")
                 return request.redirect('/pagina_error')
 
-            # =====================================================
-            # 🔧 MEJORA SOLICITADA (SIN ALTERAR LÓGICA EXISTENTE)
-            # =====================================================
-            is_whatsapp = bool(user_name or phone_number)
-            is_logged_user = request.env.user and not request.env.user._is_public()
-
-            if is_whatsapp:
-                # Igual que antes
-                nombre = user_name or ""
-                celular = self.clean_phone_number(phone_number) if phone_number else ""
-            elif is_logged_user:
-                # NUEVO: usuario logueado en portal
-                partner = request.env.user.partner_id
-                nombre = partner.name or ""
-                celular = self.clean_phone_number(
-                    partner.mobile or partner.phone or ""
-                )
+            # ============================
+            # 📞 Limpiar teléfono WhatsApp
+            # ============================
+            if phone_number:
+                phone_number = self.clean_phone_number(phone_number)
             else:
-                # QR público (igual que antes)
-                nombre = ""
-                celular = ""
+                phone_number = ""
 
-            # =====================================================
-            # RESTO DEL CÓDIGO ORIGINAL (SIN CAMBIOS)
-            # =====================================================
+            # ============================
+            # 📦 Info de stock
+            # ============================
             stock_info = self._get_equipment_stock_info(registro)
 
             contador_bn = registro.contador_bn or 0
             contador_color = registro.contador_color or 0
 
+            # ============================
+            # 🔐 PRECARGA SI HAY LOGIN
+            # ============================
+            nombre_precargado = ""
+            celular_precargado = phone_number or ""
+
+            if request.session.uid:
+                user = request.env['res.users'].sudo().browse(request.session.uid)
+                partner = user.partner_id
+
+                if partner:
+                    nombre_precargado = partner.name or ""
+                    celular_precargado = (
+                        partner.mobile or
+                        partner.phone or
+                        phone_number or ""
+                    )
+                    celular_precargado = self.clean_phone_number(celular_precargado)
+
+            # ============================
+            # 📤 Valores para el template
+            # ============================
             values = {
                 'id_registro': registro.id,
                 'cliente': registro.cliente_id.name if registro.cliente_id else "",
                 'modelo_maquina': registro.name.name if registro.name else "",
                 'serie': registro.serie if registro else "",
-                'nombre': nombre,
-                'celular': celular,
+                'nombre': nombre_precargado or user_name or "",
+                'celular': celular_precargado,
                 'ubicacion_instalacion': registro.ubicacion_instalacion,
                 'tipo_maquina_id': registro.tipo_maquina_id,
                 'stock_info': stock_info,
@@ -107,12 +116,19 @@ class TonerRequestController(http.Controller):
                 'has_auto_counters': registro.has_auto_counters,
             }
 
-            _logger.info(f"Formulario de tóner preparado con los siguientes valores: {values}")
-            return request.render('sat.solicitar_toner_form_template', {'values': values})
-        
+            _logger.info(f"Formulario de tóner preparado con los valores: {values}")
+
+            return request.render(
+                'sat.solicitar_toner_form_template',
+                {'values': values}
+            )
+
         except Exception as e:
-            _logger.exception(f"Error al mostrar el formulario de solicitud de tóner: {str(e)}")
+            _logger.exception(
+                f"Error al mostrar el formulario de solicitud de tóner: {str(e)}"
+            )
             return request.redirect('/pagina_error')
+
 
     def _get_equipment_stock_info(self, equipment):
         """Obtiene información del stock actual del equipo"""
