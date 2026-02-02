@@ -3,576 +3,925 @@
     <!-- FORMULARIO PRINCIPAL -->
     <template id="solicitar_toner_form_template" name="Solicitar Toner Form">
         <t t-call="website.layout">
-            <div class="container my-5">
-                <!-- ENCABEZADO GENERAL -->
-                <div class="text-center mb-4">
-                    <h2 class="font-weight-bold">
-                        <i class="fa fa-print text-primary"></i>
-                        &#160;Solicitud de Tóner
-                    </h2>
-                    <p class="text-muted mb-0">
-                        Complete la información para solicitar suministros de su equipo.
-                    </p>
-                </div>
+            
+            <!-- Custom CSS -->
+            <style>
+                @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap');
+                
+                .toner-container {
+                    font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+                    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+                    min-height: 100vh;
+                    padding: 2rem 0;
+                }
+                
+                .toner-hero {
+                    background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%);
+                    border-radius: 24px;
+                    padding: 3rem 2rem;
+                    margin-bottom: 2rem;
+                    box-shadow: 0 20px 60px rgba(8, 145, 178, 0.25);
+                    position: relative;
+                    overflow: hidden;
+                }
+                
+                .toner-hero::before {
+                    content: '';
+                    position: absolute;
+                    top: -50%;
+                    right: -20%;
+                    width: 400px;
+                    height: 400px;
+                    background: radial-gradient(circle, rgba(165, 243, 252, 0.15) 0%, transparent 70%);
+                    border-radius: 50%;
+                }
+                
+                .toner-hero h2 {
+                    color: #fff;
+                    font-weight: 700;
+                    font-size: 2.25rem;
+                    margin: 0 0 0.75rem 0;
+                    letter-spacing: -0.5px;
+                    position: relative;
+                    z-index: 1;
+                }
+                
+                .toner-hero-subtitle {
+                    color: rgba(255,255,255,0.85);
+                    font-size: 1.1rem;
+                    margin: 0;
+                    position: relative;
+                    z-index: 1;
+                }
+                
+                .info-card {
+                    background: #fff;
+                    border-radius: 20px;
+                    border: none;
+                    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+                    margin-bottom: 1.5rem;
+                    overflow: hidden;
+                }
+                
+                .info-card-header {
+                    padding: 1.5rem 2rem;
+                    border-bottom: 1px solid #f3f4f6;
+                    display: flex;
+                    align-items: center;
+                    gap: 1rem;
+                }
+                
+                .info-card-header.primary {
+                    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+                    color: #fff;
+                    border: none;
+                }
+                
+                .info-card-header.info {
+                    background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%);
+                    color: #fff;
+                    border: none;
+                }
+                
+                .info-card-header.secondary {
+                    background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+                    color: #fff;
+                    border: none;
+                }
+                
+                .info-card-header h3,
+                .info-card-header h5 {
+                    margin: 0;
+                    font-weight: 700;
+                    font-size: 1.25rem;
+                }
+                
+                .info-card-body {
+                    padding: 2rem;
+                }
+                
+                .section-title {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                    font-size: 1rem;
+                    font-weight: 700;
+                    color: #6366f1;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                    margin-bottom: 1.25rem;
+                    padding-bottom: 0.75rem;
+                    border-bottom: 2px solid #f3f4f6;
+                }
+                
+                .info-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                    gap: 1.5rem;
+                }
+                
+                .info-item {
+                    background: #f9fafb;
+                    padding: 1.25rem;
+                    border-radius: 12px;
+                    border-left: 3px solid #6366f1;
+                }
+                
+                .info-label {
+                    font-size: 0.75rem;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                    color: #6b7280;
+                    margin-bottom: 0.5rem;
+                    font-weight: 600;
+                }
+                
+                .info-value {
+                    font-size: 1.1rem;
+                    font-weight: 600;
+                    color: #1a1f3a;
+                }
+                
+                .status-badge {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 0.4rem;
+                    padding: 0.5rem 1rem;
+                    border-radius: 50px;
+                    font-size: 0.875rem;
+                    font-weight: 600;
+                    border: 2px solid;
+                }
+                
+                .badge-success-custom {
+                    background: #d1fae5;
+                    color: #065f46;
+                    border-color: #10b981;
+                }
+                
+                .badge-info-custom {
+                    background: #dbeafe;
+                    color: #1e40af;
+                    border-color: #3b82f6;
+                }
+                
+                .badge-secondary-custom {
+                    background: #f3f4f6;
+                    color: #374151;
+                    border-color: #9ca3af;
+                }
+                
+                .stock-display {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+                    gap: 1.25rem;
+                    margin-bottom: 1.5rem;
+                }
+                
+                .stock-item {
+                    background: #f9fafb;
+                    border-radius: 16px;
+                    padding: 1.5rem;
+                    text-align: center;
+                    border: 2px solid #e5e7eb;
+                    transition: all 0.2s;
+                }
+                
+                .stock-item:hover {
+                    transform: translateY(-2px);
+                    border-color: #0891b2;
+                    box-shadow: 0 8px 20px rgba(8, 145, 178, 0.15);
+                }
+                
+                .stock-color-indicator {
+                    width: 48px;
+                    height: 48px;
+                    border-radius: 50%;
+                    margin: 0 auto 1rem;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                }
+                
+                .stock-name {
+                    font-weight: 700;
+                    font-size: 1rem;
+                    margin-bottom: 0.75rem;
+                    color: #1a1f3a;
+                }
+                
+                .stock-amount {
+                    font-size: 1.75rem;
+                    font-weight: 700;
+                    font-family: 'JetBrains Mono', monospace;
+                    margin-bottom: 0.5rem;
+                }
+                
+                .stock-min {
+                    font-size: 0.8rem;
+                    color: #6b7280;
+                }
+                
+                .alert-custom {
+                    border-radius: 14px;
+                    padding: 1.25rem;
+                    border: none;
+                    display: flex;
+                    align-items: start;
+                    gap: 1rem;
+                    margin-bottom: 1.5rem;
+                }
+                
+                .alert-info-custom {
+                    background: #f0f9ff;
+                    color: #0c4a6e;
+                }
+                
+                .alert-warning-custom {
+                    background: #fef3c7;
+                    color: #92400e;
+                }
+                
+                .form-label {
+                    font-weight: 600;
+                    color: #374151;
+                    margin-bottom: 0.5rem;
+                    font-size: 0.9rem;
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                }
+                
+                .form-control {
+                    border: 2px solid #e5e7eb;
+                    border-radius: 12px;
+                    padding: 0.875rem 1rem;
+                    font-size: 1rem;
+                    transition: all 0.2s;
+                    background: #f9fafb;
+                }
+                
+                .form-control:focus {
+                    border-color: #0891b2;
+                    box-shadow: 0 0 0 4px rgba(8, 145, 178, 0.1);
+                    background: #fff;
+                    outline: none;
+                }
+                
+                textarea.form-control {
+                    resize: vertical;
+                    min-height: 120px;
+                }
+                
+                .toner-card {
+                    background: #fff;
+                    border: 2px solid #e5e7eb;
+                    border-radius: 16px;
+                    padding: 1.5rem;
+                    text-align: center;
+                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                    cursor: pointer;
+                    height: 100%;
+                }
+                
+                .toner-card:hover {
+                    transform: translateY(-4px);
+                    border-color: #0891b2;
+                    box-shadow: 0 12px 24px rgba(8, 145, 178, 0.2);
+                }
+                
+                .toner-card.selected {
+                    border-color: #0891b2;
+                    background: linear-gradient(135deg, #ecfeff 0%, #cffafe 100%);
+                    box-shadow: 0 8px 20px rgba(8, 145, 178, 0.25);
+                }
+                
+                .toner-color-circle {
+                    width: 64px;
+                    height: 64px;
+                    border-radius: 50%;
+                    margin: 0 auto 1rem;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+                
+                .toner-name {
+                    font-weight: 700;
+                    font-size: 1.1rem;
+                    margin-bottom: 1rem;
+                    color: #1a1f3a;
+                }
+                
+                .toner-checkbox-wrapper {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 0.5rem;
+                    margin-top: 1rem;
+                }
+                
+                .form-check-input {
+                    width: 20px;
+                    height: 20px;
+                    border: 2px solid #0891b2;
+                    cursor: pointer;
+                }
+                
+                .form-check-input:checked {
+                    background-color: #0891b2;
+                    border-color: #0891b2;
+                }
+                
+                .btn-action-primary {
+                    background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%);
+                    color: #fff;
+                    border: none;
+                    border-radius: 12px;
+                    padding: 1rem 1.5rem;
+                    font-weight: 700;
+                    font-size: 1rem;
+                    transition: all 0.2s;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 0.5rem;
+                }
+                
+                .btn-action-primary:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 12px 24px rgba(8, 145, 178, 0.3);
+                    color: #fff;
+                }
+                
+                .btn-action-primary:disabled {
+                    opacity: 0.6;
+                    cursor: not-allowed;
+                    transform: none;
+                }
+                
+                .btn-action-secondary {
+                    background: #fff;
+                    color: #374151;
+                    border: 2px solid #e5e7eb;
+                    border-radius: 12px;
+                    padding: 1rem 1.5rem;
+                    font-weight: 600;
+                    font-size: 1rem;
+                    transition: all 0.2s;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 0.5rem;
+                }
+                
+                .btn-action-secondary:hover {
+                    background: #f9fafb;
+                    border-color: #d1d5db;
+                    transform: translateY(-2px);
+                    color: #374151;
+                }
+                
+                .btn-action-warning {
+                    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+                    color: #fff;
+                    border: none;
+                    border-radius: 12px;
+                    padding: 1rem 1.5rem;
+                    font-weight: 700;
+                    font-size: 1rem;
+                    transition: all 0.2s;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 0.5rem;
+                }
+                
+                .btn-action-warning:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 12px 24px rgba(245, 158, 11, 0.3);
+                    color: #fff;
+                }
+                
+                .divider {
+                    height: 1px;
+                    background: linear-gradient(to right, transparent, #e5e7eb, transparent);
+                    margin: 2rem 0;
+                }
+                
+                #validationAlert {
+                    border-radius: 14px;
+                    border: none;
+                    padding: 1.25rem;
+                }
+                
+                @media (max-width: 768px) {
+                    .toner-hero {
+                        padding: 2rem 1.5rem;
+                    }
+                    
+                    .toner-hero h2 {
+                        font-size: 1.75rem;
+                    }
+                    
+                    .info-card-body {
+                        padding: 1.5rem;
+                    }
+                }
+            </style>
 
-                <!-- Información del equipo -->
-                <div class="card shadow-sm mb-4">
-                    <div class="card-header bg-primary text-white text-center">
-                        <h3 class="mb-0">
-                            <i class="fa fa-desktop"></i>
-                            &#160;Información del Equipo
-                        </h3>
+            <div class="toner-container">
+                <div class="container">
+                    
+                    <!-- Hero Section -->
+                    <div class="toner-hero text-center">
+                        <h2>
+                            <i class="fa fa-fill-drip me-2"></i>
+                            Solicitud de Tóner
+                        </h2>
+                        <p class="toner-hero-subtitle">
+                            Complete la información para solicitar suministros de su equipo
+                        </p>
                     </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <!-- Columna izquierda -->
-                            <div class="col-md-6 border-right">
-                                <h6 class="text-uppercase text-muted mb-3">
-                                    <strong>📋 Datos del Cliente</strong>
-                                </h6>
-                                <p class="mb-2">
-                                    <span class="text-muted">Cliente:</span><br/>
-                                    <strong>
-                                        <span t-esc="values.get('cliente', 'Sin cliente')"/>
-                                    </strong>
-                                </p>
-                                <p class="mb-2">
-                                    <span class="text-muted">Modelo:</span><br/>
-                                    <strong>
-                                        <span t-esc="values.get('modelo_maquina', 'Sin modelo')"/>
-                                    </strong>
-                                </p>
-                                <p class="mb-0">
-                                    <span class="text-muted">Serie:</span><br/>
-                                    <span class="badge badge-light border">
-                                        <span t-esc="values.get('serie', 'Sin serie')"/>
-                                    </span>
-                                </p>
-                            </div>
 
-                            <!-- Columna derecha -->
-                            <div class="col-md-6">
-                                <h6 class="text-uppercase text-muted mb-3">
-                                    <strong>⚙️ Configuración</strong>
-                                </h6>
-                                <p class="mb-2">
-                                    <span class="text-muted">Tipo de equipo:</span><br/>
-                                    <span class="badge badge-info">
-                                        <span t-esc="'Color' if values.get('tipo_maquina_id') == 'color' else 'Monocromática'"/>
-                                    </span>
-                                </p>
-                                <p class="mb-2">
-                                    <span class="text-muted">Ubicación de instalación:</span><br/>
-                                    <strong>
-                                        <span t-esc="values.get('ubicacion_instalacion', 'No especificada')"/>
-                                    </strong>
-                                </p>
-                                <p class="mb-0">
-                                    <span class="text-muted">Gestión de tóner:</span><br/>
-                                    <span class="badge badge-pill"
-                                          t-attf-class="badge-pill {{'badge-success' if values.get('gestion_automatica', True) else 'badge-secondary'}}">
-                                        <span t-esc="'Automática' if values.get('gestion_automatica', True) else 'Manual'"/>
-                                    </span>
-                                </p>
-                            </div>
+                    <!-- Información del equipo -->
+                    <div class="info-card">
+                        <div class="info-card-header primary">
+                            <i class="fa fa-desktop" style="font-size: 1.5rem;"></i>
+                            <h3>Información del Equipo</h3>
                         </div>
-                    </div>
-                </div>
-
-                <!-- Stock actual -->
-                <t t-if="values.get('stock_info')">
-                    <div class="card shadow-sm mb-4">
-                        <div class="card-header bg-info text-white d-flex align-items-center">
-                            <h5 class="mb-0">
-                                <i class="fa fa-boxes"></i>
-                                &#160;Stock Actual de Tóner
-                            </h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="row text-center">
-                                <!-- Tóner Negro -->
-                                <div class="col-md-3 mb-3">
-                                    <div class="stock-item h-100">
-                                        <div class="mb-2">
-                                            <span class="stock-color-indicator"
-                                                  style="background-color: #000; display: inline-block; width: 20px; height: 20px; border-radius: 50%; margin-right: 8px;"></span>
-                                            <strong>Negro</strong>
-                                        </div>
-                                        <span class="badge"
-                                              t-attf-class="badge {{'badge-success' if values['stock_info']['black']['stock_total'] >= values['stock_info']['black']['stock_minimo'] else 'badge-warning' if values['stock_info']['black']['stock_total'] &gt; 0 else 'badge-danger'}}">
-                                            <span t-esc="values['stock_info']['black']['stock_total']"/> unidades
-                                        </span>
-                                        <div class="mt-1">
-                                            <small class="text-muted">
-                                                Mínimo: <span t-esc="values['stock_info']['black']['stock_minimo']"/>
-                                            </small>
+                        <div class="info-card-body">
+                            <div class="row">
+                                <!-- Datos del Cliente -->
+                                <div class="col-md-6 mb-3 mb-md-0">
+                                    <div class="section-title">
+                                        <i class="fa fa-user-circle"></i>
+                                        Datos del Cliente
+                                    </div>
+                                    
+                                    <div class="info-item mb-3">
+                                        <div class="info-label">Cliente</div>
+                                        <div class="info-value">
+                                            <t t-esc="values.get('cliente', 'Sin cliente')"/>
                                         </div>
                                     </div>
-                                </div>
-
-                                <!-- Tóners Color (solo si es máquina color) -->
-                                <t t-if="values['stock_info']['has_color']">
-                                    <div class="col-md-3 mb-3">
-                                        <div class="stock-item h-100">
-                                            <div class="mb-2">
-                                                <span class="stock-color-indicator"
-                                                      style="background-color: cyan; display: inline-block; width: 20px; height: 20px; border-radius: 50%; margin-right: 8px;"></span>
-                                                <strong>Cian</strong>
-                                            </div>
-                                            <span class="badge"
-                                                  t-attf-class="badge {{'badge-success' if values['stock_info']['cyan']['stock_total'] >= values['stock_info']['cyan']['stock_minimo'] else 'badge-warning' if values['stock_info']['cyan']['stock_total'] &gt; 0 else 'badge-danger'}}">
-                                                <span t-esc="values['stock_info']['cyan']['stock_total']"/> unidades
+                                    
+                                    <div class="info-item mb-3">
+                                        <div class="info-label">Modelo</div>
+                                        <div class="info-value">
+                                            <t t-esc="values.get('modelo_maquina', 'Sin modelo')"/>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="info-item">
+                                        <div class="info-label">Serie</div>
+                                        <div class="info-value">
+                                            <span class="badge badge-dark" style="font-size: 1rem; padding: 0.5rem 1rem;">
+                                                <t t-esc="values.get('serie', 'Sin serie')"/>
                                             </span>
-                                            <div class="mt-1">
-                                                <small class="text-muted">
-                                                    Mínimo: <span t-esc="values['stock_info']['cyan']['stock_minimo']"/>
-                                                </small>
-                                            </div>
                                         </div>
-                                    </div>
-
-                                    <div class="col-md-3 mb-3">
-                                        <div class="stock-item h-100">
-                                            <div class="mb-2">
-                                                <span class="stock-color-indicator"
-                                                      style="background-color: magenta; display: inline-block; width: 20px; height: 20px; border-radius: 50%; margin-right: 8px;"></span>
-                                                <strong>Magenta</strong>
-                                            </div>
-                                            <span class="badge"
-                                                  t-attf-class="badge {{'badge-success' if values['stock_info']['magenta']['stock_total'] >= values['stock_info']['magenta']['stock_minimo'] else 'badge-warning' if values['stock_info']['magenta']['stock_total'] &gt; 0 else 'badge-danger'}}">
-                                                <span t-esc="values['stock_info']['magenta']['stock_total']"/> unidades
-                                            </span>
-                                            <div class="mt-1">
-                                                <small class="text-muted">
-                                                    Mínimo: <span t-esc="values['stock_info']['magenta']['stock_minimo']"/>
-                                                </small>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="col-md-3 mb-3">
-                                        <div class="stock-item h-100">
-                                            <div class="mb-2">
-                                                <span class="stock-color-indicator"
-                                                      style="background-color: yellow; display: inline-block; width: 20px; height: 20px; border-radius: 50%; margin-right: 8px; border: 1px solid #ccc;"></span>
-                                                <strong>Amarillo</strong>
-                                            </div>
-                                            <span class="badge"
-                                                  t-attf-class="badge {{'badge-success' if values['stock_info']['yellow']['stock_total'] >= values['stock_info']['yellow']['stock_minimo'] else 'badge-warning' if values['stock_info']['yellow']['stock_total'] &gt; 0 else 'badge-danger'}}">
-                                                <span t-esc="values['stock_info']['yellow']['stock_total']"/> unidades
-                                            </span>
-                                            <div class="mt-1">
-                                                <small class="text-muted">
-                                                    Mínimo: <span t-esc="values['stock_info']['yellow']['stock_minimo']"/>
-                                                </small>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </t>
-                            </div>
-
-                            <!-- Mensaje informativo sobre gestión automática -->
-                            <t t-if="values.get('gestion_automatica', True)">
-                                <div class="alert alert-info mt-3 mb-0">
-                                    <i class="fa fa-info-circle"></i>
-                                    <strong>Sistema inteligente activo:</strong>
-                                    Su solicitud será evaluada automáticamente según el stock actual.
-                                </div>
-                            </t>
-                            <t t-else="">
-                                <div class="alert alert-warning mt-3 mb-0">
-                                    <i class="fa fa-exclamation-triangle"></i>
-                                    <strong>Gestión manual:</strong>
-                                    Su solicitud será procesada sin validación automática.
-                                </div>
-                            </t>
-                        </div>
-                    </div>
-                </t>
-
-                <!-- Formulario -->
-                <div class="card shadow-sm">
-                    <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">
-                            <i class="fa fa-edit"></i>
-                            &#160;Datos de la Solicitud
-                        </h5>
-                        <small class="text-light">
-                            Los campos marcados con <strong>*</strong> son obligatorios.
-                        </small>
-                    </div>
-                    <div class="card-body">
-                        <form id="tonerForm" action="/toner/enviar_solicitud" method="post" class="solicitar_toner_form">
-                            <!-- Hidden base -->
-                            <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
-                            <input type="hidden" name="modelo_maquina" t-att-value="values['modelo_maquina']"/>
-                            <input type="hidden" name="cliente" t-att-value="values['cliente']"/>
-                            <input type="hidden" name="serie" t-att-value="values['serie']"/>
-                            <input type="hidden" name="id_registro" t-att-value="values['id_registro']"/>
-                            <input type="hidden" name="tipo_maquina_id" t-att-value="values['tipo_maquina_id']"/>
-
-                            <!-- Datos del solicitante -->
-                            <div class="mb-3">
-                                <h6 class="text-uppercase text-muted">
-                                    <strong>👤 Datos del solicitante</strong>
-                                </h6>
-                                <div class="row">
-                                    <div class="col-md-6 mb-3">
-                                        <label for="nombre">
-                                            <strong>Nombre completo *</strong>
-                                        </label>
-                                        <input type="text"
-                                               class="form-control"
-                                               id="nombre"
-                                               name="nombre"
-                                               t-att-value="values.get('nombre', '')"
-                                               required="1"
-                                               placeholder="Ingrese su nombre completo"/>
-                                    </div>
-
-                                    <div class="col-md-6 mb-3">
-                                        <label for="celular">
-                                            <strong>Número de celular *</strong>
-                                        </label>
-                                        <input type="tel"
-                                               class="form-control"
-                                               id="celular"
-                                               name="celular"
-                                               t-att-value="values.get('celular', '')"
-                                               required="1"
-                                               placeholder="Ej: 999123456"/>
                                     </div>
                                 </div>
-                            </div>
 
-                            <!-- Contadores -->
-                            <div class="mb-3">
-                                <h6 class="text-uppercase text-muted">
-                                    <strong>📊 Lectura de contadores</strong>
-                                </h6>
-
-                                <t t-if="not values.get('has_auto_counters')">
-                                    <div class="alert alert-light border mb-3">
-                                        <small class="text-muted">
-                                            Ingrese la lectura actual de su equipo. Estos datos nos ayudan a validar el uso del tóner.
-                                        </small>
+                                <!-- Configuración -->
+                                <div class="col-md-6">
+                                    <div class="section-title">
+                                        <i class="fa fa-cog"></i>
+                                        Configuración
                                     </div>
-                                    <div class="row">
-                                        <div class="col-md-6 mb-3">
-                                            <label for="contometro_black">
-                                                <strong>Contador Blanco y Negro *</strong>
-                                            </label>
-                                            <input type="number"
-                                                   class="form-control"
-                                                   id="contometro_black"
-                                                   name="contometro_black"
-                                                   t-att-value="values.get('contador_actual_bn', 0)"
-                                                   min="1"
-                                                   required="1"
-                                                   placeholder="Lectura actual del contador B/N"
-                                                   oninvalid="this.setCustomValidity('El contador no puede ser 0 o menor.')"
-                                                   oninput="this.setCustomValidity('')"/>
-                                        </div>
-
-                                        <t t-if="values['tipo_maquina_id'] == 'color'">
-                                            <div class="col-md-6 mb-3">
-                                                <label for="contometro_color">
-                                                    <strong>Contador Color</strong>
-                                                </label>
-                                                <input type="number"
-                                                       class="form-control"
-                                                       id="contometro_color"
-                                                       name="contometro_color"
-                                                       t-att-value="values.get('contador_actual_color', 0)"
-                                                       min="0"
-                                                       placeholder="Lectura actual del contador color"/>
-                                            </div>
-                                        </t>
-                                    </div>
-                                </t>
-                                <t t-else="">
-                                    <div class="alert alert-info mb-0">
-                                        <h6 class="mb-1">
-                                            <strong>📡 Contadores detectados automáticamente</strong>
-                                        </h6>
-                                        <p class="mb-1">
-                                            <strong>B/N:</strong>
-                                            <span t-esc="values.get('contador_actual_bn', 'N/D')"/>
-                                            <t t-if="values['tipo_maquina_id'] == 'color'">
-                                                &#160;&#160;|&#160;&#160;
-                                                <strong>Color:</strong>
-                                                <span t-esc="values.get('contador_actual_color', 'N/D')"/>
+                                    
+                                    <div class="info-item mb-3">
+                                        <div class="info-label">Tipo de equipo</div>
+                                        <div class="info-value">
+                                            <t t-if="values.get('tipo_maquina_id') == 'color'">
+                                                <span class="status-badge badge-info-custom">
+                                                    <i class="fa fa-palette"></i>
+                                                    Color
+                                                </span>
                                             </t>
-                                        </p>
-                                        <small class="text-muted">
-                                            Estos valores provienen de sistemas automáticos de monitoreo.
-                                            No es necesario que ingrese la lectura manual.
-                                        </small>
+                                            <t t-else="">
+                                                <span class="status-badge badge-secondary-custom">
+                                                    <i class="fa fa-circle"></i>
+                                                    Monocromática
+                                                </span>
+                                            </t>
+                                        </div>
                                     </div>
-                                </t>
+                                    
+                                    <div class="info-item mb-3">
+                                        <div class="info-label">Ubicación de instalación</div>
+                                        <div class="info-value">
+                                            <t t-esc="values.get('ubicacion_instalacion', 'No especificada')"/>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="info-item">
+                                        <div class="info-label">Gestión de tóner</div>
+                                        <div class="info-value">
+                                            <t t-if="values.get('gestion_automatica', True)">
+                                                <span class="status-badge badge-success-custom">
+                                                    <i class="fa fa-magic"></i>
+                                                    Automática
+                                                </span>
+                                            </t>
+                                            <t t-else="">
+                                                <span class="status-badge badge-secondary-custom">
+                                                    <i class="fa fa-hand-paper"></i>
+                                                    Manual
+                                                </span>
+                                            </t>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
+                        </div>
+                    </div>
 
-                            <!-- Tóners solicitados -->
-                            <div class="mb-4">
-                                <h6 class="text-uppercase text-muted mb-3">
-                                    <strong>📦 Seleccione los tóners que necesita</strong>
-                                </h6>
-                                <div class="row">
+                    <!-- Stock actual -->
+                    <t t-if="values.get('stock_info')">
+                        <div class="info-card">
+                            <div class="info-card-header info">
+                                <i class="fa fa-boxes" style="font-size: 1.5rem;"></i>
+                                <h5>Stock Actual de Tóner</h5>
+                            </div>
+                            <div class="info-card-body">
+                                <div class="stock-display">
                                     <!-- Tóner Negro -->
-                                    <div class="col-md-6 col-lg-3 mb-3">
-                                        <div class="card h-100 toner-card" data-color="black">
-                                            <div class="card-body text-center d-flex flex-column justify-content-between">
-                                                <div>
-                                                    <div class="toner-color-circle mb-2"
-                                                         style="background-color: #000; width: 40px; height: 40px; border-radius: 50%; margin: 0 auto;"></div>
-                                                    <h6 class="mb-2">Tóner Negro</h6>
-                                                    <div class="form-check d-inline-flex align-items-center">
-                                                        <input class="form-check-input toner-checkbox"
-                                                               type="checkbox"
-                                                               id="toner_black"
-                                                               name="toner_black"
-                                                               value="1"/>
-                                                        <label class="form-check-label ml-2" for="toner_black">
-                                                            Solicitar
-                                                        </label>
-                                                    </div>
-                                                </div>
-                                                <t t-if="values.get('stock_info')">
-                                                    <small class="text-muted d-block mt-2">
-                                                        Stock actual: <span t-esc="values['stock_info']['black']['stock_total']"/> unidades
-                                                    </small>
-                                                </t>
-                                            </div>
+                                    <div class="stock-item">
+                                        <div class="stock-color-indicator" style="background-color: #000;">
+                                        </div>
+                                        <div class="stock-name">Negro</div>
+                                        <div class="stock-amount" t-attf-style="color: {{'#10b981' if values['stock_info']['black']['stock_total'] >= values['stock_info']['black']['stock_minimo'] else '#f59e0b' if values['stock_info']['black']['stock_total'] > 0 else '#ef4444'}}">
+                                            <t t-esc="values['stock_info']['black']['stock_total']"/>
+                                        </div>
+                                        <div class="stock-min">
+                                            Mínimo: <t t-esc="values['stock_info']['black']['stock_minimo']"/>
                                         </div>
                                     </div>
 
-                                    <!-- Tóners Color (solo si es máquina color) -->
-                                    <t t-if="values['tipo_maquina_id'] == 'color'">
-                                        <div class="col-md-6 col-lg-3 mb-3">
-                                            <div class="card h-100 toner-card" data-color="cyan">
-                                                <div class="card-body text-center d-flex flex-column justify-content-between">
-                                                    <div>
-                                                        <div class="toner-color-circle mb-2"
-                                                             style="background-color: cyan; width: 40px; height: 40px; border-radius: 50%; margin: 0 auto;"></div>
-                                                        <h6 class="mb-2">Tóner Cian</h6>
-                                                        <div class="form-check d-inline-flex align-items-center">
-                                                            <input class="form-check-input toner-checkbox"
-                                                                   type="checkbox"
-                                                                   id="toner_cyan"
-                                                                   name="toner_cyan"
-                                                                   value="1"/>
-                                                            <label class="form-check-label ml-2" for="toner_cyan">
-                                                                Solicitar
-                                                            </label>
-                                                        </div>
-                                                    </div>
-                                                    <t t-if="values.get('stock_info')">
-                                                        <small class="text-muted d-block mt-2">
-                                                            Stock actual: <span t-esc="values['stock_info']['cyan']['stock_total']"/> unidades
-                                                        </small>
-                                                    </t>
-                                                </div>
+                                    <!-- Tóners Color -->
+                                    <t t-if="values['stock_info']['has_color']">
+                                        <div class="stock-item">
+                                            <div class="stock-color-indicator" style="background-color: cyan;">
+                                            </div>
+                                            <div class="stock-name">Cian</div>
+                                            <div class="stock-amount" t-attf-style="color: {{'#10b981' if values['stock_info']['cyan']['stock_total'] >= values['stock_info']['cyan']['stock_minimo'] else '#f59e0b' if values['stock_info']['cyan']['stock_total'] > 0 else '#ef4444'}}">
+                                                <t t-esc="values['stock_info']['cyan']['stock_total']"/>
+                                            </div>
+                                            <div class="stock-min">
+                                                Mínimo: <t t-esc="values['stock_info']['cyan']['stock_minimo']"/>
                                             </div>
                                         </div>
 
-                                        <div class="col-md-6 col-lg-3 mb-3">
-                                            <div class="card h-100 toner-card" data-color="magenta">
-                                                <div class="card-body text-center d-flex flex-column justify-content-between">
-                                                    <div>
-                                                        <div class="toner-color-circle mb-2"
-                                                             style="background-color: magenta; width: 40px; height: 40px; border-radius: 50%; margin: 0 auto;"></div>
-                                                        <h6 class="mb-2">Tóner Magenta</h6>
-                                                        <div class="form-check d-inline-flex align-items-center">
-                                                            <input class="form-check-input toner-checkbox"
-                                                                   type="checkbox"
-                                                                   id="toner_magenta"
-                                                                   name="toner_magenta"
-                                                                   value="1"/>
-                                                            <label class="form-check-label ml-2" for="toner_magenta">
-                                                                Solicitar
-                                                            </label>
-                                                        </div>
-                                                    </div>
-                                                    <t t-if="values.get('stock_info')">
-                                                        <small class="text-muted d-block mt-2">
-                                                            Stock actual: <span t-esc="values['stock_info']['magenta']['stock_total']"/> unidades
-                                                        </small>
-                                                    </t>
-                                                </div>
+                                        <div class="stock-item">
+                                            <div class="stock-color-indicator" style="background-color: magenta;">
+                                            </div>
+                                            <div class="stock-name">Magenta</div>
+                                            <div class="stock-amount" t-attf-style="color: {{'#10b981' if values['stock_info']['magenta']['stock_total'] >= values['stock_info']['magenta']['stock_minimo'] else '#f59e0b' if values['stock_info']['magenta']['stock_total'] > 0 else '#ef4444'}}">
+                                                <t t-esc="values['stock_info']['magenta']['stock_total']"/>
+                                            </div>
+                                            <div class="stock-min">
+                                                Mínimo: <t t-esc="values['stock_info']['magenta']['stock_minimo']"/>
                                             </div>
                                         </div>
 
-                                        <div class="col-md-6 col-lg-3 mb-3">
-                                            <div class="card h-100 toner-card" data-color="yellow">
-                                                <div class="card-body text-center d-flex flex-column justify-content-between">
-                                                    <div>
-                                                        <div class="toner-color-circle mb-2"
-                                                             style="background-color: yellow; width: 40px; height: 40px; border-radius: 50%; margin: 0 auto; border: 1px solid #ccc;"></div>
-                                                        <h6 class="mb-2">Tóner Amarillo</h6>
-                                                        <div class="form-check d-inline-flex align-items-center">
-                                                            <input class="form-check-input toner-checkbox"
-                                                                   type="checkbox"
-                                                                   id="toner_yellow"
-                                                                   name="toner_yellow"
-                                                                   value="1"/>
-                                                            <label class="form-check-label ml-2" for="toner_yellow">
-                                                                Solicitar
-                                                            </label>
-                                                        </div>
-                                                    </div>
-                                                    <t t-if="values.get('stock_info')">
-                                                        <small class="text-muted d-block mt-2">
-                                                            Stock actual: <span t-esc="values['stock_info']['yellow']['stock_total']"/> unidades
-                                                        </small>
-                                                    </t>
-                                                </div>
+                                        <div class="stock-item">
+                                            <div class="stock-color-indicator" style="background-color: yellow; border: 2px solid #cbd5e1;">
+                                            </div>
+                                            <div class="stock-name">Amarillo</div>
+                                            <div class="stock-amount" t-attf-style="color: {{'#10b981' if values['stock_info']['yellow']['stock_total'] >= values['stock_info']['yellow']['stock_minimo'] else '#f59e0b' if values['stock_info']['yellow']['stock_total'] > 0 else '#ef4444'}}">
+                                                <t t-esc="values['stock_info']['yellow']['stock_total']"/>
+                                            </div>
+                                            <div class="stock-min">
+                                                Mínimo: <t t-esc="values['stock_info']['yellow']['stock_minimo']"/>
                                             </div>
                                         </div>
                                     </t>
                                 </div>
-                            </div>
 
-                            <!-- Observaciones -->
-                            <div class="mb-3">
-                                <label for="observaciones">
-                                    <strong>Observaciones adicionales (opcional):</strong>
-                                </label>
-                                <textarea class="form-control"
-                                          id="observaciones"
-                                          name="observaciones"
-                                          rows="3"
-                                          placeholder="Comentarios adicionales sobre la solicitud..."></textarea>
+                                <!-- Mensaje informativo -->
+                                <t t-if="values.get('gestion_automatica', True)">
+                                    <div class="alert-custom alert-info-custom">
+                                        <i class="fa fa-info-circle" style="font-size: 1.25rem;"></i>
+                                        <div>
+                                            <strong>Sistema inteligente activo:</strong>
+                                            Su solicitud será evaluada automáticamente según el stock actual.
+                                        </div>
+                                    </div>
+                                </t>
+                                <t t-else="">
+                                    <div class="alert-custom alert-warning-custom">
+                                        <i class="fa fa-exclamation-triangle" style="font-size: 1.25rem;"></i>
+                                        <div>
+                                            <strong>Gestión manual:</strong>
+                                            Su solicitud será procesada sin validación automática.
+                                        </div>
+                                    </div>
+                                </t>
                             </div>
+                        </div>
+                    </t>
 
-                            <!-- Validación en tiempo real -->
-                            <div id="validationAlert" class="alert d-none" role="alert"></div>
-
-                            <!-- Botones -->
-                            <div class="text-center mt-4">
-                                <button type="button"
-                                        class="btn btn-outline-secondary mr-2"
-                                        onclick="goBack()">
-                                    <i class="fa fa-arrow-left"></i>
-                                    &#160;Volver
-                                </button>
-                                <button type="button"
-                                        id="validateBtn"
-                                        class="btn btn-warning mr-2"
-                                        style="display: none;">
-                                    <i class="fa fa-check-circle"></i>
-                                    &#160;Validar Solicitud
-                                </button>
-                                <button class="btn btn-primary"
-                                        type="submit"
-                                        id="submitBtn">
-                                    <i class="fa fa-paper-plane"></i>
-                                    &#160;Enviar Solicitud
-                                </button>
+                    <!-- Formulario -->
+                    <div class="info-card">
+                        <div class="info-card-header secondary">
+                            <i class="fa fa-edit" style="font-size: 1.5rem;"></i>
+                            <div class="d-flex justify-content-between align-items-center w-100">
+                                <h5>Datos de la Solicitud</h5>
+                                <small style="opacity: 0.9;">
+                                    Los campos marcados con <strong>*</strong> son obligatorios
+                                </small>
                             </div>
-                        </form>
+                        </div>
+                        <div class="info-card-body">
+                            <form id="tonerForm" action="/toner/enviar_solicitud" method="post" class="solicitar_toner_form">
+                                <!-- Hidden fields -->
+                                <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                <input type="hidden" name="modelo_maquina" t-att-value="values['modelo_maquina']"/>
+                                <input type="hidden" name="cliente" t-att-value="values['cliente']"/>
+                                <input type="hidden" name="serie" t-att-value="values['serie']"/>
+                                <input type="hidden" name="id_registro" t-att-value="values['id_registro']"/>
+                                <input type="hidden" name="tipo_maquina_id" t-att-value="values['tipo_maquina_id']"/>
+
+                                <!-- Datos del solicitante -->
+                                <div class="mb-4">
+                                    <div class="section-title">
+                                        <i class="fa fa-user"></i>
+                                        Datos del Solicitante
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label for="nombre" class="form-label">
+                                                <i class="fa fa-id-card"></i>
+                                                Nombre completo *
+                                            </label>
+                                            <input type="text"
+                                                   class="form-control"
+                                                   id="nombre"
+                                                   name="nombre"
+                                                   t-att-value="values.get('nombre', '')"
+                                                   required="1"
+                                                   placeholder="Ingrese su nombre completo"/>
+                                        </div>
+
+                                        <div class="col-md-6 mb-3">
+                                            <label for="celular" class="form-label">
+                                                <i class="fa fa-phone"></i>
+                                                Número de celular *
+                                            </label>
+                                            <input type="tel"
+                                                   class="form-control"
+                                                   id="celular"
+                                                   name="celular"
+                                                   t-att-value="values.get('celular', '')"
+                                                   required="1"
+                                                   placeholder="Ej: 999123456"/>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="divider"></div>
+
+                                <!-- Contadores -->
+                                <div class="mb-4">
+                                    <div class="section-title">
+                                        <i class="fa fa-tachometer-alt"></i>
+                                        Lectura de Contadores
+                                    </div>
+
+                                    <t t-if="not values.get('has_auto_counters')">
+                                        <div class="alert-custom alert-info-custom mb-3">
+                                            <i class="fa fa-lightbulb" style="font-size: 1.25rem;"></i>
+                                            <div>
+                                                <small>
+                                                    Ingrese la lectura actual de su equipo. Estos datos nos ayudan a validar el uso del tóner.
+                                                </small>
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-6 mb-3">
+                                                <label for="contometro_black" class="form-label">
+                                                    <i class="fa fa-circle"></i>
+                                                    Contador Blanco y Negro *
+                                                </label>
+                                                <input type="number"
+                                                       class="form-control"
+                                                       id="contometro_black"
+                                                       name="contometro_black"
+                                                       t-att-value="values.get('contador_actual_bn', 0)"
+                                                       min="1"
+                                                       required="1"
+                                                       placeholder="Lectura actual del contador B/N"
+                                                       oninvalid="this.setCustomValidity('El contador no puede ser 0 o menor.')"
+                                                       oninput="this.setCustomValidity('')"/>
+                                            </div>
+
+                                            <t t-if="values['tipo_maquina_id'] == 'color'">
+                                                <div class="col-md-6 mb-3">
+                                                    <label for="contometro_color" class="form-label">
+                                                        <i class="fa fa-palette"></i>
+                                                        Contador Color
+                                                    </label>
+                                                    <input type="number"
+                                                           class="form-control"
+                                                           id="contometro_color"
+                                                           name="contometro_color"
+                                                           t-att-value="values.get('contador_actual_color', 0)"
+                                                           min="0"
+                                                           placeholder="Lectura actual del contador color"/>
+                                                </div>
+                                            </t>
+                                        </div>
+                                    </t>
+                                    <t t-else="">
+                                        <div class="alert-custom alert-info-custom">
+                                            <i class="fa fa-wifi" style="font-size: 1.25rem;"></i>
+                                            <div>
+                                                <h6 class="mb-2" style="font-weight: 700;">Contadores detectados automáticamente</h6>
+                                                <p class="mb-1">
+                                                    <strong>B/N:</strong>
+                                                    <span t-esc="values.get('contador_actual_bn', 'N/D')"/>
+                                                    <t t-if="values['tipo_maquina_id'] == 'color'">
+                                                        &#160;&#160;|&#160;&#160;
+                                                        <strong>Color:</strong>
+                                                        <span t-esc="values.get('contador_actual_color', 'N/D')"/>
+                                                    </t>
+                                                </p>
+                                                <small style="opacity: 0.8;">
+                                                    Estos valores provienen de sistemas automáticos de monitoreo.
+                                                    No es necesario que ingrese la lectura manual.
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </t>
+                                </div>
+
+                                <div class="divider"></div>
+
+                                <!-- Tóners solicitados -->
+                                <div class="mb-4">
+                                    <div class="section-title">
+                                        <i class="fa fa-box-open"></i>
+                                        Seleccione los Tóners que Necesita
+                                    </div>
+                                    <div class="row">
+                                        <!-- Tóner Negro -->
+                                        <div class="col-md-6 col-lg-3 mb-3">
+                                            <div class="toner-card" data-color="black">
+                                                <div class="toner-color-circle" style="background-color: #000;">
+                                                </div>
+                                                <div class="toner-name">Tóner Negro</div>
+                                                <div class="toner-checkbox-wrapper">
+                                                    <input class="form-check-input toner-checkbox"
+                                                           type="checkbox"
+                                                           id="toner_black"
+                                                           name="toner_black"
+                                                           value="1"/>
+                                                    <label class="form-check-label" for="toner_black" style="font-weight: 600; cursor: pointer;">
+                                                        Solicitar
+                                                    </label>
+                                                </div>
+                                                <t t-if="values.get('stock_info')">
+                                                    <div class="mt-3" style="font-size: 0.85rem; color: #6b7280;">
+                                                        Stock actual: <strong><t t-esc="values['stock_info']['black']['stock_total']"/> unidades</strong>
+                                                    </div>
+                                                </t>
+                                            </div>
+                                        </div>
+
+                                        <!-- Tóners Color -->
+                                        <t t-if="values['tipo_maquina_id'] == 'color'">
+                                            <div class="col-md-6 col-lg-3 mb-3">
+                                                <div class="toner-card" data-color="cyan">
+                                                    <div class="toner-color-circle" style="background-color: cyan;">
+                                                    </div>
+                                                    <div class="toner-name">Tóner Cian</div>
+                                                    <div class="toner-checkbox-wrapper">
+                                                        <input class="form-check-input toner-checkbox"
+                                                               type="checkbox"
+                                                               id="toner_cyan"
+                                                               name="toner_cyan"
+                                                               value="1"/>
+                                                        <label class="form-check-label" for="toner_cyan" style="font-weight: 600; cursor: pointer;">
+                                                            Solicitar
+                                                        </label>
+                                                    </div>
+                                                    <t t-if="values.get('stock_info')">
+                                                        <div class="mt-3" style="font-size: 0.85rem; color: #6b7280;">
+                                                            Stock actual: <strong><t t-esc="values['stock_info']['cyan']['stock_total']"/> unidades</strong>
+                                                        </div>
+                                                    </t>
+                                                </div>
+                                            </div>
+
+                                            <div class="col-md-6 col-lg-3 mb-3">
+                                                <div class="toner-card" data-color="magenta">
+                                                    <div class="toner-color-circle" style="background-color: magenta;">
+                                                    </div>
+                                                    <div class="toner-name">Tóner Magenta</div>
+                                                    <div class="toner-checkbox-wrapper">
+                                                        <input class="form-check-input toner-checkbox"
+                                                               type="checkbox"
+                                                               id="toner_magenta"
+                                                               name="toner_magenta"
+                                                               value="1"/>
+                                                        <label class="form-check-label" for="toner_magenta" style="font-weight: 600; cursor: pointer;">
+                                                            Solicitar
+                                                        </label>
+                                                    </div>
+                                                    <t t-if="values.get('stock_info')">
+                                                        <div class="mt-3" style="font-size: 0.85rem; color: #6b7280;">
+                                                            Stock actual: <strong><t t-esc="values['stock_info']['magenta']['stock_total']"/> unidades</strong>
+                                                        </div>
+                                                    </t>
+                                                </div>
+                                            </div>
+
+                                            <div class="col-md-6 col-lg-3 mb-3">
+                                                <div class="toner-card" data-color="yellow">
+                                                    <div class="toner-color-circle" style="background-color: yellow; border: 2px solid #cbd5e1;">
+                                                    </div>
+                                                    <div class="toner-name">Tóner Amarillo</div>
+                                                    <div class="toner-checkbox-wrapper">
+                                                        <input class="form-check-input toner-checkbox"
+                                                               type="checkbox"
+                                                               id="toner_yellow"
+                                                               name="toner_yellow"
+                                                               value="1"/>
+                                                        <label class="form-check-label" for="toner_yellow" style="font-weight: 600; cursor: pointer;">
+                                                            Solicitar
+                                                        </label>
+                                                    </div>
+                                                    <t t-if="values.get('stock_info')">
+                                                        <div class="mt-3" style="font-size: 0.85rem; color: #6b7280;">
+                                                            Stock actual: <strong><t t-esc="values['stock_info']['yellow']['stock_total']"/> unidades</strong>
+                                                        </div>
+                                                    </t>
+                                                </div>
+                                            </div>
+                                        </t>
+                                    </div>
+                                </div>
+
+                                <div class="divider"></div>
+
+                                <!-- Observaciones -->
+                                <div class="mb-4">
+                                    <label for="observaciones" class="form-label">
+                                        <i class="fa fa-comment-dots"></i>
+                                        Observaciones adicionales (opcional)
+                                    </label>
+                                    <textarea class="form-control"
+                                              id="observaciones"
+                                              name="observaciones"
+                                              rows="4"
+                                              placeholder="Comentarios adicionales sobre la solicitud..."></textarea>
+                                </div>
+
+                                <!-- Validación en tiempo real -->
+                                <div id="validationAlert" class="alert d-none" role="alert"></div>
+
+                                <!-- Botones -->
+                                <div class="row g-3 mt-2">
+                                    <div class="col-12 col-md-4 order-md-1 order-3">
+                                        <button type="button"
+                                                class="btn-action-secondary w-100"
+                                                onclick="goBack()">
+                                            <i class="fa fa-arrow-left"></i>
+                                            Volver
+                                        </button>
+                                    </div>
+
+                                    <div class="col-12 col-md-4 order-md-2 order-2">
+                                        <button type="button"
+                                                id="validateBtn"
+                                                class="btn-action-warning w-100"
+                                                style="display: none;">
+                                            <i class="fa fa-check-circle"></i>
+                                            Validar Solicitud
+                                        </button>
+                                    </div>
+
+                                    <div class="col-12 col-md-4 order-md-3 order-1">
+                                        <button class="btn-action-primary w-100"
+                                                type="submit"
+                                                id="submitBtn">
+                                            <i class="fa fa-paper-plane"></i>
+                                            Enviar Solicitud
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- ESTILOS PERSONALIZADOS -->
-            <style>
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&amp;display=swap');
-
-.ticket-container {
-  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-  min-height: 100vh;
-  padding: 2rem 0;
-}
-
-/* HERO */
-.ticket-hero {
-  background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
-  border-radius: 24px;
-  padding: 3rem 2rem;
-  margin-bottom: 2.5rem;
-  box-shadow: 0 20px 60px rgba(37,99,235,.25);
-  color: #fff;
-  text-align: center;
-}
-
-.ticket-hero h1 {
-  font-weight: 700;
-  font-size: 2.25rem;
-  margin-bottom: .5rem;
-}
-
-.ticket-hero-subtitle {
-  opacity: .9;
-  font-size: 1.05rem;
-}
-
-/* CARDS */
-.ticket-container .card {
-  border-radius: 20px;
-  border: none;
-  box-shadow: 0 4px 20px rgba(0,0,0,.08);
-}
-
-.ticket-container .card-header {
-  border-radius: 20px 20px 0 0;
-  font-weight: 700;
-}
-
-/* INPUTS */
-.ticket-container .form-control {
-  border: 2px solid #e5e7eb;
-  border-radius: 12px;
-  padding: .85rem 1rem;
-  background: #f9fafb;
-}
-
-.ticket-container .form-control:focus {
-  border-color: #6366f1;
-  box-shadow: 0 0 0 4px rgba(99,102,241,.15);
-  background: #fff;
-}
-
-/* BOTONES */
-.ticket-container .btn-primary {
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-  border: none;
-  border-radius: 12px;
-  font-weight: 700;
-}
-
-.ticket-container .btn-outline-secondary,
-.ticket-container .btn-outline-primary {
-  border-radius: 12px;
-  font-weight: 600;
-}
-
-/* ALERTS */
-.ticket-container .alert {
-  border-radius: 14px;
-}
-
-/* STOCK ITEMS */
-.stock-item {
-  border-radius: 16px;
-  background: #f9fafb;
-}
-
-/* TONER CARDS (se integran al estilo) */
-.toner-card {
-  border-radius: 18px;
-  transition: all .25s ease;
-}
-
-.toner-card:hover {
-  transform: translateY(-4px);
-}
-</style>
-
-
-            <!-- JAVASCRIPT -->
             <script>
-               function goBack() {
+//<![CDATA[
+function goBack() {
     if (document.referrer) {
         window.location.href = document.referrer;
     } else {
@@ -580,7 +929,6 @@
     }
 }
 
-// Funcionalidad para seleccionar tóners
 document.addEventListener('DOMContentLoaded', function() {
     const tonerCards = document.querySelectorAll('.toner-card');
     const checkboxes = document.querySelectorAll('.toner-checkbox');
@@ -588,17 +936,17 @@ document.addEventListener('DOMContentLoaded', function() {
     const submitBtn = document.getElementById('submitBtn');
     const validationAlert = document.getElementById('validationAlert');
 
-    // Funcionalidad de selección de tarjetas
     tonerCards.forEach(function(card) {
-        card.addEventListener('click', function() {
-            const checkbox = card.querySelector('.toner-checkbox');
-            checkbox.checked = !checkbox.checked;
-            card.classList.toggle('selected', checkbox.checked);
-            checkTonerSelection();
+        card.addEventListener('click', function(e) {
+            if (e.target.type !== 'checkbox' && e.target.tagName !== 'LABEL') {
+                const checkbox = card.querySelector('.toner-checkbox');
+                checkbox.checked = !checkbox.checked;
+                card.classList.toggle('selected', checkbox.checked);
+                checkTonerSelection();
+            }
         });
     });
 
-    // Sincronizar checkboxes con tarjetas
     checkboxes.forEach(function(checkbox) {
         checkbox.addEventListener('change', function() {
             const card = checkbox.closest('.toner-card');
@@ -608,31 +956,29 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     function checkTonerSelection() {
-        const hasSelection = Array.from(checkboxes).some(cb =&gt; cb.checked);
+        const hasSelection = Array.from(checkboxes).some(cb => cb.checked);
         
-        if (hasSelection &amp;&amp; validateBtn) {
-            validateBtn.style.display = 'inline-block';
-            submitBtn.textContent = 'Enviar sin Validar';
-            submitBtn.className = 'btn btn-outline-primary';
+        if (hasSelection && validateBtn) {
+            validateBtn.style.display = 'inline-flex';
+            submitBtn.innerHTML = '<i class="fa fa-paper-plane me-2"></i>Enviar sin Validar';
+            submitBtn.className = 'btn-action-secondary w-100';
         } else {
             if (validateBtn) {
                 validateBtn.style.display = 'none';
             }
-            submitBtn.textContent = 'Enviar Solicitud';
-            submitBtn.className = 'btn btn-primary';
+            submitBtn.innerHTML = '<i class="fa fa-paper-plane me-2"></i>Enviar Solicitud';
+            submitBtn.className = 'btn-action-primary w-100';
             hideValidationAlert();
         }
     }
 
-    // Validación previa usando FormData
     if (validateBtn) {
         validateBtn.addEventListener('click', function() {
             console.log("=== INICIANDO VALIDACIÓN ===");
             
             validateBtn.disabled = true;
-            validateBtn.innerHTML = 'Validando...';
+            validateBtn.innerHTML = '<i class="fa fa-spinner fa-spin me-2"></i>Validando...';
             
-            // Crear FormData
             const formData = new FormData();
             formData.append('equipment_id', document.querySelector('input[name="id_registro"]').value);
             formData.append('toner_black', document.getElementById('toner_black').checked);
@@ -651,24 +997,24 @@ document.addEventListener('DOMContentLoaded', function() {
                 method: 'POST',
                 body: formData
             })
-            .then(response =&gt; {
+            .then(response => {
                 console.log("Status:", response.status);
                 if (!response.ok) {
                     throw new Error('Error HTTP: ' + response.status);
                 }
                 return response.json();
             })
-            .then(data =&gt; {
+            .then(data => {
                 console.log("Respuesta:", data);
                 showValidationResult(data);
                 validateBtn.disabled = false;
-                validateBtn.innerHTML = 'Validar Solicitud';
+                validateBtn.innerHTML = '<i class="fa fa-check-circle me-2"></i>Validar Solicitud';
             })
-            .catch(error =&gt; {
+            .catch(error => {
                 console.error('Error completo:', error);
                 showValidationAlert('Error al validar: ' + error.message, 'danger');
                 validateBtn.disabled = false;
-                validateBtn.innerHTML = 'Validar Solicitud';
+                validateBtn.innerHTML = '<i class="fa fa-check-circle me-2"></i>Validar Solicitud';
             });
         });
     }
@@ -677,13 +1023,14 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log("Mostrando resultado:", result);
         
         if (result.valid) {
-            showValidationAlert('Solicitud válida. Puede proceder con el envío.', 'success');
-            submitBtn.textContent = 'Enviar Solicitud Validada';
-            submitBtn.className = 'btn btn-success';
+            showValidationAlert('✅ Solicitud válida. Puede proceder con el envío.', 'success');
+            submitBtn.innerHTML = '<i class="fa fa-paper-plane me-2"></i>Enviar Solicitud Validada';
+            submitBtn.className = 'btn-action-primary w-100';
+            submitBtn.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
         } else {
-            let message = result.message;
-            if (result.blocked_toners &amp;&amp; result.blocked_toners.length &gt; 0) {
-                message += ' - Tóners no necesarios: ';
+            let message = '⚠️ ' + result.message;
+            if (result.blocked_toners && result.blocked_toners.length > 0) {
+                message += '<br><strong>Tóners no necesarios:</strong> ';
                 const blockedList = result.blocked_toners.map(function(blocked) {
                     return blocked.color + ' (' + blocked.reason + ')';
                 });
@@ -706,110 +1053,280 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 });
-            </script>
+//]]>
+</script>
         </t>
     </template>
-
     <!-- SOLICITUD RECHAZADA -->
     <template id="solicitud_toner_rechazada" name="Solicitud de Tóner Rechazada">
         <t t-call="website.layout">
-            <div class="container mt-5 mb-5">
-                <div class="row justify-content-center">
-                    <div class="col-md-8">
-                        <div class="card border-warning shadow-sm">
-                            <div class="card-header bg-warning text-dark text-center">
-                                <h3 class="mb-0">
-                                    <i class="fa fa-exclamation-triangle"></i>
-                                    &#160;Solicitud No Aprobada
-                                </h3>
+            
+            <style>
+                @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&amp;display=swap');
+                
+                .response-container {
+                    font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+                    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+                    min-height: 100vh;
+                    padding: 3rem 0;
+                }
+                
+                .response-card {
+                    background: #fff;
+                    border-radius: 24px;
+                    box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+                    overflow: hidden;
+                    max-width: 800px;
+                    margin: 0 auto;
+                }
+                
+                .response-header {
+                    padding: 2.5rem 2rem;
+                    text-align: center;
+                    position: relative;
+                }
+                
+                .response-header.warning {
+                    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+                    color: #fff;
+                }
+                
+                .response-header.success {
+                    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+                    color: #fff;
+                }
+                
+                .response-header.danger {
+                    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+                    color: #fff;
+                }
+                
+                .response-header h3 {
+                    font-size: 2rem;
+                    font-weight: 700;
+                    margin: 0;
+                }
+                
+                .response-body {
+                    padding: 2.5rem 2rem;
+                }
+                
+                .status-alert {
+                    border-radius: 16px;
+                    padding: 1.5rem;
+                    margin-bottom: 2rem;
+                    border: none;
+                }
+                
+                .status-alert h5 {
+                    font-weight: 700;
+                    font-size: 1.25rem;
+                    margin-bottom: 0.75rem;
+                }
+                
+                .info-section {
+                    background: #f9fafb;
+                    border-radius: 16px;
+                    padding: 1.5rem;
+                    margin-bottom: 1.5rem;
+                }
+                
+                .section-label {
+                    font-size: 0.75rem;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                    color: #6b7280;
+                    font-weight: 600;
+                    margin-bottom: 1rem;
+                }
+                
+                .info-row {
+                    margin-bottom: 1rem;
+                }
+                
+                .info-row:last-child {
+                    margin-bottom: 0;
+                }
+                
+                .info-row-label {
+                    font-size: 0.875rem;
+                    color: #6b7280;
+                    margin-bottom: 0.25rem;
+                }
+                
+                .info-row-value {
+                    font-size: 1.1rem;
+                    font-weight: 600;
+                    color: #1a1f3a;
+                }
+                
+                .contact-buttons {
+                    display: flex;
+                    gap: 1rem;
+                    justify-content: center;
+                    flex-wrap: wrap;
+                    margin-top: 2rem;
+                }
+                
+                .btn-contact {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                    padding: 1rem 1.5rem;
+                    border-radius: 12px;
+                    font-weight: 600;
+                    text-decoration: none;
+                    transition: all 0.2s;
+                }
+                
+                .btn-contact-primary {
+                    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+                    color: #fff;
+                    border: none;
+                }
+                
+                .btn-contact-primary:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 12px 24px rgba(99, 102, 241, 0.3);
+                    color: #fff;
+                }
+                
+                .btn-contact-outline {
+                    background: #fff;
+                    color: #6366f1;
+                    border: 2px solid #6366f1;
+                }
+                
+                .btn-contact-outline:hover {
+                    background: #f5f3ff;
+                    transform: translateY(-2px);
+                    color: #6366f1;
+                }
+                
+                @media (max-width: 768px) {
+                    .response-body {
+                        padding: 1.5rem;
+                    }
+                    
+                    .response-header h3 {
+                        font-size: 1.5rem;
+                    }
+                }
+            </style>
+
+            <div class="response-container">
+                <div class="container">
+                    <div class="response-card">
+                        <div class="response-header warning">
+                            <h3>
+                                <i class="fa fa-exclamation-triangle me-2"></i>
+                                Solicitud No Aprobada
+                            </h3>
+                        </div>
+                        
+                        <div class="response-body">
+                            <div class="status-alert alert-warning">
+                                <h5>❌ Su solicitud de tóner no ha sido aprobada</h5>
+                                <p class="mb-0" style="font-size: 1.05rem;">
+                                    <strong>Motivo:</strong>
+                                    <span t-esc="validation_result.get('message', 'Stock suficiente')"/>
+                                </p>
                             </div>
-                            <div class="card-body">
-                                <div class="alert alert-warning">
-                                    <h5 class="mb-2">❌ Su solicitud de tóner no ha sido aprobada</h5>
-                                    <p class="mb-0">
-                                        <strong>Motivo:</strong>
-                                        <span t-esc="validation_result.get('message', 'Stock suficiente')"/>
-                                    </p>
-                                </div>
-                                
-                                <div class="row mb-4">
-                                    <div class="col-md-6">
-                                        <h6 class="text-uppercase text-muted mb-2">
-                                            <strong>📋 Información del equipo</strong>
-                                        </h6>
-                                        <p class="mb-1">
-                                            <span class="text-muted">Cliente:</span><br/>
-                                            <strong><span t-esc="datos_formulario.get('cliente')"/></strong>
-                                        </p>
-                                        <p class="mb-1">
-                                            <span class="text-muted">Modelo:</span><br/>
-                                            <strong><span t-esc="datos_formulario.get('modelo_maquina')"/></strong>
-                                        </p>
-                                        <p class="mb-0">
-                                            <span class="text-muted">Serie:</span><br/>
-                                            <span class="badge badge-light border">
-                                                <span t-esc="datos_formulario.get('serie')"/>
-                                            </span>
-                                        </p>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <h6 class="text-uppercase text-muted mb-2">
-                                            <strong>👤 Solicitante</strong>
-                                        </h6>
-                                        <p class="mb-1">
-                                            <span class="text-muted">Nombre:</span><br/>
-                                            <strong><span t-esc="datos_formulario.get('nombre')"/></strong>
-                                        </p>
-                                        <p class="mb-0">
-                                            <span class="text-muted">Teléfono:</span><br/>
-                                            <span class="badge badge-primary">
-                                                <span t-esc="datos_formulario.get('celular')"/>
-                                            </span>
-                                        </p>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <div class="info-section">
+                                        <div class="section-label">
+                                            <i class="fa fa-desktop me-1"></i>
+                                            Información del Equipo
+                                        </div>
+                                        <div class="info-row">
+                                            <div class="info-row-label">Cliente</div>
+                                            <div class="info-row-value">
+                                                <t t-esc="datos_formulario.get('cliente')"/>
+                                            </div>
+                                        </div>
+                                        <div class="info-row">
+                                            <div class="info-row-label">Modelo</div>
+                                            <div class="info-row-value">
+                                                <t t-esc="datos_formulario.get('modelo_maquina')"/>
+                                            </div>
+                                        </div>
+                                        <div class="info-row">
+                                            <div class="info-row-label">Serie</div>
+                                            <div class="info-row-value">
+                                                <span class="badge badge-dark" style="font-size: 0.95rem; padding: 0.5rem 1rem;">
+                                                    <t t-esc="datos_formulario.get('serie')"/>
+                                                </span>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                                 
-                                <t t-if="validation_result.get('blocked_toners')">
-                                    <div class="alert alert-info">
-                                        <h6 class="mb-2">
-                                            <strong>🚫 Tóners no necesarios</strong>
-                                        </h6>
-                                        <ul class="mb-0 pl-3">
-                                            <t t-foreach="validation_result.get('blocked_toners', [])" t-as="blocked">
-                                                <li>
-                                                    <strong>
-                                                        <span t-esc="blocked['color'].title()"/>:
-                                                    </strong>
-                                                    &#160;<span t-esc="blocked['reason']"/>
-                                                </li>
-                                            </t>
-                                        </ul>
+                                <div class="col-md-6 mb-3">
+                                    <div class="info-section">
+                                        <div class="section-label">
+                                            <i class="fa fa-user me-1"></i>
+                                            Solicitante
+                                        </div>
+                                        <div class="info-row">
+                                            <div class="info-row-label">Nombre</div>
+                                            <div class="info-row-value">
+                                                <t t-esc="datos_formulario.get('nombre')"/>
+                                            </div>
+                                        </div>
+                                        <div class="info-row">
+                                            <div class="info-row-label">Teléfono</div>
+                                            <div class="info-row-value">
+                                                <span class="badge badge-primary" style="font-size: 0.95rem; padding: 0.5rem 1rem;">
+                                                    <t t-esc="datos_formulario.get('celular')"/>
+                                                </span>
+                                            </div>
+                                        </div>
                                     </div>
-                                </t>
-                                
-                                <div class="alert alert-success">
-                                    <h6 class="mb-1">
-                                        <strong>✅ Su equipo actualmente tiene stock suficiente</strong>
+                                </div>
+                            </div>
+                            
+                            <t t-if="validation_result.get('blocked_toners')">
+                                <div class="status-alert alert-info">
+                                    <h6 style="font-weight: 700; margin-bottom: 1rem;">
+                                        🚫 Tóners no necesarios
                                     </h6>
-                                    <p class="mb-0">
-                                        Nuestro sistema ha determinado que no es necesario enviar tóner en este momento.
-                                    </p>
+                                    <ul class="mb-0" style="padding-left: 1.5rem;">
+                                        <t t-foreach="validation_result.get('blocked_toners', [])" t-as="blocked">
+                                            <li style="margin-bottom: 0.5rem;">
+                                                <strong><span t-esc="blocked['color'].title()"/>:</strong>
+                                                <span t-esc="blocked['reason']"/>
+                                            </li>
+                                        </t>
+                                    </ul>
                                 </div>
-                                
-                                <div class="text-center mt-4">
-                                    <h6 class="mb-1">
-                                        <strong>¿Considera que hay un error?</strong>
-                                    </h6>
-                                    <p class="text-muted">
-                                        Puede contactarnos directamente:
-                                    </p>
-                                    <a href="tel:+51924894829" class="btn btn-primary mr-2">
+                            </t>
+                            
+                            <div class="status-alert alert-success">
+                                <h6 style="font-weight: 700; margin-bottom: 0.5rem;">
+                                    ✅ Su equipo actualmente tiene stock suficiente
+                                </h6>
+                                <p class="mb-0">
+                                    Nuestro sistema ha determinado que no es necesario enviar tóner en este momento.
+                                </p>
+                            </div>
+                            
+                            <div class="text-center mt-4">
+                                <h6 style="font-weight: 700; margin-bottom: 1rem;">
+                                    ¿Considera que hay un error?
+                                </h6>
+                                <p style="color: #6b7280; margin-bottom: 1.5rem;">
+                                    Puede contactarnos directamente:
+                                </p>
+                                <div class="contact-buttons">
+                                    <a href="tel:+51924894829" class="btn-contact btn-contact-primary">
                                         <i class="fa fa-phone"></i>
-                                        &#160;+51 924 894 829
+                                        +51 924 894 829
                                     </a>
-                                    <a href="mailto:soporte@andescopiers.com.pe" class="btn btn-outline-primary">
+                                    <a href="mailto:soporte@andescopiers.com.pe" class="btn-contact btn-contact-outline">
                                         <i class="fa fa-envelope"></i>
-                                        &#160;soporte@andescopiers.com.pe
+                                        Email Soporte
                                     </a>
                                 </div>
                             </div>
@@ -823,117 +1340,277 @@ document.addEventListener('DOMContentLoaded', function() {
     <!-- SOLICITUD APROBADA -->
     <template id="solicitud_toner_aprobada" name="Solicitud de Tóner Aprobada">
         <t t-call="website.layout">
-            <div class="container mt-5 mb-5">
-                <div class="row justify-content-center">
-                    <div class="col-md-8">
-                        <div class="card border-success shadow-sm">
-                            <div class="card-header bg-success text-white text-center">
-                                <h3 class="mb-0">
-                                    <i class="fa fa-check-circle"></i>
-                                    &#160;Solicitud Aprobada
-                                </h3>
+            
+            <style>
+                @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&amp;display=swap');
+                
+                .response-container {
+                    font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+                    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+                    min-height: 100vh;
+                    padding: 3rem 0;
+                }
+                
+                .response-card {
+                    background: #fff;
+                    border-radius: 24px;
+                    box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+                    overflow: hidden;
+                    max-width: 800px;
+                    margin: 0 auto;
+                }
+                
+                .response-header {
+                    padding: 2.5rem 2rem;
+                    text-align: center;
+                    position: relative;
+                }
+                
+                .response-header.success {
+                    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+                    color: #fff;
+                }
+                
+                .response-header h3 {
+                    font-size: 2rem;
+                    font-weight: 700;
+                    margin: 0;
+                }
+                
+                .response-body {
+                    padding: 2.5rem 2rem;
+                }
+                
+                .status-alert {
+                    border-radius: 16px;
+                    padding: 1.5rem;
+                    margin-bottom: 2rem;
+                    border: none;
+                }
+                
+                .status-alert h5 {
+                    font-weight: 700;
+                    font-size: 1.25rem;
+                    margin-bottom: 0.75rem;
+                }
+                
+                .info-section {
+                    background: #f9fafb;
+                    border-radius: 16px;
+                    padding: 1.5rem;
+                    margin-bottom: 1.5rem;
+                }
+                
+                .section-label {
+                    font-size: 0.75rem;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                    color: #6b7280;
+                    font-weight: 600;
+                    margin-bottom: 1rem;
+                }
+                
+                .info-row {
+                    margin-bottom: 1rem;
+                }
+                
+                .info-row:last-child {
+                    margin-bottom: 0;
+                }
+                
+                .info-row-label {
+                    font-size: 0.875rem;
+                    color: #6b7280;
+                    margin-bottom: 0.25rem;
+                }
+                
+                .info-row-value {
+                    font-size: 1.1rem;
+                    font-weight: 600;
+                    color: #1a1f3a;
+                }
+                
+                .contact-buttons {
+                    display: flex;
+                    gap: 1rem;
+                    justify-content: center;
+                    flex-wrap: wrap;
+                    margin-top: 2rem;
+                }
+                
+                .btn-contact {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                    padding: 1rem 1.5rem;
+                    border-radius: 12px;
+                    font-weight: 600;
+                    text-decoration: none;
+                    transition: all 0.2s;
+                }
+                
+                .btn-contact-success {
+                    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+                    color: #fff;
+                    border: none;
+                }
+                
+                .btn-contact-success:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 12px 24px rgba(16, 185, 129, 0.3);
+                    color: #fff;
+                }
+                
+                .btn-contact-outline-success {
+                    background: #fff;
+                    color: #10b981;
+                    border: 2px solid #10b981;
+                }
+                
+                .btn-contact-outline-success:hover {
+                    background: #f0fdf4;
+                    transform: translateY(-2px);
+                    color: #10b981;
+                }
+                
+                @media (max-width: 768px) {
+                    .response-body {
+                        padding: 1.5rem;
+                    }
+                    
+                    .response-header h3 {
+                        font-size: 1.5rem;
+                    }
+                }
+            </style>
+
+            <div class="response-container">
+                <div class="container">
+                    <div class="response-card">
+                        <div class="response-header success">
+                            <h3>
+                                <i class="fa fa-check-circle me-2"></i>
+                                Solicitud Aprobada
+                            </h3>
+                        </div>
+                        
+                        <div class="response-body">
+                            <div class="status-alert alert-success">
+                                <h5>✅ Su solicitud de tóner ha sido aprobada</h5>
+                                <p class="mb-0" style="font-size: 1.05rem;">
+                                    <strong>Número de reporte:</strong>
+                                    <span class="badge badge-light border ms-2" style="font-size: 1rem; padding: 0.5rem 1rem;">
+                                        <t t-esc="creation_result.get('secuencia')"/>
+                                    </span>
+                                </p>
                             </div>
-                            <div class="card-body">
-                                <div class="alert alert-success">
-                                    <h5 class="mb-2">
-                                        ✅ Su solicitud de tóner ha sido aprobada
-                                    </h5>
-                                    <p class="mb-0">
-                                        <strong>Número de reporte:</strong>
-                                        <span class="badge badge-light border ml-1">
-                                            <span t-esc="creation_result.get('secuencia')"/>
-                                        </span>
-                                    </p>
-                                </div>
-                                
-                                <div class="row mb-4">
-                                    <div class="col-md-6">
-                                        <h6 class="text-uppercase text-muted mb-2">
-                                            <strong>📋 Información del equipo</strong>
-                                        </h6>
-                                        <p class="mb-1">
-                                            <span class="text-muted">Cliente:</span><br/>
-                                            <strong><span t-esc="datos_formulario.get('cliente')"/></strong>
-                                        </p>
-                                        <p class="mb-1">
-                                            <span class="text-muted">Modelo:</span><br/>
-                                            <strong><span t-esc="datos_formulario.get('modelo_maquina')"/></strong>
-                                        </p>
-                                        <p class="mb-0">
-                                            <span class="text-muted">Serie:</span><br/>
-                                            <span class="badge badge-light border">
-                                                <span t-esc="datos_formulario.get('serie')"/>
-                                            </span>
-                                        </p>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <h6 class="text-uppercase text-muted mb-2">
-                                            <strong>👤 Solicitante</strong>
-                                        </h6>
-                                        <p class="mb-1">
-                                            <span class="text-muted">Nombre:</span><br/>
-                                            <strong><span t-esc="datos_formulario.get('nombre')"/></strong>
-                                        </p>
-                                        <p class="mb-0">
-                                            <span class="text-muted">Teléfono:</span><br/>
-                                            <span class="badge badge-success">
-                                                <span t-esc="datos_formulario.get('celular')"/>
-                                            </span>
-                                        </p>
-                                    </div>
-                                </div>
-                                
-                                <t t-set="validation_details" t-value="creation_result.get('validation_details', {})"/>
-                                <t t-if="validation_details.get('requested_toners')">
-                                    <div class="alert alert-info">
-                                        <h6 class="mb-2">
-                                            <strong>📦 Tóners aprobados</strong>
-                                        </h6>
-                                        <p class="mb-0">
-                                            <t t-foreach="validation_details.get('requested_toners', [])" t-as="toner">
-                                                <span class="badge badge-primary mr-1 mb-1">
-                                                    <span t-esc="toner"/>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <div class="info-section">
+                                        <div class="section-label">
+                                            <i class="fa fa-desktop me-1"></i>
+                                            Información del Equipo
+                                        </div>
+                                        <div class="info-row">
+                                            <div class="info-row-label">Cliente</div>
+                                            <div class="info-row-value">
+                                                <t t-esc="datos_formulario.get('cliente')"/>
+                                            </div>
+                                        </div>
+                                        <div class="info-row">
+                                            <div class="info-row-label">Modelo</div>
+                                            <div class="info-row-value">
+                                                <t t-esc="datos_formulario.get('modelo_maquina')"/>
+                                            </div>
+                                        </div>
+                                        <div class="info-row">
+                                            <div class="info-row-label">Serie</div>
+                                            <div class="info-row-value">
+                                                <span class="badge badge-dark" style="font-size: 0.95rem; padding: 0.5rem 1rem;">
+                                                    <t t-esc="datos_formulario.get('serie')"/>
                                                 </span>
-                                            </t>
-                                        </p>
+                                            </div>
+                                        </div>
                                     </div>
-                                </t>
-                                
-                                <div class="alert alert-primary">
-                                    <t t-if="creation_result.get('requires_automatic_delivery')">
-                                        <h6 class="mb-1">
-                                            <strong>🚚 Entrega programada automáticamente</strong>
-                                        </h6>
-                                        <p class="mb-0">
-                                            Su solicitud ha activado una programación automática de entrega.
-                                            Recibirá confirmación de la fecha de entrega.
-                                        </p>
-                                    </t>
-                                    <t t-else="">
-                                        <h6 class="mb-1">
-                                            <strong>📋 Será revisado por nuestro equipo</strong>
-                                        </h6>
-                                        <p class="mb-0">
-                                            Su solicitud será revisada por nuestro equipo administrativo
-                                            y recibirá confirmación en breve.
-                                        </p>
-                                    </t>
                                 </div>
                                 
-                                <div class="text-center mt-4">
-                                    <h6 class="mb-1">
-                                        <strong>¡Gracias por confiar en Andes Copier!</strong>
+                                <div class="col-md-6 mb-3">
+                                    <div class="info-section">
+                                        <div class="section-label">
+                                            <i class="fa fa-user me-1"></i>
+                                            Solicitante
+                                        </div>
+                                        <div class="info-row">
+                                            <div class="info-row-label">Nombre</div>
+                                            <div class="info-row-value">
+                                                <t t-esc="datos_formulario.get('nombre')"/>
+                                            </div>
+                                        </div>
+                                        <div class="info-row">
+                                            <div class="info-row-label">Teléfono</div>
+                                            <div class="info-row-value">
+                                                <span class="badge badge-success" style="font-size: 0.95rem; padding: 0.5rem 1rem;">
+                                                    <t t-esc="datos_formulario.get('celular')"/>
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <t t-set="validation_details" t-value="creation_result.get('validation_details', {})"/>
+                            <t t-if="validation_details.get('requested_toners')">
+                                <div class="status-alert alert-info">
+                                    <h6 style="font-weight: 700; margin-bottom: 1rem;">
+                                        📦 Tóners aprobados
                                     </h6>
-                                    <p class="text-muted">
-                                        Ha recibido una confirmación por WhatsApp.
+                                    <div>
+                                        <t t-foreach="validation_details.get('requested_toners', [])" t-as="toner">
+                                            <span class="badge badge-primary me-2 mb-2" style="font-size: 0.95rem; padding: 0.5rem 1rem;">
+                                                <t t-esc="toner"/>
+                                            </span>
+                                        </t>
+                                    </div>
+                                </div>
+                            </t>
+                            
+                            <div class="status-alert" style="background: #dbeafe; color: #1e40af;">
+                                <t t-if="creation_result.get('requires_automatic_delivery')">
+                                    <h6 style="font-weight: 700; margin-bottom: 0.5rem;">
+                                        🚚 Entrega programada automáticamente
+                                    </h6>
+                                    <p class="mb-0">
+                                        Su solicitud ha activado una programación automática de entrega.
+                                        Recibirá confirmación de la fecha de entrega.
                                     </p>
-                                    <a href="tel:+51924894829" class="btn btn-success mr-2">
+                                </t>
+                                <t t-else="">
+                                    <h6 style="font-weight: 700; margin-bottom: 0.5rem;">
+                                        📋 Será revisado por nuestro equipo
+                                    </h6>
+                                    <p class="mb-0">
+                                        Su solicitud será revisada por nuestro equipo administrativo
+                                        y recibirá confirmación en breve.
+                                    </p>
+                                </t>
+                            </div>
+                            
+                            <div class="text-center mt-4">
+                                <h6 style="font-weight: 700; margin-bottom: 1rem;">
+                                    ¡Gracias por confiar en Andes Copier!
+                                </h6>
+                                <p style="color: #6b7280; margin-bottom: 1.5rem;">
+                                    Ha recibido una confirmación por WhatsApp.
+                                </p>
+                                <div class="contact-buttons">
+                                    <a href="tel:+51924894829" class="btn-contact btn-contact-success">
                                         <i class="fa fa-phone"></i>
-                                        &#160;+51 924 894 829
+                                        +51 924 894 829
                                     </a>
-                                    <a href="mailto:soporte@andescopiers.com.pe" class="btn btn-outline-success">
+                                    <a href="mailto:soporte@andescopiers.com.pe" class="btn-contact btn-contact-outline-success">
                                         <i class="fa fa-envelope"></i>
-                                        &#160;soporte@andescopiers.com.pe
+                                        Email Soporte
                                     </a>
                                 </div>
                             </div>
@@ -944,89 +1621,247 @@ document.addEventListener('DOMContentLoaded', function() {
         </t>
     </template>
 
-    <!-- SOLICITUD SIN SELECCIÓN DE TÓNER -->
+    <!-- SOLICITUD SIN SELECCIÓN -->
     <template id="solicitud_toner_sin_seleccion" name="Solicitud Sin Selección de Tóner">
         <t t-call="website.layout">
-            <div class="container mt-5 mb-5">
-                <div class="row justify-content-center">
-                    <div class="col-md-8">
-                        <div class="card border-danger shadow-sm">
-                            <div class="card-header bg-danger text-white text-center">
-                                <h3 class="mb-0">
-                                    <i class="fa fa-times-circle"></i>
-                                    &#160;Error en Solicitud
-                                </h3>
+            
+            <style>
+                @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&amp;display=swap');
+                
+                .response-container {
+                    font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+                    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+                    min-height: 100vh;
+                    padding: 3rem 0;
+                }
+                
+                .response-card {
+                    background: #fff;
+                    border-radius: 24px;
+                    box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+                    overflow: hidden;
+                    max-width: 800px;
+                    margin: 0 auto;
+                }
+                
+                .response-header {
+                    padding: 2.5rem 2rem;
+                    text-align: center;
+                }
+                
+                .response-header.danger {
+                    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+                    color: #fff;
+                }
+                
+                .response-header h3 {
+                    font-size: 2rem;
+                    font-weight: 700;
+                    margin: 0;
+                }
+                
+                .response-body {
+                    padding: 2.5rem 2rem;
+                }
+                
+                .status-alert {
+                    border-radius: 16px;
+                    padding: 1.5rem;
+                    margin-bottom: 2rem;
+                    border: none;
+                }
+                
+                .status-alert h5 {
+                    font-weight: 700;
+                    font-size: 1.25rem;
+                    margin-bottom: 0.75rem;
+                }
+                
+                .info-section {
+                    background: #f9fafb;
+                    border-radius: 16px;
+                    padding: 1.5rem;
+                    margin-bottom: 1.5rem;
+                }
+                
+                .section-label {
+                    font-size: 0.75rem;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                    color: #6b7280;
+                    font-weight: 600;
+                    margin-bottom: 1rem;
+                }
+                
+                .info-row {
+                    margin-bottom: 1rem;
+                }
+                
+                .info-row:last-child {
+                    margin-bottom: 0;
+                }
+                
+                .info-row-label {
+                    font-size: 0.875rem;
+                    color: #6b7280;
+                    margin-bottom: 0.25rem;
+                }
+                
+                .info-row-value {
+                    font-size: 1.1rem;
+                    font-weight: 600;
+                    color: #1a1f3a;
+                }
+                
+                .contact-buttons {
+                    display: flex;
+                    gap: 1rem;
+                    justify-content: center;
+                    flex-wrap: wrap;
+                    margin-top: 2rem;
+                }
+                
+                .btn-contact {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                    padding: 1rem 1.5rem;
+                    border-radius: 12px;
+                    font-weight: 600;
+                    text-decoration: none;
+                    transition: all 0.2s;
+                }
+                
+                .btn-contact-primary {
+                    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+                    color: #fff;
+                    border: none;
+                }
+                
+                .btn-contact-primary:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 12px 24px rgba(99, 102, 241, 0.3);
+                    color: #fff;
+                }
+                
+                .btn-contact-outline {
+                    background: #fff;
+                    color: #6366f1;
+                    border: 2px solid #6366f1;
+                }
+                
+                .btn-contact-outline:hover {
+                    background: #f5f3ff;
+                    transform: translateY(-2px);
+                    color: #6366f1;
+                }
+                
+                @media (max-width: 768px) {
+                    .response-body {
+                        padding: 1.5rem;
+                    }
+                    
+                    .response-header h3 {
+                        font-size: 1.5rem;
+                    }
+                }
+            </style>
+
+            <div class="response-container">
+                <div class="container">
+                    <div class="response-card">
+                        <div class="response-header danger">
+                            <h3>
+                                <i class="fa fa-times-circle me-2"></i>
+                                Error en Solicitud
+                            </h3>
+                        </div>
+                        
+                        <div class="response-body">
+                            <div class="status-alert alert-danger">
+                                <h5>❌ No se seleccionó ningún tóner</h5>
+                                <p class="mb-0" style="font-size: 1.05rem;">
+                                    Para procesar su solicitud, debe seleccionar al menos un tipo de tóner.
+                                </p>
                             </div>
-                            <div class="card-body">
-                                <div class="alert alert-danger">
-                                    <h5 class="mb-2">
-                                        ❌ No se seleccionó ningún tóner
-                                    </h5>
-                                    <p class="mb-0">
-                                        Para procesar su solicitud, debe seleccionar al menos un tipo de tóner.
-                                    </p>
-                                </div>
-                                
-                                <div class="row mb-4">
-                                    <div class="col-md-6">
-                                        <h6 class="text-uppercase text-muted mb-2">
-                                            <strong>📋 Información del equipo</strong>
-                                        </h6>
-                                        <p class="mb-1">
-                                            The text below is just code formatted in XML, thus no need for citations.
-                                            <span class="text-muted">Cliente:</span><br/>
-                                            <strong><span t-esc="datos_formulario.get('cliente')"/></strong>
-                                        </p>
-                                        <p class="mb-1">
-                                            <span class="text-muted">Modelo:</span><br/>
-                                            <strong><span t-esc="datos_formulario.get('modelo_maquina')"/></strong>
-                                        </p>
-                                        <p class="mb-0">
-                                            <span class="text-muted">Serie:</span><br/>
-                                            <span class="badge badge-light border">
-                                                <span t-esc="datos_formulario.get('serie')"/>
-                                            </span>
-                                        </p>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <h6 class="text-uppercase text-muted mb-2">
-                                            <strong>👤 Solicitante</strong>
-                                        </h6>
-                                        <p class="mb-1">
-                                            <span class="text-muted">Nombre:</span><br/>
-                                            <strong><span t-esc="datos_formulario.get('nombre')"/></strong>
-                                        </p>
-                                        <p class="mb-0">
-                                            <span class="text-muted">Teléfono:</span><br/>
-                                            <span class="badge badge-primary">
-                                                <span t-esc="datos_formulario.get('celular')"/>
-                                            </span>
-                                        </p>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <div class="info-section">
+                                        <div class="section-label">
+                                            <i class="fa fa-desktop me-1"></i>
+                                            Información del Equipo
+                                        </div>
+                                        <div class="info-row">
+                                            <div class="info-row-label">Cliente</div>
+                                            <div class="info-row-value">
+                                                <t t-esc="datos_formulario.get('cliente')"/>
+                                            </div>
+                                        </div>
+                                        <div class="info-row">
+                                            <div class="info-row-label">Modelo</div>
+                                            <div class="info-row-value">
+                                                <t t-esc="datos_formulario.get('modelo_maquina')"/>
+                                            </div>
+                                        </div>
+                                        <div class="info-row">
+                                            <div class="info-row-label">Serie</div>
+                                            <div class="info-row-value">
+                                                <span class="badge badge-dark" style="font-size: 0.95rem; padding: 0.5rem 1rem;">
+                                                    <t t-esc="datos_formulario.get('serie')"/>
+                                                </span>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                                 
-                                <div class="alert alert-info">
-                                    <h6 class="mb-2">
-                                        <strong>📝 Para continuar</strong>
-                                    </h6>
-                                    <ol class="mb-0 pl-3">
-                                        <li>Vuelva al formulario anterior</li>
-                                        <li>Seleccione al menos un tipo de tóner</li>
-                                        <li>Complete los contadores correctamente</li>
-                                        <li>Envíe nuevamente la solicitud</li>
-                                    </ol>
+                                <div class="col-md-6 mb-3">
+                                    <div class="info-section">
+                                        <div class="section-label">
+                                            <i class="fa fa-user me-1"></i>
+                                            Solicitante
+                                        </div>
+                                        <div class="info-row">
+                                            <div class="info-row-label">Nombre</div>
+                                            <div class="info-row-value">
+                                                <t t-esc="datos_formulario.get('nombre')"/>
+                                            </div>
+                                        </div>
+                                        <div class="info-row">
+                                            <div class="info-row-label">Teléfono</div>
+                                            <div class="info-row-value">
+                                                <span class="badge badge-primary" style="font-size: 0.95rem; padding: 0.5rem 1rem;">
+                                                    <t t-esc="datos_formulario.get('celular')"/>
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
-                                
-                                <div class="text-center mt-4">
+                            </div>
+                            
+                            <div class="status-alert alert-info">
+                                <h6 style="font-weight: 700; margin-bottom: 1rem;">
+                                    📝 Para continuar
+                                </h6>
+                                <ol style="padding-left: 1.5rem; margin-bottom: 0;">
+                                    <li style="margin-bottom: 0.5rem;">Vuelva al formulario anterior</li>
+                                    <li style="margin-bottom: 0.5rem;">Seleccione al menos un tipo de tóner</li>
+                                    <li style="margin-bottom: 0.5rem;">Complete los contadores correctamente</li>
+                                    <li>Envíe nuevamente la solicitud</li>
+                                </ol>
+                            </div>
+                            
+                            <div class="text-center">
+                                <div class="contact-buttons">
                                     <button type="button"
-                                            class="btn btn-primary mr-2"
+                                            class="btn-contact btn-contact-primary"
                                             onclick="goBack()">
                                         <i class="fa fa-arrow-left"></i>
-                                        &#160;Volver al formulario
+                                        Volver al formulario
                                     </button>
-                                    <a href="tel:+51924894829" class="btn btn-outline-primary">
+                                    <a href="tel:+51924894829" class="btn-contact btn-contact-outline">
                                         <i class="fa fa-phone"></i>
-                                        &#160;Contactar soporte
+                                        Contactar soporte
                                     </a>
                                 </div>
                             </div>
