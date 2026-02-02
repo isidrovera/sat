@@ -55,31 +55,43 @@ class PublicTicketController(http.Controller):
         if not registro:
             return request.redirect('/pagina_error')
 
-        # Determinar si es un escaneo QR o desde WhatsApp
-        is_qr_scan = not (user_name or phone_number)
+        # Detectar contexto
+        is_whatsapp = bool(user_name or phone_number)
+        is_logged_user = request.env.user and not request.env.user._is_public()
+        is_qr_scan = not is_whatsapp and not is_logged_user
 
         values = {
             'partner_id': registro.cliente_id.id if registro.cliente_id else '',
-            'direccion': registro.direccion if registro.direccion else '',
-            'correo': registro.correo_ if registro.correo_ else '',
+            'direccion': registro.direccion or '',
+            'correo': registro.correo_ or '',
             'product_id': registro.id,
             'is_qr_scan': is_qr_scan,
         }
 
-        if not is_qr_scan:
-            # Si viene de WhatsApp, prellenamos los campos
+        # 1️⃣ WhatsApp
+        if is_whatsapp:
             values.update({
                 'contacto_id': user_name or '',
                 'celular': phone_number.replace('@c.us', '') if phone_number else '',
             })
+
+        # 2️⃣ Usuario logueado (ESTO FALTABA)
+        elif is_logged_user:
+            partner = request.env.user.partner_id
+            values.update({
+                'contacto_id': partner.name or '',
+                'celular': partner.mobile or partner.phone or '',
+            })
+
+        # 3️⃣ QR público
         else:
-            # Si es escaneo QR, dejamos los campos en blanco
             values.update({
                 'contacto_id': '',
                 'celular': '',
             })
 
         return request.render('sat.reportar_incidencia_form', values)
+
 
     @http.route('/pagina_confirmacion', type='http', auth="public", website=True)
     def pagina_confirmacion(self, **kw):
