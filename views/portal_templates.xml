@@ -72,7 +72,6 @@
             <t t-set="title">Mis Equipos</t>
         </t>
 
-        <!-- ICONOS -->
         <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet"/>
 
         <style>
@@ -80,20 +79,17 @@
                 --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             }
 
-            .card-equipos {
-                border-radius: 16px;
-                animation: fadeInUp .5s ease;
-            }
-
+            .card-equipos { border-radius: 16px; }
             .header-gradient {
                 background: var(--gradient-primary);
-                border-radius: 16px 16px 0 0;
                 padding: 1.5rem;
+                border-radius: 16px 16px 0 0;
+                color: white;
             }
 
             .badge-modern {
-                border-radius: 50px;
                 padding: .4rem .9rem;
+                border-radius: 50px;
                 font-weight: 600;
                 display: inline-flex;
                 align-items: center;
@@ -103,13 +99,12 @@
             .counter-box {
                 background: #f5f7fa;
                 border-radius: 12px;
-                padding: .7rem;
+                padding: .6rem;
                 text-align: center;
             }
 
             .counter-value {
                 font-weight: 700;
-                font-size: 1.2rem;
                 color: #667eea;
             }
 
@@ -122,14 +117,7 @@
                 border-radius: 10px;
             }
 
-            .modal-content {
-                border-radius: 20px;
-            }
-
-            @keyframes fadeInUp {
-                from {opacity:0; transform: translateY(15px);}
-                to {opacity:1; transform: translateY(0);}
-            }
+            .modal-content { border-radius: 20px; }
         </style>
 
         <div class="container mt-4">
@@ -139,28 +127,26 @@
                 <div class="card card-equipos shadow-sm text-center p-5">
                     <i class="bi bi-printer text-muted" style="font-size:4rem;"></i>
                     <h5 class="mt-3">No tiene equipos registrados</h5>
-                    <p class="text-muted mb-0">No hay equipos asociados a su cuenta.</p>
+                    <p class="text-muted mb-0">Actualmente no hay equipos asociados a su cuenta.</p>
                 </div>
             </t>
 
             <!-- CON EQUIPOS -->
             <t t-else="">
                 <div class="card card-equipos shadow-lg">
-                    <div class="header-gradient text-white">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <h4 class="mb-1"><i class="bi bi-printer"></i> Mis Equipos</h4>
-                                <small class="opacity-75">Gestión y soporte de sus equipos</small>
-                            </div>
-                            <span class="badge-modern bg-white text-dark">
-                                <i class="bi bi-collection"></i>
-                                <t t-esc="len(equipos)"/> equipos
-                            </span>
+                    <div class="header-gradient d-flex justify-content-between align-items-center">
+                        <div>
+                            <h4 class="mb-1"><i class="bi bi-printer"></i> Mis Equipos</h4>
+                            <small class="opacity-75">Gestión de equipos en alquiler</small>
                         </div>
+                        <span class="badge-modern bg-white text-dark">
+                            <i class="bi bi-collection"></i>
+                            <t t-esc="len(equipos)"/> equipos
+                        </span>
                     </div>
 
                     <div class="table-responsive">
-                        <table class="table table-hover mb-0 align-middle">
+                        <table class="table table-hover align-middle mb-0">
                             <thead class="table-light">
                                 <tr>
                                     <th>Marca</th>
@@ -176,11 +162,13 @@
                             <tbody>
                                 <t t-foreach="equipos" t-as="equipo">
                                     <tr>
+                                        <!-- MARCA -->
                                         <td><strong><t t-esc="equipo.marca"/></strong></td>
 
+                                        <!-- MODELO -->
                                         <td>
                                             <div class="fw-bold"><t t-esc="equipo.name.name"/></div>
-                                            <t t-if="equipo.ip_address">
+                                            <t t-if="'ip_address' in equipo._fields and equipo.ip_address">
                                                 <small class="text-muted">
                                                     <i class="bi bi-hdd-network"></i>
                                                     <t t-esc="equipo.ip_address"/>
@@ -188,6 +176,7 @@
                                             </t>
                                         </td>
 
+                                        <!-- SERIE -->
                                         <td>
                                             <span class="badge bg-dark">
                                                 <i class="bi bi-upc-scan"></i>
@@ -195,41 +184,54 @@
                                             </span>
                                         </td>
 
+                                        <!-- UBICACIÓN -->
                                         <td>
-                                            <t t-if="equipo.ubicacion_instalacion">
+                                            <t t-if="'ubicacion_instalacion' in equipo._fields and equipo.ubicacion_instalacion">
                                                 <i class="bi bi-geo-alt-fill text-danger"></i>
                                                 <t t-esc="equipo.ubicacion_instalacion"/>
                                             </t>
                                             <t t-else="">-</t>
                                         </td>
 
+                                        <!-- ESTADO (SIN INVENTAR CAMPOS) -->
                                         <td>
-                                            <t t-if="equipo.bloqueado">
-                                                <span class="badge bg-danger">Bloqueado</span>
+                                            <t t-if="'estado_alquiler_id' in equipo._fields and equipo.estado_alquiler_id == 'con_problemas'">
+                                                <span class="badge bg-warning text-dark">Con problemas</span>
+                                            </t>
+                                            <t t-elif="'estado_alquiler_id' in equipo._fields and equipo.estado_alquiler_id == 'alquilada'">
+                                                <span class="badge bg-success">Activo</span>
                                             </t>
                                             <t t-else="">
-                                                <span class="badge bg-success">Activo</span>
+                                                <span class="badge bg-secondary">-</span>
                                             </t>
                                         </td>
 
+                                        <!-- CONTADORES -->
                                         <td class="text-center">
-                                            <div class="d-flex justify-content-center gap-2">
-                                                <div class="counter-box">
-                                                    <small>B/N</small>
-                                                    <div class="counter-value">
-                                                        <t t-esc="equipo.contador_bn or 0"/>
-                                                    </div>
-                                                </div>
-
-                                                <t t-if="equipo.tipo_maquina_id == 'color'">
-                                                    <div class="counter-box">
-                                                        <small>Color</small>
-                                                        <div class="counter-value">
-                                                            <t t-esc="equipo.contador_color or 0"/>
+                                            <t t-if="'contador_bn' in equipo._fields or 'contador_color' in equipo._fields">
+                                                <div class="d-flex justify-content-center gap-2">
+                                                    <t t-if="'contador_bn' in equipo._fields">
+                                                        <div class="counter-box">
+                                                            <small>B/N</small>
+                                                            <div class="counter-value">
+                                                                <t t-esc="equipo.contador_bn or 0"/>
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                </t>
-                                            </div>
+                                                    </t>
+
+                                                    <t t-if="'contador_color' in equipo._fields and equipo.tipo_maquina_id == 'color'">
+                                                        <div class="counter-box">
+                                                            <small>Color</small>
+                                                            <div class="counter-value">
+                                                                <t t-esc="equipo.contador_color or 0"/>
+                                                            </div>
+                                                        </div>
+                                                    </t>
+                                                </div>
+                                            </t>
+                                            <t t-else="">
+                                                <span class="text-muted">Sin datos</span>
+                                            </t>
                                         </td>
 
                                         <!-- ACCIONES -->
@@ -257,12 +259,11 @@
                                                    title="Solicitar tóner">
                                                     <i class="bi bi-droplet-fill"></i>
                                                 </a>
-
                                             </div>
                                         </td>
                                     </tr>
 
-                                    <!-- MODAL DETALLE -->
+                                    <!-- MODAL -->
                                     <div class="modal fade" t-attf-id="equipoModal#{equipo.id}">
                                         <div class="modal-dialog modal-lg modal-dialog-centered">
                                             <div class="modal-content">
@@ -276,7 +277,12 @@
 
                                                 <div class="modal-body">
                                                     <p><strong>Serie:</strong> <t t-esc="equipo.serie"/></p>
-                                                    <p><strong>Ubicación:</strong> <t t-esc="equipo.ubicacion_instalacion or '-'"/></p>
+
+                                                    <t t-if="'ubicacion_instalacion' in equipo._fields">
+                                                        <p><strong>Ubicación:</strong>
+                                                            <t t-esc="equipo.ubicacion_instalacion or '-'"/>
+                                                        </p>
+                                                    </t>
                                                 </div>
 
                                                 <div class="modal-footer">
