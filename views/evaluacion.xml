@@ -367,17 +367,19 @@
                         </group>
                         
                         <notebook>
-                            <!-- TAB: ANÁLISIS DIARIO (NUEVO) -->
                             <!-- TAB: ANÁLISIS DIARIO (CORREGIDO) -->
-<page string="📊 Análisis Diario" name="analisis_diario">
+<page string="📊 Análisis Diario" 
+      name="analisis_diario"
+      invisible="not id">
+    
     <div class="alert alert-warning" role="alert" invisible="tiene_detalle_diario">
         <strong>⚠️ Análisis Diario no Generado</strong><br/>
         Haga clic en "Regenerar Análisis Diario" para generar el desglose día por día.
     </div>
     
     <field name="detalle_diario_ids" 
-       mode="list,graph"
-       context="{'default_evaluacion_id': id}">
+           mode="list,graph"
+           context="{'default_evaluacion_id': id}">
         <list string="Desglose Diario"
               decoration-success="cumple_objetivo and es_dia_laboral"
               decoration-warning="porcentaje_cumplimiento &gt;= 70 and porcentaje_cumplimiento &lt; 100 and es_dia_laboral"
@@ -418,8 +420,7 @@
             <field name="cantidad_tickets" type="measure"/>
         </graph>
     </field>
-</page>
-                            
+</page>           
                             <!-- TAB: MÉTRICAS OBJETIVAS -->
                             <page string="📈 Métricas Objetivas" name="metricas_objetivas">
                                 <group>
