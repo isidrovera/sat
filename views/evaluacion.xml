@@ -365,56 +365,57 @@
                         
                         <notebook>
                             <!-- TAB: ANÁLISIS DIARIO (NUEVO) -->
-                            <page string="📊 Análisis Diario" name="analisis_diario">
-                                <div class="alert alert-warning" role="alert" invisible="tiene_detalle_diario">
-                                    <strong>⚠️ Análisis Diario no Generado</strong><br/>
-                                    Haga clic en "Regenerar Análisis Diario" para generar el desglose día por día.
-                                </div>
-                                
-                                <field name="detalle_diario_ids" 
-                                       mode="list,graph"
-                                       context="{'default_evaluacion_id': active_id}">
-                                    <list string="Desglose Diario"
-                                          decoration-success="cumple_objetivo and es_dia_laboral"
-                                          decoration-warning="porcentaje_cumplimiento &gt;= 70 and porcentaje_cumplimiento &lt; 100 and es_dia_laboral"
-                                          decoration-danger="porcentaje_cumplimiento &lt; 70 and es_dia_laboral and total_trabajos &gt; 0"
-                                          decoration-muted="not es_dia_laboral or total_trabajos == 0"
-                                          create="0" delete="0" edit="0">
-                                        
-                                        <field name="fecha"/>
-                                        <field name="dia_semana"/>
-                                        <field name="es_dia_laboral" column_invisible="1"/>
-                                        <field name="cantidad_reparaciones" sum="Total"/>
-                                        <field name="cantidad_tickets" sum="Total"/>
-                                        <field name="total_trabajos" sum="Total" widget="badge"/>
-                                        <field name="objetivo_dia"/>
-                                        <field name="porcentaje_cumplimiento" widget="percentage"/>
-                                        <field name="estado_dia" widget="badge"/>
-                                        <field name="clientes_atendidos" optional="hide"/>
-                                        <field name="modelos_trabajados" optional="hide"/>
-                                        
-                                        <button name="action_ver_reparaciones_dia" 
-                                                type="object" 
-                                                string=""
-                                                icon="fa-wrench"
-                                                invisible="cantidad_reparaciones == 0"
-                                                title="Ver Reparaciones"/>
-                                        
-                                        <button name="action_ver_tickets_dia" 
-                                                type="object" 
-                                                string=""
-                                                icon="fa-ticket"
-                                                invisible="cantidad_tickets == 0"
-                                                title="Ver Tickets"/>
-                                    </list>
-                                    
-                                    <graph type="line" stacked="0">
-                                        <field name="fecha" interval="day"/>
-                                        <field name="cantidad_reparaciones" type="measure"/>
-                                        <field name="cantidad_tickets" type="measure"/>
-                                    </graph>
-                                </field>
-                            </page>
+                            <!-- TAB: ANÁLISIS DIARIO (CORREGIDO) -->
+<page string="📊 Análisis Diario" name="analisis_diario">
+    <div class="alert alert-warning" role="alert" invisible="tiene_detalle_diario">
+        <strong>⚠️ Análisis Diario no Generado</strong><br/>
+        Haga clic en "Regenerar Análisis Diario" para generar el desglose día por día.
+    </div>
+    
+    <field name="detalle_diario_ids" 
+           mode="list,graph"
+           context="{'default_evaluacion_id': id}">
+        <list string="Desglose Diario"
+              decoration-success="cumple_objetivo and es_dia_laboral"
+              decoration-warning="porcentaje_cumplimiento &gt;= 70 and porcentaje_cumplimiento &lt; 100 and es_dia_laboral"
+              decoration-danger="porcentaje_cumplimiento &lt; 70 and es_dia_laboral and total_trabajos &gt; 0"
+              decoration-muted="not es_dia_laboral or total_trabajos == 0"
+              create="0" delete="0" edit="0">
+            
+            <field name="fecha"/>
+            <field name="dia_semana"/>
+            <field name="es_dia_laboral" column_invisible="1"/>
+            <field name="cantidad_reparaciones" sum="Total"/>
+            <field name="cantidad_tickets" sum="Total"/>
+            <field name="total_trabajos" sum="Total" widget="badge"/>
+            <field name="objetivo_dia"/>
+            <field name="porcentaje_cumplimiento" widget="percentage"/>
+            <field name="estado_dia" widget="badge"/>
+            <field name="clientes_atendidos" optional="hide"/>
+            <field name="modelos_trabajados" optional="hide"/>
+            
+            <button name="action_ver_reparaciones_dia" 
+                    type="object" 
+                    string=""
+                    icon="fa-wrench"
+                    invisible="cantidad_reparaciones == 0"
+                    title="Ver Reparaciones"/>
+            
+            <button name="action_ver_tickets_dia" 
+                    type="object" 
+                    string=""
+                    icon="fa-ticket"
+                    invisible="cantidad_tickets == 0"
+                    title="Ver Tickets"/>
+        </list>
+        
+        <graph type="line" stacked="0">
+            <field name="fecha" interval="day"/>
+            <field name="cantidad_reparaciones" type="measure"/>
+            <field name="cantidad_tickets" type="measure"/>
+        </graph>
+    </field>
+</page>
                             
                             <!-- TAB: MÉTRICAS OBJETIVAS -->
                             <page string="📈 Métricas Objetivas" name="metricas_objetivas">
