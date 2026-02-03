@@ -159,8 +159,8 @@
                                             <list create="0" delete="0" edit="0">
                                                 <field name="name"/>
                                                 <field name="cliente_id"/>
-                                                <field name="modelo_id"/>
-                                                <field name="serie"/>
+                                                <field name="maquina_id"/>
+                                                <field name="serie_id"/>
                                                 <field name="create_date"/>
                                             </list>
                                         </field>
@@ -170,8 +170,8 @@
                                             <list create="0" delete="0" edit="0">
                                                 <field name="name"/>
                                                 <field name="partner_id"/>
-                                                <field name="modelo_id"/>
-                                                <field name="serie"/>
+                                                <field name="product_alquiler"/>
+                                                <field name="serie_id_r"/>
                                                 <field name="agenda"/>
                                             </list>
                                         </field>
