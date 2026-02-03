@@ -1,145 +1,499 @@
 <?xml version='1.0' encoding='utf-8'?>
 <odoo>
     <data>
-        <!-- Vista de lista -->
-         <record id="view_evaluacion_personal_tree" model="ir.ui.view">
-                <field name="name">evaluacion.personal.tree</field>
-                <field name="model">evaluacion.personal</field>
-                <field name="arch" type="xml">
-                    <list default_order="fecha desc" 
-                        decoration-danger="state=='borrador'" 
-                        decoration-success="state=='enviado'" 
-                        decoration-warning="puntaje_total&lt;80" 
-                        decoration-info="puntaje_total>=80"
-                        decoration-muted="state=='cancelado'">
-                        <!-- Añadir el botón de envío aquí -->
-                        <header>
-                            <button name="action_enviar_reportes_masivo" string="Enviar Reportes" type="object" class="btn-primary"/>
-                        </header>
-                        <field name="name" />
-                        <field name="fecha" />
-                        <field name="usuario_id" />
-                        <field name="cantidad_reparaciones" />
-                        <field name="objetivo_reparaciones" />
-                        <field name="porcentaje_reparaciones" widget="percentage" />
-                        <field name="cantidad_tickets" />
-                        <field name="objetivo_tickets" />
-                        <field name="porcentaje_tickets" widget="percentage" />
-                        <field name="puntaje_total" widget="progressbar" />
-                        <field name="nivel_desempeno" />
-                        <field name="state" widget="badge" />
-                    </list>
-                </field>
-            </record>
+        <!-- ============================================================ -->
+        <!-- VISTA TREE DEL DETALLE DIARIO -->
+        <!-- ============================================================ -->
+        <record id="view_evaluacion_personal_detalle_diario_tree" model="ir.ui.view">
+            <field name="name">evaluacion.personal.detalle.diario.tree</field>
+            <field name="model">evaluacion.personal.detalle.diario</field>
+            <field name="arch" type="xml">
+                <list string="Análisis Diario" 
+                      default_order="fecha asc"
+                      decoration-success="cumple_objetivo and es_dia_laboral"
+                      decoration-warning="porcentaje_cumplimiento &gt;= 70 and porcentaje_cumplimiento &lt; 100 and es_dia_laboral"
+                      decoration-danger="porcentaje_cumplimiento &lt; 70 and es_dia_laboral and total_trabajos &gt; 0"
+                      decoration-muted="not es_dia_laboral or total_trabajos == 0"
+                      create="0" 
+                      delete="0" 
+                      edit="0">
+                    
+                    <field name="fecha" />
+                    <field name="dia_semana" />
+                    <field name="numero_dia" column_invisible="1"/>
+                    <field name="es_dia_laboral" column_invisible="1"/>
+                    <field name="es_sabado" column_invisible="1"/>
+                    
+                    <field name="cantidad_reparaciones" 
+                           string="Reparaciones"
+                           sum="Total Reparaciones"/>
+                    
+                    <field name="cantidad_tickets" 
+                           string="Tickets"
+                           sum="Total Tickets"/>
+                    
+                    <field name="total_trabajos" 
+                           string="Total"
+                           sum="Total General"
+                           widget="badge"
+                           decoration-success="total_trabajos &gt;= objetivo_dia"
+                           decoration-warning="total_trabajos &gt;= objetivo_dia * 0.7 and total_trabajos &lt; objetivo_dia"
+                           decoration-danger="total_trabajos &lt; objetivo_dia * 0.7 and total_trabajos &gt; 0"/>
+                    
+                    <field name="objetivo_dia" string="Objetivo"/>
+                    
+                    <field name="porcentaje_cumplimiento" 
+                           string="% Cumplimiento"
+                           widget="percentage"
+                           optional="show"/>
+                    
+                    <field name="cumple_objetivo" 
+                           string="Cumple"
+                           widget="boolean_toggle"
+                           optional="show"/>
+                    
+                    <field name="estado_dia" 
+                           string="Estado"
+                           widget="badge"
+                           decoration-success="estado_dia == 'excelente'"
+                           decoration-info="estado_dia == 'bueno'"
+                           decoration-warning="estado_dia == 'aceptable'"
+                           decoration-danger="estado_dia == 'bajo'"
+                           decoration-muted="estado_dia == 'sin_actividad'"/>
+                    
+                    <field name="cantidad_clientes" 
+                           string="Nº Clientes"
+                           optional="hide"/>
+                    
+                    <field name="clientes_atendidos" 
+                           string="Clientes"
+                           optional="hide"/>
+                    
+                    <field name="modelos_trabajados" 
+                           string="Modelos/Equipos"
+                           optional="hide"/>
+                    
+                    <!-- Botones de acción -->
+                    <button name="action_ver_reparaciones_dia" 
+                            type="object" 
+                            string="Ver Reparaciones"
+                            icon="fa-wrench"
+                            invisible="cantidad_reparaciones == 0"
+                            class="btn-link"/>
+                    
+                    <button name="action_ver_tickets_dia" 
+                            type="object" 
+                            string="Ver Tickets"
+                            icon="fa-ticket"
+                            invisible="cantidad_tickets == 0"
+                            class="btn-link"/>
+                </list>
+            </field>
+        </record>
 
-        <!-- Vista de formulario -->
+        <!-- ============================================================ -->
+        <!-- VISTA FORM DEL DETALLE DIARIO -->
+        <!-- ============================================================ -->
+        <record id="view_evaluacion_personal_detalle_diario_form" model="ir.ui.view">
+            <field name="name">evaluacion.personal.detalle.diario.form</field>
+            <field name="model">evaluacion.personal.detalle.diario</field>
+            <field name="arch" type="xml">
+                <form string="Detalle del Día" create="0" delete="0">
+                    <header>
+                        <field name="estado_dia" widget="statusbar"/>
+                    </header>
+                    <sheet>
+                        <div class="oe_button_box" name="button_box">
+                            <button name="action_ver_reparaciones_dia" 
+                                    type="object" 
+                                    class="oe_stat_button"
+                                    icon="fa-wrench"
+                                    invisible="cantidad_reparaciones == 0">
+                                <field name="cantidad_reparaciones" widget="statinfo" string="Reparaciones"/>
+                            </button>
+                            <button name="action_ver_tickets_dia" 
+                                    type="object" 
+                                    class="oe_stat_button"
+                                    icon="fa-ticket"
+                                    invisible="cantidad_tickets == 0">
+                                <field name="cantidad_tickets" widget="statinfo" string="Tickets"/>
+                            </button>
+                        </div>
+                        
+                        <div class="oe_title">
+                            <h1>
+                                <field name="dia_semana" readonly="1"/> 
+                                <field name="fecha" readonly="1"/>
+                            </h1>
+                        </div>
+                        
+                        <group>
+                            <group string="Información del Día">
+                                <field name="evaluacion_id" readonly="1"/>
+                                <field name="usuario_id" readonly="1"/>
+                                <field name="numero_dia"/>
+                                <field name="es_dia_laboral"/>
+                                <field name="es_sabado"/>
+                            </group>
+                            <group string="Métricas">
+                                <field name="total_trabajos" widget="integer"/>
+                                <field name="objetivo_dia"/>
+                                <field name="porcentaje_cumplimiento" widget="percentpie"/>
+                                <field name="cumple_objetivo"/>
+                            </group>
+                        </group>
+                        
+                        <notebook>
+                            <page string="Clientes y Equipos" name="clientes_equipos">
+                                <group>
+                                    <field name="cantidad_clientes"/>
+                                    <field name="clientes_atendidos" widget="text"/>
+                                    <field name="modelos_trabajados" widget="text"/>
+                                </group>
+                            </page>
+                            
+                            <page string="Trabajos Realizados" name="trabajos">
+                                <group>
+                                    <group string="Reparaciones">
+                                        <field name="reparacion_ids" nolabel="1" mode="tree">
+                                            <list create="0" delete="0" edit="0">
+                                                <field name="name"/>
+                                                <field name="partner_id"/>
+                                                <field name="modelo_id"/>
+                                                <field name="serie"/>
+                                                <field name="create_date"/>
+                                            </list>
+                                        </field>
+                                    </group>
+                                    <group string="Tickets">
+                                        <field name="ticket_ids" nolabel="1" mode="tree">
+                                            <list create="0" delete="0" edit="0">
+                                                <field name="name"/>
+                                                <field name="partner_id"/>
+                                                <field name="modelo_id"/>
+                                                <field name="serie"/>
+                                                <field name="agenda"/>
+                                            </list>
+                                        </field>
+                                    </group>
+                                </group>
+                            </page>
+                        </notebook>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <!-- ============================================================ -->
+        <!-- VISTA GRÁFICA DEL DETALLE DIARIO -->
+        <!-- ============================================================ -->
+        <record id="view_evaluacion_personal_detalle_diario_graph" model="ir.ui.view">
+            <field name="name">evaluacion.personal.detalle.diario.graph</field>
+            <field name="model">evaluacion.personal.detalle.diario</field>
+            <field name="arch" type="xml">
+                <graph string="Tendencia Diaria" type="line" stacked="0">
+                    <field name="fecha" interval="day"/>
+                    <field name="cantidad_reparaciones" type="measure"/>
+                    <field name="cantidad_tickets" type="measure"/>
+                    <field name="objetivo_dia" type="measure"/>
+                </graph>
+            </field>
+        </record>
+
+        <!-- ============================================================ -->
+        <!-- ACCIÓN PARA DETALLE DIARIO -->
+        <!-- ============================================================ -->
+        <record id="action_evaluacion_personal_detalle_diario" model="ir.actions.act_window">
+            <field name="name">Análisis Diario</field>
+            <field name="res_model">evaluacion.personal.detalle.diario</field>
+            <field name="view_mode">list,form,graph</field>
+            <field name="context">{'create': False, 'delete': False}</field>
+        </record>
+
+        <!-- ============================================================ -->
+        <!-- VISTA TREE PRINCIPAL (ACTUALIZADA) -->
+        <!-- ============================================================ -->
+        <record id="view_evaluacion_personal_tree" model="ir.ui.view">
+            <field name="name">evaluacion.personal.tree</field>
+            <field name="model">evaluacion.personal</field>
+            <field name="arch" type="xml">
+                <list default_order="fecha desc" 
+                      decoration-danger="state == 'borrador'" 
+                      decoration-success="state == 'enviado'" 
+                      decoration-warning="puntaje_total &lt; 80" 
+                      decoration-info="puntaje_total &gt;= 80"
+                      decoration-muted="state == 'cancelado'">
+                    
+                    <header>
+                        <button name="action_enviar_reportes_masivo" 
+                                string="Enviar Reportes" 
+                                type="object" 
+                                class="btn-primary"/>
+                    </header>
+                    
+                    <field name="name"/>
+                    <field name="fecha"/>
+                    <field name="usuario_id"/>
+                    <field name="cantidad_reparaciones"/>
+                    <field name="objetivo_reparaciones"/>
+                    <field name="porcentaje_reparaciones" widget="percentage"/>
+                    <field name="cantidad_tickets"/>
+                    <field name="objetivo_tickets"/>
+                    <field name="porcentaje_tickets" widget="percentage"/>
+                    <field name="puntaje_total" widget="progressbar"/>
+                    <field name="nivel_desempeno"/>
+                    <field name="state" widget="badge"
+                           decoration-danger="state == 'borrador'"
+                           decoration-warning="state == 'en_revision'"
+                           decoration-info="state == 'aprobado'"
+                           decoration-success="state == 'enviado' or state == 'finalizado'"/>
+                </list>
+            </field>
+        </record>
+
+        <!-- ============================================================ -->
+        <!-- VISTA FORM PRINCIPAL (ACTUALIZADA CON ANÁLISIS DIARIO) -->
+        <!-- ============================================================ -->
         <record id="view_evaluacion_personal_form" model="ir.ui.view">
             <field name="name">evaluacion.personal.form</field>
             <field name="model">evaluacion.personal</field>
             <field name="arch" type="xml">
                 <form>
-                    <!-- En la sección del header, reemplazamos states por invisible -->
                     <header>
+                        <button name="action_regenerar_detalle_diario"
+                                string="🔄 Regenerar Análisis Diario"
+                                type="object"
+                                class="btn-secondary"
+                                confirm="¿Desea regenerar el análisis diario? Esto recalculará todos los datos."/>
+                        
+                        <button name="action_duplicar_mes_anterior"
+                                string="📋 Duplicar del Mes Anterior"
+                                type="object"
+                                class="btn-primary"/>
                         
                         <field name="state" widget="statusbar"
-                            statusbar_visible="borrador,en_revision,aprobado,finalizado" />
-                            <button name="action_duplicar_abril"
-                            string="Duplicar Evaluaciones de Abril"
-                            type="object"
-                            class="btn btn-primary"
-                            />
+                               statusbar_visible="borrador,en_revision,aprobado,enviado,finalizado"/>
                     </header>
+                    
                     <sheet>
                         <div class="oe_button_box" name="button_box">
-                            <button name="ver_reparaciones" type="object" class="oe_stat_button"
-                                icon="fa-wrench">
-                                <field name="cantidad_reparaciones" widget="statinfo"
-                                    string="Reparaciones" />
+                            <button name="ver_reparaciones" 
+                                    type="object" 
+                                    class="oe_stat_button"
+                                    icon="fa-wrench">
+                                <field name="cantidad_reparaciones" widget="statinfo" string="Reparaciones"/>
                             </button>
-                            <button name="ver_tickets" type="object" class="oe_stat_button"
-                                icon="fa-ticket">
-                                <field name="cantidad_tickets" widget="statinfo" string="Tickets" />
+                            
+                            <button name="ver_tickets" 
+                                    type="object" 
+                                    class="oe_stat_button"
+                                    icon="fa-ticket">
+                                <field name="cantidad_tickets" widget="statinfo" string="Tickets"/>
+                            </button>
+                            
+                            <button name="action_ver_dia_detalle" 
+                                    type="object" 
+                                    class="oe_stat_button"
+                                    icon="fa-calendar-check"
+                                    invisible="not tiene_detalle_diario">
+                                <div class="o_field_widget o_stat_info">
+                                    <span class="o_stat_value">
+                                        <field name="total_dias_trabajados"/>
+                                    </span>
+                                    <span class="o_stat_text">Días Trabajados</span>
+                                </div>
+                            </button>
+                            
+                            <button name="%(action_evaluacion_personal_detalle_diario)d" 
+                                    type="action" 
+                                    class="oe_stat_button"
+                                    icon="fa-chart-line"
+                                    context="{'search_default_evaluacion_id': active_id}"
+                                    invisible="not tiene_detalle_diario">
+                                <div class="o_field_widget o_stat_info">
+                                    <span class="o_stat_value">Ver</span>
+                                    <span class="o_stat_text">Análisis Diario</span>
+                                </div>
                             </button>
                         </div>
+                        
                         <div class="oe_title">
                             <h1>
-                                <field name="name" readonly="1" />
+                                <field name="name" readonly="1"/>
                             </h1>
                         </div>
+                        
+                        <!-- Resumen Visual -->
+                        <div class="alert alert-info" role="alert" invisible="not tiene_detalle_diario">
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <strong>🎯 Mejor Día:</strong><br/>
+                                    <field name="mejor_dia_fecha" readonly="1"/> 
+                                    (<field name="mejor_dia_total" readonly="1"/> trabajos)
+                                </div>
+                                <div class="col-md-3">
+                                    <strong>⚠️ Día Más Bajo:</strong><br/>
+                                    <field name="peor_dia_fecha" readonly="1"/> 
+                                    (<field name="peor_dia_total" readonly="1"/> trabajos)
+                                </div>
+                                <div class="col-md-3">
+                                    <strong>✅ Días con Actividad:</strong><br/>
+                                    <field name="total_dias_trabajados" readonly="1"/> días
+                                </div>
+                                <div class="col-md-3">
+                                    <strong>❌ Días sin Actividad:</strong><br/>
+                                    <field name="total_dias_sin_actividad" readonly="1"/> días
+                                </div>
+                            </div>
+                        </div>
+                        
                         <group>
                             <group>
-                                <field name="usuario_id" />
-                                <field name="evaluador_id" />
-                                <field name="fecha" />
+                                <field name="usuario_id"/>
+                                <field name="evaluador_id"/>
+                                <field name="fecha"/>
+                                <field name="mes" readonly="1"/>
+                                <field name="anio" readonly="1"/>
                             </group>
                             <group>
-                                <field name="puntaje_total" widget="progressbar" />
-                                <field name="nivel_desempeno" />
-
+                                <field name="puntaje_total" widget="progressbar"/>
+                                <field name="nivel_desempeno"/>
+                                <field name="dias_evaluados" readonly="1"/>
+                                <field name="tiene_detalle_diario" invisible="1"/>
                             </group>
                         </group>
+                        
                         <notebook>
-                            <page string="Métricas Objetivas" name="metricas_objetivas">
+                            <!-- TAB: ANÁLISIS DIARIO (NUEVO) -->
+                            <page string="📊 Análisis Diario" name="analisis_diario">
+                                <div class="alert alert-warning" role="alert" invisible="tiene_detalle_diario">
+                                    <strong>⚠️ Análisis Diario no Generado</strong><br/>
+                                    Haga clic en "Regenerar Análisis Diario" para generar el desglose día por día.
+                                </div>
+                                
+                                <field name="detalle_diario_ids" 
+                                       mode="list,graph"
+                                       context="{'default_evaluacion_id': active_id}">
+                                    <list string="Desglose Diario"
+                                          decoration-success="cumple_objetivo and es_dia_laboral"
+                                          decoration-warning="porcentaje_cumplimiento &gt;= 70 and porcentaje_cumplimiento &lt; 100 and es_dia_laboral"
+                                          decoration-danger="porcentaje_cumplimiento &lt; 70 and es_dia_laboral and total_trabajos &gt; 0"
+                                          decoration-muted="not es_dia_laboral or total_trabajos == 0"
+                                          create="0" delete="0" edit="0">
+                                        
+                                        <field name="fecha"/>
+                                        <field name="dia_semana"/>
+                                        <field name="es_dia_laboral" column_invisible="1"/>
+                                        <field name="cantidad_reparaciones" sum="Total"/>
+                                        <field name="cantidad_tickets" sum="Total"/>
+                                        <field name="total_trabajos" sum="Total" widget="badge"/>
+                                        <field name="objetivo_dia"/>
+                                        <field name="porcentaje_cumplimiento" widget="percentage"/>
+                                        <field name="estado_dia" widget="badge"/>
+                                        <field name="clientes_atendidos" optional="hide"/>
+                                        <field name="modelos_trabajados" optional="hide"/>
+                                        
+                                        <button name="action_ver_reparaciones_dia" 
+                                                type="object" 
+                                                string=""
+                                                icon="fa-wrench"
+                                                invisible="cantidad_reparaciones == 0"
+                                                title="Ver Reparaciones"/>
+                                        
+                                        <button name="action_ver_tickets_dia" 
+                                                type="object" 
+                                                string=""
+                                                icon="fa-ticket"
+                                                invisible="cantidad_tickets == 0"
+                                                title="Ver Tickets"/>
+                                    </list>
+                                    
+                                    <graph type="line" stacked="0">
+                                        <field name="fecha" interval="day"/>
+                                        <field name="cantidad_reparaciones" type="measure"/>
+                                        <field name="cantidad_tickets" type="measure"/>
+                                    </graph>
+                                </field>
+                            </page>
+                            
+                            <!-- TAB: MÉTRICAS OBJETIVAS -->
+                            <page string="📈 Métricas Objetivas" name="metricas_objetivas">
                                 <group>
-                                    <group string="Reparaciones (25%)">
-                                        <field name="cantidad_reparaciones" />
-                                        <field name="objetivo_reparaciones" />
-                                        <field name="porcentaje_reparaciones" widget="percentage" />
-                                        <field name="puntaje_objetivos" widget="percentage" />
+                                    <group string="Reparaciones (20%)">
+                                        <field name="cantidad_reparaciones"/>
+                                        <field name="objetivo_reparaciones"/>
+                                        <field name="porcentaje_reparaciones" widget="percentpie"/>
+                                        <field name="promedio_diario_reparaciones" widget="float" digits="[16,2]"/>
                                     </group>
-                                    <group string="Tickets (25%)">
-                                        <field name="cantidad_tickets" />
-                                        <field name="objetivo_tickets" />
-                                        <field name="porcentaje_tickets" widget="percentage" />
+                                    <group string="Tickets (20%)">
+                                        <field name="cantidad_tickets"/>
+                                        <field name="objetivo_tickets"/>
+                                        <field name="porcentaje_tickets" widget="percentpie"/>
+                                        <field name="promedio_diario_tickets" widget="float" digits="[16,2]"/>
+                                    </group>
+                                </group>
+                                <group>
+                                    <group string="Puntajes">
+                                        <field name="puntaje_objetivos" widget="percentage"/>
+                                        <field name="puntaje_desempeno" widget="percentage"/>
                                     </group>
                                 </group>
                             </page>
-                            <page string="Evaluación Técnica" name="evaluacion_tecnica">
+                            
+                            <!-- TAB: EVALUACIÓN TÉCNICA -->
+                            <page string="🔧 Evaluación Técnica" name="evaluacion_tecnica">
                                 <group>
                                     <group string="Calidad del Trabajo">
-                                        <field name="calidad_trabajo" />
-                                        <field name="conocimiento_tecnico" />
-                                        <field name="resolucion_problemas" />
-                                        <field name="uso_herramientas" />
+                                        <field name="calidad_trabajo"/>
+                                        <field name="conocimiento_tecnico"/>
+                                        <field name="resolucion_problemas"/>
+                                        <field name="uso_herramientas"/>
                                     </group>
                                     <group string="Actitud y Comportamiento">
-                                        <field name="puntualidad" />
-                                        <field name="compromiso" />
-                                        <field name="trabajo_equipo" />
+                                        <field name="puntualidad"/>
+                                        <field name="compromiso"/>
+                                        <field name="trabajo_equipo"/>
                                     </group>
                                 </group>
                                 <group>
                                     <group string="Atención al Cliente">
-                                        <field name="trato_cliente" />
-                                        <field name="comunicacion_cliente" />
-                                        <field name="manejo_conflictos" />
+                                        <field name="trato_cliente"/>
+                                        <field name="comunicacion_cliente"/>
+                                        <field name="manejo_conflictos"/>
                                     </group>
                                 </group>
                             </page>
-                            <page string="Retroalimentación" name="retroalimentacion">
+                            
+                            <!-- TAB: RETROALIMENTACIÓN -->
+                            <page string="💬 Retroalimentación" name="retroalimentacion">
                                 <group>
-                                    <field name="fortalezas" />
-                                    <field name="areas_mejora" />
-                                    <field name="plan_accion" />
-                                    <field name="comentarios" />
+                                    <field name="fortalezas" widget="text"/>
+                                    <field name="areas_mejora" widget="text"/>
+                                    <field name="plan_accion" widget="text"/>
+                                    <field name="comentarios" widget="text"/>
                                 </group>
                             </page>
-                            <page string="Seguimiento" name="seguimiento">
+                            
+                            <!-- TAB: SEGUIMIENTO -->
+                            <page string="📅 Seguimiento" name="seguimiento">
                                 <group>
-                                    <field name="proxima_evaluacion" />
-                                    <field name="objetivos_proximos" />
-                                    <field name="necesita_capacitacion" />
-                                    <field name="temas_capacitacion" />
+                                    <field name="proxima_evaluacion"/>
+                                    <field name="objetivos_proximos" widget="text"/>
+                                    <field name="necesita_capacitacion"/>
+                                    <field name="temas_capacitacion" widget="text" 
+                                           invisible="not necesita_capacitacion"/>
                                 </group>
                             </page>
                         </notebook>
                     </sheet>
-                    <chatter />
+                    <chatter/>
                 </form>
             </field>
         </record>
 
-        <!-- Vista Kanban -->
+        <!-- ============================================================ -->
+        <!-- VISTA KANBAN (ACTUALIZADA) -->
+        <!-- ============================================================ -->
         <record id="view_evaluacion_personal_kanban" model="ir.ui.view">
             <field name="name">evaluacion.personal.kanban</field>
             <field name="model">evaluacion.personal</field>
@@ -154,14 +508,17 @@
                     <field name="cantidad_tickets"/>
                     <field name="objetivo_reparaciones"/>
                     <field name="objetivo_tickets"/>
+                    <field name="state"/>
+                    <field name="tiene_detalle_diario"/>
+                    <field name="total_dias_trabajados"/>
                     
                     <templates>
-                        <t t-name="kanban-box">
+                        <t t-name="card">
                             <div class="oe_kanban_card oe_kanban_global_click">
                                 <!-- Cabecera con color según el puntaje -->
                                 <div t-attf-class="p-2 text-white #{record.puntaje_total.raw_value >= 80 ? 'bg-success' : (record.puntaje_total.raw_value >= 60 ? 'bg-warning' : 'bg-danger')}">
                                     <div class="d-flex align-items-center">
-                                        <i class="fa fa-user-circle me-2"/>
+                                        <i class="fa fa-user-circle me-2 fa-2x"/>
                                         <div class="flex-grow-1">
                                             <strong><field name="usuario_id"/></strong>
                                             <div class="small">
@@ -169,65 +526,82 @@
                                                 <field name="fecha"/>
                                             </div>
                                         </div>
+                                        <span t-if="record.state.raw_value == 'enviado'" class="badge bg-light text-success">
+                                            <i class="fa fa-check-circle"/> Enviado
+                                        </span>
                                     </div>
                                 </div>
                                 
                                 <div class="p-2">
-                                    <!-- Velocímetro -->
+                                    <!-- Puntaje Total -->
                                     <div class="text-center py-2">
                                         <div class="mb-2">Puntaje Total</div>
                                         <div class="d-flex flex-column align-items-center">
-                                            <div class="w-75">
-                                                <div t-attf-class="progress" style="height: 100px;">
+                                            <div class="w-100">
+                                                <div class="progress" style="height: 30px;">
                                                     <div t-attf-class="progress-bar progress-bar-striped #{record.puntaje_total.raw_value >= 80 ? 'bg-success' : (record.puntaje_total.raw_value >= 60 ? 'bg-warning' : 'bg-danger')}"
-                                                        t-attf-style="width: #{record.puntaje_total.raw_value}%"
-                                                        role="progressbar">
+                                                         t-attf-style="width: #{record.puntaje_total.raw_value}%"
+                                                         role="progressbar">
+                                                        <span class="fw-bold">
+                                                            <t t-esc="Math.round(record.puntaje_total.raw_value)"/>%
+                                                        </span>
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div class="h3 mt-2 mb-0">
-                                                <t t-esc="Math.round(record.puntaje_total.raw_value)"/>%
-                                            </div>
-                                            <div t-attf-class="badge mt-1 #{record.puntaje_total.raw_value >= 80 ? 'bg-success' : (record.puntaje_total.raw_value >= 60 ? 'bg-warning' : 'bg-danger')}">
+                                            <div t-attf-class="badge mt-2 #{record.puntaje_total.raw_value >= 80 ? 'bg-success' : (record.puntaje_total.raw_value >= 60 ? 'bg-warning' : 'bg-danger')}">
                                                 <field name="nivel_desempeno"/>
                                             </div>
                                         </div>
                                     </div>
-        
+                                    
+                                    <!-- Estadísticas Diarias -->
+                                    <div class="mt-2 p-2 bg-light rounded" t-if="record.tiene_detalle_diario.raw_value">
+                                        <div class="small text-muted mb-1">
+                                            <i class="fa fa-calendar-check me-1"/>
+                                            Análisis Diario
+                                        </div>
+                                        <div class="d-flex justify-content-between">
+                                            <span>
+                                                <i class="fa fa-check-circle text-success me-1"/>
+                                                <t t-esc="record.total_dias_trabajados.raw_value"/> días trabajados
+                                            </span>
+                                        </div>
+                                    </div>
+                                    
                                     <!-- Métricas -->
                                     <div class="mt-3">
                                         <!-- Reparaciones -->
                                         <div class="mb-2">
                                             <div class="d-flex justify-content-between align-items-center mb-1">
                                                 <div>
-                                                    <i class="fa fa-wrench me-1"/>
+                                                    <i class="fa fa-wrench me-1 text-primary"/>
                                                     <span>Reparaciones</span>
                                                 </div>
                                                 <small class="text-muted">
                                                     <field name="cantidad_reparaciones"/> / <field name="objetivo_reparaciones"/>
                                                 </small>
                                             </div>
-                                            <div class="progress" style="height: 4px;">
+                                            <div class="progress" style="height: 6px;">
                                                 <div class="progress-bar bg-primary"
-                                                    t-att-style="'width: ' + (record.cantidad_reparaciones.raw_value / record.objetivo_reparaciones.raw_value * 100) + '%'">
+                                                     t-att-style="'width: ' + Math.min(100, (record.cantidad_reparaciones.raw_value / record.objetivo_reparaciones.raw_value * 100)) + '%'">
                                                 </div>
                                             </div>
                                         </div>
-        
+                                        
                                         <!-- Tickets -->
                                         <div>
                                             <div class="d-flex justify-content-between align-items-center mb-1">
                                                 <div>
-                                                    <i class="fa fa-ticket-alt me-1"/>
+                                                    <i class="fa fa-ticket me-1 text-info"/>
                                                     <span>Tickets</span>
                                                 </div>
                                                 <small class="text-muted">
                                                     <field name="cantidad_tickets"/> / <field name="objetivo_tickets"/>
                                                 </small>
                                             </div>
-                                            <div class="progress" style="height: 4px;">
+                                            <div class="progress" style="height: 6px;">
                                                 <div class="progress-bar bg-info"
-                                                    t-att-style="'width: ' + (record.cantidad_tickets.raw_value / record.objetivo_tickets.raw_value * 100) + '%'">
+                                                     t-att-style="'width: ' + Math.min(100, (record.cantidad_tickets.raw_value / record.objetivo_tickets.raw_value * 100)) + '%'">
                                                 </div>
                                             </div>
                                         </div>
@@ -239,35 +613,131 @@
                 </kanban>
             </field>
         </record>
-        <!-- Vista Pivote -->
+
+        <!-- ============================================================ -->
+        <!-- VISTA PIVOTE (SIN CAMBIOS) -->
+        <!-- ============================================================ -->
         <record id="view_evaluacion_personal_pivot" model="ir.ui.view">
             <field name="name">evaluacion.personal.pivot</field>
             <field name="model">evaluacion.personal</field>
             <field name="arch" type="xml">
                 <pivot string="Análisis de Evaluaciones">
-                    <field name="fecha" type="row" interval="month" />
-                    <field name="usuario_id" type="row" />
-                    <field name="cantidad_reparaciones" type="measure" />
-                    <field name="cantidad_tickets" type="measure" />
-                    <field name="puntaje_total" type="measure" />
-                    <field name="porcentaje_reparaciones" type="measure" />
-                    <field name="porcentaje_tickets" type="measure" />
+                    <field name="fecha" type="row" interval="month"/>
+                    <field name="usuario_id" type="row"/>
+                    <field name="cantidad_reparaciones" type="measure"/>
+                    <field name="cantidad_tickets" type="measure"/>
+                    <field name="puntaje_total" type="measure"/>
+                    <field name="porcentaje_reparaciones" type="measure"/>
+                    <field name="porcentaje_tickets" type="measure"/>
                 </pivot>
             </field>
         </record>
 
-        <!-- Vista Gráfica -->
+        <!-- ============================================================ -->
+        <!-- VISTA GRÁFICA (MEJORADA) -->
+        <!-- ============================================================ -->
         <record id="view_evaluacion_personal_graph" model="ir.ui.view">
             <field name="name">evaluacion.personal.graph</field>
             <field name="model">evaluacion.personal</field>
             <field name="arch" type="xml">
                 <graph string="Análisis de Desempeño" type="bar">
-                    <field name="usuario_id" />
-                    <field name="puntaje_total" type="measure" />
+                    <field name="usuario_id"/>
+                    <field name="puntaje_total" type="measure"/>
+                    <field name="cantidad_reparaciones" type="measure"/>
+                    <field name="cantidad_tickets" type="measure"/>
                 </graph>
             </field>
         </record>
 
+        <!-- ============================================================ -->
+        <!-- BÚSQUEDA/FILTROS (ACTUALIZADA) -->
+        <!-- ============================================================ -->
+        <record id="view_evaluacion_personal_search" model="ir.ui.view">
+            <field name="name">evaluacion.personal.search</field>
+            <field name="model">evaluacion.personal</field>
+            <field name="arch" type="xml">
+                <search>
+                    <field name="name"/>
+                    <field name="usuario_id"/>
+                    <field name="evaluador_id"/>
+                    <field name="fecha"/>
+                    
+                    <filter string="Borradores" name="borrador" domain="[('state', '=', 'borrador')]"/>
+                    <filter string="En Revisión" name="revision" domain="[('state', '=', 'en_revision')]"/>
+                    <filter string="Aprobados" name="aprobado" domain="[('state', '=', 'aprobado')]"/>
+                    <filter string="Enviados" name="enviado" domain="[('state', '=', 'enviado')]"/>
+                    <filter string="Finalizados" name="finalizado" domain="[('state', '=', 'finalizado')]"/>
+                    
+                    <separator/>
+                    
+                    <filter string="Excelente" name="excelente" domain="[('nivel_desempeno', '=', 'excelente')]"/>
+                    <filter string="Muy Bueno" name="muy_bueno" domain="[('nivel_desempeno', '=', 'muy_bueno')]"/>
+                    <filter string="Bueno" name="bueno" domain="[('nivel_desempeno', '=', 'bueno')]"/>
+                    <filter string="Regular" name="regular" domain="[('nivel_desempeno', '=', 'regular')]"/>
+                    <filter string="Deficiente" name="deficiente" domain="[('nivel_desempeno', '=', 'deficiente')]"/>
+                    
+                    <separator/>
+                    
+                    <filter string="Con Análisis Diario" name="con_detalle" domain="[('tiene_detalle_diario', '=', True)]"/>
+                    <filter string="Sin Análisis Diario" name="sin_detalle" domain="[('tiene_detalle_diario', '=', False)]"/>
+                    
+                    <separator/>
+                    
+                    <filter string="Este Mes" name="este_mes" 
+                            domain="[('fecha', '&gt;=', (context_today() - relativedelta(day=1)).strftime('%Y-%m-%d')),
+                                     ('fecha', '&lt;=', (context_today() + relativedelta(day=31)).strftime('%Y-%m-%d'))]"/>
+                    <filter string="Mes Anterior" name="mes_anterior" 
+                            domain="[('fecha', '&gt;=', (context_today() - relativedelta(months=1, day=1)).strftime('%Y-%m-%d')),
+                                     ('fecha', '&lt;=', (context_today() - relativedelta(months=1, day=31)).strftime('%Y-%m-%d'))]"/>
+                    
+                    <group expand="0" string="Agrupar por">
+                        <filter string="Técnico" name="group_usuario" context="{'group_by': 'usuario_id'}"/>
+                        <filter string="Evaluador" name="group_evaluador" context="{'group_by': 'evaluador_id'}"/>
+                        <filter string="Mes" name="group_mes" context="{'group_by': 'fecha:month'}"/>
+                        <filter string="Estado" name="group_state" context="{'group_by': 'state'}"/>
+                        <filter string="Nivel" name="group_nivel" context="{'group_by': 'nivel_desempeno'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <!-- ============================================================ -->
+        <!-- BÚSQUEDA PARA DETALLE DIARIO -->
+        <!-- ============================================================ -->
+        <record id="view_evaluacion_personal_detalle_diario_search" model="ir.ui.view">
+            <field name="name">evaluacion.personal.detalle.diario.search</field>
+            <field name="model">evaluacion.personal.detalle.diario</field>
+            <field name="arch" type="xml">
+                <search>
+                    <field name="evaluacion_id"/>
+                    <field name="usuario_id"/>
+                    <field name="fecha"/>
+                    
+                    <filter string="Días Laborales" name="laborales" domain="[('es_dia_laboral', '=', True)]"/>
+                    <filter string="Con Actividad" name="con_actividad" domain="[('total_trabajos', '&gt;', 0)]"/>
+                    <filter string="Sin Actividad" name="sin_actividad" domain="[('total_trabajos', '=', 0)]"/>
+                    
+                    <separator/>
+                    
+                    <filter string="Cumple Objetivo" name="cumple" domain="[('cumple_objetivo', '=', True)]"/>
+                    <filter string="No Cumple" name="no_cumple" domain="[('cumple_objetivo', '=', False)]"/>
+                    
+                    <separator/>
+                    
+                    <filter string="Excelente" name="excelente" domain="[('estado_dia', '=', 'excelente')]"/>
+                    <filter string="Bueno" name="bueno" domain="[('estado_dia', '=', 'bueno')]"/>
+                    <filter string="Aceptable" name="aceptable" domain="[('estado_dia', '=', 'aceptable')]"/>
+                    <filter string="Bajo" name="bajo" domain="[('estado_dia', '=', 'bajo')]"/>
+                    
+                    <group expand="0" string="Agrupar por">
+                        <filter string="Evaluación" name="group_eval" context="{'group_by': 'evaluacion_id'}"/>
+                        <filter string="Técnico" name="group_usuario" context="{'group_by': 'usuario_id'}"/>
+                        <filter string="Día Semana" name="group_dia" context="{'group_by': 'dia_semana'}"/>
+                        <filter string="Estado" name="group_estado" context="{'group_by': 'estado_dia'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
         
     </data>
 </odoo>
