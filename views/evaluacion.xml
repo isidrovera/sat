@@ -304,18 +304,7 @@
                                 </div>
                             </button>
                             
-                            <!-- ❌ INCORRECTO (línea ~257) -->
-<button name="%(action_evaluacion_personal_detalle_diario)d" 
-        type="action" 
-        class="oe_stat_button"
-        icon="fa-chart-line"
-        context="{'search_default_evaluacion_id': active_id}"
-        invisible="not tiene_detalle_diario">
-    <div class="o_field_widget o_stat_info">
-        <span class="o_stat_value">Ver</span>
-        <span class="o_stat_text">Análisis Diario</span>
-    </div>
-</button>
+  
 
 <!-- ✅ CORRECTO -->
 <button name="%(action_evaluacion_personal_detalle_diario)d" 
@@ -387,8 +376,8 @@
     </div>
     
     <field name="detalle_diario_ids" 
-           mode="list,graph"
-           context="{'default_evaluacion_id': id}">
+       mode="list,graph"
+       context="{'default_evaluacion_id': id}">
         <list string="Desglose Diario"
               decoration-success="cumple_objetivo and es_dia_laboral"
               decoration-warning="porcentaje_cumplimiento &gt;= 70 and porcentaje_cumplimiento &lt; 100 and es_dia_laboral"
