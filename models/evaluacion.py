@@ -1357,6 +1357,9 @@ class EvaluacionPersonalDetalleDiario(models.Model):
     
     reparacion_ids = fields.Many2many(
         'reparaciones.reparaciones',
+        'eval_detalle_reparacion_rel',  # Nombre corto de tabla (27 caracteres)
+        'detalle_id',
+        'reparacion_id',
         string='Reparaciones del Día',
         compute='_compute_trabajos',
         store=True
@@ -1364,11 +1367,13 @@ class EvaluacionPersonalDetalleDiario(models.Model):
     
     ticket_ids = fields.Many2many(
         'ticket.alquiler',
+        'eval_detalle_ticket_rel',      # Nombre corto de tabla (24 caracteres)
+        'detalle_id',
+        'ticket_id',
         string='Tickets del Día',
         compute='_compute_trabajos',
         store=True
     )
-    
     # ============================================================
     # ANÁLISIS Y OBJETIVOS
     # ============================================================
