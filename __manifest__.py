@@ -29,6 +29,9 @@
         'website',
         'bus'
     ],
+    'external_dependencies': {
+        'python': ['matplotlib', 'numpy'],
+    },
     
     'data': [
         'security/acceso.xml',

@@ -77,3 +77,4 @@ from . import gemini_config
 from . import modelo_maquina
 from . import sat_import_line
 from . import hereda_sat_notificaciones
+from . import evaluacion_personal_report
