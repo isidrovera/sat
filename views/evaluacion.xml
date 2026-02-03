@@ -414,11 +414,7 @@
                     title="Ver Tickets"/>
         </list>
         
-        <graph type="line" stacked="0">
-            <field name="fecha" interval="day"/>
-            <field name="cantidad_reparaciones" type="measure"/>
-            <field name="cantidad_tickets" type="measure"/>
-        </graph>
+        
     </field>
 </page>           
                             <!-- TAB: MÉTRICAS OBJETIVAS -->
