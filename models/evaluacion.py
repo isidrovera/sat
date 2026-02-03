@@ -1550,9 +1550,9 @@ class EvaluacionPersonalDetalleDiario(models.Model):
             # ===============================
             for rep in record.reparacion_ids:
                 # Cliente
-                if rep.partner_id and rep.partner_id.name:
-                    if rep.partner_id.name not in clientes:
-                        clientes.append(rep.partner_id.name)
+                if rep.cliente_id and rep.cliente_id.name:
+                    if rep.cliente_id.name not in clientes:
+                        clientes.append(rep.cliente_id.name)
 
                 # Modelo y serie
                 if hasattr(rep, 'modelo_id') and rep.modelo_id:
