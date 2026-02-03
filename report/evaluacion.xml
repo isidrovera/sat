@@ -2,7 +2,7 @@
 <odoo>
   
     <!-- ============================================ -->
-    <!-- TEMPLATE DEL REPORTE -->
+    <!-- TEMPLATE DEL REPORTE OPTIMIZADO -->
     <!-- ============================================ -->
     <template id="report_evaluacion_personal">
         <t t-call="web.html_container">
@@ -37,55 +37,63 @@
                         .report-header {
                             display: flex;
                             justify-content: space-between;
-                            padding: 16px;
-                            margin-bottom: 20px;
+                            padding: 14px;
+                            margin-bottom: 15px;
                             background: #1e40af;
                             color: #ffffff;
                             border-radius: 6px;
                         }
 
                         .header-title {
-                            font-size: 20pt;
+                            font-size: 18pt;
                             font-weight: bold;
                         }
 
                         .header-item {
-                            font-size: 10pt;
+                            font-size: 9.5pt;
                         }
 
                         /* =========================
-                           STATS SUMMARY
+                           STATS SUMMARY (4 COLUMNAS)
                         ========================== */
                         .stats-summary {
                             display: grid;
                             grid-template-columns: repeat(4, 1fr);
-                            gap: 10px;
-                            margin-bottom: 20px;
+                            gap: 8px;
+                            margin-bottom: 12px;
                         }
 
                         .stat-item {
                             background: #ffffff;
                             border: 1px solid #d1d5db;
                             border-radius: 6px;
-                            padding: 10px;
+                            padding: 8px;
                             text-align: center;
                         }
 
+                        .stat-icon {
+                            font-size: 16pt;
+                            margin-bottom: 3px;
+                        }
+
                         .stat-label {
-                            font-size: 8.5pt;
+                            font-size: 7.5pt;
                             font-weight: bold;
                             color: #374151;
+                            margin-bottom: 2px;
                         }
 
                         .stat-value {
-                            font-size: 18pt;
+                            font-size: 16pt;
                             font-weight: bold;
                             color: #111827;
+                            line-height: 1.1;
                         }
 
                         .stat-subvalue {
-                            font-size: 8pt;
+                            font-size: 7pt;
                             color: #374151;
+                            margin-top: 2px;
                         }
 
                         /* =========================
@@ -94,8 +102,8 @@
                         .metrics-container {
                             display: grid;
                             grid-template-columns: repeat(4, 1fr);
-                            gap: 10px;
-                            margin-bottom: 25px;
+                            gap: 8px;
+                            margin-bottom: 15px;
                         }
 
                         .metric-card {
@@ -103,7 +111,7 @@
                             border: 1px solid #d1d5db;
                             border-top: 4px solid #2563eb;
                             border-radius: 6px;
-                            padding: 12px;
+                            padding: 10px;
                             page-break-inside: avoid;
                         }
 
@@ -111,22 +119,24 @@
                         .metric-card.tickets { border-top-color: #dc2626; }
 
                         .metric-title {
-                            font-size: 9pt;
+                            font-size: 8.5pt;
                             font-weight: bold;
                             color: #374151;
-                            margin-bottom: 6px;
+                            margin-bottom: 5px;
                             text-transform: uppercase;
                         }
 
                         .metric-value {
-                            font-size: 24pt;
+                            font-size: 20pt;
                             font-weight: bold;
                             color: #111827;
+                            line-height: 1;
                         }
 
                         .metric-subtitle {
-                            font-size: 8pt;
+                            font-size: 7.5pt;
                             color: #374151;
+                            margin-top: 3px;
                         }
 
                         /* =========================
@@ -153,23 +163,23 @@
                            SECTION TITLES
                         ========================== */
                         .section-title {
-                            margin: 25px 0 15px;
-                            padding: 10px;
+                            margin: 20px 0 12px;
+                            padding: 8px 10px;
                             background: #1e40af;
                             color: #ffffff;
-                            font-size: 13pt;
+                            font-size: 12pt;
                             font-weight: bold;
                             border-radius: 5px;
                         }
 
                         /* =========================
-                           EVALUATION GRID (3 COL)
+                           EVALUATION GRID (4 COL)
                         ========================== */
                         .evaluation-grid {
                             display: grid;
-                            grid-template-columns: repeat(3, 1fr);
-                            gap: 10px;
-                            margin-bottom: 20px;
+                            grid-template-columns: repeat(4, 1fr);
+                            gap: 8px;
+                            margin-bottom: 15px;
                         }
 
                         .evaluation-item {
@@ -177,14 +187,14 @@
                             border: 1px solid #d1d5db;
                             border-left: 4px solid #2563eb;
                             border-radius: 5px;
-                            padding: 10px;
+                            padding: 8px;
                             page-break-inside: avoid;
                         }
 
                         .evaluation-value {
                             font-weight: bold;
-                            font-size: 11pt;
-                            margin-bottom: 6px;
+                            font-size: 10pt;
+                            margin-bottom: 5px;
                         }
 
                         /* =========================
@@ -193,7 +203,7 @@
                         .daily-analysis-table {
                             width: 100%;
                             border-collapse: collapse;
-                            margin-bottom: 25px;
+                            margin-bottom: 20px;
                             font-size: 8.5pt;
                         }
 
@@ -204,15 +214,15 @@
 
                         .daily-analysis-table th,
                         .daily-analysis-table td {
-                            padding: 6px;
+                            padding: 5px;
                             border: 1px solid #d1d5db;
                             text-align: center;
                         }
 
                         .badge {
-                            padding: 3px 8px;
+                            padding: 2px 6px;
                             border-radius: 10px;
-                            font-size: 8pt;
+                            font-size: 7.5pt;
                             font-weight: bold;
                             color: #ffffff;
                         }
@@ -224,19 +234,20 @@
                         .badge-excelente { background: #16a34a; }
 
                         /* =========================
-                           CHARTS
+                           CHARTS - ALTA RESOLUCIÓN
                         ========================== */
                         .chart-container {
                             background: #ffffff;
                             border: 1px solid #d1d5db;
                             border-radius: 6px;
-                            padding: 15px;
-                            margin-bottom: 25px;
+                            padding: 12px;
+                            margin-bottom: 15px;
                             page-break-inside: avoid;
                         }
 
                         .chart-title {
                             font-weight: bold;
+                            font-size: 10pt;
                             margin-bottom: 10px;
                             color: #1e40af;
                         }
@@ -244,6 +255,8 @@
                         .chart-image {
                             width: 100%;
                             height: auto;
+                            image-rendering: -webkit-optimize-contrast;
+                            image-rendering: crisp-edges;
                         }
 
                         /* =========================
@@ -252,20 +265,21 @@
                         .info-grid {
                             display: grid;
                             grid-template-columns: repeat(2, 1fr);
-                            gap: 15px;
+                            gap: 12px;
                         }
 
                         .info-card {
                             background: #ffffff;
                             border: 1px solid #d1d5db;
                             border-radius: 6px;
-                            padding: 15px;
+                            padding: 12px;
                             page-break-inside: avoid;
                         }
 
                         .info-card-title {
                             font-weight: bold;
-                            margin-bottom: 10px;
+                            font-size: 10pt;
+                            margin-bottom: 8px;
                             color: #1e40af;
                         }
 
@@ -276,8 +290,47 @@
                         }
 
                         .info-list li {
-                            padding: 5px 0;
-                            font-size: 9pt;
+                            padding: 4px 0;
+                            font-size: 8.5pt;
+                        }
+
+                        /* =========================
+                           FEEDBACK SECTIONS
+                        ========================== */
+                        .feedback-container {
+                            margin-top: 15px;
+                        }
+
+                        .feedback-section {
+                            background: #ffffff;
+                            border: 1px solid #d1d5db;
+                            border-left: 4px solid #3498db;
+                            border-radius: 6px;
+                            padding: 12px;
+                            margin-bottom: 12px;
+                            page-break-inside: avoid;
+                        }
+
+                        .feedback-content {
+                            font-size: 9.5pt;
+                            color: #2c3e50;
+                            line-height: 1.6;
+                            margin-top: 5px;
+                        }
+
+                        /* =========================
+                           SIGNATURES
+                        ========================== */
+                        .signatures-section {
+                            margin-top: 30px;
+                        }
+
+                        .signature-line {
+                            border-top: 2px solid #34495e;
+                            padding-top: 8px;
+                            font-size: 10pt;
+                            font-weight: bold;
+                            color: #2c3e50;
                         }
                         </style>
 
@@ -301,14 +354,14 @@
                                     <i class="fa fa-user"></i>
                                     <span><t t-esc="o.nombre_usuario" /></span>
                                 </div>
-                                <div class="header-item" style="margin-top: 10px;">
+                                <div class="header-item" style="margin-top: 8px;">
                                     <i class="fa fa-user-tie"></i>
                                     <span>Evaluador: <t t-esc="o.evaluador_id.name" /></span>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Resumen Estadístico NUEVO -->
+                        <!-- Resumen Estadístico - 4 COLUMNAS -->
                         <div class="stats-summary">
                             <!-- Mejor Día -->
                             <div class="stat-item">
@@ -355,75 +408,82 @@
                             </div>
                         </div>
 
-                        <!-- Métricas Principales -->
+                        <!-- Métricas Principales - 4 COLUMNAS -->
                         <div class="metrics-container">
                             <!-- Puntaje Total -->
                             <div class="metric-card score">
                                 <div class="metric-title">
-                                    <i class="fa fa-star"></i>Puntaje Total
+                                    <i class="fa fa-star"></i> Puntaje Total
                                 </div>
                                 <div class="metric-value">
                                     <t t-esc="'%.1f' % o.puntaje_total" />%
                                 </div>
                                 <div class="metric-subtitle">
-                                    Nivel: <t t-esc="dict(o._fields['nivel_desempeno'].selection).get(o.nivel_desempeno)" />
+                                    <t t-esc="dict(o._fields['nivel_desempeno'].selection).get(o.nivel_desempeno)" />
                                 </div>
-                                <div class="progress-container">
-                                    <div class="progress-bar">
-                                        <div
-                                            t-attf-class="progress-fill {{
-                                            'excellent' if o.puntaje_total >= 90 else
-                                            'good' if o.puntaje_total >= 80 else
-                                            'regular' if o.puntaje_total >= 70 else
-                                            'poor'
-                                        }}"
-                                            t-attf-style="width: #{min(o.puntaje_total, 100)}%" />
-                                    </div>
+                                <div class="progress-bar">
+                                    <div
+                                        t-attf-class="progress-fill {{
+                                        'excellent' if o.puntaje_total >= 90 else
+                                        'good' if o.puntaje_total >= 80 else
+                                        'regular' if o.puntaje_total >= 70 else
+                                        'poor'
+                                    }}"
+                                        t-attf-style="width: #{min(o.puntaje_total, 100)}%" />
                                 </div>
                             </div>
 
                             <!-- Reparaciones -->
                             <div class="metric-card repairs">
                                 <div class="metric-title">
-                                    <i class="fa fa-tools"></i>Reparaciones
+                                    <i class="fa fa-tools"></i> Reparaciones
                                 </div>
                                 <div class="metric-value">
                                     <t t-esc="o.cantidad_reparaciones" />
                                 </div>
                                 <div class="metric-subtitle">
-                                    Objetivo: <t t-esc="o.objetivo_reparaciones" /> | 
+                                    Obj: <t t-esc="o.objetivo_reparaciones" /> | 
                                     <t t-esc="'%.1f' % o.porcentaje_reparaciones" />%
                                 </div>
-                                <div class="progress-container">
-                                    <div class="progress-bar">
-                                        <div class="progress-fill good"
-                                            t-attf-style="width: #{min(o.porcentaje_reparaciones, 100)}%" />
-                                    </div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill good"
+                                        t-attf-style="width: #{min(o.porcentaje_reparaciones, 100)}%" />
                                 </div>
                             </div>
 
                             <!-- Tickets -->
                             <div class="metric-card tickets">
                                 <div class="metric-title">
-                                    <i class="fa fa-ticket-alt"></i>Tickets
+                                    <i class="fa fa-ticket-alt"></i> Tickets
                                 </div>
                                 <div class="metric-value">
                                     <t t-esc="o.cantidad_tickets" />
                                 </div>
                                 <div class="metric-subtitle">
-                                    Objetivo: <t t-esc="o.objetivo_tickets" /> | 
+                                    Obj: <t t-esc="o.objetivo_tickets" /> | 
                                     <t t-esc="'%.1f' % o.porcentaje_tickets" />%
                                 </div>
-                                <div class="progress-container">
-                                    <div class="progress-bar">
-                                        <div class="progress-fill good"
-                                            t-attf-style="width: #{min(o.porcentaje_tickets, 100)}%" />
-                                    </div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill good"
+                                        t-attf-style="width: #{min(o.porcentaje_tickets, 100)}%" />
+                                </div>
+                            </div>
+
+                            <!-- Productividad Total -->
+                            <div class="metric-card">
+                                <div class="metric-title">
+                                    <i class="fa fa-chart-line"></i> Total Trabajos
+                                </div>
+                                <div class="metric-value">
+                                    <t t-esc="o.cantidad_reparaciones + o.cantidad_tickets" />
+                                </div>
+                                <div class="metric-subtitle">
+                                    Promedio: <t t-esc="'%.1f' % ((o.cantidad_reparaciones + o.cantidad_tickets) / o.dias_evaluados if o.dias_evaluados > 0 else 0)" />/día
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Gráfico de Tendencia Diaria NUEVO -->
+                        <!-- Gráfico de Tendencia Diaria - ALTA RESOLUCIÓN -->
                         <t t-if="datos['grafico_tendencia']">
                             <div class="chart-container">
                                 <div class="chart-title">
@@ -433,15 +493,15 @@
                             </div>
                         </t>
 
-                        <!-- Evaluación Técnica -->
+                        <!-- Evaluación Técnica - 4 COLUMNAS -->
                         <div class="section-title">
-                            <i class="fa fa-cogs"></i>EVALUACIÓN TÉCNICA
+                            <i class="fa fa-cogs"></i> EVALUACIÓN TÉCNICA
                         </div>
                         <div class="evaluation-grid">
                             <!-- Calidad del Trabajo -->
                             <div class="evaluation-item">
                                 <div class="metric-title">
-                                    <i class="fa fa-check-circle"></i>Calidad del Trabajo
+                                    <i class="fa fa-check-circle"></i> Calidad
                                 </div>
                                 <div class="evaluation-value">
                                     <t t-esc="dict(o._fields['calidad_trabajo'].selection).get(o.calidad_trabajo)" />
@@ -455,7 +515,7 @@
                             <!-- Conocimiento Técnico -->
                             <div class="evaluation-item">
                                 <div class="metric-title">
-                                    <i class="fa fa-brain"></i>Conocimiento Técnico
+                                    <i class="fa fa-brain"></i> Conocimiento
                                 </div>
                                 <div class="evaluation-value">
                                     <t t-esc="dict(o._fields['conocimiento_tecnico'].selection).get(o.conocimiento_tecnico)" />
@@ -469,7 +529,7 @@
                             <!-- Resolución de Problemas -->
                             <div class="evaluation-item">
                                 <div class="metric-title">
-                                    <i class="fa fa-puzzle-piece"></i>Resolución de Problemas
+                                    <i class="fa fa-puzzle-piece"></i> Resolución
                                 </div>
                                 <div class="evaluation-value">
                                     <t t-esc="dict(o._fields['resolucion_problemas'].selection).get(o.resolucion_problemas)" />
@@ -483,7 +543,7 @@
                             <!-- Uso de Herramientas -->
                             <div class="evaluation-item">
                                 <div class="metric-title">
-                                    <i class="fa fa-wrench"></i>Uso de Herramientas
+                                    <i class="fa fa-wrench"></i> Herramientas
                                 </div>
                                 <div class="evaluation-value">
                                     <t t-esc="dict(o._fields['uso_herramientas'].selection).get(o.uso_herramientas)" />
@@ -495,15 +555,15 @@
                             </div>
                         </div>
 
-                        <!-- Evaluación Actitudinal -->
+                        <!-- Evaluación Actitudinal - 3 COLUMNAS (para que quepan bien) -->
                         <div class="section-title">
-                            <i class="fa fa-user-check"></i>EVALUACIÓN ACTITUDINAL
+                            <i class="fa fa-user-check"></i> EVALUACIÓN ACTITUDINAL
                         </div>
-                        <div class="evaluation-grid">
+                        <div class="evaluation-grid" style="grid-template-columns: repeat(3, 1fr);">
                             <!-- Puntualidad -->
                             <div class="evaluation-item">
                                 <div class="metric-title">
-                                    <i class="fa fa-clock"></i>Puntualidad
+                                    <i class="fa fa-clock"></i> Puntualidad
                                 </div>
                                 <div class="evaluation-value">
                                     <t t-esc="dict(o._fields['puntualidad'].selection).get(o.puntualidad)" />
@@ -517,7 +577,7 @@
                             <!-- Compromiso -->
                             <div class="evaluation-item">
                                 <div class="metric-title">
-                                    <i class="fa fa-handshake"></i>Compromiso
+                                    <i class="fa fa-handshake"></i> Compromiso
                                 </div>
                                 <div class="evaluation-value">
                                     <t t-esc="dict(o._fields['compromiso'].selection).get(o.compromiso)" />
@@ -531,7 +591,7 @@
                             <!-- Trabajo en Equipo -->
                             <div class="evaluation-item">
                                 <div class="metric-title">
-                                    <i class="fa fa-users"></i>Trabajo en Equipo
+                                    <i class="fa fa-users"></i> Trabajo en Equipo
                                 </div>
                                 <div class="evaluation-value">
                                     <t t-esc="dict(o._fields['trabajo_equipo'].selection).get(o.trabajo_equipo)" />
@@ -543,15 +603,15 @@
                             </div>
                         </div>
 
-                        <!-- Atención al Cliente -->
+                        <!-- Atención al Cliente - 3 COLUMNAS -->
                         <div class="section-title">
-                            <i class="fa fa-headset"></i>ATENCIÓN AL CLIENTE
+                            <i class="fa fa-headset"></i> ATENCIÓN AL CLIENTE
                         </div>
-                        <div class="evaluation-grid">
+                        <div class="evaluation-grid" style="grid-template-columns: repeat(3, 1fr);">
                             <!-- Trato al Cliente -->
                             <div class="evaluation-item">
                                 <div class="metric-title">
-                                    <i class="fa fa-smile"></i>Trato al Cliente
+                                    <i class="fa fa-smile"></i> Trato
                                 </div>
                                 <div class="evaluation-value">
                                     <t t-esc="dict(o._fields['trato_cliente'].selection).get(o.trato_cliente)" />
@@ -565,7 +625,7 @@
                             <!-- Comunicación con Cliente -->
                             <div class="evaluation-item">
                                 <div class="metric-title">
-                                    <i class="fa fa-comments"></i>Comunicación con Cliente
+                                    <i class="fa fa-comments"></i> Comunicación
                                 </div>
                                 <div class="evaluation-value">
                                     <t t-esc="dict(o._fields['comunicacion_cliente'].selection).get(o.comunicacion_cliente)" />
@@ -579,7 +639,7 @@
                             <!-- Manejo de Conflictos -->
                             <div class="evaluation-item">
                                 <div class="metric-title">
-                                    <i class="fa fa-balance-scale"></i>Manejo de Conflictos
+                                    <i class="fa fa-balance-scale"></i> Conflictos
                                 </div>
                                 <div class="evaluation-value">
                                     <t t-esc="dict(o._fields['manejo_conflictos'].selection).get(o.manejo_conflictos)" />
@@ -599,10 +659,10 @@
                         <!-- ============================================ -->
 
                         <div class="section-title">
-                            <i class="fa fa-calendar-alt"></i>ANÁLISIS DE PRODUCTIVIDAD DIARIA
+                            <i class="fa fa-calendar-alt"></i> ANÁLISIS DE PRODUCTIVIDAD DIARIA
                         </div>
 
-                        <!-- Tabla de Análisis Diario NUEVO -->
+                        <!-- Tabla de Análisis Diario -->
                         <t t-if="o.detalle_diario_ids">
                             <table class="daily-analysis-table">
                                 <thead>
@@ -648,7 +708,7 @@
                             </table>
                         </t>
 
-                        <!-- Gráfico Semanal NUEVO -->
+                        <!-- Gráfico Semanal - ALTA RESOLUCIÓN -->
                         <t t-if="datos['grafico_semanal']">
                             <div class="chart-container">
                                 <div class="chart-title">
@@ -658,7 +718,7 @@
                             </div>
                         </t>
 
-                        <!-- Heatmap de Actividad NUEVO -->
+                        <!-- Heatmap de Actividad - ALTA RESOLUCIÓN -->
                         <t t-if="datos['heatmap_actividad']">
                             <div class="chart-container">
                                 <div class="chart-title">
@@ -676,10 +736,10 @@
                         <!-- ============================================ -->
 
                         <div class="section-title">
-                            <i class="fa fa-clipboard-list"></i>INFORMACIÓN DETALLADA
+                            <i class="fa fa-clipboard-list"></i> INFORMACIÓN DETALLADA
                         </div>
 
-                        <!-- Grid de Información NUEVO -->
+                        <!-- Grid de Información -->
                         <div class="info-grid">
                             <!-- Clientes Atendidos -->
                             <div class="info-card">
@@ -740,18 +800,18 @@
                             </div>
                         </div>
 
-                        <!-- Gráfico de Distribución NUEVO -->
+                        <!-- Gráfico de Distribución - ALTA RESOLUCIÓN -->
                         <t t-if="datos['grafico_distribucion']">
                             <div class="chart-container">
                                 <div class="chart-title">
                                     <i class="fa fa-chart-pie"></i> Distribución de Actividades del Mes
                                 </div>
-                                <img class="chart-image" t-att-src="'data:image/png;base64,' + datos['grafico_distribucion']" style="max-width: 500px;"/>
+                                <img class="chart-image" t-att-src="'data:image/png;base64,' + datos['grafico_distribucion']" style="max-width: 500px; margin: 0 auto; display: block;"/>
                             </div>
                         </t>
 
                         <!-- Promedios y KPIs Adicionales -->
-                        <div class="info-grid" style="margin-top: 30px;">
+                        <div class="info-grid" style="margin-top: 20px;">
                             <div class="info-card">
                                 <div class="info-card-title">
                                     <i class="fa fa-chart-line"></i>
@@ -803,14 +863,14 @@
                         <!-- ============================================ -->
 
                         <div class="section-title">
-                            <i class="fa fa-comments"></i>RETROALIMENTACIÓN Y PLAN DE ACCIÓN
+                            <i class="fa fa-comments"></i> RETROALIMENTACIÓN Y PLAN DE ACCIÓN
                         </div>
                         
                         <div class="feedback-container">
                             <!-- Fortalezas -->
                             <div class="feedback-section" style="border-left-color: #2ecc71;">
                                 <div class="metric-title" style="color: #2ecc71;">
-                                    <i class="fa fa-star"></i>Fortalezas Identificadas
+                                    <i class="fa fa-star"></i> Fortalezas Identificadas
                                 </div>
                                 <div class="feedback-content">
                                     <t t-esc="o.fortalezas or 'No se identificaron fortalezas específicas.'" />
@@ -820,7 +880,7 @@
                             <!-- Áreas de Mejora -->
                             <div class="feedback-section" style="border-left-color: #e74c3c;">
                                 <div class="metric-title" style="color: #e74c3c;">
-                                    <i class="fa fa-arrow-up"></i>Áreas de Mejora
+                                    <i class="fa fa-arrow-up"></i> Áreas de Mejora
                                 </div>
                                 <div class="feedback-content">
                                     <t t-esc="o.areas_mejora or 'No se identificaron áreas de mejora críticas.'" />
@@ -830,7 +890,7 @@
                             <!-- Plan de Acción -->
                             <div class="feedback-section" style="border-left-color: #3498db;">
                                 <div class="metric-title" style="color: #3498db;">
-                                    <i class="fa fa-tasks"></i>Plan de Acción
+                                    <i class="fa fa-tasks"></i> Plan de Acción
                                 </div>
                                 <div class="feedback-content">
                                     <t t-esc="o.plan_accion or 'No se estableció un plan de acción específico.'" />
@@ -840,7 +900,7 @@
                             <!-- Objetivos para el Próximo Período -->
                             <div class="feedback-section" style="border-left-color: #9b59b6;">
                                 <div class="metric-title" style="color: #9b59b6;">
-                                    <i class="fa fa-bullseye"></i>Objetivos para el Próximo Período
+                                    <i class="fa fa-bullseye"></i> Objetivos para el Próximo Período
                                 </div>
                                 <div class="feedback-content">
                                     <t t-esc="o.objetivos_proximos or 'No se establecieron objetivos específicos.'" />
@@ -851,7 +911,7 @@
                             <t t-if="o.necesita_capacitacion">
                                 <div class="feedback-section" style="border-left-color: #f39c12;">
                                     <div class="metric-title" style="color: #f39c12;">
-                                        <i class="fa fa-graduation-cap"></i>Necesidades de Capacitación
+                                        <i class="fa fa-graduation-cap"></i> Necesidades de Capacitación
                                     </div>
                                     <div class="feedback-content">
                                         <t t-esc="o.temas_capacitacion or 'No se especificaron temas de capacitación.'" />
@@ -863,7 +923,7 @@
                             <t t-if="o.comentarios">
                                 <div class="feedback-section" style="border-left-color: #34495e;">
                                     <div class="metric-title" style="color: #34495e;">
-                                        <i class="fa fa-comment"></i>Comentarios Adicionales del Evaluador
+                                        <i class="fa fa-comment"></i> Comentarios Adicionales del Evaluador
                                     </div>
                                     <div class="feedback-content">
                                         <t t-esc="o.comentarios" />
@@ -874,12 +934,12 @@
 
                         <!-- Información de Próxima Evaluación -->
                         <t t-if="o.proxima_evaluacion">
-                            <div class="info-card" style="margin-top: 30px; background: #e8f5e9; border-left: 4px solid #2ecc71;">
+                            <div class="info-card" style="margin-top: 25px; background: #e8f5e9; border-left: 4px solid #2ecc71;">
                                 <div class="info-card-title" style="color: #2ecc71;">
                                     <i class="fa fa-calendar-plus"></i>
                                     Próxima Evaluación Programada
                                 </div>
-                                <p style="font-size: 12pt; color: #2c3e50; margin: 10px 0;">
+                                <p style="font-size: 11pt; color: #2c3e50; margin: 8px 0;">
                                     <strong>Fecha:</strong> 
                                     <t t-esc="o.proxima_evaluacion" t-options='{"widget": "date", "format": "dd/MM/yyyy"}' />
                                 </p>
@@ -890,28 +950,28 @@
                         <div class="signatures-section">
                             <div class="row mt-4">
                                 <div class="col-6 text-center">
-                                    <div style="height: 60px;"></div>
+                                    <div style="height: 50px;"></div>
                                     <div class="signature-line">
                                         <i class="fa fa-user-tie"></i> 
                                         <t t-esc="o.evaluador_id.name"/>
                                         <br/>
-                                        <span style="font-size: 9pt; color: #7f8c8d;">Evaluador</span>
+                                        <span style="font-size: 8.5pt; color: #7f8c8d;">Evaluador</span>
                                     </div>
                                 </div>
                                 <div class="col-6 text-center">
-                                    <div style="height: 60px;"></div>
+                                    <div style="height: 50px;"></div>
                                     <div class="signature-line">
                                         <i class="fa fa-user"></i> 
                                         <t t-esc="o.nombre_usuario"/>
                                         <br/>
-                                        <span style="font-size: 9pt; color: #7f8c8d;">Técnico Evaluado</span>
+                                        <span style="font-size: 8.5pt; color: #7f8c8d;">Técnico Evaluado</span>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Pie de página con fecha de generación -->
-                        <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #ecf0f1; text-align: center; font-size: 8pt; color: #95a5a6;">
+                        <div style="margin-top: 30px; padding-top: 15px; border-top: 1px solid #ecf0f1; text-align: center; font-size: 8pt; color: #95a5a6;">
                             <p>
                                 Documento generado el 
                                 <t t-esc="context_timestamp(datetime.datetime.now()).strftime('%d/%m/%Y a las %H:%M')"/>

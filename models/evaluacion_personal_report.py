@@ -34,9 +34,9 @@ class EvaluacionPersonalReport(models.AbstractModel):
             if not detalle_diario:
                 return False
             
-            # Configuración de estilo moderno
+            # Configuración de estilo moderno con ALTA RESOLUCIÓN
             plt.style.use('seaborn-v0_8-darkgrid')
-            fig, ax = plt.subplots(figsize=(12, 5), dpi=100)
+            fig, ax = plt.subplots(figsize=(12, 5), dpi=150)
             
             # Datos
             fechas = [d.fecha for d in detalle_diario]
@@ -76,9 +76,10 @@ class EvaluacionPersonalReport(models.AbstractModel):
             # Ajuste automático
             plt.tight_layout()
             
-            # Convertir a base64
+            # Convertir a base64 con ALTA CALIDAD
             buffer = io.BytesIO()
-            plt.savefig(buffer, format='png', bbox_inches='tight', dpi=100)
+            plt.savefig(buffer, format='png', bbox_inches='tight', dpi=150, 
+                       facecolor='white', edgecolor='none')
             buffer.seek(0)
             imagen_base64 = base64.b64encode(buffer.read()).decode('utf-8')
             plt.close(fig)
@@ -117,8 +118,8 @@ class EvaluacionPersonalReport(models.AbstractModel):
             reparaciones = [semanas[s]['reparaciones'] for s in semanas_ordenadas]
             tickets = [semanas[s]['tickets'] for s in semanas_ordenadas]
             
-            # Crear gráfico
-            fig, ax = plt.subplots(figsize=(10, 5), dpi=100)
+            # Crear gráfico con ALTA RESOLUCIÓN
+            fig, ax = plt.subplots(figsize=(10, 5), dpi=150)
             
             x = np.arange(len(semanas_ordenadas))
             width = 0.35
@@ -150,9 +151,10 @@ class EvaluacionPersonalReport(models.AbstractModel):
             
             plt.tight_layout()
             
-            # Convertir a base64
+            # Convertir a base64 con ALTA CALIDAD
             buffer = io.BytesIO()
-            plt.savefig(buffer, format='png', bbox_inches='tight', dpi=100)
+            plt.savefig(buffer, format='png', bbox_inches='tight', dpi=150,
+                       facecolor='white', edgecolor='none')
             buffer.seek(0)
             imagen_base64 = base64.b64encode(buffer.read()).decode('utf-8')
             plt.close(fig)
@@ -198,8 +200,8 @@ class EvaluacionPersonalReport(models.AbstractModel):
                 if semana < semanas:
                     matriz[dia_semana][semana] = detalle.total_trabajos
             
-            # Crear figura
-            fig, ax = plt.subplots(figsize=(12, 3), dpi=100)
+            # Crear figura con ALTA RESOLUCIÓN
+            fig, ax = plt.subplots(figsize=(12, 3), dpi=150)
             
             # Heatmap
             cmap = plt.cm.YlGnBu
@@ -232,9 +234,10 @@ class EvaluacionPersonalReport(models.AbstractModel):
             
             plt.tight_layout()
             
-            # Convertir a base64
+            # Convertir a base64 con ALTA CALIDAD
             buffer = io.BytesIO()
-            plt.savefig(buffer, format='png', bbox_inches='tight', dpi=100)
+            plt.savefig(buffer, format='png', bbox_inches='tight', dpi=150,
+                       facecolor='white', edgecolor='none')
             buffer.seek(0)
             imagen_base64 = base64.b64encode(buffer.read()).decode('utf-8')
             plt.close(fig)
@@ -264,8 +267,8 @@ class EvaluacionPersonalReport(models.AbstractModel):
             colors = ['#2ecc71', '#e74c3c', '#95a5a6']
             explode = (0.05, 0.05, 0)
             
-            # Crear figura
-            fig, ax = plt.subplots(figsize=(8, 6), dpi=100)
+            # Crear figura con ALTA RESOLUCIÓN
+            fig, ax = plt.subplots(figsize=(8, 6), dpi=150)
             
             # Gráfico de pastel
             wedges, texts, autotexts = ax.pie(sizes, explode=explode, labels=labels,
@@ -287,9 +290,10 @@ class EvaluacionPersonalReport(models.AbstractModel):
             
             plt.tight_layout()
             
-            # Convertir a base64
+            # Convertir a base64 con ALTA CALIDAD
             buffer = io.BytesIO()
-            plt.savefig(buffer, format='png', bbox_inches='tight', dpi=100)
+            plt.savefig(buffer, format='png', bbox_inches='tight', dpi=150,
+                       facecolor='white', edgecolor='none')
             buffer.seek(0)
             imagen_base64 = base64.b64encode(buffer.read()).decode('utf-8')
             plt.close(fig)
