@@ -206,7 +206,7 @@
         <record id="action_evaluacion_personal_detalle_diario" model="ir.actions.act_window">
             <field name="name">Análisis Diario</field>
             <field name="res_model">evaluacion.personal.detalle.diario</field>
-            <field name="view_mode">list,form,graph</field>
+            <field name="view_mode">list,form</field>
             <field name="context">{'create': False, 'delete': False}</field>
         </record>
 
@@ -378,7 +378,7 @@
     </div>
     
     <field name="detalle_diario_ids" 
-           mode="list,graph"
+           mode="list"
            context="{'default_evaluacion_id': id}">
         <list string="Desglose Diario"
               decoration-success="cumple_objetivo and es_dia_laboral"

@@ -27,7 +27,6 @@
         'hr_attendance',
         'hr',
         'website',
-        'web_graph',
         'bus'
     ],
     
