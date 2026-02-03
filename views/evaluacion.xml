@@ -155,10 +155,10 @@
                             <page string="Trabajos Realizados" name="trabajos">
                                 <group>
                                     <group string="Reparaciones">
-                                        <field name="reparacion_ids" nolabel="1" mode="tree">
+                                        <field name="reparacion_ids" nolabel="1" mode="list">
                                             <list create="0" delete="0" edit="0">
                                                 <field name="name"/>
-                                                <field name="partner_id"/>
+                                                <field name="cliente_id"/>
                                                 <field name="modelo_id"/>
                                                 <field name="serie"/>
                                                 <field name="create_date"/>
@@ -166,7 +166,7 @@
                                         </field>
                                     </group>
                                     <group string="Tickets">
-                                        <field name="ticket_ids" nolabel="1" mode="tree">
+                                        <field name="ticket_ids" nolabel="1" mode="list">
                                             <list create="0" delete="0" edit="0">
                                                 <field name="name"/>
                                                 <field name="partner_id"/>
