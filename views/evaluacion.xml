@@ -185,23 +185,7 @@
         </record>
 
         <!-- ============================================================ -->
-        <!-- VISTA GRÁFICA DEL DETALLE DIARIO -->
-        <!-- ============================================================ -->
-        <record id="view_evaluacion_personal_detalle_diario_graph" model="ir.ui.view">
-            <field name="name">evaluacion.personal.detalle.diario.graph</field>
-            <field name="model">evaluacion.personal.detalle.diario</field>
-            <field name="arch" type="xml">
-                <graph string="Tendencia Diaria" type="line" stacked="0">
-                    <field name="fecha" interval="day"/>
-                    <field name="cantidad_reparaciones" type="measure"/>
-                    <field name="cantidad_tickets" type="measure"/>
-                    <field name="objetivo_dia" type="measure"/>
-                </graph>
-            </field>
-        </record>
-
-        <!-- ============================================================ -->
-        <!-- ACCIÓN PARA DETALLE DIARIO -->
+        <!-- ACCIÓN PARA DETALLE DIARIO (SIN GRAPH) -->
         <!-- ============================================================ -->
         <record id="action_evaluacion_personal_detalle_diario" model="ir.actions.act_window">
             <field name="name">Análisis Diario</field>
@@ -211,7 +195,7 @@
         </record>
 
         <!-- ============================================================ -->
-        <!-- VISTA TREE PRINCIPAL (ACTUALIZADA) -->
+        <!-- VISTA TREE PRINCIPAL -->
         <!-- ============================================================ -->
         <record id="view_evaluacion_personal_tree" model="ir.ui.view">
             <field name="name">evaluacion.personal.tree</field>
@@ -252,7 +236,7 @@
         </record>
 
         <!-- ============================================================ -->
-        <!-- VISTA FORM PRINCIPAL (ACTUALIZADA CON ANÁLISIS DIARIO) -->
+        <!-- VISTA FORM PRINCIPAL -->
         <!-- ============================================================ -->
         <record id="view_evaluacion_personal_form" model="ir.ui.view">
             <field name="name">evaluacion.personal.form</field>
@@ -304,20 +288,17 @@
                                 </div>
                             </button>
                             
-  
-
-<!-- ✅ CORRECTO -->
-<button name="%(action_evaluacion_personal_detalle_diario)d" 
-        type="action" 
-        class="oe_stat_button"
-        icon="fa-chart-line"
-        context="{'search_default_evaluacion_id': id}"
-        invisible="not tiene_detalle_diario">
-    <div class="o_field_widget o_stat_info">
-        <span class="o_stat_value">Ver</span>
-        <span class="o_stat_text">Análisis Diario</span>
-    </div>
-</button>
+                            <button name="%(action_evaluacion_personal_detalle_diario)d" 
+                                    type="action" 
+                                    class="oe_stat_button"
+                                    icon="fa-chart-line"
+                                    context="{'search_default_evaluacion_id': id}"
+                                    invisible="not tiene_detalle_diario">
+                                <div class="o_field_widget o_stat_info">
+                                    <span class="o_stat_value">Ver</span>
+                                    <span class="o_stat_text">Análisis Diario</span>
+                                </div>
+                            </button>
                         </div>
                         
                         <div class="oe_title">
@@ -367,56 +348,55 @@
                         </group>
                         
                         <notebook>
-                            <!-- TAB: ANÁLISIS DIARIO (CORREGIDO) -->
-<page string="📊 Análisis Diario" 
-      name="analisis_diario"
-      invisible="not id">
-    
-    <div class="alert alert-warning" role="alert" invisible="tiene_detalle_diario">
-        <strong>⚠️ Análisis Diario no Generado</strong><br/>
-        Haga clic en "Regenerar Análisis Diario" para generar el desglose día por día.
-    </div>
-    
-    <field name="detalle_diario_ids" 
-           mode="list"
-           context="{'default_evaluacion_id': id}">
-        <list string="Desglose Diario"
-              decoration-success="cumple_objetivo and es_dia_laboral"
-              decoration-warning="porcentaje_cumplimiento &gt;= 70 and porcentaje_cumplimiento &lt; 100 and es_dia_laboral"
-              decoration-danger="porcentaje_cumplimiento &lt; 70 and es_dia_laboral and total_trabajos &gt; 0"
-              decoration-muted="not es_dia_laboral or total_trabajos == 0"
-              create="0" delete="0" edit="0">
-            
-            <field name="fecha"/>
-            <field name="dia_semana"/>
-            <field name="es_dia_laboral" column_invisible="1"/>
-            <field name="cantidad_reparaciones" sum="Total"/>
-            <field name="cantidad_tickets" sum="Total"/>
-            <field name="total_trabajos" sum="Total" widget="badge"/>
-            <field name="objetivo_dia"/>
-            <field name="porcentaje_cumplimiento" widget="percentage"/>
-            <field name="estado_dia" widget="badge"/>
-            <field name="clientes_atendidos" optional="hide"/>
-            <field name="modelos_trabajados" optional="hide"/>
-            
-            <button name="action_ver_reparaciones_dia" 
-                    type="object" 
-                    string=""
-                    icon="fa-wrench"
-                    invisible="cantidad_reparaciones == 0"
-                    title="Ver Reparaciones"/>
-            
-            <button name="action_ver_tickets_dia" 
-                    type="object" 
-                    string=""
-                    icon="fa-ticket"
-                    invisible="cantidad_tickets == 0"
-                    title="Ver Tickets"/>
-        </list>
-        
-        
-    </field>
-</page>           
+                            <!-- TAB: ANÁLISIS DIARIO (SIN GRAPH) -->
+                            <page string="📊 Análisis Diario" 
+                                  name="analisis_diario"
+                                  invisible="not id">
+                                
+                                <div class="alert alert-warning" role="alert" invisible="tiene_detalle_diario">
+                                    <strong>⚠️ Análisis Diario no Generado</strong><br/>
+                                    Haga clic en "Regenerar Análisis Diario" para generar el desglose día por día.
+                                </div>
+                                
+                                <field name="detalle_diario_ids" 
+                                       mode="list"
+                                       context="{'default_evaluacion_id': id}">
+                                    <list string="Desglose Diario"
+                                          decoration-success="cumple_objetivo and es_dia_laboral"
+                                          decoration-warning="porcentaje_cumplimiento &gt;= 70 and porcentaje_cumplimiento &lt; 100 and es_dia_laboral"
+                                          decoration-danger="porcentaje_cumplimiento &lt; 70 and es_dia_laboral and total_trabajos &gt; 0"
+                                          decoration-muted="not es_dia_laboral or total_trabajos == 0"
+                                          create="0" delete="0" edit="0">
+                                        
+                                        <field name="fecha"/>
+                                        <field name="dia_semana"/>
+                                        <field name="es_dia_laboral" column_invisible="1"/>
+                                        <field name="cantidad_reparaciones" sum="Total"/>
+                                        <field name="cantidad_tickets" sum="Total"/>
+                                        <field name="total_trabajos" sum="Total" widget="badge"/>
+                                        <field name="objetivo_dia"/>
+                                        <field name="porcentaje_cumplimiento" widget="percentage"/>
+                                        <field name="estado_dia" widget="badge"/>
+                                        <field name="clientes_atendidos" optional="hide"/>
+                                        <field name="modelos_trabajados" optional="hide"/>
+                                        
+                                        <button name="action_ver_reparaciones_dia" 
+                                                type="object" 
+                                                string=""
+                                                icon="fa-wrench"
+                                                invisible="cantidad_reparaciones == 0"
+                                                title="Ver Reparaciones"/>
+                                        
+                                        <button name="action_ver_tickets_dia" 
+                                                type="object" 
+                                                string=""
+                                                icon="fa-ticket"
+                                                invisible="cantidad_tickets == 0"
+                                                title="Ver Tickets"/>
+                                    </list>
+                                </field>
+                            </page>
+                            
                             <!-- TAB: MÉTRICAS OBJETIVAS -->
                             <page string="📈 Métricas Objetivas" name="metricas_objetivas">
                                 <group>
@@ -493,7 +473,7 @@
         </record>
 
         <!-- ============================================================ -->
-        <!-- VISTA KANBAN (ACTUALIZADA) -->
+        <!-- VISTA KANBAN -->
         <!-- ============================================================ -->
         <record id="view_evaluacion_personal_kanban" model="ir.ui.view">
             <field name="name">evaluacion.personal.kanban</field>
@@ -616,7 +596,7 @@
         </record>
 
         <!-- ============================================================ -->
-        <!-- VISTA PIVOTE (SIN CAMBIOS) -->
+        <!-- VISTA PIVOTE -->
         <!-- ============================================================ -->
         <record id="view_evaluacion_personal_pivot" model="ir.ui.view">
             <field name="name">evaluacion.personal.pivot</field>
@@ -635,23 +615,7 @@
         </record>
 
         <!-- ============================================================ -->
-        <!-- VISTA GRÁFICA (MEJORADA) -->
-        <!-- ============================================================ -->
-        <record id="view_evaluacion_personal_graph" model="ir.ui.view">
-            <field name="name">evaluacion.personal.graph</field>
-            <field name="model">evaluacion.personal</field>
-            <field name="arch" type="xml">
-                <graph string="Análisis de Desempeño" type="bar">
-                    <field name="usuario_id"/>
-                    <field name="puntaje_total" type="measure"/>
-                    <field name="cantidad_reparaciones" type="measure"/>
-                    <field name="cantidad_tickets" type="measure"/>
-                </graph>
-            </field>
-        </record>
-
-        <!-- ============================================================ -->
-        <!-- BÚSQUEDA/FILTROS (ACTUALIZADA) -->
+        <!-- BÚSQUEDA/FILTROS -->
         <!-- ============================================================ -->
         <record id="view_evaluacion_personal_search" model="ir.ui.view">
             <field name="name">evaluacion.personal.search</field>
