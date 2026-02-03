@@ -1567,7 +1567,7 @@ class EvaluacionPersonalDetalleDiario(models.Model):
                 
                 # Modelo y serie
                 if ticket.modelo_id:
-                    modelo_info = f"{ticket.modelo_id.modelo}"
+                    modelo_info = f"{ticket.product_alquiler.modelo}"
                     if ticket.serie:
                         modelo_info += f" ({ticket.serie})"
                     if modelo_info not in modelos:
