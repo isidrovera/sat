@@ -1566,9 +1566,9 @@ class EvaluacionPersonalDetalleDiario(models.Model):
                     clientes.append(ticket.partner_id.name)
                 
                 # Modelo y serie
-                if ticket.modelo_id:
+                if ticket.pruduct_alquiler:
                     modelo_info = f"{ticket.product_alquiler.modelo}"
-                    if ticket.serie:
+                    if ticket.serie_id_r:
                         modelo_info += f" ({ticket.serie})"
                     if modelo_info not in modelos:
                         modelos.append(modelo_info)
