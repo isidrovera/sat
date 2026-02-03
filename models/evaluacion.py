@@ -1540,48 +1540,72 @@ class EvaluacionPersonalDetalleDiario(models.Model):
     
     @api.depends('reparacion_ids', 'ticket_ids')
     def _compute_info_trabajos(self):
-        """Genera información resumida de clientes y equipos"""
+        """Genera información resumida de clientes y equipos trabajados"""
         for record in self:
             clientes = []
             modelos = []
-            
-            # Procesar reparaciones
+
+            # ===============================
+            # PROCESAR REPARACIONES
+            # ===============================
             for rep in record.reparacion_ids:
                 # Cliente
-                if rep.partner_id and rep.partner_id.name not in clientes:
-                    clientes.append(rep.partner_id.name)
-                
+                if rep.partner_id and rep.partner_id.name:
+                    if rep.partner_id.name not in clientes:
+                        clientes.append(rep.partner_id.name)
+
                 # Modelo y serie
-                if rep.modelo_id:
-                    modelo_info = f"{rep.modelo_id.modelo}"
-                    if rep.serie:
+                if hasattr(rep, 'modelo_id') and rep.modelo_id:
+                    modelo_info = rep.modelo_id.modelo if hasattr(rep.modelo_id, 'modelo') else rep.modelo_id.display_name
+
+                    if hasattr(rep, 'serie') and rep.serie:
                         modelo_info += f" ({rep.serie})"
+
                     if modelo_info not in modelos:
                         modelos.append(modelo_info)
-            
-            # Procesar tickets
+
+            # ===============================
+            # PROCESAR TICKETS (ticket.alquiler)
+            # ===============================
             for ticket in record.ticket_ids:
                 # Cliente
-                if ticket.partner_id and ticket.partner_id.name not in clientes:
-                    clientes.append(ticket.partner_id.name)
-                
-                # Modelo y serie
-                if ticket.pruduct_alquiler:
-                    modelo_info = f"{ticket.product_alquiler.modelo}"
+                if ticket.partner_id and ticket.partner_id.name:
+                    if ticket.partner_id.name not in clientes:
+                        clientes.append(ticket.partner_id.name)
+
+                # Modelo / equipo (USANDO CAMPOS REALES)
+                if ticket.product_alquiler:
+                    # modelo_id_r es related='product_alquiler.name.name'
+                    modelo_info = ticket.modelo_id_r or ticket.product_alquiler.display_name
+
+                    # Serie (serie_id_r es Char related)
                     if ticket.serie_id_r:
-                        modelo_info += f" ({ticket.serie})"
+                        modelo_info += f" ({ticket.serie_id_r})"
+
                     if modelo_info not in modelos:
                         modelos.append(modelo_info)
-            
-            # Asignar valores
+
+            # ===============================
+            # ASIGNAR RESULTADOS
+            # ===============================
             record.cantidad_clientes = len(clientes)
-            record.clientes_atendidos = ", ".join(clientes[:5]) if clientes else "Sin clientes"
-            if len(clientes) > 5:
-                record.clientes_atendidos += f"... (+{len(clientes)-5} más)"
-            
-            record.modelos_trabajados = ", ".join(modelos[:3]) if modelos else "Sin equipos"
-            if len(modelos) > 3:
-                record.modelos_trabajados += f"... (+{len(modelos)-3} más)"
+
+            # Clientes (máx 5 visibles)
+            if clientes:
+                record.clientes_atendidos = ", ".join(clientes[:5])
+                if len(clientes) > 5:
+                    record.clientes_atendidos += f"... (+{len(clientes) - 5} más)"
+            else:
+                record.clientes_atendidos = "Sin clientes"
+
+            # Modelos / equipos (máx 3 visibles)
+            if modelos:
+                record.modelos_trabajados = ", ".join(modelos[:3])
+                if len(modelos) > 3:
+                    record.modelos_trabajados += f"... (+{len(modelos) - 3} más)"
+            else:
+                record.modelos_trabajados = "Sin equipos"
+
     
     # ============================================================
     # ACCIONES
