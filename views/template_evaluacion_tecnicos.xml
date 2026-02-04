@@ -1,302 +1,491 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
- <!-- Plantilla del Formulario de Evaluación -->
-<template id="evaluation_form_template" name="Formulario de Evaluación">
-    <t t-call="website.layout">
-        <div class="container py-5">
-            <div class="row justify-content-center">
-                <div class="col-12 col-lg-10">
-                    <!-- Card Principal -->
-                    <div class="card shadow-sm rounded-3 overflow-hidden">
-                        <!-- Encabezado -->
-                        <div class="card-header bg-primary py-4">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <h3 class="text-white mb-0 fw-bold">Evaluación de Servicio Técnico</h3>
-                                    <p class="text-white-50 mb-0">Su opinión es muy importante para mejorar nuestro servicio</p>
+    <!-- Plantilla del Formulario de Evaluación -->
+    <template id="evaluation_form_template" name="Formulario de Evaluación">
+        <t t-call="website.layout">
+            <div class="container py-4 py-md-5">
+                <div class="row justify-content-center">
+                    <div class="col-12 col-lg-10 col-xl-8">
+                        <!-- Card Principal -->
+                        <div class="card shadow-lg border-0 rounded-4 overflow-hidden">
+                            <!-- Encabezado con Gradiente -->
+                            <div class="card-header border-0 text-white py-4 py-md-5" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                                <div class="text-center">
+                                    <div class="mb-3">
+                                        <i class="fa fa-star fa-3x opacity-75"></i>
+                                    </div>
+                                    <h2 class="mb-2 fw-bold">Evaluación de Servicio Técnico</h2>
+                                    <p class="mb-0 opacity-90">Su opinión es muy importante para mejorar nuestro servicio</p>
                                 </div>
                             </div>
-                        </div>
 
-                        <!-- Cuerpo del formulario -->
-                        <div class="card-body p-4">
-                            <!-- Detalles del Servicio -->
-                            <div class="bg-light p-4 rounded-3 mb-4">
-                                <div class="row">
-                                    <div class="col-md-4">
-                                        <p class="mb-2">
-                                            <i class="fa fa-ticket me-2"></i>
-                                            <strong>Ticket:</strong>
-                                            <t t-esc="evaluation.ticket_id.name"/>
-                                        </p>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <p class="mb-2">
-                                            <i class="fa fa-user me-2"></i>
-                                            <strong>Técnico:</strong>
-                                            <t t-esc="evaluation.technician_id.name"/>
-                                        </p>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <p class="mb-2">
-                                            <i class="fa fa-calendar me-2"></i>
-                                            <strong>Fecha:</strong>
-                                            <t t-esc="evaluation.evaluation_date.strftime('%d/%m/%Y')"/>
-                                        </p>
+                            <!-- Cuerpo del formulario -->
+                            <div class="card-body p-3 p-md-5">
+                                <!-- Detalles del Servicio -->
+                                <div class="alert alert-light border-0 shadow-sm rounded-3 mb-4">
+                                    <div class="row g-3">
+                                        <div class="col-12 col-md-4">
+                                            <div class="d-flex align-items-center">
+                                                <div class="bg-primary bg-opacity-10 rounded-circle p-2 me-3">
+                                                    <i class="fa fa-ticket text-primary"></i>
+                                                </div>
+                                                <div>
+                                                    <small class="text-muted d-block">Ticket</small>
+                                                    <strong class="d-block"><t t-esc="evaluation.ticket_id.name"/></strong>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-12 col-md-4">
+                                            <div class="d-flex align-items-center">
+                                                <div class="bg-success bg-opacity-10 rounded-circle p-2 me-3">
+                                                    <i class="fa fa-user text-success"></i>
+                                                </div>
+                                                <div>
+                                                    <small class="text-muted d-block">Técnico</small>
+                                                    <strong class="d-block"><t t-esc="evaluation.technician_id.name"/></strong>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-12 col-md-4">
+                                            <div class="d-flex align-items-center">
+                                                <div class="bg-info bg-opacity-10 rounded-circle p-2 me-3">
+                                                    <i class="fa fa-calendar text-info"></i>
+                                                </div>
+                                                <div>
+                                                    <small class="text-muted d-block">Fecha</small>
+                                                    <strong class="d-block"><t t-esc="evaluation.evaluation_date.strftime('%d/%m/%Y')"/></strong>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
+
+                                <form action="/evaluation/submit/process" method="post" class="needs-validation" novalidate="novalidate">
+                                    <input type="hidden" name="token" t-att-value="evaluation.token"/>
+                                    <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+
+                                    <!-- Sección de Evaluación -->
+                                    <div class="mb-4">
+                                        <div class="text-center mb-4">
+                                            <h5 class="fw-bold text-primary">Aspectos del Servicio</h5>
+                                            <p class="text-muted small">Por favor, califique cada aspecto del servicio recibido</p>
+                                        </div>
+
+                                        <!-- Pregunta: Saludo y Presentación -->
+                                        <div class="question-card mb-4 p-3 p-md-4 border rounded-3 bg-light">
+                                            <label class="form-label fw-bold mb-3">
+                                                <i class="fa fa-handshake-o text-primary me-2"></i>
+                                                ¿Cómo califica el saludo y presentación del técnico?
+                                            </label>
+                                            <div class="rating-options">
+                                                <t t-foreach="[('1', 'No saludó ni se presentó'),
+                                                           ('2', 'Saludo y presentación básica'),
+                                                           ('3', 'Saludo correcto y profesional'),
+                                                           ('4', 'Saludo profesional y actitud positiva'),
+                                                           ('5', 'Saludo excelente, mostró cortesía y empatía')]" t-as="option">
+                                                    <div class="form-check mb-2">
+                                                        <input type="radio" class="form-check-input" required="1"
+                                                            name="saludo_presentacion" t-att-value="option[0]"
+                                                            t-att-id="'saludo_presentacion_' + option[0]"/>
+                                                        <label class="form-check-label w-100 ps-2" t-att-for="'saludo_presentacion_' + option[0]">
+                                                            <span class="badge bg-primary bg-opacity-10 text-primary me-2"><t t-esc="option[0]"/></span>
+                                                            <t t-esc="option[1]"/>
+                                                        </label>
+                                                    </div>
+                                                </t>
+                                                <div class="invalid-feedback">Por favor, seleccione una opción</div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Pregunta: Revisión del Problema -->
+                                        <div class="question-card mb-4 p-3 p-md-4 border rounded-3 bg-light">
+                                            <label class="form-label fw-bold mb-3">
+                                                <i class="fa fa-search text-primary me-2"></i>
+                                                ¿Cómo califica la revisión del problema?
+                                            </label>
+                                            <div class="rating-options rating-stars">
+                                                <div class="d-flex justify-content-center gap-3 flex-wrap">
+                                                    <t t-foreach="[('1', 'Malo'), ('2', 'Regular'), ('3', 'Bueno'), ('4', 'Muy Bueno'), ('5', 'Excelente')]" t-as="option">
+                                                        <div class="form-check text-center">
+                                                            <input type="radio" class="form-check-input d-none star-input" required="1"
+                                                                name="diagnostico_problema" t-att-value="option[0]"
+                                                                t-att-id="'diagnostico_problema_' + option[0]"/>
+                                                            <label class="form-check-label star-label" t-att-for="'diagnostico_problema_' + option[0]">
+                                                                <div class="star-wrapper">
+                                                                    <i class="fa fa-star fa-2x"></i>
+                                                                </div>
+                                                                <small class="d-block mt-2"><t t-esc="option[1]"/></small>
+                                                            </label>
+                                                        </div>
+                                                    </t>
+                                                </div>
+                                                <div class="invalid-feedback text-center">Por favor, seleccione una opción</div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Pregunta: Solución Brindada -->
+                                        <div class="question-card mb-4 p-3 p-md-4 border rounded-3 bg-light">
+                                            <label class="form-label fw-bold mb-3">
+                                                <i class="fa fa-check-circle text-primary me-2"></i>
+                                                ¿Cómo califica la solución brindada?
+                                            </label>
+                                            <div class="rating-options rating-stars">
+                                                <div class="d-flex justify-content-center gap-3 flex-wrap">
+                                                    <t t-foreach="[('1', 'Malo'), ('2', 'Regular'), ('3', 'Bueno'), ('4', 'Muy Bueno'), ('5', 'Excelente')]" t-as="option">
+                                                        <div class="form-check text-center">
+                                                            <input type="radio" class="form-check-input d-none star-input" required="1"
+                                                                name="solucion_problema" t-att-value="option[0]"
+                                                                t-att-id="'solucion_problema_' + option[0]"/>
+                                                            <label class="form-check-label star-label" t-att-for="'solucion_problema_' + option[0]">
+                                                                <div class="star-wrapper">
+                                                                    <i class="fa fa-star fa-2x"></i>
+                                                                </div>
+                                                                <small class="d-block mt-2"><t t-esc="option[1]"/></small>
+                                                            </label>
+                                                        </div>
+                                                    </t>
+                                                </div>
+                                                <div class="invalid-feedback text-center">Por favor, seleccione una opción</div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Pregunta: Explicación del Trabajo -->
+                                        <div class="question-card mb-4 p-3 p-md-4 border rounded-3 bg-light">
+                                            <label class="form-label fw-bold mb-3">
+                                                <i class="fa fa-comments text-primary me-2"></i>
+                                                ¿Cómo califica la explicación del trabajo realizado?
+                                            </label>
+                                            <div class="rating-options rating-stars">
+                                                <div class="d-flex justify-content-center gap-3 flex-wrap">
+                                                    <t t-foreach="[('1', 'Malo'), ('2', 'Regular'), ('3', 'Bueno'), ('4', 'Muy Bueno'), ('5', 'Excelente')]" t-as="option">
+                                                        <div class="form-check text-center">
+                                                            <input type="radio" class="form-check-input d-none star-input" required="1"
+                                                                name="explicacion_trabajo" t-att-value="option[0]"
+                                                                t-att-id="'explicacion_trabajo_' + option[0]"/>
+                                                            <label class="form-check-label star-label" t-att-for="'explicacion_trabajo_' + option[0]">
+                                                                <div class="star-wrapper">
+                                                                    <i class="fa fa-star fa-2x"></i>
+                                                                </div>
+                                                                <small class="d-block mt-2"><t t-esc="option[1]"/></small>
+                                                            </label>
+                                                        </div>
+                                                    </t>
+                                                </div>
+                                                <div class="invalid-feedback text-center">Por favor, seleccione una opción</div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Pregunta: Limpieza y Orden -->
+                                        <div class="question-card mb-4 p-3 p-md-4 border rounded-3 bg-light">
+                                            <label class="form-label fw-bold mb-3">
+                                                <i class="fa fa-magic text-primary me-2"></i>
+                                                ¿Cómo califica la limpieza y orden después del servicio?
+                                            </label>
+                                            <div class="rating-options rating-stars">
+                                                <div class="d-flex justify-content-center gap-3 flex-wrap">
+                                                    <t t-foreach="[('1', 'Malo'), ('2', 'Regular'), ('3', 'Bueno'), ('4', 'Muy Bueno'), ('5', 'Excelente')]" t-as="option">
+                                                        <div class="form-check text-center">
+                                                            <input type="radio" class="form-check-input d-none star-input" required="1"
+                                                                name="limpieza_orden" t-att-value="option[0]"
+                                                                t-att-id="'limpieza_orden_' + option[0]"/>
+                                                            <label class="form-check-label star-label" t-att-for="'limpieza_orden_' + option[0]">
+                                                                <div class="star-wrapper">
+                                                                    <i class="fa fa-star fa-2x"></i>
+                                                                </div>
+                                                                <small class="d-block mt-2"><t t-esc="option[1]"/></small>
+                                                            </label>
+                                                        </div>
+                                                    </t>
+                                                </div>
+                                                <div class="invalid-feedback text-center">Por favor, seleccione una opción</div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Pregunta: Conformidad de Retiro -->
+                                        <div class="question-card mb-4 p-3 p-md-4 border rounded-3 bg-light">
+                                            <label class="form-label fw-bold mb-3">
+                                                <i class="fa fa-sign-out text-primary me-2"></i>
+                                                ¿El técnico obtuvo la conformidad antes de retirarse?
+                                            </label>
+                                            <div class="rating-options">
+                                                <t t-foreach="[('con_visto', 'Con Visto Bueno', 'success'),
+                                                           ('sin_visto', 'Sin Visto Bueno', 'warning'),
+                                                           ('sin_aviso', 'Se Retiró Sin Avisar', 'danger')]" t-as="option">
+                                                    <div class="form-check mb-2">
+                                                        <input type="radio" class="form-check-input" required="1"
+                                                            name="retiro_tecnico" t-att-value="option[0]"
+                                                            t-att-id="'retiro_tecnico_' + option[0]"/>
+                                                        <label class="form-check-label w-100 ps-2" t-att-for="'retiro_tecnico_' + option[0]">
+                                                            <span t-att-class="'badge bg-' + option[2] + ' bg-opacity-10 text-' + option[2] + ' me-2'">
+                                                                <i t-att-class="'fa fa-' + ('check' if option[0] == 'con_visto' else 'exclamation-triangle')"></i>
+                                                            </span>
+                                                            <t t-esc="option[1]"/>
+                                                        </label>
+                                                    </div>
+                                                </t>
+                                                <div class="invalid-feedback">Por favor, seleccione una opción</div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Preguntas Sí/No -->
+                                        <div class="row g-3">
+                                            <!-- Pregunta: Realización de Pruebas -->
+                                            <div class="col-12 col-md-6">
+                                                <div class="question-card h-100 p-3 p-md-4 border rounded-3 bg-light">
+                                                    <label class="form-label fw-bold mb-3">
+                                                        <i class="fa fa-flask text-primary me-2"></i>
+                                                        ¿Realizó pruebas del equipo?
+                                                    </label>
+                                                    <div class="rating-options d-flex gap-2">
+                                                        <div class="form-check flex-fill">
+                                                            <input type="radio" class="btn-check" required="1"
+                                                                name="realizo_pruebas" value="si" id="realizo_pruebas_si"/>
+                                                            <label class="btn btn-outline-success w-100" for="realizo_pruebas_si">
+                                                                <i class="fa fa-check me-2"></i>Sí
+                                                            </label>
+                                                        </div>
+                                                        <div class="form-check flex-fill">
+                                                            <input type="radio" class="btn-check" required="1"
+                                                                name="realizo_pruebas" value="no" id="realizo_pruebas_no"/>
+                                                            <label class="btn btn-outline-danger w-100" for="realizo_pruebas_no">
+                                                                <i class="fa fa-times me-2"></i>No
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                    <div class="invalid-feedback">Por favor, seleccione una opción</div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Pregunta: Consulta de Suministros -->
+                                            <div class="col-12 col-md-6">
+                                                <div class="question-card h-100 p-3 p-md-4 border rounded-3 bg-light">
+                                                    <label class="form-label fw-bold mb-3">
+                                                        <i class="fa fa-cubes text-primary me-2"></i>
+                                                        ¿Consultó sobre el stock de suministros?
+                                                    </label>
+                                                    <div class="rating-options d-flex gap-2">
+                                                        <div class="form-check flex-fill">
+                                                            <input type="radio" class="btn-check" required="1"
+                                                                name="consulto_suministros" value="si" id="consulto_suministros_si"/>
+                                                            <label class="btn btn-outline-success w-100" for="consulto_suministros_si">
+                                                                <i class="fa fa-check me-2"></i>Sí
+                                                            </label>
+                                                        </div>
+                                                        <div class="form-check flex-fill">
+                                                            <input type="radio" class="btn-check" required="1"
+                                                                name="consulto_suministros" value="no" id="consulto_suministros_no"/>
+                                                            <label class="btn btn-outline-danger w-100" for="consulto_suministros_no">
+                                                                <i class="fa fa-times me-2"></i>No
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                    <div class="invalid-feedback">Por favor, seleccione una opción</div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Pregunta: Consulta de Problemas Adicionales -->
+                                            <div class="col-12 col-md-6">
+                                                <div class="question-card h-100 p-3 p-md-4 border rounded-3 bg-light">
+                                                    <label class="form-label fw-bold mb-3">
+                                                        <i class="fa fa-question-circle text-primary me-2"></i>
+                                                        ¿Preguntó si había problemas adicionales?
+                                                    </label>
+                                                    <div class="rating-options d-flex gap-2">
+                                                        <div class="form-check flex-fill">
+                                                            <input type="radio" class="btn-check" required="1"
+                                                                name="consulto_problemas" value="si" id="consulto_problemas_si"/>
+                                                            <label class="btn btn-outline-success w-100" for="consulto_problemas_si">
+                                                                <i class="fa fa-check me-2"></i>Sí
+                                                            </label>
+                                                        </div>
+                                                        <div class="form-check flex-fill">
+                                                            <input type="radio" class="btn-check" required="1"
+                                                                name="consulto_problemas" value="no" id="consulto_problemas_no"/>
+                                                            <label class="btn btn-outline-danger w-100" for="consulto_problemas_no">
+                                                                <i class="fa fa-times me-2"></i>No
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                    <div class="invalid-feedback">Por favor, seleccione una opción</div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Pregunta: Revisión de Equipos Adicionales -->
+                                        <div class="question-card mt-3 mb-4 p-3 p-md-4 border rounded-3 bg-light">
+                                            <label class="form-label fw-bold mb-3">
+                                                <i class="fa fa-desktop text-primary me-2"></i>
+                                                ¿Realizó revisión de equipos adicionales?
+                                            </label>
+                                            <div class="rating-options">
+                                                <t t-foreach="[
+                                                    ('1', 'No revisó otros equipos ni consultó sobre más impresoras'),
+                                                    ('2', 'Revisión básica - Solo preguntó si había más equipos'),
+                                                    ('3', 'Bueno - Verificó estado básico de otros equipos'),
+                                                    ('4', 'Muy Bueno - Revisó estado y funcionamiento de equipos adicionales'),
+                                                    ('5', 'Excelente - Revisión completa de todos los equipos e impresoras, verificó operatividad')]"
+                                                    t-as="option">
+                                                    <div class="form-check mb-2">
+                                                        <input type="radio" class="form-check-input" required="1"
+                                                            name="revision_adicional" t-att-value="option[0]"
+                                                            t-att-id="'revision_adicional_' + option[0]"/>
+                                                        <label class="form-check-label w-100 ps-2" t-att-for="'revision_adicional_' + option[0]">
+                                                            <span class="badge bg-primary bg-opacity-10 text-primary me-2"><t t-esc="option[0]"/></span>
+                                                            <t t-esc="option[1]"/>
+                                                        </label>
+                                                    </div>
+                                                </t>
+                                                <div class="invalid-feedback">Por favor, seleccione una opción</div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Comentarios -->
+                                        <div class="question-card mb-4 p-3 p-md-4 border rounded-3 bg-light">
+                                            <label class="form-label fw-bold mb-3">
+                                                <i class="fa fa-comment text-primary me-2"></i>
+                                                Comentarios o Sugerencias
+                                            </label>
+                                            <textarea name="comentarios" class="form-control border-2" rows="4"
+                                                placeholder="Comparta sus comentarios o sugerencias para ayudarnos a mejorar nuestro servicio..."></textarea>
+                                            <small class="text-muted mt-2 d-block">
+                                                <i class="fa fa-info-circle me-1"></i>Opcional: Sus comentarios son muy valiosos para nosotros
+                                            </small>
+                                        </div>
+
+                                        <!-- Botón de Envío -->
+                                        <div class="text-center mt-4">
+                                            <button type="submit" class="btn btn-lg px-5 py-3 fw-bold shadow-sm" 
+                                                style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; color: white;">
+                                                <i class="fa fa-paper-plane me-2"></i>Enviar Evaluación
+                                            </button>
+                                        </div>
+                                    </div>
+                                </form>
                             </div>
-                            <form action="/evaluation/submit/process" method="post" class="needs-validation" novalidate="novalidate">
-                                <input type="hidden" name="token" t-att-value="evaluation.token"/>
-                                <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
-
-                                <!-- Sección de Evaluación -->
-                                <div class="mb-4">
-                                    <h5 class="fw-bold mb-4">Aspectos del Servicio</h5>
-
-                                    <!-- Pregunta: Saludo y Presentación -->
-                                    <div class="mb-4">
-                                        <label class="form-label fw-bold">¿Cómo califica el saludo y presentación del técnico?</label>
-                                        <div class="rating-group d-flex flex-wrap gap-3">
-                                            <t t-foreach="[('1', 'No saludó ni se presentó'),
-                                                       ('2', 'Saludo y presentación básica'),
-                                                       ('3', 'Saludo correcto y profesional'),
-                                                       ('4', 'Saludo profesional y actitud positiva'),
-                                                       ('5', 'Saludo excelente, mostró cortesía y empatía')]" t-as="option">
-                                                <div class="form-check form-check-inline">
-                                                    <input type="radio" class="form-check-input" required="1"
-                                                        name="saludo_presentacion" t-att-value="option[0]"
-                                                        t-att-id="'saludo_presentacion_' + option[0]"/>
-                                                    <label class="form-check-label" t-att-for="'saludo_presentacion_' + option[0]">
-                                                        <t t-esc="option[1]"/>
-                                                    </label>
-                                                </div>
-                                            </t>
-                                            <div class="invalid-feedback">Por favor, seleccione una opción</div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Pregunta: Revisión del Problema -->
-                                    <div class="mb-4">
-                                        <label class="form-label fw-bold">¿Cómo califica la revisión del problema?</label>
-                                        <div class="rating-group d-flex flex-wrap gap-3">
-                                            <t t-foreach="[('1', 'Malo'), ('2', 'Regular'), ('3', 'Bueno'), ('4', 'Muy Bueno'), ('5', 'Excelente')]" t-as="option">
-                                                <div class="form-check form-check-inline">
-                                                    <input type="radio" class="form-check-input" required="1"
-                                                        name="diagnostico_problema" t-att-value="option[0]"
-                                                        t-att-id="'diagnostico_problema_' + option[0]"/>
-                                                    <label class="form-check-label" t-att-for="'diagnostico_problema_' + option[0]">
-                                                        <t t-esc="option[1]"/>
-                                                    </label>
-                                                </div>
-                                            </t>
-                                            <div class="invalid-feedback">Por favor, seleccione una opción</div>
-                                        </div>
-                                    </div>
-                                    <!-- Pregunta: Solución Brindada -->
-                                    <div class="mb-4">
-                                        <label class="form-label fw-bold">¿Cómo califica la solución brindada?</label>
-                                        <div class="rating-group d-flex flex-wrap gap-3">
-                                            <t t-foreach="[('1', 'Malo'), ('2', 'Regular'), ('3', 'Bueno'), ('4', 'Muy Bueno'), ('5', 'Excelente')]" t-as="option">
-                                                <div class="form-check form-check-inline">
-                                                    <input type="radio" class="form-check-input" required="1"
-                                                        name="solucion_problema" t-att-value="option[0]"
-                                                        t-att-id="'solucion_problema_' + option[0]"/>
-                                                    <label class="form-check-label" t-att-for="'solucion_problema_' + option[0]">
-                                                        <t t-esc="option[1]"/>
-                                                    </label>
-                                                </div>
-                                            </t>
-                                            <div class="invalid-feedback">Por favor, seleccione una opción</div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Pregunta: Explicación del Trabajo -->
-                                    <div class="mb-4">
-                                        <label class="form-label fw-bold">¿Cómo califica la explicación del trabajo realizado?</label>
-                                        <div class="rating-group d-flex flex-wrap gap-3">
-                                            <t t-foreach="[('1', 'Malo'), ('2', 'Regular'), ('3', 'Bueno'), ('4', 'Muy Bueno'), ('5', 'Excelente')]" t-as="option">
-                                                <div class="form-check form-check-inline">
-                                                    <input type="radio" class="form-check-input" required="1"
-                                                        name="explicacion_trabajo" t-att-value="option[0]"
-                                                        t-att-id="'explicacion_trabajo_' + option[0]"/>
-                                                    <label class="form-check-label" t-att-for="'explicacion_trabajo_' + option[0]">
-                                                        <t t-esc="option[1]"/>
-                                                    </label>
-                                                </div>
-                                            </t>
-                                            <div class="invalid-feedback">Por favor, seleccione una opción</div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Pregunta: Limpieza y Orden -->
-                                    <div class="mb-4">
-                                        <label class="form-label fw-bold">¿Cómo califica la limpieza y orden después del servicio?</label>
-                                        <div class="rating-group d-flex flex-wrap gap-3">
-                                            <t t-foreach="[('1', 'Malo'), ('2', 'Regular'), ('3', 'Bueno'), ('4', 'Muy Bueno'), ('5', 'Excelente')]" t-as="option">
-                                                <div class="form-check form-check-inline">
-                                                    <input type="radio" class="form-check-input" required="1"
-                                                        name="limpieza_orden" t-att-value="option[0]"
-                                                        t-att-id="'limpieza_orden_' + option[0]"/>
-                                                    <label class="form-check-label" t-att-for="'limpieza_orden_' + option[0]">
-                                                        <t t-esc="option[1]"/>
-                                                    </label>
-                                                </div>
-                                            </t>
-                                            <div class="invalid-feedback">Por favor, seleccione una opción</div>
-                                        </div>
-                                    </div>
-                                    <!-- Pregunta: Conformidad de Retiro -->
-                                    <div class="mb-4">
-                                        <label class="form-label fw-bold">¿El técnico obtuvo la conformidad antes de retirarse?</label>
-                                        <div class="rating-group d-flex flex-wrap gap-3">
-                                            <t t-foreach="[('con_visto', 'Con Visto Bueno'),
-                                                       ('sin_visto', 'Sin Visto Bueno'),
-                                                       ('sin_aviso', 'Se Retiró Sin Avisar')]" t-as="option">
-                                                <div class="form-check form-check-inline">
-                                                    <input type="radio" class="form-check-input" required="1"
-                                                        name="retiro_tecnico" t-att-value="option[0]"
-                                                        t-att-id="'retiro_tecnico_' + option[0]"/>
-                                                    <label class="form-check-label" t-att-for="'retiro_tecnico_' + option[0]">
-                                                        <t t-esc="option[1]"/>
-                                                    </label>
-                                                </div>
-                                            </t>
-                                            <div class="invalid-feedback">Por favor, seleccione una opción</div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Pregunta: Realización de Pruebas -->
-                                    <div class="mb-4">
-                                        <label class="form-label fw-bold">¿Realizó pruebas del equipo?</label>
-                                        <div class="rating-group d-flex flex-wrap gap-3">
-                                            <div class="form-check form-check-inline">
-                                                <input type="radio" class="form-check-input" required="1"
-                                                    name="realizo_pruebas" value="si" id="realizo_pruebas_si"/>
-                                                <label class="form-check-label" for="realizo_pruebas_si">Sí</label>
-                                            </div>
-                                            <div class="form-check form-check-inline">
-                                                <input type="radio" class="form-check-input" required="1"
-                                                    name="realizo_pruebas" value="no" id="realizo_pruebas_no"/>
-                                                <label class="form-check-label" for="realizo_pruebas_no">No</label>
-                                            </div>
-                                            <div class="invalid-feedback">Por favor, seleccione una opción</div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Pregunta: Consulta de Suministros -->
-                                    <div class="mb-4">
-                                        <label class="form-label fw-bold">¿Consultó sobre el stock de suministros?</label>
-                                        <div class="rating-group d-flex flex-wrap gap-3">
-                                            <div class="form-check form-check-inline">
-                                                <input type="radio" class="form-check-input" required="1"
-                                                    name="consulto_suministros" value="si" id="consulto_suministros_si"/>
-                                                <label class="form-check-label" for="consulto_suministros_si">Sí</label>
-                                            </div>
-                                            <div class="form-check form-check-inline">
-                                                <input type="radio" class="form-check-input" required="1"
-                                                    name="consulto_suministros" value="no" id="consulto_suministros_no"/>
-                                                <label class="form-check-label" for="consulto_suministros_no">No</label>
-                                            </div>
-                                            <div class="invalid-feedback">Por favor, seleccione una opción</div>
-                                        </div>
-                                    </div>
-                                    <!-- Pregunta: Consulta de Problemas Adicionales -->
-                                    <div class="mb-4">
-                                        <label class="form-label fw-bold">¿Preguntó si había problemas adicionales?</label>
-                                        <div class="rating-group d-flex flex-wrap gap-3">
-                                            <div class="form-check form-check-inline">
-                                                <input type="radio" class="form-check-input" required="1"
-                                                    name="consulto_problemas" value="si" id="consulto_problemas_si"/>
-                                                <label class="form-check-label" for="consulto_problemas_si">Sí</label>
-                                            </div>
-                                            <div class="form-check form-check-inline">
-                                                <input type="radio" class="form-check-input" required="1"
-                                                    name="consulto_problemas" value="no" id="consulto_problemas_no"/>
-                                                <label class="form-check-label" for="consulto_problemas_no">No</label>
-                                            </div>
-                                            <div class="invalid-feedback">Por favor, seleccione una opción</div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Pregunta: Revisión de Equipos Adicionales -->
-                                    <div class="mb-4">
-                                        <label class="form-label fw-bold">¿Realizó revisión de equipos adicionales?</label>
-                                        <div class="rating-group d-flex flex-wrap gap-3">
-                                            <t t-foreach="[
-                                                ('1', 'No revisó otros equipos ni consultó sobre más impresoras'),
-                                                ('2', 'Revisión básica - Solo preguntó si había más equipos'),
-                                                ('3', 'Bueno - Verificó estado básico de otros equipos'),
-                                                ('4', 'Muy Bueno - Revisó estado y funcionamiento de equipos adicionales'),
-                                                ('5', 'Excelente - Revisión completa de todos los equipos e impresoras, verificó operatividad')]"
-                                                t-as="option">
-                                                <div class="form-check form-check-inline">
-                                                    <input type="radio" class="form-check-input" required="1"
-                                                        name="revision_adicional" t-att-value="option[0]"
-                                                        t-att-id="'revision_adicional_' + option[0]"/>
-                                                    <label class="form-check-label" t-att-for="'revision_adicional_' + option[0]">
-                                                        <t t-esc="option[1]"/>
-                                                    </label>
-                                                </div>
-                                            </t>
-                                            <div class="invalid-feedback">Por favor, seleccione una opción</div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Comentarios -->
-                                    <div class="mb-4">
-                                        <label class="form-label fw-bold">Comentarios o Sugerencias</label>
-                                        <textarea name="comentarios" class="form-control" rows="4"
-                                            placeholder="Ingrese sus comentarios o sugerencias para ayudarnos a mejorar..."></textarea>
-                                        <div class="invalid-feedback">Por favor, ingrese sus comentarios o sugerencias</div>
-                                    </div>
-
-                                    <!-- Botón de Envío -->
-                                    <div class="text-end">
-                                        <button type="submit" class="btn btn-primary btn-lg px-5">
-                                            <i class="fa fa-paper-plane me-2"></i>Enviar Evaluación
-                                        </button>
-                                    </div>
-                                </div>
-                            </form>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Script para validación del formulario -->
-        <script>
-            (function() {
-                'use strict'
-                var forms = document.querySelectorAll('.needs-validation')
-                Array.prototype.slice.call(forms).forEach(function(form) {
-                    form.addEventListener('submit', function(event) {
-                        if (!form.checkValidity()) {
-                            event.preventDefault()
-                            event.stopPropagation()
-                        }
-                        form.classList.add('was-validated')
-                    }, false)
-                })
-            })()
-        </script>
-    </t>
-</template>
+            <!-- CSS Personalizado -->
+            <style>
+                <![CDATA[
+                .star-label {
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                }
+                
+                .star-wrapper {
+                    color: #ddd;
+                    transition: all 0.3s ease;
+                }
+                
+                .star-input:checked + .star-label .star-wrapper {
+                    color: #ffc107;
+                    transform: scale(1.2);
+                }
+                
+                .star-label:hover .star-wrapper {
+                    color: #ffdb4d;
+                    transform: scale(1.1);
+                }
+                
+                .question-card {
+                    transition: all 0.3s ease;
+                }
+                
+                .question-card:hover {
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                    transform: translateY(-2px);
+                }
+                
+                .form-check-input:checked {
+                    background-color: #667eea;
+                    border-color: #667eea;
+                }
+                
+                .btn-check:checked + .btn {
+                    transform: scale(1.05);
+                }
+                
+                @media (max-width: 768px) {
+                    .star-wrapper i {
+                        font-size: 1.5rem !important;
+                    }
+                    
+                    .rating-stars small {
+                        font-size: 0.75rem;
+                    }
+                }
+                ]]>
+            </style>
 
-
+            <!-- Script para validación del formulario -->
+            <script>
+                <![CDATA[
+                (function() {
+                    'use strict'
+                    
+                    // Validación de formulario
+                    var forms = document.querySelectorAll('.needs-validation')
+                    Array.prototype.slice.call(forms).forEach(function(form) {
+                        form.addEventListener('submit', function(event) {
+                            if (!form.checkValidity()) {
+                                event.preventDefault()
+                                event.stopPropagation()
+                                
+                                // Scroll al primer error
+                                var firstInvalid = form.querySelector(':invalid');
+                                if (firstInvalid) {
+                                    firstInvalid.scrollIntoView({behavior: 'smooth', block: 'center'});
+                                }
+                            }
+                            form.classList.add('was-validated')
+                        }, false)
+                    })
+                    
+                    // Animación suave al hacer clic en radio buttons
+                    document.querySelectorAll('.form-check-input, .btn-check').forEach(function(input) {
+                        input.addEventListener('change', function() {
+                            if (this.checked) {
+                                var label = this.nextElementSibling || document.querySelector('label[for="' + this.id + '"]');
+                                if (label) {
+                                    label.style.transform = 'scale(1.05)';
+                                    setTimeout(function() {
+                                        label.style.transform = 'scale(1)';
+                                    }, 200);
+                                }
+                            }
+                        });
+                    });
+                })()
+                ]]>
+            </script>
+        </t>
+    </template>
 
     <!-- Plantilla de Agradecimiento -->
     <template id="evaluation_thanks" name="Evaluación Completada">
         <t t-call="website.layout">
-            <div class="container mt-4 mb-4">
-                <div class="card">
-                    <div class="card-body text-center">
-                        <i class="fa fa-check-circle text-success fa-5x mb-3"></i>
-                        <h2>¡Gracias por su evaluación!</h2>
-                        <p class="lead">Su retroalimentación nos ayuda a mejorar nuestro servicio.</p>
-                        <a href="/" class="btn btn-primary mt-3">Volver al Inicio</a>
+            <div class="container py-5">
+                <div class="row justify-content-center">
+                    <div class="col-12 col-md-8 col-lg-6">
+                        <div class="card shadow-lg border-0 rounded-4 overflow-hidden text-center">
+                            <div class="card-body p-5">
+                                <div class="mb-4">
+                                    <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex p-4 mb-3">
+                                        <i class="fa fa-check-circle text-success" style="font-size: 4rem;"></i>
+                                    </div>
+                                </div>
+                                <h2 class="fw-bold mb-3">¡Gracias por su evaluación!</h2>
+                                <p class="lead text-muted mb-4">Su retroalimentación nos ayuda a mejorar nuestro servicio continuamente.</p>
+                                <a href="/" class="btn btn-lg px-5 fw-bold shadow-sm" 
+                                    style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; color: white;">
+                                    <i class="fa fa-home me-2"></i>Volver al Inicio
+                                </a>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -306,14 +495,23 @@
     <!-- Plantilla de Error -->
     <template id="evaluation_error" name="Error en Evaluación">
         <t t-call="website.layout">
-            <div class="container mt-4 mb-4">
-                <div class="card">
-                    <div class="card-body text-center">
-                        <i class="fa fa-exclamation-triangle text-danger fa-5x mb-3"></i>
-                        <h2>Ha ocurrido un error</h2>
-                        <p class="lead">No se pudo procesar su evaluación. Por favor, intente
-                            nuevamente.</p>
-                        <a href="/" class="btn btn-primary mt-3">Volver al Inicio</a>
+            <div class="container py-5">
+                <div class="row justify-content-center">
+                    <div class="col-12 col-md-8 col-lg-6">
+                        <div class="card shadow-lg border-0 rounded-4 overflow-hidden text-center">
+                            <div class="card-body p-5">
+                                <div class="mb-4">
+                                    <div class="bg-danger bg-opacity-10 rounded-circle d-inline-flex p-4 mb-3">
+                                        <i class="fa fa-exclamation-triangle text-danger" style="font-size: 4rem;"></i>
+                                    </div>
+                                </div>
+                                <h2 class="fw-bold mb-3">Ha ocurrido un error</h2>
+                                <p class="lead text-muted mb-4">No se pudo procesar su evaluación. Por favor, intente nuevamente más tarde.</p>
+                                <a href="/" class="btn btn-lg btn-outline-primary px-5 fw-bold">
+                                    <i class="fa fa-home me-2"></i>Volver al Inicio
+                                </a>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -323,13 +521,23 @@
     <!-- Plantilla de Evaluación Expirada -->
     <template id="evaluation_expired" name="Evaluación Expirada">
         <t t-call="website.layout">
-            <div class="container mt-4 mb-4">
-                <div class="card">
-                    <div class="card-body text-center">
-                        <i class="fa fa-clock-o text-warning fa-5x mb-3"></i>
-                        <h2>Evaluación No Disponible</h2>
-                        <p class="lead">Esta evaluación ya no está disponible o ha expirado.</p>
-                        <a href="/" class="btn btn-primary mt-3">Volver al Inicio</a>
+            <div class="container py-5">
+                <div class="row justify-content-center">
+                    <div class="col-12 col-md-8 col-lg-6">
+                        <div class="card shadow-lg border-0 rounded-4 overflow-hidden text-center">
+                            <div class="card-body p-5">
+                                <div class="mb-4">
+                                    <div class="bg-warning bg-opacity-10 rounded-circle d-inline-flex p-4 mb-3">
+                                        <i class="fa fa-clock-o text-warning" style="font-size: 4rem;"></i>
+                                    </div>
+                                </div>
+                                <h2 class="fw-bold mb-3">Evaluación No Disponible</h2>
+                                <p class="lead text-muted mb-4">Esta evaluación ya no está disponible o ha expirado.</p>
+                                <a href="/" class="btn btn-lg btn-outline-primary px-5 fw-bold">
+                                    <i class="fa fa-home me-2"></i>Volver al Inicio
+                                </a>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
