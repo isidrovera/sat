@@ -8,6 +8,19 @@
             <field name="arch" type="xml">
                 <form>
                     <header>
+                        <button name="action_resend_evaluation" string="Reenviar Evaluación" 
+                                type="object" class="btn-primary"
+                                invisible="state not in ['sent', 'expired']"/>
+                        <button name="action_send_reminder" string="Enviar Recordatorio" 
+                                type="object" class="btn-warning"
+                                invisible="state != 'sent'"/>
+                        <button name="action_mark_as_completed" string="Marcar como Completada" 
+                                type="object" class="btn-success"
+                                invisible="state not in ['draft', 'sent']"/>
+                        <button name="action_reset_to_draft" string="Regresar a Borrador" 
+                                type="object" class="btn-secondary"
+                                invisible="state not in ['sent', 'expired']"
+                                groups="sat.group_sat_supervisor"/>
                         <field name="state" widget="statusbar" options="{'clickable': '1'}"/>
                     </header>
                     <sheet>
@@ -17,72 +30,185 @@
                                 <field string="Tickets" name="ticket_ids" widget="statinfo"/>
                             </button>
                         </div>
+                        
+                        <!-- Alerta de Atención Requerida -->
+                        <div class="alert alert-danger mb-3" role="alert" invisible="not requiere_atencion">
+                            <i class="fa fa-exclamation-triangle me-2"/>
+                            <strong>¡Atención Requerida!</strong> Esta evaluación requiere seguimiento inmediato.
+                        </div>
+                        
                         <div class="oe_title">
                             <h1>
                                 <field name="name" readonly="1" force_save="1"/>
-                                <field name="token" invisible="1"/>
                             </h1>
+                            <div class="d-flex gap-3 text-muted">
+                                <span invisible="not email_sent">
+                                    <i class="fa fa-check-circle text-success me-1"/>
+                                    Correo enviado
+                                </span>
+                                <span invisible="email_sent or state == 'draft'">
+                                    <i class="fa fa-times-circle text-danger me-1"/>
+                                    Correo no enviado
+                                </span>
+                                <span invisible="reminder_count == 0">
+                                    <i class="fa fa-bell text-warning me-1"/>
+                                    <field name="reminder_count"/> recordatorio(s)
+                                </span>
+                            </div>
                         </div>
+                        
                         <group>
-                            <group>
-                                <field name="partner_id" readonly="context.get('from_portal', False)"/>
-                                <field name="technician_id" readonly="context.get('from_portal', False)"/>
+                            <group string="Información General">
+                                <field name="partner_id" readonly="context.get('from_portal', False) or state == 'completed'"/>
+                                <field name="technician_id" readonly="context.get('from_portal', False) or state == 'completed'"/>
                                 <field name="evaluation_date"/>
                                 <field name="expiration_date" readonly="1"/>
                             </group>
-                            <group>
+                            <group string="Resultados">
                                 <field name="puntaje_servicio" widget="percentpie"/>
                                 <field name="nivel_atencion"
                                     decoration-success="nivel_atencion == 'excelente'"
+                                    decoration-info="nivel_atencion == 'bueno'"
                                     decoration-warning="nivel_atencion == 'regular'"
                                     decoration-danger="nivel_atencion == 'deficiente'"/>
                                 <field name="requiere_atencion" invisible="1"/>
                             </group>
                         </group>
+                        
                         <notebook>
+                            <!-- Pestaña de Control de Envío -->
+                            <page string="📧 Control de Envío" name="email_control">
+                                <group>
+                                    <group string="Estado del Envío">
+                                        <field name="email_sent" readonly="1"/>
+                                        <field name="email_sent_date" readonly="1"/>
+                                        <field name="email_delivery_status" readonly="1"
+                                            decoration-success="email_delivery_status == 'delivered'"
+                                            decoration-info="email_delivery_status == 'sent'"
+                                            decoration-warning="email_delivery_status == 'pending'"
+                                            decoration-danger="email_delivery_status in ['failed', 'bounced']"/>
+                                        <field name="email_error_message" readonly="1" 
+                                               invisible="not email_error_message"
+                                               widget="text"/>
+                                    </group>
+                                    <group string="Recordatorios">
+                                        <field name="reminder_count" readonly="1"/>
+                                        <field name="last_reminder_date" readonly="1"/>
+                                        <field name="notification_channel" readonly="1"/>
+                                    </group>
+                                </group>
+                            </page>
                             
-                            <page string="Evaluación" name="evaluation">
+                            <!-- Pestaña de Respuesta del Cliente -->
+                            <page string="👤 Respuesta del Cliente" name="client_response">
+                                <group>
+                                    <group string="Información de Respuesta">
+                                        <field name="response_date" readonly="1"/>
+                                        <field name="response_time" readonly="1" 
+                                               widget="float_time"
+                                               invisible="not response_date"/>
+                                        <field name="days_to_complete" readonly="1"
+                                               invisible="not response_date"/>
+                                        <field name="is_on_time" readonly="1"
+                                               invisible="not response_date"/>
+                                    </group>
+                                    <group string="Acceso al Portal">
+                                        <field name="portal_access_count" readonly="1"/>
+                                        <field name="first_portal_access" readonly="1"
+                                               invisible="not first_portal_access"/>
+                                        <field name="last_portal_access" readonly="1"
+                                               invisible="not last_portal_access"/>
+                                    </group>
+                                </group>
+                                <group string="Auditoría">
+                                    <group>
+                                        <field name="completed_by" readonly="1"
+                                               invisible="not completed_by"/>
+                                        <field name="completion_source" readonly="1"
+                                               invisible="not completion_source"/>
+                                    </group>
+                                    <group>
+                                        <field name="ip_address" readonly="1"
+                                               invisible="not ip_address"/>
+                                        <field name="user_agent" readonly="1"
+                                               invisible="not user_agent"
+                                               widget="text"/>
+                                    </group>
+                                </group>
+                            </page>
+                            
+                            <!-- Pestaña de Evaluación -->
+                            <page string="⭐ Evaluación" name="evaluation">
                                 <group>
                                     <group string="Aspectos del Servicio">
-                                        <field name="saludo_presentacion" widget="radio"/>
-                                        <field name="diagnostico_problema" widget="radio"/>
-                                        <field name="solucion_problema" widget="radio"/>
-                                        <field name="explicacion_trabajo" widget="radio"/>
-                                        <field name="limpieza_orden" widget="radio"/>
-                                        <field name="revision_adicional" widget="radio"/>
-                                        <field name="retiro_tecnico" widget="radio"/>
+                                        <field name="saludo_presentacion" widget="radio"
+                                               readonly="state == 'completed'"/>
+                                        <field name="diagnostico_problema" widget="radio"
+                                               readonly="state == 'completed'"/>
+                                        <field name="solucion_problema" widget="radio"
+                                               readonly="state == 'completed'"/>
+                                        <field name="explicacion_trabajo" widget="radio"
+                                               readonly="state == 'completed'"/>
+                                        <field name="limpieza_orden" widget="radio"
+                                               readonly="state == 'completed'"/>
+                                        <field name="revision_adicional" widget="radio"
+                                               readonly="state == 'completed'"/>
+                                        <field name="retiro_tecnico" widget="radio"
+                                               readonly="state == 'completed'"/>
                                     </group>
                                     <group string="Verificación de Protocolos">
-                                        <field name="realizo_pruebas" widget="radio"/>
-                                        <field name="consulto_suministros" widget="radio"/>
-                                        <field name="consulto_problemas" widget="radio"/>
+                                        <field name="realizo_pruebas" widget="radio"
+                                               readonly="state == 'completed'"/>
+                                        <field name="consulto_suministros" widget="radio"
+                                               readonly="state == 'completed'"/>
+                                        <field name="consulto_problemas" widget="radio"
+                                               readonly="state == 'completed'"/>
                                     </group>
                                 </group>
                                 <group string="Comentarios">
                                     <field name="comentarios" nolabel="1"
-                                        placeholder="Ingrese comentarios adicionales..."/>
+                                        placeholder="Ingrese comentarios adicionales..."
+                                        readonly="state == 'completed'"/>
                                 </group>
                             </page>
-                            <page string="Análisis" name="analysis">
+                            
+                            <!-- Pestaña de Análisis -->
+                            <page string="📊 Análisis" name="analysis">
                                 <group>
-                                    <field name="analisis_detallado" readonly="1" nolabel="1"/>
+                                    <field name="analisis_detallado" readonly="1" nolabel="1" widget="text"/>
                                 </group>
                             </page>
-                            <page string="Recomendaciones">
+                            
+                            <!-- Pestaña de Recomendaciones -->
+                            <page string="💡 Recomendaciones" name="recommendations">
                                 <group>
-                                    <field name="recomendaciones_mejora" readonly="1" nolabel="1"/>
+                                    <field name="recomendaciones_mejora" readonly="1" nolabel="1" widget="text"/>
                                 </group>
                             </page>
-                            <page string="Tickets Atendidos" name="tickets">
-                                <field name="ticket_ids" readonly="context.get('from_portal', False)">
+                            
+                            <!-- Pestaña de Tickets -->
+                            <page string="🎫 Tickets Atendidos" name="tickets">
+                                <field name="ticket_ids" readonly="context.get('from_portal', False) or state == 'completed'">
                                     <list>
-                                       
+                                        <field name="name"/>
+                                        <field name="partner_id" optional="hide"/>
+                                        <field name="product_alquiler" optional="show"/>
+                                        <field name="tipo_servicio" optional="show"/>
+                                        <field name="agenda" optional="show"/>
+                                        <field name="estado"/>
                                     </list>
                                 </field>
                             </page>
                         </notebook>
+                        
+                        <!-- Campos ocultos -->
+                        <field name="token" invisible="1"/>
+                        <field name="color" invisible="1"/>
+                        <field name="ticket_id" invisible="1"/>
                     </sheet>
                     
+                    <!-- Chatter -->
+                    <chatter/>
                 </form>
             </field>
         </record>
@@ -93,93 +219,169 @@
             <field name="model">client.service.evaluation</field>
             <field name="arch" type="xml">
                 <list decoration-danger="requiere_atencion == True"
-                    decoration-success="nivel_atencion == 'excelente'"
-                    decoration-warning="nivel_atencion == 'regular'">
-                    <field name="name"/>
+                      decoration-success="nivel_atencion == 'excelente'"
+                      decoration-info="nivel_atencion == 'bueno'"
+                      decoration-warning="nivel_atencion == 'regular'"
+                      decoration-muted="state == 'expired'"
+                      multi_edit="1">
+                    <field name="name" readonly="1"/>
                     <field name="partner_id"/>
                     <field name="technician_id"/>
                     <field name="evaluation_date"/>
+                    <field name="expiration_date" optional="hide"/>
+                    <field name="email_sent" optional="show" widget="boolean_toggle"/>
+                    <field name="email_sent_date" optional="hide"/>
+                    <field name="reminder_count" optional="show"/>
+                    <field name="response_date" optional="show"/>
+                    <field name="response_time" optional="hide" widget="float_time"/>
+                    <field name="portal_access_count" optional="hide"/>
                     <field name="puntaje_servicio" widget="percentage"/>
                     <field name="nivel_atencion"/>
-                    <field name="state"/>
+                    <field name="state" 
+                           decoration-success="state == 'completed'"
+                           decoration-info="state == 'sent'"
+                           decoration-warning="state == 'draft'"
+                           decoration-danger="state == 'expired'"
+                           widget="badge"/>
                     <field name="requiere_atencion" invisible="1"/>
+                    <field name="color" invisible="1"/>
                 </list>
             </field>
         </record>
 
-        <!-- Vista Kanban -->
-<record id="view_client_service_evaluation_kanban" model="ir.ui.view">
-    <field name="name">client.service.evaluation.kanban</field>
-    <field name="model">client.service.evaluation</field>
-    <field name="arch" type="xml">
-        <kanban default_group_by="state" class="o_kanban_small_column" records_draggable="0">
-            <field name="name"/>
-            <field name="ticket_ids"/>
-            <field name="partner_id"/>
-            <field name="technician_id"/>
-            <field name="puntaje_servicio"/>
-            <field name="nivel_atencion"/>
-            <field name="requiere_atencion"/>
-            <field name="state"/>
-            <templates>
-                <t t-name="kanban-box">
-                    <div t-attf-class="oe_kanban_card oe_kanban_global_click shadow-sm rounded-3 position-relative #{record.requiere_atencion.raw_value ? 'border-danger' : 'border-0'}" 
-                         t-attf-style="background-color: #{record.state.raw_value == 'draft' ? '#f8f9fa' :
-                                                         record.state.raw_value == 'in_progress' ? '#fff3cd' :
-                                                         record.state.raw_value == 'done' ? '#d1e7dd' :
-                                                         record.state.raw_value == 'cancelled' ? '#f8d7da' : '#ffffff'}">
-                        <!-- Indicador de Atención Requerida -->
-                        <div t-if="record.requiere_atencion.raw_value" class="position-absolute top-0 end-0 mt-2 me-2">
-                            <i class="fa fa-exclamation-circle text-danger fs-4"/>
-                        </div>
-                        
-                        <div class="oe_kanban_content p-3">
-                            <!-- Encabezado con Nombre y Puntaje -->
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <h5 class="mb-0 text-primary">
-                                    <field name="name"/>
-                                </h5>
-                                <span class="badge rounded-pill px-3 py-2"
-                                    t-attf-class="bg-#{record.nivel_atencion.raw_value == 'excelente' ? 'success' : 
-                                                    record.nivel_atencion.raw_value == 'deficiente' ? 'danger' : 'warning'}">
-                                    <i class="fa fa-star me-1"/>
-                                    <field name="puntaje_servicio" widget="percentage"/>
-                                </span>
-                            </div>
-
-                            <!-- Información del Cliente y Técnico -->
-                            <div class="mb-2">
-                                <div class="d-flex align-items-center text-muted mb-1">
-                                    <i class="fa fa-user me-2"/>
-                                    <field name="partner_id"/>
+        <!-- Vista Kanban Mejorada -->
+        <record id="view_client_service_evaluation_kanban" model="ir.ui.view">
+            <field name="name">client.service.evaluation.kanban</field>
+            <field name="model">client.service.evaluation</field>
+            <field name="arch" type="xml">
+                <kanban default_group_by="state" class="o_kanban_small_column" records_draggable="0">
+                    <field name="name"/>
+                    <field name="ticket_ids"/>
+                    <field name="partner_id"/>
+                    <field name="technician_id"/>
+                    <field name="evaluation_date"/>
+                    <field name="puntaje_servicio"/>
+                    <field name="nivel_atencion"/>
+                    <field name="requiere_atencion"/>
+                    <field name="state"/>
+                    <field name="email_sent"/>
+                    <field name="reminder_count"/>
+                    <field name="response_date"/>
+                    <field name="portal_access_count"/>
+                    <field name="color"/>
+                    <templates>
+                        <t t-name="kanban-box">
+                            <div t-attf-class="oe_kanban_card oe_kanban_global_click shadow-sm rounded-3 position-relative border-start border-5 #{record.requiere_atencion.raw_value ? 'border-danger' : 'border-primary'}" 
+                                 t-attf-style="background: linear-gradient(135deg, #{record.nivel_atencion.raw_value == 'excelente' ? '#d1f2eb' :
+                                                             record.nivel_atencion.raw_value == 'bueno' ? '#d1ecf1' :
+                                                             record.nivel_atencion.raw_value == 'regular' ? '#fff3cd' :
+                                                             record.nivel_atencion.raw_value == 'deficiente' ? '#f8d7da' : '#ffffff'} 0%, #ffffff 100%)">
+                                
+                                <!-- Badge Superior con Estado -->
+                                <div class="position-absolute top-0 end-0 m-2">
+                                    <span t-if="record.state.raw_value == 'completed'" class="badge bg-success">
+                                        <i class="fa fa-check-circle me-1"/> Completada
+                                    </span>
+                                    <span t-elif="record.state.raw_value == 'sent'" class="badge bg-info">
+                                        <i class="fa fa-paper-plane me-1"/> Enviada
+                                    </span>
+                                    <span t-elif="record.state.raw_value == 'expired'" class="badge bg-danger">
+                                        <i class="fa fa-clock me-1"/> Expirada
+                                    </span>
+                                    <span t-else="" class="badge bg-secondary">
+                                        <i class="fa fa-hourglass-half me-1"/> Borrador
+                                    </span>
                                 </div>
-                                <div class="d-flex align-items-center text-muted">
-                                    <i class="fa fa-wrench me-2"/>
-                                    <field name="technician_id"/>
+                                
+                                <!-- Indicador de Atención Requerida -->
+                                <div t-if="record.requiere_atencion.raw_value" class="position-absolute top-0 start-0 m-2">
+                                    <span class="badge bg-danger">
+                                        <i class="fa fa-exclamation-triangle"/> ¡Atención!
+                                    </span>
+                                </div>
+                                
+                                <div class="oe_kanban_content p-3 pt-5">
+                                    <!-- Encabezado con Nombre y Puntaje -->
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <h5 class="mb-0 text-primary fw-bold">
+                                            <field name="name"/>
+                                        </h5>
+                                        <div class="text-center">
+                                            <div class="badge rounded-circle p-3 fs-5"
+                                                t-attf-class="bg-#{record.nivel_atencion.raw_value == 'excelente' ? 'success' : 
+                                                                record.nivel_atencion.raw_value == 'bueno' ? 'info' :
+                                                                record.nivel_atencion.raw_value == 'regular' ? 'warning' : 'danger'}">
+                                                <field name="puntaje_servicio" widget="integer"/>%
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Información del Cliente y Técnico -->
+                                    <div class="mb-3">
+                                        <div class="d-flex align-items-center mb-2">
+                                            <i class="fa fa-user text-primary me-2 fs-5"/>
+                                            <strong class="me-2">Cliente:</strong>
+                                            <field name="partner_id"/>
+                                        </div>
+                                        <div class="d-flex align-items-center">
+                                            <i class="fa fa-wrench text-success me-2 fs-5"/>
+                                            <strong class="me-2">Técnico:</strong>
+                                            <field name="technician_id"/>
+                                        </div>
+                                    </div>
+
+                                    <!-- Estadísticas de Interacción -->
+                                    <div class="mb-3 p-2 bg-light rounded">
+                                        <div class="row g-2 small">
+                                            <div class="col-6" t-if="record.email_sent.raw_value">
+                                                <i class="fa fa-envelope text-success me-1"/>
+                                                <span>Correo enviado</span>
+                                            </div>
+                                            <div class="col-6" t-if="record.reminder_count.raw_value > 0">
+                                                <i class="fa fa-bell text-warning me-1"/>
+                                                <span t-esc="record.reminder_count.raw_value"/> recordatorio(s)
+                                            </div>
+                                            <div class="col-6" t-if="record.portal_access_count.raw_value > 0">
+                                                <i class="fa fa-eye text-info me-1"/>
+                                                <span t-esc="record.portal_access_count.raw_value"/> acceso(s)
+                                            </div>
+                                            <div class="col-6" t-if="record.response_date.raw_value">
+                                                <i class="fa fa-check-circle text-success me-1"/>
+                                                <span>Respondida</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Tickets Relacionados -->
+                                    <div class="mb-3">
+                                        <small class="text-muted d-block mb-1">
+                                            <i class="fa fa-ticket me-1"/>
+                                            Tickets atendidos:
+                                        </small>
+                                        <field name="ticket_ids" widget="many2many_tags" options="{'color_field': 'color'}"/>
+                                    </div>
+
+                                    <!-- Footer con Fecha -->
+                                    <div class="mt-3 pt-2 border-top d-flex justify-content-between align-items-center">
+                                        <small class="text-muted">
+                                            <i class="fa fa-calendar-alt me-1"/>
+                                            <field name="evaluation_date" widget="date"/>
+                                        </small>
+                                        <field name="nivel_atencion" widget="badge" 
+                                               decoration-success="nivel_atencion == 'excelente'"
+                                               decoration-info="nivel_atencion == 'bueno'"
+                                               decoration-warning="nivel_atencion == 'regular'"
+                                               decoration-danger="nivel_atencion == 'deficiente'"/>
+                                    </div>
                                 </div>
                             </div>
+                        </t>
+                    </templates>
+                </kanban>
+            </field>
+        </record>
 
-                            <!-- Tickets Relacionados -->
-                            <div class="mt-3">
-                                <field name="ticket_ids" widget="many2many_tags" options="{'color_field': 'color'}"/>
-                            </div>
-
-                            <!-- Fecha de Evaluación -->
-                            <div class="mt-3 pt-2 border-top">
-                                <small class="text-muted d-flex align-items-center">
-                                    <i class="fa fa-calendar-alt me-2"/>
-                                    <field name="evaluation_date"/>
-                                </small>
-                            </div>
-                        </div>
-                    </div>
-                </t>
-            </templates>
-        </kanban>
-    </field>
-</record>
-
-        <!-- Vista de Búsqueda -->
+        <!-- Vista de Búsqueda Mejorada -->
         <record id="view_client_service_evaluation_search" model="ir.ui.view">
             <field name="name">client.service.evaluation.search</field>
             <field name="model">client.service.evaluation</field>
@@ -189,36 +391,148 @@
                     <field name="ticket_ids"/>
                     <field name="partner_id"/>
                     <field name="technician_id"/>
+                    
                     <separator/>
-                    <filter string="Requiere Atención" name="requiere_atencion"
+                    
+                    <!-- Filtros de Calidad -->
+                    <filter string="⚠️ Requiere Atención" name="requiere_atencion"
                         domain="[('requiere_atencion', '=', True)]"/>
-                    <filter string="Excelente" name="nivel_excelente"
+                    <filter string="🌟 Excelente" name="nivel_excelente"
                         domain="[('nivel_atencion', '=', 'excelente')]"/>
-                    <filter string="Deficiente" name="nivel_deficiente"
+                    <filter string="👍 Bueno" name="nivel_bueno"
+                        domain="[('nivel_atencion', '=', 'bueno')]"/>
+                    <filter string="⚠️ Regular" name="nivel_regular"
+                        domain="[('nivel_atencion', '=', 'regular')]"/>
+                    <filter string="❌ Deficiente" name="nivel_deficiente"
                         domain="[('nivel_atencion', '=', 'deficiente')]"/>
+                    
                     <separator/>
-                    <filter string="Expiradas" name="expired"
+                    
+                    <!-- Filtros de Estado -->
+                    <filter string="📝 Borrador" name="draft"
+                        domain="[('state', '=', 'draft')]"/>
+                    <filter string="📧 Enviada" name="sent"
+                        domain="[('state', '=', 'sent')]"/>
+                    <filter string="✅ Completada" name="completed"
+                        domain="[('state', '=', 'completed')]"/>
+                    <filter string="⏰ Expirada" name="expired"
                         domain="[('state', '=', 'expired')]"/>
-                    <filter string="Mis Evaluaciones" name="my_evaluations"
+                    
+                    <separator/>
+                    
+                    <!-- Filtros de Envío -->
+                    <filter string="📧 Correo Enviado" name="email_sent"
+                        domain="[('email_sent', '=', True)]"/>
+                    <filter string="❌ Correo No Enviado" name="email_not_sent"
+                        domain="[('email_sent', '=', False)]"/>
+                    <filter string="🔴 Error en Envío" name="email_failed"
+                        domain="[('email_delivery_status', 'in', ['failed', 'bounced'])]"/>
+                    <filter string="🔔 Con Recordatorios" name="has_reminders"
+                        domain="[('reminder_count', '>', 0)]"/>
+                    
+                    <separator/>
+                    
+                    <!-- Filtros de Respuesta -->
+                    <filter string="👁️ Con Acceso al Portal" name="portal_accessed"
+                        domain="[('portal_access_count', '>', 0)]"/>
+                    <filter string="✅ Respondida a Tiempo" name="on_time"
+                        domain="[('is_on_time', '=', True)]"/>
+                    <filter string="⏱️ Respuesta Tardía" name="late"
+                        domain="[('is_on_time', '=', False), ('state', '=', 'completed')]"/>
+                    
+                    <separator/>
+                    
+                    <!-- Filtros Personales y de Fecha -->
+                    <filter string="👤 Mis Evaluaciones" name="my_evaluations"
                         domain="[('technician_id', '=', uid)]"/>
-                    <filter string="Evaluaciones de Hoy" name="today"
-                        domain="[('evaluation_date', '>=', context_today().strftime('%Y-%m-%d'))]"/>
+                    <filter string="📅 Hoy" name="today"
+                        domain="[('evaluation_date', '&gt;=', context_today().strftime('%Y-%m-%d'))]"/>
+                    <filter string="📅 Esta Semana" name="this_week"
+                        domain="[('evaluation_date', '&gt;=', (context_today() - datetime.timedelta(days=context_today().weekday())).strftime('%Y-%m-%d'))]"/>
+                    <filter string="📅 Este Mes" name="this_month"
+                        domain="[('evaluation_date', '&gt;=', context_today().strftime('%Y-%m-01'))]"/>
+                    
+                    <separator/>
+                    
                     <group expand="0" string="Agrupar Por">
-                        <filter string="Técnico" name="technician"
+                        <filter string="👤 Técnico" name="technician"
                             context="{'group_by': 'technician_id'}"/>
-                        <filter string="Cliente" name="partner" 
+                        <filter string="🏢 Cliente" name="partner" 
                             context="{'group_by': 'partner_id'}"/>
-                        <filter string="Nivel" name="nivel" 
+                        <filter string="📊 Nivel de Atención" name="nivel" 
                             context="{'group_by': 'nivel_atencion'}"/>
-                        <filter string="Estado" name="state" 
+                        <filter string="📋 Estado" name="state" 
                             context="{'group_by': 'state'}"/>
-                        <filter string="Fecha" name="date"
+                        <filter string="📧 Estado de Envío" name="delivery_status"
+                            context="{'group_by': 'email_delivery_status'}"/>
+                        <filter string="📅 Fecha de Evaluación" name="date"
                             context="{'group_by': 'evaluation_date:day'}"/>
+                        <filter string="📅 Fecha de Respuesta" name="response_date"
+                            context="{'group_by': 'response_date:day'}"/>
                     </group>
                 </search>
             </field>
         </record>
 
-        
+        <!-- Vista de Gráfico (Pivot) -->
+        <record id="view_client_service_evaluation_pivot" model="ir.ui.view">
+            <field name="name">client.service.evaluation.pivot</field>
+            <field name="model">client.service.evaluation</field>
+            <field name="arch" type="xml">
+                <pivot string="Análisis de Evaluaciones">
+                    <field name="technician_id" type="row"/>
+                    <field name="nivel_atencion" type="col"/>
+                    <field name="puntaje_servicio" type="measure"/>
+                </pivot>
+            </field>
+        </record>
+
+        <!-- Vista de Gráfico -->
+        <record id="view_client_service_evaluation_graph" model="ir.ui.view">
+            <field name="name">client.service.evaluation.graph</field>
+            <field name="model">client.service.evaluation</field>
+            <field name="arch" type="xml">
+                <graph string="Evaluaciones de Servicio" type="bar" stacked="False">
+                    <field name="technician_id"/>
+                    <field name="puntaje_servicio" type="measure"/>
+                </graph>
+            </field>
+        </record>
+
+        <!-- Vista de Calendario -->
+        <record id="view_client_service_evaluation_calendar" model="ir.ui.view">
+            <field name="name">client.service.evaluation.calendar</field>
+            <field name="model">client.service.evaluation</field>
+            <field name="arch" type="xml">
+                <calendar string="Calendario de Evaluaciones" 
+                         date_start="evaluation_date" 
+                         color="nivel_atencion"
+                         event_open_popup="true"
+                         quick_create="false">
+                    <field name="partner_id"/>
+                    <field name="technician_id"/>
+                    <field name="puntaje_servicio"/>
+                </calendar>
+            </field>
+        </record>
+
+        <!-- Vista de Actividad -->
+        <record id="view_client_service_evaluation_activity" model="ir.ui.view">
+            <field name="name">client.service.evaluation.activity</field>
+            <field name="model">client.service.evaluation</field>
+            <field name="arch" type="xml">
+                <activity string="Evaluaciones">
+                    <field name="name"/>
+                    <templates>
+                        <div t-name="activity-box">
+                            <div>
+                                <field name="partner_id" muted="1" display="full"/>
+                            </div>
+                        </div>
+                    </templates>
+                </activity>
+            </field>
+        </record>
+
     </data>
 </odoo>
