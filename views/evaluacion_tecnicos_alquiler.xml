@@ -193,7 +193,7 @@
                                         <field name="name"/>
                                         <field name="partner_id" optional="hide"/>
                                         <field name="product_alquiler" optional="show"/>
-                                        <field name="tipo_servicio" optional="show"/>
+                                        <field name="tipo_servicio_id" optional="show"/>
                                         <field name="agenda" optional="show"/>
                                         <field name="estado"/>
                                     </list>
