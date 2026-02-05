@@ -1644,24 +1644,23 @@ class EvaluacionPersonalEnvioMasivo(models.TransientModel):
     _name = 'evaluacion.personal.envio.masivo'
     _description = 'Asistente para Envío Masivo de Reportes'
     
-    user_id = fields.Many2one(
+    user_ids = fields.Many2many(
         'res.users',
-        string='Usuario Destinatario Principal',
+        'evaluacion_envio_user_rel',
+        'envio_id',
+        'user_id',
+        string='Destinatarios Principales',
         required=True,
-        help='Usuario principal al que se enviarán los reportes'
+        help='Usuarios a los que se enviarán los reportes'
     )
     
-    email = fields.Char(
-        string='Correo Electrónico Principal',
-        required=True,
-        help='Dirección de correo principal donde se enviarán los reportes',
-        related='user_id.email',
-        readonly=False
-    )
-    
-    email_cc = fields.Char(
-        string='CC (Con Copia)',
-        help='Direcciones de correo con copia, separadas por comas'
+    user_cc_ids = fields.Many2many(
+        'res.users',
+        'evaluacion_envio_user_cc_rel',
+        'envio_id',
+        'user_id',
+        string='Con Copia (CC)',
+        help='Usuarios que recibirán copia de los reportes'
     )
     
     subject = fields.Char(
@@ -1683,11 +1682,18 @@ class EvaluacionPersonalEnvioMasivo(models.TransientModel):
         readonly=True
     )
     
-    @api.depends('user_id', 'evaluacion_ids')
+    @api.depends('user_ids', 'evaluacion_ids')
     def _compute_body_html(self):
         """Genera el cuerpo HTML del correo con diseño moderno"""
         for wizard in self:
-            user_name = wizard.user_id.name if wizard.user_id else 'Estimado/a'
+            # Obtener nombres de destinatarios
+            if len(wizard.user_ids) == 1:
+                user_name = wizard.user_ids[0].name
+            elif len(wizard.user_ids) > 1:
+                user_name = 'Estimados colaboradores'
+            else:
+                user_name = 'Estimado/a'
+            
             num_evaluaciones = len(wizard.evaluacion_ids)
             
             # Lista de evaluaciones
@@ -1743,10 +1749,10 @@ class EvaluacionPersonalEnvioMasivo(models.TransientModel):
                                 <tr>
                                     <td style="padding-bottom: 25px;">
                                         <p style="font-size: 16px; color: #2c3e50; margin: 0 0 15px 0;">
-                                            <strong>Estimado/a {user_name}:</strong>
+                                            <strong>{user_name}:</strong>
                                         </p>
                                         <p style="color: #555; margin: 0 0 10px 0;">
-                                            Por medio de la presente, hago llegar los reportes de evaluación del personal. Los documentos adjuntos contienen información detallada sobre el desempeño, competencias y resultados de cada colaborador durante el período evaluado.
+                                            Por medio de la presente, hago llegar los reportes de evaluación del personal. Los documentos adjuntos contienen información detallada sobre el desempeño y competencias de cada colaborador durante el período evaluado.
                                         </p>
                                     </td>
                                 </tr>
@@ -1775,12 +1781,12 @@ class EvaluacionPersonalEnvioMasivo(models.TransientModel):
                                     <td style="background: #f8f9fa; padding: 20px; border-radius: 6px;">
                                         <p style="margin: 0 0 10px 0; color: #2c3e50; font-weight: 600;">Cada reporte incluye:</p>
                                         <ul style="margin: 10px 0; padding-left: 20px; color: #555;">
-                                            <li style="margin: 8px 0;">📈 <strong>Métricas objetivas de productividad</strong></li>
-                                            <li style="margin: 8px 0;">📅 <strong>Análisis diario de actividades</strong></li>
+                                            <li style="margin: 8px 0;">📈 <strong>Métricas de productividad</strong></li>
+                                            <li style="margin: 8px 0;">📅 <strong>Análisis de actividades</strong></li>
                                             <li style="margin: 8px 0;">🔧 <strong>Evaluación de competencias técnicas</strong></li>
-                                            <li style="margin: 8px 0;">😊 <strong>Evaluación de actitudes y comportamientos</strong></li>
+                                            <li style="margin: 8px 0;">😊 <strong>Evaluación de actitudes</strong></li>
                                             <li style="margin: 8px 0;">👥 <strong>Evaluación de atención al cliente</strong></li>
-                                            <li style="margin: 8px 0;">💡 <strong>Retroalimentación y plan de acción</strong></li>
+                                            <li style="margin: 8px 0;">💡 <strong>Retroalimentación</strong></li>
                                         </ul>
                                     </td>
                                 </tr>
@@ -1816,26 +1822,12 @@ class EvaluacionPersonalEnvioMasivo(models.TransientModel):
                                 </tr>
                             </table>
                             
-                            <!-- Sección de Acción -->
-                            <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin: 30px 0;">
-                                <tr>
-                                    <td style="padding: 25px; background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%); border-radius: 8px; border-left: 4px solid #f39c12;">
-                                        <div style="color: #8a6d3b; margin: 0 0 10px 0; font-size: 16px; font-weight: bold;">
-                                            💡 Nota Importante
-                                        </div>
-                                        <div style="color: #856404;">
-                                            Le recomendamos revisar cada evaluación detenidamente. Los reportes contienen información confidencial que debe ser tratada con la debida discreción y profesionalismo.
-                                        </div>
-                                    </td>
-                                </tr>
-                            </table>
-                            
                             <!-- Disponibilidad -->
                             <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin: 25px 0;">
                                 <tr>
                                     <td>
                                         <p style="color: #555; margin: 0 0 10px 0;">
-                                            Quedo a su disposición para cualquier consulta, aclaración o comentario que desee realizar sobre los reportes adjuntos.
+                                            Quedo a su disposición para cualquier consulta o aclaración.
                                         </p>
                                     </td>
                                 </tr>
@@ -1845,9 +1837,8 @@ class EvaluacionPersonalEnvioMasivo(models.TransientModel):
                             <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
                                 <tr>
                                     <td>
-                                        <p style="margin: 5px 0; color: #555;">Atentamente,</p>
+                                        <p style="margin: 5px 0; color: #555;">Saludos cordiales,</p>
                                         <p style="margin: 5px 0;"><strong style="color: #2c3e50;">Jefe de Área Técnica</strong></p>
-                                        <p style="margin: 5px 0; color: #4a5568;">Departamento de Recursos Humanos</p>
                                     </td>
                                 </tr>
                             </table>
@@ -1860,9 +1851,6 @@ class EvaluacionPersonalEnvioMasivo(models.TransientModel):
                         <td style="background: #2c3e50; color: white; padding: 20px; text-align: center; font-size: 14px; border-radius: 0 0 8px 8px;">
                             <div style="margin: 5px 0; opacity: 0.9;">
                                 <strong>Sistema de Evaluación del Personal</strong>
-                            </div>
-                            <div style="margin: 15px 0 5px 0; font-size: 12px; opacity: 0.7;">
-                                📧 Para consultas, contacte al Departamento de RRHH
                             </div>
                         </td>
                     </tr>
@@ -1886,20 +1874,12 @@ class EvaluacionPersonalEnvioMasivo(models.TransientModel):
         if active_ids:
             _logger.info(f"✅ Active IDs encontrados: {active_ids}")
             res['evaluacion_ids'] = [(6, 0, active_ids)]
-            res['user_id'] = self.env.user.id
+            res['user_ids'] = [(6, 0, [self.env.user.id])]
             _logger.info(f"👤 Usuario actual: {self.env.user.name}")
         else:
             _logger.warning("⚠️ No se encontraron IDs activos en el contexto")
         
         return res
-    
-    @api.onchange('user_id')
-    def _onchange_user_id(self):
-        """Actualiza el email cuando cambia el usuario"""
-        if self.user_id and self.user_id.email:
-            self.email = self.user_id.email
-        else:
-            self.email = False
     
     def action_enviar_reportes(self):
         """Genera PDFs de las evaluaciones y los envía por correo"""
@@ -1910,10 +1890,20 @@ class EvaluacionPersonalEnvioMasivo(models.TransientModel):
             _logger.warning("⚠️ No hay evaluaciones seleccionadas para enviar")
             return {'type': 'ir.actions.act_window_close'}
         
-        if not self.email:
-            raise ValidationError("Debe especificar un correo electrónico válido")
+        if not self.user_ids:
+            raise ValidationError("Debe especificar al menos un destinatario")
+        
+        # Obtener emails de destinatarios
+        emails_to = [user.email for user in self.user_ids if user.email]
+        if not emails_to:
+            raise ValidationError("Ninguno de los destinatarios tiene un correo electrónico válido")
+        
+        emails_cc = [user.email for user in self.user_cc_ids if user.email]
         
         _logger.info(f"📊 Preparando envío para {len(self.evaluacion_ids)} evaluaciones")
+        _logger.info(f"📧 Destinatarios: {', '.join(emails_to)}")
+        if emails_cc:
+            _logger.info(f"📧 Con copia: {', '.join(emails_cc)}")
         
         # Buscar reporte PDF
         _logger.info("🔍 Buscando reporte PDF para evaluaciones")
@@ -1973,10 +1963,6 @@ class EvaluacionPersonalEnvioMasivo(models.TransientModel):
         
         # Enviar correo
         try:
-            _logger.info(f"📧 Preparando envío de correo a: {self.email}")
-            if self.email_cc:
-                _logger.info(f"📧 Con copia a: {self.email_cc}")
-            
             # Verificar servidor de correo
             mail_server = self.env['ir.mail_server'].sudo().search([], limit=1)
             if not mail_server:
@@ -1992,15 +1978,15 @@ class EvaluacionPersonalEnvioMasivo(models.TransientModel):
             mail_values = {
                 'subject': self.subject,
                 'body_html': self.body,
-                'email_to': self.email,
+                'email_to': ', '.join(emails_to),
                 'attachment_ids': [(6, 0, attachment_ids)],
                 'mail_server_id': mail_server.id,
                 'auto_delete': False,
             }
             
             # Añadir CC si existe
-            if self.email_cc:
-                mail_values['email_cc'] = self.email_cc
+            if emails_cc:
+                mail_values['email_cc'] = ', '.join(emails_cc)
             
             mail = self.env['mail.mail'].sudo().create(mail_values)
             _logger.info(f"✉️ Correo creado - ID: {mail.id}")
@@ -2018,9 +2004,12 @@ class EvaluacionPersonalEnvioMasivo(models.TransientModel):
                     evaluacion.write({'state': 'enviado'})
                     _logger.info(f"✅ Evaluación {evaluacion.name} → estado 'enviado'")
                 
-                mensaje = f'Se enviaron {len(attachments)} reportes a {self.user_id.name} ({self.email})'
-                if self.email_cc:
-                    mensaje += f' con copia a: {self.email_cc}'
+                # Mensaje de confirmación
+                user_names = ', '.join([u.name for u in self.user_ids])
+                mensaje = f'Se enviaron {len(attachments)} reportes a: {user_names}'
+                if self.user_cc_ids:
+                    cc_names = ', '.join([u.name for u in self.user_cc_ids])
+                    mensaje += f' (CC: {cc_names})'
                 mensaje += ' y se actualizaron los estados.'
                 
                 return {

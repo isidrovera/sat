@@ -14,22 +14,17 @@
                     </div>
                     
                     <!-- Información del destinatario -->
-                    <group string="📧 Información de Destinatarios">
-                        <group>
-                            <field name="user_id" 
-                                   options="{'no_create': True, 'no_open': True}"
-                                   placeholder="Seleccione el usuario destinatario..."/>
-                            <field name="email" 
-                                   placeholder="correo@ejemplo.com"
-                                   readonly="1"
-                                   force_save="1"/>
-                        </group>
-                        <group>
-                            <field name="email_cc" 
-                                   placeholder="copia1@ejemplo.com, copia2@ejemplo.com"/>
-                            <field name="subject" 
-                                   placeholder="Asunto del correo electrónico..."/>
-                        </group>
+                    <group string="📧 Destinatarios">
+                        <field name="user_ids" 
+                               widget="many2many_tags" 
+                               options="{'no_create': True}"
+                               placeholder="Seleccione los destinatarios principales..."/>
+                        <field name="user_cc_ids" 
+                               widget="many2many_tags" 
+                               options="{'no_create': True}"
+                               placeholder="Seleccione los destinatarios con copia (opcional)..."/>
+                        <field name="subject" 
+                               placeholder="Asunto del correo electrónico..."/>
                     </group>
                     
                     <!-- Evaluaciones a enviar -->
