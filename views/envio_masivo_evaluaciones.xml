@@ -7,29 +7,73 @@
         <field name="arch" type="xml">
             <form>
                 <sheet>
-                    <div class="alert alert-info" role="alert">
-                        Se enviarán reportes PDF de las evaluaciones seleccionadas.
+                    <!-- Encabezado informativo -->
+                    <div class="alert alert-info" role="alert" style="margin-bottom: 20px;">
+                        <i class="fa fa-info-circle"/> <strong>Envío Masivo de Reportes:</strong> 
+                        Se generarán y enviarán reportes PDF de las evaluaciones seleccionadas al usuario destinatario.
                     </div>
-                    <group>
-                        <field name="email" placeholder="correo@ejemplo.com"/>
-                        <field name="subject"/>
+                    
+                    <!-- Información del destinatario -->
+                    <group string="📧 Información del Destinatario">
+                        <group>
+                            <field name="user_id" 
+                                   options="{'no_create': True, 'no_open': True}"
+                                   placeholder="Seleccione el usuario destinatario..."/>
+                            <field name="email" 
+                                   placeholder="correo@ejemplo.com"
+                                   readonly="1"
+                                   force_save="1"/>
+                        </group>
+                        <group>
+                            <field name="subject" 
+                                   placeholder="Asunto del correo electrónico..."/>
+                        </group>
                     </group>
-                    <group>
-                        <field name="body" widget="html" options="{'style-inline': true}"/>
+                    
+                    <!-- Evaluaciones a enviar -->
+                    <group string="📋 Evaluaciones Seleccionadas">
+                        <field name="evaluacion_ids" 
+                               nolabel="1"
+                               readonly="1">
+                            <LIST decoration-info="state == 'borrador'" 
+                                  decoration-success="state == 'aprobado'"
+                                  decoration-primary="state == 'enviado'">
+                                <field name="name" string="Código"/>
+                                <field name="nombre_usuario" string="Colaborador"/>
+                                <field name="fecha_evaluacion" string="Fecha"/>
+                                <field name="state" string="Estado" widget="badge"/>
+                            </LIST>
+                        </field>
                     </group>
-                    <group>
-                        <field name="evaluacion_ids" widget="many2many_tags" options="{'no_create': true}"/>
+                    
+                    <!-- Cuerpo del mensaje -->
+                    <group string="✉️ Contenido del Correo">
+                        <field name="body" 
+                               nolabel="1" 
+                               widget="html" 
+                               options="{'style-inline': true, 'height': 400}"/>
                     </group>
+                    
+                    <!-- Nota informativa -->
+                    <div class="alert alert-warning" role="alert" style="margin-top: 20px;">
+                        <i class="fa fa-exclamation-triangle"/> <strong>Nota:</strong> 
+                        Una vez enviados los reportes, el estado de las evaluaciones cambiará automáticamente a "Enviado".
+                    </div>
                 </sheet>
+                
                 <footer>
-                    <button name="action_enviar_reportes" string="Enviar" type="object" class="btn-primary"/>
-                    <button string="Cancelar" special="cancel" class="btn-secondary"/>
+                    <button name="action_enviar_reportes" 
+                            string="📤 Enviar Reportes" 
+                            type="object" 
+                            class="btn-primary"
+                            confirm="¿Está seguro de enviar estos reportes por correo electrónico?"/>
+                    <button string="Cancelar" 
+                            special="cancel" 
+                            class="btn-secondary"/>
                 </footer>
             </form>
         </field>
     </record>
-    
-    
     
     <!-- Configuración de seguridad para el nuevo modelo -->
     <record id="access_evaluacion_personal_envio_masivo" model="ir.model.access">

@@ -235,7 +235,7 @@
                     <field name="response_date" optional="show"/>
                     <field name="response_time" optional="hide" widget="float_time"/>
                     <field name="portal_access_count" optional="hide"/>
-                    <field name="puntaje_servicio" widget="percentage"/>
+                    <field name="puntaje_servicio" widget="percentpie"/>
                     <field name="nivel_atencion"/>
                     <field name="state" 
                            decoration-success="state == 'completed'"
@@ -260,7 +260,7 @@
                     <field name="partner_id"/>
                     <field name="technician_id"/>
                     <field name="evaluation_date"/>
-                    <field name="puntaje_servicio"/>
+                    <field name="puntaje_servicio" widget="percentpie"/>
                     <field name="nivel_atencion"/>
                     <field name="requiere_atencion"/>
                     <field name="state"/>
