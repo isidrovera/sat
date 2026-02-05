@@ -1685,152 +1685,150 @@ class EvaluacionPersonalEnvioMasivo(models.TransientModel):
             user_name = wizard.user_id.name if wizard.user_id else 'Estimado/a'
             num_evaluaciones = len(wizard.evaluacion_ids)
             
-            # Lista de evaluaciones
+            # Lista de evaluaciones - SOLO con campos que existen
             evaluaciones_list = ''
             for eval in wizard.evaluacion_ids:
+                # Usar solo campos que sabemos que existen
+                codigo = eval.name if hasattr(eval, 'name') else 'N/A'
+                nombre = eval.nombre_usuario if hasattr(eval, 'nombre_usuario') else 'N/A'
+                
                 evaluaciones_list += f"""
                     <tr>
                         <td style="padding: 12px; border-bottom: 1px solid #e9ecef; color: #555;">
-                            <strong>{eval.name}</strong>
+                            <strong>{codigo}</strong>
                         </td>
                         <td style="padding: 12px; border-bottom: 1px solid #e9ecef; color: #555;">
-                            {eval.nombre_usuario}
-                        </td>
-                        <td style="padding: 12px; border-bottom: 1px solid #e9ecef; color: #555;">
-                            {eval.fecha_evaluacion.strftime('%d/%m/%Y') if eval.fecha_evaluacion else 'N/A'}
+                            {nombre}
                         </td>
                     </tr>
                 """
             
             wizard.body = f"""
-<!DOCTYPE html>
-<html>
-<head>
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reportes de Evaluación del Personal</title>
-</head>
-<body bgcolor="#f4f4f4" style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; line-height: 1.6; color: #2d3748;">
-    <!-- Contenedor Principal -->
-    <div style="max-width: 800px; margin: 20px auto; padding: 20px;">
-        
-        <!-- Encabezado -->
-        <div style="background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%); padding: 30px 20px; text-align: center; border-radius: 8px 8px 0 0;">
-            <div style="color: #ffffff; font-size: 28px; font-weight: bold; margin: 0;">
-                📊 Reportes de Evaluación del Personal
-            </div>
-            <div style="color: #ffffff; font-size: 16px; margin: 10px 0 0 0; opacity: 0.9;">
-                Sistema de Gestión de Recursos Humanos
-            </div>
-        </div>
-        
-        <!-- Contenido Principal -->
-        <div style="background-color: #ffffff; padding: 30px; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 8px 8px;">
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Reportes de Evaluación del Personal</title>
+    </head>
+    <body bgcolor="#f4f4f4" style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; line-height: 1.6; color: #2d3748;">
+        <!-- Contenedor Principal -->
+        <div style="max-width: 800px; margin: 20px auto; padding: 20px;">
             
-            <!-- Saludo -->
-            <div style="margin: 0 0 25px 0;">
-                <p style="font-size: 16px; color: #2c3e50; margin: 0 0 15px 0;">
-                    <strong>Estimado/a {user_name}:</strong>
-                </p>
-                <p style="color: #555; margin: 0 0 10px 0;">
-                    Por medio de la presente, hago llegar los reportes de evaluación del personal. Los documentos adjuntos contienen información detallada sobre el desempeño, competencias y resultados de cada colaborador durante el período evaluado.
-                </p>
+            <!-- Encabezado -->
+            <div style="background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%); padding: 30px 20px; text-align: center; border-radius: 8px 8px 0 0;">
+                <div style="color: #ffffff; font-size: 28px; font-weight: bold; margin: 0;">
+                    📊 Reportes de Evaluación del Personal
+                </div>
+                <div style="color: #ffffff; font-size: 16px; margin: 10px 0 0 0; opacity: 0.9;">
+                    Sistema de Gestión de Recursos Humanos
+                </div>
             </div>
             
-            <!-- Resumen de Evaluaciones -->
-            <div style="background: #e8f4fd; border: 1px solid #3498db; border-left: 4px solid #3498db; padding: 15px; margin: 0 0 25px 0; border-radius: 6px;">
-                <strong style="color: #2c3e50;">📋 Resumen:</strong> 
-                Se adjuntan <strong>{num_evaluaciones}</strong> reporte(s) de evaluación en formato PDF.
-            </div>
-            
-            <!-- Contenido de las Evaluaciones -->
-            <div style="margin: 25px 0;">
-                <div style="color: #2c3e50; font-size: 20px; margin: 0 0 15px 0; border-bottom: 2px solid #3498db; padding-bottom: 8px; font-weight: bold;">
-                    📑 Contenido de los Reportes
+            <!-- Contenido Principal -->
+            <div style="background-color: #ffffff; padding: 30px; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 8px 8px;">
+                
+                <!-- Saludo -->
+                <div style="margin: 0 0 25px 0;">
+                    <p style="font-size: 16px; color: #2c3e50; margin: 0 0 15px 0;">
+                        <strong>Estimado/a {user_name}:</strong>
+                    </p>
+                    <p style="color: #555; margin: 0 0 10px 0;">
+                        Por medio de la presente, hago llegar los reportes de evaluación del personal. Los documentos adjuntos contienen información detallada sobre el desempeño, competencias y resultados de cada colaborador durante el período evaluado.
+                    </p>
                 </div>
                 
-                <div style="background: #f8f9fa; padding: 20px; border-radius: 6px; margin: 15px 0;">
-                    <p style="margin: 0 0 10px 0; color: #2c3e50; font-weight: 600;">Cada reporte incluye:</p>
-                    <ul style="margin: 10px 0; padding-left: 20px; color: #555;">
-                        <li style="margin: 8px 0;">📈 <strong>Métricas objetivas de productividad</strong></li>
-                        <li style="margin: 8px 0;">📅 <strong>Análisis diario de actividades</strong></li>
-                        <li style="margin: 8px 0;">🔧 <strong>Evaluación de competencias técnicas</strong></li>
-                        <li style="margin: 8px 0;">😊 <strong>Evaluación de actitudes y comportamientos</strong></li>
-                        <li style="margin: 8px 0;">👥 <strong>Evaluación de atención al cliente</strong></li>
-                        <li style="margin: 8px 0;">💡 <strong>Retroalimentación y plan de acción</strong></li>
-                    </ul>
-                </div>
-            </div>
-            
-            <!-- Lista de Evaluaciones Adjuntas -->
-            <div style="margin: 25px 0;">
-                <div style="color: #2c3e50; font-size: 20px; margin: 0 0 15px 0; border-bottom: 2px solid #3498db; padding-bottom: 8px; font-weight: bold;">
-                    📎 Evaluaciones Adjuntas
+                <!-- Resumen de Evaluaciones -->
+                <div style="background: #e8f4fd; border: 1px solid #3498db; border-left: 4px solid #3498db; padding: 15px; margin: 0 0 25px 0; border-radius: 6px;">
+                    <strong style="color: #2c3e50;">📋 Resumen:</strong> 
+                    Se adjuntan <strong>{num_evaluaciones}</strong> reporte(s) de evaluación en formato PDF.
                 </div>
                 
-                <table cellspacing="0" cellpadding="0" style="width: 100%; border-collapse: collapse; margin: 20px 0; background: #ffffff; border-radius: 6px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border: 1px solid #e2e8f0;">
-                    <thead>
-                        <tr style="background: #f8f9fa;">
-                            <th style="color: #2c3e50; font-weight: 600; padding: 15px; text-align: left; border-bottom: 2px solid #e9ecef;">
-                                Código
-                            </th>
-                            <th style="color: #2c3e50; font-weight: 600; padding: 15px; text-align: left; border-bottom: 2px solid #e9ecef;">
-                                Colaborador
-                            </th>
-                            <th style="color: #2c3e50; font-weight: 600; padding: 15px; text-align: left; border-bottom: 2px solid #e9ecef;">
-                                Fecha
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {evaluaciones_list}
-                    </tbody>
-                </table>
-            </div>
-            
-            <!-- Sección de Acción -->
-            <div style="margin: 30px 0; padding: 25px; background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%); border-radius: 8px; border-left: 4px solid #f39c12;">
-                <div style="color: #8a6d3b; margin: 0 0 10px 0; font-size: 16px; font-weight: bold;">
-                    💡 Nota Importante
+                <!-- Contenido de las Evaluaciones -->
+                <div style="margin: 25px 0;">
+                    <div style="color: #2c3e50; font-size: 20px; margin: 0 0 15px 0; border-bottom: 2px solid #3498db; padding-bottom: 8px; font-weight: bold;">
+                        📑 Contenido de los Reportes
+                    </div>
+                    
+                    <div style="background: #f8f9fa; padding: 20px; border-radius: 6px; margin: 15px 0;">
+                        <p style="margin: 0 0 10px 0; color: #2c3e50; font-weight: 600;">Cada reporte incluye:</p>
+                        <ul style="margin: 10px 0; padding-left: 20px; color: #555;">
+                            <li style="margin: 8px 0;">📈 <strong>Métricas objetivas de productividad</strong></li>
+                            <li style="margin: 8px 0;">📅 <strong>Análisis diario de actividades</strong></li>
+                            <li style="margin: 8px 0;">🔧 <strong>Evaluación de competencias técnicas</strong></li>
+                            <li style="margin: 8px 0;">😊 <strong>Evaluación de actitudes y comportamientos</strong></li>
+                            <li style="margin: 8px 0;">👥 <strong>Evaluación de atención al cliente</strong></li>
+                            <li style="margin: 8px 0;">💡 <strong>Retroalimentación y plan de acción</strong></li>
+                        </ul>
+                    </div>
                 </div>
-                <div style="color: #856404;">
-                    Le recomendamos revisar cada evaluación detenidamente. Los reportes contienen información confidencial que debe ser tratada con la debida discreción y profesionalismo.
+                
+                <!-- Lista de Evaluaciones Adjuntas -->
+                <div style="margin: 25px 0;">
+                    <div style="color: #2c3e50; font-size: 20px; margin: 0 0 15px 0; border-bottom: 2px solid #3498db; padding-bottom: 8px; font-weight: bold;">
+                        📎 Evaluaciones Adjuntas
+                    </div>
+                    
+                    <table cellspacing="0" cellpadding="0" style="width: 100%; border-collapse: collapse; margin: 20px 0; background: #ffffff; border-radius: 6px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border: 1px solid #e2e8f0;">
+                        <thead>
+                            <tr style="background: #f8f9fa;">
+                                <th style="color: #2c3e50; font-weight: 600; padding: 15px; text-align: left; border-bottom: 2px solid #e9ecef;">
+                                    Código
+                                </th>
+                                <th style="color: #2c3e50; font-weight: 600; padding: 15px; text-align: left; border-bottom: 2px solid #e9ecef;">
+                                    Colaborador
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {evaluaciones_list}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Sección de Acción -->
+                <div style="margin: 30px 0; padding: 25px; background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%); border-radius: 8px; border-left: 4px solid #f39c12;">
+                    <div style="color: #8a6d3b; margin: 0 0 10px 0; font-size: 16px; font-weight: bold;">
+                        💡 Nota Importante
+                    </div>
+                    <div style="color: #856404;">
+                        Le recomendamos revisar cada evaluación detenidamente. Los reportes contienen información confidencial que debe ser tratada con la debida discreción y profesionalismo.
+                    </div>
+                </div>
+                
+                <!-- Disponibilidad -->
+                <div style="margin: 25px 0;">
+                    <p style="color: #555; margin: 0 0 10px 0;">
+                        Quedo a su disposición para cualquier consulta, aclaración o comentario que desee realizar sobre los reportes adjuntos.
+                    </p>
+                </div>
+                
+                <!-- Pie de mensaje -->
+                <div style="margin-top: 30px; text-align: left; padding-top: 20px; border-top: 1px solid #eee;">
+                    <p style="margin: 5px 0; color: #555;">Atentamente,</p>
+                    <p style="margin: 5px 0;"><strong style="color: #2c3e50;">Departamento de Recursos Humanos</strong></p>
+                    <p style="margin: 5px 0; color: #4a5568;">Sistema de Gestión de Personal</p>
                 </div>
             </div>
             
-            <!-- Disponibilidad -->
-            <div style="margin: 25px 0;">
-                <p style="color: #555; margin: 0 0 10px 0;">
-                    Quedo a su disposición para cualquier consulta, aclaración o comentario que desee realizar sobre los reportes adjuntos.
-                </p>
-            </div>
-            
-            <!-- Pie de mensaje -->
-            <div style="margin-top: 30px; text-align: left; padding-top: 20px; border-top: 1px solid #eee;">
-                <p style="margin: 5px 0; color: #555;">Atentamente,</p>
-                <p style="margin: 5px 0;"><strong style="color: #2c3e50;">Departamento de Recursos Humanos</strong></p>
-                <p style="margin: 5px 0; color: #4a5568;">Sistema de Gestión de Personal</p>
+            <!-- Pie de página -->
+            <div style="background: #2c3e50; color: white; padding: 20px; text-align: center; font-size: 14px; border-radius: 0 0 8px 8px;">
+                <div style="margin: 5px 0; opacity: 0.9;">
+                    <strong>Sistema de Evaluación del Personal</strong>
+                </div>
+                <div style="margin: 5px 0; opacity: 0.8;">
+                    Este es un correo automático generado por el sistema
+                </div>
+                <div style="margin: 5px 0; opacity: 0.8;">
+                    Por favor no responda directamente a este correo
+                </div>
+                <div style="margin: 15px 0 5px 0; font-size: 12px; opacity: 0.7;">
+                    📧 Para consultas, contacte al Departamento de RRHH
+                </div>
             </div>
         </div>
-        
-        <!-- Pie de página -->
-        <div style="background: #2c3e50; color: white; padding: 20px; text-align: center; font-size: 14px; border-radius: 0 0 8px 8px;">
-            <div style="margin: 5px 0; opacity: 0.9;">
-                <strong>Sistema de Evaluación del Personal</strong>
-            </div>
-            <div style="margin: 5px 0; opacity: 0.8;">
-                Este es un correo automático generado por el sistema
-            </div>
-            <div style="margin: 5px 0; opacity: 0.8;">
-                Por favor no responda directamente a este correo
-            </div>
-            <div style="margin: 15px 0 5px 0; font-size: 12px; opacity: 0.7;">
-                📧 Para consultas, contacte al Departamento de RRHH
-            </div>
-        </div>
-    </div>
-</body>
-</html>
+    </body>
+    </html>
             """
     
     @api.model
