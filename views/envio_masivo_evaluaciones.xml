@@ -33,17 +33,9 @@
                     <!-- Evaluaciones a enviar -->
                     <group string="📋 Evaluaciones Seleccionadas">
                         <field name="evaluacion_ids" 
-                               nolabel="1"
-                               readonly="1">
-                            <LIST decoration-info="state == 'borrador'" 
-                                  decoration-success="state == 'aprobado'"
-                                  decoration-primary="state == 'enviado'">
-                                <field name="name" string="Código"/>
-                                <field name="nombre_usuario" string="Colaborador"/>
-                                <field name="fecha_evaluacion" string="Fecha"/>
-                                <field name="state" string="Estado" widget="badge"/>
-                            </LIST>
-                        </field>
+                               widget="many2many_tags" 
+                               options="{'no_create': true}"
+                               readonly="1"/>
                     </group>
                     
                     <!-- Cuerpo del mensaje -->
