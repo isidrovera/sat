@@ -10,11 +10,11 @@
                     <!-- Encabezado informativo -->
                     <div class="alert alert-info" role="alert" style="margin-bottom: 20px;">
                         <i class="fa fa-info-circle"/> <strong>Envío Masivo de Reportes:</strong> 
-                        Se generarán y enviarán reportes PDF de las evaluaciones seleccionadas al usuario destinatario.
+                        Se generarán y enviarán reportes PDF de las evaluaciones seleccionadas a los destinatarios especificados.
                     </div>
                     
                     <!-- Información del destinatario -->
-                    <group string="📧 Información del Destinatario">
+                    <group string="📧 Información de Destinatarios">
                         <group>
                             <field name="user_id" 
                                    options="{'no_create': True, 'no_open': True}"
@@ -25,6 +25,8 @@
                                    force_save="1"/>
                         </group>
                         <group>
+                            <field name="email_cc" 
+                                   placeholder="copia1@ejemplo.com, copia2@ejemplo.com"/>
                             <field name="subject" 
                                    placeholder="Asunto del correo electrónico..."/>
                         </group>
