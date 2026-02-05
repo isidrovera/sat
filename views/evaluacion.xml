@@ -220,10 +220,10 @@
                     <field name="usuario_id"/>
                     <field name="cantidad_reparaciones"/>
                     <field name="objetivo_reparaciones"/>
-                    <field name="porcentaje_reparaciones" widget="percentage"/>
+                    <field name="porcentaje_reparaciones" widget="percentpie"/>
                     <field name="cantidad_tickets"/>
                     <field name="objetivo_tickets"/>
-                    <field name="porcentaje_tickets" widget="percentage"/>
+                    <field name="porcentaje_tickets" widget="percentpie"/>
                     <field name="puntaje_total" widget="progressbar"/>
                     <field name="nivel_desempeno"/>
                     <field name="state" widget="badge"
