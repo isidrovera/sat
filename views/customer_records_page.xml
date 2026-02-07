@@ -32,7 +32,7 @@
                                    id="searchInput" 
                                    class="form-control" 
                                    placeholder="Buscar por modelo, serie o área..."/>
-                            <button class="btn btn-outline-secondary" type="button" onclick="clearSearch()">
+                            <button class="btn btn-outline-secondary" type="button" id="clearSearchBtn">
                                 <i class="fa fa-times"/>
                             </button>
                         </div>
@@ -231,25 +231,26 @@
                 }
             </style>
 
-            <!-- JavaScript mejorado -->
+            <!-- JavaScript mejorado SIN usar < o > -->
             <script type="text/javascript">
-                function filterTable() {
+                function filterRecords() {
                     var input = document.getElementById('searchInput');
-                    var filter = input.value.toLowerCase();
+                    var filter = input.value.toLowerCase().trim();
                     
                     // Filtrar tabla desktop
                     var table = document.getElementById('recordsTable');
                     var noResults = document.getElementById('noResults');
+                    var visibleCount = 0;
                     
                     if (table) {
-                        var rows = table.getElementsByTagName('tr');
-                        var visibleCount = 0;
+                        var tbody = table.getElementsByTagName('tbody')[0];
+                        var rows = tbody.getElementsByTagName('tr');
                         
-                        for (var i = 1; i &lt; rows.length; i++) {
+                        for (var i = 0; i !== rows.length; i++) {
                             var row = rows[i];
                             var text = row.textContent || row.innerText;
                             
-                            if (text.toLowerCase().indexOf(filter) &lt; -1) {
+                            if (filter === '' || text.toLowerCase().indexOf(filter) !== -1) {
                                 row.style.display = '';
                                 visibleCount++;
                             } else {
@@ -258,10 +259,12 @@
                         }
                         
                         if (noResults) {
-                            if (visibleCount &lt; 0) {
-                                noResults.classList.add('d-none');
-                            } else {
+                            if (visibleCount === 0 &amp;&amp; filter !== '') {
                                 noResults.classList.remove('d-none');
+                                table.parentElement.parentElement.classList.add('d-none');
+                            } else {
+                                noResults.classList.add('d-none');
+                                table.parentElement.parentElement.classList.remove('d-none');
                             }
                         }
                     }
@@ -274,7 +277,7 @@
                     cards.forEach(function(card) {
                         var text = card.textContent || card.innerText;
                         
-                        if (text.toLowerCase().indexOf(filter) &lt; -1) {
+                        if (filter === '' || text.toLowerCase().indexOf(filter) !== -1) {
                             card.style.display = '';
                             visibleCardCount++;
                         } else {
@@ -283,24 +286,31 @@
                     });
                     
                     if (noResultsMobile) {
-                        if (visibleCardCount &lt; 0) {
-                            noResultsMobile.classList.add('d-none');
-                        } else {
+                        if (visibleCardCount === 0 &amp;&amp; filter !== '') {
                             noResultsMobile.classList.remove('d-none');
+                        } else {
+                            noResultsMobile.classList.add('d-none');
                         }
                     }
                 }
                 
                 function clearSearch() {
                     document.getElementById('searchInput').value = '';
-                    filterTable();
+                    filterRecords();
                 }
 
-                // Event listener para búsqueda
+                // Event listeners
                 document.addEventListener('DOMContentLoaded', function() {
                     var searchInput = document.getElementById('searchInput');
+                    var clearBtn = document.getElementById('clearSearchBtn');
+                    
                     if (searchInput) {
-                        searchInput.addEventListener('keyup', filterTable);
+                        searchInput.addEventListener('keyup', filterRecords);
+                        searchInput.addEventListener('input', filterRecords);
+                    }
+                    
+                    if (clearBtn) {
+                        clearBtn.addEventListener('click', clearSearch);
                     }
                 });
             </script>
