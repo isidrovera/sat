@@ -1,108 +1,375 @@
 <?xml version="1.0" encoding="utf-8"?>
-
 <odoo>
     <template id="customer_records_page" name="Lista de maquinas">
         <t t-call="website.layout">
-            <div class="container">
-                <h2><t t-esc="cliente"/></h2>
-
-                <!-- Campo de búsqueda -->
-                <div class="form-group mb-3">
-                    <input type="text" id="searchInput" class="form-control" placeholder="Buscar por modelo, serie o área" onkeyup="filterTable()"/>
-                </div>
-
-                <!-- Tabla visible en pantallas medianas o más grandes -->
-                <div class="table-responsive d-none d-md-block">
-                    <table class="table table-striped" id="recordsTable">
-                        <thead>
-                            <tr>
-                                <th>Modelo</th>
-                                <th>Serie</th>
-                                <th>Área</th>
-                                <th>Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <t t-foreach="registros" t-as="registro">
-                                <tr>
-                                    <td><t t-esc="registro.name.name"/></td>
-                                    <td><t t-esc="registro.serie"/></td>
-                                    <td><t t-esc="registro.ubicacion_instalacion"/></td>
-                                    <td>
-                                        <a t-att-href="'/ticket/reportar_incidencia?id_registro=' + str(registro.id) + '&amp;user_name=' + (user_name or '') + '&amp;phone_number=' + (phone_number or '')" class="btn btn-primary">
-                                            <i class="fa fa-exclamation-circle"></i> Reportar Incidencia
-                                        </a>
-                                        <a t-att-href="'/toner/solicitar_toner?id_registro=' + str(registro.id) + '&amp;user_name=' + (user_name or '') + '&amp;phone_number=' + (phone_number or '')" class="btn btn-secondary">
-                                            <i class="fa fa-print"></i> Solicitar Tóner
-                                        </a>
-                                    </td>
-                                </tr>
-                            </t>
-                        </tbody>
-                    </table>
-                </div>
-
-                <!-- Vista tipo Kanban para pantallas pequeñas -->
-                <div class="kanban-view d-block d-md-none"> 
-                    <t t-foreach="registros" t-as="registro">
-                        <div class="card mb-3">
-                            <div class="card-body">
-                                <h5 class="card-title"><strong>Modelo:</strong> <t t-esc="registro.name.name"/></h5>
-                                <p class="card-text">
-                                    <strong>Serie:</strong> <t t-esc="registro.serie"/><br/>
-                                    <strong>Área:</strong> <t t-esc="registro.ubicacion_instalacion"/>
+            <div class="container py-5">
+                <!-- Encabezado mejorado -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="d-flex align-items-center justify-content-between flex-wrap">
+                            <div>
+                                <h1 class="mb-1 fw-bold text-primary">
+                                    <i class="fa fa-building me-2"/>
+                                    <t t-esc="cliente"/>
+                                </h1>
+                                <p class="text-muted mb-0">
+                                    <i class="fa fa-desktop me-1"/>
+                                    <span id="totalRecords"><t t-esc="len(registros)"/></span> equipos registrados
                                 </p>
-                                <div class="btn-group d-flex" role="group">
-                                    <a t-att-href="'/ticket/reportar_incidencia?id_registro=' + str(registro.id) + '&amp;user_name=' + (user_name or '') + '&amp;phone_number=' + (phone_number or '')" class="btn btn-primary w-100">
-                                        <i class="fa fa-exclamation-circle"></i> Reportar
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Barra de búsqueda mejorada -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="input-group input-group-lg shadow-sm">
+                            <span class="input-group-text bg-white">
+                                <i class="fa fa-search text-muted"/>
+                            </span>
+                            <input type="text" 
+                                   id="searchInput" 
+                                   class="form-control" 
+                                   placeholder="Buscar por modelo, serie o área..."/>
+                            <button class="btn btn-outline-secondary" type="button" onclick="clearSearch()">
+                                <i class="fa fa-times"/>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabla responsive mejorada para pantallas medianas/grandes -->
+                <div class="d-none d-md-block">
+                    <div class="card border-0 shadow-sm">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0" id="recordsTable">
+                                <thead class="bg-light">
+                                    <tr>
+                                        <th class="border-0 text-uppercase text-muted fw-semibold px-4 py-3">
+                                            <i class="fa fa-tag me-2"/>Modelo
+                                        </th>
+                                        <th class="border-0 text-uppercase text-muted fw-semibold py-3">
+                                            <i class="fa fa-barcode me-2"/>Serie
+                                        </th>
+                                        <th class="border-0 text-uppercase text-muted fw-semibold py-3">
+                                            <i class="fa fa-map-marker me-2"/>Área
+                                        </th>
+                                        <th class="border-0 text-uppercase text-muted fw-semibold py-3 text-center">
+                                            <i class="fa fa-cog me-2"/>Acciones
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-foreach="registros" t-as="registro">
+                                        <tr class="record-row">
+                                            <td class="px-4 py-3">
+                                                <div class="d-flex align-items-center">
+                                                    <div class="icon-circle bg-primary bg-opacity-10 rounded-circle p-2 me-3">
+                                                        <i class="fa fa-print text-primary"/>
+                                                    </div>
+                                                    <span class="fw-semibold"><t t-esc="registro.name.name"/></span>
+                                                </div>
+                                            </td>
+                                            <td class="py-3">
+                                                <span class="badge bg-light text-dark px-3 py-2">
+                                                    <t t-esc="registro.serie"/>
+                                                </span>
+                                            </td>
+                                            <td class="py-3">
+                                                <i class="fa fa-map-marker-alt text-muted me-2"/>
+                                                <t t-esc="registro.ubicacion_instalacion"/>
+                                            </td>
+                                            <td class="py-3">
+                                                <div class="d-flex gap-2 justify-content-center">
+                                                    <a t-attf-href="/ticket/reportar_incidencia?id_registro={{registro.id}}&amp;user_name={{user_name or ''}}&amp;phone_number={{phone_number or ''}}" 
+                                                       class="btn btn-danger btn-sm px-3 shadow-sm">
+                                                        <i class="fa fa-exclamation-circle me-1"/> 
+                                                        <span class="d-none d-lg-inline">Incidencia</span>
+                                                    </a>
+                                                    <a t-attf-href="/toner/solicitar_toner?id_registro={{registro.id}}&amp;user_name={{user_name or ''}}&amp;phone_number={{phone_number or ''}}" 
+                                                       class="btn btn-primary btn-sm px-3 shadow-sm">
+                                                        <i class="fa fa-print me-1"/> 
+                                                        <span class="d-none d-lg-inline">Tóner</span>
+                                                    </a>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </t>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- Mensaje cuando no hay resultados -->
+                    <div id="noResults" class="text-center py-5 d-none">
+                        <i class="fa fa-search fa-3x text-muted mb-3"/>
+                        <h5 class="text-muted">No se encontraron resultados</h5>
+                        <p class="text-muted">Intenta con otros términos de búsqueda</p>
+                    </div>
+                </div>
+
+                <!-- Vista tipo tarjetas mejorada para móviles -->
+                <div class="d-block d-md-none">
+                    <t t-foreach="registros" t-as="registro">
+                        <div class="card border-0 shadow-sm mb-3 record-card">
+                            <div class="card-body p-4">
+                                <!-- Header de la tarjeta -->
+                                <div class="d-flex align-items-start mb-3">
+                                    <div class="icon-circle-mobile bg-primary bg-opacity-10 rounded-3 p-3 me-3">
+                                        <i class="fa fa-print fa-lg text-primary"/>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <h5 class="card-title mb-1 fw-bold">
+                                            <t t-esc="registro.name.name"/>
+                                        </h5>
+                                        <span class="badge bg-light text-dark">
+                                            <i class="fa fa-barcode me-1"/>
+                                            <t t-esc="registro.serie"/>
+                                        </span>
+                                    </div>
+                                </div>
+                                
+                                <!-- Ubicación -->
+                                <div class="mb-3 pb-3 border-bottom">
+                                    <p class="mb-0 text-muted">
+                                        <i class="fa fa-map-marker-alt me-2"/>
+                                        <small>Ubicación:</small>
+                                    </p>
+                                    <p class="mb-0 fw-semibold">
+                                        <t t-esc="registro.ubicacion_instalacion"/>
+                                    </p>
+                                </div>
+                                
+                                <!-- Botones de acción -->
+                                <div class="d-grid gap-2">
+                                    <a t-attf-href="/ticket/reportar_incidencia?id_registro={{registro.id}}&amp;user_name={{user_name or ''}}&amp;phone_number={{phone_number or ''}}" 
+                                       class="btn btn-danger shadow-sm">
+                                        <i class="fa fa-exclamation-circle me-2"/>
+                                        Reportar Incidencia
                                     </a>
-                                    <a t-att-href="'/toner/solicitar_toner?id_registro=' + str(registro.id) + '&amp;user_name=' + (user_name or '') + '&amp;phone_number=' + (phone_number or '')" class="btn btn-secondary w-100">
-                                        <i class="fa fa-print"></i> Tóner
+                                    <a t-attf-href="/toner/solicitar_toner?id_registro={{registro.id}}&amp;user_name={{user_name or ''}}&amp;phone_number={{phone_number or ''}}" 
+                                       class="btn btn-primary shadow-sm">
+                                        <i class="fa fa-print me-2"/>
+                                        Solicitar Tóner
                                     </a>
                                 </div>
                             </div>
                         </div>
                     </t>
+                    
+                    <!-- Mensaje cuando no hay resultados en móvil -->
+                    <div id="noResultsMobile" class="text-center py-5 d-none">
+                        <i class="fa fa-search fa-3x text-muted mb-3"/>
+                        <h5 class="text-muted">No se encontraron resultados</h5>
+                        <p class="text-muted">Intenta con otros términos de búsqueda</p>
+                    </div>
                 </div>
             </div>
 
-            <!-- Importar el archivo JS -->
-            <script type="text/javascript" src="/sat/static/src/js/searchFilter.js"></script>
+            <!-- Estilos CSS -->
+            <style>
+                /* Hover effects */
+                .record-row {
+                    transition: all 0.3s ease;
+                }
+
+                .record-row:hover {
+                    background-color: #f8f9fa;
+                    transform: scale(1.01);
+                }
+
+                .record-card {
+                    transition: all 0.3s ease;
+                    border-left: 4px solid transparent;
+                }
+
+                .record-card:hover {
+                    border-left-color: var(--primary);
+                    transform: translateX(5px);
+                }
+
+                /* Input de búsqueda */
+                #searchInput {
+                    transition: all 0.3s ease;
+                }
+
+                /* Iconos circulares */
+                .icon-circle {
+                    width: 40px;
+                    height: 40px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+
+                .icon-circle-mobile {
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+
+                /* Cards en móvil */
+                .card {
+                    border-radius: 12px;
+                    overflow: hidden;
+                }
+
+                /* Botones */
+                .btn {
+                    border-radius: 8px;
+                    font-weight: 500;
+                    transition: all 0.3s ease;
+                }
+
+                .btn:hover {
+                    transform: translateY(-2px);
+                }
+
+                .shadow-sm {
+                    box-shadow: 0 .125rem .25rem rgba(0,0,0,.075)!important;
+                }
+            </style>
+
+            <!-- JavaScript mejorado -->
+            <script type="text/javascript">
+                function filterTable() {
+                    var input = document.getElementById('searchInput');
+                    var filter = input.value.toLowerCase();
+                    
+                    // Filtrar tabla desktop
+                    var table = document.getElementById('recordsTable');
+                    var noResults = document.getElementById('noResults');
+                    
+                    if (table) {
+                        var rows = table.getElementsByTagName('tr');
+                        var visibleCount = 0;
+                        
+                        for (var i = 1; i &lt; rows.length; i++) {
+                            var row = rows[i];
+                            var text = row.textContent || row.innerText;
+                            
+                            if (text.toLowerCase().indexOf(filter) &lt; -1) {
+                                row.style.display = '';
+                                visibleCount++;
+                            } else {
+                                row.style.display = 'none';
+                            }
+                        }
+                        
+                        if (noResults) {
+                            if (visibleCount &lt; 0) {
+                                noResults.classList.add('d-none');
+                            } else {
+                                noResults.classList.remove('d-none');
+                            }
+                        }
+                    }
+                    
+                    // Filtrar cards móvil
+                    var cards = document.querySelectorAll('.record-card');
+                    var noResultsMobile = document.getElementById('noResultsMobile');
+                    var visibleCardCount = 0;
+                    
+                    cards.forEach(function(card) {
+                        var text = card.textContent || card.innerText;
+                        
+                        if (text.toLowerCase().indexOf(filter) &lt; -1) {
+                            card.style.display = '';
+                            visibleCardCount++;
+                        } else {
+                            card.style.display = 'none';
+                        }
+                    });
+                    
+                    if (noResultsMobile) {
+                        if (visibleCardCount &lt; 0) {
+                            noResultsMobile.classList.add('d-none');
+                        } else {
+                            noResultsMobile.classList.remove('d-none');
+                        }
+                    }
+                }
+                
+                function clearSearch() {
+                    document.getElementById('searchInput').value = '';
+                    filterTable();
+                }
+
+                // Event listener para búsqueda
+                document.addEventListener('DOMContentLoaded', function() {
+                    var searchInput = document.getElementById('searchInput');
+                    if (searchInput) {
+                        searchInput.addEventListener('keyup', filterTable);
+                    }
+                });
+            </script>
 
         </t>
     </template>
+
     <template id="pagina_sin_registros" name="No se encontraron registros">
         <t t-call="website.layout">
-            <div class="container mt-4">
-                <div class="alert alert-info">
-                    <h4 class="alert-heading">No se encontraron registros</h4>
-                    <p>No hay registros de alquiler disponibles para el cliente: <strong t-esc="cliente"/></p>
-                    <t t-if="user_name">
-                        <p>Usuario: <span t-esc="user_name"/></p>
-                    </t>
-                    <t t-if="phone_number">
-                        <p>Teléfono: <span t-esc="phone_number"/></p>
-                    </t>
-                    <hr/>
-                    <p class="mb-0">
-                        <a href="/" class="btn btn-primary">Volver al inicio</a>
-                    </p>
+            <div class="container mt-5">
+                <div class="row justify-content-center">
+                    <div class="col-md-8 col-lg-6">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body text-center p-5">
+                                <div class="mb-4">
+                                    <i class="fa fa-inbox fa-4x text-muted"/>
+                                </div>
+                                <h3 class="mb-3 fw-bold">No se encontraron registros</h3>
+                                <p class="text-muted mb-4">
+                                    No hay registros de alquiler disponibles para el cliente: 
+                                    <strong class="text-primary"><t t-esc="cliente"/></strong>
+                                </p>
+                                <t t-if="user_name">
+                                    <p class="mb-2">
+                                        <i class="fa fa-user me-2 text-muted"/>
+                                        <span t-esc="user_name"/>
+                                    </p>
+                                </t>
+                                <t t-if="phone_number">
+                                    <p class="mb-4">
+                                        <i class="fa fa-phone me-2 text-muted"/>
+                                        <span t-esc="phone_number"/>
+                                    </p>
+                                </t>
+                                <a href="/" class="btn btn-primary btn-lg px-5 shadow-sm">
+                                    <i class="fa fa-home me-2"/>
+                                    Volver al inicio
+                                </a>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </t>
     </template>
+
     <template id="pagina_error" name="Página de Error">
-    <t t-call="website.layout">
-        <div class="container mt-4">
-            <div class="alert alert-danger">
-                <h4 class="alert-heading">Error</h4>
-                <p>Ha ocurrido un error al procesar su solicitud.</p>
-                <hr/>
-                <p class="mb-0">
-                    <a href="/" class="btn btn-primary">Volver al inicio</a>
-                </p>
+        <t t-call="website.layout">
+            <div class="container mt-5">
+                <div class="row justify-content-center">
+                    <div class="col-md-8 col-lg-6">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body text-center p-5">
+                                <div class="mb-4">
+                                    <i class="fa fa-exclamation-triangle fa-4x text-danger"/>
+                                </div>
+                                <h3 class="mb-3 fw-bold text-danger">Error</h3>
+                                <p class="text-muted mb-4">
+                                    Ha ocurrido un error al procesar su solicitud.
+                                </p>
+                                <a href="/" class="btn btn-primary btn-lg px-5 shadow-sm">
+                                    <i class="fa fa-home me-2"/>
+                                    Volver al inicio
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </div>
-    </t>
-</template>
+        </t>
+    </template>
 </odoo>
