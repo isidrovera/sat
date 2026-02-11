@@ -1,12 +1,14 @@
 # ================================================================================================
 # MODELO: printtracker_alert.py - Sistema de Alertas PrintTracker
-# Corregido: Email configurable a soporte, API real PrintTracker, timestamps naive
+# Email configurable vía ir.config_parameter: printtracker.alert.email_destino
+# Timestamps naive para Odoo, campos alineados con API real PrintTracker
 # ================================================================================================
 
 from odoo import models, fields, api
 import logging
 import traceback
-from datetime import datetime, timedelta, date
+from datetime import datetime, timedelta
+from dateutil import parser as dateutil_parser
 import json
 
 _logger = logging.getLogger(__name__)
@@ -14,24 +16,21 @@ _logger = logging.getLogger(__name__)
 
 class PrintTrackerAlert(models.Model):
     _name = 'printtracker.alert'
-    _description = 'Sistema de Alertas PrintTracker'
+    _description = 'Alertas PrintTracker'
     _order = 'fecha_creacion desc, prioridad desc'
     _rec_name = 'display_name'
 
     # ==========================================
-    # IDENTIFICACIÓN PRINCIPAL
+    # IDENTIFICACIÓN
     # ==========================================
     serie_equipo = fields.Char('Serie del Equipo', required=True, index=True)
-    equipo_id = fields.Many2one(
-        'alquiler', string='Equipo',
-        compute='_compute_equipo_id', store=True, index=True
-    )
+    equipo_id = fields.Many2one('alquiler', string='Equipo',
+                                compute='_compute_equipo_id', store=True, index=True)
 
     # ==========================================
-    # TIPO Y CLASIFICACIÓN DE ALERTA
+    # TIPO Y PRIORIDAD
     # ==========================================
     tipo_alerta = fields.Selection([
-        # Alertas internas (generadas por revisiones locales)
         ('suministro_bajo', 'Suministro Bajo'),
         ('suministro_critico', 'Suministro Crítico'),
         ('suministro_vacio', 'Suministro Vacío'),
@@ -43,7 +42,6 @@ class PrintTrackerAlert(models.Model):
         ('mantenimiento_debido', 'Mantenimiento Requerido'),
         ('error_sincronizacion', 'Error de Sincronización'),
         ('conflicto_datos', 'Conflicto en Datos'),
-        # Alertas de API Events (PrintTracker Pro)
         ('paper_jam', 'Atasco de Papel'),
         ('device_error', 'Error de Dispositivo'),
         ('supply_replaced', 'Suministro Reemplazado'),
@@ -55,15 +53,12 @@ class PrintTrackerAlert(models.Model):
     ], string='Tipo de Alerta', required=True, index=True)
 
     prioridad = fields.Selection([
-        ('baja', 'Baja'),
-        ('media', 'Media'),
-        ('alta', 'Alta'),
-        ('critica', 'Crítica'),
-        ('urgente', 'Urgente'),
+        ('baja', 'Baja'), ('media', 'Media'), ('alta', 'Alta'),
+        ('critica', 'Crítica'), ('urgente', 'Urgente'),
     ], string='Prioridad', required=True, default='media', index=True)
 
     # ==========================================
-    # CONTENIDO DE LA ALERTA
+    # CONTENIDO
     # ==========================================
     titulo = fields.Char('Título', required=True)
     descripcion = fields.Text('Descripción')
@@ -73,23 +68,20 @@ class PrintTrackerAlert(models.Model):
     # FECHAS
     # ==========================================
     fecha_creacion = fields.Datetime('Fecha Creación', default=fields.Datetime.now, readonly=True)
-    fecha_deteccion = fields.Datetime('Fecha Detección', help='Cuándo se detectó el problema')
-    fecha_vencimiento = fields.Datetime('Fecha Vencimiento', help='Cuándo expira la alerta')
+    fecha_deteccion = fields.Datetime('Fecha Detección')
+    fecha_vencimiento = fields.Datetime('Fecha Vencimiento')
 
     # ==========================================
-    # ESTADO DE LA ALERTA
+    # ESTADO
     # ==========================================
     estado = fields.Selection([
-        ('nueva', 'Nueva'),
-        ('notificada', 'Notificada'),
-        ('en_proceso', 'En Proceso'),
-        ('resuelta', 'Resuelta'),
-        ('cerrada', 'Cerrada'),
-        ('ignorada', 'Ignorada'),
+        ('nueva', 'Nueva'), ('notificada', 'Notificada'),
+        ('en_proceso', 'En Proceso'), ('resuelta', 'Resuelta'),
+        ('cerrada', 'Cerrada'), ('ignorada', 'Ignorada'),
     ], string='Estado', default='nueva', index=True)
 
     # ==========================================
-    # GESTIÓN Y RESOLUCIÓN
+    # GESTIÓN
     # ==========================================
     asignado_a = fields.Many2one('res.users', string='Asignado A')
     resuelto_por = fields.Many2one('res.users', string='Resuelto Por')
@@ -97,23 +89,18 @@ class PrintTrackerAlert(models.Model):
     notas_resolucion = fields.Text('Notas de Resolución')
 
     # ==========================================
-    # INFORMACIÓN ESPECÍFICA SEGÚN TIPO
+    # DATOS ESPECÍFICOS
     # ==========================================
-    # Suministros
     suministro_id = fields.Many2one('printtracker.supply', string='Suministro Relacionado')
     porcentaje_suministro = fields.Float('Porcentaje Suministro (%)')
-
-    # Equipos offline
     dias_sin_lecturas = fields.Integer('Días sin Lecturas')
     ultima_lectura = fields.Datetime('Última Lectura')
-
-    # Contadores
     contador_actual = fields.Integer('Contador Actual')
     contador_anterior = fields.Integer('Contador Anterior')
     diferencia_contador = fields.Integer('Diferencia Contador')
 
     # ==========================================
-    # CONFIGURACIÓN DE NOTIFICACIONES
+    # NOTIFICACIONES
     # ==========================================
     notificar_email = fields.Boolean('Notificar por Email', default=True)
     notificar_chatter = fields.Boolean('Notificar en Chatter', default=True)
@@ -121,78 +108,51 @@ class PrintTrackerAlert(models.Model):
     chatter_enviado = fields.Boolean('Chatter Enviado', readonly=True)
 
     # ==========================================
-    # CONTROL DE REPETICIÓN
+    # REPETICIÓN Y CONTROL
     # ==========================================
     es_recurrente = fields.Boolean('Es Recurrente', default=False)
-    frecuencia_revision = fields.Integer('Frecuencia Revisión (minutos)', default=60)
+    frecuencia_revision = fields.Integer('Frecuencia Revisión (min)', default=60)
     ultima_revision = fields.Datetime('Última Revisión')
     contador_repeticiones = fields.Integer('Repeticiones', default=1)
     max_repeticiones = fields.Integer('Máximo Repeticiones', default=5)
 
     # ==========================================
-    # ORIGEN DE DATOS
+    # ORIGEN
     # ==========================================
     origen_datos = fields.Selection([
         ('interno', 'Generado Internamente'),
         ('api_events', 'Event de PrintTracker API'),
-    ], string='Origen de Datos', default='interno', required=True, index=True)
+    ], string='Origen', default='interno', required=True, index=True)
 
     # ==========================================
-    # CAMPOS DE API EVENTS (PrintTracker Pro)
-    # Estructura real del event:
-    #   id, createdDate, modifiedDate, entityKey, installKey,
-    #   deviceKey, deviceSerialNumber, timestamp, description,
-    #   alertType, supplyKey, resolutionStatus, acknowledged, meterRead
+    # CAMPOS DE API EVENTS (PrintTracker real)
     # ==========================================
-    api_event_id = fields.Char(
-        'Event ID de API', index=True,
-        help='ID único del event de PrintTracker API'
-    )
-    api_event_type = fields.Char(
-        'Tipo de Event API',
-        help='alertType del event de PrintTracker API'
-    )
-    api_resolution_status = fields.Char(
-        'Estado Resolución API',
-        help='resolutionStatus del event (Open, Resolved, etc.)'
-    )
-    api_event_timestamp = fields.Datetime('Timestamp del Event API')
-    api_supply_key = fields.Char(
-        'Supply Key API',
-        help='supplyKey del event (blackToner, cyanToner, etc.)'
-    )
-    api_device_key = fields.Char(
-        'Device Key API',
-        help='deviceKey del event en PrintTracker'
-    )
-    api_raw_data = fields.Text(
-        'Datos Crudos de API',
-        help='JSON completo del event para debugging'
-    )
+    api_event_id = fields.Char('Event ID API', index=True)
+    api_event_type = fields.Char('Tipo Event API')
+    api_resolution_status = fields.Char('Estado Resolución API')
+    api_event_timestamp = fields.Datetime('Timestamp Event API')
+    api_supply_key = fields.Char('Supply Key API')
+    api_device_key = fields.Char('Device Key API')
+    api_raw_data = fields.Text('Datos Crudos API')
 
     # ==========================================
-    # INFORMACIÓN DEL EQUIPO (CACHE)
+    # INFO EQUIPO (cache)
     # ==========================================
     cliente_nombre = fields.Char('Cliente', compute='_compute_equipo_info', store=True)
     modelo_equipo = fields.Char('Modelo', compute='_compute_equipo_info', store=True)
     ubicacion_equipo = fields.Char('Ubicación', compute='_compute_equipo_info', store=True)
 
-    # ==========================================
-    # DISPLAY NAME
-    # ==========================================
     display_name = fields.Char('Nombre', compute='_compute_display_name', store=True)
 
     # ==========================================
-    # ACCIONES AUTOMÁTICAS
+    # ACCIÓN AUTOMÁTICA
     # ==========================================
     accion_automatica = fields.Selection([
         ('ninguna', 'Ninguna'),
         ('crear_orden_compra', 'Crear Orden de Compra'),
-        ('enviar_email_cliente', 'Enviar Email a Cliente'),
         ('crear_tarea', 'Crear Tarea'),
         ('notificar_tecnico', 'Notificar Técnico'),
     ], string='Acción Automática', default='ninguna')
-
     accion_ejecutada = fields.Boolean('Acción Ejecutada', default=False)
     resultado_accion = fields.Text('Resultado de Acción')
 
@@ -200,19 +160,12 @@ class PrintTrackerAlert(models.Model):
     # CONSTRAINTS
     # ==========================================
     _sql_constraints = [
-        ('positive_percentage',
-         'CHECK(porcentaje_suministro >= 0 AND porcentaje_suministro <= 100)',
-         'Porcentaje de suministro debe estar entre 0 y 100'),
-        ('positive_days',
-         'CHECK(dias_sin_lecturas >= 0)',
+        ('positive_percentage', 'CHECK(porcentaje_suministro >= 0 AND porcentaje_suministro <= 100)',
+         'Porcentaje debe estar entre 0 y 100'),
+        ('positive_days', 'CHECK(dias_sin_lecturas >= 0)',
          'Días sin lecturas debe ser positivo'),
-        ('valid_repetitions_interno',
-         "CHECK(origen_datos != 'interno' OR contador_repeticiones <= max_repeticiones)",
-         'Contador repeticiones no puede exceder el máximo para alertas internas'),
-        # Evita duplicados de events API (NULLs múltiples no violan UNIQUE en PostgreSQL)
-        ('unique_api_event',
-         'UNIQUE(api_event_id)',
-         'No se puede procesar el mismo event de la API dos veces'),
+        ('unique_api_event', 'UNIQUE(api_event_id)',
+         'Event de API ya procesado'),
     ]
 
     # ==========================================
@@ -221,968 +174,700 @@ class PrintTrackerAlert(models.Model):
 
     @api.depends('serie_equipo')
     def _compute_equipo_id(self):
-        """Busca el equipo por serie."""
         for alert in self:
             if alert.serie_equipo:
-                equipo = self.env['alquiler'].search([
-                    ('serie', '=', alert.serie_equipo)
-                ], limit=1)
+                equipo = self.env['alquiler'].search([('serie', '=', alert.serie_equipo)], limit=1)
                 alert.equipo_id = equipo.id if equipo else False
             else:
                 alert.equipo_id = False
 
     @api.depends('equipo_id')
     def _compute_equipo_info(self):
-        """Cachea información básica del equipo."""
         for alert in self:
             if alert.equipo_id:
-                equipo = alert.equipo_id
-                alert.cliente_nombre = (
-                    equipo.cliente_id.name
-                    if hasattr(equipo, 'cliente_id') and equipo.cliente_id
-                    else ''
-                )
-                alert.modelo_equipo = (
-                    equipo.name.name
-                    if hasattr(equipo, 'name') and equipo.name
-                    else ''
-                )
-                alert.ubicacion_equipo = (
-                    getattr(equipo, 'ubicacion', '') or
-                    getattr(equipo, 'custom_location', '')
-                )
+                eq = alert.equipo_id
+                alert.cliente_nombre = eq.cliente_id.name if hasattr(eq, 'cliente_id') and eq.cliente_id else ''
+                alert.modelo_equipo = eq.name.name if hasattr(eq, 'name') and eq.name else ''
+                alert.ubicacion_equipo = getattr(eq, 'ubicacion', '') or getattr(eq, 'custom_location', '') or ''
             else:
                 alert.cliente_nombre = ''
                 alert.modelo_equipo = ''
                 alert.ubicacion_equipo = ''
 
-    @api.depends('tipo_alerta', 'serie_equipo', 'titulo', 'prioridad')
+    @api.depends('serie_equipo', 'tipo_alerta', 'prioridad')
     def _compute_display_name(self):
-        """Genera nombre descriptivo."""
-        prioridad_icons = {
-            'baja': '🔵', 'media': '🟡', 'alta': '🟠',
-            'critica': '🔴', 'urgente': '🚨',
-        }
+        tipo_labels = dict(self._fields['tipo_alerta'].selection)
+        prio_labels = dict(self._fields['prioridad'].selection)
         for alert in self:
-            parts = []
-            if alert.prioridad:
-                parts.append(prioridad_icons.get(alert.prioridad, ''))
-            if alert.serie_equipo:
-                parts.append(alert.serie_equipo)
-            if alert.tipo_alerta:
-                tipo_display = dict(alert._fields['tipo_alerta'].selection).get(
-                    alert.tipo_alerta, alert.tipo_alerta
-                )
-                parts.append(tipo_display)
-            alert.display_name = " - ".join(parts) if parts else f"Alerta {alert.id or 'nueva'}"
+            serie = alert.serie_equipo or 'N/A'
+            tipo = tipo_labels.get(alert.tipo_alerta, alert.tipo_alerta or '')
+            prio = prio_labels.get(alert.prioridad, alert.prioridad or '')
+            alert.display_name = f"[{prio}] {serie} - {tipo}"
 
     # ==========================================
-    # HELPER: OBTENER EMAIL DE SOPORTE
+    # HELPER: EMAIL SOPORTE (configurable)
     # ==========================================
-
     def _get_email_soporte(self):
-        """
-        Obtiene el email de soporte configurado en parámetros del sistema.
-        Clave: printtracker.alert.email_destino
-        Default: soporte@andescopiers.com.pe
-        """
-        config_params = self.env['ir.config_parameter'].sudo()
-        return config_params.get_param(
-            'printtracker.alert.email_destino',
-            'soporte@andescopiers.com.pe'
+        """Obtiene email de soporte desde parámetro del sistema."""
+        return self.env['ir.config_parameter'].sudo().get_param(
+            'printtracker.alert.email_destino', 'soporte@andescopiers.com.pe'
         )
 
     # ==========================================
-    # HELPER: PARSEAR TIMESTAMP DE API
+    # HELPER: PARSE TIMESTAMP API → naive datetime
     # ==========================================
-
-    def _parse_api_timestamp(self, timestamp_str):
+    @staticmethod
+    def _parse_api_timestamp(timestamp_str):
         """
-        Convierte timestamp de API a datetime naive (sin timezone) para Odoo.
-        Formato de la API: "2021-01-01T01:44:44.000Z"
-        Odoo requiere datetimes naive (UTC).
+        Convierte timestamp de API a datetime naive (Odoo requiere naive UTC).
+        Ejemplos API: '2024-01-15T10:30:00Z', '2024-01-15T10:30:00.000Z'
         """
         if not timestamp_str:
-            return fields.Datetime.now()
+            return None
         try:
-            # Limpiar el string
-            ts = timestamp_str.replace('Z', '').strip()
-            # Intentar con milisegundos
-            if '.' in ts:
-                return datetime.strptime(ts, '%Y-%m-%dT%H:%M:%S.%f')
+            dt = dateutil_parser.parse(timestamp_str)
+            # Odoo requiere naive datetime (asume UTC)
+            if dt.tzinfo:
+                dt = dt.replace(tzinfo=None)
+            return dt
+        except Exception:
+            return None
+
+    # ==========================================
+    # CREAR ALERTAS - SUMINISTRO BAJO
+    # ==========================================
+    def crear_alerta_suministro_bajo(self, suministro):
+        """
+        Crea o actualiza alerta de suministro bajo.
+        Si ya existe una activa para el mismo suministro, actualiza y escala.
+        """
+        try:
+            serie = suministro.device_id.serie if suministro.device_id else None
+            if not serie:
+                return None
+
+            percent = suministro.percent_remaining or 0
+
+            # Determinar tipo y prioridad según porcentaje
+            if percent <= 0:
+                tipo = 'suministro_vacio'
+                prioridad = 'urgente'
+            elif percent < 5:
+                tipo = 'suministro_critico'
+                prioridad = 'critica'
             else:
-                return datetime.strptime(ts, '%Y-%m-%dT%H:%M:%S')
-        except (ValueError, TypeError) as e:
-            _logger.warning(f"⚠️ Error parseando timestamp '{timestamp_str}': {e}")
-            return fields.Datetime.now()
+                tipo = 'suministro_bajo'
+                prioridad = 'alta'
 
-    # ==========================================
-    # CREAR ALERTAS: SUMINISTRO BAJO
-    # ==========================================
-
-    @api.model
-    def crear_alerta_suministro_bajo(self, suministro_record):
-        """Crea alerta para suministro bajo/crítico/vacío."""
-        try:
-            if not suministro_record.device_id or not suministro_record.device_id.serie:
-                _logger.warning("⚠️ Suministro sin device_id o serie válida")
-                return False
-
-            serie_equipo = suministro_record.device_id.serie
-            _logger.info(
-                f"🎨 Procesando suministro {suministro_record.supply_type} "
-                f"de {serie_equipo} ({suministro_record.percent_remaining:.1f}%)"
-            )
-
-            # Verificar alerta activa existente
-            existing_alert = self.search([
-                ('serie_equipo', '=', serie_equipo),
-                ('tipo_alerta', 'in', ['suministro_bajo', 'suministro_critico', 'suministro_vacio']),
-                ('suministro_id', '=', suministro_record.id),
-                ('origen_datos', '=', 'interno'),
+            # Buscar alerta existente activa para este suministro
+            existente = self.search([
+                ('serie_equipo', '=', serie),
+                ('suministro_id', '=', suministro.id),
                 ('estado', 'in', ['nueva', 'notificada', 'en_proceso']),
+                ('origen_datos', '=', 'interno'),
             ], limit=1)
 
-            if existing_alert:
-                _logger.info(
-                    f"🔄 Alerta existente: {existing_alert.display_name} "
-                    f"(rep: {existing_alert.contador_repeticiones}/{existing_alert.max_repeticiones})"
-                )
+            if existente:
+                # Actualizar: incrementar repeticiones, escalar si empeoró
+                vals = {
+                    'ultima_revision': fields.Datetime.now(),
+                    'porcentaje_suministro': percent,
+                    'contador_repeticiones': existente.contador_repeticiones + 1,
+                }
 
-                if existing_alert.contador_repeticiones < existing_alert.max_repeticiones:
-                    update_vals = {
-                        'porcentaje_suministro': suministro_record.percent_remaining,
-                        'contador_repeticiones': existing_alert.contador_repeticiones + 1,
-                        'ultima_revision': fields.Datetime.now(),
-                    }
+                # Escalar prioridad si empeoró
+                prioridades = ['baja', 'media', 'alta', 'critica', 'urgente']
+                if prioridades.index(prioridad) > prioridades.index(existente.prioridad):
+                    vals['prioridad'] = prioridad
+                    vals['tipo_alerta'] = tipo
 
-                    # Escalamiento si empeoró
-                    if suministro_record.percent_remaining <= 0 and existing_alert.tipo_alerta != 'suministro_vacio':
-                        update_vals.update({
-                            'tipo_alerta': 'suministro_vacio',
-                            'prioridad': 'urgente',
-                            'titulo': f"🚨 URGENTE: Suministro agotado - {suministro_record.display_name}",
-                        })
-                        _logger.error(f"🚨 Escalada a VACÍO: {existing_alert.display_name}")
-                    elif suministro_record.percent_remaining < 5 and \
-                            existing_alert.tipo_alerta not in ['suministro_critico', 'suministro_vacio']:
-                        update_vals.update({
-                            'tipo_alerta': 'suministro_critico',
-                            'prioridad': 'critica',
-                            'titulo': f"⚠️ CRÍTICO: Suministro agotándose - {suministro_record.display_name}",
-                        })
-                        _logger.warning(f"⬆️ Escalada a CRÍTICA: {existing_alert.display_name}")
+                # Si llegó al máximo repeticiones → en_proceso
+                if existente.contador_repeticiones + 1 >= existente.max_repeticiones:
+                    vals['estado'] = 'en_proceso'
 
-                    existing_alert.write(update_vals)
-                    return existing_alert
-                else:
-                    # Límite alcanzado
-                    _logger.warning(f"🚨 Máximo repeticiones alcanzado: {existing_alert.display_name}")
-                    existing_alert.write({
-                        'estado': 'en_proceso',
-                        'notas_resolucion': (
-                            f'Máximo de {existing_alert.max_repeticiones} repeticiones alcanzado. '
-                            f'Requiere atención manual. Último nivel: {suministro_record.percent_remaining:.1f}%'
-                        ),
-                    })
-                    if suministro_record.percent_remaining > 5:
-                        return existing_alert
-                    # Si es crítico, crear nueva alerta
+                existente.write(vals)
+                _logger.debug(f"📝 Actualizada alerta suministro {serie} ({percent:.1f}%)")
+                return existente
 
-            # Determinar tipo y prioridad
-            if suministro_record.percent_remaining <= 0:
-                tipo_alerta = 'suministro_vacio'
-                prioridad = 'urgente'
-                titulo = f"🚨 URGENTE: Suministro agotado - {suministro_record.display_name}"
-            elif suministro_record.percent_remaining < 5:
-                tipo_alerta = 'suministro_critico'
-                prioridad = 'critica'
-                titulo = f"⚠️ CRÍTICO: Suministro agotándose - {suministro_record.display_name}"
-            else:
-                tipo_alerta = 'suministro_bajo'
-                prioridad = 'alta'
-                titulo = f"⚠️ Suministro bajo - {suministro_record.display_name}"
+            # Crear nueva
+            tipo_supply = dict(suministro._fields['supply_type'].selection).get(
+                suministro.supply_type, suministro.supply_type)
+            color_supply = dict(suministro._fields['supply_color'].selection).get(
+                suministro.supply_color, '') if suministro.supply_color else ''
 
-            nueva_alerta = self.create({
-                'serie_equipo': serie_equipo,
-                'tipo_alerta': tipo_alerta,
+            titulo = f"Suministro {tipo} - {serie}"
+            desc = (f"{tipo_supply} {color_supply} al {percent:.1f}% "
+                    f"en equipo {serie}")
+
+            nueva = self.create({
+                'serie_equipo': serie,
+                'tipo_alerta': tipo,
                 'prioridad': prioridad,
                 'titulo': titulo,
-                'descripcion': (
-                    f"El suministro {suministro_record.supply_type} "
-                    f"{suministro_record.supply_color or ''} "
-                    f"está al {suministro_record.percent_remaining:.1f}%"
-                ),
-                'suministro_id': suministro_record.id,
-                'porcentaje_suministro': suministro_record.percent_remaining,
+                'descripcion': desc,
+                'suministro_id': suministro.id,
+                'porcentaje_suministro': percent,
                 'fecha_deteccion': fields.Datetime.now(),
                 'origen_datos': 'interno',
-                'accion_automatica': 'crear_orden_compra' if suministro_record.percent_remaining < 10 else 'ninguna',
+                'max_repeticiones': 5,
+                'accion_automatica': 'crear_orden_compra' if percent < 5 else 'ninguna',
             })
 
-            _logger.info(f"🚨 Nueva alerta suministro: {nueva_alerta.display_name}")
-            return nueva_alerta
+            _logger.info(f"🆕 Alerta suministro: {serie} - {tipo_supply} {color_supply} ({percent:.1f}%)")
+            return nueva
 
         except Exception as e:
-            _logger.error(f"❌ Error creando alerta suministro: {e}")
-            _logger.error(f"Traceback: {traceback.format_exc()}")
-            return False
+            _logger.error(f"❌ Error crear alerta suministro: {e}\n{traceback.format_exc()}")
+            return None
 
     # ==========================================
-    # CREAR ALERTAS: EQUIPO OFFLINE
+    # CREAR ALERTAS - EQUIPO OFFLINE
     # ==========================================
-
-    @api.model
-    def crear_alerta_equipo_offline(self, serie_equipo, dias_sin_lecturas, ultima_lectura=None):
-        """Crea alerta para equipo offline."""
+    def crear_alerta_equipo_offline(self, serie, dias_offline, ultima_lectura):
+        """
+        Crea o actualiza alerta de equipo offline.
+        Escala: 3+ días = alta, 7+ = crítica, 14+ = urgente
+        """
         try:
-            _logger.info(f"📵 Procesando equipo offline: {serie_equipo} ({dias_sin_lecturas} días)")
+            if not serie:
+                return None
 
-            existing_alert = self.search([
-                ('serie_equipo', '=', serie_equipo),
+            # Prioridad por días
+            if dias_offline >= 14:
+                prioridad = 'urgente'
+            elif dias_offline >= 7:
+                prioridad = 'critica'
+            else:
+                prioridad = 'alta'
+
+            existente = self.search([
+                ('serie_equipo', '=', serie),
                 ('tipo_alerta', '=', 'equipo_offline'),
-                ('origen_datos', '=', 'interno'),
                 ('estado', 'in', ['nueva', 'notificada', 'en_proceso']),
+                ('origen_datos', '=', 'interno'),
             ], limit=1)
 
-            if existing_alert:
-                if existing_alert.contador_repeticiones < existing_alert.max_repeticiones:
-                    update_vals = {
-                        'dias_sin_lecturas': dias_sin_lecturas,
-                        'contador_repeticiones': existing_alert.contador_repeticiones + 1,
-                        'ultima_revision': fields.Datetime.now(),
-                    }
+            if existente:
+                vals = {
+                    'ultima_revision': fields.Datetime.now(),
+                    'dias_sin_lecturas': dias_offline,
+                    'contador_repeticiones': existente.contador_repeticiones + 1,
+                }
+                prioridades = ['baja', 'media', 'alta', 'critica', 'urgente']
+                if prioridades.index(prioridad) > prioridades.index(existente.prioridad):
+                    vals['prioridad'] = prioridad
 
-                    # Escalamiento según días
-                    if dias_sin_lecturas >= 14 and existing_alert.prioridad != 'urgente':
-                        update_vals.update({
-                            'prioridad': 'urgente',
-                            'titulo': f"🚨 URGENTE: Equipo offline {dias_sin_lecturas} días - {serie_equipo}",
-                        })
-                    elif dias_sin_lecturas >= 7 and existing_alert.prioridad not in ['critica', 'urgente']:
-                        update_vals.update({
-                            'prioridad': 'critica',
-                            'titulo': f"🔴 CRÍTICO: Equipo offline {dias_sin_lecturas} días - {serie_equipo}",
-                        })
+                if existente.contador_repeticiones + 1 >= existente.max_repeticiones:
+                    vals['estado'] = 'en_proceso'
 
-                    existing_alert.write(update_vals)
-                    return existing_alert
-                else:
-                    # Límite alcanzado - escalar
-                    existing_alert.write({
-                        'prioridad': 'urgente',
-                        'estado': 'en_proceso',
-                        'notas_resolucion': (
-                            f'Equipo offline {dias_sin_lecturas} días. '
-                            f'Máximo repeticiones alcanzado. Requiere intervención técnica urgente.'
-                        ),
-                        'accion_automatica': 'notificar_tecnico',
-                    })
-                    return existing_alert
+                existente.write(vals)
+                return existente
 
-            # Determinar prioridad según días
-            if dias_sin_lecturas >= 14:
-                prioridad = 'urgente'
-                titulo = f"🚨 URGENTE: Equipo offline {dias_sin_lecturas} días - {serie_equipo}"
-            elif dias_sin_lecturas >= 7:
-                prioridad = 'critica'
-                titulo = f"🔴 CRÍTICO: Equipo offline {dias_sin_lecturas} días - {serie_equipo}"
-            elif dias_sin_lecturas >= 3:
-                prioridad = 'alta'
-                titulo = f"📵 Equipo offline {dias_sin_lecturas} días - {serie_equipo}"
-            else:
-                prioridad = 'media'
-                titulo = f"📵 Equipo offline {dias_sin_lecturas} días - {serie_equipo}"
-
-            nueva_alerta = self.create({
-                'serie_equipo': serie_equipo,
+            nueva = self.create({
+                'serie_equipo': serie,
                 'tipo_alerta': 'equipo_offline',
                 'prioridad': prioridad,
-                'titulo': titulo,
-                'descripcion': (
-                    f"El equipo no ha reportado lecturas en {dias_sin_lecturas} días. "
-                    f"Última lectura: {ultima_lectura or 'No disponible'}"
-                ),
-                'dias_sin_lecturas': dias_sin_lecturas,
-                'ultima_lectura': ultima_lectura,
+                'titulo': f"Equipo offline - {serie} ({dias_offline} días)",
+                'descripcion': f"Equipo {serie} sin reportar hace {dias_offline} días. Última lectura: {ultima_lectura}",
+                'dias_sin_lecturas': dias_offline,
+                'ultima_lectura': ultima_lectura if isinstance(ultima_lectura, datetime) else None,
                 'fecha_deteccion': fields.Datetime.now(),
                 'origen_datos': 'interno',
-                'accion_automatica': 'notificar_tecnico' if dias_sin_lecturas >= 3 else 'ninguna',
+                'max_repeticiones': 5,
             })
 
-            _logger.info(f"📵 Nueva alerta offline: {nueva_alerta.display_name}")
-            return nueva_alerta
+            _logger.info(f"🆕 Alerta offline: {serie} ({dias_offline} días)")
+            return nueva
 
         except Exception as e:
-            _logger.error(f"❌ Error creando alerta offline: {e}")
-            _logger.error(f"Traceback: {traceback.format_exc()}")
-            return False
+            _logger.error(f"❌ Error alerta offline: {e}\n{traceback.format_exc()}")
+            return None
 
     # ==========================================
-    # CREAR ALERTAS: USO ANÓMALO
+    # CREAR ALERTAS - USO ANÓMALO
     # ==========================================
-
-    @api.model
-    def crear_alerta_uso_anomalo(self, serie_equipo, tipo_anomalia, contador_actual, contador_anterior):
-        """Crea alerta para uso anómalo (muy alto o muy bajo)."""
+    def crear_alerta_uso_anomalo(self, serie, tipo_anomalia, contador_actual, contador_anterior):
+        """tipo_anomalia: 'alto' o 'bajo'"""
         try:
-            diferencia = contador_actual - contador_anterior
+            if not serie:
+                return None
 
-            if tipo_anomalia == 'alto':
-                tipo_alerta = 'uso_anomalo_alto'
-                titulo = f"📈 Uso anómalamente alto - {serie_equipo}"
-                descripcion = f"Incremento de {diferencia:,} páginas en un día (mucho mayor al promedio)"
-                prioridad = 'media'
-            else:
-                tipo_alerta = 'uso_anomalo_bajo'
-                titulo = f"📉 Uso anómalamente bajo - {serie_equipo}"
-                descripcion = f"Incremento de solo {diferencia:,} páginas (muy por debajo del promedio)"
-                prioridad = 'baja'
+            tipo = f"uso_anomalo_{tipo_anomalia}"
+            prioridad = 'alta' if tipo_anomalia == 'alto' else 'media'
+            diferencia = abs(contador_actual - contador_anterior)
 
-            # Verificar alerta similar reciente (últimos 7 días)
-            fecha_limite = datetime.now() - timedelta(days=7)
-            existing_alert = self.search([
-                ('serie_equipo', '=', serie_equipo),
-                ('tipo_alerta', '=', tipo_alerta),
-                ('origen_datos', '=', 'interno'),
-                ('fecha_creacion', '>=', fecha_limite),
+            existente = self.search([
+                ('serie_equipo', '=', serie),
+                ('tipo_alerta', '=', tipo),
                 ('estado', 'in', ['nueva', 'notificada', 'en_proceso']),
+                ('origen_datos', '=', 'interno'),
             ], limit=1)
 
-            if existing_alert:
-                _logger.info(f"⚠️ Alerta uso anómalo similar reciente: {existing_alert.display_name}")
-                return existing_alert
+            if existente:
+                existente.write({
+                    'ultima_revision': fields.Datetime.now(),
+                    'contador_actual': contador_actual,
+                    'contador_anterior': contador_anterior,
+                    'diferencia_contador': diferencia,
+                    'contador_repeticiones': existente.contador_repeticiones + 1,
+                })
+                return existente
 
-            nueva_alerta = self.create({
-                'serie_equipo': serie_equipo,
-                'tipo_alerta': tipo_alerta,
+            nueva = self.create({
+                'serie_equipo': serie,
+                'tipo_alerta': tipo,
                 'prioridad': prioridad,
-                'titulo': titulo,
-                'descripcion': descripcion,
+                'titulo': f"Uso {tipo_anomalia} - {serie}",
+                'descripcion': f"Incremento {'excesivo' if tipo_anomalia == 'alto' else 'muy bajo'}: "
+                               f"{diferencia:,} páginas en equipo {serie}",
                 'contador_actual': contador_actual,
                 'contador_anterior': contador_anterior,
                 'diferencia_contador': diferencia,
                 'fecha_deteccion': fields.Datetime.now(),
                 'origen_datos': 'interno',
+                'max_repeticiones': 5,
             })
 
-            _logger.info(f"📊 Nueva alerta uso anómalo: {nueva_alerta.display_name}")
-            return nueva_alerta
+            _logger.info(f"🆕 Alerta uso {tipo_anomalia}: {serie} ({diferencia:,} págs)")
+            return nueva
 
         except Exception as e:
-            _logger.error(f"❌ Error creando alerta uso anómalo: {e}")
-            _logger.error(f"Traceback: {traceback.format_exc()}")
-            return False
+            _logger.error(f"❌ Error alerta uso anómalo: {e}\n{traceback.format_exc()}")
+            return None
 
     # ==========================================
-    # CREAR ALERTAS: CONTADOR DECRECE
+    # CREAR ALERTAS - CONTADOR DECRECE
     # ==========================================
-
-    @api.model
-    def crear_alerta_contador_decrece(self, serie_equipo, tipo_contador, valor_actual, valor_anterior):
-        """Crea alerta cuando un contador decrece (posible reset o error)."""
+    def crear_alerta_contador_decrece(self, serie, tipo_contador, valor_actual, valor_anterior):
+        """tipo_contador: 'B/N', 'Color', 'Scan'"""
         try:
-            diferencia = valor_anterior - valor_actual
-            _logger.warning(f"⬇️ Contador decrece: {serie_equipo} - {tipo_contador} ({diferencia:,})")
+            if not serie:
+                return None
 
-            nueva_alerta = self.create({
-                'serie_equipo': serie_equipo,
+            diferencia = valor_anterior - valor_actual
+
+            existente = self.search([
+                ('serie_equipo', '=', serie),
+                ('tipo_alerta', '=', 'contador_decrece'),
+                ('estado', 'in', ['nueva', 'notificada', 'en_proceso']),
+                ('origen_datos', '=', 'interno'),
+            ], limit=1)
+
+            if existente:
+                existente.write({
+                    'ultima_revision': fields.Datetime.now(),
+                    'contador_actual': valor_actual,
+                    'contador_anterior': valor_anterior,
+                    'diferencia_contador': diferencia,
+                    'contador_repeticiones': existente.contador_repeticiones + 1,
+                })
+                return existente
+
+            nueva = self.create({
+                'serie_equipo': serie,
                 'tipo_alerta': 'contador_decrece',
-                'prioridad': 'alta',
-                'titulo': f"⬇️ Contador decreció - {serie_equipo}",
-                'descripcion': (
-                    f"El contador {tipo_contador} decreció de {valor_anterior:,} "
-                    f"a {valor_actual:,} (-{diferencia:,}). Posible reset o error."
-                ),
+                'prioridad': 'critica' if diferencia > 10000 else 'alta',
+                'titulo': f"Contador {tipo_contador} decreció - {serie}",
+                'descripcion': f"Contador {tipo_contador} bajó de {valor_anterior:,} a {valor_actual:,} "
+                               f"(dif: {diferencia:,}) en equipo {serie}",
                 'contador_actual': valor_actual,
                 'contador_anterior': valor_anterior,
-                'diferencia_contador': -diferencia,
+                'diferencia_contador': diferencia,
                 'fecha_deteccion': fields.Datetime.now(),
                 'origen_datos': 'interno',
-                'accion_automatica': 'notificar_tecnico',
+                'max_repeticiones': 5,
             })
 
-            _logger.warning(f"⬇️ Nueva alerta contador decrece: {nueva_alerta.display_name}")
-            return nueva_alerta
+            _logger.info(f"🆕 Alerta contador decrece: {serie} {tipo_contador} ({diferencia:,})")
+            return nueva
 
         except Exception as e:
-            _logger.error(f"❌ Error creando alerta contador decrece: {e}")
-            _logger.error(f"Traceback: {traceback.format_exc()}")
-            return False
+            _logger.error(f"❌ Error alerta contador: {e}\n{traceback.format_exc()}")
+            return None
 
     # ==========================================
-    # CREAR ALERTAS: DESDE API EVENT
-    # Estructura real del event de PrintTracker:
-    # {
-    #   "id": "000000000000000000000006",
-    #   "createdDate": "2021-01-01T01:44:44.000Z",
-    #   "modifiedDate": "2021-01-01T01:44:44.000Z",
-    #   "entityKey": "000000000000000000000002",
-    #   "installKey": "000000000000000000000003",
-    #   "deviceKey": "000000000000000000000006",
-    #   "deviceSerialNumber": "SN12345",
-    #   "timestamp": "2021-01-01T01:44:44.000Z",
-    #   "description": "A black toner was replaced",
-    #   "alertType": null,
-    #   "supplyKey": "blackToner",
-    #   "resolutionStatus": "Open",
-    #   "acknowledged": { "timestamp": "...", "note": "...", "userKey": "...", "userName": "..." },
-    #   "meterRead": { ... }
-    # }
+    # CREAR ALERTAS - DESDE API EVENT
     # ==========================================
-
-    @api.model
     def crear_alerta_desde_api_event(self, event_data, device_serial):
         """
-        Crea alerta desde un event de PrintTracker Pro API.
-        Siempre crea nueva alerta (sin límites de repetición para events de API).
+        Crea alerta desde un event de la API de PrintTracker.
+        Campos del event: id, createdDate, modifiedDate, entityKey, installKey,
+        deviceKey, deviceSerialNumber, timestamp, description, alertType,
+        supplyKey, resolutionStatus, acknowledged, meterRead
         """
         try:
             event_id = event_data.get('id')
-            _logger.info(f"📋 Procesando API event: {event_id} para {device_serial}")
+            if not event_id or not device_serial:
+                return None
 
             # Verificar duplicado
-            existing_alert = self.search([
-                ('api_event_id', '=', event_id)
-            ], limit=1)
+            if self.search([('api_event_id', '=', event_id)], limit=1):
+                return None
 
-            if existing_alert:
-                _logger.info(f"⚠️ Event ya procesado: {event_id}")
-                return existing_alert
+            # Clasificar event
+            clasificacion = self._clasificar_event_api(event_data)
 
-            # Clasificar el event
-            tipo_alerta, prioridad = self._clasificar_event_api(event_data)
+            # Parse timestamp
+            ts_raw = event_data.get('timestamp') or event_data.get('createdDate')
+            ts = self._parse_api_timestamp(ts_raw)
 
-            # Generar título
-            titulo = self._generar_titulo_event(event_data, device_serial)
-
-            # Parsear timestamp (naive para Odoo)
-            event_timestamp = self._parse_api_timestamp(event_data.get('timestamp'))
-
-            nueva_alerta = self.create({
+            nueva = self.create({
                 'serie_equipo': device_serial,
-                'tipo_alerta': tipo_alerta,
-                'prioridad': prioridad,
-                'titulo': titulo,
-                'descripcion': event_data.get('description', 'Event de PrintTracker Pro'),
-                'fecha_deteccion': event_timestamp,
+                'tipo_alerta': clasificacion['tipo'],
+                'prioridad': clasificacion['prioridad'],
+                'titulo': f"{clasificacion['titulo']} - {device_serial}",
+                'descripcion': event_data.get('description', 'Evento de PrintTracker API'),
+                'fecha_deteccion': ts or fields.Datetime.now(),
                 'origen_datos': 'api_events',
-                # Campos de API
-                'api_event_id': event_data.get('id'),
-                'api_event_type': event_data.get('alertType'),
-                'api_resolution_status': event_data.get('resolutionStatus'),
-                'api_event_timestamp': event_timestamp,
-                'api_supply_key': event_data.get('supplyKey'),
-                'api_device_key': event_data.get('deviceKey'),
-                'api_raw_data': json.dumps(event_data, default=str),
-                # Sin límite de repetición para events API
-                'contador_repeticiones': 1,
-                'max_repeticiones': 9999,
-                'accion_automatica': self._determinar_accion_event(event_data),
+                'api_event_id': event_id,
+                'api_event_type': event_data.get('alertType', ''),
+                'api_resolution_status': event_data.get('resolutionStatus', ''),
+                'api_event_timestamp': ts,
+                'api_supply_key': event_data.get('supplyKey', ''),
+                'api_device_key': event_data.get('deviceKey', ''),
+                'api_raw_data': json.dumps(event_data, default=str)[:5000],
+                'max_repeticiones': 9999,  # API events no tienen límite
             })
 
-            _logger.info(f"📋 Nueva alerta API event: {nueva_alerta.display_name}")
-            return nueva_alerta
+            _logger.info(f"🆕 Alerta API: {device_serial} - {clasificacion['tipo']} (event {event_id})")
+            return nueva
 
         except Exception as e:
-            _logger.error(f"❌ Error creando alerta desde API event: {e}")
-            _logger.error(f"Traceback: {traceback.format_exc()}")
-            return False
-
-    # ==========================================
-    # CLASIFICACIÓN DE EVENTS API
-    # ==========================================
+            _logger.error(f"❌ Error alerta API event: {e}\n{traceback.format_exc()}")
+            return None
 
     def _clasificar_event_api(self, event_data):
-        """
-        Clasifica event de API para determinar tipo_alerta y prioridad.
-        Basado en campos reales: description, alertType, supplyKey, resolutionStatus
-        """
-        try:
-            description = (event_data.get('description', '')).lower()
-            supply_key = event_data.get('supplyKey', '')
+        """Clasifica un event de la API según description/alertType/supplyKey."""
+        desc = (event_data.get('description', '')).lower()
+        alert_type = event_data.get('alertType', '') or ''
+        supply_key = event_data.get('supplyKey', '') or ''
 
-            # Atascos de papel
-            if any(word in description for word in ['jam', 'atasco', 'trabamiento', 'paper jam']):
-                return 'paper_jam', 'alta'
+        # Atasco de papel
+        if any(w in desc for w in ['jam', 'atasco', 'paper jam']):
+            return {'tipo': 'paper_jam', 'prioridad': 'alta', 'titulo': 'Atasco de Papel'}
 
-            # Suministros (usar supplyKey si está disponible)
-            if supply_key or any(word in description for word in ['toner', 'ink', 'cartridge', 'drum']):
-                if 'replaced' in description or 'cambio' in description or 'reemplaz' in description:
-                    return 'supply_replaced', 'media'
-                elif any(word in description for word in ['low', 'bajo', 'empty', 'agotado', 'depleted']):
-                    return 'suministro_bajo', 'alta'
-                else:
-                    return 'supply_event', 'media'
+        # Suministro reemplazado
+        if any(w in desc for w in ['replaced', 'reemplaz', 'installed', 'nuevo']):
+            return {'tipo': 'supply_replaced', 'prioridad': 'media', 'titulo': 'Suministro Reemplazado'}
 
-            # Errores de dispositivo
-            if any(word in description for word in ['error', 'fault', 'codigo', 'code']):
-                return 'device_error', 'critica'
+        # Suministro bajo (por supplyKey o descripción)
+        if supply_key or any(w in desc for w in ['toner', 'ink', 'drum', 'supply', 'low']):
+            if any(w in desc for w in ['empty', 'vacio', 'agotado', 'depleted', '0%']):
+                return {'tipo': 'suministro_vacio', 'prioridad': 'urgente', 'titulo': 'Suministro Vacío'}
+            if any(w in desc for w in ['critical', 'critico', 'very low']):
+                return {'tipo': 'suministro_critico', 'prioridad': 'critica', 'titulo': 'Suministro Crítico'}
+            if any(w in desc for w in ['low', 'bajo']):
+                return {'tipo': 'suministro_bajo', 'prioridad': 'alta', 'titulo': 'Suministro Bajo'}
+            if supply_key:
+                return {'tipo': 'supply_event', 'prioridad': 'media', 'titulo': 'Evento de Suministro'}
 
-            # Cubierta abierta
-            if any(word in description for word in ['cover', 'door', 'open', 'abierta', 'tapa']):
-                return 'cover_open', 'baja'
+        # Error de dispositivo
+        if any(w in desc for w in ['error', 'fault', 'fallo', 'codigo']):
+            return {'tipo': 'device_error', 'prioridad': 'critica', 'titulo': 'Error de Dispositivo'}
 
-            # Mantenimiento
-            if any(word in description for word in ['maintenance', 'service', 'mantenimiento']):
-                return 'mantenimiento_debido', 'alta'
+        # Cubierta abierta
+        if any(w in desc for w in ['cover', 'door', 'tapa', 'cubierta', 'open']):
+            return {'tipo': 'cover_open', 'prioridad': 'baja', 'titulo': 'Cubierta Abierta'}
 
-            # Conectividad
-            if any(word in description for word in ['offline', 'connection', 'network', 'red']):
-                return 'connectivity_issue', 'alta'
+        # Mantenimiento
+        if any(w in desc for w in ['maintenance', 'mantenimiento', 'service']):
+            return {'tipo': 'mantenimiento_debido', 'prioridad': 'alta', 'titulo': 'Mantenimiento Requerido'}
 
-            # Event genérico
-            return 'device_event', 'media'
+        # Conectividad
+        if any(w in desc for w in ['offline', 'connection', 'connectivity', 'desconect']):
+            return {'tipo': 'connectivity_issue', 'prioridad': 'alta', 'titulo': 'Problema de Conectividad'}
 
-        except Exception as e:
-            _logger.error(f"❌ Error clasificando event API: {e}")
-            return 'device_event', 'media'
-
-    def _generar_titulo_event(self, event_data, device_serial):
-        """Genera título descriptivo para el event."""
-        try:
-            description = event_data.get('description', 'Event')
-            desc_lower = description.lower()
-
-            emojis = {
-                'jam': '📄', 'toner': '🎨', 'ink': '🎨', 'drum': '🎨',
-                'error': '⚠️', 'fault': '⚠️', 'maintenance': '🔧',
-                'service': '🔧', 'cover': '🚪', 'door': '🚪',
-                'offline': '📡', 'replaced': '🔄',
-            }
-
-            emoji = '📋'  # Default
-            for keyword, icon in emojis.items():
-                if keyword in desc_lower:
-                    emoji = icon
-                    break
-
-            return f"{emoji} {device_serial} - {description}"
-
-        except Exception as e:
-            _logger.error(f"❌ Error generando título event: {e}")
-            return f"📋 {device_serial} - Event PrintTracker"
-
-    def _determinar_accion_event(self, event_data):
-        """Determina acción automática según el event."""
-        try:
-            description = (event_data.get('description', '')).lower()
-
-            if 'jam' in description or 'atasco' in description:
-                return 'notificar_tecnico'
-            elif ('toner' in description or 'ink' in description) and \
-                 any(w in description for w in ['low', 'bajo', 'empty', 'agotado']):
-                return 'crear_orden_compra'
-            elif 'error' in description or 'fault' in description:
-                return 'notificar_tecnico'
-            elif 'maintenance' in description or 'service' in description:
-                return 'crear_tarea'
-            else:
-                return 'ninguna'
-
-        except Exception as e:
-            _logger.error(f"❌ Error determinando acción event: {e}")
-            return 'ninguna'
+        # Genérico
+        return {'tipo': 'device_event', 'prioridad': 'media', 'titulo': 'Evento de Dispositivo'}
 
     # ==========================================
-    # PROCESAR NOTIFICACIONES
-    # Email siempre va a soporte@andescopiers.com.pe (configurable)
+    # NOTIFICACIONES
     # ==========================================
-
     def procesar_notificaciones(self):
-        """Procesa notificaciones pendientes para esta alerta."""
-        try:
-            for alert in self:
-                if alert.estado != 'nueva':
-                    continue
-
-                _logger.info(f"📬 Procesando notificaciones: {alert.display_name}")
-                notificaciones_enviadas = 0
-
-                # Email a soporte
+        """Envía email a soporte + chatter en equipo."""
+        for alert in self:
+            try:
                 if alert.notificar_email and not alert.email_enviado:
-                    if alert._enviar_notificacion_email():
-                        alert.email_enviado = True
-                        notificaciones_enviadas += 1
+                    alert._enviar_notificacion_email()
 
-                # Chatter del equipo
                 if alert.notificar_chatter and not alert.chatter_enviado:
-                    if alert._enviar_notificacion_chatter():
-                        alert.chatter_enviado = True
-                        notificaciones_enviadas += 1
+                    alert._enviar_notificacion_chatter()
 
-                # Acción automática
+                # Ejecutar acción automática
                 if alert.accion_automatica != 'ninguna' and not alert.accion_ejecutada:
                     alert._ejecutar_accion_automatica()
 
-                # Actualizar estado
-                if notificaciones_enviadas > 0:
+                # Cambiar estado
+                if alert.estado == 'nueva':
                     alert.estado = 'notificada'
-                    _logger.info(f"✅ Alerta notificada: {alert.display_name}")
 
-        except Exception as e:
-            _logger.error(f"❌ Error procesando notificaciones: {e}")
-            _logger.error(f"Traceback: {traceback.format_exc()}")
+            except Exception as e:
+                _logger.error(f"❌ Error notificación {alert.display_name}: {e}")
 
     def _enviar_notificacion_email(self):
         """
-        Envía notificación por email a soporte (configurable).
-        YA NO envía al email del cliente/entidad.
-        El destino se configura en: Ajustes > Parámetros del sistema
-        Clave: printtracker.alert.email_destino
-        Default: soporte@andescopiers.com.pe
+        Envía email a soporte (configurable).
+        SIEMPRE a soporte, NUNCA al cliente/entidad.
         """
+        self.ensure_one()
         try:
-            email_soporte = self._get_email_soporte()
+            email_destino = self._get_email_soporte()
+            if not email_destino:
+                _logger.warning("⚠️ Email soporte no configurado")
+                return
 
-            if not email_soporte:
-                _logger.warning("⚠️ No hay email de soporte configurado")
-                return False
+            # Construir HTML del email
+            html_body = self._construir_email_html()
 
-            _logger.info(f"📧 Enviando alerta a {email_soporte}: {self.display_name}")
+            prioridad_label = dict(self._fields['prioridad'].selection).get(self.prioridad, self.prioridad)
+            tipo_label = dict(self._fields['tipo_alerta'].selection).get(self.tipo_alerta, self.tipo_alerta)
 
-            # Construir asunto
-            prioridad_label = dict(self._fields['prioridad'].selection).get(self.prioridad, '')
-            subject = f"[PrintTracker - {prioridad_label.upper()}] {self.titulo}"
-
-            # Construir cuerpo HTML
-            body = f"""
-            <div style="font-family: Arial, sans-serif; max-width: 600px;">
-                <h2 style="color: #333;">{self.titulo}</h2>
-                <table style="width: 100%; border-collapse: collapse; margin: 10px 0;">
-                    <tr>
-                        <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; width: 160px;">Equipo (Serie)</td>
-                        <td style="padding: 8px; border: 1px solid #ddd;">{self.serie_equipo}</td>
-                    </tr>
-                    <tr>
-                        <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Cliente</td>
-                        <td style="padding: 8px; border: 1px solid #ddd;">{self.cliente_nombre or 'N/A'}</td>
-                    </tr>
-                    <tr>
-                        <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Modelo</td>
-                        <td style="padding: 8px; border: 1px solid #ddd;">{self.modelo_equipo or 'N/A'}</td>
-                    </tr>
-                    <tr>
-                        <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Ubicación</td>
-                        <td style="padding: 8px; border: 1px solid #ddd;">{self.ubicacion_equipo or 'N/A'}</td>
-                    </tr>
-                    <tr>
-                        <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Prioridad</td>
-                        <td style="padding: 8px; border: 1px solid #ddd;"><strong>{prioridad_label.upper()}</strong></td>
-                    </tr>
-                    <tr>
-                        <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Tipo de Alerta</td>
-                        <td style="padding: 8px; border: 1px solid #ddd;">{dict(self._fields['tipo_alerta'].selection).get(self.tipo_alerta, self.tipo_alerta)}</td>
-                    </tr>
-                    <tr>
-                        <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Descripción</td>
-                        <td style="padding: 8px; border: 1px solid #ddd;">{self.descripcion or 'N/A'}</td>
-                    </tr>
-                    <tr>
-                        <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Fecha Detección</td>
-                        <td style="padding: 8px; border: 1px solid #ddd;">{self.fecha_deteccion or 'N/A'}</td>
-                    </tr>
-            """
-
-            # Info adicional según tipo
-            if self.suministro_id:
-                body += f"""
-                    <tr>
-                        <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Suministro</td>
-                        <td style="padding: 8px; border: 1px solid #ddd;">{self.suministro_id.display_name} ({self.porcentaje_suministro:.1f}%)</td>
-                    </tr>
-                """
-
-            if self.dias_sin_lecturas:
-                body += f"""
-                    <tr>
-                        <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Días sin lecturas</td>
-                        <td style="padding: 8px; border: 1px solid #ddd;">{self.dias_sin_lecturas}</td>
-                    </tr>
-                """
-
-            if self.origen_datos == 'api_events':
-                body += f"""
-                    <tr>
-                        <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Origen</td>
-                        <td style="padding: 8px; border: 1px solid #ddd;">Event PrintTracker API</td>
-                    </tr>
-                """
-                if self.api_event_type:
-                    body += f"""
-                    <tr>
-                        <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Alert Type</td>
-                        <td style="padding: 8px; border: 1px solid #ddd;">{self.api_event_type}</td>
-                    </tr>
-                    """
-                if self.api_supply_key:
-                    body += f"""
-                    <tr>
-                        <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Supply Key</td>
-                        <td style="padding: 8px; border: 1px solid #ddd;">{self.api_supply_key}</td>
-                    </tr>
-                    """
-                if self.api_resolution_status:
-                    body += f"""
-                    <tr>
-                        <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Estado Event</td>
-                        <td style="padding: 8px; border: 1px solid #ddd;">{self.api_resolution_status}</td>
-                    </tr>
-                    """
-
-            body += """
-                </table>
-                <p style="color: #666; font-size: 12px; margin-top: 20px;">
-                    Este es un mensaje automático del sistema de alertas PrintTracker de Andes Copiers.
-                </p>
-            </div>
-            """
-
-            # Enviar email
             mail_values = {
-                'subject': subject,
-                'body_html': body,
-                'email_to': email_soporte,
+                'subject': f"[{prioridad_label.upper()}] Alerta PrintTracker - {self.serie_equipo} - {tipo_label}",
+                'body_html': html_body,
                 'email_from': self.env.company.email or 'noreply@andescopiers.com.pe',
-                'reply_to': self.env.company.email or 'noreply@andescopiers.com.pe',
+                'email_to': email_destino,
+                'auto_delete': False,
             }
 
-            mail = self.env['mail.mail'].create(mail_values)
+            mail = self.env['mail.mail'].sudo().create(mail_values)
             mail.send()
 
-            _logger.info(f"✅ Email enviado a {email_soporte}: {self.display_name}")
-            return True
+            self.email_enviado = True
+            _logger.info(f"📧 Email enviado a {email_destino} para {self.serie_equipo}")
 
         except Exception as e:
-            _logger.error(f"❌ Error enviando email: {e}")
-            _logger.error(f"Traceback: {traceback.format_exc()}")
-            return False
+            _logger.error(f"❌ Error email: {e}\n{traceback.format_exc()}")
+
+    def _construir_email_html(self):
+        """Construye HTML profesional para email."""
+        self.ensure_one()
+        prioridad_label = dict(self._fields['prioridad'].selection).get(self.prioridad, self.prioridad)
+        tipo_label = dict(self._fields['tipo_alerta'].selection).get(self.tipo_alerta, self.tipo_alerta)
+
+        # Color según prioridad
+        colores = {
+            'urgente': '#dc3545', 'critica': '#e74c3c',
+            'alta': '#fd7e14', 'media': '#ffc107', 'baja': '#28a745',
+        }
+        color = colores.get(self.prioridad, '#6c757d')
+
+        # Info adicional según tipo
+        info_extra = ''
+        if self.porcentaje_suministro:
+            info_extra += f'<tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold;">Nivel Suministro</td><td style="padding:8px;border:1px solid #ddd;">{self.porcentaje_suministro:.1f}%</td></tr>'
+        if self.dias_sin_lecturas:
+            info_extra += f'<tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold;">Días Offline</td><td style="padding:8px;border:1px solid #ddd;">{self.dias_sin_lecturas}</td></tr>'
+        if self.diferencia_contador:
+            info_extra += f'<tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold;">Diferencia Contador</td><td style="padding:8px;border:1px solid #ddd;">{self.diferencia_contador:,}</td></tr>'
+        if self.api_event_id:
+            info_extra += f'<tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold;">Event ID</td><td style="padding:8px;border:1px solid #ddd;">{self.api_event_id}</td></tr>'
+        if self.api_resolution_status:
+            info_extra += f'<tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold;">Estado API</td><td style="padding:8px;border:1px solid #ddd;">{self.api_resolution_status}</td></tr>'
+
+        html = f"""
+        <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
+            <div style="background:{color};color:white;padding:15px;border-radius:8px 8px 0 0;">
+                <h2 style="margin:0;">🚨 Alerta PrintTracker - {prioridad_label.upper()}</h2>
+            </div>
+            <div style="border:1px solid #ddd;border-top:none;padding:20px;border-radius:0 0 8px 8px;">
+                <table style="width:100%;border-collapse:collapse;margin-bottom:15px;">
+                    <tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold;width:35%;">Equipo (Serie)</td>
+                        <td style="padding:8px;border:1px solid #ddd;">{self.serie_equipo}</td></tr>
+                    <tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold;">Cliente</td>
+                        <td style="padding:8px;border:1px solid #ddd;">{self.cliente_nombre or 'N/A'}</td></tr>
+                    <tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold;">Modelo</td>
+                        <td style="padding:8px;border:1px solid #ddd;">{self.modelo_equipo or 'N/A'}</td></tr>
+                    <tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold;">Ubicación</td>
+                        <td style="padding:8px;border:1px solid #ddd;">{self.ubicacion_equipo or 'N/A'}</td></tr>
+                    <tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold;">Tipo Alerta</td>
+                        <td style="padding:8px;border:1px solid #ddd;">{tipo_label}</td></tr>
+                    <tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold;">Prioridad</td>
+                        <td style="padding:8px;border:1px solid #ddd;color:{color};font-weight:bold;">{prioridad_label}</td></tr>
+                    <tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold;">Fecha Detección</td>
+                        <td style="padding:8px;border:1px solid #ddd;">{self.fecha_deteccion or self.fecha_creacion}</td></tr>
+                    {info_extra}
+                </table>
+                <div style="background:#f8f9fa;padding:12px;border-radius:4px;margin-top:10px;">
+                    <strong>Descripción:</strong><br/>{self.descripcion or 'Sin descripción adicional'}
+                </div>
+                <p style="color:#6c757d;font-size:12px;margin-top:15px;">
+                    Origen: {self.origen_datos} | Alerta #{self.id or 'nueva'} |
+                    Generado automáticamente por PrintTracker Alert System
+                </p>
+            </div>
+        </div>
+        """
+        return html
 
     def _enviar_notificacion_chatter(self):
-        """Envía notificación en el chatter del equipo."""
+        """Publica notificación en el chatter del equipo."""
+        self.ensure_one()
         try:
             if not self.equipo_id:
-                _logger.warning(f"⚠️ Sin equipo para chatter: {self.serie_equipo}")
-                return False
+                return
 
-            _logger.info(f"💬 Chatter del equipo: {self.equipo_id.name}")
+            prioridad_label = dict(self._fields['prioridad'].selection).get(self.prioridad, self.prioridad)
+            tipo_label = dict(self._fields['tipo_alerta'].selection).get(self.tipo_alerta, self.tipo_alerta)
 
-            mensaje = f"""
-            🚨 <strong>{self.titulo}</strong><br/>
-            📅 <strong>Fecha:</strong> {self.fecha_deteccion}<br/>
-            ⚡ <strong>Prioridad:</strong> {self.prioridad.upper()}<br/>
-            📝 <strong>Descripción:</strong> {self.descripcion}<br/>
+            body = f"""
+            <p><strong>🚨 Alerta PrintTracker [{prioridad_label}]</strong></p>
+            <p><strong>Tipo:</strong> {tipo_label}</p>
+            <p>{self.descripcion or ''}</p>
             """
 
-            if self.suministro_id:
-                mensaje += (
-                    f"🎨 <strong>Suministro:</strong> {self.suministro_id.display_name} "
-                    f"({self.porcentaje_suministro:.1f}%)<br/>"
-                )
-
-            if self.origen_datos == 'api_events':
-                mensaje += "📋 <strong>Origen:</strong> Event PrintTracker API<br/>"
-                if self.api_event_type:
-                    mensaje += f"🔧 <strong>Alert Type:</strong> {self.api_event_type}<br/>"
-                if self.api_supply_key:
-                    mensaje += f"🎨 <strong>Supply:</strong> {self.api_supply_key}<br/>"
-
             self.equipo_id.message_post(
-                body=mensaje,
+                body=body,
+                subject=f"Alerta: {tipo_label}",
                 message_type='notification',
                 subtype_xmlid='mail.mt_note',
             )
 
-            _logger.info("✅ Chatter enviado")
-            return True
+            self.chatter_enviado = True
+            _logger.info(f"💬 Chatter en equipo {self.serie_equipo}")
 
         except Exception as e:
-            _logger.error(f"❌ Error enviando chatter: {e}")
-            _logger.error(f"Traceback: {traceback.format_exc()}")
-            return False
+            _logger.error(f"❌ Error chatter: {e}")
 
+    # ==========================================
+    # ACCIONES AUTOMÁTICAS
+    # ==========================================
     def _ejecutar_accion_automatica(self):
-        """Ejecuta la acción automática configurada."""
+        """Ejecuta acción automática según configuración."""
+        self.ensure_one()
         try:
-            _logger.info(f"⚡ Acción automática '{self.accion_automatica}': {self.display_name}")
-
-            if self.accion_automatica == 'crear_orden_compra' and self.suministro_id:
-                resultado = self.suministro_id.action_create_purchase_order()
-                self.accion_ejecutada = True
-                self.resultado_accion = f"Orden de compra creada: {resultado}"
-                _logger.info("🛒 Orden de compra creada")
-
+            if self.accion_automatica == 'crear_orden_compra':
+                self._accion_crear_orden_compra()
             elif self.accion_automatica == 'crear_tarea':
-                tarea = self.env['project.task'].create({
-                    'name': f"Resolver: {self.titulo}",
-                    'description': self.descripcion,
-                    'user_ids': [(6, 0, [self.asignado_a.id])] if self.asignado_a else [],
-                    'priority': '1' if self.prioridad in ['critica', 'urgente'] else '0',
-                })
-                self.accion_ejecutada = True
-                self.resultado_accion = f"Tarea creada: {tarea.name}"
-                _logger.info(f"📋 Tarea creada: {tarea.name}")
-
+                self._accion_crear_tarea()
             elif self.accion_automatica == 'notificar_tecnico':
-                # Enviar email a soporte (mismo destino configurable)
-                email_soporte = self._get_email_soporte()
-                if email_soporte:
-                    self.env['mail.message'].create({
-                        'message_type': 'notification',
-                        'subject': f"🔧 Alerta Técnica: {self.titulo}",
-                        'body': (
-                            f"<p><strong>Equipo:</strong> {self.serie_equipo}</p>"
-                            f"<p><strong>Descripción:</strong> {self.descripcion}</p>"
-                            f"<p><strong>Prioridad:</strong> {self.prioridad.upper()}</p>"
-                        ),
-                    })
-                    self.accion_ejecutada = True
-                    self.resultado_accion = f"Técnico notificado en: {email_soporte}"
-                    _logger.info(f"✅ Técnico notificado: {email_soporte}")
-
+                self._accion_notificar_tecnico()
         except Exception as e:
-            _logger.error(f"❌ Error ejecutando acción automática: {e}")
-            self.resultado_accion = f"Error: {str(e)}"
-            _logger.error(f"Traceback: {traceback.format_exc()}")
+            self.resultado_accion = f"Error: {e}"
+            _logger.error(f"❌ Error acción automática: {e}")
+
+    def _accion_crear_orden_compra(self):
+        """Crea orden de compra si hay suministro y producto asociados."""
+        self.ensure_one()
+        if not self.suministro_id or not self.suministro_id.product_id:
+            self.resultado_accion = "Sin suministro/producto asociado"
+            return
+
+        try:
+            supply = self.suministro_id
+            po = self.env['purchase.order'].create({
+                'origin': f'Alerta PrintTracker - {self.serie_equipo}',
+                'order_line': [(0, 0, {
+                    'product_id': supply.product_id.id,
+                    'name': f'{supply.product_id.name} - {self.serie_equipo}',
+                    'product_qty': 1,
+                    'price_unit': supply.supply_cost or supply.product_id.standard_price or 0,
+                    'date_planned': fields.Datetime.now(),
+                })],
+            })
+            self.accion_ejecutada = True
+            self.resultado_accion = f"OC creada: {po.name}"
+            _logger.info(f"📦 OC {po.name} creada para {self.serie_equipo}")
+        except Exception as e:
+            self.resultado_accion = f"Error OC: {e}"
+
+    def _accion_crear_tarea(self):
+        """Crea tarea en proyecto si está disponible."""
+        self.ensure_one()
+        try:
+            if not hasattr(self.env, 'project.task'):
+                self.resultado_accion = "Módulo project no instalado"
+                return
+
+            task = self.env['project.task'].create({
+                'name': self.titulo,
+                'description': self.descripcion or '',
+            })
+            self.accion_ejecutada = True
+            self.resultado_accion = f"Tarea creada: {task.name}"
+        except Exception as e:
+            self.resultado_accion = f"Error tarea: {e}"
+
+    def _accion_notificar_tecnico(self):
+        """Envía email al equipo de soporte (no a todos los usuarios)."""
+        self.ensure_one()
+        try:
+            email_soporte = self._get_email_soporte()
+            if email_soporte:
+                self._enviar_notificacion_email()
+                self.accion_ejecutada = True
+                self.resultado_accion = f"Notificación enviada a {email_soporte}"
+        except Exception as e:
+            self.resultado_accion = f"Error notificación: {e}"
 
     # ==========================================
-    # ACCIONES DE INTERFAZ
+    # ACCIONES MANUALES
     # ==========================================
+    def action_marcar_resuelta(self):
+        for alert in self:
+            alert.write({
+                'estado': 'resuelta',
+                'resuelto_por': self.env.uid,
+                'fecha_resolucion': fields.Datetime.now(),
+            })
+        return {'type': 'ir.actions.client', 'tag': 'display_notification',
+                'params': {'message': 'Alerta(s) marcada(s) como resuelta(s)', 'type': 'success'}}
 
-    def action_resolver(self):
-        """Acción manual para resolver alerta."""
+    def action_marcar_en_proceso(self):
+        for alert in self:
+            alert.estado = 'en_proceso'
+
+    def action_ignorar(self):
+        for alert in self:
+            alert.estado = 'ignorada'
+
+    def action_reenviar_email(self):
         self.ensure_one()
-        return {
-            'type': 'ir.actions.act_window',
-            'name': 'Resolver Alerta',
-            'res_model': 'printtracker.alert.resolve.wizard',
-            'view_mode': 'form',
-            'target': 'new',
-            'context': {
-                'default_alert_id': self.id,
-                'default_notas_resolucion': '',
-            },
-        }
-
-    def action_asignar(self):
-        """Acción para asignar alerta a un usuario."""
-        self.ensure_one()
-        return {
-            'type': 'ir.actions.act_window',
-            'name': 'Asignar Alerta',
-            'res_model': 'printtracker.alert.assign.wizard',
-            'view_mode': 'form',
-            'target': 'new',
-            'context': {'default_alert_id': self.id},
-        }
-
-    def marcar_como_resuelta(self, notas_resolucion=''):
-        """Marca la alerta como resuelta."""
-        self.write({
-            'estado': 'resuelta',
-            'resuelto_por': self.env.user.id,
-            'fecha_resolucion': fields.Datetime.now(),
-            'notas_resolucion': notas_resolucion,
-        })
-        _logger.info(f"✅ Alerta resuelta: {self.display_name} por {self.env.user.name}")
-
-    def action_view_equipo(self):
-        """Acción para ver el equipo relacionado."""
-        self.ensure_one()
-        if not self.equipo_id:
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'message': 'No se encontró equipo para esta serie',
-                    'type': 'warning',
-                },
-            }
-        return {
-            'type': 'ir.actions.act_window',
-            'name': f'Equipo - {self.serie_equipo}',
-            'res_model': 'alquiler',
-            'res_id': self.equipo_id.id,
-            'view_mode': 'form',
-            'target': 'current',
-        }
+        self.email_enviado = False
+        self._enviar_notificacion_email()
+        return {'type': 'ir.actions.client', 'tag': 'display_notification',
+                'params': {'message': f'Email reenviado a {self._get_email_soporte()}', 'type': 'success'}}
 
     # ==========================================
     # UTILIDADES
     # ==========================================
-
     @api.model
     def limpiar_alertas_antiguas(self, dias=30):
-        """Limpia alertas resueltas/cerradas/ignoradas antiguas."""
+        """Elimina alertas resueltas/cerradas más antiguas que N días."""
         try:
-            fecha_limite = datetime.now() - timedelta(days=dias)
-            _logger.info(f"🗑️ Limpiando alertas anteriores a: {fecha_limite}")
-
-            alertas_antiguas = self.search([
+            fecha_corte = datetime.now() - timedelta(days=dias)
+            antiguas = self.search([
                 ('estado', 'in', ['resuelta', 'cerrada', 'ignorada']),
-                ('fecha_creacion', '<', fecha_limite),
+                ('fecha_creacion', '<', fecha_corte),
             ])
-
-            count = len(alertas_antiguas)
-            if count > 0:
-                alertas_antiguas.unlink()
-                _logger.info(f"✅ {count} alertas antiguas eliminadas")
-            else:
-                _logger.info("ℹ️ No hay alertas antiguas para eliminar")
-
+            count = len(antiguas)
+            antiguas.unlink()
+            _logger.info(f"🗑️ {count} alertas antiguas eliminadas")
             return count
-
         except Exception as e:
-            _logger.error(f"❌ Error en limpieza de alertas: {e}")
+            _logger.error(f"❌ Error limpieza: {e}")
             return 0
 
     @api.model
-    def obtener_estadisticas_alertas(self, dias=7):
-        """Obtiene estadísticas de alertas de los últimos N días."""
+    def obtener_estadisticas_alertas(self):
+        """Estadísticas generales de alertas."""
         try:
-            fecha_inicio = datetime.now() - timedelta(days=dias)
-            alertas = self.search([('fecha_creacion', '>=', fecha_inicio)])
-
-            stats = {
-                'total_alertas': len(alertas),
-                'por_tipo': {},
-                'por_prioridad': {},
-                'por_estado': {},
-                'por_origen': {},
-                'resueltas': len(alertas.filtered(lambda a: a.estado == 'resuelta')),
-                'pendientes': len(alertas.filtered(lambda a: a.estado in ['nueva', 'notificada', 'en_proceso'])),
-                'equipos_con_alertas': len(set(alertas.mapped('serie_equipo'))),
+            activas = self.search([('estado', 'in', ['nueva', 'notificada', 'en_proceso'])])
+            return {
+                'total_activas': len(activas),
+                'por_prioridad': {
+                    p: len(activas.filtered(lambda a, pr=p: a.prioridad == pr))
+                    for p in ['urgente', 'critica', 'alta', 'media', 'baja']
+                },
+                'por_tipo': {
+                    t: len(activas.filtered(lambda a, tp=t: a.tipo_alerta == tp))
+                    for t in set(activas.mapped('tipo_alerta'))
+                },
+                'por_origen': {
+                    'interno': len(activas.filtered(lambda a: a.origen_datos == 'interno')),
+                    'api_events': len(activas.filtered(lambda a: a.origen_datos == 'api_events')),
+                },
+                'equipos_afectados': len(set(activas.mapped('serie_equipo'))),
             }
-
-            # Por tipo
-            for tipo in ['suministro_bajo', 'suministro_critico', 'equipo_offline',
-                         'uso_anomalo_alto', 'contador_decrece', 'paper_jam',
-                         'device_error', 'supply_event', 'supply_replaced']:
-                count = len(alertas.filtered(lambda a, t=tipo: a.tipo_alerta == t))
-                if count > 0:
-                    stats['por_tipo'][tipo] = count
-
-            # Por prioridad
-            for prioridad in ['baja', 'media', 'alta', 'critica', 'urgente']:
-                count = len(alertas.filtered(lambda a, p=prioridad: a.prioridad == p))
-                if count > 0:
-                    stats['por_prioridad'][prioridad] = count
-
-            # Por estado
-            for estado in ['nueva', 'notificada', 'en_proceso', 'resuelta', 'cerrada']:
-                count = len(alertas.filtered(lambda a, e=estado: a.estado == e))
-                if count > 0:
-                    stats['por_estado'][estado] = count
-
-            # Por origen
-            for origen in ['interno', 'api_events']:
-                count = len(alertas.filtered(lambda a, o=origen: a.origen_datos == o))
-                if count > 0:
-                    stats['por_origen'][origen] = count
-
-            _logger.info(f"📊 Estadísticas: {stats['total_alertas']} alertas totales")
-            return stats
-
-        except Exception as e:
-            _logger.error(f"❌ Error obteniendo estadísticas: {e}")
+        except Exception:
             return {}
