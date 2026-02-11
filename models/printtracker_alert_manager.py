@@ -29,9 +29,9 @@ class PrintTrackerAlertManager(models.TransientModel):
     # CAMPOS DE CONFIGURACIÓN
     # ==========================================
     revisar_suministros = fields.Boolean('Revisar Suministros', default=True)
-    revisar_equipos_offline = fields.Boolean('Revisar Equipos Offline', default=True)
-    revisar_uso_anomalo = fields.Boolean('Revisar Uso Anómalo', default=True)
-    revisar_contadores_decrecen = fields.Boolean('Revisar Contadores que Decrecen', default=True)
+    revisar_equipos_offline = fields.Boolean('Revisar Equipos Offline', default=False)
+    revisar_uso_anomalo = fields.Boolean('Revisar Uso Anómalo', default=False)
+    revisar_contadores_decrecen = fields.Boolean('Revisar Contadores que Decrecen', default=False)
     revisar_api_events = fields.Boolean('Revisar Events de API', default=True)
 
     umbral_suministro_bajo = fields.Float('Umbral Suministro Bajo (%)', default=15.0)
@@ -82,9 +82,9 @@ class PrintTrackerAlertManager(models.TransientModel):
 
             alert_manager = self.create({
                 'revisar_suministros': True,
-                'revisar_equipos_offline': True,
-                'revisar_uso_anomalo': True,
-                'revisar_contadores_decrecen': True,
+                'revisar_equipos_offline': False,
+                'revisar_uso_anomalo': False,
+                'revisar_contadores_decrecen': False,
                 'revisar_api_events': True,
             })
 
@@ -327,14 +327,7 @@ class PrintTrackerAlertManager(models.TransientModel):
                             serie, 'alto', lec.contador_total, lec.contador_total - inc_ayer)
                         if a:
                             alertas += 1
-                            log_lines.append(f"📈 {serie} ({inc_ayer:,} vs {prom:.0f})")
-
-                    elif inc_ayer < prom * 0.3 and prom > 100:
-                        a = self.env['printtracker.alert'].crear_alerta_uso_anomalo(
-                            serie, 'bajo', lec.contador_total, lec.contador_total - inc_ayer)
-                        if a:
-                            alertas += 1
-                            log_lines.append(f"📉 {serie} ({inc_ayer:,} vs {prom:.0f})")
+                            log_lines.append(f"📈 {serie} ({inc_ayer:,} vs prom {prom:.0f})")
 
                 except Exception as e:
                     log_lines.append(f"❌ {lec.serie}: {e}")
@@ -489,10 +482,10 @@ class PrintTrackerAlertManager(models.TransientModel):
             cp = self.env['ir.config_parameter'].sudo()
             base = cp.get_param('printtracker.api.base_url', 'https://papi.printtrackerpro.com/v1')
 
-            if entity and entity.entity_id:
+            if entity and entity.pt_entity_id:
                 token = getattr(entity, 'api_token', None) or cp.get_param('printtracker.api.key')
                 if token:
-                    return {'base_url': base.rstrip('/'), 'entity_id': entity.entity_id, 'api_key': token, 'timeout': 30}
+                    return {'base_url': base.rstrip('/'), 'entity_id': entity.pt_entity_id, 'api_key': token, 'timeout': 30}
 
             eid = cp.get_param('printtracker.api.entity_id')
             key = cp.get_param('printtracker.api.key')
