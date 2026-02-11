@@ -510,7 +510,7 @@ class PrintTrackerAlertManager(models.TransientModel):
     def _consultar_printtracker_events(self, cfg, start_from):
         try:
             url = f"{cfg['base_url']}/entity/{cfg['entity_id']}/events"
-            headers = {'Authorization': f"Bearer {cfg['api_key']}", 'Content-Type': 'application/json'}
+            headers = {'x-api-key': cfg['api_key'], 'Content-Type': 'application/json'}
             params = {
                 'limit': 100, 'page': 1, 'includeChildren': 'true',
                 'start': start_from.strftime('%Y-%m-%dT%H:%M:%S.000Z'),
