@@ -488,7 +488,108 @@ class UnidadAlquiler(models.Model):
             rec.apto_instalacion = rec.estado_instalacion == 'apto'
             rec.requiere_adecuacion = rec.estado_instalacion == 'requiere_adecuacion'
             rec.notas_adecuacion = '\n'.join(notas) if notas else False
+    # ═══════════════════════════════════════════════════════════════════
+    #  ACCIONES MANUALES DE ESTADO DE ALQUILER
+    # ═══════════════════════════════════════════════════════════════════
 
+    def action_estado_sin_revisar(self):
+        """Regresa el equipo a sin revisar."""
+        for record in self:
+            record.write({'estado_alquiler_id': 'sin_revisar'})
+            record.message_post(
+                body=_("🔄 Estado cambiado manualmente a 'Sin revisar'."),
+                message_type='notification',
+            )
+
+    def action_estado_revisada(self):
+        """Marca el equipo como revisado."""
+        for record in self:
+            record.write({'estado_alquiler_id': 'revisada'})
+            record.message_post(
+                body=_("🔧 Estado cambiado manualmente a 'Revisada'."),
+                message_type='notification',
+            )
+
+    def action_estado_lista(self):
+        """Marca el equipo como listo."""
+        for record in self:
+            record.write({'estado_alquiler_id': 'lista'})
+            record.message_post(
+                body=_("📋 Estado cambiado manualmente a 'Lista'."),
+                message_type='notification',
+            )
+
+    def action_estado_inspeccion(self):
+        """Marca el equipo como en inspección."""
+        for record in self:
+            record.write({'estado_alquiler_id': 'inspeccion'})
+            record.message_post(
+                body=_("🔍 Estado cambiado manualmente a 'En inspección'."),
+                message_type='notification',
+            )
+
+    def action_estado_subsanacion(self):
+        """Marca el equipo como esperando subsanación."""
+        for record in self:
+            record.write({'estado_alquiler_id': 'subsanacion'})
+            record.message_post(
+                body=_("⏳ Estado cambiado manualmente a 'Esperando subsanación'."),
+                message_type='notification',
+            )
+
+    def action_estado_por_instalar(self):
+        """Marca el equipo como por instalar."""
+        for record in self:
+            record.write({'estado_alquiler_id': 'por_instalar'})
+            record.message_post(
+                body=_("🏗️ Estado cambiado manualmente a 'Por instalar'."),
+                message_type='notification',
+            )
+
+    def action_estado_alquilada(self):
+        """Marca el equipo como alquilado."""
+        for record in self:
+            record.write({'estado_alquiler_id': 'alquilada'})
+            record.message_post(
+                body=_("✅ Estado cambiado manualmente a 'Alquilada'."),
+                message_type='notification',
+            )
+
+    def action_estado_con_problemas(self):
+        """Marca el equipo con problemas."""
+        for record in self:
+            record.write({'estado_alquiler_id': 'con_problemas'})
+            record.message_post(
+                body=_("⚠️ Estado cambiado manualmente a 'Con Problemas'."),
+                message_type='notification',
+            )
+
+    def action_estado_partes(self):
+        """Marca el equipo como de partes."""
+        for record in self:
+            record.write({'estado_alquiler_id': 'partes'})
+            record.message_post(
+                body=_("🔩 Estado cambiado manualmente a 'De Partes'."),
+                message_type='notification',
+            )
+
+    def action_estado_externo(self):
+        """Marca el equipo como externo."""
+        for record in self:
+            record.write({'estado_alquiler_id': 'externo'})
+            record.message_post(
+                body=_("🌐 Estado cambiado manualmente a 'Externo'."),
+                message_type='notification',
+            )
+
+    def action_estado_vendida(self):
+        """Marca el equipo como vendido."""
+        for record in self:
+            record.write({'estado_alquiler_id': 'vendida'})
+            record.message_post(
+                body=_("💰 Estado cambiado manualmente a 'Vendida'."),
+                message_type='notification',
+            )
     def action_enviar_inspeccion(self):
         """Enviar formulario de inspección al cliente."""
         self.ensure_one()
