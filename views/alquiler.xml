@@ -131,6 +131,13 @@
                                 <field string="Entregas Tóner" name="toner_deliveries_count"
                                     widget="statinfo" />
                             </button>
+                            <button class="oe_stat_button" type="object"
+                                    name="action_view_inspecciones"
+                                    icon="fa-clipboard-check"
+                                    invisible="inspeccion_count == 0">
+                                <field name="inspeccion_count" widget="statinfo"
+                                    string="Inspecciones"/>
+                            </button>
                         </div>
 
                         <separator />

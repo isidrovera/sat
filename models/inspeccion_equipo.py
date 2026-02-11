@@ -1,105 +1,78 @@
-import calendar
-import requests
-import uuid
-from urllib.parse import urlencode
-from odoo.exceptions import UserError, ValidationError
-import io
-import qrcode
-import re
-import base64
-from io import BytesIO
-import xlwt
-from odoo import _, models, fields, api
-from dateutil.relativedelta import relativedelta
-from datetime import datetime
-from datetime import datetime, timedelta
-import xml.etree.ElementTree as ET
 import logging
+from odoo import _, models, fields, api
+from odoo.exceptions import ValidationError
+
 _logger = logging.getLogger(__name__)
+
+
 class InspeccionResultado(models.Model):
     _name = 'inspeccion.resultado'
     _description = 'Resultado de inspección de sitio'
     _inherit = ['mail.thread', 'mail.activity.mixin']
 
-    name = fields.Char('Número', readonly=True, copy=False, default='Nuevo')
+    # ─── Identificación ───────────────────────────────────────────────
+    name = fields.Char(
+        'Número', readonly=True, copy=False, default='Nuevo')
+    alquiler_id = fields.Many2one(
+        'alquiler', string='Alquiler', required=True)
+    fecha = fields.Datetime(
+        'Fecha de inspección', default=fields.Datetime.now)
 
-    @api.model_create_multi
-    def create(self, vals_list):
-        for vals in vals_list:
-            if vals.get('name', 'Nuevo') == 'Nuevo':
-                vals['name'] = self.env['ir.sequence'].next_by_code(
-                    'inspeccion.resultado') or 'Nuevo'
-        records = super().create(vals_list)
-        for record in records:
-            record._update_estado()
-            if record.alquiler_id:
-                record.alquiler_id._compute_apto()
-        return records
-
-    def write(self, vals):
-        res = super(InspeccionResultado, self).write(vals)
-        self._update_estado()
-        if any(field in vals for field in ['punto_corriente', 'punto_red', 'espacio']):
-            for record in self:
-                if record.alquiler_id:
-                    record.alquiler_id._compute_apto()
-        return res
-    alquiler_id = fields.Many2one('alquiler', required=True)
-    fecha = fields.Datetime('Fecha de inspección', default=fields.Datetime.now)
-
-    # Instalación Eléctrica
+    # ─── Instalación Eléctrica ────────────────────────────────────────
     punto_corriente = fields.Selection([
         ('si', 'Sí'),
         ('no', 'No'),
-        ('pendiente', 'Requiere instalación')
+        ('pendiente', 'Requiere instalación'),
     ], string='Punto eléctrico', required=True)
     voltaje = fields.Float('Voltaje medido (V)')
 
-    # Infraestructura de Red
+    # ─── Infraestructura de Red ───────────────────────────────────────
     punto_red = fields.Selection([
         ('si', 'Sí'),
         ('no', 'No'),
-        ('pendiente', 'Requiere instalación')
+        ('pendiente', 'Requiere instalación'),
     ], string='Punto de red', required=True)
     wifi = fields.Selection([
         ('si', 'Sí'),
-        ('no', 'No')
+        ('no', 'No'),
     ], string='Señal WiFi')
     area_sistemas = fields.Boolean('¿Cuenta con área de sistemas?')
     contacto_sistemas = fields.Char('Contacto del área de sistemas')
 
-    # Control de Impresión
+    # ─── Control de Impresión ─────────────────────────────────────────
     control_impresion = fields.Boolean('¿Requiere control de impresión?')
     tipo_control = fields.Selection([
         ('usuario', 'Por usuario'),
         ('departamento', 'Por departamento'),
-        ('proyecto', 'Por proyecto')
+        ('proyecto', 'Por proyecto'),
     ], string='Tipo de control')
     cantidad_usuarios = fields.Integer('Cantidad de usuarios')
     requiere_reportes = fields.Boolean('¿Requiere reportes de uso?')
     frecuencia_reportes = fields.Selection([
         ('diario', 'Diario'),
         ('semanal', 'Semanal'),
-        ('mensual', 'Mensual')
+        ('mensual', 'Mensual'),
     ], string='Frecuencia de reportes')
 
-    # Entorno de PCs
+    # ─── Entorno de PCs ───────────────────────────────────────────────
     cantidad_windows = fields.Integer('Cantidad de PCs Windows')
     cantidad_mac = fields.Integer('Cantidad de PCs Mac')
     cantidad_linux = fields.Integer('Cantidad de PCs Linux')
 
-    # Configuración de Escaneo
-    usar_smb = fields.Boolean('¿Usará escaneo a carpeta compartida (SMB)?')
+    # ─── Configuración de Escaneo ─────────────────────────────────────
+    usar_smb = fields.Boolean(
+        '¿Usará escaneo a carpeta compartida (SMB)?')
     usar_ftp = fields.Boolean('¿Usará escaneo a FTP?')
     usar_email = fields.Boolean('¿Usará escaneo a email?')
     tipo_servidor_email = fields.Selection([
         ('propio', 'Servidor de correo propio'),
-        ('proveedor', 'Servidor del proveedor')
+        ('proveedor', 'Servidor del proveedor'),
     ], string='Tipo de servidor email')
     servidor_email_propio = fields.Char(
-        'Servidor SMTP propio', help='Solo si usará su propio servidor de correo')
+        'Servidor SMTP propio',
+        help='Solo si usará su propio servidor de correo')
 
-    # Espacio Físico y Acceso
+    # ─── Espacio Físico y Acceso ──────────────────────────────────────
     piso = fields.Integer('Número de piso')
     ascensor = fields.Boolean('Tiene ascensor')
     espacio = fields.Float('Espacio disponible (m²)')
@@ -109,16 +82,49 @@ class InspeccionResultado(models.Model):
     observaciones_estacionamiento = fields.Text(
         'Observaciones de estacionamiento')
 
-    # Estado y Observaciones
+    # ─── Estado y Observaciones ───────────────────────────────────────
     estado = fields.Selection([
         ('pendiente', 'Pendiente de revisión'),
         ('aprobado', 'Aprobado'),
         ('requiere_cambios', 'Requiere cambios'),
-        ('rechazado', 'No viable')
-    ], string='Estado', default='pendiente')
+        ('rechazado', 'No viable'),
+    ], string='Estado', default='pendiente', tracking=True)
     observaciones = fields.Text('Observaciones')
     requisitos_pendientes = fields.Text('Requisitos pendientes')
-    puede_reenviar = fields.Boolean('Puede reenviar formulario', default=True)
+    puede_reenviar = fields.Boolean(
+        'Puede reenviar formulario', default=True)
+
+    # ═══════════════════════════════════════════════════════════════════
+    #  CRUD
+    # ═══════════════════════════════════════════════════════════════════
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            if vals.get('name', 'Nuevo') == 'Nuevo':
+                vals['name'] = self.env['ir.sequence'].next_by_code(
+                    'inspeccion.resultado') or 'Nuevo'
+        records = super().create(vals_list)
+        records._update_estado()
+        for record in records:
+            if record.alquiler_id:
+                record.alquiler_id._compute_apto()
+        return records
+
+    def write(self, vals):
+        res = super().write(vals)
+        if not self.env.context.get('_skip_update_estado'):
+            self._update_estado()
+        campos_apto = {'punto_corriente', 'punto_red', 'espacio'}
+        if campos_apto.intersection(vals):
+            for record in self:
+                if record.alquiler_id:
+                    record.alquiler_id._compute_apto()
+        return res
+
+    # ═══════════════════════════════════════════════════════════════════
+    #  ONCHANGES
+    # ═══════════════════════════════════════════════════════════════════
 
     @api.onchange('usar_email')
     def _onchange_usar_email(self):
@@ -132,8 +138,8 @@ class InspeccionResultado(models.Model):
             self.servidor_email_propio = False
 
     @api.onchange('estado')
-    def _onchange_estado(self):
-        if self.estado in ['requiere_cambios', 'rechazado']:
+    def _onchange_estado_manual(self):
+        if self.estado in ('requiere_cambios', 'rechazado'):
             self.puede_reenviar = True
         else:
             self.puede_reenviar = False
@@ -146,6 +152,160 @@ class InspeccionResultado(models.Model):
             self.requiere_reportes = False
             self.frecuencia_reportes = False
 
+    @api.onchange(
+        'punto_corriente', 'punto_red', 'wifi',
+        'espacio', 'ancho_pasillo',
+        'cantidad_windows', 'cantidad_mac', 'cantidad_linux',
+    )
+    def _onchange_datos_tecnicos(self):
+        """Recalcula el estado en tiempo real mientras el usuario edita."""
+        self._update_estado()
+
+    # ═══════════════════════════════════════════════════════════════════
+    #  CONSTRAINTS
+    # ═══════════════════════════════════════════════════════════════════
+
+    @api.constrains('cantidad_windows', 'cantidad_mac', 'cantidad_linux')
+    def _check_total_pcs(self):
+        for rec in self:
+            total = rec.cantidad_windows + rec.cantidad_mac + rec.cantidad_linux
+            if total <= 0:
+                raise ValidationError(_(
+                    "Debe haber al menos una computadora conectada "
+                    "(Windows, Mac o Linux)."))
+
+    # ═══════════════════════════════════════════════════════════════════
+    #  LÓGICA DE ESTADO + SINCRONIZACIÓN CON ALQUILER
+    # ═══════════════════════════════════════════════════════════════════
+
+    def _update_estado(self):
+        """Evalúa las condiciones del sitio, determina el estado
+        y sincroniza el estado del alquiler asociado."""
+        for record in self:
+            problemas = []
+            critico = False
+
+            # ── Punto eléctrico ──
+            if record.punto_corriente == 'no':
+                problemas.append("No tiene punto de corriente.")
+                critico = True
+            elif record.punto_corriente == 'pendiente':
+                problemas.append(
+                    "Requiere instalación de punto de corriente.")
+
+            # ── Conectividad de red ──
+            if record.punto_red == 'no' and record.wifi == 'no':
+                problemas.append("No tiene conexión a red ni WiFi.")
+                critico = True
+            elif record.punto_red == 'pendiente':
+                problemas.append(
+                    "Requiere instalación de punto de red.")
+
+            # ── Espacio físico ──
+            if record.espacio < 2.0 or record.ancho_pasillo < 1.0:
+                problemas.append(
+                    "Espacio insuficiente: mínimo 2m² y pasillo "
+                    "de 1m de ancho.")
+
+            # ── Computadoras ──
+            total_pcs = (
+                record.cantidad_windows
+                + record.cantidad_mac
+                + record.cantidad_linux
+            )
+            if total_pcs <= 0:
+                problemas.append("No hay computadoras conectadas.")
+
+            # ── Determinar estado de inspección ──
+            if not problemas:
+                nuevo_estado = 'aprobado'
+            elif critico:
+                nuevo_estado = 'rechazado'
+            else:
+                nuevo_estado = 'requiere_cambios'
+
+            nuevo_requisitos = (
+                '\n'.join(problemas) if problemas else False
+            )
+
+            # Escribir estado de inspección sin recursión
+            record.with_context(_skip_update_estado=True).write({
+                'estado': nuevo_estado,
+                'requisitos_pendientes': nuevo_requisitos,
+            })
+
+            # ── Sincronizar estado del alquiler ──
+            record._sync_estado_alquiler(nuevo_estado, problemas)
+
+    def _sync_estado_alquiler(self, estado_inspeccion, problemas):
+        """Sincroniza el estado del alquiler según el resultado
+        de la inspección.
+
+        Mapa de transiciones:
+            aprobado         → por_instalar
+            requiere_cambios → subsanacion
+            rechazado        → lista (vuelve al stock)
+        """
+        self.ensure_one()
+        alquiler = self.alquiler_id
+        if not alquiler:
+            return
+
+        estado_actual = alquiler.estado_alquiler_id
+        # Solo actuar si el alquiler está en flujo de inspección
+        estados_inspeccion = ('inspeccion', 'subsanacion')
+
+        if estado_actual not in estados_inspeccion:
+            return
+
+        if estado_inspeccion == 'aprobado':
+            alquiler.write({'estado_alquiler_id': 'por_instalar'})
+            alquiler.message_post(
+                body=_(
+                    "✅ Inspección aprobada. Equipo listo para instalar.\n"
+                    "Inspección: %s"
+                ) % self.name,
+                message_type='notification',
+            )
+            _logger.info(
+                "Alquiler %s → por_instalar (inspección %s aprobada)",
+                alquiler.id, self.name)
+
+        elif estado_inspeccion == 'requiere_cambios':
+            alquiler.write({'estado_alquiler_id': 'subsanacion'})
+            notas = '\n'.join(problemas) if problemas else ''
+            alquiler.message_post(
+                body=_(
+                    "⚠️ Inspección requiere cambios. "
+                    "Esperando subsanación del cliente.\n"
+                    "Inspección: %s\n"
+                    "Pendientes:\n%s"
+                ) % (self.name, notas),
+                message_type='notification',
+            )
+            _logger.info(
+                "Alquiler %s → subsanacion (inspección %s requiere cambios)",
+                alquiler.id, self.name)
+
+        elif estado_inspeccion == 'rechazado':
+            alquiler.write({'estado_alquiler_id': 'lista'})
+            notas = '\n'.join(problemas) if problemas else ''
+            alquiler.message_post(
+                body=_(
+                    "❌ Inspección rechazada. Equipo regresa a 'Lista'.\n"
+                    "Inspección: %s\n"
+                    "Motivos:\n%s"
+                ) % (self.name, notas),
+                message_type='notification',
+            )
+            _logger.info(
+                "Alquiler %s → lista (inspección %s rechazada)",
+                alquiler.id, self.name)
+
+    # ═══════════════════════════════════════════════════════════════════
+    #  ACCIONES
+    # ═══════════════════════════════════════════════════════════════════
+
     def action_view_alquiler(self):
         self.ensure_one()
         return {
@@ -156,46 +316,3 @@ class InspeccionResultado(models.Model):
             'view_mode': 'form',
             'target': 'current',
         }
-
-    @api.constrains('cantidad_windows', 'cantidad_mac', 'cantidad_linux')
-    def _check_total_pcs(self):
-        for rec in self:
-            total_pcs = rec.cantidad_windows + rec.cantidad_mac + rec.cantidad_linux
-            if total_pcs <= 0:
-                raise ValidationError(
-                    "Debe haber al menos una computadora conectada (Windows, Mac o Linux).")
-
-    def _update_estado(self):
-        for record in self:
-            problemas = []
-            if record.punto_corriente == 'no':
-                problemas.append("No tiene punto de corriente.")
-            elif record.punto_corriente == 'pendiente':
-                problemas.append("Requiere instalación de punto de corriente.")
-
-            if record.punto_red == 'no' and record.wifi == 'no':
-                problemas.append("No tiene conexión a red ni WiFi.")
-            elif record.punto_red == 'pendiente':
-                problemas.append("Requiere instalación de punto de red.")
-
-            if record.espacio < 2.0 or record.ancho_pasillo < 1.0:
-                problemas.append(
-                    "Espacio insuficiente: mínimo 2m² y pasillo de 1m de ancho.")
-
-            total_pcs = record.cantidad_windows + record.cantidad_mac + record.cantidad_linux
-            if total_pcs <= 0:
-                problemas.append("No hay computadoras conectadas.")
-
-            nuevo_estado = 'aprobado' if not problemas else 'rechazado' if any(
-                "Requiere" in p or "No tiene" in p for p in problemas) else 'requiere_cambios'
-            nuevo_requisitos = '\n'.join(problemas) if problemas else False
-
-            self.env.cr.execute("""
-                UPDATE inspeccion_resultado 
-                SET estado = %s, requisitos_pendientes = %s 
-                WHERE id = %s
-            """, (nuevo_estado, nuevo_requisitos, record.id))
-
-    @api.onchange('punto_corriente', 'punto_red', 'wifi', 'espacio', 'ancho_pasillo', 'cantidad_windows', 'cantidad_mac', 'cantidad_linux')
-    def _onchange_estado(self):
-        self._update_estado()

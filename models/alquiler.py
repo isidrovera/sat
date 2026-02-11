@@ -109,9 +109,19 @@ class UnidadAlquiler(models.Model):
     ubicacion_id = fields.Selection([('primer_piso', 'Primer piso'), ('tercer_piso', 'Tercer piso'), ('segundo_local', 'Segundo local'), ('covida', 'Covida')],
                                     default='primer_piso', tracking=True,
                                     )
-    estado_alquiler_id = fields.Selection([('sin_revisar', 'Sin revisar'), ('revisada', 'Revisada'), ('lista', 'Lista'), ('alquilada', 'Alquilada'), ('con_problemas', 'Con Problemas'), ('partes', 'De Partes'), ('externo', 'Externo'), ('vendida', 'Vendida')],
-                                          string='Estado de Maquina',
-                                          default='sin_revisar', tracking=True)
+    estado_alquiler_id = fields.Selection([
+        ('sin_revisar', 'Sin revisar'),
+        ('revisada', 'Revisada'),
+        ('lista', 'Lista'),
+        ('inspeccion', 'En inspección'),
+        ('subsanacion', 'Esperando subsanación'),
+        ('por_instalar', 'Por instalar'),
+        ('alquilada', 'Alquilada'),
+        ('con_problemas', 'Con Problemas'),
+        ('partes', 'De Partes'),
+        ('externo', 'Externo'),
+        ('vendida', 'Vendida'),
+    ], string='Estado de Maquina', default='sin_revisar', tracking=True)
 
     cliente_id = fields.Many2one(
         'res.partner', string='Cliente', required=False, tracking=True)
@@ -365,6 +375,34 @@ class UnidadAlquiler(models.Model):
         'alquiler_id',
         string='Resultados de inspección'
     )
+    inspeccion_count = fields.Integer(
+        string='Inspecciones',
+        compute='_compute_inspeccion_count',
+    )
+
+    @api.depends('resultado_inspeccion')
+    def _compute_inspeccion_count(self):
+        for rec in self:
+            rec.inspeccion_count = len(rec.resultado_inspeccion)
+
+    def action_view_inspecciones(self):
+        """Abrir inspecciones del equipo."""
+        self.ensure_one()
+        action = {
+            'type': 'ir.actions.act_window',
+            'name': 'Inspecciones',
+            'res_model': 'inspeccion.resultado',
+            'view_mode': 'list,form',
+            'domain': [('alquiler_id', '=', self.id)],
+            'context': {
+                'default_alquiler_id': self.id,
+            },
+        }
+        # Si solo hay una inspección, abrir directo el formulario
+        if self.inspeccion_count == 1:
+            action['view_mode'] = 'form'
+            action['res_id'] = self.resultado_inspeccion[0].id
+        return action
 
     token = fields.Char('Token de inspección',
                         readonly=True, copy=False, store=True)
@@ -452,14 +490,38 @@ class UnidadAlquiler(models.Model):
             rec.notas_adecuacion = '\n'.join(notas) if notas else False
 
     def action_enviar_inspeccion(self):
+        """Enviar formulario de inspección al cliente."""
         self.ensure_one()
+        estados_permitidos = ('lista', 'inspeccion', 'subsanacion')
+        if self.estado_alquiler_id not in estados_permitidos:
+            estado_label = dict(
+                self._fields['estado_alquiler_id'].selection
+            ).get(self.estado_alquiler_id, self.estado_alquiler_id)
+            raise UserError(_(
+                "Solo se puede enviar inspección cuando el equipo está en "
+                "estado 'Lista', 'En inspección' o 'Esperando subsanación'.\n"
+                "Estado actual: %s"
+            ) % estado_label)
+
+        # Cambiar estado solo si viene de 'lista' o 'subsanacion'
+        if self.estado_alquiler_id in ('lista', 'subsanacion'):
+            self.write({'estado_alquiler_id': 'inspeccion'})
+            origen = 'subsanación' if self.estado_alquiler_id == 'subsanacion' else 'lista'
+            self.message_post(
+                body=_(
+                    "📋 Inspección enviada al cliente. "
+                    "Estado cambiado de '%s' a 'En inspección'."
+                ) % origen,
+                message_type='notification',
+            )
+
         return {
             'name': 'Enviar Inspección',
             'type': 'ir.actions.act_window',
             'res_model': 'wizard.enviar.inspeccion',
             'view_mode': 'form',
             'target': 'new',
-            'context': {'default_alquiler_id': self.id}
+            'context': {'default_alquiler_id': self.id},
         }
      # Añadir contador de partes solicitadas
     partes_solicitadas_count = fields.Integer(
@@ -549,48 +611,27 @@ class UnidadAlquiler(models.Model):
         domain = domain or []
         Alquiler = self.env['alquiler']
 
-        # Excluir equipos vendidos del conteo general
         domain_sin_vendidos = domain + [('estado_alquiler_id', '!=', 'vendida')]
-        
+
         records = Alquiler.search(domain_sin_vendidos)
         total_equipos = len(records)
 
-        # Estados de alquiler (sin vendidos)
-        total_sin_revisar = Alquiler.search_count(domain_sin_vendidos + [
-            ('estado_alquiler_id', '=', 'sin_revisar')
-        ])
-        total_revisada = Alquiler.search_count(domain_sin_vendidos + [
-            ('estado_alquiler_id', '=', 'revisada')
-        ])
-        total_lista = Alquiler.search_count(domain_sin_vendidos + [
-            ('estado_alquiler_id', '=', 'lista')
-        ])
-        total_alquilada = Alquiler.search_count(domain_sin_vendidos + [
-            ('estado_alquiler_id', '=', 'alquilada')
-        ])
-        total_con_problemas = Alquiler.search_count(domain_sin_vendidos + [
-            ('estado_alquiler_id', '=', 'con_problemas')
-        ])
-        total_partes = Alquiler.search_count(domain_sin_vendidos + [
-            ('estado_alquiler_id', '=', 'partes')
-        ])
-        total_externo = Alquiler.search_count(domain_sin_vendidos + [
-            ('estado_alquiler_id', '=', 'externo')
-        ])
-        
-        # Vendidos: solo para mostrar en su propio botón
-        total_vendida = Alquiler.search_count(domain + [
-            ('estado_alquiler_id', '=', 'vendida')
-        ])
+        # Mapeo de estados para conteo automático
+        estados = [
+            'sin_revisar', 'revisada', 'lista', 'inspeccion',
+            'subsanacion', 'por_instalar', 'alquilada',
+            'con_problemas', 'partes', 'externo',
+        ]
+        resultado = {'total_equipos': total_equipos}
 
-        return {
-            'total_equipos': total_equipos,
-            'total_sin_revisar': total_sin_revisar,
-            'total_revisada': total_revisada,
-            'total_lista': total_lista,
-            'total_alquilada': total_alquilada,
-            'total_con_problemas': total_con_problemas,
-            'total_partes': total_partes,
-            'total_externo': total_externo,
-            'total_vendida': total_vendida,
-        }
+        for estado in estados:
+            resultado[f'total_{estado}'] = Alquiler.search_count(
+                domain_sin_vendidos + [('estado_alquiler_id', '=', estado)]
+            )
+
+        # Vendidos aparte (no se excluyen del domain base)
+        resultado['total_vendida'] = Alquiler.search_count(
+            domain + [('estado_alquiler_id', '=', 'vendida')]
+        )
+
+        return resultado

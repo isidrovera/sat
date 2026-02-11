@@ -30,17 +30,29 @@ class ticket_alquiler(models.Model):
 
     @api.model
     def create(self, vals):
-        # Generar el número del ticket utilizando la secuencia definida
+        # Validar que el equipo esté en estado correcto para instalación
+        if vals.get('tipo_servicio_id') == 'instalacion' and vals.get('product_alquiler'):
+            equipo = self.env['alquiler'].browse(vals['product_alquiler'])
+            if equipo.exists() and equipo.estado_alquiler_id != 'por_instalar':
+                raise UserError(_(
+                    "No se puede crear un ticket de instalación.\n"
+                    "El equipo '%s' no está en estado 'Por instalar'.\n"
+                    "Estado actual: %s\n\n"
+                    "Primero debe completarse y aprobarse la inspección del sitio."
+                ) % (
+                    equipo.serie,
+                    dict(equipo._fields['estado_alquiler_id'].selection).get(
+                        equipo.estado_alquiler_id, equipo.estado_alquiler_id
+                    )
+                ))
+
+        # Generar el número del ticket
         vals['name'] = self.env['ir.sequence'].next_by_code('ticket.alquiler') or 'New'
         
-        # Asegurar que el nombre no es nulo
         if vals.get('name', 'New') == 'New':
             raise UserError(_("Error: No se pudo generar un número de ticket."))
         
-        # Crear el registro
         record = super(ticket_alquiler, self).create(vals)
-        
-        # Calcular la URL del registro
         record._compute_url()
         
         return record
@@ -687,6 +699,7 @@ class ticket_alquiler(models.Model):
                 if ticket.tipo_servicio_id == 'alquiler' and unidad.estado_alquiler_id == 'sin_revisar':
                     unidad.write({'estado_alquiler_id': 'revisada'})
                     _logger.info("Unidad %s pasada a 'revisada'", unidad.id)
+
                 elif ticket.tipo_servicio_id == 'cambio_repuestos' and unidad.estado_alquiler_id == 'revisada':
                     prev = ticket.search([
                         ('product_alquiler', '=', unidad.id),
@@ -695,6 +708,33 @@ class ticket_alquiler(models.Model):
                     if prev:
                         unidad.write({'estado_alquiler_id': 'lista'})
                         _logger.info("Unidad %s pasada a 'lista' (ticket previo %s)", unidad.id, prev.id)
+
+                elif ticket.tipo_servicio_id == 'instalacion':
+                    if unidad.estado_alquiler_id != 'por_instalar':
+                        raise UserError(_(
+                            "No se puede finalizar la instalación.\n"
+                            "El equipo '%s' no está en estado 'Por instalar'.\n"
+                            "Estado actual: %s\n\n"
+                            "Verifique que la inspección del sitio esté aprobada."
+                        ) % (
+                            unidad.serie,
+                            dict(unidad._fields['estado_alquiler_id'].selection).get(
+                                unidad.estado_alquiler_id, unidad.estado_alquiler_id
+                            )
+                        ))
+                    unidad.write({'estado_alquiler_id': 'alquilada'})
+                    unidad.message_post(
+                        body=_(
+                            "🏗️ Equipo instalado exitosamente.\n"
+                            "Ticket de instalación: %s\n"
+                            "Técnico: %s"
+                        ) % (ticket.name, ticket.responsable.name or 'N/A'),
+                        message_type='notification',
+                    )
+                    _logger.info(
+                        "Unidad %s pasada a 'alquilada' por instalación (ticket %s)",
+                        unidad.id, ticket.name)
+
                 elif ticket.tipo_servicio_id == 'retiro':
                     unidad.write({
                         'estado_alquiler_id': 'sin_revisar',
