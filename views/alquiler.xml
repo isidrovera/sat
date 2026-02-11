@@ -54,7 +54,7 @@
                             invisible="estado_alquiler_id != 'alquilada'" />
 
                         <field name="estado_alquiler_id" widget="statusbar"
-                            options="{'clickable': '1'}" />
+                             />
                     </header>
 
                     <sheet>

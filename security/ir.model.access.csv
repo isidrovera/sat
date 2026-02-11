@@ -127,6 +127,7 @@ access_client_service_evaluation_user,client.service.evaluation.user,model_clien
 access_client_service_evaluation_manager,client.service.evaluation.manager,model_client_service_evaluation,base.group_system,1,1,1,1
 access_client_service_evaluation_portal,client_service_evaluation.portal_access,model_client_service_evaluation,base.group_portal,1,0,0,0
 access_inspeccion_resultado_user,inspeccion.resultado.user,model_inspeccion_resultado,base.group_system,1,1,1,1
+access_inspeccion_resultado_user,inspeccion.resultado.user,model_inspeccion_resultado,base.group_user,1,1,1,1
 access_inspeccion_resultado_portal,inspeccion_resultado.portal_access,model_inspeccion_resultado,base.group_portal,1,0,0,0
 access_wizard_enviar_inspeccion_user,wizard.enviar.inspeccion.user,model_wizard_enviar_inspeccion,base.group_system,1,1,1,1
 access_wizard_enviar_inspeccion_portal,wizard_enviar_inspeccion.portal_access,model_wizard_enviar_inspeccion,base.group_portal,1,0,0,0
