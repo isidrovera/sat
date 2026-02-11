@@ -871,3 +871,21 @@ class PrintTrackerAlert(models.Model):
             }
         except Exception:
             return {}
+
+
+    def action_resolver(self):
+        """Acción desde botón de vista - Resolver alerta"""
+        return self.action_marcar_resuelta()
+
+    def action_asignar(self):
+        """Acción desde botón de vista - Asignar alerta"""
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Asignar Alerta',
+            'res_model': 'printtracker.alert',
+            'res_id': self.id,
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {'form_view_initial_mode': 'edit'},
+        }
