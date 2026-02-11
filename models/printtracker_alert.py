@@ -828,6 +828,38 @@ class PrintTrackerAlert(models.Model):
         return {'type': 'ir.actions.client', 'tag': 'display_notification',
                 'params': {'message': f'Email reenviado a {self._get_email_soporte()}', 'type': 'success'}}
 
+    def action_resolver(self):
+        """Botón 'Resolver' en la vista form."""
+        return self.action_marcar_resuelta()
+
+    def action_asignar(self):
+        """Botón 'Asignar' en la vista form."""
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Asignar Alerta',
+            'res_model': 'printtracker.alert',
+            'res_id': self.id,
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {'form_view_initial_mode': 'edit'},
+        }
+
+    def action_view_equipo(self):
+        """Botón 'Ver Equipo' en la vista form."""
+        self.ensure_one()
+        if not self.equipo_id:
+            return {'type': 'ir.actions.client', 'tag': 'display_notification',
+                    'params': {'message': 'No hay equipo vinculado', 'type': 'warning'}}
+        return {
+            'type': 'ir.actions.act_window',
+            'name': f'Equipo - {self.serie_equipo}',
+            'res_model': 'alquiler',
+            'res_id': self.equipo_id.id,
+            'view_mode': 'form',
+            'target': 'current',
+        }
+
     # ==========================================
     # UTILIDADES
     # ==========================================
@@ -871,21 +903,3 @@ class PrintTrackerAlert(models.Model):
             }
         except Exception:
             return {}
-
-
-    def action_resolver(self):
-        """Acción desde botón de vista - Resolver alerta"""
-        return self.action_marcar_resuelta()
-
-    def action_asignar(self):
-        """Acción desde botón de vista - Asignar alerta"""
-        self.ensure_one()
-        return {
-            'type': 'ir.actions.act_window',
-            'name': 'Asignar Alerta',
-            'res_model': 'printtracker.alert',
-            'res_id': self.id,
-            'view_mode': 'form',
-            'target': 'new',
-            'context': {'form_view_initial_mode': 'edit'},
-        }
