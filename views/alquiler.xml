@@ -17,15 +17,15 @@
                             icon="fa-wrench" class="btn btn-primary"
                             invisible="estado_bloqueo in ('suspendido', 'bloqueado', 'no_accesible')" />
 
-                        <button string="Enviar Recordatorio" type="object" class="oe_highlight"
+                        <button string="Mantenimiento" type="object" class="oe_highlight"
                             name="button_send_test_mail"
                             invisible="estado_bloqueo in ('suspendido', 'bloqueado', 'no_accesible')" />
 
                         <button name="action_enviar_inspeccion"
-                            string="Enviar Inspección"
+                            string="Inspección"
                             type="object"
                             class="btn-primary"
-                            invisible="estado_bloqueo in ('suspendido', 'bloqueado', 'no_accesible')" />
+                            invisible="estado_alquiler_id not in ('lista', 'inspeccion', 'subsanacion')" />
 
                         <button name="action_solicitar_partes"
                             string="Solicitar Partes"
@@ -907,6 +907,52 @@
                 class="btn btn-warning"
                 icon="fa-envelope"/>
     </group>
+</page>
+<page string="📋 Gestión de Estados" name="estado_page">
+<group>
+    <button name="action_estado_revisada" string="Marcar Revisada"
+            type="object" class="btn-primary"
+            invisible="estado_alquiler_id != 'sin_revisar'"/>
+
+    <button name="action_estado_lista" string="Marcar Lista"
+            type="object" class="btn-primary"
+            invisible="estado_alquiler_id != 'revisada'"/>
+
+    <button name="action_enviar_inspeccion" string="Enviar Inspección"
+            type="object" class="btn-primary"
+            invisible="estado_alquiler_id not in ('lista', 'inspeccion', 'subsanacion')"/>
+
+    <button name="action_estado_por_instalar" string="Aprobar Instalación"
+            type="object" class="btn-success"
+            invisible="estado_alquiler_id not in ('inspeccion', 'subsanacion')"
+            groups="base.group_system"/>
+
+    <button name="action_estado_alquilada" string="Marcar Alquilada"
+            type="object" class="btn-success"
+            invisible="estado_alquiler_id != 'por_instalar'"/>
+
+    <!-- Estados especiales -->
+    <button name="action_estado_con_problemas" string="Con Problemas"
+            type="object" class="btn-warning"
+            invisible="estado_alquiler_id in ('vendida', 'con_problemas')"/>
+
+    <button name="action_estado_partes" string="De Partes"
+            type="object" class="btn-warning"
+            invisible="estado_alquiler_id in ('vendida', 'partes')"/>
+
+    <button name="action_estado_vendida" string="Marcar Vendida"
+            type="object" class="btn-danger"
+            invisible="estado_alquiler_id == 'vendida'"
+            confirm="¿Está seguro de marcar este equipo como vendido?"/>
+
+    <!-- Botón de reset (solo admin) -->
+    <button name="action_estado_sin_revisar" string="Resetear"
+            type="object" class="btn-secondary"
+            invisible="estado_alquiler_id == 'sin_revisar'"
+            groups="base.group_system"
+            confirm="¿Está seguro de resetear el estado del equipo?"/>
+
+</group> 
 </page>
 
                         </notebook>
