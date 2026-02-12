@@ -47,37 +47,61 @@ class GeoMapWidget extends Component {
     async _onMounted() {
         console.log("🗺️ [GeoMapWidget] _onMounted() iniciado");
         try {
+            // Paso 1: Leer coordenadas
+            console.log("🗺️ [Paso 1] Cargando coordenadas actuales...");
             await this._loadCurrentCoords();
+            console.log("🗺️ [Paso 1] Coordenadas:", {
+                lat: this.state.lat,
+                lng: this.state.lng,
+                tieneCoords: this.state.tieneCoords,
+            });
 
+            // Paso 2: Obtener API Key
+            console.log("🗺️ [Paso 2] Obteniendo API Key...");
             const apiKey = await this._getApiKey();
+            console.log("🗺️ [Paso 2] API Key obtenida:", apiKey ? `${apiKey.substring(0, 8)}...` : "NULL/VACÍA");
             if (!apiKey) {
                 this.state.error = "No se ha configurado la API Key de Google Maps.";
                 this.state.loading = false;
+                console.error("🗺️ [Paso 2] ❌ Sin API Key, abortando.");
                 return;
             }
 
+            // Paso 3: Cargar script
+            console.log("🗺️ [Paso 3] Cargando script de Google Maps...");
+            console.log("🗺️ [Paso 3] google.maps ya existe?", !!(window.google && window.google.maps));
             await this._loadGoogleMapsScript(apiKey);
+            console.log("🗺️ [Paso 3] ✅ Script cargado. google.maps:", !!window.google?.maps);
+            console.log("🗺️ [Paso 3] google.maps.places:", !!window.google?.maps?.places);
             this.state.apiLoaded = true;
 
-            // ★ CAMBIO CLAVE: primero quitamos loading para que OWL renderice el contenedor
-            this.state.loading = false;
-
-            // ★ Esperar al siguiente frame para que el DOM esté listo
-            await new Promise(resolve => requestAnimationFrame(resolve));
-
-            console.log("🗺️ [Post-render] mapContainer:", this.mapContainerRef.el);
-            console.log("🗺️ [Post-render] searchInput:", this.searchInputRef.el);
-
+            // Paso 4: Inicializar mapa
+            console.log("🗺️ [Paso 4] Inicializando mapa...");
+            console.log("🗺️ [Paso 4] mapContainerRef.el:", this.mapContainerRef.el);
+            console.log("🗺️ [Paso 4] Dimensiones container:", {
+                width: this.mapContainerRef.el?.offsetWidth,
+                height: this.mapContainerRef.el?.offsetHeight,
+            });
             this._initMap();
-            this._initAutocomplete();
+            console.log("🗺️ [Paso 4] Mapa creado:", !!this.map);
 
+            // Paso 5: Inicializar autocomplete
+            console.log("🗺️ [Paso 5] Inicializando autocomplete...");
+            console.log("🗺️ [Paso 5] searchInputRef.el:", this.searchInputRef.el);
+            console.log("🗺️ [Paso 5] props.readonly:", this.props.readonly);
+            this._initAutocomplete();
+            console.log("🗺️ [Paso 5] Autocomplete creado:", !!this.autocomplete);
+
+            this.state.loading = false;
             console.log("🗺️ ✅ Widget inicializado correctamente");
         } catch (e) {
             console.error("🗺️ ❌ Error en _onMounted:", e);
+            console.error("🗺️ Stack:", e.stack);
             this.state.error = e.message || "Error al cargar el mapa.";
             this.state.loading = false;
         }
     }
+
     _onWillUnmount() {
         console.log("🗺️ [GeoMapWidget] _onWillUnmount()");
         if (this.autocomplete) {

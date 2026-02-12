@@ -16,8 +16,8 @@
                 <span>Cargando mapa...</span>
             </div>
 
-            <!-- Contenido principal -->
-            <div t-if="!state.loading and !state.error" class="o_geo_map_content">
+            <!-- Contenido principal: SIEMPRE en el DOM, oculto con CSS si loading/error -->
+            <div t-att-class="'o_geo_map_content' + (state.loading or state.error ? ' d-none' : '')">
 
                 <!-- Barra de búsqueda -->
                 <div class="o_geo_search_bar mb-2">
