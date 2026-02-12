@@ -81,11 +81,18 @@ class UnidadAlquilerGeo(models.Model):
             'alquiler_geo.google_maps_api_key', ''
         )
         if not api_key:
+            _logger.error("[GEO] API Key de Google Maps NO configurada en parámetros del sistema")
             raise UserError(
                 "No se ha configurado la API Key de Google Maps.\n"
                 "Configurar en: Ajustes → Parámetros del Sistema → "
                 "alquiler_geo.google_maps_api_key"
             )
+        # Verificar que no tenga espacios o saltos de línea
+        api_key_clean = api_key.strip()
+        if api_key_clean != api_key:
+            _logger.warning("[GEO] API Key tenía espacios/saltos — se limpió automáticamente")
+            api_key = api_key_clean
+        _logger.info("[GEO] API Key obtenida correctamente (longitud: %d)", len(api_key))
         return api_key
 
     def _extraer_componentes_direccion(self, address_components):
@@ -126,27 +133,59 @@ class UnidadAlquilerGeo(models.Model):
         self.ensure_one()
         api_key = self._get_google_api_key()
 
+        # Log de la API Key (mostramos solo los primeros 10 caracteres por seguridad)
+        api_key_preview = api_key[:10] + '...' if len(api_key) > 10 else api_key
+        _logger.info(
+            "[GEO] Geocodificando equipo ID=%s | API Key: %s | Longitud key: %d",
+            self.id, api_key_preview, len(api_key)
+        )
+
         direccion = self.direccion_completa or self.direccion
         if not direccion:
+            _logger.warning("[GEO] No hay dirección para geocodificar en equipo ID=%s", self.id)
             raise UserError("No hay dirección para geocodificar.")
 
+        _logger.info("[GEO] Dirección a geocodificar: '%s'", direccion)
+
         try:
-            resp = requests.get(
-                'https://maps.googleapis.com/maps/api/geocode/json',
-                params={
-                    'address': direccion,
-                    'key': api_key,
-                    'components': 'country:PE',
-                    'language': 'es',
-                },
-                timeout=10,
+            url = 'https://maps.googleapis.com/maps/api/geocode/json'
+            params = {
+                'address': direccion,
+                'key': api_key,
+                'components': 'country:PE',
+                'language': 'es',
+            }
+            _logger.info("[GEO] Request URL: %s | Params (sin key): %s", url, {
+                k: v for k, v in params.items() if k != 'key'
+            })
+
+            resp = requests.get(url, params=params, timeout=10)
+
+            _logger.info(
+                "[GEO] Response HTTP status: %d | Content-Type: %s",
+                resp.status_code, resp.headers.get('Content-Type', 'unknown')
             )
+
             data = resp.json()
 
+            _logger.info(
+                "[GEO] Google response status: '%s' | error_message: '%s' | results count: %d",
+                data.get('status', 'N/A'),
+                data.get('error_message', 'ninguno'),
+                len(data.get('results', []))
+            )
+
             if data.get('status') != 'OK' or not data.get('results'):
+                error_msg = data.get('error_message', 'Sin detalle de error')
+                _logger.error(
+                    "[GEO] FALLO geocodificación | Status: %s | Error: %s | "
+                    "Dirección: '%s' | Equipo ID: %s",
+                    data.get('status'), error_msg, direccion, self.id
+                )
                 raise UserError(
                     f"No se encontró la dirección.\n"
-                    f"Respuesta de Google: {data.get('status')}"
+                    f"Respuesta de Google: {data.get('status')}\n"
+                    f"Detalle: {error_msg}"
                 )
 
             result = data['results'][0]
@@ -176,23 +215,41 @@ class UnidadAlquilerGeo(models.Model):
             raise UserError("No hay coordenadas para buscar la dirección.")
 
         api_key = self._get_google_api_key()
+        _logger.info(
+            "[GEO] Reverse geocoding equipo ID=%s | lat=%s, lng=%s",
+            self.id, self.latitud, self.longitud
+        )
 
         try:
-            resp = requests.get(
-                'https://maps.googleapis.com/maps/api/geocode/json',
-                params={
-                    'latlng': f"{self.latitud},{self.longitud}",
-                    'key': api_key,
-                    'language': 'es',
-                },
-                timeout=10,
-            )
+            url = 'https://maps.googleapis.com/maps/api/geocode/json'
+            params = {
+                'latlng': f"{self.latitud},{self.longitud}",
+                'key': api_key,
+                'language': 'es',
+            }
+            resp = requests.get(url, params=params, timeout=10)
+
+            _logger.info("[GEO] Reverse geocode HTTP status: %d", resp.status_code)
+
             data = resp.json()
 
+            _logger.info(
+                "[GEO] Reverse geocode Google status: '%s' | error_message: '%s' | results: %d",
+                data.get('status', 'N/A'),
+                data.get('error_message', 'ninguno'),
+                len(data.get('results', []))
+            )
+
             if data.get('status') != 'OK' or not data.get('results'):
+                error_msg = data.get('error_message', 'Sin detalle')
+                _logger.error(
+                    "[GEO] FALLO reverse geocode | Status: %s | Error: %s",
+                    data.get('status'), error_msg
+                )
                 raise UserError(
                     f"No se encontró dirección para estas coordenadas.\n"
-                    f"Respuesta: {data.get('status')}"
+                    f"Respuesta: {data.get('status')}\n"
+                    f"Detalle: {error_msg}"
                 )
 
             result = data['results'][0]
@@ -219,9 +276,14 @@ class UnidadAlquilerGeo(models.Model):
     def get_google_maps_api_key(self):
         """Retorna la API Key para uso en el widget JS del frontend.
         Solo usuarios internos pueden obtenerla."""
-        return self.env['ir.config_parameter'].sudo().get_param(
+        api_key = self.env['ir.config_parameter'].sudo().get_param(
             'alquiler_geo.google_maps_api_key', ''
         )
+        if api_key:
+            _logger.info("[GEO] API Key entregada al widget JS (longitud: %d)", len(api_key))
+        else:
+            _logger.warning("[GEO] Widget JS solicitó API Key pero está vacía")
+        return api_key
 
     def action_aplicar_place_data(self, place_data):
         """Recibe los datos del Place seleccionado en el widget JS
