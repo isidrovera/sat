@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <data>
-
         <record id="Alquiler_form_view" model="ir.ui.view">
             <field name="name">Alquiler.form</field>
             <field name="model">alquiler</field>
@@ -12,21 +11,17 @@
                         <button string="Crear Pedido" name="create_sale_order" type="object"
                             icon="fa-cart-plus" class="btn btn-success"
                             invisible="estado_bloqueo in ('suspendido', 'bloqueado', 'no_accesible')" />
-
                         <button string="Crear Ticket" name="create_ticket" type="object"
                             icon="fa-wrench" class="btn btn-primary"
                             invisible="estado_bloqueo in ('suspendido', 'bloqueado', 'no_accesible')" />
-
                         <button string="Mantenimiento" type="object" class="oe_highlight"
                             name="button_send_test_mail"
                             invisible="estado_bloqueo in ('suspendido', 'bloqueado', 'no_accesible')" />
-
                         <button name="action_enviar_inspeccion"
                             string="Inspección"
                             type="object"
                             class="btn-primary"
                             invisible="estado_alquiler_id not in ('lista', 'inspeccion', 'subsanacion')" />
-
                         <button name="action_solicitar_partes"
                             string="Solicitar Partes"
                             type="object"
@@ -38,25 +33,21 @@
                             class="btn-info"
                             icon="fa-file-text"
                             invisible="estado_alquiler_id != 'alquilada'" />
-
                         <button name="action_view_toner_deliveries"
                             type="object"
                             string="Entregas de Tóner"
                             class="btn-secondary"
                             icon="fa-truck"
                             invisible="estado_alquiler_id != 'alquilada'" />
-
                         <button name="action_create_manual_delivery"
                             type="object"
                             string="Programar Entrega Tóner"
                             class="btn-primary"
                             icon="fa-plus"
                             invisible="estado_alquiler_id != 'alquilada'" />
-
                         <field name="estado_alquiler_id" widget="statusbar"
                              />
                     </header>
-
                     <sheet>
                         <!-- Alert de estado de bloqueo -->
                         <div class="alert alert-warning mb-3" role="alert"
@@ -87,7 +78,6 @@
                                 </div>
                             </div>
                         </div>
-
                         <!-- Botones estadísticos -->
                         <div name="button_box">
                             <button class="oe_stat_button" type="object" name="get_ticket"
@@ -112,7 +102,7 @@
                                     class="oe_stat_button"
                                     icon="fa-list"
                                     string="Contadores">
-                            <field name="contadores_count" widget="statinfo"/>
+                                <field name="contadores_count" widget="statinfo"/>
                             </button>
                             <button class="oe_stat_button"
                                 type="object"
@@ -122,7 +112,6 @@
                                 <field string="Reportes Tóner" name="toner_reports_count"
                                     widget="statinfo" />
                             </button>
-
                             <button class="oe_stat_button"
                                 type="object"
                                 name="action_view_toner_deliveries"
@@ -139,7 +128,6 @@
                                     string="Inspecciones"/>
                             </button>
                         </div>
-
                         <separator />
                         <div class="oe_title">
                             <label for="cliente_id" />
@@ -148,7 +136,6 @@
                                     widget="many2one_avatar" options="{'no_create': True}" />
                             </h1>
                         </div>
-
                         <!-- Información principal del equipo -->
                         <group>
                             <group string="📍 Información de Ubicación">
@@ -177,7 +164,6 @@
                                 <field name="observaciones" />
                             </group>
                         </group>
-
                         <notebook>
                             <!-- Nueva página para Sistema de Bloqueo -->
                             <page string="🔒 Sistema de Bloqueo" name="bloqueo_page">
@@ -188,7 +174,8 @@
                                             <div class="card-header bg-primary text-white">
                                                 <h5 class="mb-0">
                                                     <i class="fa fa-shield me-2"></i> Control de
-                                                    Acceso y Bloqueo </h5>
+                                                    Acceso y Bloqueo
+                                                </h5>
                                             </div>
                                             <div class="card-body">
                                                 <div class="row g-3">
@@ -196,15 +183,16 @@
                                                         <div class="o_form_label">
                                                             <i
                                                                 class="fa fa-info-circle text-primary me-1"></i>
-                                                            Estado Actual del Servicio </div>
+                                                            Estado Actual del Servicio
+                                                        </div>
                                                         <field name="estado_bloqueo"
                                                             widget="selection" />
                                                     </div>
-
                                                     <div class="col-12 col-md-6">
                                                         <div class="o_form_label">
                                                             <i class="fa fa-wifi text-success me-1"></i>
-                                                            Acceso Remoto </div>
+                                                            Acceso Remoto
+                                                        </div>
                                                         <div class="d-flex align-items-center">
                                                             <field name="acceso_remoto_disponible"
                                                                 widget="toggle" />
@@ -212,71 +200,70 @@
                                                                 para bloqueo remoto</span>
                                                         </div>
                                                     </div>
-
                                                     <div class="col-12 col-md-6">
                                                         <div class="o_form_label">
                                                             <i class="fa fa-globe text-info me-1"></i>
-                                                            Dirección IP del Equipo </div>
+                                                            Dirección IP del Equipo
+                                                        </div>
                                                         <field name="ip_equipo"
                                                             placeholder="192.168.1.100" />
                                                     </div>
-
                                                     <div class="col-12 col-md-6"
                                                         invisible="not fecha_bloqueo">
                                                         <div class="o_form_label">
                                                             <i
                                                                 class="fa fa-calendar text-warning me-1"></i>
-                                                            Fecha de Bloqueo </div>
+                                                            Fecha de Bloqueo
+                                                        </div>
                                                         <field name="fecha_bloqueo" readonly="1" />
                                                     </div>
-
                                                     <div class="col-12 col-md-6"
                                                         invisible="not fecha_desbloqueo">
                                                         <div class="o_form_label">
                                                             <i
                                                                 class="fa fa-calendar text-success me-1"></i>
-                                                            Fecha de Desbloqueo </div>
+                                                            Fecha de Desbloqueo
+                                                        </div>
                                                         <field name="fecha_desbloqueo" readonly="1" />
                                                     </div>
-
                                                     <div class="col-12 col-md-6"
                                                         invisible="not usuario_bloqueo">
                                                         <div class="o_form_label">
                                                             <i
                                                                 class="fa fa-user text-secondary me-1"></i>
-                                                            Usuario Responsable </div>
+                                                            Usuario Responsable
+                                                        </div>
                                                         <field name="usuario_bloqueo" readonly="1" />
                                                     </div>
                                                 </div>
-
                                                 <!-- Motivo del bloqueo -->
                                                 <div class="mt-3" invisible="not motivo_bloqueo">
                                                     <div class="o_form_label">
                                                         <i class="fa fa-comment text-warning me-1"></i>
-                                                        Motivo del Bloqueo/Suspensión </div>
+                                                        Motivo del Bloqueo/Suspensión
+                                                    </div>
                                                     <field name="motivo_bloqueo" widget="text" />
                                                 </div>
-
                                                 <!-- Observaciones -->
                                                 <div class="mt-3">
                                                     <div class="o_form_label">
                                                         <i class="fa fa-sticky-note text-info me-1"></i>
-                                                        Observaciones Adicionales </div>
+                                                        Observaciones Adicionales
+                                                    </div>
                                                     <field name="observaciones_bloqueo"
                                                         widget="text"
                                                         placeholder="Ingrese observaciones sobre el estado del equipo..." />
                                                 </div>
                                             </div>
-
                                             <!-- Panel de Acciones de Bloqueo -->
                                             <div class="card-footer bg-light">
                                                 <div class="row g-2">
                                                     <div class="col-12">
                                                         <h6 class="text-muted mb-3">
                                                             <i class="fa fa-cogs me-2"></i> Acciones
-                                                            de Control </h6>
+                                                            de Control
+                                                        </h6>
                                                     </div>
-
                                                     <!-- Botones principales de bloqueo/desbloqueo -->
                                                     <div class="col-12 col-md-6 col-lg-4">
                                                         <button name="action_suspender_servicio"
@@ -286,7 +273,6 @@
                                                             invisible="estado_bloqueo in ['suspendido', 'bloqueado']"
                                                             confirm="¿Está seguro de suspender el servicio por mora?" />
                                                     </div>
-
                                                     <div class="col-12 col-md-6 col-lg-4">
                                                         <button name="action_bloquear_equipo"
                                                             string="🔒 Bloquear Equipo"
@@ -295,7 +281,6 @@
                                                             invisible="estado_bloqueo in ['bloqueado', 'no_accesible']"
                                                             confirm="¿Está seguro de bloquear el equipo remotamente?" />
                                                     </div>
-
                                                     <div class="col-12 col-md-6 col-lg-4">
                                                         <button name="action_desbloquear_equipo"
                                                             string="🔓 Desbloquear Equipo"
@@ -304,7 +289,6 @@
                                                             invisible="estado_bloqueo not in ['bloqueado', 'suspendido', 'pendiente_desbloqueo']"
                                                             confirm="¿Está seguro de desbloquear el equipo?" />
                                                     </div>
-
                                                     <!-- Botones de estados pendientes -->
                                                     <div class="col-12 col-md-6 col-lg-4">
                                                         <button
@@ -315,7 +299,6 @@
                                                             invisible="estado_bloqueo in ['bloqueado', 'pendiente_bloqueo']"
                                                             groups="base.group_user" />
                                                     </div>
-
                                                     <div class="col-12 col-md-6 col-lg-4">
                                                         <button
                                                             name="action_marcar_pendiente_desbloqueo"
@@ -325,7 +308,6 @@
                                                             invisible="estado_bloqueo != 'bloqueado'"
                                                             groups="base.group_user" />
                                                     </div>
-
                                                     <!-- Botones especiales -->
                                                     <div class="col-12 col-md-6 col-lg-4">
                                                         <button name="action_marcar_no_accesible"
@@ -335,7 +317,6 @@
                                                             invisible="estado_bloqueo in ['bloqueado', 'no_accesible']"
                                                             confirm="¿Marcar este equipo como no accesible para bloqueo remoto?" />
                                                     </div>
-
                                                     <div class="col-12 col-md-6 col-lg-4">
                                                         <button name="action_reactivar_servicio"
                                                             string="✅ Reactivar Servicio"
@@ -344,7 +325,6 @@
                                                             invisible="estado_bloqueo == 'activo'"
                                                             confirm="¿Está seguro de reactivar el servicio completamente?" />
                                                     </div>
-
                                                     <div class="col-12 col-md-6 col-lg-4">
                                                         <button
                                                             name="action_verificar_acceso_remoto"
@@ -355,7 +335,6 @@
                                                             icon="fa-wifi" />
                                                     </div>
                                                 </div>
-
                                                 <!-- Indicador de estado actual con colores -->
                                                 <div class="mt-3">
                                                     <div class="alert mb-0"
@@ -363,86 +342,88 @@
                                                         style="background-color: #d4edda; border-color: #c3e6cb;">
                                                         <i
                                                             class="fa fa-check-circle text-success me-2"></i>
-                            <strong>
+                                                        <strong>
                                                         Estado:</strong> Servicio Activo - Equipo
-                                                        operativo </div>
-
+                                                        operativo
+                                                    </div>
                                                     <div class="alert mb-0"
                                                         invisible="estado_bloqueo != 'suspendido'"
                                                         style="background-color: #fff3cd; border-color: #ffeeba;">
                                                         <i
                                                             class="fa fa-exclamation-triangle text-warning me-2"></i>
-                            <strong>
+                                                        <strong>
                                                         Estado:</strong> Servicio Suspendido por
-                                                        Mora </div>
-
+                                                        Mora
+                                                    </div>
                                                     <div class="alert mb-0"
                                                         invisible="estado_bloqueo != 'bloqueado'"
                                                         style="background-color: #f8d7da; border-color: #f5c6cb;">
                                                         <i class="fa fa-lock text-danger me-2"></i>
-                            <strong>
+                                                        <strong>
                                                         Estado:</strong> Equipo Bloqueado
-                                                        Remotamente </div>
-
+                                                        Remotamente
+                                                    </div>
                                                     <div class="alert mb-0"
                                                         invisible="estado_bloqueo != 'no_accesible'"
                                                         style="background-color: #e2e3e5; border-color: #d6d8db;">
                                                         <i
                                                             class="fa fa-times-circle text-secondary me-2"></i>
-                            <strong>
+                                                        <strong>
                                                         Estado:</strong> Equipo No Accesible para
-                                                        Bloqueo Remoto </div>
-
+                                                        Bloqueo Remoto
+                                                    </div>
                                                     <div class="alert mb-0"
                                                         invisible="estado_bloqueo != 'pendiente_bloqueo'"
                                                         style="background-color: #fff3cd; border-color: #ffeeba;">
                                                         <i class="fa fa-clock-o text-warning me-2"></i>
-                            <strong>
-                                                        Estado:</strong> Pendiente de Bloqueo </div>
-
+                                                        <strong>
+                                                        Estado:</strong> Pendiente de Bloqueo
+                                                    </div>
                                                     <div class="alert mb-0"
                                                         invisible="estado_bloqueo != 'pendiente_desbloqueo'"
                                                         style="background-color: #d1ecf1; border-color: #bee5eb;">
                                                         <i class="fa fa-clock-o text-info me-2"></i>
-                            <strong>
+                                                        <strong>
                                                         Estado:</strong> Pendiente de Desbloqueo -
-                                                        Pago en proceso </div>
+                                                        Pago en proceso
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
-
                                     <!-- Panel de Contactos Responsables -->
                                     <div class="col-12 col-lg-4">
                                         <div class="card border-info">
                                             <div class="card-header bg-info text-white">
                                                 <h6 class="mb-0">
                                                     <i class="fa fa-users me-2"></i> Contactos
-                                                    Responsables </h6>
+                                                    Responsables
+                                                </h6>
                                             </div>
                                             <div class="card-body">
                                                 <div class="mb-3">
                                                     <div class="o_form_label">
                                                         <i
                                                             class="fa fa-handshake-o text-primary me-1"></i>
-                                                        Asesor de Ventas </div>
+                                                        Asesor de Ventas
+                                                    </div>
                                                     <field name="asesor_ventas_id"
                                                         options="{'no_create': True}" />
                                                 </div>
-
                                                 <div class="mb-3">
                                                     <div class="o_form_label">
                                                         <i class="fa fa-wrench text-success me-1"></i>
-                                                        Soporte Técnico </div>
+                                                        Soporte Técnico
+                                                    </div>
                                                     <field name="soporte_tecnico_id"
                                                         options="{'no_create': True}" />
                                                 </div>
-
                                                 <!-- Campos de grupos WhatsApp -->
                                                 <div class="mb-3">
                                                     <div class="o_form_label">
                                                         <i class="fa fa-whatsapp text-success me-1"></i>
-                                                        Grupo de Notificaciones </div>
+                                                        Grupo de Notificaciones
+                                                    </div>
                                                     <field name="grupo_notificaciones_id"
                                                         options="{'no_create': True}" />
                                                     <button name="action_refresh_grupos"
@@ -450,15 +431,14 @@
                                                         string="🔄 Actualizar"
                                                         class="btn btn-sm btn-secondary ms-2" />
                                                 </div>
-
                                                 <div class="mb-3">
                                                     <div class="o_form_label">
                                                         <i class="fa fa-users text-info me-1"></i>
-                                                        Grupo Asesor de Ventas </div>
+                                                        Grupo Asesor de Ventas
+                                                    </div>
                                                     <field name="grupo_asesor_ventas_id"
                                                         options="{'no_create': True}" />
                                                 </div>
-
                                                 <!-- Indicadores de notificación -->
                                                 <div class="mt-4">
                                                     <h6 class="text-muted">Estado de Notificaciones</h6>
@@ -477,74 +457,83 @@
                                                 </div>
                                             </div>
                                         </div>
-
                                         <!-- Panel de instrucciones actualizado -->
                                         <div class="card border-warning mt-3">
                                             <div class="card-header bg-warning text-dark">
                                                 <h6 class="mb-0">
                                                     <i class="fa fa-lightbulb-o me-2"></i>
-                                                    Instrucciones de Uso </h6>
+                                                    Instrucciones de Uso
+                                                </h6>
                                             </div>
                                             <div class="card-body">
                                                 <ul class="list-unstyled small mb-0">
                                                     <li class="mb-2">
                                                         <i
                                                             class="fa fa-check-circle text-success me-1"></i>
-                            <strong>Configurar
+                                                        <strong>Configurar
                                                         IP:</strong> Configure la IP del equipo para
-                                                        habilitar bloqueo remoto </li>
+                                                        habilitar bloqueo remoto
+                                                    </li>
                                                     <li class="mb-2">
                                                         <i class="fa fa-pause text-warning me-1"></i>
-                            <strong>
+                                                        <strong>
                                                         Suspender:</strong> Use para corte por mora
-                                                        de pagos (solo suspende servicio técnico) </li>
+                                                        de pagos (solo suspende servicio técnico)
+                                                    </li>
                                                     <li class="mb-2">
                                                         <i class="fa fa-lock text-danger me-1"></i>
-                            <strong>
+                                                        <strong>
                                                         Bloquear:</strong> Bloqueo técnico remoto
-                                                        del equipo (requiere IP configurada) </li>
+                                                        del equipo (requiere IP configurada)
+                                                    </li>
                                                     <li class="mb-2">
                                                         <i class="fa fa-clock-o text-warning me-1"></i>
-                            <strong>Pendiente
+                                                        <strong>Pendiente
                                                         Bloqueo:</strong> Marca equipos que
-                                                        requieren bloqueo posterior </li>
+                                                        requieren bloqueo posterior
+                                                    </li>
                                                     <li class="mb-2">
                                                         <i class="fa fa-clock-o text-info me-1"></i>
-                            <strong>Pendiente
+                                                        <strong>Pendiente
                                                         Desbloqueo:</strong> Para equipos con pago
-                                                        en proceso de verificación </li>
+                                                        en proceso de verificación
+                                                    </li>
                                                     <li class="mb-2">
                                                         <i
                                                             class="fa fa-times-circle text-secondary me-1"></i>
-                            <strong>No
+                                                        <strong>No
                                                         Accesible:</strong> Equipos sin posibilidad
-                                                        de bloqueo remoto </li>
+                                                        de bloqueo remoto
+                                                    </li>
                                                     <li class="mb-2">
                                                         <i class="fa fa-check text-primary me-1"></i>
-                            <strong>
+                                                        <strong>
                                                         Reactivar:</strong> Restaura el servicio
-                                                        completamente desde cualquier estado </li>
+                                                        completamente desde cualquier estado
+                                                    </li>
                                                     <li class="mb-2">
                                                         <i class="fa fa-whatsapp text-success me-1"></i>
-                            <strong>
+                                                        <strong>
                                                         Notificaciones:</strong> Se envían
                                                         automáticamente por WhatsApp a los grupos
-                                                        configurados </li>
+                                                        configurados
+                                                    </li>
                                                     <li>
                                                         <i class="fa fa-user-plus text-info me-1"></i>
-                            <strong>
+                                                        <strong>
                                                         Responsables:</strong> Asigne asesor y
-                                                        soporte técnico para recibir notificaciones </li>
+                                                        soporte técnico para recibir notificaciones
+                                                    </li>
                                                 </ul>
                                             </div>
                                         </div>
-
                                         <!-- Panel de flujo de trabajo -->
                                         <div class="card border-primary mt-3">
                                             <div class="card-header bg-primary text-white">
                                                 <h6 class="mb-0">
                                                     <i class="fa fa-sitemap me-2"></i> Flujo de
-                                                    Estados </h6>
+                                                    Estados
+                                                </h6>
                                             </div>
                                             <div class="card-body small">
                                                 <div class="text-center">
@@ -578,7 +567,6 @@
                                         <field name="control_mantenimiento" widget="toggle" />
                                         <span class="text-muted">Control de Mantenimiento</span>
                                     </div>
-
                                     <div invisible="not control_mantenimiento">
                                         <!-- Campos Principales -->
                                         <div class="row g-3">
@@ -589,12 +577,12 @@
                                                         <h6 class="mb-3">
                                                             <i
                                                                 class="fa fa-calendar text-primary me-2"></i>
-                                                            Configuración de Fechas </h6>
+                                                            Configuración de Fechas
+                                                        </h6>
                                                         <group>
                                                             <field name="fecha_inicio"
                                                                 required="control_mantenimiento == True and estado_alquiler_id == 'alquilada'"
                                                                 class="mb-3" />
-
                                                             <!-- Nuevo campo para el patrón de
                                                             recurrencia -->
                                                             <field name="patron_recurrencia"
@@ -602,7 +590,6 @@
                                                                 class="mb-3"
                                                                 widget="radio"
                                                                 options="{'horizontal': true}" />
-
                                                             <!-- Campos para el patrón de semana y
                                                             día -->
                                                             <div class="row"
@@ -624,12 +611,10 @@
                                                                         class="w-100" />
                                                                 </div>
                                                             </div>
-
                                                             <field name="fecha_recurrente"
                                                                 readonly="1"
                                                                 class="mb-3 mt-3"
                                                                 decoration-info="True" />
-
                                                             <!-- Control para usar fecha recurrente
                                                             como base -->
                                                             <div class="mt-3">
@@ -673,14 +658,14 @@
                                                     </div>
                                                 </div>
                                             </div>
-
                                             <!-- Columna Derecha -->
                                             <div class="col-12 col-lg-6">
                                                 <div class="card">
                                                     <div class="card-body">
                                                         <h6 class="mb-3">
                                                             <i class="fa fa-clock-o text-info me-2"></i>
-                                                            Configuración de Intervalos </h6>
+                                                            Configuración de Intervalos
+                                                        </h6>
                                                         <field name="intervalo_meses"
                                                             invisible="not control_mantenimiento"
                                                             required="control_mantenimiento"
@@ -690,7 +675,6 @@
                                                 </div>
                                             </div>
                                         </div>
-
                                         <!-- Panel de Instrucciones -->
                                         <div class="alert alert-info mt-4" role="alert">
                                             <div class="d-flex gap-2 mb-2">
@@ -733,13 +717,13 @@
                                                 </li>
                                             </ul>
                                         </div>
-
                                         <!-- Estado de Programación -->
                                         <div class="card mt-4">
                                             <div class="card-body">
                                                 <h6 class="mb-3">
                                                     <i class="fa fa-tasks text-success me-2"></i>
-                                                    Estado del Mantenimiento </h6>
+                                                    Estado del Mantenimiento
+                                                </h6>
                                                 <field name="estado_programacion"
                                                     widget="state_selection"
                                                     class="d-block"
@@ -755,7 +739,6 @@
                                     </div>
                                 </div>
                             </page>
-
                             <!-- Páginas existentes mantenidas -->
                             <page string="💰 Datos de compra">
                                 <group>
@@ -766,7 +749,6 @@
                                         options="{'currency_field': 'currency_id'}" />
                                 </group>
                             </page>
-
                             <page string="🏢 Datos de cliente externo">
                                 <group>
                                     <group>
@@ -782,7 +764,6 @@
                                     </group>
                                 </group>
                             </page>
-
                             <page string="🔧 Partes Solicitadas">
                                 <field name="partes_ids">
                                     <list>
@@ -796,165 +777,144 @@
                                 </field>
                             </page>
                             <page string="Tóner y Contadores">
-    <!-- Resumen General en la parte superior -->
-    <group string="📊 Resumen General" col="4">
-        <field name="estado_stock_toner" readonly="1" widget="badge"/>
-        <field name="fecha_ultima_lectura" readonly="1"/>
-        <field name="stock_total_toner_black" readonly="1"/>
-        <field name="stock_total_toner_cyan" invisible="tipo_maquina_id == 'monocromatica'" readonly="1"/>
-        <field name="stock_total_toner_magenta" invisible="tipo_maquina_id == 'monocromatica'" readonly="1"/>
-        <field name="stock_total_toner_yellow" invisible="tipo_maquina_id == 'monocromatica'" readonly="1"/>
-    </group>
-
-    <!-- Contadores Actuales -->
-    <group string="📈 Contadores Actuales" col="4">
-        <field name="contador_actual_black"/>
-        <field name="contador_actual_color" invisible="tipo_maquina_id == 'monocromatica'"/>
-    </group>
-
-    <!-- Sección dividida en dos columnas principales -->
-    <group col="2">
-        <!-- Columna izquierda: Stock e Instalación -->
-        <group>
-            <!-- Stock del Cliente -->
-            <group string="📦 Stock del Cliente" col="2">
-                <field name="stock_cliente_toner_black"/>
-                <field name="toner_black_instalado" widget="boolean_toggle"/>
-                <field name="stock_cliente_toner_cyan" invisible="tipo_maquina_id == 'monocromatica'"/>
-                <field name="toner_cyan_instalado" invisible="tipo_maquina_id == 'monocromatica'" widget="boolean_toggle"/>
-                <field name="stock_cliente_toner_magenta" invisible="tipo_maquina_id == 'monocromatica'"/>
-                <field name="toner_magenta_instalado" invisible="tipo_maquina_id == 'monocromatica'" widget="boolean_toggle"/>
-                <field name="stock_cliente_toner_yellow" invisible="tipo_maquina_id == 'monocromatica'"/>
-                <field name="toner_yellow_instalado" invisible="tipo_maquina_id == 'monocromatica'" widget="boolean_toggle"/>
-            </group>
-        </group>
-
-        <!-- Columna derecha: Contadores y Niveles -->
-        <group>
-            <!-- Contadores de Instalación -->
-            <group string="🔧 Contadores de Instalación" col="2">
-                <field name="contador_instalacion_toner_black"/>
-                <field name="fecha_instalacion_toner_black"/>
-                <field name="contador_instalacion_toner_cyan" invisible="tipo_maquina_id == 'monocromatica'"/>
-                <field name="fecha_instalacion_toner_cyan" invisible="tipo_maquina_id == 'monocromatica'"/>
-                <field name="contador_instalacion_toner_magenta" invisible="tipo_maquina_id == 'monocromatica'"/>
-                <field name="fecha_instalacion_toner_magenta" invisible="tipo_maquina_id == 'monocromatica'"/>
-                <field name="contador_instalacion_toner_yellow" invisible="tipo_maquina_id == 'monocromatica'"/>
-                <field name="fecha_instalacion_toner_yellow" invisible="tipo_maquina_id == 'monocromatica'"/>
-            </group>
-        </group>
-    </group>
-
-    <!-- Análisis de Rendimiento - Separado por colores -->
-    <notebook>
-        <!-- Tóner Negro -->
-        <page string="🖤 Tóner Negro">
-            <group col="3">
-                <field name="paginas_usadas_toner_black" readonly="1"/>
-                <field name="paginas_restantes_toner_black" readonly="1"/>
-                <field name="nivel_toner_black" readonly="1" widget="progressbar"/>
-            </group>
-        </page>
-
-        <!-- Tóner Color (solo para máquinas color) -->
-        <page string="🌈 Tóners Color" invisible="tipo_maquina_id == 'monocromatica'">
-            <!-- Tóner Cian -->
-            <group string="🔵 Tóner Cian" col="3">
-                <field name="paginas_usadas_toner_cyan" readonly="1"/>
-                <field name="paginas_restantes_toner_cyan" readonly="1"/>
-                <field name="nivel_toner_cyan" readonly="1" widget="progressbar"/>
-            </group>
-
-            <!-- Tóner Magenta -->
-            <group string="🔴 Tóner Magenta" col="3">
-                <field name="paginas_usadas_toner_magenta" readonly="1"/>
-                <field name="paginas_restantes_toner_magenta" readonly="1"/>
-                <field name="nivel_toner_magenta" readonly="1" widget="progressbar"/>
-            </group>
-
-            <!-- Tóner Amarillo -->
-            <group string="🟡 Tóner Amarillo" col="3">
-                <field name="paginas_usadas_toner_yellow" readonly="1"/>
-                <field name="paginas_restantes_toner_yellow" readonly="1"/>
-                <field name="nivel_toner_yellow" readonly="1" widget="progressbar"/>
-            </group>
-        </page>
-    </notebook>
-
-    <!-- Botones de Acción -->
-    <group string="🔧 Acciones" col="4">
-        <button name="action_update_toner_stock"
+                                <!-- Resumen General en la parte superior -->
+                                <group string="📊 Resumen General" col="4">
+                                    <field name="estado_stock_toner" readonly="1" widget="badge"/>
+                                    <field name="fecha_ultima_lectura" readonly="1"/>
+                                    <field name="stock_total_toner_black" readonly="1"/>
+                                    <field name="stock_total_toner_cyan" invisible="tipo_maquina_id == 'monocromatica'" readonly="1"/>
+                                    <field name="stock_total_toner_magenta" invisible="tipo_maquina_id == 'monocromatica'" readonly="1"/>
+                                    <field name="stock_total_toner_yellow" invisible="tipo_maquina_id == 'monocromatica'" readonly="1"/>
+                                </group>
+                                <!-- Contadores Actuales -->
+                                <group string="📈 Contadores Actuales" col="4">
+                                    <field name="contador_actual_black"/>
+                                    <field name="contador_actual_color" invisible="tipo_maquina_id == 'monocromatica'"/>
+                                </group>
+                                <!-- Sección dividida en dos columnas principales -->
+                                <group col="2">
+                                    <!-- Columna izquierda: Stock e Instalación -->
+                                    <group>
+                                        <!-- Stock del Cliente -->
+                                        <group string="📦 Stock del Cliente" col="2">
+                                            <field name="stock_cliente_toner_black"/>
+                                            <field name="toner_black_instalado" widget="boolean_toggle"/>
+                                            <field name="stock_cliente_toner_cyan" invisible="tipo_maquina_id == 'monocromatica'"/>
+                                            <field name="toner_cyan_instalado" invisible="tipo_maquina_id == 'monocromatica'" widget="boolean_toggle"/>
+                                            <field name="stock_cliente_toner_magenta" invisible="tipo_maquina_id == 'monocromatica'"/>
+                                            <field name="toner_magenta_instalado" invisible="tipo_maquina_id == 'monocromatica'" widget="boolean_toggle"/>
+                                            <field name="stock_cliente_toner_yellow" invisible="tipo_maquina_id == 'monocromatica'"/>
+                                            <field name="toner_yellow_instalado" invisible="tipo_maquina_id == 'monocromatica'" widget="boolean_toggle"/>
+                                        </group>
+                                    </group>
+                                    <!-- Columna derecha: Contadores y Niveles -->
+                                    <group>
+                                        <!-- Contadores de Instalación -->
+                                        <group string="🔧 Contadores de Instalación" col="2">
+                                            <field name="contador_instalacion_toner_black"/>
+                                            <field name="fecha_instalacion_toner_black"/>
+                                            <field name="contador_instalacion_toner_cyan" invisible="tipo_maquina_id == 'monocromatica'"/>
+                                            <field name="fecha_instalacion_toner_cyan" invisible="tipo_maquina_id == 'monocromatica'"/>
+                                            <field name="contador_instalacion_toner_magenta" invisible="tipo_maquina_id == 'monocromatica'"/>
+                                            <field name="fecha_instalacion_toner_magenta" invisible="tipo_maquina_id == 'monocromatica'"/>
+                                            <field name="contador_instalacion_toner_yellow" invisible="tipo_maquina_id == 'monocromatica'"/>
+                                            <field name="fecha_instalacion_toner_yellow" invisible="tipo_maquina_id == 'monocromatica'"/>
+                                        </group>
+                                    </group>
+                                </group>
+                                <!-- Análisis de Rendimiento - Separado por colores -->
+                                <notebook>
+                                    <!-- Tóner Negro -->
+                                    <page string="🖤 Tóner Negro">
+                                        <group col="3">
+                                            <field name="paginas_usadas_toner_black" readonly="1"/>
+                                            <field name="paginas_restantes_toner_black" readonly="1"/>
+                                            <field name="nivel_toner_black" readonly="1" widget="progressbar"/>
+                                        </group>
+                                    </page>
+                                    <!-- Tóner Color (solo para máquinas color) -->
+                                    <page string="🌈 Tóners Color" invisible="tipo_maquina_id == 'monocromatica'">
+                                        <!-- Tóner Cian -->
+                                        <group string="🔵 Tóner Cian" col="3">
+                                            <field name="paginas_usadas_toner_cyan" readonly="1"/>
+                                            <field name="paginas_restantes_toner_cyan" readonly="1"/>
+                                            <field name="nivel_toner_cyan" readonly="1" widget="progressbar"/>
+                                        </group>
+                                        <!-- Tóner Magenta -->
+                                        <group string="🔴 Tóner Magenta" col="3">
+                                            <field name="paginas_usadas_toner_magenta" readonly="1"/>
+                                            <field name="paginas_restantes_toner_magenta" readonly="1"/>
+                                            <field name="nivel_toner_magenta" readonly="1" widget="progressbar"/>
+                                        </group>
+                                        <!-- Tóner Amarillo -->
+                                        <group string="🟡 Tóner Amarillo" col="3">
+                                            <field name="paginas_usadas_toner_yellow" readonly="1"/>
+                                            <field name="paginas_restantes_toner_yellow" readonly="1"/>
+                                            <field name="nivel_toner_yellow" readonly="1" widget="progressbar"/>
+                                        </group>
+                                    </page>
+                                </notebook>
+                                <!-- Botones de Acción -->
+                                <group string="🔧 Acciones" col="4">
+                                    <button name="action_update_toner_stock"
                 type="object"
                 string="📦 Actualizar Stock"
                 class="btn btn-primary"
                 icon="fa-refresh"/>
-        
-        <button name="action_install_new_toner"
+                                    <button name="action_install_new_toner"
                 type="object"
                 string="🔧 Instalar Tóner"
                 class="btn btn-success"
                 icon="fa-wrench"/>
-        
-        <button name="action_view_model_toner_config"
+                                    <button name="action_view_model_toner_config"
                 type="object"
                 string="⚙️ Configuración Modelo"
                 class="btn btn-info"
                 icon="fa-cog"/>
-        
-        <button name="action_send_stock_reminder"
+                                    <button name="action_send_stock_reminder"
                 type="object"
                 string="📧 Recordatorio Cliente"
                 class="btn btn-warning"
                 icon="fa-envelope"/>
-    </group>
-</page>
-<page string="📋 Gestión de Estados" name="estado_page">
-<group>
-    <button name="action_estado_revisada" string="Marcar Revisada"
+                                </group>
+                            </page>
+                            <page string="📋 Gestión de Estados" name="estado_page">
+                                <group>
+                                    <button name="action_estado_revisada" string="Marcar Revisada"
             type="object" class="btn-primary"
             invisible="estado_alquiler_id != 'sin_revisar'"/>
-
-    <button name="action_estado_lista" string="Marcar Lista"
+                                    <button name="action_estado_lista" string="Marcar Lista"
             type="object" class="btn-primary"
             invisible="estado_alquiler_id != 'revisada'"/>
-
-    <button name="action_enviar_inspeccion" string="Enviar Inspección"
+                                    <button name="action_enviar_inspeccion" string="Enviar Inspección"
             type="object" class="btn-primary"
             invisible="estado_alquiler_id not in ('lista', 'inspeccion', 'subsanacion')"/>
-
-    <button name="action_estado_por_instalar" string="Aprobar Instalación"
+                                    <button name="action_estado_por_instalar" string="Aprobar Instalación"
             type="object" class="btn-success"
             invisible="estado_alquiler_id not in ('inspeccion', 'subsanacion')"
             groups="base.group_system"/>
-
-    <button name="action_estado_alquilada" string="Marcar Alquilada"
+                                    <button name="action_estado_alquilada" string="Marcar Alquilada"
             type="object" class="btn-success"
             invisible="estado_alquiler_id != 'por_instalar'"/>
-
-    <!-- Estados especiales -->
-    <button name="action_estado_con_problemas" string="Con Problemas"
+                                    <!-- Estados especiales -->
+                                    <button name="action_estado_con_problemas" string="Con Problemas"
             type="object" class="btn-warning"
             invisible="estado_alquiler_id in ('vendida', 'con_problemas')"/>
-
-    <button name="action_estado_partes" string="De Partes"
+                                    <button name="action_estado_partes" string="De Partes"
             type="object" class="btn-warning"
             invisible="estado_alquiler_id in ('vendida', 'partes')"/>
-
-    <button name="action_estado_vendida" string="Marcar Vendida"
+                                    <button name="action_estado_vendida" string="Marcar Vendida"
             type="object" class="btn-danger"
             invisible="estado_alquiler_id == 'vendida'"
             confirm="¿Está seguro de marcar este equipo como vendido?"/>
-
-    <!-- Botón de reset (solo admin) -->
-    <button name="action_estado_sin_revisar" string="Resetear"
+                                    <!-- Botón de reset (solo admin) -->
+                                    <button name="action_estado_sin_revisar" string="Resetear"
             type="object" class="btn-secondary"
             invisible="estado_alquiler_id == 'sin_revisar'"
             groups="base.group_system"
             confirm="¿Está seguro de resetear el estado del equipo?"/>
-
-</group> 
-</page>
-
+                                </group>
+                            </page>
                         </notebook>
                     </sheet>
                     <chatter />
@@ -970,7 +930,6 @@
                     records_draggable="1"
                     group_create="0"
                     sample="1">
-
                     <field name="cliente_id" />
                     <field name="name" />
                     <field name="serie" />
@@ -982,12 +941,10 @@
                     <field name="ticket_count" />
                     <field name="pedidos_count" />
                     <field name="repuestos_count" />
-
                     <templates>
                         <t t-name="kanban-box">
                             <div class="oe_kanban_card rounded-3 overflow-hidden"
                                 style="box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 10px;">
-
                                 <!-- Estado como badge flotante (más compacto) -->
                                 <div class="position-absolute top-0 end-0 p-2 z-index-2">
                                     <span
@@ -1000,17 +957,18 @@
                                         <field name="estado_alquiler_id" />
                                     </span>
                                 </div>
-
                                 <!-- Contenedor principal con gradiente (más compacto) -->
                                 <div class="p-3"
                                     style="background: linear-gradient(135deg, #2B2E4A 0%, #1A1B2E 100%);">
-
                                     <!-- Información principal (mejor espaciado) -->
                                     <div class="mb-2">
                                         <div class="d-flex align-items-center mb-1 text-white">
                                             <i class="fa fa-print me-2"
                                                 style="color: #4ECDC4; font-size: 0.9rem;" />
-                                            <strong><field name="name" /> - <field name="serie" /></strong>
+                                            <strong>
+                                                <field name="name" /> -
+                                                <field name="serie" />
+                                            </strong>
                                         </div>
                                         <div
                                             class="d-flex align-items-center text-white-50 mb-1 small">
@@ -1029,7 +987,6 @@
                                         </div>
                                     </div>
                                 </div>
-
                                 <!-- Área de estadísticas (mejor espaciado) -->
                                 <div class="bg-white p-2">
                                     <!-- Contadores (más compactos) -->
@@ -1049,7 +1006,6 @@
                                                 </div>
                                             </button>
                                         </div>
-
                                         <!-- Pedidos -->
                                         <div class="flex-fill">
                                             <button name="get_pedidos" type="object"
@@ -1065,7 +1021,6 @@
                                                 </div>
                                             </button>
                                         </div>
-
                                         <!-- Repuestos -->
                                         <div class="flex-fill">
                                             <button name="get_repuestos" type="object"
@@ -1082,7 +1037,6 @@
                                             </button>
                                         </div>
                                     </div>
-
                                     <!-- Botones de acción (más compactos) -->
                                     <div class="d-flex gap-1">
                                         <button name="generate_qr_code" type="object"
@@ -1091,14 +1045,12 @@
                                             <i class="fa fa-qrcode" />
                                             <span class="small">QR</span>
                                         </button>
-
                                         <button name="create_ticket" type="object"
                                             class="btn flex-fill rounded-2 d-flex align-items-center justify-content-center gap-1 py-1 fs-6"
                                             style="background: #4ECDC4; color: white;">
                                             <i class="fa fa-plus" />
                                             <span class="small">Ticket</span>
                                         </button>
-
                                         <button name="create_sale_order" type="object"
                                             class="btn flex-fill rounded-2 d-flex align-items-center justify-content-center gap-1 py-1 fs-6"
                                             style="background: #FF6B6B; color: white;">
@@ -1113,7 +1065,6 @@
                 </kanban>
             </field>
         </record>
-
         <record id="alquiler_tree_view" model="ir.ui.view">
             <field name="name">alquiler.tree</field>
             <field name="model">alquiler</field>
@@ -1127,7 +1078,6 @@
                     decoration-muted="estado_alquiler_id == 'vendida'"
                     multi_edit="1"
                     sample="1" js_class="alquiler_tree_dashboard">
-
                     <!-- Campos principales -->
                     <field name="cliente_id" widget="many2one_avatar_user" />
                     <field name="tipo_maquina_id" optional="hide"/>
@@ -1142,13 +1092,11 @@
                     <field name="direccion" optional="hide"/>
                     <field name="contacto_id" optional="hide" />
                     <field name="celular" widget="phone" optional="hide" />
-
                     <!-- Fecha con widget mejorado -->
                     <field name="fecha_recurrente"
                         string="Fecha Mantenimiento"
                         widget="remaining_days"
                         decoration-danger="fecha_recurrente and fecha_recurrente &lt;= context_today()" />
-
                     <!-- Estado con colores modernos -->
                     <field name="estado_alquiler_id"
                         string="Estado"
@@ -1159,7 +1107,6 @@
                         decoration-danger="estado_alquiler_id in ('con_problemas', 'partes')"
                         decoration-warning="estado_alquiler_id == 'vendida'"
                         decoration-primary="estado_alquiler_id == 'externo'" />
-
                     <!-- Estado programación -->
                     <field name="estado_programacion"
                         string="Mantenimiento"
@@ -1173,8 +1120,6 @@
                         decoration-warning="estado_bloqueo in ('pendiente_bloqueo', 'pendiente_desbloqueo')"
                         decoration-muted="estado_bloqueo == 'no_accesible'"
                         decoration-success="estado_bloqueo == 'activo'" />
-                    
-                   
                 </list>
             </field>
         </record>
@@ -1187,12 +1132,10 @@
                     <field name="cliente_id" />
                     <field name="marca" />
                     <field name="name" />
-
                     <filter name="mantenimiento_hoy" string="Mantenimiento Hoy"
                         domain="[('fecha_recurrente', '=', context_today())]" />
                     <filter name="mantenimiento_pendiente" string="Mantenimiento Pendiente"
                         domain="[('fecha_recurrente', '&lt;=', context_today())]" />
-
                     <separator />
                     <filter name="estado_sin_revisar" string="Sin revisar"
                         domain="[('estado_alquiler_id', '=', 'sin_revisar')]" />
@@ -1218,7 +1161,6 @@
                     <filter name="estado_vendida" string="Vendida"
                         domain="[('estado_alquiler_id', '=', 'vendida')]" />
                     <separator />
-
                     <group>
                         <filter name="group_by_estado" string="Estado"
                             context="{'group_by': 'estado_alquiler_id'}" />
@@ -1227,12 +1169,9 @@
                         <filter name="group_by_marca" string="Marca"
                             context="{'group_by': 'marca'}" />
                     </group>
-
-                   
                 </search>
             </field>
         </record>
-
         <record id="alquiler_view_calendar" model="ir.ui.view">
             <field name="name">alquiler.calendar</field>
             <field name="model">alquiler</field>
@@ -1253,7 +1192,6 @@
                 </graph>
             </field>
         </record>
-
         <!-- Vista Form Wizard -->
         <record id="wizard_enviar_inspeccion_form" model="ir.ui.view">
             <field name="name">wizard.enviar.inspeccion.form</field>
@@ -1276,7 +1214,5 @@
                 </form>
             </field>
         </record>
-
-
     </data>
 </odoo>
