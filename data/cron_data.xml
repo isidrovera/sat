@@ -84,5 +84,9 @@ if config:
         <field name="priority">10</field>
         <field name="user_id" ref="base.user_admin"/>
     </record>
+    <record id="google_maps_api_key" model="ir.config_parameter">
+            <field name="key">alquiler_geo.google_maps_api_key</field>
+            <field name="value"></field>
+        </record>
     </data>
 </odoo>
