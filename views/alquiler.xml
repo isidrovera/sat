@@ -915,6 +915,55 @@
             confirm="¿Está seguro de resetear el estado del equipo?"/>
                                 </group>
                             </page>
+                             <page string="📍 Ubicación" name="ubicacion_page">
+                                <group>
+                                    <group string="Dirección">
+                                        <field name="nombre_establecimiento" 
+                                               placeholder="Nombre de empresa o local (opcional)"/>
+                                        <field name="direccion_calle" 
+                                               placeholder="Av. Javier Prado 1234"/>
+                                        <field name="direccion_referencia" 
+                                               placeholder="Frente al parque, piso 3..."/>
+                                        <field name="distrito"/>
+                                        <field name="provincia"/>
+                                        <field name="departamento"/>
+                                        <field name="codigo_postal"/>
+                                        <field name="pais"/>
+                                    </group>
+                                    <group string="Coordenadas">
+                                        <field name="latitud"/>
+                                        <field name="longitud"/>
+                                        <field name="tiene_coordenadas" invisible="1"/>
+                                        <field name="ubicacion_manual" readonly="1" 
+                                               widget="boolean_toggle"/>
+                                        <field name="google_place_id" readonly="1" 
+                                               groups="base.group_no_one"/>
+                                        <field name="direccion_completa" readonly="1"/>
+                                    </group>
+                                </group>
+
+                                <!-- Botones de acción -->
+                                <div class="d-flex gap-2 mb-3">
+                                    <button name="action_geocodificar_direccion"
+                                            string="📍 Geocodificar dirección"
+                                            type="object"
+                                            class="btn-primary"
+                                            help="Obtiene coordenadas a partir de la dirección escrita"/>
+                                    <button name="action_geocodificar_inverso"
+                                            string="🔄 Dirección desde coordenadas"
+                                            type="object"
+                                            class="btn-secondary"
+                                            invisible="not tiene_coordenadas"/>
+                                    <button name="action_abrir_en_google_maps"
+                                            string="🗺️ Ver en Google Maps"
+                                            type="object"
+                                            class="btn-info"
+                                            invisible="not tiene_coordenadas"/>
+                                </div>
+
+                                <!-- Widget de mapa interactivo -->
+                                <field name="latitud" widget="geo_map_widget"/>
+                            </page>
                         </notebook>
                     </sheet>
                     <chatter />

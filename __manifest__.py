@@ -196,6 +196,7 @@
             'sat/static/src/css/image-viewer.css',
             'sat/static/src/css/sat_table_styles.css',
             'sat/static/src/css/gallery.css',
+            'sat/static/src/css/geo_map_widget.css',
             #'sat/static/src/css/contadores_dashboard.css',
             
             # SCSS existente
@@ -212,6 +213,7 @@
             'sat/static/src/xml/selection_subparts_template.xml',
             'sat/static/src/xml/sat_dashboard.xml',
             'sat/static/src/xml/alquiler_dashboard.xml',
+            'sat/static/src/xml/geo_map_widget.xml',
             
             # JS Files existentes
             'sat/static/src/js/selection_subparts.js',

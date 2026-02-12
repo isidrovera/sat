@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="alquiler_geo.GeoMapWidget">
+        <div class="o_geo_map_widget">
+
+            <!-- Error -->
+            <div t-if="state.error" class="alert alert-warning d-flex align-items-center gap-2 mb-2">
+                <i class="fa fa-exclamation-triangle"/>
+                <span t-esc="state.error"/>
+            </div>
+
+            <!-- Loading -->
+            <div t-if="state.loading" class="d-flex align-items-center gap-2 p-3 text-muted">
+                <i class="fa fa-spinner fa-spin"/>
+                <span>Cargando mapa...</span>
+            </div>
+
+            <!-- Contenido principal -->
+            <div t-if="!state.loading and !state.error" class="o_geo_map_content">
+
+                <!-- Barra de búsqueda -->
+                <div class="o_geo_search_bar mb-2">
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="fa fa-search"/>
+                        </span>
+                        <input t-ref="searchInput"
+                               type="text"
+                               class="form-control"
+                               placeholder="Buscar dirección o nombre de empresa..."
+                               t-att-readonly="props.readonly ? 'readonly' : undefined"
+                               t-att-value="state.direccionCompleta"/>
+                    </div>
+                    <small class="text-muted mt-1 d-block">
+                        Escribe una dirección o nombre de empresa. También puedes hacer clic en el mapa.
+                    </small>
+                </div>
+
+                <!-- Info de ubicación actual -->
+                <div t-if="state.tieneCoords" class="o_geo_info_bar mb-2 p-2 rounded d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="fa fa-map-marker text-danger"/>
+                        <div>
+                            <span t-if="state.nombreEstablecimiento"
+                                  class="fw-bold d-block"
+                                  t-esc="state.nombreEstablecimiento"/>
+                            <small class="text-muted" t-esc="state.direccionCompleta"/>
+                            <br/>
+                            <small class="text-muted">
+                                <t t-esc="state.lat.toFixed(6)"/>,
+                                <t t-esc="state.lng.toFixed(6)"/>
+                                <span t-if="state.modoManual"
+                                      class="badge bg-info ms-1">manual</span>
+                            </small>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-1">
+                        <button type="button"
+                                class="btn btn-sm btn-outline-primary"
+                                title="Centrar mapa"
+                                t-on-click="onClickCenterMap">
+                            <i class="fa fa-crosshairs"/>
+                        </button>
+                        <button type="button"
+                                class="btn btn-sm btn-outline-info"
+                                title="Abrir en Google Maps"
+                                t-on-click="onClickOpenGoogleMaps">
+                            <i class="fa fa-external-link"/>
+                        </button>
+                        <button t-if="!props.readonly"
+                                type="button"
+                                class="btn btn-sm btn-outline-danger"
+                                title="Limpiar ubicación"
+                                t-on-click="onClickClearLocation">
+                            <i class="fa fa-trash"/>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Mapa -->
+                <div t-ref="mapContainer" class="o_geo_map_container"/>
+
+            </div>
+        </div>
+    </t>
+
+</templates>
