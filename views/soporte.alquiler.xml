@@ -11,7 +11,25 @@
                         <field name="estado" widget="statusbar" options="{'clickable': '1'}"/>
                         <button name="action_regenerar_informe" type="object" string="Regenerar informe" class="btn-primary"/>
                         <button name="action_limpiar_informe" type="object" string="Limpiar informe" class="btn-primary"/>
+                        <button name="action_en_ruta"
+                                string="🚗 En Ruta"
+                                type="object"
+                                class="btn-primary"
+                                invisible="estado != 'proceso'"
+                                confirm="¿Confirmar que está en ruta hacia el cliente?"/>
 
+                        <button name="action_en_sitio"
+                                string="📍 Llegué al sitio"
+                                type="object"
+                                class="btn-primary"
+                                invisible="estado not in ('proceso', 'en_ruta')"
+                                confirm="¿Confirmar llegada al sitio del cliente?"/>
+
+                        <button name="action_en_revision"
+                                string="🔧 Iniciar Revisión"
+                                type="object"
+                                class="btn-warning"
+                                invisible="estado != 'en_sitio'"/>
                         <button string="Cerrar" name="action_finalizar" type="object" class="btn btn-info" icon="fa-wrench" invisible="estado !='proceso'" />
                         <button name="action_cargar_contadores"
         type="object"
@@ -225,6 +243,39 @@
                                     en la pestaña "📍 Ubicación".
                                 </div>
                             </page>
+                            <page string="📡 Tracking GPS" name="tracking_gps_page">
+    <group>
+        <group string="Tiempos registrados">
+            <field name="fecha_asignacion"/>
+            <field name="fecha_en_ruta"/>
+            <field name="fecha_llegada"/>
+            <field name="fecha_inicio_revision"/>
+            <field name="fecha_salida_sitio"/>
+            <field name="fecha_finalizacion"/>
+        </group>
+        <group string="Métricas de atención">
+            <field name="tiempo_traslado_minutos" widget="float_time" string="Tiempo traslado"/>
+            <field name="tiempo_en_sitio_minutos" widget="float_time" string="Tiempo en sitio"/>
+            <field name="tiempo_total_atencion_minutos" widget="float_time" string="Tiempo total"/>
+            <field name="diferencia_puntualidad_minutos" string="Puntualidad (min)"/>
+            <field name="es_puntual" widget="boolean_toggle"/>
+        </group>
+    </group>
+    <div class="alert alert-success" invisible="not es_puntual or not fecha_llegada">
+        <i class="fa fa-check-circle me-2"/>
+        <strong>✅ El técnico llegó a tiempo</strong>
+    </div>
+    <div class="alert alert-warning" invisible="es_puntual or not fecha_llegada or diferencia_puntualidad_minutos &lt;= 0">
+        <i class="fa fa-clock-o me-2"/>
+        <strong>⚠️ El técnico llegó tarde</strong>
+    </div>
+    <group string="Log de eventos GPS">
+        <field name="tracking_log" nolabel="1" readonly="1" placeholder="Los eventos GPS se registran automáticamente aquí..."/>
+    </group>
+    <group invisible="not traccar_geofence_id">
+        <field name="traccar_geofence_id" readonly="1"/>
+    </group>
+</page>
                         </notebook>
                     </sheet>
                     <chatter />

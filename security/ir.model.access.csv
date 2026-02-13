@@ -212,3 +212,5 @@ access_sat_import_assign_header_wizard_user,sat.import.assign.header.wizard user
 access_sat_import_assign_header_wizard_admin,sat.import.assign.header.wizard admin,model_sat_import_assign_header_wizard,base.group_system,1,1,1,1
 access_evaluacion_personal_detalle_diario_base,Evaluación Personal Detalle Diario - Base,model_evaluacion_personal_detalle_diario,base.group_user,1,0,0,0
 access_evaluacion_personal_detalle_diario_user,Evaluación Personal Detalle Diario - User,model_evaluacion_personal_detalle_diario,base.group_system,1,1,1,0
+access_tecnico_dispositivo_gps_admin,tecnico.dispositivo.gps admin,model_tecnico_dispositivo_gps,base.group_system,1,1,1,1
+access_tecnico_dispositivo_gps_user,tecnico.dispositivo.gps user,model_tecnico_dispositivo_gps,base.group_user,1,0,0,0

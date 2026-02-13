@@ -162,10 +162,14 @@ class ticket_alquiler(models.Model):
     )
     informe_id = fields.Html(string='Notas de reparación')   
 
-    estado = fields.Selection(string='Estado', selection=[('nuevo', 'Nuevo'),
-    ('proceso','En Proceso'),('finalizado','Finalizado')],  tracking=True,
-    default='nuevo'
-    )
+    estado = fields.Selection(string='Estado', selection=[
+        ('nuevo', 'Nuevo'),
+        ('proceso', 'Asignado'),
+        ('en_ruta', 'En Ruta'),
+        ('en_sitio', 'En Sitio'),
+        ('en_revision', 'En Revisión'),
+        ('finalizado', 'Finalizado'),
+    ], tracking=True, default='nuevo')
     codigo_id = fields.Many2one('sale.order', string="Código")
 
     product_alquiler = fields.Many2one('alquiler', string='Modelo', tracking=True)
@@ -542,7 +546,7 @@ class ticket_alquiler(models.Model):
         
         # Buscar todos los tickets en proceso
         tickets_pendientes = self.search([
-            ('estado', '=', 'proceso'),
+            ('estado', 'in', ['proceso', 'en_ruta', 'en_sitio', 'en_revision']),
             ('agenda', '<', fields.Datetime.now())  # Solo tickets cuya fecha de visita ya pasó
         ])
         
@@ -589,7 +593,7 @@ class ticket_alquiler(models.Model):
                     errors.append("• Descripción del problema es requerida cuando el ticket está en estado 'nuevo'")
             
             # Campos requeridos cuando estado == 'proceso' (para finalizar debe estar en proceso)
-            if ticket.estado == 'proceso':
+            if ticket.estado in ('proceso', 'en_ruta', 'en_sitio', 'en_revision'):
                 # Contómetros requeridos en proceso
                 if not ticket.contometrok_id:
                     errors.append("• Contador K es requerido cuando el ticket está en proceso")
