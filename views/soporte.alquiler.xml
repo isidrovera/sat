@@ -76,6 +76,7 @@
                                 <field name="tipo_id" invisible="1" />
                                 <field name="url" invisible="1" />
                                 <field name="mostrar_boton_contadores" invisible="1"/>
+                                <field name="equipo_tiene_coordenadas" invisible="1"/>
 
                             </group>
                             <group>
@@ -177,6 +178,52 @@
                                         <field name="price_subtotal" readonly="True" optional="hide"/>
                                     </list>
                                 </field>
+                            </page>
+                            <page string="📍 Ubicación" name="ubicacion_ticket_page">
+                                <!-- Dirección desglosada -->
+                                <group invisible="not equipo_tiene_coordenadas">
+                                    <group string="Dirección del equipo">
+                                        <field name="equipo_nombre_establecimiento"
+                                               invisible="not equipo_nombre_establecimiento"/>
+                                        <field name="equipo_direccion_completa"/>
+                                        <field name="equipo_direccion_referencia"
+                                               invisible="not equipo_direccion_referencia"/>
+                                        <field name="equipo_distrito"/>
+                                        <field name="equipo_provincia"/>
+                                        <field name="equipo_departamento"/>
+                                    </group>
+                                    <group string="Coordenadas">
+                                        <field name="equipo_latitud"/>
+                                        <field name="equipo_longitud"/>
+                                        <field name="google_maps_url" widget="url"
+                                               string="Ver en mapa"/>
+                                        <field name="google_maps_nav_url" widget="url"
+                                               string="Navegar"/>
+                                    </group>
+                                </group>
+
+                                <!-- Botones de navegación para el técnico -->
+                                <div class="d-flex gap-2 mb-3"
+                                     invisible="not equipo_tiene_coordenadas">
+                                    <button name="action_abrir_mapa_equipo"
+                                            string="🗺️ Ver en Google Maps"
+                                            type="object"
+                                            class="btn-info"/>
+                                    <button name="action_navegar_a_equipo"
+                                            string="🧭 Navegar al equipo"
+                                            type="object"
+                                            class="btn-success"/>
+                                </div>
+
+                                <!-- Mensaje cuando no hay coordenadas -->
+                                <div class="alert alert-warning"
+                                     invisible="equipo_tiene_coordenadas">
+                                    <i class="fa fa-map-marker me-2"/>
+                                    <strong>Sin ubicación:</strong>
+                                    El equipo no tiene coordenadas registradas.
+                                    Configure la ubicación desde la ficha del equipo
+                                    en la pestaña "📍 Ubicación".
+                                </div>
                             </page>
                         </notebook>
                     </sheet>

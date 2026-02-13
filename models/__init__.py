@@ -79,3 +79,4 @@ from . import sat_import_line
 from . import hereda_sat_notificaciones
 from . import evaluacion_personal_report
 from . import alquiler_geo
+from . import ticket_geo
