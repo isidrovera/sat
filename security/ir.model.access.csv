@@ -130,6 +130,7 @@ access_inspeccion_resultado_user,inspeccion.resultado.user,model_inspeccion_resu
 access_inspeccion_resultado_user,inspeccion.resultado.user,model_inspeccion_resultado,base.group_user,1,1,1,1
 access_inspeccion_resultado_portal,inspeccion_resultado.portal_access,model_inspeccion_resultado,base.group_portal,1,0,0,0
 access_wizard_enviar_inspeccion_user,wizard.enviar.inspeccion.user,model_wizard_enviar_inspeccion,base.group_system,1,1,1,1
+access_wizard_enviar_inspeccion_user,wizard.enviar.inspeccion.user,model_wizard_enviar_inspeccion,base.group_user,1,1,1,1
 access_wizard_enviar_inspeccion_portal,wizard_enviar_inspeccion.portal_access,model_wizard_enviar_inspeccion,base.group_portal,1,0,0,0
 access_wizard_asignar_componentes_user,wizard.asignar.componentes.user,model_wizard_asignar_componentes,base.group_user,1,1,1,1
 access_wizard_asignar_componentes_linea_user,wizard.asignar.componentes.linea.user,model_wizard_asignar_componentes_linea,base.group_user,1,1,1,1
