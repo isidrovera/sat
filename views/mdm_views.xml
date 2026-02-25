@@ -1,416 +1,401 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-<data>
-    
-    <!-- ═══════════════════════════════════════════════════════════ -->
-    <!-- VISTAS: mdm.config                                          -->
-    <!-- ═══════════════════════════════════════════════════════════ -->
-
-    <record id="view_mdm_config_list" model="ir.ui.view">
-      <field name="name">mdm.config.list</field>
-      <field name="model">mdm.config</field>
-      <field name="arch" type="xml">
-        <list string="Configuraciones MDM">
-          <field name="url"/>
-          <field name="login"/>
-          <field name="active"/>
-          <field name="last_sync"/>
-          <field name="device_count"/>
-          <field name="token_expiry"/>
-        </list>
-      </field>
-    </record>
-
-    <record id="view_mdm_config_form" model="ir.ui.view">
-      <field name="name">mdm.config.form</field>
-      <field name="model">mdm.config</field>
-      <field name="arch" type="xml">
-        <form string="Configuración Headwind MDM">
-          <header>
-            <button name="action_test_connection"
+    <data>
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- VISTAS: mdm.config                                          -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <record id="view_mdm_config_list" model="ir.ui.view">
+            <field name="name">mdm.config.list</field>
+            <field name="model">mdm.config</field>
+            <field name="arch" type="xml">
+                <list string="Configuraciones MDM">
+                    <field name="url"/>
+                    <field name="login"/>
+                    <field name="active"/>
+                    <field name="last_sync"/>
+                    <field name="device_count"/>
+                    <field name="token_expiry"/>
+                </list>
+            </field>
+        </record>
+        <record id="view_mdm_config_form" model="ir.ui.view">
+            <field name="name">mdm.config.form</field>
+            <field name="model">mdm.config</field>
+            <field name="arch" type="xml">
+                <form string="Configuración Headwind MDM">
+                    <header>
+                        <button name="action_test_connection"
                     string="🔌 Probar conexión"
                     type="object"
                     class="btn-primary"/>
-            <button name="action_sync_devices"
+                        <button name="action_sync_devices"
                     string="🔄 Sincronizar dispositivos"
                     type="object"
                     class="btn-secondary"/>
-          </header>
-          <sheet>
-            <div class="oe_button_box" name="button_box">
-              <button name="action_view_devices"
+                    </header>
+                    <sheet>
+                        <div class="oe_button_box" name="button_box">
+                            <button name="action_view_devices"
                       type="object"
                       class="oe_stat_button"
                       icon="fa-mobile">
-                <field name="device_count" widget="statinfo" string="Dispositivos"/>
-              </button>
-            </div>
-            <group string="Conexión">
-              <group>
-                <field name="url" placeholder="https://it.andessolutioncopiers.com"/>
-                <field name="login"/>
-                <field name="password" password="True"/>
-                <field name="active"/>
-              </group>
-              <group>
-                <field name="last_sync"/>
-                <field name="token_expiry"/>
-              </group>
-            </group>
-          </sheet>
-        </form>
-      </field>
-    </record>
-
-    <!-- ═══════════════════════════════════════════════════════════ -->
-    <!-- VISTAS: mdm.device                                          -->
-    <!-- ═══════════════════════════════════════════════════════════ -->
-
-    <record id="view_mdm_device_list" model="ir.ui.view">
-      <field name="name">mdm.device.list</field>
-      <field name="model">mdm.device</field>
-      <field name="arch" type="xml">
-        <list string="Dispositivos MDM"
+                                <field name="device_count" widget="statinfo" string="Dispositivos"/>
+                            </button>
+                        </div>
+                        <group string="Conexión">
+                            <group>
+                                <field name="url" placeholder="https://it.andessolutioncopiers.com"/>
+                                <field name="login"/>
+                                <field name="password" password="True"/>
+                                <field name="active"/>
+                            </group>
+                            <group>
+                                <field name="last_sync"/>
+                                <field name="token_expiry"/>
+                            </group>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- VISTAS: mdm.device                                          -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <record id="view_mdm_device_list" model="ir.ui.view">
+            <field name="name">mdm.device.list</field>
+            <field name="model">mdm.device</field>
+            <field name="arch" type="xml">
+                <list string="Dispositivos MDM"
               decoration-success="status_code == 'green'"
               decoration-warning="status_code == 'yellow'"
               decoration-danger="status_code in ('red', 'grey')"
               multi_edit="1">
-          <field name="device_number"/>
-          <field name="user_id"/>
-          <field name="status_code" widget="badge"
+                    <field name="device_number"/>
+                    <field name="user_id"/>
+                    <field name="status_code" widget="badge"
                  decoration-success="status_code == 'green'"
                  decoration-warning="status_code == 'yellow'"
                  decoration-danger="status_code in ('red','grey')"/>
-          <field name="model"/>
-          <field name="android_version"/>
-          <field name="phone"/>
-          <field name="battery_level" widget="progressbar"/>
-          <field name="last_update"/>
-          <field name="command_count"/>
-          <!-- Botones de acción rápida -->
-          <button name="action_send_push_traccar"
+                    <field name="model"/>
+                    <field name="android_version"/>
+                    <field name="phone"/>
+                    <field name="battery_level" widget="progressbar"/>
+                    <field name="last_update"/>
+                    <field name="command_count"/>
+                    <!-- Botones de acción rápida -->
+                    <button name="action_send_push_traccar"
                   string="📍 Traccar"
                   type="object"
                   title="Abrir Traccar"
                   class="btn-sm btn-primary"/>
-          <button name="action_send_push_config_updated"
+                    <button name="action_send_push_config_updated"
                   string="🔄 Config"
                   type="object"
                   title="Actualizar configuración"
                   class="btn-sm btn-secondary"/>
-          <button name="action_send_push_reboot"
+                    <button name="action_send_push_reboot"
                   string="🔁 Reiniciar"
                   type="object"
                   title="Reiniciar dispositivo"
                   class="btn-sm btn-warning"/>
-        </list>
-      </field>
-    </record>
-
-    <record id="view_mdm_device_form" model="ir.ui.view">
-      <field name="name">mdm.device.form</field>
-      <field name="model">mdm.device</field>
-      <field name="arch" type="xml">
-        <form string="Dispositivo MDM">
-          <header>
-            <!-- Botones de acción rápida -->
-            <button name="action_send_push_traccar"
+                </list>
+            </field>
+        </record>
+        <record id="view_mdm_device_form" model="ir.ui.view">
+            <field name="name">mdm.device.form</field>
+            <field name="model">mdm.device</field>
+            <field name="arch" type="xml">
+                <form string="Dispositivo MDM">
+                    <header>
+                        <!-- Botones de acción rápida -->
+                        <button name="action_send_push_traccar"
                     string="📍 Abrir Traccar"
                     type="object"
                     class="btn-primary"/>
-            <button name="action_send_push_whatsapp"
+                        <button name="action_send_push_whatsapp"
                     string="💬 Abrir WhatsApp"
                     type="object"
                     class="btn-secondary"/>
-            <button name="action_send_push_config_updated"
+                        <button name="action_send_push_config_updated"
                     string="🔄 Actualizar Config"
                     type="object"
                     class="btn-secondary"/>
-            <button name="action_send_push_exit_kiosk"
+                        <button name="action_send_push_exit_kiosk"
                     string="🚪 Salir Kiosk"
                     type="object"
                     class="btn-secondary"/>
-            <button name="action_send_push_reboot"
+                        <button name="action_send_push_reboot"
                     string="🔁 Reiniciar"
                     type="object"
                     class="btn-warning"/>
-          </header>
-          <sheet>
-            <div class="oe_button_box" name="button_box">
-              <button name="action_view_logs"
+                    </header>
+                    <sheet>
+                        <div class="oe_button_box" name="button_box">
+                            <button name="action_view_logs"
                       type="object"
                       class="oe_stat_button"
                       icon="fa-history">
-                <field name="command_count" widget="statinfo" string="Comandos"/>
-              </button>
-            </div>
-
-            <!-- Info del dispositivo -->
-            <group string="Información del dispositivo">
-              <group>
-                <field name="device_number"/>
-                <field name="user_id"/>
-                <field name="config_id"/>
-                <field name="status_code" widget="badge"
+                                <field name="command_count" widget="statinfo" string="Comandos"/>
+                            </button>
+                        </div>
+                        <!-- Info del dispositivo -->
+                        <group string="Información del dispositivo">
+                            <group>
+                                <field name="device_number"/>
+                                <field name="user_id"/>
+                                <field name="config_id"/>
+                                <field name="status_code" widget="badge"
                        decoration-success="status_code == 'green'"
                        decoration-warning="status_code == 'yellow'"
                        decoration-danger="status_code in ('red','grey')"/>
-              </group>
-              <group>
-                <field name="model"/>
-                <field name="android_version"/>
-                <field name="imei"/>
-                <field name="phone"/>
-                <field name="battery_level" widget="progressbar"/>
-                <field name="launcher_version"/>
-                <field name="last_update"/>
-              </group>
-            </group>
-
-            <group string="Estado">
-              <group>
-                <field name="mdm_mode"/>
-                <field name="kiosk_mode"/>
-              </group>
-            </group>
-
-            <!-- Panel de envío de comandos -->
-            <group string="📤 Enviar comando push">
-              <group>
-                <field name="push_type"/>
-                <field name="push_app_shortcut"
+                            </group>
+                            <group>
+                                <field name="model"/>
+                                <field name="android_version"/>
+                                <field name="imei"/>
+                                <field name="phone"/>
+                                <field name="battery_level" widget="progressbar"/>
+                                <field name="launcher_version"/>
+                                <field name="last_update"/>
+                            </group>
+                        </group>
+                        <group string="Estado">
+                            <group>
+                                <field name="mdm_mode"/>
+                                <field name="kiosk_mode"/>
+                            </group>
+                        </group>
+                        <!-- Panel de envío de comandos -->
+                        <group string="📤 Enviar comando push">
+                            <group>
+                                <field name="push_type"/>
+                                <field name="push_app_shortcut"
                        invisible="push_type != 'runApp' and push_type != 'uninstallApp'"/>
-                <field name="push_app_custom"
+                                <field name="push_app_custom"
                        invisible="push_app_shortcut != 'custom'"
                        placeholder="com.ejemplo.app"/>
-              </group>
-              <group>
-                <field name="push_payload" widget="text"
+                            </group>
+                            <group>
+                                <field name="push_payload" widget="text"
                        placeholder='Ej: {"pkg":"org.traccar.client"}'/>
-              </group>
-              <div>
-                <button name="action_send_push"
+                            </group>
+                            <div>
+                                <button name="action_send_push"
                         string="📤 Enviar comando"
                         type="object"
                         class="btn-primary"/>
-              </div>
-            </group>
-
-            <!-- Historial de comandos -->
-            <notebook>
-              <page string="📋 Historial de comandos">
-                <field name="command_log_ids">
-                  <list decoration-success="status == 'sent'"
+                            </div>
+                        </group>
+                        <!-- Historial de comandos -->
+                        <notebook>
+                            <page string="📋 Historial de comandos">
+                                <field name="command_log_ids">
+                                    <list decoration-success="status == 'sent'"
                         decoration-danger="status == 'error'">
+                                        <field name="create_date"/>
+                                        <field name="user_id"/>
+                                        <field name="message_type"/>
+                                        <field name="payload"/>
+                                        <field name="status" widget="badge"
+                           decoration-success="status == 'sent'"
+                           decoration-danger="status == 'error'"/>
+                                        <field name="error_message" optional="show"/>
+                                    </list>
+                                </field>
+                            </page>
+                        </notebook>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+        <record id="view_mdm_device_kanban" model="ir.ui.view">
+            <field name="name">mdm.device.kanban</field>
+            <field name="model">mdm.device</field>
+            <field name="arch" type="xml">
+                <kanban class="o_kanban_small_column">
+                    <field name="device_number"/>
+                    <field name="status_code"/>
+                    <field name="model"/>
+                    <field name="user_id"/>
+                    <field name="battery_level"/>
+                    <field name="phone"/>
+                    <field name="last_update"/>
+                    <templates>
+                        <t t-name="kanban-box">
+                            <div class="oe_kanban_card oe_kanban_global_click">
+                                <div class="o_kanban_record_top">
+                                    <div class="o_kanban_record_headings">
+                                        <strong>
+                                            <t t-if="record.status_code.raw_value == 'green'">🟢</t>
+                                            <t t-if="record.status_code.raw_value == 'yellow'">🟡</t>
+                                            <t t-if="record.status_code.raw_value == 'red'">🔴</t>
+                                            <t t-if="record.status_code.raw_value == 'grey'">⚫</t>
+                                            <field name="device_number"/>
+                                        </strong>
+                                    </div>
+                                </div>
+                                <div class="o_kanban_record_body">
+                                    <div>
+                                        <i class="fa fa-user"/>
+                                        <field name="user_id"/>
+                                    </div>
+                                    <div>
+                                        <i class="fa fa-mobile"/>
+                                        <field name="model"/>
+                                    </div>
+                                    <div>
+                                        <i class="fa fa-phone"/>
+                                        <field name="phone"/>
+                                    </div>
+                                    <div>
+                    🔋
+                                        <field name="battery_level"/>%
+                                    </div>
+                                </div>
+                                <div class="o_kanban_record_bottom">
+                                    <div class="oe_kanban_bottom_left text-muted small">
+                                        <field name="last_update" widget="datetime"/>
+                                    </div>
+                                </div>
+                            </div>
+                        </t>
+                    </templates>
+                </kanban>
+            </field>
+        </record>
+        <record id="view_mdm_device_search" model="ir.ui.view">
+            <field name="name">mdm.device.search</field>
+            <field name="model">mdm.device</field>
+            <field name="arch" type="xml">
+                <search string="Buscar dispositivos">
+                    <field name="device_number"/>
+                    <field name="user_id"/>
+                    <field name="model"/>
+                    <field name="imei"/>
+                    <field name="phone"/>
+                    <filter string="En línea" name="online"
+                  domain="[('status_code','=','green')]"/>
+                    <filter string="Desconectados" name="offline"
+                  domain="[('status_code','in',['grey','red'])]"/>
+                    <filter string="Con advertencia" name="warning"
+                  domain="[('status_code','=','yellow')]"/>
+                    <filter string="Sin técnico asignado" name="no_user"
+                  domain="[('user_id','=',False)]"/>
+                    <separator/>
+                    <group expand="0" string="Agrupar por">
+                        <filter string="Estado" name="group_status"
+                    context="{'group_by':'status_code'}"/>
+                        <filter string="Técnico" name="group_user"
+                    context="{'group_by':'user_id'}"/>
+                        <filter string="Servidor MDM" name="group_config"
+                    context="{'group_by':'config_id'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- VISTAS: mdm.command.log                                     -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <record id="view_mdm_command_log_list" model="ir.ui.view">
+            <field name="name">mdm.command.log.list</field>
+            <field name="model">mdm.command.log</field>
+            <field name="arch" type="xml">
+                <list string="Historial de comandos"
+              decoration-success="status == 'sent'"
+              decoration-danger="status == 'error'">
                     <field name="create_date"/>
+                    <field name="device_number"/>
                     <field name="user_id"/>
                     <field name="message_type"/>
                     <field name="payload"/>
                     <field name="status" widget="badge"
-                           decoration-success="status == 'sent'"
-                           decoration-danger="status == 'error'"/>
-                    <field name="error_message" optional="show"/>
-                  </list>
-                </field>
-              </page>
-            </notebook>
-          </sheet>
-        </form>
-      </field>
-    </record>
-
-    <record id="view_mdm_device_kanban" model="ir.ui.view">
-      <field name="name">mdm.device.kanban</field>
-      <field name="model">mdm.device</field>
-      <field name="arch" type="xml">
-        <kanban class="o_kanban_small_column">
-          <field name="device_number"/>
-          <field name="status_code"/>
-          <field name="model"/>
-          <field name="user_id"/>
-          <field name="battery_level"/>
-          <field name="phone"/>
-          <field name="last_update"/>
-          <templates>
-            <t t-name="kanban-box">
-              <div class="oe_kanban_card oe_kanban_global_click">
-                <div class="o_kanban_record_top">
-                  <div class="o_kanban_record_headings">
-                    <strong>
-                      <t t-if="record.status_code.raw_value == 'green'">🟢</t>
-                      <t t-if="record.status_code.raw_value == 'yellow'">🟡</t>
-                      <t t-if="record.status_code.raw_value == 'red'">🔴</t>
-                      <t t-if="record.status_code.raw_value == 'grey'">⚫</t>
-                      <field name="device_number"/>
-                    </strong>
-                  </div>
-                </div>
-                <div class="o_kanban_record_body">
-                  <div><i class="fa fa-user"/> <field name="user_id"/></div>
-                  <div><i class="fa fa-mobile"/> <field name="model"/></div>
-                  <div><i class="fa fa-phone"/> <field name="phone"/></div>
-                  <div>
-                    🔋 <field name="battery_level"/>%
-                  </div>
-                </div>
-                <div class="o_kanban_record_bottom">
-                  <div class="oe_kanban_bottom_left text-muted small">
-                    <field name="last_update" widget="datetime"/>
-                  </div>
-                </div>
-              </div>
-            </t>
-          </templates>
-        </kanban>
-      </field>
-    </record>
-
-    <record id="view_mdm_device_search" model="ir.ui.view">
-      <field name="name">mdm.device.search</field>
-      <field name="model">mdm.device</field>
-      <field name="arch" type="xml">
-        <search string="Buscar dispositivos">
-          <field name="device_number"/>
-          <field name="user_id"/>
-          <field name="model"/>
-          <field name="imei"/>
-          <field name="phone"/>
-          <filter string="En línea" name="online"
-                  domain="[('status_code','=','green')]"/>
-          <filter string="Desconectados" name="offline"
-                  domain="[('status_code','in',['grey','red'])]"/>
-          <filter string="Con advertencia" name="warning"
-                  domain="[('status_code','=','yellow')]"/>
-          <filter string="Sin técnico asignado" name="no_user"
-                  domain="[('user_id','=',False)]"/>
-          <separator/>
-          <group expand="0" string="Agrupar por">
-            <filter string="Estado" name="group_status"
-                    context="{'group_by':'status_code'}"/>
-            <filter string="Técnico" name="group_user"
-                    context="{'group_by':'user_id'}"/>
-            <filter string="Servidor MDM" name="group_config"
-                    context="{'group_by':'config_id'}"/>
-          </group>
-        </search>
-      </field>
-    </record>
-
-    <!-- ═══════════════════════════════════════════════════════════ -->
-    <!-- VISTAS: mdm.command.log                                     -->
-    <!-- ═══════════════════════════════════════════════════════════ -->
-
-    <record id="view_mdm_command_log_list" model="ir.ui.view">
-      <field name="name">mdm.command.log.list</field>
-      <field name="model">mdm.command.log</field>
-      <field name="arch" type="xml">
-        <list string="Historial de comandos"
-              decoration-success="status == 'sent'"
-              decoration-danger="status == 'error'">
-          <field name="create_date"/>
-          <field name="device_number"/>
-          <field name="user_id"/>
-          <field name="message_type"/>
-          <field name="payload"/>
-          <field name="status" widget="badge"
                  decoration-success="status == 'sent'"
                  decoration-danger="status == 'error'"/>
-          <field name="error_message" optional="show"/>
-        </list>
-      </field>
-    </record>
-
-    <record id="view_mdm_command_log_search" model="ir.ui.view">
-      <field name="name">mdm.command.log.search</field>
-      <field name="model">mdm.command.log</field>
-      <field name="arch" type="xml">
-        <search string="Buscar historial">
-          <field name="device_number"/>
-          <field name="user_id"/>
-          <field name="message_type"/>
-          <filter string="Enviados" name="sent" domain="[('status','=','sent')]"/>
-          <filter string="Con error" name="error" domain="[('status','=','error')]"/>
-          <filter string="Hoy" name="today"
+                    <field name="error_message" optional="show"/>
+                </list>
+            </field>
+        </record>
+        <record id="view_mdm_command_log_search" model="ir.ui.view">
+            <field name="name">mdm.command.log.search</field>
+            <field name="model">mdm.command.log</field>
+            <field name="arch" type="xml">
+                <search string="Buscar historial">
+                    <field name="device_number"/>
+                    <field name="user_id"/>
+                    <field name="message_type"/>
+                    <filter string="Enviados" name="sent" domain="[('status','=','sent')]"/>
+                    <filter string="Con error" name="error" domain="[('status','=','error')]"/>
+                    <filter string="Hoy" name="today"
                   domain="[('create_date','&gt;=',datetime.datetime.now().strftime('%Y-%m-%d 00:00:00'))]"/>
-          <group expand="0" string="Agrupar por">
-            <filter string="Dispositivo" name="group_device"
+                    <group expand="0" string="Agrupar por">
+                        <filter string="Dispositivo" name="group_device"
                     context="{'group_by':'device_id'}"/>
-            <filter string="Tipo de comando" name="group_type"
+                        <filter string="Tipo de comando" name="group_type"
                     context="{'group_by':'message_type'}"/>
-            <filter string="Estado" name="group_status"
+                        <filter string="Estado" name="group_status"
                     context="{'group_by':'status'}"/>
-          </group>
-        </search>
-      </field>
-    </record>
-
-    <!-- ═══════════════════════════════════════════════════════════ -->
-    <!-- ACCIONES                                                     -->
-    <!-- ═══════════════════════════════════════════════════════════ -->
-
-    <record id="action_mdm_config" model="ir.actions.act_window">
-      <field name="name">Configuración MDM</field>
-      <field name="res_model">mdm.config</field>
-      <field name="view_mode">list,form</field>
-      <field name="help" type="html">
-        <p class="o_view_nocontent_smiling_face">
+                    </group>
+                </search>
+            </field>
+        </record>
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- ACCIONES                                                     -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <record id="action_mdm_config" model="ir.actions.act_window">
+            <field name="name">Configuración MDM</field>
+            <field name="res_model">mdm.config</field>
+            <field name="view_mode">list,form</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
           Configura la conexión con Headwind MDM
         </p>
-        <p>Agrega la URL, usuario y contraseña de tu servidor MDM.</p>
-      </field>
-    </record>
-
-    <record id="action_mdm_device" model="ir.actions.act_window">
-      <field name="name">Dispositivos MDM</field>
-      <field name="res_model">mdm.device</field>
-      <field name="view_mode">list,kanban,form</field>
-      <field name="search_view_id" ref="view_mdm_device_search"/>
-      <field name="context">{'search_default_online': 1}</field>
-      <field name="help" type="html">
-        <p class="o_view_nocontent_smiling_face">
+                <p>Agrega la URL, usuario y contraseña de tu servidor MDM.</p>
+            </field>
+        </record>
+        <record id="action_mdm_device" model="ir.actions.act_window">
+            <field name="name">Dispositivos MDM</field>
+            <field name="res_model">mdm.device</field>
+            <field name="view_mode">list,kanban,form</field>
+            <field name="search_view_id" ref="view_mdm_device_search"/>
+            <field name="context">{'search_default_online': 1}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
           No hay dispositivos sincronizados
         </p>
-        <p>Ve a Configuración MDM y ejecuta "Sincronizar dispositivos".</p>
-      </field>
-    </record>
-
-    <record id="action_mdm_command_log" model="ir.actions.act_window">
-      <field name="name">Historial de Comandos MDM</field>
-      <field name="res_model">mdm.command.log</field>
-      <field name="view_mode">list</field>
-      <field name="search_view_id" ref="view_mdm_command_log_search"/>
-      <field name="context">{'search_default_today': 1}</field>
-    </record>
-
-    <!-- ═══════════════════════════════════════════════════════════ -->
-    <!-- MENÚS                                                        -->
-    <!-- ═══════════════════════════════════════════════════════════ -->
-
-    <!-- Sub-raíz MDM dentro del menú principal sat -->
-    <menuitem id="menu_mdm_root"
+                <p>Ve a Configuración MDM y ejecuta "Sincronizar dispositivos".</p>
+            </field>
+        </record>
+        <record id="action_mdm_command_log" model="ir.actions.act_window">
+            <field name="name">Historial de Comandos MDM</field>
+            <field name="res_model">mdm.command.log</field>
+            <field name="view_mode">list</field>
+            <field name="search_view_id" ref="view_mdm_command_log_search"/>
+            <field name="context">{'search_default_today': 1}</field>
+        </record>
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- MENÚS                                                        -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- Sub-raíz MDM dentro del menú principal sat -->
+        <menuitem id="menu_mdm_root"
               name="Control MDM"
               parent="sat_menu_root"
               sequence="95"
               web_icon="fa fa-mobile"/>
-
-    <menuitem id="menu_mdm_devices"
+        <menuitem id="menu_mdm_devices"
               name="📱 Dispositivos"
               parent="menu_mdm_root"
               action="action_mdm_device"
               sequence="10"/>
-
-    <menuitem id="menu_mdm_command_log"
+        <menuitem id="menu_mdm_command_log"
               name="📋 Historial de Comandos"
               parent="menu_mdm_root"
               action="action_mdm_command_log"
               sequence="20"/>
-
-    <!-- Configuración MDM dentro de sat.ajustes -->
-    <menuitem id="menu_mdm_config"
+        <!-- Configuración MDM dentro de sat.ajustes -->
+        <menuitem id="menu_mdm_config"
               name="Headwind MDM"
               parent="sat.ajustes"
               action="action_mdm_config"
               sequence="170"/>
-
-</data>
+    </data>
 </odoo>

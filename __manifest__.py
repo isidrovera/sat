@@ -155,7 +155,7 @@
         'views/sat_import_line_views.xml',
         'views/portal_templates.xml',
         'views/traccar_tracking_views.xml',
-        #'views/mdm_views.xml',          
+        'views/mdm_views.xml',          
         'wizards/sat_import_assign_header_wizard_views.xml',
         'views/acciones_menus.xml',
     ],
