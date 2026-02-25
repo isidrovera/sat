@@ -1,4 +1,4 @@
-<?xml version='1.0' encoding='utf-8'?>
+<?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <data>
         <!-- ═══════════════════════════════════════════════════════════ -->
@@ -357,7 +357,7 @@
             <field name="res_model">mdm.device</field>
             <field name="view_mode">list,kanban,form</field>
             <field name="search_view_id" ref="view_mdm_device_search"/>
-            
+            <field name="context">{'search_default_online': 1}</field>
             <field name="help" type="html">
                 <p class="o_view_nocontent_smiling_face">
           No hay dispositivos sincronizados
@@ -370,7 +370,7 @@
             <field name="res_model">mdm.command.log</field>
             <field name="view_mode">list</field>
             <field name="search_view_id" ref="view_mdm_command_log_search"/>
-            
+            <field name="context">{'search_default_today': 1}</field>
         </record>
         <!-- ═══════════════════════════════════════════════════════════ -->
         <!-- MENÚS                                                        -->
@@ -380,7 +380,7 @@
               name="Control MDM"
               parent="sat_menu_root"
               sequence="95"
-              web_icon="fa fa-mobile"/>
+              />
         <menuitem id="menu_mdm_devices"
               name="📱 Dispositivos"
               parent="menu_mdm_root"
