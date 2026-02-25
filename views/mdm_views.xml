@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-  <data>
 
     <!-- ═══════════════════════════════════════════════════════════ -->
     <!-- VISTAS: mdm.config                                          -->
@@ -412,5 +411,4 @@
               action="action_mdm_config"
               sequence="170"/>
 
-  </data>
 </odoo>
