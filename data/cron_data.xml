@@ -84,6 +84,16 @@ if config:
         <field name="priority">10</field>
         <field name="user_id" ref="base.user_admin"/>
     </record>
+    <record id="cron_ticket_en_revision" model="ir.cron">
+        <field name="name">Tracking: en_sitio → en_revision automático</field>
+        <field name="model_id" ref="sat.model_ticket_alquiler"/>
+        <field name="state">code</field>
+        <field name="code">model.cron_actualizar_en_revision()</field>
+        <field name="interval_number">5</field>
+        <field name="interval_type">minutes</field>        
+        <field name="active">True</field>
+        <field name="user_id" ref="base.user_root"/>
+    </record>
     <record id="google_maps_api_key" model="ir.config_parameter">
             <field name="key">alquiler_geo.google_maps_api_key</field>
             <field name="value"></field>

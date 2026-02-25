@@ -84,3 +84,4 @@ from . import ticket_tracking
 from . import mdm_config
 from . import mdm_device
 from . import mdm_command_log
+from . import ticket_notificaciones_tracking
