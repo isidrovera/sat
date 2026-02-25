@@ -215,3 +215,9 @@ access_evaluacion_personal_detalle_diario_base,Evaluación Personal Detalle Diar
 access_evaluacion_personal_detalle_diario_user,Evaluación Personal Detalle Diario - User,model_evaluacion_personal_detalle_diario,base.group_system,1,1,1,0
 access_tecnico_dispositivo_gps_admin,tecnico.dispositivo.gps admin,model_tecnico_dispositivo_gps,base.group_system,1,1,1,1
 access_tecnico_dispositivo_gps_user,tecnico.dispositivo.gps user,model_tecnico_dispositivo_gps,base.group_user,1,0,0,0
+access_mdm_config_admin,mdm.config admin,model_mdm_config,base.group_system,1,1,1,1
+access_mdm_config_user,mdm.config user,model_mdm_config,base.group_user,1,0,0,0
+access_mdm_device_admin,mdm.device admin,model_mdm_device,base.group_system,1,1,1,1
+access_mdm_device_user,mdm.device user,model_mdm_device,base.group_user,1,1,0,0
+access_mdm_command_log_admin,mdm.command.log admin,model_mdm_command_log,base.group_system,1,1,1,1
+access_mdm_command_log_user,mdm.command.log user,model_mdm_command_log,base.group_user,1,1,1,0

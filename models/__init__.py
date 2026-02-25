@@ -81,3 +81,6 @@ from . import evaluacion_personal_report
 from . import alquiler_geo
 from . import ticket_geo
 from . import ticket_tracking
+from . import mdm_config
+from . import mdm_device
+from . import mdm_command_log
