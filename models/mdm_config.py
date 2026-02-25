@@ -162,6 +162,83 @@ class MdmConfig(models.Model):
             }
         }
 
+    @api.model
+    def cron_sync_all_devices(self):
+        """
+        Ejecutar cada 10 minutos.
+        Sincroniza estado, batería y conexión de todos los dispositivos
+        de todas las configuraciones MDM activas.
+        """
+        configs = self.sudo().search([('active', '=', True)])
+        if not configs:
+            _logger.info("[MDM-CRON] Sin configuraciones activas")
+            return
+
+        _logger.info("[MDM-CRON] Sincronizando %d configuración(es)", len(configs))
+
+        for config in configs:
+            try:
+                config._sync_devices_silencioso()
+                _logger.info("[MDM-CRON] ✅ Config %s sincronizada", config.url)
+            except Exception as e:
+                _logger.error("[MDM-CRON] ❌ Error sincronizando %s: %s", config.url, e)
+
+    def _sync_devices_silencioso(self):
+        """
+        Igual que action_sync_devices pero sin retornar notificación UI.
+        Para uso desde cron.
+        """
+        self.ensure_one()
+        headers = self._get_headers()
+        url = f"{self.url}/rest/private/devices/search"
+
+        resp = requests.post(url, headers=headers, json={
+            'pageNum': 1,
+            'pageSize': 200,
+        }, timeout=15)
+        resp.raise_for_status()
+        data = resp.json()
+
+        if data.get('status') != 'OK':
+            raise Exception(f'API respondió: {data.get("status")}')
+
+        devices = data['data']['devices']['items']
+        MdmDevice = self.env['mdm.device']
+        synced = 0
+        ahora = fields.Datetime.now()
+
+        for dev in devices:
+            info = dev.get('info') or {}
+            existing = MdmDevice.search([
+                ('device_number', '=', dev['number']),
+                ('config_id', '=', self.id),
+            ], limit=1)
+
+            vals = {
+                'config_id': self.id,
+                'device_number': dev['number'],
+                'device_id_mdm': dev.get('id'),
+                'status_code': dev.get('statusCode', 'grey'),
+                'model': info.get('model', ''),
+                'android_version': info.get('androidVersion', ''),
+                'imei': info.get('imei', ''),
+                'phone': info.get('phone', ''),
+                'battery_level': info.get('batteryLevel', 0),
+                'launcher_version': dev.get('launcherVersion', ''),
+                'last_update': ahora,
+                'mdm_mode': info.get('mdmMode', False),
+                'kiosk_mode': info.get('kioskMode', False),
+            }
+
+            if existing:
+                existing.write(vals)
+            else:
+                MdmDevice.create(vals)
+            synced += 1
+
+        self.sudo().write({'last_sync': ahora})
+        _logger.info("[MDM-CRON] %d dispositivos actualizados en %s", synced, self.url)
+
     def action_view_devices(self):
         self.ensure_one()
         return {
