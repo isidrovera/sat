@@ -246,6 +246,13 @@
                             <page string="📡 Tracking GPS" name="tracking_gps_page">
     <group>
         <group string="Tiempos registrados">
+            <button
+                        name="action_crear_geocerca_manual"
+                        string="📡 Crear / Recrear Geocerca"
+                        type="object"
+                        class="btn-primary"
+                        
+                    />
             <field name="fecha_asignacion"/>
             <field name="fecha_en_ruta"/>
             <field name="fecha_llegada"/>

@@ -222,3 +222,4 @@ access_mdm_device_user,mdm.device user,model_mdm_device,base.group_user,1,1,0,0
 access_mdm_command_log_admin,mdm.command.log admin,model_mdm_command_log,base.group_system,1,1,1,1
 access_mdm_command_log_user,mdm.command.log user,model_mdm_command_log,base.group_user,1,1,1,0
 access_tracking_diagnostico,tracking.diagnostico,model_tracking_diagnostico,base.group_user,1,1,1,1
+user,model_tecnico_dispositivo_gps,base.group_user,1,1,1,1
