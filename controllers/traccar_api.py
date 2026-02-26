@@ -19,7 +19,6 @@ class TraccarController(http.Controller):
         """Valida Authorization: Bearer <token>."""
         auth_header = request.httprequest.headers.get('Authorization', '')
 
-        # Log siempre para diagnóstico
         _logger.info(
             "[TRACCAR-AUTH] Header recibido: '%s...' (primeros 30 chars)",
             auth_header[:30]
@@ -70,7 +69,6 @@ class TraccarController(http.Controller):
         """
         Traccar envía JSON: {event, device, position, geofence}
         """
-        # Log del body crudo siempre — para diagnóstico
         try:
             raw_body = request.httprequest.data
             _logger.info("[TRACCAR-RAW] Body recibido: %s", raw_body[:500])
@@ -87,17 +85,22 @@ class TraccarController(http.Controller):
             _logger.error("[TRACCAR] ❌ JSON inválido")
             return self._json_response({'success': False, 'error': 'JSON inválido'}, 400)
 
-        event = body.get('event', {})
-        device = body.get('device', {})
-        position = body.get('position', {})
-        geofence = body.get('geofence')
+        event    = body.get('event') or {}
+        device   = body.get('device') or {}
+        # ✅ CORRECCIÓN: proteger contra position=null y geofence=null
+        position = body.get('position') or {}
+        geofence = body.get('geofence') or {}
 
         event_type = event.get('type', 'unknown')
-        device_id = device.get('id')
+        device_id  = device.get('id')
 
+        # ✅ Log completo para diagnóstico
         _logger.info(
-            "[TRACCAR] ✅ Evento: %s | Device ID: %s | Device name: %s",
+            "[TRACCAR] ✅ Evento: %s | Device ID: %s | Device name: %s | "
+            "lat: %s | lon: %s | geofence_id: %s",
             event_type, device_id, device.get('name'),
+            position.get('latitude'), position.get('longitude'),
+            geofence.get('id'),
         )
 
         eventos_ticket = ['geofenceEnter', 'geofenceExit', 'deviceMoving']
@@ -106,11 +109,11 @@ class TraccarController(http.Controller):
         if event_type in eventos_ticket and device_id:
             try:
                 datos = {
-                    'latitude': position.get('latitude'),
-                    'longitude': position.get('longitude'),
-                    'speed': position.get('speed'),
-                    'address': position.get('address'),
-                    'geofenceId': geofence.get('id') if geofence else None,
+                    'latitude':   position.get('latitude'),
+                    'longitude':  position.get('longitude'),
+                    'speed':      position.get('speed'),
+                    'address':    position.get('address'),
+                    'geofenceId': geofence.get('id'),
                 }
 
                 _logger.info(
@@ -136,7 +139,7 @@ class TraccarController(http.Controller):
 
         return self._json_response({
             'success': True,
-            'event': event_type,
-            'device': device.get('name'),
+            'event':   event_type,
+            'device':  device.get('name'),
             'tickets': odoo_result.get('tickets_actualizados', []) if odoo_result else [],
         })

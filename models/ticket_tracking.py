@@ -462,56 +462,81 @@ class TicketAlquilerTracking(models.Model):
         }
 
     def _gps_procesar_llegada(self, tickets_hoy, datos):
-        geofence_id = datos.get('geofenceId')
-        lat_tec = datos.get('latitude')
-        lon_tec = datos.get('longitude')
-        actualizados = self.env['ticket.alquiler']
+        """
+        geofenceEnter → marcar en_sitio.
+
+        Prioridad de match:
+          1. Por traccar_geofence_id exacto
+          2. Por proximidad GPS (≤ 200m) si llegan coordenadas
+          3. Fallback: primer candidato disponible
+             (cuando lat/lon son None y no hay geocerca configurada)
+        """
+        geofence_id   = datos.get('geofenceId')
+        lat_tec       = datos.get('latitude')
+        lon_tec       = datos.get('longitude')
+        actualizados  = self.env['ticket.alquiler']
 
         candidatos = tickets_hoy.filtered(lambda t: t.estado in ('proceso', 'en_ruta'))
         if not candidatos:
+            estados = ', '.join(set(tickets_hoy.mapped('estado')))
             for t in tickets_hoy:
                 t._registrar_evento(
-                    f"ℹ️ geofenceEnter ignorado — estado: "
-                    f"{', '.join(set(tickets_hoy.mapped('estado')))}"
+                    f"ℹ️ geofenceEnter ignorado — no hay candidatos "
+                    f"(estados actuales: {estados})"
                 )
             return actualizados
 
-        ticket_match = None
+        ticket_match   = None
         distancia_match = None
+        metodo_match   = None
 
-        for ticket in candidatos:
-            if geofence_id and ticket.traccar_geofence_id == geofence_id:
-                ticket_match = ticket
-                break
-            lat_eq = getattr(ticket, 'equipo_latitud', None)
-            lon_eq = getattr(ticket, 'equipo_longitud', None)
-            if lat_tec and lon_tec and lat_eq and lon_eq:
-                dist = self._haversine_metros(lat_tec, lon_tec, lat_eq, lon_eq)
-                if dist <= 200:
-                    ticket_match = ticket
-                    distancia_match = dist
+        # ── 1. Match por geocerca ────────────────────────────────
+        if geofence_id:
+            for ticket in candidatos:
+                if ticket.traccar_geofence_id == geofence_id:
+                    ticket_match  = ticket
+                    metodo_match  = f"geocerca ID:{geofence_id}"
                     break
-                else:
-                    ticket._registrar_evento(
-                        f"📡 Técnico a {dist:.0f}m del equipo (mín 200m)"
-                    )
 
+        # ── 2. Match por proximidad GPS ──────────────────────────
+        if not ticket_match and lat_tec and lon_tec:
+            for ticket in candidatos:
+                lat_eq = getattr(ticket, 'equipo_latitud', None)
+                lon_eq = getattr(ticket, 'equipo_longitud', None)
+                if lat_eq and lon_eq:
+                    dist = self._haversine_metros(lat_tec, lon_tec, lat_eq, lon_eq)
+                    if dist <= 200:
+                        ticket_match    = ticket
+                        distancia_match = dist
+                        metodo_match    = f"proximidad GPS ({dist:.0f}m)"
+                        break
+                    else:
+                        ticket._registrar_evento(
+                            f"📡 Técnico a {dist:.0f}m del equipo (mín 200m para match)"
+                        )
+
+        # ── 3. Fallback: primer candidato ────────────────────────
+        #    Aplica cuando Traccar no envía posición (lat/lon None)
+        #    y el ticket no tiene geocerca configurada.
+        #    Se toma el primero ordenado por agenda (orden del search).
         if not ticket_match:
-            for t in candidatos:
-                t._registrar_evento("⚠️ geofenceEnter sin coincidencia por geocerca ni proximidad")
-            return actualizados
+            ticket_match = candidatos[0]
+            metodo_match = "fallback (sin coordenadas ni geocerca configurada)"
+            _logger.warning(
+                "[GPS-LLEGADA] Usando fallback para ticket %s — "
+                "geofence_id=%s lat=%s lon=%s",
+                ticket_match.name, geofence_id, lat_tec, lon_tec
+            )
 
-        # Agrupar tickets del mismo cliente/agenda
+        # ── Agrupar tickets del mismo cliente/agenda ─────────────
         tickets_visita = ticket_match._get_tickets_misma_visita(candidatos)
 
         for ticket in tickets_visita:
             ticket.sudo().action_en_sitio()
-            msg = (f"📍 Llegada por proximidad GPS ({distancia_match:.0f}m)"
-                   if distancia_match else f"📍 Llegada por geocerca ID:{geofence_id}")
-            ticket._registrar_evento(msg)
+            ticket._registrar_evento(f"📍 Llegada registrada — método: {metodo_match}")
             actualizados |= ticket
 
-        # Un solo mensaje para todos los tickets del cliente
+        # ── Notificación grupal ──────────────────────────────────
         if actualizados:
             try:
                 actualizados[0].notificar_en_sitio(tickets_grupo=actualizados)
