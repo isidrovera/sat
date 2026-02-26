@@ -2,9 +2,6 @@
 """
 Diagnóstico GPS Tracking — Traccar ↔ Odoo
 ==========================================
-Wizard accesible desde un botón en Odoo.
-Verifica toda la cadena sin necesidad de shell ni logs.
-
 Archivo: models/tracking_diagnostico.py
 """
 import logging
@@ -14,6 +11,10 @@ from odoo import models, fields, api
 
 _logger = logging.getLogger(__name__)
 
+
+# ═══════════════════════════════════════════════════════════════════
+#  HERENCIA ticket.alquiler — botón de diagnóstico en el formulario
+# ═══════════════════════════════════════════════════════════════════
 
 class TicketAlquilerDiagnostico(models.Model):
     _inherit = 'ticket.alquiler'
@@ -33,6 +34,13 @@ class TicketAlquilerDiagnostico(models.Model):
             'target': 'new',
             'name': f'Diagnóstico GPS — {self.responsable.name if self.responsable else ""}',
         }
+
+
+# ═══════════════════════════════════════════════════════════════════
+#  WIZARD: Diagnóstico GPS
+# ═══════════════════════════════════════════════════════════════════
+
+class TrackingDiagnostico(models.TransientModel):
     _name = 'tracking.diagnostico'
     _description = 'Diagnóstico GPS Tracking'
 
@@ -108,7 +116,6 @@ class TicketAlquilerDiagnostico(models.Model):
         if not tickets_hoy:
             lineas.append("⚠️  SIN TICKETS CON AGENDA HOY")
 
-            # Buscar tickets activos de otros días para diagnóstico
             dominio_otros = [
                 ('estado', 'in', ['proceso', 'en_ruta', 'en_sitio', 'en_revision']),
             ]
@@ -130,13 +137,12 @@ class TicketAlquilerDiagnostico(models.Model):
                 errores = True
         else:
             for t in tickets_hoy:
-                desde_lima = self._fmt_hora(t.agenda)
                 lineas.append(
                     f"✅ {t.name} | {t.responsable.name} "
-                    f"| Agenda: {desde_lima} | Estado: {t.estado}"
+                    f"| Agenda: {self._fmt_hora(t.agenda)} | Estado: {t.estado}"
                 )
 
-        # ── 3. Verificar tickets sin agenda ──────────────────────
+        # ── 3. Tickets sin agenda ─────────────────────────────────
         lineas.append("\n▶ 3. TICKETS SIN CAMPO AGENDA")
         lineas.append("-" * 40)
 
@@ -157,7 +163,7 @@ class TicketAlquilerDiagnostico(models.Model):
         else:
             lineas.append("✅ Todos los tickets tienen agenda configurada")
 
-        # ── 4. Cruce: técnico tiene vínculo Y tickets hoy ────────
+        # ── 4. Cruce técnico ↔ tickets ───────────────────────────
         lineas.append("\n▶ 4. CRUCE TÉCNICO ↔ TICKETS HOY")
         lineas.append("-" * 40)
 
@@ -182,20 +188,14 @@ class TicketAlquilerDiagnostico(models.Model):
         if not sin_ticket and not sin_vinculo and vinculos and tickets_hoy:
             lineas.append("✅ Todos los técnicos con tickets tienen vínculo GPS")
 
-        # ── 5. Verificar deviceNumber en vínculo ─────────────────
+        # ── 5. Validar Traccar Device ID ─────────────────────────
         lineas.append("\n▶ 5. VALIDACIÓN TRACCAR DEVICE ID")
         lineas.append("-" * 40)
 
         for v in vinculos:
-            if not v.traccar_device_id:
+            if not v.traccar_device_id or v.traccar_device_id == 0:
                 lineas.append(
-                    f"❌ {v.user_id.name}: traccar_device_id está VACÍO "
-                    f"→ el sistema no puede identificar el dispositivo"
-                )
-                errores = True
-            elif v.traccar_device_id == 0:
-                lineas.append(
-                    f"❌ {v.user_id.name}: traccar_device_id = 0 (inválido)"
+                    f"❌ {v.user_id.name}: traccar_device_id vacío o 0 (inválido)"
                 )
                 errores = True
             else:
@@ -203,15 +203,15 @@ class TicketAlquilerDiagnostico(models.Model):
                     f"✅ {v.user_id.name}: traccar_device_id = {v.traccar_device_id}"
                 )
 
-        # ── 6. Simulación de evento GPS ──────────────────────────
+        # ── 6. Simulación ─────────────────────────────────────────
         if self.simular_evento != 'none' and vinculos:
             lineas.append(f"\n▶ 6. SIMULACIÓN: {self.simular_evento}")
             lineas.append("-" * 40)
 
             for v in vinculos:
                 lineas.append(
-                    f"Simulando '{self.simular_evento}' "
-                    f"para {v.user_id.name} (device_id={v.traccar_device_id})..."
+                    f"Simulando para {v.user_id.name} "
+                    f"(device_id={v.traccar_device_id})..."
                 )
                 try:
                     resultado = self.env['ticket.alquiler'].api_actualizar_estado_gps(
@@ -223,15 +223,13 @@ class TicketAlquilerDiagnostico(models.Model):
                         actualizados = resultado.get('tickets_actualizados', [])
                         msg = resultado.get('message', '')
                         if actualizados:
-                            lineas.append(f"✅ Tickets actualizados:")
+                            lineas.append("✅ Tickets actualizados:")
                             for t in actualizados:
                                 lineas.append(
-                                    f"   → {t['name']} ahora en estado: {t['estado']}"
+                                    f"   → {t['name']} ahora en: {t['estado']}"
                                 )
-                        elif msg:
-                            lineas.append(f"ℹ️  {msg}")
                         else:
-                            lineas.append("ℹ️  Sin tickets que actualizar")
+                            lineas.append(f"ℹ️  {msg or 'Sin tickets que actualizar'}")
                     else:
                         lineas.append(f"❌ Error: {resultado.get('error')}")
                         errores = True
@@ -239,12 +237,12 @@ class TicketAlquilerDiagnostico(models.Model):
                     lineas.append(f"❌ Excepción: {str(e)}")
                     errores = True
 
-        # ── Resumen final ─────────────────────────────────────────
+        # ── Resumen ───────────────────────────────────────────────
         lineas.append("\n" + "=" * 55)
         if errores:
-            lineas.append("⚠️  HAY PROBLEMAS QUE CORREGIR (ver detalles arriba)")
+            lineas.append("⚠️  HAY PROBLEMAS — ver detalles arriba")
         else:
-            lineas.append("✅ TODO OK — la cadena GPS → Odoo está configurada correctamente")
+            lineas.append("✅ TODO OK — cadena GPS → Odoo correctamente configurada")
         lineas.append("=" * 55)
 
         self.write({
@@ -252,7 +250,6 @@ class TicketAlquilerDiagnostico(models.Model):
             'tiene_errores': errores,
         })
 
-        # Reabrir el wizard con el resultado
         return {
             'type': 'ir.actions.act_window',
             'res_model': 'tracking.diagnostico',
