@@ -15,7 +15,24 @@ from odoo import models, fields, api
 _logger = logging.getLogger(__name__)
 
 
-class TrackingDiagnostico(models.TransientModel):
+class TicketAlquilerDiagnostico(models.Model):
+    _inherit = 'ticket.alquiler'
+
+    def action_abrir_diagnostico_gps(self):
+        """Abre el wizard de diagnóstico pre-filtrado con el técnico del ticket."""
+        self.ensure_one()
+        wizard = self.env['tracking.diagnostico'].create({
+            'tecnico_id': self.responsable.id if self.responsable else False,
+            'simular_evento': 'none',
+        })
+        return {
+            'type': 'ir.actions.act_window',
+            'res_model': 'tracking.diagnostico',
+            'res_id': wizard.id,
+            'view_mode': 'form',
+            'target': 'new',
+            'name': f'Diagnóstico GPS — {self.responsable.name if self.responsable else ""}',
+        }
     _name = 'tracking.diagnostico'
     _description = 'Diagnóstico GPS Tracking'
 
