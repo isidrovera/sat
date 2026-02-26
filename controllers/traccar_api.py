@@ -2,12 +2,6 @@
 """
 Controlador API: Traccar → Odoo
 ================================
-Recibe eventos GPS de Traccar (event.forward) y actualiza tickets.
-Sin notificaciones WhatsApp (se agregará después).
-
-Autenticación: Authorization: Bearer <token>
-Parámetro Odoo: traccar.api_key
-
 Archivo: controllers/traccar_api.py
 """
 import json
@@ -24,7 +18,15 @@ class TraccarController(http.Controller):
     def _validar_authorization(self):
         """Valida Authorization: Bearer <token>."""
         auth_header = request.httprequest.headers.get('Authorization', '')
+
+        # Log siempre para diagnóstico
+        _logger.info(
+            "[TRACCAR-AUTH] Header recibido: '%s...' (primeros 30 chars)",
+            auth_header[:30]
+        )
+
         if not auth_header.startswith('Bearer '):
+            _logger.warning("[TRACCAR-AUTH] ❌ No tiene formato Bearer")
             return False
 
         token_recibido = auth_header[7:]
@@ -35,10 +37,20 @@ class TraccarController(http.Controller):
         )
 
         if not token_config:
-            _logger.error("[TRACCAR] traccar.api_key no configurada")
+            _logger.error("[TRACCAR-AUTH] ❌ traccar.api_key no configurada en Odoo")
             return False
 
-        return token_recibido == token_config
+        coincide = token_recibido == token_config
+        if not coincide:
+            _logger.warning(
+                "[TRACCAR-AUTH] ❌ Token NO coincide | "
+                "Recibido: '%s' | Esperado: '%s'",
+                token_recibido[:20], token_config[:20]
+            )
+        else:
+            _logger.info("[TRACCAR-AUTH] ✅ Token válido")
+
+        return coincide
 
     def _json_response(self, data, status=200):
         return Response(
@@ -46,11 +58,6 @@ class TraccarController(http.Controller):
             status=status,
             content_type='application/json',
         )
-
-    # ═══════════════════════════════════════════════════════════
-    #  POST /api/traccar/evento
-    #  Recibe evento directo de Traccar (event.forward)
-    # ═══════════════════════════════════════════════════════════
 
     @http.route(
         '/api/traccar/evento',
@@ -62,14 +69,22 @@ class TraccarController(http.Controller):
     def recibir_evento_traccar(self, **kwargs):
         """
         Traccar envía JSON: {event, device, position, geofence}
-        Odoo actualiza el estado del ticket según el evento.
         """
+        # Log del body crudo siempre — para diagnóstico
+        try:
+            raw_body = request.httprequest.data
+            _logger.info("[TRACCAR-RAW] Body recibido: %s", raw_body[:500])
+        except Exception:
+            pass
+
         if not self._validar_authorization():
+            _logger.warning("[TRACCAR] ❌ Petición rechazada — token inválido")
             return self._json_response({'success': False, 'error': 'No autorizado'}, 401)
 
         try:
             body = json.loads(request.httprequest.data)
         except Exception:
+            _logger.error("[TRACCAR] ❌ JSON inválido")
             return self._json_response({'success': False, 'error': 'JSON inválido'}, 400)
 
         event = body.get('event', {})
@@ -81,11 +96,10 @@ class TraccarController(http.Controller):
         device_id = device.get('id')
 
         _logger.info(
-            "[TRACCAR] Evento: %s | Device: %s (%s)",
-            event_type, device.get('name'), device_id,
+            "[TRACCAR] ✅ Evento: %s | Device ID: %s | Device name: %s",
+            event_type, device_id, device.get('name'),
         )
 
-        # Solo eventos que afectan tickets
         eventos_ticket = ['geofenceEnter', 'geofenceExit', 'deviceMoving']
         odoo_result = None
 
@@ -99,6 +113,11 @@ class TraccarController(http.Controller):
                     'geofenceId': geofence.get('id') if geofence else None,
                 }
 
+                _logger.info(
+                    "[TRACCAR] Procesando: device_id=%s evento=%s datos=%s",
+                    device_id, event_type, datos
+                )
+
                 odoo_result = (
                     request.env['ticket.alquiler']
                     .sudo()
@@ -108,7 +127,12 @@ class TraccarController(http.Controller):
                 _logger.info("[TRACCAR] Resultado: %s", odoo_result)
 
             except Exception:
-                _logger.exception("[TRACCAR] Error actualizando tickets")
+                _logger.exception("[TRACCAR] ❌ Error actualizando tickets")
+        else:
+            _logger.info(
+                "[TRACCAR] Evento '%s' ignorado (no es de ticket o sin device_id)",
+                event_type
+            )
 
         return self._json_response({
             'success': True,
