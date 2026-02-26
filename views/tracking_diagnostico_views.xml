@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!--  WIZARD: Diagnóstico GPS Tracking                          -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+
+    <record id="view_tracking_diagnostico_form" model="ir.ui.view">
+        <field name="name">tracking.diagnostico.form</field>
+        <field name="model">tracking.diagnostico</field>
+        <field name="arch" type="xml">
+            <form string="Diagnóstico GPS Tracking">
+                <sheet>
+                    <div class="oe_title">
+                        <h1>🔍 Diagnóstico GPS Tracking</h1>
+                        <p class="text-muted">
+                            Verifica la cadena completa: Vínculos → Tickets → Agenda → Simulación
+                        </p>
+                    </div>
+
+                    <group string="Filtros (opcional)">
+                        <group>
+                            <field name="tecnico_id"
+                                   placeholder="Dejar vacío para todos los técnicos"/>
+                            <field name="simular_evento"/>
+                        </group>
+                    </group>
+
+                    <div class="text-center mt-3 mb-3">
+                        <button name="action_diagnosticar"
+                                type="object"
+                                string="▶  Ejecutar diagnóstico"
+                                class="btn btn-primary btn-lg"/>
+                    </div>
+
+                    <group string="Resultado" invisible="not resultado">
+                        <field name="resultado"
+                               nolabel="1"
+                               widget="text"
+                               style="font-family: monospace; font-size: 12px; background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 6px; white-space: pre;"/>
+                    </group>
+
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Acción para abrir el wizard -->
+    <record id="action_tracking_diagnostico" model="ir.actions.act_window">
+        <field name="name">Diagnóstico GPS</field>
+        <field name="res_model">tracking.diagnostico</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <!-- Botón en la lista de tickets — barra superior -->
+    <record id="view_ticket_alquiler_list_diag" model="ir.ui.view">
+        <field name="name">ticket.alquiler.list.diagnostico</field>
+        <field name="model">ticket.alquiler</field>
+        <field name="inherit_id" ref="sat.view_ticket_alquiler_list"/>
+        <field name="arch" type="xml">
+            <xpath expr="//list" position="attributes">
+                <attribute name="create">true</attribute>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Menú: Técnicos → Diagnóstico GPS -->
+    <menuitem
+        id="menu_tracking_diagnostico"
+        name="🔍 Diagnóstico GPS"
+        parent="sat.sat_menu_root"
+        action="action_tracking_diagnostico"
+        sequence="96"/>
+
+</odoo>
