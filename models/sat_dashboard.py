@@ -95,6 +95,9 @@ class SatDashboard(models.Model):
         total_tickets = self.env['ticket.alquiler'].search_count([])
         tickets_nuevos = self.env['ticket.alquiler'].search_count([('estado', '=', 'nuevo')])
         tickets_proceso = self.env['ticket.alquiler'].search_count([('estado', '=', 'proceso')])
+        tickets_en_ruta = self.env['ticket.alquiler'].search_count([('estado', '=', 'en_ruta')])
+        tickets_en_sitio = self.env['ticket.alquiler'].search_count([('estado', '=', 'en_sitio')])
+        tickets_en_revision = self.env['ticket.alquiler'].search_count([('estado', '=', 'en_revision')])
         tickets_finalizado = self.env['ticket.alquiler'].search_count([('estado', '=', 'finalizado')])
         
         _logger.info("Total de tickets: %s", total_tickets)

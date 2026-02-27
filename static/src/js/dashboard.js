@@ -252,6 +252,30 @@ class SatDashboard extends Component {
                 search_view_id: 'ticket_search' 
             },
             { 
+                id: 'tickets_en_ruta', 
+                value: this.dashboardData.tickets_en_ruta, 
+                res_model: 'ticket.alquiler', 
+                action_id: 'sat.action_soporte_window', 
+                domain: [['estado', '=', 'en_ruta']], 
+                search_view_id: 'ticket_search' 
+            },
+            { 
+                id: 'tickets_en_sitio', 
+                value: this.dashboardData.tickets_en_sitio, 
+                res_model: 'ticket.alquiler', 
+                action_id: 'sat.action_soporte_window', 
+                domain: [['estado', '=', 'en_sitio']], 
+                search_view_id: 'ticket_search' 
+            },
+            { 
+                id: 'tickets_en_revision', 
+                value: this.dashboardData.tickets_en_revision, 
+                res_model: 'ticket.alquiler', 
+                action_id: 'sat.action_soporte_window', 
+                domain: [['estado', '=', 'en_revision']], 
+                search_view_id: 'ticket_search' 
+            },
+            { 
                 id: 'tickets_finalizado', 
                 value: this.dashboardData.tickets_finalizado, 
                 res_model: 'ticket.alquiler', 

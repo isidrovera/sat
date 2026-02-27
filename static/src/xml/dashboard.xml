@@ -179,6 +179,35 @@
                                 </div>
                             </div>
                         </div>
+                        <div class="tot_tasks">
+    <div class="oh-card modern-card" id="tile_tickets_en_ruta">
+        <div class="oh-card-body text-center">
+            <i class="ri-car-fill"></i>
+            <h3>En Ruta</h3>
+            <span class="metric-value" id="tickets_en_ruta">0</span>
+        </div>
+    </div>
+</div>
+
+<div class="tot_tasks">
+    <div class="oh-card modern-card" id="tile_tickets_en_sitio">
+        <div class="oh-card-body text-center">
+            <i class="ri-map-pin-fill"></i>
+            <h3>En Sitio</h3>
+            <span class="metric-value" id="tickets_en_sitio">0</span>
+        </div>
+    </div>
+</div>
+
+<div class="tot_tasks">
+    <div class="oh-card modern-card" id="tile_tickets_en_revision">
+        <div class="oh-card-body text-center">
+            <i class="ri-tools-fill"></i>
+            <h3>En Revisión</h3>
+            <span class="metric-value" id="tickets_en_revision">0</span>
+        </div>
+    </div>
+</div>
 
                         <div class="tot_tasks">
                             <div class="oh-card modern-card" id="tile_tickets_finalizado">
