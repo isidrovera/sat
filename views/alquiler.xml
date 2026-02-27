@@ -830,6 +830,21 @@
                             </list>
                         </field>
                     </page>
+                    <page string="🔩 Partes Retiradas" name="partes_retiradas_page">
+                        <field name="partes_retiradas_ids" readonly="1">
+                            <list>
+                                <field name="solicitud_id" string="Solicitud"/>
+                                <field name="parte"/>
+                                <field name="descripcion"/>
+                                <field name="state" widget="badge"
+                                    decoration-success="state == 'entregada'"
+                                    decoration-warning="state == 'encontrada'"
+                                    decoration-info="state == 'buscando'"/>
+                                <field name="fecha_gestion" string="Fecha Retiro"/>
+                                <field name="gestionado_por"/>
+                            </list>
+                        </field>
+                    </page>
 
                     <!-- ══════════════════════════════════════════════════ -->
                     <!-- TAB 6: UBICACIÓN Y MAPA                           -->
