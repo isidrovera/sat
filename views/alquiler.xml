@@ -830,7 +830,7 @@
                             </list>
                         </field>
                     </page>
-                    <page string="🔩 Partes Retiradas" name="partes_retiradas_page">
+                    <page string="🔩 Partes Retiradas para corapsac" name="partes_retiradas_page">
                         <field name="partes_retiradas_ids" readonly="1">
                             <list>
                                 <field name="solicitud_id" string="Solicitud"/>
