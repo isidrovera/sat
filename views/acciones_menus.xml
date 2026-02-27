@@ -1018,6 +1018,19 @@ action = env["sat.import.line"].browse(env.context.get("active_ids", [])).action
       </field>
     </record>
   <menuitem id="menu_checklist" name="Chech" parent="menu_accesorios_root" action="action_reparacion_comp_eval_v18" sequence="80"/>
-    
+    <!-- ACTION solicitud parte técnico -->
+<record id="action_solicitud_parte_tecnico" model="ir.actions.act_window">
+    <field name="name">Solicitudes de Partes Técnico</field>
+    <field name="res_model">solicitud.parte.tecnico</field>
+    <field name="view_mode">list,form</field>
+    <field name="context">{'search_default_enviadas': 1}</field>
+</record>
+
+<!-- MENÚ -->
+<menuitem id="menu_solicitud_parte_tecnico"
+    name="Solicitudes de Partes Técnico"
+    parent="sat_menu_root"
+    action="action_solicitud_parte_tecnico"
+    sequence="47"/>
   </data>
 </odoo>

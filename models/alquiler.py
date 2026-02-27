@@ -736,3 +736,7 @@ class UnidadAlquiler(models.Model):
         )
 
         return resultado
+
+    partes_retiradas_ids = fields.One2many(
+        'solicitud.parte.tecnico.linea', 'maquina_origen_alquiler_id',
+        string='Partes Retiradas', readonly=True)

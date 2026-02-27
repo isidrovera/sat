@@ -800,7 +800,19 @@ class Reparaciones(models.Model):
             else:
                 record.asesora_mobile_clean = ''
 
+    solicitudes_parte_tecnico_ids = fields.One2many(
+    'solicitud.parte.tecnico', 'reparacion_id', string='Solicitudes de Partes Técnico')
 
+    def action_solicitar_parte(self):
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Solicitar Parte',
+            'res_model': 'solicitud.parte.tecnico.wizard',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {'default_reparacion_id': self.id},
+        }
     qr_code_ventas = fields.Binary(string='QR Code Relacionado', related='maquina_id.qr_image', readonly=True)
     
 

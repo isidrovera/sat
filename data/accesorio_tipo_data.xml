@@ -15,6 +15,12 @@
         <field name="sequence">10</field>
         <field name="descripcion">Bandeja de papel de gran capacidad (Large Capacity Tray)</field>
     </record>
+    <record id="acc_tipo_cassette_tray" model="accesorio.tipo">
+        <field name="name">Caseteras de Papel </field>
+        <field name="code">cassette_tray</field>
+        <field name="sequence">15</field>
+        <field name="descripcion">Bandejas/caseteras/Indica la cantidad</field>
+    </record>
 
     <record id="acc_tipo_ot" model="accesorio.tipo">
         <field name="name">Bandeja de Salida OT (Offset)</field>

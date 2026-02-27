@@ -58,13 +58,19 @@
             <field name="estado_id" widget="statusbar" statusbar_visible="true" />
             <button
               name="action_request_parts"
-              string="Solicitar Partes"
+              string="Solicitar HDD/Ruedas"
               type="object"
               class="oe_highlight"
               icon="fa-cogs"
               help="Crea una solicitud formal de partes necesarias para completar la reparación. Complete primero el diagnóstico técnico antes de solicitar partes."
               options="{'no_required_fields_validation': true}"
             />
+            <button name="action_solicitar_parte"
+              string="Solicitar Parte (General)"
+              type="object"
+              class="btn-warning"
+              icon="fa-wrench"
+              invisible="estado_id != 'en_revision'"/>
             
           </header>
 

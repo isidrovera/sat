@@ -557,6 +557,9 @@ class SatSat(models.Model):
                     break
 
             record.posicion_cola = posicion
+    partes_retiradas_ids = fields.One2many(
+        'solicitud.parte.tecnico.linea', 'maquina_origen_sat_id',
+        string='Partes Retiradas', readonly=True)
     def action_colocar_en_revision(self):
         """
         Coloca la máquina en estado 'para_revision',
