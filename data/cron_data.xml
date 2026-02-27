@@ -105,6 +105,41 @@ if config:
         <field name="active">True</field>
         <field name="user_id" ref="base.user_root"/>
     </record>
+    <!-- Cron 1: proceso → en_ruta (red de seguridad deviceMoving) -->
+        <record id="cron_gps_detectar_movimiento" model="ir.cron">
+            <field name="name">Tracking GPS: proceso → en_ruta</field>
+            <field name="model_id" ref="sat.model_ticket_alquiler"/>
+            <field name="state">code</field>
+            <field name="code">model.cron_gps_detectar_movimiento()</field>
+            <field name="interval_number">5</field>
+            <field name="interval_type">minutes</field>
+            <field name="active">True</field>
+            <field name="user_id" ref="base.user_root"/>
+        </record>
+
+        <!-- Cron 2: en_ruta → en_sitio (red de seguridad geofenceEnter) -->
+        <record id="cron_gps_detectar_llegada" model="ir.cron">
+            <field name="name">Tracking GPS: en_ruta → en_sitio</field>
+            <field name="model_id" ref="sat.model_ticket_alquiler"/>
+            <field name="state">code</field>
+            <field name="code">model.cron_gps_detectar_llegada()</field>
+            <field name="interval_number">3</field>
+            <field name="interval_type">minutes</field>
+            <field name="active">True</field>
+            <field name="user_id" ref="base.user_root"/>
+        </record>
+
+        <!-- Cron 3: en_sitio → salida (red de seguridad geofenceExit) -->
+        <record id="cron_gps_detectar_salida" model="ir.cron">
+            <field name="name">Tracking GPS: en_sitio → salida</field>
+            <field name="model_id" ref="sat.model_ticket_alquiler"/>
+            <field name="state">code</field>
+            <field name="code">model.cron_gps_detectar_salida()</field>
+            <field name="interval_number">5</field>
+            <field name="interval_type">minutes</field>
+            <field name="active">True</field>
+            <field name="user_id" ref="base.user_root"/>
+        </record>
     <record id="google_maps_api_key" model="ir.config_parameter">
             <field name="key">alquiler_geo.google_maps_api_key</field>
             <field name="value"></field>

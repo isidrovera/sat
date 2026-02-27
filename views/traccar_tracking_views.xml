@@ -8,7 +8,7 @@
 
     <record id="traccar_api_key_param" model="ir.config_parameter">
       <field name="key">traccar.api_key</field>
-      <field name="value">CAMBIAR_POR_TU_API_KEY_SEGURA</field>
+      <field name="value">andes_traccar_2026_xK9mP3qR7vL</field>
     </record>
 
     <!-- ═══════════════════════════════════════════════════════ -->

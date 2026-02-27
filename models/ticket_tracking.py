@@ -1,14 +1,15 @@
 # -*- coding: utf-8 -*-
 """
-Tracking GPS de técnicos en campo — v4
+Tracking GPS de técnicos en campo — v5
 ========================================
 Archivo: models/ticket_tracking.py
 
-Cambios v4:
-  • Geocercas automáticas en Traccar al asignar técnico
-  • Al finalizar/cancelar ticket → borrar geocerca en Traccar
-  • Vinculación automática geocerca ↔ dispositivo del técnico
-  • Sin necesidad de configurar geocercas manualmente
+Cambios v5:
+  • Cron 1: proceso → en_ruta  (red de seguridad deviceMoving)
+  • Cron 2: en_ruta → en_sitio (red de seguridad geofenceEnter)
+  • Cron 3: en_sitio → salida  (red de seguridad geofenceExit)
+  • Una sola llamada a Traccar /api/positions por cron (todos los devices)
+  • Si webhook ya actualizó → cron no hace nada (filtro por estado)
 """
 import math
 import logging
@@ -58,15 +59,10 @@ class TecnicoDispositivoGPS(models.Model):
 # ═══════════════════════════════════════════════════════════════════
 
 class TraccarAPIService(models.AbstractModel):
-    """
-    Servicio para interactuar con la API REST de Traccar.
-    Gestiona sesión, geocercas y permisos de dispositivos.
-    """
     _name = 'traccar.api.service'
     _description = 'Servicio API Traccar'
 
     def _get_config(self):
-        """Lee configuración de Traccar desde ir.config_parameter."""
         get = lambda k, d='': self.env['ir.config_parameter'].sudo().get_param(k, default=d)
         return {
             'url':      get('traccar.url', 'https://gps.andessolutioncopiers.com'),
@@ -76,10 +72,6 @@ class TraccarAPIService(models.AbstractModel):
         }
 
     def _get_session(self):
-        """
-        Abre sesión en Traccar y retorna objeto requests.Session autenticado.
-        Usa sesión HTTP con cookies (igual que el dashboard web de Traccar).
-        """
         cfg = self._get_config()
         if not cfg['email'] or not cfg['password']:
             raise UserError(
@@ -87,7 +79,6 @@ class TraccarAPIService(models.AbstractModel):
                 "Configure traccar.url, traccar.email y traccar.password "
                 "en Ajustes → Parámetros del sistema."
             )
-
         session = requests.Session()
         resp = session.post(
             f"{cfg['url']}/api/session",
@@ -98,14 +89,33 @@ class TraccarAPIService(models.AbstractModel):
             raise UserError(
                 f"Error autenticando en Traccar: {resp.status_code} — {resp.text[:200]}"
             )
-        _logger.info("[TRACCAR-API] Sesión iniciada como %s", cfg['email'])
+        _logger.info("[TRACCAR-API] Sesion iniciada como %s", cfg['email'])
         return session, cfg
 
+    def get_all_positions(self):
+        """
+        Retorna dict {device_id: position_data} con todas las posiciones.
+        Una sola llamada para todos los devices — eficiente para crons.
+        """
+        try:
+            session, cfg = self._get_session()
+            resp = session.get(
+                f"{cfg['url']}/api/positions",
+                timeout=cfg['timeout'],
+            )
+            if resp.status_code == 200:
+                positions = resp.json()
+                return {p['deviceId']: p for p in positions}
+            else:
+                _logger.error(
+                    "[TRACCAR-API] Error obteniendo posiciones: %s", resp.status_code
+                )
+                return {}
+        except Exception as e:
+            _logger.error("[TRACCAR-API] Excepcion obteniendo posiciones: %s", e)
+            return {}
+
     def crear_geocerca(self, nombre, latitud, longitud, radio_metros=150):
-        """
-        Crea una geocerca circular en Traccar.
-        Retorna el ID de la geocerca creada, o None si falla.
-        """
         try:
             session, cfg = self._get_session()
             payload = {
@@ -122,22 +132,21 @@ class TraccarAPIService(models.AbstractModel):
                 geofence = resp.json()
                 gid = geofence.get('id')
                 _logger.info(
-                    "[TRACCAR-API] ✅ Geocerca creada: '%s' ID=%s (%.6f, %.6f r=%dm)",
+                    "[TRACCAR-API] Geocerca creada: '%s' ID=%s (%.6f, %.6f r=%dm)",
                     nombre, gid, latitud, longitud, radio_metros
                 )
                 return gid
             else:
                 _logger.error(
-                    "[TRACCAR-API] ❌ Error creando geocerca '%s': %s — %s",
-                    nombre, resp.status_code, resp.text[:300]
+                    "[TRACCAR-API] Error creando geocerca '%s': %s",
+                    nombre, resp.status_code
                 )
                 return None
         except Exception as e:
-            _logger.error("[TRACCAR-API] ❌ Excepción creando geocerca '%s': %s", nombre, e)
+            _logger.error("[TRACCAR-API] Excepcion creando geocerca '%s': %s", nombre, e)
             return None
 
     def borrar_geocerca(self, geofence_id):
-        """Borra una geocerca de Traccar por su ID."""
         if not geofence_id:
             return False
         try:
@@ -147,20 +156,19 @@ class TraccarAPIService(models.AbstractModel):
                 timeout=cfg['timeout'],
             )
             if resp.status_code in (200, 204):
-                _logger.info("[TRACCAR-API] ✅ Geocerca ID=%s eliminada", geofence_id)
+                _logger.info("[TRACCAR-API] Geocerca ID=%s eliminada", geofence_id)
                 return True
             else:
                 _logger.warning(
-                    "[TRACCAR-API] ⚠️ No se pudo borrar geocerca ID=%s: %s",
+                    "[TRACCAR-API] No se pudo borrar geocerca ID=%s: %s",
                     geofence_id, resp.status_code
                 )
                 return False
         except Exception as e:
-            _logger.error("[TRACCAR-API] ❌ Excepción borrando geocerca %s: %s", geofence_id, e)
+            _logger.error("[TRACCAR-API] Excepcion borrando geocerca %s: %s", geofence_id, e)
             return False
 
     def vincular_geocerca_dispositivo(self, geofence_id, device_id):
-        """Vincula una geocerca a un dispositivo en Traccar."""
         try:
             session, cfg = self._get_session()
             resp = session.post(
@@ -170,25 +178,24 @@ class TraccarAPIService(models.AbstractModel):
             )
             if resp.status_code in (200, 204):
                 _logger.info(
-                    "[TRACCAR-API] ✅ Geocerca %s vinculada a device %s",
+                    "[TRACCAR-API] Geocerca %s vinculada a device %s",
                     geofence_id, device_id
                 )
                 return True
             else:
                 _logger.warning(
-                    "[TRACCAR-API] ⚠️ Error vinculando geocerca %s a device %s: %s",
+                    "[TRACCAR-API] Error vinculando geocerca %s device %s: %s",
                     geofence_id, device_id, resp.status_code
                 )
                 return False
         except Exception as e:
             _logger.error(
-                "[TRACCAR-API] ❌ Excepción vinculando geocerca %s device %s: %s",
+                "[TRACCAR-API] Excepcion vinculando geocerca %s device %s: %s",
                 geofence_id, device_id, e
             )
             return False
 
     def desvincular_geocerca_dispositivo(self, geofence_id, device_id):
-        """Desvincula una geocerca de un dispositivo en Traccar."""
         try:
             session, cfg = self._get_session()
             resp = session.delete(
@@ -198,17 +205,17 @@ class TraccarAPIService(models.AbstractModel):
             )
             if resp.status_code in (200, 204):
                 _logger.info(
-                    "[TRACCAR-API] ✅ Geocerca %s desvinculada de device %s",
+                    "[TRACCAR-API] Geocerca %s desvinculada de device %s",
                     geofence_id, device_id
                 )
                 return True
             else:
                 _logger.warning(
-                    "[TRACCAR-API] ⚠️ Error desvinculando: %s", resp.status_code
+                    "[TRACCAR-API] Error desvinculando: %s", resp.status_code
                 )
                 return False
         except Exception as e:
-            _logger.error("[TRACCAR-API] ❌ Excepción desvinculando: %s", e)
+            _logger.error("[TRACCAR-API] Excepcion desvinculando: %s", e)
             return False
 
 
@@ -219,27 +226,24 @@ class TraccarAPIService(models.AbstractModel):
 class TicketAlquilerTracking(models.Model):
     _inherit = 'ticket.alquiler'
 
-    # ─── TIMESTAMPS ───────────────────────────────────────────────
     fecha_asignacion = fields.Datetime(
-        string='Fecha asignación', readonly=True, tracking=True,
+        string='Fecha asignacion', readonly=True, tracking=True,
     )
     fecha_en_ruta = fields.Datetime(
-        string='Técnico en ruta', readonly=True, tracking=True,
+        string='Tecnico en ruta', readonly=True, tracking=True,
     )
     fecha_llegada = fields.Datetime(
         string='Llegada al sitio', readonly=True, tracking=True,
     )
     fecha_inicio_revision = fields.Datetime(
-        string='Inicio revisión', readonly=True, tracking=True,
+        string='Inicio revision', readonly=True, tracking=True,
     )
     fecha_salida_sitio = fields.Datetime(
         string='Salida del sitio', readonly=True, tracking=True,
     )
     fecha_finalizacion = fields.Datetime(
-        string='Fecha finalización', readonly=True, tracking=True,
+        string='Fecha finalizacion', readonly=True, tracking=True,
     )
-
-    # ─── CAMPOS COMPUTADOS ────────────────────────────────────────
     tiempo_traslado_minutos = fields.Float(
         string='Tiempo traslado (min)',
         compute='_compute_tiempos_tracking', store=True,
@@ -249,27 +253,23 @@ class TicketAlquilerTracking(models.Model):
         compute='_compute_tiempos_tracking', store=True,
     )
     tiempo_total_atencion_minutos = fields.Float(
-        string='Tiempo total atención (min)',
+        string='Tiempo total atencion (min)',
         compute='_compute_tiempos_tracking', store=True,
     )
     diferencia_puntualidad_minutos = fields.Float(
         string='Puntualidad (min)',
         compute='_compute_tiempos_tracking', store=True,
-        help='Negativo = llegó antes, Positivo = llegó tarde',
+        help='Negativo = llego antes, Positivo = llego tarde',
     )
     es_puntual = fields.Boolean(
-        string='¿Fue puntual?',
+        string='Fue puntual?',
         compute='_compute_tiempos_tracking', store=True,
     )
-
-    # ─── TRACCAR ──────────────────────────────────────────────────
     traccar_geofence_id = fields.Integer(
         string='Geocerca Traccar ID',
         readonly=True,
-        help='ID de la geocerca creada automáticamente en Traccar para este ticket',
+        help='ID de la geocerca creada automaticamente en Traccar para este ticket',
     )
-
-    # ─── LOG ──────────────────────────────────────────────────────
     tracking_log = fields.Text(
         string='Log de tracking GPS', readonly=True,
     )
@@ -288,122 +288,82 @@ class TicketAlquilerTracking(models.Model):
         for rec in records:
             if rec.responsable and rec.fecha_asignacion:
                 rec._registrar_evento(
-                    f"📋 Ticket creado y asignado a {rec.responsable.name}"
+                    f"Ticket creado y asignado a {rec.responsable.name}"
                 )
-            # Crear geocerca si ya tiene técnico y coordenadas
             if rec.responsable and rec.equipo_tiene_coordenadas:
                 rec._geocerca_crear()
         return records
 
     def write(self, vals):
-        # Detectar cambio de técnico ANTES del super
         tecnico_anterior = {rec.id: rec.responsable.id for rec in self}
         resultado = super().write(vals)
         ahora = fields.Datetime.now()
-
         for rec in self:
-            # Técnico recién asignado
             if 'responsable' in vals:
                 tecnico_cambio = tecnico_anterior[rec.id] != rec.responsable.id
                 if rec.responsable and not rec.fecha_asignacion:
                     rec.sudo().write({'fecha_asignacion': ahora})
                     rec._registrar_evento(
-                        f"📋 Ticket asignado a {rec.responsable.name}"
+                        f"Ticket asignado a {rec.responsable.name}"
                     )
-                # Crear/actualizar geocerca si cambió el técnico y hay coordenadas
                 if tecnico_cambio and rec.responsable and rec.equipo_tiene_coordenadas:
-                    # Si había geocerca anterior, borrarla primero
                     if rec.traccar_geofence_id:
                         rec._geocerca_borrar()
                     rec._geocerca_crear()
-
         return resultado
 
     # ═══════════════════════════════════════════════════════════════
-    #  GESTIÓN AUTOMÁTICA DE GEOCERCAS
+    #  GEOCERCAS
     # ═══════════════════════════════════════════════════════════════
 
     def _geocerca_crear(self):
-        """
-        Crea geocerca en Traccar para este ticket y la vincula
-        al dispositivo del técnico asignado.
-        Guarda el ID en traccar_geofence_id.
-        """
         self.ensure_one()
-
         if not self.equipo_latitud or not self.equipo_longitud:
-            _logger.info(
-                "[GEO-AUTO] Ticket %s sin coordenadas — geocerca no creada", self.name
-            )
             return False
-
         if not self.responsable:
             return False
-
-        # Buscar dispositivo Traccar del técnico
         vinculo = self.env['tecnico.dispositivo.gps'].sudo().search([
             ('user_id', '=', self.responsable.id),
             ('activo', '=', True),
         ], limit=1)
-
         if not vinculo:
-            _logger.warning(
-                "[GEO-AUTO] Técnico %s sin dispositivo GPS vinculado",
-                self.responsable.name
-            )
+            _logger.warning("[GEO-AUTO] Tecnico %s sin dispositivo GPS", self.responsable.name)
             return False
-
-        # Nombre descriptivo de la geocerca
         cliente = self.partner_id.name or 'Cliente'
-        nombre = f"{self.name} — {cliente}"[:100]  # Traccar limita a 100 chars
-
-        # Radio configurable (default 150m)
-        radio = int(
+        nombre  = f"{self.name} - {cliente}"[:100]
+        radio   = int(
             self.env['ir.config_parameter'].sudo().get_param(
                 'traccar.geocerca_radio_metros', '150'
             )
         )
-
-        traccar = self.env['traccar.api.service']
+        traccar     = self.env['traccar.api.service']
         geofence_id = traccar.crear_geocerca(
             nombre=nombre,
             latitud=self.equipo_latitud,
             longitud=self.equipo_longitud,
             radio_metros=radio,
         )
-
         if not geofence_id:
-            self._registrar_evento("⚠️ No se pudo crear geocerca en Traccar")
+            self._registrar_evento("No se pudo crear geocerca en Traccar")
             return False
-
-        # Vincular geocerca al dispositivo del técnico
         traccar.vincular_geocerca_dispositivo(
             geofence_id=geofence_id,
             device_id=vinculo.traccar_device_id,
         )
-
-        # Guardar ID en el ticket
         self.sudo().write({'traccar_geofence_id': geofence_id})
         self._registrar_evento(
-            f"📡 Geocerca Traccar creada automáticamente "
-            f"(ID:{geofence_id}, radio:{radio}m) — "
+            f"Geocerca Traccar creada automaticamente "
+            f"(ID:{geofence_id}, radio:{radio}m) - "
             f"{self.equipo_latitud:.6f}, {self.equipo_longitud:.6f}"
         )
         return geofence_id
 
     def _geocerca_borrar(self):
-        """
-        Borra la geocerca de Traccar asociada a este ticket
-        y limpia el campo traccar_geofence_id.
-        """
         self.ensure_one()
         if not self.traccar_geofence_id:
             return False
-
         geofence_id = self.traccar_geofence_id
-        traccar = self.env['traccar.api.service']
-
-        # Desvincular del dispositivo si el técnico sigue asignado
+        traccar     = self.env['traccar.api.service']
         if self.responsable:
             vinculo = self.env['tecnico.dispositivo.gps'].sudo().search([
                 ('user_id', '=', self.responsable.id),
@@ -414,15 +374,12 @@ class TicketAlquilerTracking(models.Model):
                     geofence_id=geofence_id,
                     device_id=vinculo.traccar_device_id,
                 )
-
-        # Borrar la geocerca
         traccar.borrar_geocerca(geofence_id)
         self.sudo().write({'traccar_geofence_id': 0})
-        self._registrar_evento(f"🗑️ Geocerca Traccar ID:{geofence_id} eliminada")
+        self._registrar_evento(f"Geocerca Traccar ID:{geofence_id} eliminada")
         return True
 
     def action_crear_geocerca_manual(self):
-        """Botón manual para crear/recrear geocerca desde la vista del ticket."""
         self.ensure_one()
         if self.traccar_geofence_id:
             self._geocerca_borrar()
@@ -432,24 +389,23 @@ class TicketAlquilerTracking(models.Model):
                 'type': 'ir.actions.client',
                 'tag': 'display_notification',
                 'params': {
-                    'title': '✅ Geocerca creada',
+                    'title':   'Geocerca creada',
                     'message': f'Geocerca ID:{result} creada y vinculada en Traccar.',
-                    'type': 'success',
+                    'type':    'success',
                 },
             }
-        else:
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'title': '⚠️ Error',
-                    'message': 'No se pudo crear la geocerca. Revise logs.',
-                    'type': 'warning',
-                },
-            }
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title':   'Error',
+                'message': 'No se pudo crear la geocerca. Revise logs.',
+                'type':    'warning',
+            },
+        }
 
     # ═══════════════════════════════════════════════════════════════
-    #  CÁLCULO DE TIEMPOS
+    #  CALCULO DE TIEMPOS
     # ═══════════════════════════════════════════════════════════════
 
     @api.depends(
@@ -463,20 +419,17 @@ class TicketAlquilerTracking(models.Model):
                 rec.tiempo_traslado_minutos = round(delta.total_seconds() / 60, 1)
             else:
                 rec.tiempo_traslado_minutos = 0
-
             fin_sitio = rec.fecha_salida_sitio or rec.fecha_finalizacion
             if rec.fecha_llegada and fin_sitio:
                 delta = fin_sitio - rec.fecha_llegada
                 rec.tiempo_en_sitio_minutos = round(delta.total_seconds() / 60, 1)
             else:
                 rec.tiempo_en_sitio_minutos = 0
-
             if rec.fecha_asignacion and rec.fecha_finalizacion:
                 delta = rec.fecha_finalizacion - rec.fecha_asignacion
                 rec.tiempo_total_atencion_minutos = round(delta.total_seconds() / 60, 1)
             else:
                 rec.tiempo_total_atencion_minutos = 0
-
             if rec.fecha_llegada and rec.agenda:
                 delta = rec.fecha_llegada - rec.agenda
                 rec.diferencia_puntualidad_minutos = round(delta.total_seconds() / 60, 1)
@@ -507,7 +460,7 @@ class TicketAlquilerTracking(models.Model):
             ts = local.strftime('%d/%m/%Y %H:%M:%S')
         except Exception:
             ts = ahora.strftime('%d/%m/%Y %H:%M:%S')
-        log_actual = self.tracking_log or ''
+        log_actual  = self.tracking_log or ''
         nueva_linea = f"[{ts}] {mensaje}"
         self.tracking_log = f"{log_actual}\n{nueva_linea}" if log_actual else nueva_linea
 
@@ -515,19 +468,13 @@ class TicketAlquilerTracking(models.Model):
         self._append_tracking_log(mensaje)
         self._chatter_tracking(mensaje)
 
-    # ═══════════════════════════════════════════════════════════════
-    #  HELPER: agrupar tickets del mismo cliente/visita
-    # ═══════════════════════════════════════════════════════════════
-
     def _get_tickets_misma_visita(self, tickets_pool):
         self.ensure_one()
         if not self.agenda or not self.partner_id:
             return self
-
-        ventana = timedelta(minutes=30)
+        ventana    = timedelta(minutes=30)
         agenda_ini = self.agenda - ventana
         agenda_fin = self.agenda + ventana
-
         misma_visita = tickets_pool.filtered(lambda t: (
             t.partner_id.id == self.partner_id.id
             and t.responsable.id == self.responsable.id
@@ -545,7 +492,7 @@ class TicketAlquilerTracking(models.Model):
         for ticket in self:
             if ticket.estado not in ('proceso',):
                 raise UserError(_(
-                    "Solo se puede marcar 'En Ruta' un ticket asignado.\n"
+                    "Solo se puede marcar En Ruta un ticket asignado.\n"
                     "Estado actual: %s"
                 ) % ticket.estado)
             vals = {'estado': 'en_ruta'}
@@ -553,7 +500,7 @@ class TicketAlquilerTracking(models.Model):
                 vals['fecha_en_ruta'] = ahora
             ticket.write(vals)
             ticket._registrar_evento(
-                f"🚗 Técnico {ticket.responsable.name or 'N/A'} en ruta"
+                f"Tecnico {ticket.responsable.name or 'N/A'} en ruta"
             )
             try:
                 ticket.notificar_en_ruta()
@@ -565,7 +512,7 @@ class TicketAlquilerTracking(models.Model):
         for ticket in self:
             if ticket.estado not in ('proceso', 'en_ruta'):
                 raise UserError(_(
-                    "Solo se puede marcar 'En Sitio' desde asignado o en ruta.\n"
+                    "Solo se puede marcar En Sitio desde asignado o en ruta.\n"
                     "Estado actual: %s"
                 ) % ticket.estado)
             vals = {'estado': 'en_sitio'}
@@ -575,7 +522,7 @@ class TicketAlquilerTracking(models.Model):
                 vals['fecha_en_ruta'] = ahora
             ticket.write(vals)
             ticket._registrar_evento(
-                f"📍 Técnico {ticket.responsable.name or 'N/A'} llegó al sitio"
+                f"Tecnico {ticket.responsable.name or 'N/A'} llego al sitio"
             )
             try:
                 ticket.notificar_en_sitio()
@@ -587,7 +534,7 @@ class TicketAlquilerTracking(models.Model):
         for ticket in self:
             if ticket.estado not in ('en_sitio',):
                 raise UserError(_(
-                    "Solo se puede iniciar revisión cuando el técnico está en sitio.\n"
+                    "Solo se puede iniciar revision cuando el tecnico esta en sitio.\n"
                     "Estado actual: %s"
                 ) % ticket.estado)
             vals = {'estado': 'en_revision'}
@@ -595,7 +542,7 @@ class TicketAlquilerTracking(models.Model):
                 vals['fecha_inicio_revision'] = ahora
             ticket.write(vals)
             ticket._registrar_evento(
-                f"🔧 Técnico {ticket.responsable.name or 'N/A'} inició revisión"
+                f"Tecnico {ticket.responsable.name or 'N/A'} inicio revision"
             )
             try:
                 ticket.notificar_en_revision()
@@ -608,7 +555,7 @@ class TicketAlquilerTracking(models.Model):
             if not ticket.fecha_salida_sitio:
                 ticket.write({'fecha_salida_sitio': ahora})
                 ticket._registrar_evento(
-                    f"📤 Técnico {ticket.responsable.name or 'N/A'} salió del sitio"
+                    f"Tecnico {ticket.responsable.name or 'N/A'} salio del sitio"
                 )
                 try:
                     ticket.notificar_salida_sitio()
@@ -621,12 +568,11 @@ class TicketAlquilerTracking(models.Model):
             if not ticket.fecha_asignacion:
                 ticket.fecha_asignacion = ahora
             ticket._registrar_evento(
-                f"📋 Ticket asignado a {ticket.responsable.name or 'N/A'}"
+                f"Ticket asignado a {ticket.responsable.name or 'N/A'}"
             )
         return super().action_proceso()
 
     def _registrar_finalizacion_tracking(self):
-        """Llamar desde action_finalizar antes de cambiar estado."""
         ahora = fields.Datetime.now()
         for ticket in self:
             vals = {}
@@ -638,8 +584,7 @@ class TicketAlquilerTracking(models.Model):
                 vals['fecha_inicio_revision'] = ticket.fecha_llegada
             if vals:
                 ticket.write(vals)
-            ticket._registrar_evento("✅ Ticket finalizado")
-            # Borrar geocerca al finalizar
+            ticket._registrar_evento("Ticket finalizado")
             ticket._geocerca_borrar()
             try:
                 ticket.notificar_finalizado()
@@ -647,38 +592,312 @@ class TicketAlquilerTracking(models.Model):
                 _logger.error("[TRACKING] Error notificando finalizado: %s", e)
 
     # ═══════════════════════════════════════════════════════════════
-    #  CRON: en_sitio → en_revision automático
+    #  CRONS — RED DE SEGURIDAD GPS
     # ═══════════════════════════════════════════════════════════════
 
     @api.model
+    def cron_gps_detectar_movimiento(self):
+        """
+        Red de seguridad para deviceMoving.
+        proceso → en_ruta si el tecnico esta en movimiento en Traccar.
+        Si webhook ya marco en_ruta → ticket no esta en 'proceso' → ignorado.
+        Frecuencia: cada 5 minutos.
+        """
+        _logger.info("[CRON-MOVIMIENTO] Iniciando verificacion de movimiento GPS")
+
+        hoy_inicio, hoy_fin = self._get_rango_hoy()
+        ahora   = fields.Datetime.now()
+        ventana = timedelta(hours=2)
+
+        tickets = self.sudo().search([
+            ('estado', '=', 'proceso'),
+            ('responsable', '!=', False),
+            ('agenda', '>=', hoy_inicio),
+            ('agenda', '<=', hoy_fin),
+        ], order='agenda asc')
+
+        if not tickets:
+            _logger.info("[CRON-MOVIMIENTO] Sin tickets en proceso para hoy")
+            return
+
+        tecnicos_ids = tickets.mapped('responsable.id')
+        vinculos = self.env['tecnico.dispositivo.gps'].sudo().search([
+            ('user_id', 'in', tecnicos_ids),
+            ('activo', '=', True),
+        ])
+        if not vinculos:
+            return
+
+        # UNA sola llamada a Traccar para todos los devices
+        posiciones = self.env['traccar.api.service'].get_all_positions()
+        if not posiciones:
+            _logger.warning("[CRON-MOVIMIENTO] No se obtuvieron posiciones de Traccar")
+            return
+
+        mapa_tecnico_device = {v.user_id.id: v.traccar_device_id for v in vinculos}
+        procesados = 0
+
+        for ticket in tickets:
+            try:
+                diff       = ticket.agenda - ahora
+                ya_paso    = diff.total_seconds() < 0
+                esta_cerca = 0 <= diff.total_seconds() <= ventana.total_seconds()
+                if not ya_paso and not esta_cerca:
+                    continue
+
+                device_id = mapa_tecnico_device.get(ticket.responsable.id)
+                if not device_id:
+                    continue
+
+                pos = posiciones.get(device_id)
+                if not pos:
+                    continue
+
+                attrs  = pos.get('attributes', {})
+                speed  = pos.get('speed', 0) or 0
+                motion = attrs.get('motion', False)
+
+                if speed > 1 or motion:
+                    _logger.info(
+                        "[CRON-MOVIMIENTO] Tecnico %s en movimiento "
+                        "(speed=%.1f motion=%s) -> en_ruta ticket %s",
+                        ticket.responsable.name, speed, motion, ticket.name
+                    )
+                    ticket.sudo().action_en_ruta()
+                    ticket._registrar_evento(
+                        f"En ruta detectado por cron GPS "
+                        f"(speed={speed:.1f} motion={motion})"
+                    )
+                    procesados += 1
+
+            except Exception as e:
+                _logger.error("[CRON-MOVIMIENTO] Error en ticket %s: %s", ticket.name, e)
+
+        _logger.info("[CRON-MOVIMIENTO] Completado — %d tickets marcados en_ruta", procesados)
+
+    @api.model
+    def cron_gps_detectar_llegada(self):
+        """
+        Red de seguridad para geofenceEnter.
+        en_ruta/proceso → en_sitio si tecnico esta dentro de geocerca en Traccar.
+        Si webhook ya marco en_sitio → ticket no esta en estos estados → ignorado.
+        Frecuencia: cada 3 minutos.
+        """
+        _logger.info("[CRON-LLEGADA] Iniciando verificacion de llegada GPS")
+
+        hoy_inicio, hoy_fin = self._get_rango_hoy()
+
+        tickets = self.sudo().search([
+            ('estado', 'in', ['en_ruta', 'proceso']),
+            ('responsable', '!=', False),
+            ('traccar_geofence_id', '!=', 0),
+            ('traccar_geofence_id', '!=', False),
+            ('agenda', '>=', hoy_inicio),
+            ('agenda', '<=', hoy_fin),
+        ], order='agenda asc')
+
+        if not tickets:
+            _logger.info("[CRON-LLEGADA] Sin tickets candidatos para verificar llegada")
+            return
+
+        tecnicos_ids = tickets.mapped('responsable.id')
+        vinculos = self.env['tecnico.dispositivo.gps'].sudo().search([
+            ('user_id', 'in', tecnicos_ids),
+            ('activo', '=', True),
+        ])
+        if not vinculos:
+            return
+
+        # UNA sola llamada a Traccar
+        posiciones = self.env['traccar.api.service'].get_all_positions()
+        if not posiciones:
+            _logger.warning("[CRON-LLEGADA] No se obtuvieron posiciones de Traccar")
+            return
+
+        mapa_tecnico_device = {v.user_id.id: v.traccar_device_id for v in vinculos}
+
+        # Agrupar por tecnico para manejar visitas agrupadas
+        tickets_por_tecnico = {}
+        for ticket in tickets:
+            tid = ticket.responsable.id
+            tickets_por_tecnico.setdefault(tid, self.env['ticket.alquiler'])
+            tickets_por_tecnico[tid] |= ticket
+
+        procesados = 0
+        for tecnico_id, tickets_tecnico in tickets_por_tecnico.items():
+            try:
+                device_id = mapa_tecnico_device.get(tecnico_id)
+                if not device_id:
+                    continue
+
+                pos = posiciones.get(device_id)
+                if not pos:
+                    continue
+
+                geofence_ids_activos = pos.get('geofenceIds') or []
+
+                for ticket in tickets_tecnico:
+                    if ticket.traccar_geofence_id in geofence_ids_activos:
+                        _logger.info(
+                            "[CRON-LLEGADA] Tecnico %s dentro geocerca %s -> en_sitio %s",
+                            ticket.responsable.name,
+                            ticket.traccar_geofence_id,
+                            ticket.name,
+                        )
+                        tickets_visita = ticket._get_tickets_misma_visita(tickets_tecnico)
+                        for t in tickets_visita:
+                            if t.estado in ('en_ruta', 'proceso'):
+                                t.sudo().action_en_sitio()
+                                t._registrar_evento(
+                                    f"Llegada detectada por cron GPS "
+                                    f"(geocerca ID:{ticket.traccar_geofence_id})"
+                                )
+                                procesados += 1
+                        break
+
+            except Exception as e:
+                _logger.error(
+                    "[CRON-LLEGADA] Error tecnico ID %s: %s", tecnico_id, e
+                )
+
+        _logger.info("[CRON-LLEGADA] Completado — %d tickets marcados en_sitio", procesados)
+
+    @api.model
+    def cron_gps_detectar_salida(self):
+        """
+        Red de seguridad para geofenceExit.
+        en_sitio/en_revision → salida si tecnico ya NO esta en geocerca.
+        Si webhook ya registro salida → ticket tiene fecha_salida_sitio → ignorado.
+        Frecuencia: cada 5 minutos.
+        """
+        _logger.info("[CRON-SALIDA] Iniciando verificacion de salida GPS")
+
+        hoy_inicio, hoy_fin = self._get_rango_hoy()
+
+        tickets = self.sudo().search([
+            ('estado', 'in', ['en_sitio', 'en_revision']),
+            ('responsable', '!=', False),
+            ('fecha_salida_sitio', '=', False),
+            ('traccar_geofence_id', '!=', 0),
+            ('traccar_geofence_id', '!=', False),
+            ('agenda', '>=', hoy_inicio),
+            ('agenda', '<=', hoy_fin),
+        ], order='agenda asc')
+
+        if not tickets:
+            _logger.info("[CRON-SALIDA] Sin tickets en sitio para verificar salida")
+            return
+
+        tecnicos_ids = tickets.mapped('responsable.id')
+        vinculos = self.env['tecnico.dispositivo.gps'].sudo().search([
+            ('user_id', 'in', tecnicos_ids),
+            ('activo', '=', True),
+        ])
+        if not vinculos:
+            return
+
+        # UNA sola llamada a Traccar
+        posiciones = self.env['traccar.api.service'].get_all_positions()
+        if not posiciones:
+            _logger.warning("[CRON-SALIDA] No se obtuvieron posiciones de Traccar")
+            return
+
+        mapa_tecnico_device = {v.user_id.id: v.traccar_device_id for v in vinculos}
+
+        tickets_por_tecnico = {}
+        for ticket in tickets:
+            tid = ticket.responsable.id
+            tickets_por_tecnico.setdefault(tid, self.env['ticket.alquiler'])
+            tickets_por_tecnico[tid] |= ticket
+
+        procesados = 0
+        for tecnico_id, tickets_tecnico in tickets_por_tecnico.items():
+            try:
+                device_id = mapa_tecnico_device.get(tecnico_id)
+                if not device_id:
+                    continue
+
+                pos = posiciones.get(device_id)
+                if not pos:
+                    continue
+
+                geofence_ids_activos = pos.get('geofenceIds') or []
+
+                for ticket in tickets_tecnico:
+                    if ticket.traccar_geofence_id not in geofence_ids_activos:
+                        _logger.info(
+                            "[CRON-SALIDA] Tecnico %s fuera geocerca %s -> salida %s",
+                            ticket.responsable.name,
+                            ticket.traccar_geofence_id,
+                            ticket.name,
+                        )
+                        tickets_visita = ticket._get_tickets_misma_visita(tickets_tecnico)
+                        tickets_salida = tickets_visita.filtered(
+                            lambda t: not t.fecha_salida_sitio
+                        )
+                        for t in tickets_salida:
+                            t.sudo().action_registrar_salida_sitio()
+                            t._registrar_evento(
+                                f"Salida detectada por cron GPS "
+                                f"(geocerca ID:{ticket.traccar_geofence_id})"
+                            )
+                            procesados += 1
+
+                        # Siguiente ticket en_ruta automatico
+                        todos_hoy = self.sudo().search([
+                            ('responsable', '=', tecnico_id),
+                            ('estado', 'in', ['proceso', 'en_ruta', 'en_sitio', 'en_revision']),
+                            ('agenda', '>=', hoy_inicio),
+                            ('agenda', '<=', hoy_fin),
+                        ], order='agenda asc')
+                        siguiente = todos_hoy.filtered(lambda t: t.estado == 'proceso')
+                        if siguiente:
+                            sig = siguiente[0]
+                            try:
+                                sig.sudo().action_en_ruta()
+                                sig._registrar_evento(
+                                    "En ruta automatico por cron — salida del servicio anterior"
+                                )
+                            except Exception as e:
+                                _logger.error(
+                                    "[CRON-SALIDA] Error marcando siguiente en_ruta: %s", e
+                                )
+                        break
+
+            except Exception as e:
+                _logger.error("[CRON-SALIDA] Error tecnico ID %s: %s", tecnico_id, e)
+
+        _logger.info("[CRON-SALIDA] Completado — %d tickets con salida registrada", procesados)
+
+    @api.model
     def cron_actualizar_en_revision(self):
+        """
+        en_sitio con fecha_llegada hace mas de 15 min -> en_revision.
+        Frecuencia: cada 5 minutos.
+        """
         umbral = int(
             self.env['ir.config_parameter'].sudo().get_param(
                 'tracking.minutos_para_revision', '15'
             )
         )
-        limite = fields.Datetime.now() - timedelta(minutes=umbral)
-
+        limite  = fields.Datetime.now() - timedelta(minutes=umbral)
         tickets = self.sudo().search([
             ('estado', '=', 'en_sitio'),
             ('fecha_llegada', '<=', limite),
             ('fecha_inicio_revision', '=', False),
         ])
-
         if not tickets:
             return
-
-        _logger.info("[CRON-REVISION] %d tickets → en_revision automático", len(tickets))
-
+        _logger.info("[CRON-REVISION] %d tickets -> en_revision automatico", len(tickets))
         for ticket in tickets:
             try:
                 ticket.action_en_revision()
             except Exception as e:
                 _logger.error("[CRON-REVISION] Error en %s: %s", ticket.name, e)
-                ticket._registrar_evento(f"❌ Error cron en_revision: {str(e)}")
+                ticket._registrar_evento(f"Error cron en_revision: {str(e)}")
 
     # ═══════════════════════════════════════════════════════════════
-    #  API GPS
+    #  API GPS (webhook Traccar)
     # ═══════════════════════════════════════════════════════════════
 
     @api.model
@@ -690,17 +909,15 @@ class TicketAlquilerTracking(models.Model):
             datos.get('latitude'), datos.get('longitude'),
             datos.get('geofenceId'),
         )
-
         vinculo = self.env['tecnico.dispositivo.gps'].sudo().search([
             ('traccar_device_id', '=', tecnico_traccar_device_id),
             ('activo', '=', True),
         ], limit=1)
-
         if not vinculo:
-            _logger.warning("[GPS-API] Sin técnico para device_id=%s", tecnico_traccar_device_id)
-            return {'success': False, 'error': f'Sin técnico para dispositivo {tecnico_traccar_device_id}'}
+            _logger.warning("[GPS-API] Sin tecnico para device_id=%s", tecnico_traccar_device_id)
+            return {'success': False, 'error': f'Sin tecnico para dispositivo {tecnico_traccar_device_id}'}
 
-        tecnico = vinculo.user_id
+        tecnico    = vinculo.user_id
         hoy_inicio, hoy_fin = self._get_rango_hoy()
 
         tickets_hoy = self.sudo().search([
@@ -721,7 +938,7 @@ class TicketAlquilerTracking(models.Model):
                 detalle = ', '.join(f"{t.name}(agenda:{t.agenda})" for t in tickets_otros)
                 return {
                     'success': True,
-                    'message': f'Sin tickets HOY. Tickets otros días ignorados: {detalle}',
+                    'message': f'Sin tickets HOY. Ignorados: {detalle}',
                     'tickets_actualizados': [],
                 }
             return {
@@ -731,7 +948,6 @@ class TicketAlquilerTracking(models.Model):
             }
 
         actualizados = self.env['ticket.alquiler']
-
         try:
             if evento_tipo == 'geofenceEnter':
                 actualizados = self._gps_procesar_llegada(tickets_hoy, datos)
@@ -742,13 +958,13 @@ class TicketAlquilerTracking(models.Model):
         except Exception as e:
             _logger.exception("[GPS-API] Error: %s", e)
             for t in tickets_hoy:
-                t.sudo()._registrar_evento(f"❌ Error GPS [{evento_tipo}]: {str(e)}")
+                t.sudo()._registrar_evento(f"Error GPS [{evento_tipo}]: {str(e)}")
             return {'success': False, 'error': str(e), 'tickets_actualizados': []}
 
         return {
             'success': True,
             'tecnico': tecnico.name,
-            'evento': evento_tipo,
+            'evento':  evento_tipo,
             'tickets_actualizados': [
                 {'id': t.id, 'name': t.name, 'estado': t.estado}
                 for t in actualizados
@@ -756,42 +972,29 @@ class TicketAlquilerTracking(models.Model):
         }
 
     def _gps_procesar_llegada(self, tickets_hoy, datos):
-        """
-        geofenceEnter → marcar en_sitio.
-
-        Prioridad de match:
-          1. Por traccar_geofence_id exacto  (geocerca automática)
-          2. Por proximidad GPS (≤ 200m)     (si llegan coordenadas)
-          3. Fallback: primer candidato       (sin coordenadas ni geocerca)
-        """
-        geofence_id    = datos.get('geofenceId')
-        lat_tec        = datos.get('latitude')
-        lon_tec        = datos.get('longitude')
-        actualizados   = self.env['ticket.alquiler']
+        geofence_id  = datos.get('geofenceId')
+        lat_tec      = datos.get('latitude')
+        lon_tec      = datos.get('longitude')
+        actualizados = self.env['ticket.alquiler']
 
         candidatos = tickets_hoy.filtered(lambda t: t.estado in ('proceso', 'en_ruta'))
         if not candidatos:
             estados = ', '.join(set(tickets_hoy.mapped('estado')))
             for t in tickets_hoy:
-                t._registrar_evento(
-                    f"ℹ️ geofenceEnter ignorado — no hay candidatos "
-                    f"(estados: {estados})"
-                )
+                t._registrar_evento(f"geofenceEnter ignorado — sin candidatos (estados: {estados})")
             return actualizados
 
         ticket_match    = None
         distancia_match = None
         metodo_match    = None
 
-        # ── 1. Match por geocerca automática ────────────────────
         if geofence_id:
             for ticket in candidatos:
                 if ticket.traccar_geofence_id == geofence_id:
                     ticket_match = ticket
-                    metodo_match = f"geocerca automática ID:{geofence_id}"
+                    metodo_match = f"geocerca automatica ID:{geofence_id}"
                     break
 
-        # ── 2. Match por proximidad GPS ──────────────────────────
         if not ticket_match and lat_tec and lon_tec:
             for ticket in candidatos:
                 lat_eq = getattr(ticket, 'equipo_latitud', None)
@@ -805,10 +1008,9 @@ class TicketAlquilerTracking(models.Model):
                         break
                     else:
                         ticket._registrar_evento(
-                            f"📡 Técnico a {dist:.0f}m del equipo (mín 200m)"
+                            f"Tecnico a {dist:.0f}m del equipo (min 200m)"
                         )
 
-        # ── 3. Fallback: primer candidato ────────────────────────
         if not ticket_match:
             ticket_match = candidatos[0]
             metodo_match = "fallback — sin geocerca ni coordenadas"
@@ -817,12 +1019,10 @@ class TicketAlquilerTracking(models.Model):
                 ticket_match.name, geofence_id, lat_tec, lon_tec,
             )
 
-        # ── Agrupar tickets del mismo cliente/agenda ─────────────
         tickets_visita = ticket_match._get_tickets_misma_visita(candidatos)
-
         for ticket in tickets_visita:
             ticket.sudo().action_en_sitio()
-            ticket._registrar_evento(f"📍 Llegada registrada — método: {metodo_match}")
+            ticket._registrar_evento(f"Llegada registrada — metodo: {metodo_match}")
             actualizados |= ticket
 
         if actualizados:
@@ -835,14 +1035,12 @@ class TicketAlquilerTracking(models.Model):
 
     def _gps_procesar_salida(self, tickets_hoy, datos):
         actualizados = self.env['ticket.alquiler']
-
         en_sitio_o_revision = tickets_hoy.filtered(
             lambda t: t.estado in ('en_sitio', 'en_revision')
         )
-
         if not en_sitio_o_revision:
             for t in tickets_hoy:
-                t._registrar_evento("ℹ️ geofenceExit ignorado — ningún ticket en sitio/revisión")
+                t._registrar_evento("geofenceExit ignorado — ningun ticket en sitio/revision")
             return actualizados
 
         clientes_procesados = set()
@@ -851,8 +1049,7 @@ class TicketAlquilerTracking(models.Model):
             clave = (ticket.partner_id.id, ticket.agenda.date() if ticket.agenda else None)
             if clave not in clientes_procesados:
                 clientes_procesados.add(clave)
-                tickets_visita = ticket._get_tickets_misma_visita(en_sitio_o_revision)
-                tickets_salida |= tickets_visita
+                tickets_salida |= ticket._get_tickets_misma_visita(en_sitio_o_revision)
 
         for ticket in tickets_salida:
             ticket.sudo().action_registrar_salida_sitio()
@@ -869,23 +1066,23 @@ class TicketAlquilerTracking(models.Model):
             sig = siguiente[0]
             try:
                 sig.sudo().action_en_ruta()
-                sig._registrar_evento("🚗 En ruta automático — salida del servicio anterior")
+                sig._registrar_evento("En ruta automatico — salida del servicio anterior")
                 try:
                     actualizados[0].notificar_siguiente_en_ruta(sig)
                 except Exception as e:
                     _logger.error("[GPS] Error notificando siguiente: %s", e)
             except Exception as e:
                 _logger.error("[GPS-SECUENCIAL] Error marcando siguiente en_ruta: %s", e)
-                sig._registrar_evento(f"❌ Error al marcar en_ruta automático: {str(e)}")
+                sig._registrar_evento(f"Error al marcar en_ruta automatico: {str(e)}")
         else:
             if actualizados:
-                actualizados[0]._registrar_evento("ℹ️ Último servicio del día completado")
+                actualizados[0]._registrar_evento("Ultimo servicio del dia completado")
 
         return actualizados
 
     def _gps_procesar_movimiento(self, tickets_hoy, datos):
         actualizados = self.env['ticket.alquiler']
-        ahora = fields.Datetime.now()
+        ahora   = fields.Datetime.now()
         ventana = timedelta(hours=2)
 
         ya_en_ruta = tickets_hoy.filtered(lambda t: t.estado == 'en_ruta')
@@ -895,32 +1092,30 @@ class TicketAlquilerTracking(models.Model):
         for ticket in tickets_hoy.filtered(lambda t: t.estado == 'proceso'):
             if not ticket.agenda:
                 continue
-            diff = ticket.agenda - ahora
-            ya_paso = diff.total_seconds() < 0
+            diff       = ticket.agenda - ahora
+            ya_paso    = diff.total_seconds() < 0
             esta_cerca = 0 <= diff.total_seconds() <= ventana.total_seconds()
-
             if ya_paso or esta_cerca:
                 ticket.sudo().action_en_ruta()
-                ticket._registrar_evento("🚗 En ruta detectado por movimiento GPS")
+                ticket._registrar_evento("En ruta detectado por movimiento GPS")
                 actualizados |= ticket
                 break
             else:
                 h = int(diff.total_seconds() / 3600)
                 m = int((diff.total_seconds() % 3600) / 60)
                 ticket._registrar_evento(
-                    f"ℹ️ deviceMoving ignorado — agenda en {h}h {m}min (ventana: 2h)"
+                    f"deviceMoving ignorado — agenda en {h}h {m}min (ventana: 2h)"
                 )
-
         return actualizados
 
     # ═══════════════════════════════════════════════════════════════
-    #  HELPERS ESTÁTICOS
+    #  HELPERS ESTATICOS
     # ═══════════════════════════════════════════════════════════════
 
     @staticmethod
     def _get_rango_hoy():
         from pytz import timezone as pytz_tz, UTC as pytz_UTC
-        lima = pytz_tz('America/Lima')
+        lima     = pytz_tz('America/Lima')
         hoy_lima = date.today()
         inicio_lima = lima.localize(fields.Datetime.from_string(f"{hoy_lima} 00:00:00"))
         fin_lima    = lima.localize(fields.Datetime.from_string(f"{hoy_lima} 23:59:59"))
@@ -931,10 +1126,10 @@ class TicketAlquilerTracking(models.Model):
 
     @staticmethod
     def _haversine_metros(lat1, lon1, lat2, lon2):
-        R = 6371000
-        phi1, phi2   = math.radians(lat1), math.radians(lat2)
-        d_phi        = math.radians(lat2 - lat1)
-        d_lambda     = math.radians(lon2 - lon1)
+        R    = 6371000
+        phi1, phi2 = math.radians(lat1), math.radians(lat2)
+        d_phi      = math.radians(lat2 - lat1)
+        d_lambda   = math.radians(lon2 - lon1)
         a = (math.sin(d_phi / 2) ** 2
              + math.cos(phi1) * math.cos(phi2) * math.sin(d_lambda / 2) ** 2)
         return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
@@ -962,29 +1157,29 @@ class TicketAlquilerTracking(models.Model):
                 return dt.strftime('%H:%M')
 
         lines = [
-            f"📊 *Resumen — {self.name}*",
-            f"🚘 Técnico: {self.responsable.name or 'N/A'}",
-            f"🏢 Cliente: {self.partner_id.name or 'N/A'}",
+            f"Resumen — {self.name}",
+            f"Tecnico: {self.responsable.name or 'N/A'}",
+            f"Cliente: {self.partner_id.name or 'N/A'}",
             "",
-            f"📋 Asignado: {fmt_hora(self.fecha_asignacion)}",
-            f"⏰ Agendado: {fmt_hora(self.agenda)}",
-            f"🚗 En ruta:  {fmt_hora(self.fecha_en_ruta)}",
-            f"📍 Llegada:  {fmt_hora(self.fecha_llegada)}",
-            f"🔧 Revisión: {fmt_hora(self.fecha_inicio_revision)}",
-            f"📤 Salida:   {fmt_hora(self.fecha_salida_sitio)}",
-            f"✅ Finalizado:{fmt_hora(self.fecha_finalizacion)}",
+            f"Asignado:  {fmt_hora(self.fecha_asignacion)}",
+            f"Agendado:  {fmt_hora(self.agenda)}",
+            f"En ruta:   {fmt_hora(self.fecha_en_ruta)}",
+            f"Llegada:   {fmt_hora(self.fecha_llegada)}",
+            f"Revision:  {fmt_hora(self.fecha_inicio_revision)}",
+            f"Salida:    {fmt_hora(self.fecha_salida_sitio)}",
+            f"Finalizado:{fmt_hora(self.fecha_finalizacion)}",
             "",
-            f"🚗 Traslado: {fmt_min(self.tiempo_traslado_minutos)}",
-            f"🏢 En sitio: {fmt_min(self.tiempo_en_sitio_minutos)}",
-            f"⏱️ Total:    {fmt_min(self.tiempo_total_atencion_minutos)}",
+            f"Traslado:  {fmt_min(self.tiempo_traslado_minutos)}",
+            f"En sitio:  {fmt_min(self.tiempo_en_sitio_minutos)}",
+            f"Total:     {fmt_min(self.tiempo_total_atencion_minutos)}",
         ]
 
         if self.fecha_llegada and self.agenda:
             if self.es_puntual:
-                lines.append("✅ Puntualidad: A tiempo")
+                lines.append("Puntualidad: A tiempo")
             elif self.diferencia_puntualidad_minutos > 0:
-                lines.append(f"⚠️ Llegó {fmt_min(self.diferencia_puntualidad_minutos)} tarde")
+                lines.append(f"Llego {fmt_min(self.diferencia_puntualidad_minutos)} tarde")
             else:
-                lines.append(f"✅ Llegó {fmt_min(abs(self.diferencia_puntualidad_minutos))} antes")
+                lines.append(f"Llego {fmt_min(abs(self.diferencia_puntualidad_minutos))} antes")
 
         return '\n'.join(lines)
