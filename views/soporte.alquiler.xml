@@ -30,7 +30,8 @@
                                 type="object"
                                 class="btn-warning"
                                 invisible="estado != 'en_sitio'"/>
-                        <button string="Cerrar" name="action_finalizar" type="object" class="btn btn-info" icon="fa-wrench" invisible="estado !='proceso'" />
+                        <button string="Cerrar" name="action_finalizar" type="object" class="btn btn-info" icon="fa-wrench" 
+    invisible="estado not in ['asignado', 'en_ruta', 'en_sitio', 'en_revision']" />
                         <button name="action_cargar_contadores"
         type="object"
         string="🔄 Cargar Contadores"
