@@ -75,11 +75,7 @@
                                             icon="fa-search"
                                             invisible="state != 'buscando'"
                                             groups="base.group_system"/>
-                                    <button name="action_marcar_entregada"
-                                            string="Entregar" type="object"
-                                            icon="fa-check"
-                                            invisible="state not in ['encontrada','por_conseguir']"
-                                            groups="base.group_system"/>
+                                    
                                 </list>
                                 <form string="Detalle de Parte">
                                     <group>
