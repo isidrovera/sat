@@ -225,6 +225,9 @@ access_tracking_diagnostico,tracking.diagnostico,model_tracking_diagnostico,base
 access_traccar_api_service,traccar.api.service,model_traccar_api_service,base.group_user,1,1,1,1
 access_tecnico_dispositivo_gps,tecnico.dispositivo.gps,model_tecnico_dispositivo_gps,base.group_user,1,1,1,1
 access_solicitud_parte_tecnico_user,solicitud.parte.tecnico user,model_solicitud_parte_tecnico,base.group_user,1,1,1,1
+access_solicitud_parte_tecnico_system,solicitud.parte.tecnico system,model_solicitud_parte_tecnico,base.group_system,1,1,1,1
 access_solicitud_parte_tecnico_linea_user,solicitud.parte.tecnico.linea user,model_solicitud_parte_tecnico_linea,base.group_user,1,1,1,1
-access_solicitud_parte_tecnico_wizard,solicitud.parte.tecnico.wizard,model_solicitud_parte_tecnico_wizard,base.group_user,1,1,1,1
-access_solicitud_parte_tecnico_wizard_linea,solicitud.parte.tecnico.wizard.linea,model_solicitud_parte_tecnico_wizard_linea,base.group_user,1,1,1,1
+access_solicitud_parte_tecnico_linea_system,solicitud.parte.tecnico.linea system,model_solicitud_parte_tecnico_linea,base.group_system,1,1,1,1
+access_solicitud_parte_tecnico_wizard_user,solicitud.parte.tecnico.wizard user,model_solicitud_parte_tecnico_wizard,base.group_user,1,1,1,1
+access_solicitud_parte_tecnico_wizard_linea_user,solicitud.parte.tecnico.wizard.linea user,model_solicitud_parte_tecnico_wizard_linea,base.group_user,1,1,1,1
+access_solicitud_parte_gestionar_wizard_user,solicitud.parte.gestionar.wizard user,model_solicitud_parte_gestionar_wizard,base.group_user,1,1,1,1

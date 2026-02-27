@@ -74,12 +74,12 @@
                                             string="Gestionar" type="object"
                                             icon="fa-search"
                                             invisible="state != 'buscando'"
-                                            groups="sat.group_sat_manager"/>
+                                            groups="base.group_system"/>
                                     <button name="action_marcar_entregada"
                                             string="Entregar" type="object"
                                             icon="fa-check"
                                             invisible="state not in ['encontrada','por_conseguir']"
-                                            groups="sat.group_sat_manager"/>
+                                            groups="base.group_system"/>
                                 </list>
                                 <form string="Detalle de Parte">
                                     <group>
@@ -108,11 +108,7 @@
                         </page>
                     </notebook>
                 </sheet>
-                <div class="oe_chatter">
-                    <field name="message_follower_ids"/>
-                    <field name="activity_ids"/>
-                    <field name="message_ids"/>
-                </div>
+                <chatter/>                
             </form>
         </field>
     </record>
