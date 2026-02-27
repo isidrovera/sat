@@ -198,8 +198,14 @@ class ContadoresTicket(models.Model):
         _logger.info(f"=== Iniciando carga de contadores para ticket {self.name} ===")
         
         # Verificaciones básicas
-        if self.estado != 'proceso':
-            raise UserError(_("Esta función solo está disponible para tickets en proceso."))
+        ESTADOS_TRABAJO = ('proceso', 'en_revision', 'en_sitio', 'en_ruta')
+
+        if self.estado not in ESTADOS_TRABAJO:
+            estados_legibles = ", ".join(ESTADOS_TRABAJO)
+            raise UserError(_(
+                "Esta función solo está disponible en los siguientes estados: %s\n"
+                "Estado actual: %s"
+            ) % (estados_legibles, self.estado))
         if not self.product_alquiler:
             raise UserError(_("No hay un equipo asignado a este ticket."))
         if not self.product_alquiler.serie:

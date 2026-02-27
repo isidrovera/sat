@@ -655,7 +655,7 @@ class ticket_alquiler(models.Model):
                             errors.append(f"• {field_label} es requerido para equipos a color cuando el ticket está en proceso")
             
             # Validar que el ticket esté en el estado correcto para finalizar
-            if ticket.estado != 'proceso':
+            if ticket.estado in ('proceso', 'en_ruta', 'en_sitio', 'en_revision'):
                 errors.append(f"• El ticket debe estar en estado 'proceso' para poder finalizarlo. Estado actual: '{ticket.estado}'")
             
             # Si hay errores, mostrar mensaje detallado y no continuar
