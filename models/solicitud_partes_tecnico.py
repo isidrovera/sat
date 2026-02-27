@@ -1,7 +1,8 @@
 import uuid
 import requests
 import logging
-from odoo import _, models, fields, api
+from odoo import _, http, models, fields, api
+from odoo.http import request as http_request
 from odoo.exceptions import UserError, ValidationError
 
 _logger = logging.getLogger(__name__)
@@ -10,9 +11,6 @@ _logger = logging.getLogger(__name__)
 JEFE_AREA_PHONE   = '51975399303'
 LOGISTICA_PHONE   = '51922541085'
 GERENCIA_PHONE    = '51998319547'
-GERENCIA_EMAIL_TO = 'campuero@corapsac.com.pe'
-GERENCIA_EMAIL_CC = 'lincoln@corapsac.com,asistentecontable@corapsac.com'
-EMAIL_FROM        = 'soporte@andescopiers.com.pe'
 WA_API_URL        = 'https://boot.andessolutioncopiers.com/api/send-message'
 WA_API_KEY        = 'sk_2312cac15276b4a3ca124e66a78fdde6428c626eb7184f26d3fa62037aaae816'
 
@@ -25,7 +23,6 @@ def _clean_phone(phone):
 
 
 def _send_whatsapp(phone, message):
-    """Envía WhatsApp vía API externa."""
     headers = {
         'Content-Type': 'application/json',
         'x-api-key': WA_API_KEY,
@@ -58,9 +55,9 @@ class SolicitudParteTecnico(models.Model):
         default='Nuevo', tracking=True)
 
     access_token = fields.Char(
-        string='Token', copy=False, readonly=True)
+        string='Token', copy=False, readonly=True, index=True)
 
-    # ── Relaciones principales ────────────────────────────────────────────
+    # ── Relaciones ────────────────────────────────────────────────────────
     reparacion_id = fields.Many2one(
         'reparaciones.reparaciones', string='Reparación',
         required=True, tracking=True, ondelete='restrict')
@@ -83,24 +80,24 @@ class SolicitudParteTecnico(models.Model):
 
     # ── Estado ────────────────────────────────────────────────────────────
     state = fields.Selection([
-        ('enviada',               'Enviada'),
-        ('en_gestion',            'En Gestión'),
-        ('pendiente_aprobacion',  'Pendiente Aprobación'),
-        ('por_conseguir',         'Por Conseguir'),
-        ('aprobada',              'Aprobada'),
-        ('completada',            'Completada'),
-        ('cancelada',             'Cancelada'),
+        ('enviada',              'Enviada'),
+        ('en_gestion',           'En Gestión'),
+        ('pendiente_aprobacion', 'Pendiente Aprobación'),
+        ('por_conseguir',        'Por Conseguir'),
+        ('aprobada',             'Aprobada'),
+        ('completada',           'Completada'),
+        ('cancelada',            'Cancelada'),
     ], string='Estado', default='enviada', tracking=True)
 
     # ── Líneas ────────────────────────────────────────────────────────────
     linea_ids = fields.One2many(
         'solicitud.parte.tecnico.linea', 'solicitud_id', string='Partes')
 
-    # ── Resumen computed ──────────────────────────────────────────────────
-    total_partes       = fields.Integer(compute='_compute_resumen', store=True)
-    partes_encontradas = fields.Integer(compute='_compute_resumen', store=True)
+    # ── Resumen ───────────────────────────────────────────────────────────
+    total_partes         = fields.Integer(compute='_compute_resumen', store=True)
+    partes_encontradas   = fields.Integer(compute='_compute_resumen', store=True)
     partes_por_conseguir = fields.Integer(compute='_compute_resumen', store=True)
-    partes_pendientes  = fields.Integer(compute='_compute_resumen', store=True)
+    partes_pendientes    = fields.Integer(compute='_compute_resumen', store=True)
 
     @api.depends('linea_ids.state')
     def _compute_resumen(self):
@@ -120,40 +117,48 @@ class SolicitudParteTecnico(models.Model):
             vals['access_token'] = str(uuid.uuid4())
         return super().create(vals)
 
-    # ── URL pública ───────────────────────────────────────────────────────
+    # ── URLs token ────────────────────────────────────────────────────────
     def _get_base_url(self):
         return self.env['ir.config_parameter'].sudo().get_param('web.base.url')
 
-    def _url_confirmar_retiro(self):
-        """URL con token para que el técnico confirme el retiro."""
-        return f"{self._get_base_url()}/solicitud-parte/confirmar/{self.access_token}"
-
     def _url_aprobar_gerencia(self):
-        """URL con token para que gerencia apruebe."""
         return f"{self._get_base_url()}/solicitud-parte/aprobar/{self.access_token}"
 
-    # ── Acciones de estado ────────────────────────────────────────────────
-    def action_cancelar(self):
-        self.ensure_one()
-        self.write({'state': 'cancelada'})
-        self.message_post(body=f"❌ Cancelada por {self.env.user.name}")
+    def _url_confirmar_retiro(self):
+        return f"{self._get_base_url()}/solicitud-parte/confirmar/{self.access_token}"
 
-    # ── PASO 1: Técnico crea → notifica Jefe de Área ──────────────────────
-    def _notificar_jefe_nueva_solicitud(self):
-        self.ensure_one()
+    def _url_odoo(self):
         try:
             action_id = self.env.ref('sat.action_solicitud_parte_tecnico').id
-            url_odoo = (f"{self._get_base_url()}/web#id={self.id}"
-                        f"&view_type=form&model=solicitud.parte.tecnico&action={action_id}")
+            return (f"{self._get_base_url()}/web#id={self.id}"
+                    f"&view_type=form&model=solicitud.parte.tecnico&action={action_id}")
         except Exception:
-            url_odoo = f"{self._get_base_url()}/web#id={self.id}&view_type=form&model=solicitud.parte.tecnico"
+            return (f"{self._get_base_url()}/web#id={self.id}"
+                    f"&view_type=form&model=solicitud.parte.tecnico")
 
-        partes_txt = "\n".join([
+    # ── Enviar template de correo ─────────────────────────────────────────
+    def _enviar_template(self, xml_id, email_to_override=None):
+        """Envía un mail.template. Si email_to_override se pasa, sobreescribe el destinatario."""
+        self.ensure_one()
+        try:
+            template = self.env.ref(xml_id)
+            if email_to_override:
+                template = template.with_context(
+                    default_email_to=email_to_override)
+            template.send_mail(self.id, force_send=True)
+            _logger.info('✅ Email template %s enviado para solicitud %s', xml_id, self.name)
+        except Exception as e:
+            _logger.error('❌ Error enviando template %s: %s', xml_id, e)
+
+    # ══════════════════════════════════════════════════════════════════════
+    # PASO 1: Técnico crea → notifica Jefe de Área
+    # ══════════════════════════════════════════════════════════════════════
+    def _notificar_jefe_nueva_solicitud(self):
+        self.ensure_one()
+        partes_wa = "\n".join([
             f"  • {l.parte}" + (f": {l.descripcion}" if l.descripcion else "")
             for l in self.linea_ids
         ])
-
-        # WhatsApp al jefe
         msg_wa = (
             f"🔧 *Nueva Solicitud de Parte*\n\n"
             f"*Solicitud:* {self.name}\n"
@@ -161,67 +166,24 @@ class SolicitudParteTecnico(models.Model):
             f"*Reparación:* {self.reparacion_id.name}\n"
             f"*Máquina:* {self.marca or ''} {self.modelo or ''}\n"
             f"*Serie:* {self.serie or ''}\n\n"
-            f"*Partes solicitadas:*\n{partes_txt}\n\n"
-            f"⚠️ Debes buscar disponibilidad y gestionar cada parte.\n\n"
-            f"👉 Ver en Odoo:\n{url_odoo}"
+            f"*Partes solicitadas:*\n{partes_wa}\n\n"
+            f"⚠️ Gestiona la disponibilidad de cada parte en Odoo:\n"
+            f"👉 {self._url_odoo()}"
         )
         _send_whatsapp(JEFE_AREA_PHONE, msg_wa)
 
-        # Email al jefe
-        self._enviar_email(
-            email_to=GERENCIA_EMAIL_TO,
-            email_cc=GERENCIA_EMAIL_CC,
-            subject=f"🔧 Nueva Solicitud de Parte {self.name}",
-            body=self._html_nueva_solicitud(partes_txt, url_odoo),
-        )
+        # Email via template
+        self._enviar_template('sat.email_template_solicitud_parte_nueva')
 
-    def _html_nueva_solicitud(self, partes_txt, url_odoo):
-        partes_html = ''.join([
-            f'<li style="margin:4px 0;">{l.parte}'
-            + (f' — {l.descripcion}' if l.descripcion else '')
-            + '</li>'
-            for l in self.linea_ids
-        ])
-        return f"""
-        <div style="font-family:Arial,sans-serif;max-width:700px;margin:0 auto;">
-          <div style="background:#4a5568;padding:20px;text-align:center;">
-            <h2 style="color:#fff;margin:0;">🔧 Nueva Solicitud de Parte</h2>
-            <p style="color:#fff;margin:8px 0 0;">{self.name}</p>
-          </div>
-          <div style="padding:25px;border:1px solid #e2e8f0;">
-            <table style="width:100%;border-collapse:collapse;">
-              <tr><td style="padding:6px;"><b>Técnico:</b></td><td>{self.tecnico_id.name}</td></tr>
-              <tr><td style="padding:6px;"><b>Reparación:</b></td><td>{self.reparacion_id.name}</td></tr>
-              <tr><td style="padding:6px;"><b>Máquina:</b></td><td>{self.marca or ''} {self.modelo or ''}</td></tr>
-              <tr><td style="padding:6px;"><b>Serie:</b></td><td>{self.serie or ''}</td></tr>
-            </table>
-            <h3>Partes solicitadas:</h3>
-            <ul>{partes_html}</ul>
-            <div style="text-align:center;margin:30px 0;">
-              <a href="{url_odoo}" style="background:#4a5568;color:#fff;padding:12px 24px;
-                 text-decoration:none;border-radius:4px;font-weight:bold;">
-                VER EN ODOO
-              </a>
-            </div>
-          </div>
-        </div>"""
-
-    # ── PASO 2A: Jefe gestiona → hay parte → notifica Gerencia para aprobar ─
+    # ══════════════════════════════════════════════════════════════════════
+    # PASO 2A: Jefe gestiona → hay partes → pide aprobación a Gerencia
+    # ══════════════════════════════════════════════════════════════════════
     def _notificar_gerencia_aprobacion(self):
         self.ensure_one()
-        url_aprobar = self._url_aprobar_gerencia()
-
         encontradas = self.linea_ids.filtered(lambda l: l.state == 'encontrada')
-        partes_html = ''.join([
-            f'<li style="margin:4px 0;"><b>{l.parte}</b> → {l._get_origen_display()}'
-            + (f'<br/><small>{l.notas_jefe}</small>' if l.notas_jefe else '')
-            + '</li>'
-            for l in encontradas
-        ])
-
-        # WhatsApp a gerencia
         partes_wa = "\n".join([
             f"  • {l.parte} → {l._get_origen_display()}" for l in encontradas])
+
         msg_wa = (
             f"✅ *Aprobación Requerida - Solicitud de Parte*\n\n"
             f"*Solicitud:* {self.name}\n"
@@ -229,195 +191,95 @@ class SolicitudParteTecnico(models.Model):
             f"*Máquina:* {self.marca or ''} {self.modelo or ''}\n"
             f"*Serie:* {self.serie or ''}\n\n"
             f"*Partes listas para retirar:*\n{partes_wa}\n\n"
-            f"👉 *APROBAR:*\n{url_aprobar}"
+            f"👉 *APROBAR RETIRO:*\n{self._url_aprobar_gerencia()}"
         )
         _send_whatsapp(GERENCIA_PHONE, msg_wa)
         _send_whatsapp(LOGISTICA_PHONE, msg_wa)
 
-        # Email a gerencia
-        self._enviar_email(
-            email_to=GERENCIA_EMAIL_TO,
-            email_cc=GERENCIA_EMAIL_CC,
-            subject=f"✅ Aprobación Requerida - Solicitud {self.name}",
-            body=self._html_aprobacion_gerencia(partes_html, url_aprobar),
-        )
+        # Email via template
+        self._enviar_template('sat.email_template_solicitud_parte_aprobacion')
 
-    def _html_aprobacion_gerencia(self, partes_html, url_aprobar):
-        return f"""
-        <div style="font-family:Arial,sans-serif;max-width:700px;margin:0 auto;">
-          <div style="background:#2f855a;padding:20px;text-align:center;">
-            <h2 style="color:#fff;margin:0;">✅ Aprobación Requerida</h2>
-            <p style="color:#fff;margin:8px 0 0;">{self.name}</p>
-          </div>
-          <div style="padding:25px;border:1px solid #e2e8f0;">
-            <table style="width:100%;border-collapse:collapse;">
-              <tr><td style="padding:6px;"><b>Técnico:</b></td><td>{self.tecnico_id.name}</td></tr>
-              <tr><td style="padding:6px;"><b>Reparación:</b></td><td>{self.reparacion_id.name}</td></tr>
-              <tr><td style="padding:6px;"><b>Máquina:</b></td><td>{self.marca or ''} {self.modelo or ''}</td></tr>
-              <tr><td style="padding:6px;"><b>Serie:</b></td><td>{self.serie or ''}</td></tr>
-            </table>
-            <h3>Partes listas para retirar:</h3>
-            <ul>{partes_html}</ul>
-            <p>Por favor apruebe el retiro de estas partes.</p>
-            <div style="text-align:center;margin:30px 0;">
-              <a href="{url_aprobar}" style="background:#48bb78;color:#fff;padding:14px 28px;
-                 text-decoration:none;border-radius:4px;font-weight:bold;font-size:16px;">
-                APROBAR RETIRO
-              </a>
-            </div>
-          </div>
-        </div>"""
-
-    # ── PASO 2B: Jefe gestiona → NO hay parte → notifica Gerencia para compra ─
+    # ══════════════════════════════════════════════════════════════════════
+    # PASO 2B: Jefe gestiona → NO hay partes → notifica Gerencia para compra
+    # ══════════════════════════════════════════════════════════════════════
     def _notificar_gerencia_por_conseguir(self):
         self.ensure_one()
-
         por_conseguir = self.linea_ids.filtered(lambda l: l.state == 'por_conseguir')
-        partes_html = ''.join([
-            f'<li style="margin:4px 0;"><b>{l.parte}</b>'
-            + (f' — {l.descripcion}' if l.descripcion else '')
-            + (f'<br/><small>Nota: {l.notas_jefe}</small>' if l.notas_jefe else '')
-            + '</li>'
-            for l in por_conseguir
-        ])
-
-        # WhatsApp a gerencia
         partes_wa = "\n".join([f"  • {l.parte}" for l in por_conseguir])
+
         msg_wa = (
             f"⏳ *Partes por Conseguir/Comprar*\n\n"
             f"*Solicitud:* {self.name}\n"
             f"*Técnico:* {self.tecnico_id.name}\n"
             f"*Máquina:* {self.marca or ''} {self.modelo or ''}\n"
             f"*Serie:* {self.serie or ''}\n\n"
-            f"*Partes que NO están disponibles y deben comprarse:*\n{partes_wa}\n\n"
+            f"*Partes que NO están disponibles:*\n{partes_wa}\n\n"
             f"⚠️ Se requiere gestionar la compra/consecución de estas partes."
         )
         _send_whatsapp(GERENCIA_PHONE, msg_wa)
         _send_whatsapp(LOGISTICA_PHONE, msg_wa)
 
-        # Email a gerencia
-        self._enviar_email(
-            email_to=GERENCIA_EMAIL_TO,
-            email_cc=GERENCIA_EMAIL_CC,
-            subject=f"⏳ Partes por Conseguir - Solicitud {self.name}",
-            body=self._html_por_conseguir(partes_html),
-        )
+        # Email via template
+        self._enviar_template('sat.email_template_solicitud_parte_por_conseguir')
 
-    def _html_por_conseguir(self, partes_html):
-        return f"""
-        <div style="font-family:Arial,sans-serif;max-width:700px;margin:0 auto;">
-          <div style="background:#c05621;padding:20px;text-align:center;">
-            <h2 style="color:#fff;margin:0;">⏳ Partes por Conseguir</h2>
-            <p style="color:#fff;margin:8px 0 0;">{self.name}</p>
-          </div>
-          <div style="padding:25px;border:1px solid #e2e8f0;">
-            <div style="background:#fffaf0;border-left:4px solid #ed8936;padding:15px;margin-bottom:20px;">
-              <b>⚠️ Las siguientes partes NO están disponibles en stock.</b><br/>
-              Se requiere gestionar su compra o consecución.
-            </div>
-            <table style="width:100%;border-collapse:collapse;">
-              <tr><td style="padding:6px;"><b>Técnico:</b></td><td>{self.tecnico_id.name}</td></tr>
-              <tr><td style="padding:6px;"><b>Reparación:</b></td><td>{self.reparacion_id.name}</td></tr>
-              <tr><td style="padding:6px;"><b>Máquina:</b></td><td>{self.marca or ''} {self.modelo or ''}</td></tr>
-              <tr><td style="padding:6px;"><b>Serie:</b></td><td>{self.serie or ''}</td></tr>
-            </table>
-            <h3>Partes a conseguir/comprar:</h3>
-            <ul>{partes_html}</ul>
-          </div>
-        </div>"""
-
-    # ── PASO 3: Gerencia aprueba → notifica Técnico para retirar ─────────
+    # ══════════════════════════════════════════════════════════════════════
+    # PASO 3: Gerencia aprueba (desde link token o botón Odoo)
+    # ══════════════════════════════════════════════════════════════════════
     def action_aprobar(self):
-        """Llamado desde el link token de gerencia o desde Odoo."""
         self.ensure_one()
         if self.state != 'pendiente_aprobacion':
-            raise UserError(_('Solo se pueden aprobar solicitudes en estado Pendiente de Aprobación.'))
+            raise UserError(
+                _('Solo se pueden aprobar solicitudes en estado Pendiente de Aprobación.'))
         self.write({'state': 'aprobada'})
-        self.message_post(body="✅ <b>Aprobada por Gerencia.</b> Técnico notificado para retirar.")
+        self.message_post(
+            body="✅ <b>Aprobada por Gerencia.</b> Técnico notificado para retirar.")
         self._notificar_tecnico_retiro()
 
     def _notificar_tecnico_retiro(self):
         self.ensure_one()
-        url_confirmar = self._url_confirmar_retiro()
-
         encontradas = self.linea_ids.filtered(lambda l: l.state == 'encontrada')
-        partes_html = ''.join([
-            f'<li style="margin:4px 0;"><b>{l.parte}</b> → {l._get_origen_display()}</li>'
-            for l in encontradas
-        ])
-
-        # WhatsApp al técnico
-        tecnico_phone = None
-        if self.tecnico_id.mobile_phone:
-            tecnico_phone = _clean_phone(self.tecnico_id.mobile_phone)
-
         partes_wa = "\n".join([
             f"  • {l.parte} → {l._get_origen_display()}" for l in encontradas])
+
         msg_wa = (
             f"✅ *¡Solicitud Aprobada! Puedes retirar las partes*\n\n"
             f"*Solicitud:* {self.name}\n"
             f"*Reparación:* {self.reparacion_id.name}\n\n"
             f"*Partes a retirar:*\n{partes_wa}\n\n"
-            f"Una vez retiradas, confirma aquí:\n"
-            f"👉 {url_confirmar}"
+            f"Una vez retiradas confirma aquí:\n"
+            f"👉 {self._url_confirmar_retiro()}"
         )
-        if tecnico_phone:
-            _send_whatsapp(tecnico_phone, msg_wa)
+        # WhatsApp al técnico
+        if self.tecnico_id.mobile_phone:
+            _send_whatsapp(_clean_phone(self.tecnico_id.mobile_phone), msg_wa)
+        # WhatsApp al jefe también para que sepa
         _send_whatsapp(JEFE_AREA_PHONE, msg_wa)
 
-        # Email al técnico
-        email_tecnico = self.tecnico_id.email or ''
+        # Email al técnico via template (sobreescribir destinatario)
+        email_tecnico = self.tecnico_id.email
         if email_tecnico:
-            self._enviar_email(
-                email_to=email_tecnico,
-                email_cc='',
-                subject=f"✅ Aprobado - Puedes retirar las partes - {self.name}",
-                body=self._html_tecnico_retiro(partes_html, url_confirmar),
-            )
+            self._enviar_template(
+                'sat.email_template_solicitud_parte_tecnico_retiro',
+                email_to_override=email_tecnico)
 
-    def _html_tecnico_retiro(self, partes_html, url_confirmar):
-        return f"""
-        <div style="font-family:Arial,sans-serif;max-width:700px;margin:0 auto;">
-          <div style="background:#2b6cb0;padding:20px;text-align:center;">
-            <h2 style="color:#fff;margin:0;">✅ Partes Aprobadas para Retiro</h2>
-            <p style="color:#fff;margin:8px 0 0;">{self.name}</p>
-          </div>
-          <div style="padding:25px;border:1px solid #e2e8f0;">
-            <p>Estimado <b>{self.tecnico_id.name}</b>,</p>
-            <p>Gerencia aprobó el retiro de las siguientes partes para la reparación
-               <b>{self.reparacion_id.name}</b>:</p>
-            <ul>{partes_html}</ul>
-            <div style="background:#ebf8ff;border-left:4px solid #4299e1;padding:15px;margin:20px 0;">
-              <b>📋 Instrucciones:</b><br/>
-              1. Retira las partes indicando la máquina origen.<br/>
-              2. Una vez retiradas, confirma haciendo clic en el botón de abajo.
-            </div>
-            <div style="text-align:center;margin:30px 0;">
-              <a href="{url_confirmar}" style="background:#2b6cb0;color:#fff;padding:14px 28px;
-                 text-decoration:none;border-radius:4px;font-weight:bold;font-size:16px;">
-                CONFIRMAR RETIRO
-              </a>
-            </div>
-          </div>
-        </div>"""
-
-    # ── PASO 4: Técnico confirma retiro vía token ─────────────────────────
+    # ══════════════════════════════════════════════════════════════════════
+    # PASO 4: Técnico confirma retiro (desde link token)
+    # ══════════════════════════════════════════════════════════════════════
     def action_confirmar_retiro(self):
-        """Llamado desde el link token del técnico."""
         self.ensure_one()
         if self.state != 'aprobada':
             raise UserError(_('Solo se pueden confirmar solicitudes aprobadas.'))
+
         self.write({'state': 'completada'})
 
-        # Registrar en máquinas origen
+        # Registrar en máquinas origen y marcar líneas como entregadas
         for linea in self.linea_ids.filtered(lambda l: l.state == 'encontrada'):
             linea._registrar_en_maquina_origen()
             linea.write({'state': 'entregada'})
 
         self.message_post(
-            body=(f"📦 <b>Retiro confirmado</b> por {self.env.user.name}.<br/>"
-                  f"Solicitud completada.")
-        )
+            body=f"📦 <b>Retiro confirmado.</b> Solicitud completada.")
+
         self._notificar_completada()
 
     def _notificar_completada(self):
@@ -433,60 +295,53 @@ class SolicitudParteTecnico(models.Model):
         _send_whatsapp(JEFE_AREA_PHONE, msg_wa)
         _send_whatsapp(GERENCIA_PHONE, msg_wa)
 
-    # ── Email helper ──────────────────────────────────────────────────────
-    def _enviar_email(self, email_to, email_cc, subject, body):
-        self.ensure_one()
-        try:
-            mail = self.env['mail.mail'].sudo().create({
-                'subject':    subject,
-                'email_from': EMAIL_FROM,
-                'email_to':   email_to,
-                'email_cc':   email_cc,
-                'body_html':  body,
-                'auto_delete': True,
-            })
-            mail.send()
-            _logger.info('✅ Email enviado a %s', email_to)
-        except Exception as e:
-            _logger.error('❌ Error enviando email a %s: %s', email_to, e)
-
-    # ── Verificar si toda la solicitud fue gestionada ─────────────────────
+    # ══════════════════════════════════════════════════════════════════════
+    # Lógica de avance de estado tras gestión del jefe
+    # ══════════════════════════════════════════════════════════════════════
     def _check_avanzar_estado(self):
         """
-        Después de que el jefe gestiona todas las líneas:
-        - Si hay encontradas → pendiente_aprobacion → notifica gerencia para aprobar
-        - Si no hay encontradas (todo por_conseguir) → por_conseguir → notifica gerencia compra
-        - Si hay mezcla → pendiente_aprobacion (las encontradas) + notifica por_conseguir
+        Se llama después de que el jefe gestiona cada línea.
+        Solo avanza cuando NO quedan líneas en estado 'buscando'.
         """
         self.ensure_one()
+        # Aún hay líneas sin gestionar → no avanzar
         if self.linea_ids.filtered(lambda l: l.state == 'buscando'):
-            return  # Aún hay líneas sin gestionar
+            return
 
         encontradas   = self.linea_ids.filtered(lambda l: l.state == 'encontrada')
         por_conseguir = self.linea_ids.filtered(lambda l: l.state == 'por_conseguir')
 
         if encontradas and not por_conseguir:
-            # Todo encontrado → pedir aprobación
+            # Todo encontrado → pedir aprobación gerencia
             self.write({'state': 'pendiente_aprobacion'})
-            self.message_post(body="📋 Todas las partes encontradas. Esperando aprobación de Gerencia.")
+            self.message_post(
+                body="📋 Todas las partes encontradas. Esperando aprobación de Gerencia.")
             self._notificar_gerencia_aprobacion()
 
         elif por_conseguir and not encontradas:
-            # Nada encontrado → todo por conseguir
+            # Nada en stock → gestionar compra
             self.write({'state': 'por_conseguir'})
-            self.message_post(body="⏳ No hay partes disponibles. Gerencia notificada para gestionar compra.")
+            self.message_post(
+                body="⏳ No hay partes disponibles. Gerencia notificada para gestionar compra.")
             self._notificar_gerencia_por_conseguir()
 
         else:
-            # Mezcla: algunas encontradas, otras por conseguir
+            # Mezcla: algunas encontradas + otras por conseguir
             self.write({'state': 'pendiente_aprobacion'})
             self.message_post(
-                body=(f"📋 Gestión mixta: {len(encontradas)} parte(s) encontrada(s), "
-                      f"{len(por_conseguir)} por conseguir.<br/>"
-                      f"Gerencia notificada de ambas situaciones.")
+                body=(
+                    f"📋 Gestión mixta: {len(encontradas)} encontrada(s), "
+                    f"{len(por_conseguir)} por conseguir.<br/>"
+                    f"Gerencia notificada de ambas situaciones."
+                )
             )
             self._notificar_gerencia_aprobacion()
             self._notificar_gerencia_por_conseguir()
+
+    def action_cancelar(self):
+        self.ensure_one()
+        self.write({'state': 'cancelada'})
+        self.message_post(body=f"❌ Cancelada por {self.env.user.name}")
 
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -518,12 +373,15 @@ class SolicitudParteTecnicoLinea(models.Model):
         ('compra',   'Compra/Conseguir'),
     ], string='Origen')
 
-    maquina_origen_alquiler_id = fields.Many2one('alquiler', string='Máquina Alquiler Origen')
-    maquina_origen_sat_id      = fields.Many2one('sat.sat',  string='Máquina SAT Origen')
+    maquina_origen_alquiler_id = fields.Many2one(
+        'alquiler', string='Máquina Alquiler Origen')
+    maquina_origen_sat_id = fields.Many2one(
+        'sat.sat', string='Máquina SAT Origen')
 
     notas_jefe    = fields.Text(string='Notas')
     fecha_gestion = fields.Datetime(string='Fecha Gestión', readonly=True)
-    gestionado_por = fields.Many2one('res.users', string='Gestionado por', readonly=True)
+    gestionado_por = fields.Many2one(
+        'res.users', string='Gestionado por', readonly=True)
 
     def _get_origen_display(self):
         self.ensure_one()
@@ -540,12 +398,12 @@ class SolicitudParteTecnicoLinea(models.Model):
     def action_gestionar(self):
         self.ensure_one()
         return {
-            'type': 'ir.actions.act_window',
-            'name': f'Gestionar: {self.parte}',
+            'type':      'ir.actions.act_window',
+            'name':      f'Gestionar: {self.parte}',
             'res_model': 'solicitud.parte.gestionar.wizard',
             'view_mode': 'form',
-            'target': 'new',
-            'context': {'default_linea_id': self.id},
+            'target':    'new',
+            'context':   {'default_linea_id': self.id},
         }
 
     def _registrar_en_maquina_origen(self):
@@ -616,19 +474,21 @@ class SolicitudParteGestionarWizard(models.TransientModel):
         linea = self.linea_id
 
         linea.write({
-            'state':        self.resultado,
-            'notas_jefe':   self.notas,
-            'fecha_gestion': fields.Datetime.now(),
-            'gestionado_por': self.env.user.id,
-            'tipo_origen':  self.tipo_origen if self.resultado == 'encontrada' else 'compra',
+            'state':                    self.resultado,
+            'notas_jefe':               self.notas,
+            'fecha_gestion':            fields.Datetime.now(),
+            'gestionado_por':           self.env.user.id,
+            'tipo_origen':              self.tipo_origen if self.resultado == 'encontrada' else 'compra',
             'maquina_origen_alquiler_id': (
-                self.maquina_origen_alquiler_id.id if self.resultado == 'encontrada' else False),
+                self.maquina_origen_alquiler_id.id
+                if self.resultado == 'encontrada' else False),
             'maquina_origen_sat_id': (
-                self.maquina_origen_sat_id.id if self.resultado == 'encontrada' else False),
+                self.maquina_origen_sat_id.id
+                if self.resultado == 'encontrada' else False),
         })
 
         # Chatter en solicitud
-        emoji       = '✅' if self.resultado == 'encontrada' else '⏳'
+        emoji        = '✅' if self.resultado == 'encontrada' else '⏳'
         estado_label = dict(linea._fields['state'].selection).get(self.resultado, '')
         linea.solicitud_id.message_post(
             body=(
@@ -638,12 +498,12 @@ class SolicitudParteGestionarWizard(models.TransientModel):
             )
         )
 
-        # Actualizar estado solicitud a en_gestion si es la primera línea gestionada
+        # Avanzar solicitud a en_gestion si es la primera línea gestionada
         solicitud = linea.solicitud_id
         if solicitud.state == 'enviada':
             solicitud.write({'state': 'en_gestion'})
 
-        # Verificar si ya se gestionaron todas las líneas → avanzar estado
+        # Verificar si ya se gestionaron todas las líneas
         solicitud._check_avanzar_estado()
 
         return {'type': 'ir.actions.act_window_close'}
@@ -680,14 +540,14 @@ class SolicitudParteTecnicoWizard(models.TransientModel):
         })
         for l in self.linea_ids:
             self.env['solicitud.parte.tecnico.linea'].create({
-                'solicitud_id':            solicitud.id,
-                'parte':                   l.parte,
-                'descripcion':             l.descripcion,
-                'foto_referencia':         l.foto_referencia,
+                'solicitud_id':             solicitud.id,
+                'parte':                    l.parte,
+                'descripcion':              l.descripcion,
+                'foto_referencia':          l.foto_referencia,
                 'foto_referencia_filename': l.foto_referencia_filename,
             })
 
-        # Notificar al jefe de área
+        # Notificar al jefe de área (WhatsApp + email template)
         solicitud._notificar_jefe_nueva_solicitud()
 
         # Chatter en reparación
@@ -695,8 +555,7 @@ class SolicitudParteTecnicoWizard(models.TransientModel):
         self.reparacion_id.message_post(
             body=(
                 f"🔧 <b>Solicitud de parte creada:</b> "
-                f"<a href='/web#id={solicitud.id}&view_type=form"
-                f"&model=solicitud.parte.tecnico'>{solicitud.name}</a><br/>"
+                f"<a href='{solicitud._url_odoo()}'>{solicitud.name}</a><br/>"
                 f"Partes: {partes_txt}"
             )
         )

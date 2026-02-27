@@ -333,5 +333,411 @@
 </html>
         ]]></field>
     </record>
+    <!-- ══════════════════════════════════════════════════════════════════
+         PLANTILLA 1: Técnico crea solicitud → Jefe de Área
+    ══════════════════════════════════════════════════════════════════════ -->
+    <record id="email_template_solicitud_parte_nueva" model="mail.template">
+        <field name="name">Solicitud Parte - Nueva Solicitud (Jefe de Área)</field>
+        <field name="subject">🔧 Nueva Solicitud de Parte {{ object.name }}</field>
+        <field name="model_id" ref="model_solicitud_parte_tecnico"/>
+        <field name="auto_delete" eval="True"/>
+        <field name="email_from">soporte@andescopiers.com.pe</field>
+        <field name="email_to">campuero@corapsac.com.pe</field>
+        <field name="email_cc">lincoln@corapsac.com,asistentecontable@corapsac.com</field>
+        <field name="body_html"><![CDATA[
+<!DOCTYPE html>
+<html>
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"></head>
+<body bgcolor="#f5f5f5" style="margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;">
+<div style="max-width:700px;margin:0 auto;background:#fff;">
+
+    <!-- Header -->
+    <div style="background:#4a5568;padding:20px;text-align:center;">
+        <h2 style="color:#fff;margin:0;">🔧 Nueva Solicitud de Parte</h2>
+        <p style="color:#e2e8f0;margin:8px 0 0 0;font-size:18px;">
+            <t t-out="object.name"/>
+        </p>
+    </div>
+
+    <!-- Cuerpo -->
+    <div style="padding:25px;border:1px solid #e2e8f0;">
+        <p>Se ha generado una nueva solicitud de parte técnico con los siguientes datos:</p>
+
+        <!-- Datos solicitud -->
+        <div style="background:#f7fafc;padding:18px;border-left:4px solid #4a5568;margin-bottom:20px;">
+            <h3 style="margin-top:0;">📋 Datos de la Solicitud</h3>
+            <table style="width:100%;border-collapse:collapse;">
+                <tr>
+                    <td style="padding:6px 10px;font-weight:bold;width:140px;">Técnico:</td>
+                    <td style="padding:6px 10px;"><t t-out="object.tecnico_id.name"/></td>
+                </tr>
+                <tr style="background:#edf2f7;">
+                    <td style="padding:6px 10px;font-weight:bold;">Reparación:</td>
+                    <td style="padding:6px 10px;"><t t-out="object.reparacion_id.name"/></td>
+                </tr>
+                <tr>
+                    <td style="padding:6px 10px;font-weight:bold;">Fecha:</td>
+                    <td style="padding:6px 10px;"><t t-out="object.fecha_solicitud"/></td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- Datos máquina -->
+        <div style="background:#edf2f7;padding:18px;border-left:4px solid #63b3ed;margin-bottom:20px;">
+            <h3 style="margin-top:0;">🖨️ Información del Equipo</h3>
+            <table style="width:100%;border-collapse:collapse;">
+                <tr>
+                    <td style="padding:6px 10px;font-weight:bold;width:140px;">Marca:</td>
+                    <td style="padding:6px 10px;"><t t-out="object.marca or ''"/></td>
+                </tr>
+                <tr style="background:#e2e8f0;">
+                    <td style="padding:6px 10px;font-weight:bold;">Modelo:</td>
+                    <td style="padding:6px 10px;"><t t-out="object.modelo or ''"/></td>
+                </tr>
+                <tr>
+                    <td style="padding:6px 10px;font-weight:bold;">Serie:</td>
+                    <td style="padding:6px 10px;"><t t-out="object.serie or ''"/></td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- Partes solicitadas -->
+        <div style="background:#fff;border:1px solid #e2e8f0;padding:18px;margin-bottom:20px;">
+            <h3 style="margin-top:0;">📦 Partes Solicitadas</h3>
+            <t t-foreach="object.linea_ids" t-as="linea">
+                <div style="padding:10px;margin-bottom:8px;border-left:4px solid #68d391;background:#f0fff4;">
+                    <b><t t-out="linea.parte"/></b>
+                    <t t-if="linea.descripcion">
+                        <br/><span style="color:#718096;font-size:13px;">
+                            <t t-out="linea.descripcion"/>
+                        </span>
+                    </t>
+                </div>
+            </t>
+        </div>
+
+        <!-- Instrucción -->
+        <div style="background:#fffaf0;border-left:4px solid #f6ad55;padding:15px;margin-bottom:25px;">
+            <b>⚠️ Acción requerida:</b> Revisar disponibilidad de cada parte
+            y gestionar desde el sistema Odoo.
+        </div>
+
+        <!-- Botón Odoo -->
+        <div style="text-align:center;margin:25px 0;">
+            <a t-attf-href="{{ object._get_base_url() }}/web#id={{ object.id }}&amp;view_type=form&amp;model=solicitud.parte.tecnico"
+               style="background:#4a5568;color:#fff;padding:13px 26px;
+                      text-decoration:none;border-radius:4px;font-weight:bold;font-size:15px;">
+                VER EN ODOO
+            </a>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div style="background:#edf2f7;padding:12px;text-align:center;">
+        <p style="color:#718096;font-size:12px;margin:0;">
+            Sistema de Taller — Andes Solution Copiers
+        </p>
+    </div>
+</div>
+</body>
+</html>
+        ]]></field>
+    </record>
+
+
+    <!-- ══════════════════════════════════════════════════════════════════
+         PLANTILLA 2: Jefe gestiona → hay partes → Gerencia aprueba
+    ══════════════════════════════════════════════════════════════════════ -->
+    <record id="email_template_solicitud_parte_aprobacion" model="mail.template">
+        <field name="name">Solicitud Parte - Aprobación Gerencia (partes encontradas)</field>
+        <field name="subject">✅ Aprobación Requerida - Solicitud {{ object.name }}</field>
+        <field name="model_id" ref="model_solicitud_parte_tecnico"/>
+        <field name="auto_delete" eval="True"/>
+        <field name="email_from">soporte@andescopiers.com.pe</field>
+        <field name="email_to">campuero@corapsac.com.pe</field>
+        <field name="email_cc">lincoln@corapsac.com,asistentecontable@corapsac.com</field>
+        <field name="body_html"><![CDATA[
+<!DOCTYPE html>
+<html>
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"></head>
+<body bgcolor="#f5f5f5" style="margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;">
+<div style="max-width:700px;margin:0 auto;background:#fff;">
+
+    <!-- Header -->
+    <div style="background:#2f855a;padding:20px;text-align:center;">
+        <h2 style="color:#fff;margin:0;">✅ Aprobación Requerida</h2>
+        <p style="color:#c6f6d5;margin:8px 0 0 0;font-size:18px;">
+            Solicitud <t t-out="object.name"/>
+        </p>
+    </div>
+
+    <div style="padding:25px;border:1px solid #e2e8f0;">
+        <p>El jefe de área encontró disponibilidad para las siguientes partes.
+           Se requiere su aprobación para proceder con el retiro.</p>
+
+        <!-- Datos -->
+        <div style="background:#f0fff4;padding:18px;border-left:4px solid #48bb78;margin-bottom:20px;">
+            <h3 style="margin-top:0;">📋 Datos de la Solicitud</h3>
+            <table style="width:100%;border-collapse:collapse;">
+                <tr>
+                    <td style="padding:6px 10px;font-weight:bold;width:140px;">Técnico:</td>
+                    <td style="padding:6px 10px;"><t t-out="object.tecnico_id.name"/></td>
+                </tr>
+                <tr style="background:#c6f6d5;">
+                    <td style="padding:6px 10px;font-weight:bold;">Reparación:</td>
+                    <td style="padding:6px 10px;"><t t-out="object.reparacion_id.name"/></td>
+                </tr>
+                <tr>
+                    <td style="padding:6px 10px;font-weight:bold;">Máquina:</td>
+                    <td style="padding:6px 10px;">
+                        <t t-out="object.marca or ''"/> <t t-out="object.modelo or ''"/>
+                    </td>
+                </tr>
+                <tr style="background:#c6f6d5;">
+                    <td style="padding:6px 10px;font-weight:bold;">Serie:</td>
+                    <td style="padding:6px 10px;"><t t-out="object.serie or ''"/></td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- Partes encontradas -->
+        <div style="background:#fff;border:1px solid #e2e8f0;padding:18px;margin-bottom:20px;">
+            <h3 style="margin-top:0;">🔩 Partes Listas para Retirar</h3>
+            <t t-foreach="object.linea_ids" t-as="linea">
+                <t t-if="linea.state == 'encontrada'">
+                    <div style="padding:10px;margin-bottom:8px;border-left:4px solid #48bb78;background:#f0fff4;">
+                        <b><t t-out="linea.parte"/></b><br/>
+                        <span style="color:#276749;font-size:13px;">
+                            📍 Origen: <t t-out="linea.tipo_origen or 'Sin definir'"/>
+                            <t t-if="linea.maquina_origen_alquiler_id">
+                                — <t t-out="linea.maquina_origen_alquiler_id.name.name"/>
+                            </t>
+                            <t t-if="linea.maquina_origen_sat_id">
+                                — <t t-out="linea.maquina_origen_sat_id.name.name"/>
+                            </t>
+                        </span>
+                        <t t-if="linea.notas_jefe">
+                            <br/><span style="color:#718096;font-size:12px;">
+                                Nota: <t t-out="linea.notas_jefe"/>
+                            </span>
+                        </t>
+                    </div>
+                </t>
+            </t>
+        </div>
+
+        <!-- Botón APROBAR -->
+        <div style="text-align:center;margin:30px 0;">
+            <a t-attf-href="{{ object._get_base_url() }}/solicitud-parte/aprobar/{{ object.access_token }}"
+               style="background:#48bb78;color:#fff;padding:15px 35px;
+                      text-decoration:none;border-radius:4px;font-weight:bold;font-size:17px;">
+                ✅ APROBAR RETIRO
+            </a>
+        </div>
+
+        <p style="color:#718096;font-size:13px;text-align:center;">
+            Al hacer clic se aprobará el retiro y se notificará al técnico automáticamente.
+        </p>
+    </div>
+
+    <div style="background:#edf2f7;padding:12px;text-align:center;">
+        <p style="color:#718096;font-size:12px;margin:0;">
+            Sistema de Taller — Andes Solution Copiers
+        </p>
+    </div>
+</div>
+</body>
+</html>
+        ]]></field>
+    </record>
+
+
+    <!-- ══════════════════════════════════════════════════════════════════
+         PLANTILLA 3: No hay partes → Gerencia gestiona compra
+    ══════════════════════════════════════════════════════════════════════ -->
+    <record id="email_template_solicitud_parte_por_conseguir" model="mail.template">
+        <field name="name">Solicitud Parte - Por Conseguir/Comprar (Gerencia)</field>
+        <field name="subject">⏳ Partes por Conseguir - Solicitud {{ object.name }}</field>
+        <field name="model_id" ref="model_solicitud_parte_tecnico"/>
+        <field name="auto_delete" eval="True"/>
+        <field name="email_from">soporte@andescopiers.com.pe</field>
+        <field name="email_to">campuero@corapsac.com.pe</field>
+        <field name="email_cc">lincoln@corapsac.com,asistentecontable@corapsac.com</field>
+        <field name="body_html"><![CDATA[
+<!DOCTYPE html>
+<html>
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"></head>
+<body bgcolor="#f5f5f5" style="margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;">
+<div style="max-width:700px;margin:0 auto;background:#fff;">
+
+    <!-- Header -->
+    <div style="background:#c05621;padding:20px;text-align:center;">
+        <h2 style="color:#fff;margin:0;">⏳ Partes por Conseguir</h2>
+        <p style="color:#feebc8;margin:8px 0 0 0;font-size:18px;">
+            Solicitud <t t-out="object.name"/>
+        </p>
+    </div>
+
+    <div style="padding:25px;border:1px solid #e2e8f0;">
+
+        <!-- Alerta -->
+        <div style="background:#fffaf0;border-left:4px solid #ed8936;padding:15px;margin-bottom:20px;">
+            <b>⚠️ Las siguientes partes NO están disponibles en stock.</b><br/>
+            Se requiere gestionar su compra o consecución externa.
+        </div>
+
+        <!-- Datos -->
+        <div style="background:#fef3c7;padding:18px;border-left:4px solid #f6ad55;margin-bottom:20px;">
+            <h3 style="margin-top:0;">📋 Datos de la Solicitud</h3>
+            <table style="width:100%;border-collapse:collapse;">
+                <tr>
+                    <td style="padding:6px 10px;font-weight:bold;width:140px;">Técnico:</td>
+                    <td style="padding:6px 10px;"><t t-out="object.tecnico_id.name"/></td>
+                </tr>
+                <tr style="background:#fde68a;">
+                    <td style="padding:6px 10px;font-weight:bold;">Reparación:</td>
+                    <td style="padding:6px 10px;"><t t-out="object.reparacion_id.name"/></td>
+                </tr>
+                <tr>
+                    <td style="padding:6px 10px;font-weight:bold;">Máquina:</td>
+                    <td style="padding:6px 10px;">
+                        <t t-out="object.marca or ''"/> <t t-out="object.modelo or ''"/>
+                    </td>
+                </tr>
+                <tr style="background:#fde68a;">
+                    <td style="padding:6px 10px;font-weight:bold;">Serie:</td>
+                    <td style="padding:6px 10px;"><t t-out="object.serie or ''"/></td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- Partes por conseguir -->
+        <div style="background:#fff;border:1px solid #e2e8f0;padding:18px;margin-bottom:20px;">
+            <h3 style="margin-top:0;">🛒 Partes a Comprar / Conseguir</h3>
+            <t t-foreach="object.linea_ids" t-as="linea">
+                <t t-if="linea.state == 'por_conseguir'">
+                    <div style="padding:10px;margin-bottom:8px;border-left:4px solid #ed8936;background:#fffaf0;">
+                        <b><t t-out="linea.parte"/></b>
+                        <t t-if="linea.descripcion">
+                            <br/><span style="color:#718096;font-size:13px;">
+                                <t t-out="linea.descripcion"/>
+                            </span>
+                        </t>
+                        <t t-if="linea.notas_jefe">
+                            <br/><span style="color:#c05621;font-size:12px;">
+                                Nota jefe: <t t-out="linea.notas_jefe"/>
+                            </span>
+                        </t>
+                    </div>
+                </t>
+            </t>
+        </div>
+
+        <p style="color:#718096;font-size:13px;">
+            Por favor coordine la adquisición de estas partes y notifique al técnico
+            <b><t t-out="object.tecnico_id.name"/></b> cuando estén disponibles.
+        </p>
+    </div>
+
+    <div style="background:#edf2f7;padding:12px;text-align:center;">
+        <p style="color:#718096;font-size:12px;margin:0;">
+            Sistema de Taller — Andes Solution Copiers
+        </p>
+    </div>
+</div>
+</body>
+</html>
+        ]]></field>
+    </record>
+
+
+    <!-- ══════════════════════════════════════════════════════════════════
+         PLANTILLA 4: Gerencia aprueba → Técnico retira
+    ══════════════════════════════════════════════════════════════════════ -->
+    <record id="email_template_solicitud_parte_tecnico_retiro" model="mail.template">
+        <field name="name">Solicitud Parte - Aprobada, Técnico puede retirar</field>
+        <field name="subject">✅ Aprobado - Puedes retirar las partes - {{ object.name }}</field>
+        <field name="model_id" ref="model_solicitud_parte_tecnico"/>
+        <field name="auto_delete" eval="True"/>
+        <field name="email_from">soporte@andescopiers.com.pe</field>
+        <field name="email_to">{{ object.tecnico_id.email or '' }}</field>
+        <field name="body_html"><![CDATA[
+<!DOCTYPE html>
+<html>
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"></head>
+<body bgcolor="#f5f5f5" style="margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;">
+<div style="max-width:700px;margin:0 auto;background:#fff;">
+
+    <!-- Header -->
+    <div style="background:#2b6cb0;padding:20px;text-align:center;">
+        <h2 style="color:#fff;margin:0;">✅ Partes Aprobadas para Retiro</h2>
+        <p style="color:#bee3f8;margin:8px 0 0 0;font-size:18px;">
+            Solicitud <t t-out="object.name"/>
+        </p>
+    </div>
+
+    <div style="padding:25px;border:1px solid #e2e8f0;">
+        <p>Estimado/a <b><t t-out="object.tecnico_id.name"/></b>,</p>
+        <p>Gerencia aprobó el retiro de las partes para la reparación
+           <b><t t-out="object.reparacion_id.name"/></b>.
+           Puedes proceder con el retiro.</p>
+
+        <!-- Partes aprobadas -->
+        <div style="background:#ebf8ff;padding:18px;border-left:4px solid #4299e1;margin-bottom:20px;">
+            <h3 style="margin-top:0;">🔩 Partes a Retirar</h3>
+            <t t-foreach="object.linea_ids" t-as="linea">
+                <t t-if="linea.state == 'encontrada'">
+                    <div style="padding:10px;margin-bottom:8px;border-left:4px solid #4299e1;background:#fff;">
+                        <b><t t-out="linea.parte"/></b><br/>
+                        <span style="color:#2b6cb0;font-size:13px;">
+                            📍 <t t-out="linea.tipo_origen or ''"/>
+                            <t t-if="linea.maquina_origen_alquiler_id">
+                                — Alquiler: <t t-out="linea.maquina_origen_alquiler_id.marca or ''"/>
+                                <t t-out="linea.maquina_origen_alquiler_id.name.name or ''"/>
+                                (Serie: <t t-out="linea.maquina_origen_alquiler_id.serie or ''"/>)
+                            </t>
+                            <t t-if="linea.maquina_origen_sat_id">
+                                — SAT: <t t-out="linea.maquina_origen_sat_id.marca or ''"/>
+                                <t t-out="linea.maquina_origen_sat_id.name.name or ''"/>
+                                (Serie: <t t-out="linea.maquina_origen_sat_id.serie_id or ''"/>)
+                            </t>
+                        </span>
+                    </div>
+                </t>
+            </t>
+        </div>
+
+        <!-- Instrucciones -->
+        <div style="background:#f0fff4;border-left:4px solid #48bb78;padding:15px;margin-bottom:25px;">
+            <b>📋 Instrucciones:</b><br/>
+            1. Retira las partes de las máquinas indicadas.<br/>
+            2. Una vez retiradas, confirma haciendo clic en el botón de abajo.<br/>
+            3. El sistema registrará automáticamente el movimiento en las máquinas origen.
+        </div>
+
+        <!-- Botón CONFIRMAR -->
+        <div style="text-align:center;margin:30px 0;">
+            <a t-attf-href="{{ object._get_base_url() }}/solicitud-parte/confirmar/{{ object.access_token }}"
+               style="background:#2b6cb0;color:#fff;padding:15px 35px;
+                      text-decoration:none;border-radius:4px;font-weight:bold;font-size:17px;">
+                📦 CONFIRMAR RETIRO
+            </a>
+        </div>
+
+        <p style="color:#718096;font-size:12px;text-align:center;">
+            Este enlace es de uso único. Al confirmar, la solicitud quedará completada.
+        </p>
+    </div>
+
+    <div style="background:#edf2f7;padding:12px;text-align:center;">
+        <p style="color:#718096;font-size:12px;margin:0;">
+            Sistema de Taller — Andes Solution Copiers
+        </p>
+    </div>
+</div>
+</body>
+</html>
+        ]]></field>
+    </record>
     </data>
 </odoo>
