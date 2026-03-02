@@ -28,7 +28,7 @@ class TicketNotificacionesTracking(models.Model):
 
     def _get_destino_tracking(self):
         destino = self.env['ir.config_parameter'].sudo().get_param(
-            'tracking.whatsapp_destino', '51975399303'
+            'tracking.whatsapp_destino', GRUPO_TRACKING
         )
         return destino.strip()
 
