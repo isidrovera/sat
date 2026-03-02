@@ -16,19 +16,29 @@ _logger = logging.getLogger(__name__)
 class TraccarController(http.Controller):
 
     def _validar_authorization(self):
-        """Valida Authorization: Bearer <token>."""
-        auth_header = request.httprequest.headers.get('Authorization', '')
+        """Valida Authorization tolerante a espacios y formato."""
 
-        _logger.info(
-            "[TRACCAR-AUTH] Header recibido: '%s...' (primeros 30 chars)",
-            auth_header[:30]
-        )
-
-        if not auth_header.startswith('Bearer '):
-            _logger.warning("[TRACCAR-AUTH] ❌ No tiene formato Bearer")
+        auth_header = request.httprequest.headers.get('Authorization')
+        if not auth_header:
+            _logger.warning("[TRACCAR-AUTH] ❌ Sin header Authorization")
             return False
 
-        token_recibido = auth_header[7:]
+        _logger.info("[TRACCAR-AUTH] HEADER COMPLETO >>> %s <<<", auth_header)
+
+        auth_header = auth_header.strip()
+
+        parts = auth_header.split()
+
+        if len(parts) != 2:
+            _logger.warning("[TRACCAR-AUTH] ❌ Formato inválido")
+            return False
+
+        esquema, token_recibido = parts
+
+        if esquema.lower() != 'bearer':
+            _logger.warning("[TRACCAR-AUTH] ❌ No es esquema Bearer")
+            return False
+
         token_config = (
             request.env['ir.config_parameter']
             .sudo()
@@ -36,20 +46,18 @@ class TraccarController(http.Controller):
         )
 
         if not token_config:
-            _logger.error("[TRACCAR-AUTH] ❌ traccar.api_key no configurada en Odoo")
+            _logger.error("[TRACCAR-AUTH] ❌ traccar.api_key no configurada")
             return False
 
-        coincide = token_recibido == token_config
-        if not coincide:
+        if token_recibido != token_config:
             _logger.warning(
-                "[TRACCAR-AUTH] ❌ Token NO coincide | "
-                "Recibido: '%s' | Esperado: '%s'",
+                "[TRACCAR-AUTH] ❌ Token incorrecto | Recibido: %s | Esperado: %s",
                 token_recibido[:20], token_config[:20]
             )
-        else:
-            _logger.info("[TRACCAR-AUTH] ✅ Token válido")
+            return False
 
-        return coincide
+        _logger.info("[TRACCAR-AUTH] ✅ Token válido")
+        return True
 
     def _json_response(self, data, status=200):
         return Response(
