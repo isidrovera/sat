@@ -1,5 +1,8 @@
 from odoo import http
 from odoo.http import request
+import logging
+
+_logger = logging.getLogger(__name__)
 
 class SolicitudParteController(http.Controller):
 
@@ -8,7 +11,7 @@ class SolicitudParteController(http.Controller):
         '/solicitud-parte/aprobar/<string:token>',
         type='http', auth='public', website=False, csrf=False)
     def aprobar_solicitud(self, token, **kwargs):
-        env = http_request.env
+        env = request.env
         solicitud = env['solicitud.parte.tecnico'].sudo().search(
             [('access_token', '=', token)], limit=1)
 
@@ -44,7 +47,7 @@ class SolicitudParteController(http.Controller):
         '/solicitud-parte/confirmar/<string:token>',
         type='http', auth='public', website=False, csrf=False)
     def confirmar_retiro(self, token, **kwargs):
-        env = http_request.env
+        env = request.env
         solicitud = env['solicitud.parte.tecnico'].sudo().search(
             [('access_token', '=', token)], limit=1)
 
@@ -77,7 +80,7 @@ class SolicitudParteController(http.Controller):
 
     # ── Helpers HTML ──────────────────────────────────────────────────────
     def _page_exito(self, titulo, mensaje, color='#2f855a'):
-        return http_request.make_response(
+        return request.make_response(
             f"""<!DOCTYPE html><html><head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width,initial-scale=1">
