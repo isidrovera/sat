@@ -74,80 +74,64 @@ class TraccarController(http.Controller):
         csrf=False,
     )
     def recibir_evento_traccar(self, **kwargs):
-        """
-        Traccar envía JSON: {event, device, position, geofence}
-        """
-        try:
-            raw_body = request.httprequest.data
-            _logger.info("[TRACCAR-RAW] Body recibido: %s", raw_body[:500])
-        except Exception:
-            pass
 
-        if not self._validar_authorization():
-            _logger.warning("[TRACCAR] ❌ Petición rechazada — token inválido")
-            return self._json_response({'success': False, 'error': 'No autorizado'}, 401)
+        raw_body = request.httprequest.data
 
         try:
-            body = json.loads(request.httprequest.data)
+            body = json.loads(raw_body)
         except Exception:
             _logger.error("[TRACCAR] ❌ JSON inválido")
             return self._json_response({'success': False, 'error': 'JSON inválido'}, 400)
 
         event    = body.get('event') or {}
         device   = body.get('device') or {}
-        # ✅ CORRECCIÓN: proteger contra position=null y geofence=null
         position = body.get('position') or {}
         geofence = body.get('geofence') or {}
 
         event_type = event.get('type', 'unknown')
         device_id  = device.get('id')
 
-        # ✅ Log completo para diagnóstico
+        # 🔥 SOLO estos eventos necesitan seguridad + procesamiento
+        eventos_ticket = ['geofenceEnter', 'geofenceExit', 'deviceMoving']
+
+        if event_type not in eventos_ticket:
+            _logger.info("[TRACCAR] Evento '%s' ignorado (no relevante)", event_type)
+            return self._json_response({'success': True})
+
+        # 🔐 Validar token SOLO si el evento es relevante
+        if not self._validar_authorization():
+            _logger.warning("[TRACCAR] ❌ Token inválido para evento relevante")
+            return self._json_response({'success': False, 'error': 'No autorizado'}, 401)
+
+        # ---- Procesamiento normal ----
+
         _logger.info(
-            "[TRACCAR] ✅ Evento: %s | Device ID: %s | Device name: %s | "
-            "lat: %s | lon: %s | geofence_id: %s",
-            event_type, device_id, device.get('name'),
-            position.get('latitude'), position.get('longitude'),
-            geofence.get('id'),
+            "[TRACCAR] ✅ Evento: %s | Device: %s",
+            event_type, device.get('name')
         )
 
-        eventos_ticket = ['geofenceEnter', 'geofenceExit', 'deviceMoving']
-        odoo_result = None
+        try:
+            datos = {
+                'latitude':   position.get('latitude'),
+                'longitude':  position.get('longitude'),
+                'speed':      position.get('speed'),
+                'address':    position.get('address'),
+                'geofenceId': geofence.get('id'),
+            }
 
-        if event_type in eventos_ticket and device_id:
-            try:
-                datos = {
-                    'latitude':   position.get('latitude'),
-                    'longitude':  position.get('longitude'),
-                    'speed':      position.get('speed'),
-                    'address':    position.get('address'),
-                    'geofenceId': geofence.get('id'),
-                }
-
-                _logger.info(
-                    "[TRACCAR] Procesando: device_id=%s evento=%s datos=%s",
-                    device_id, event_type, datos
-                )
-
-                odoo_result = (
-                    request.env['ticket.alquiler']
-                    .sudo()
-                    .api_actualizar_estado_gps(device_id, event_type, datos)
-                )
-
-                _logger.info("[TRACCAR] Resultado: %s", odoo_result)
-
-            except Exception:
-                _logger.exception("[TRACCAR] ❌ Error actualizando tickets")
-        else:
-            _logger.info(
-                "[TRACCAR] Evento '%s' ignorado (no es de ticket o sin device_id)",
-                event_type
+            odoo_result = (
+                request.env['ticket.alquiler']
+                .sudo()
+                .api_actualizar_estado_gps(device_id, event_type, datos)
             )
+
+        except Exception:
+            _logger.exception("[TRACCAR] ❌ Error actualizando tickets")
+            return self._json_response({'success': False}, 500)
 
         return self._json_response({
             'success': True,
-            'event':   event_type,
-            'device':  device.get('name'),
+            'event': event_type,
+            'device': device.get('name'),
             'tickets': odoo_result.get('tickets_actualizados', []) if odoo_result else [],
         })
