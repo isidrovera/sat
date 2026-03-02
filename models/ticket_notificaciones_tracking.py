@@ -2,13 +2,13 @@
 """
 Notificaciones WhatsApp — Tracking de técnicos
 ================================================
-Envía mensajes al grupo/número configurado en cada cambio de estado.
-
-Parámetro de sistema:
-  tracking.whatsapp_destino → número o ID de grupo destino
-  (cambiar de 51975399303 a 120363039024889968@g.us cuando se verifique)
-
 Archivo: models/ticket_notificaciones_tracking.py
+
+Cambios v6:
+  • Todos los notificar_* aceptan ubicacion_actual={'latitude': x, 'longitude': y}
+  • Si se recibe ubicacion_actual se agrega link Google Maps al mensaje
+  • Una sola notificación por técnico/cliente — la lógica de agrupación
+    está en ticket_tracking.py; aquí solo se construye el mensaje.
 """
 import logging
 from pytz import timezone as pytz_tz, UTC
@@ -27,17 +27,13 @@ class TicketNotificacionesTracking(models.Model):
     # ═══════════════════════════════════════════════════════════════
 
     def _get_destino_tracking(self):
-        """
-        Retorna el número/grupo destino desde parámetros del sistema.
-        Cambiar valor cuando se verifique que funciona.
-        """
         destino = self.env['ir.config_parameter'].sudo().get_param(
             'tracking.whatsapp_destino', '51975399303'
         )
         return destino.strip()
 
     # ═══════════════════════════════════════════════════════════════
-    #  HELPER: formatear hora Lima
+    #  HELPERS: formato
     # ═══════════════════════════════════════════════════════════════
 
     @staticmethod
@@ -56,27 +52,42 @@ class TicketNotificacionesTracking(models.Model):
         h, m = int(mins // 60), int(mins % 60)
         return f"{h}h {m}min" if h else f"{m}min"
 
+    @staticmethod
+    def _fmt_ubicacion(ubicacion_actual):
+        """
+        Recibe dict {'latitude': x, 'longitude': y} o None.
+        Retorna línea con link Google Maps o cadena vacía.
+        """
+        if not ubicacion_actual:
+            return ''
+        lat = ubicacion_actual.get('latitude')
+        lon = ubicacion_actual.get('longitude')
+        if lat is None or lon is None:
+            return ''
+        maps_url = f"https://maps.google.com/?q={lat},{lon}"
+        return f"\n📡 Ubicación actual: {maps_url}"
+
     # ═══════════════════════════════════════════════════════════════
     #  NOTIFICACIONES POR ESTADO
     # ═══════════════════════════════════════════════════════════════
 
-    def notificar_en_ruta(self, tickets_grupo=None):
+    def notificar_en_ruta(self, tickets_grupo=None, ubicacion_actual=None):
         """
         Notifica al grupo que el técnico está en ruta.
-        tickets_grupo: lista de tickets del mismo técnico en ruta (puede ser 1)
+        Una sola llamada por técnico/cliente — el agrupamiento lo hace ticket_tracking.py
         """
         self.ensure_one()
         tickets = tickets_grupo or self
         destino = self._get_destino_tracking()
 
-        tecnico = self.responsable
-        cliente = self.partner_id
-        agenda = self._fmt_hora(self.agenda)
+        tecnico     = self.responsable
+        cliente     = self.partner_id
+        agenda      = self._fmt_hora(self.agenda)
         hora_salida = self._fmt_hora(self.fecha_en_ruta)
+        direccion   = self.direccion_id_r or 'Sin dirección'
 
-        # Tickets del mismo cliente si hay varios
         nombres_tickets = ' + '.join(t.name for t in tickets)
-        direccion = self.direccion_id_r or 'Sin dirección'
+        cantidad = len(tickets) if hasattr(tickets, '__len__') else 1
 
         mensaje = (
             f"🚗 *EN RUTA*\n"
@@ -86,21 +97,27 @@ class TicketNotificacionesTracking(models.Model):
             f"⏰ Agenda: {agenda} | Salida: {hora_salida}"
         )
 
+        if cantidad > 1:
+            mensaje += f"\n📦 {cantidad} servicios agendados"
+
+        # Ubicación actual del técnico (desde GPS)
+        mensaje += self._fmt_ubicacion(ubicacion_actual)
+
         self._enviar_notificacion_tracking(destino, mensaje)
 
-    def notificar_en_sitio(self, tickets_grupo=None):
+    def notificar_en_sitio(self, tickets_grupo=None, ubicacion_actual=None):
         """
         Notifica al grupo que el técnico llegó al sitio.
-        Si hay varios tickets del mismo cliente, los agrupa en un solo mensaje.
+        Una sola llamada por técnico/cliente — el agrupamiento lo hace ticket_tracking.py
         """
         self.ensure_one()
-        tickets = tickets_grupo or self
-        destino = self._get_destino_tracking()
+        tickets  = tickets_grupo or self
+        destino  = self._get_destino_tracking()
 
-        tecnico = self.responsable
-        cliente = self.partner_id
+        tecnico      = self.responsable
+        cliente      = self.partner_id
         hora_llegada = self._fmt_hora(self.fecha_llegada)
-        traslado = self._fmt_min(self.tiempo_traslado_minutos)
+        traslado     = self._fmt_min(self.tiempo_traslado_minutos)
 
         nombres_tickets = ' + '.join(t.name for t in tickets)
         cantidad = len(tickets) if hasattr(tickets, '__len__') else 1
@@ -118,9 +135,12 @@ class TicketNotificacionesTracking(models.Model):
         if cantidad > 1:
             mensaje += f"\n📦 {cantidad} equipos a revisar"
 
+        # Ubicación actual del técnico (desde GPS) — confirma que está en el sitio
+        mensaje += self._fmt_ubicacion(ubicacion_actual)
+
         self._enviar_notificacion_tracking(destino, mensaje)
 
-    def notificar_en_revision(self, tickets_grupo=None):
+    def notificar_en_revision(self, tickets_grupo=None, ubicacion_actual=None):
         """
         Notifica al grupo que el técnico inició la revisión.
         """
@@ -128,10 +148,10 @@ class TicketNotificacionesTracking(models.Model):
         tickets = tickets_grupo or self
         destino = self._get_destino_tracking()
 
-        tecnico = self.responsable
-        cliente = self.partner_id
-        hora_revision = self._fmt_hora(self.fecha_inicio_revision)
-        en_sitio = self._fmt_min(
+        tecnico        = self.responsable
+        cliente        = self.partner_id
+        hora_revision  = self._fmt_hora(self.fecha_inicio_revision)
+        en_sitio       = self._fmt_min(
             (fields.Datetime.now() - self.fecha_llegada).total_seconds() / 60
             if self.fecha_llegada else 0
         )
@@ -148,22 +168,26 @@ class TicketNotificacionesTracking(models.Model):
         if self.fecha_llegada:
             mensaje += f" | En sitio: {en_sitio}"
 
+        mensaje += self._fmt_ubicacion(ubicacion_actual)
+
         self._enviar_notificacion_tracking(destino, mensaje)
 
-    def notificar_salida_sitio(self, tickets_grupo=None):
+    def notificar_salida_sitio(self, tickets_grupo=None, ubicacion_actual=None):
         """
         Notifica al grupo que el técnico salió del sitio.
+        Una sola llamada por técnico/cliente — el agrupamiento lo hace ticket_tracking.py
         """
         self.ensure_one()
         tickets = tickets_grupo or self
         destino = self._get_destino_tracking()
 
-        tecnico = self.responsable
-        cliente = self.partner_id
-        hora_salida = self._fmt_hora(self.fecha_salida_sitio)
+        tecnico      = self.responsable
+        cliente      = self.partner_id
+        hora_salida  = self._fmt_hora(self.fecha_salida_sitio)
         tiempo_sitio = self._fmt_min(self.tiempo_en_sitio_minutos)
 
         nombres_tickets = ' + '.join(t.name for t in tickets)
+        cantidad = len(tickets) if hasattr(tickets, '__len__') else 1
 
         mensaje = (
             f"📤 *SALIÓ DEL SITIO*\n"
@@ -172,9 +196,15 @@ class TicketNotificacionesTracking(models.Model):
             f"⏰ Salida: {hora_salida} | En sitio: {tiempo_sitio}"
         )
 
+        if cantidad > 1:
+            mensaje += f"\n📦 {cantidad} equipos atendidos"
+
+        # Ubicación actual del técnico al salir (útil para saber hacia dónde se dirige)
+        mensaje += self._fmt_ubicacion(ubicacion_actual)
+
         self._enviar_notificacion_tracking(destino, mensaje)
 
-    def notificar_finalizado(self, tickets_grupo=None):
+    def notificar_finalizado(self, tickets_grupo=None, ubicacion_actual=None):
         """
         Notifica al grupo que el ticket fue finalizado.
         """
@@ -182,9 +212,9 @@ class TicketNotificacionesTracking(models.Model):
         tickets = tickets_grupo or self
         destino = self._get_destino_tracking()
 
-        tecnico = self.responsable
-        cliente = self.partner_id
-        hora_fin = self._fmt_hora(self.fecha_finalizacion)
+        tecnico      = self.responsable
+        cliente      = self.partner_id
+        hora_fin     = self._fmt_hora(self.fecha_finalizacion)
         tiempo_sitio = self._fmt_min(self.tiempo_en_sitio_minutos)
         tiempo_total = self._fmt_min(self.tiempo_total_atencion_minutos)
 
@@ -210,16 +240,18 @@ class TicketNotificacionesTracking(models.Model):
             else:
                 mensaje += f"\n✅ Llegó {self._fmt_min(abs(self.diferencia_puntualidad_minutos))} antes"
 
+        mensaje += self._fmt_ubicacion(ubicacion_actual)
+
         self._enviar_notificacion_tracking(destino, mensaje)
 
-    def notificar_siguiente_en_ruta(self, ticket_siguiente):
+    def notificar_siguiente_en_ruta(self, ticket_siguiente, ubicacion_actual=None):
         """
         Notifica que el técnico va hacia el siguiente servicio del día.
         """
         destino = self._get_destino_tracking()
         tecnico = ticket_siguiente.responsable
         cliente = ticket_siguiente.partner_id
-        agenda = self._fmt_hora(ticket_siguiente.agenda)
+        agenda  = self._fmt_hora(ticket_siguiente.agenda)
 
         mensaje = (
             f"🚗 *HACIA SIGUIENTE SERVICIO*\n"
@@ -228,6 +260,9 @@ class TicketNotificacionesTracking(models.Model):
             f"📍 {ticket_siguiente.direccion_id_r or 'Sin dirección'}\n"
             f"⏰ Agenda: {agenda}"
         )
+
+        # Ubicación actual del técnico al salir del servicio anterior
+        mensaje += self._fmt_ubicacion(ubicacion_actual)
 
         self._enviar_notificacion_tracking(destino, mensaje)
 
@@ -239,7 +274,6 @@ class TicketNotificacionesTracking(models.Model):
         """
         Envía el mensaje al destino configurado.
         Usa send_whatsapp_message del módulo de mensajes.
-        Registra en chatter si hay error.
         """
         try:
             _logger.info(
