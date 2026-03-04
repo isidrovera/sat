@@ -45,16 +45,23 @@ class GalleryController(http.Controller):
             reparacion = request.env['reparaciones.reparaciones'].sudo().browse(reparacion_id)
 
             if not reparacion.exists():
+                _logger.error("[GALLERY] Reparación no encontrada: %s", reparacion_id)
                 return request.not_found()
 
             foto_model = request.env['reparaciones.foto'].sudo()
 
             fotos = foto_model.get_photos_preview(reparacion_id) or []
 
+            # SOLO fallback si no existe thumb_url
             for f in fotos:
 
-                # si existe thumb_url usarlo
                 if not f.get('thumb_url'):
+
+                    _logger.warning(
+                        "[GALLERY] Foto %s sin thumb_url, usando preview fallback",
+                        f.get('id')
+                    )
+
                     f['thumb_url'] = f"/gallery/preview/{f['id']}"
 
             _logger.info("[GALLERY] Se encontraron %s fotos", len(fotos))
