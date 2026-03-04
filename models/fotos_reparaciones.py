@@ -669,92 +669,218 @@ class ReparacionFoto(models.Model):
 
     def _obtener_folder_id(self, reparacion, pcloud_config):
         """Método para obtener o crear el folder ID"""
+
+        # -------------------------------------------------
+        # 1️⃣ Usar folder_id guardado si ya existe
+        # -------------------------------------------------
+        if reparacion.pcloud_folder_id:
+            _logger.info(
+                "[GET_FOLDER] Usando folder_id almacenado en reparación: %s",
+                reparacion.pcloud_folder_id
+            )
+            return reparacion.pcloud_folder_id
+
+        _logger.info(
+            "[GET_FOLDER] No existe folder_id almacenado, buscando/creando carpeta en pCloud"
+        )
+
         folder_name = f"{reparacion.maquina_id.name.name}_{reparacion.serie_id or 'sin_serie'}"
         _logger.info("[GET_FOLDER] Buscando/creando carpeta: %s", folder_name)
-        
+
         try:
             folders = {
                 'root': {'id': 0, 'name': 'root'},
                 'fotos': {'name': 'fotos_reparaciones'},
                 'maquina': {'name': folder_name}
             }
-            
-            # Obtener/Crear carpeta fotos_reparaciones
+
+            # -------------------------------------------------
+            # 2️⃣ Obtener/crear carpeta fotos_reparaciones
+            # -------------------------------------------------
             folders['fotos']['id'] = self._get_or_create_folder(
                 folders['fotos']['name'],
                 folders['root']['id'],
                 pcloud_config
             )
-            
+
             if not folders['fotos']['id']:
                 _logger.error("[GET_FOLDER] Error al crear carpeta fotos_reparaciones")
                 raise ValidationError("Error al crear carpeta fotos_reparaciones")
-                
-            # Obtener/Crear carpeta de la máquina
+
+            # -------------------------------------------------
+            # 3️⃣ Obtener/crear carpeta de la máquina
+            # -------------------------------------------------
             folders['maquina']['id'] = self._get_or_create_folder(
                 folders['maquina']['name'],
                 folders['fotos']['id'],
                 pcloud_config
             )
-            
+
             if not folders['maquina']['id']:
                 _logger.error("[GET_FOLDER] Error al crear carpeta %s", folder_name)
                 raise ValidationError(f"Error al crear carpeta {folder_name}")
-                
-            _logger.info("[GET_FOLDER] ID de carpeta obtenido: %s", folders['maquina']['id'])
-            return folders['maquina']['id']
-            
+
+            folder_id = folders['maquina']['id']
+
+            _logger.info("[GET_FOLDER] Carpeta creada/obtenida con ID: %s", folder_id)
+
+            # -------------------------------------------------
+            # 4️⃣ Guardar folder_id en la reparación
+            # -------------------------------------------------
+            reparacion.write({
+                'pcloud_folder_id': str(folder_id)
+            })
+
+            _logger.info(
+                "[GET_FOLDER] folder_id guardado en reparación %s: %s",
+                reparacion.id,
+                folder_id
+            )
+
+            return folder_id
+
         except Exception as e:
             _logger.exception("[GET_FOLDER] Error: %s", str(e))
             raise ValidationError(f"Error al obtener/crear carpetas: {str(e)}")
 
     def _get_or_create_folder(self, folder_name, parent_id, pcloud_config):
         """Obtiene o crea una carpeta en pCloud"""
-        _logger.info("[GET_OR_CREATE] Buscando/creando carpeta %s en padre %s", 
+        _logger.info("[GET_OR_CREATE] Buscando/creando carpeta '%s' en padre %s", 
                     folder_name, parent_id)
+
         try:
-            # Listar carpetas
+            # -----------------------------
+            # 1️⃣ Listar carpetas existentes
+            # -----------------------------
             list_url = f"{pcloud_config.hostname}/listfolder"
             params = {
                 'access_token': pcloud_config.access_token,
                 'folderid': parent_id
             }
-            
-            _logger.info("[GET_OR_CREATE] Listando carpetas: %s", list_url)
-            response = requests.get(list_url, params=params)
+
+            _logger.info("[GET_OR_CREATE] Listando carpetas en parent_id=%s", parent_id)
+
+            response = requests.get(list_url, params=params, timeout=15)
+
+            _logger.info("[GET_OR_CREATE] HTTP Status listfolder: %s", response.status_code)
+
             result = response.json()
-            
+            _logger.debug("[GET_OR_CREATE] Respuesta listfolder: %s", result)
+
             if response.status_code == 200 and result.get('result') == 0:
-                # Buscar carpeta existente
-                for folder in result['metadata']['contents']:
-                    if folder['isfolder'] and folder['name'] == folder_name:
-                        _logger.info("[GET_OR_CREATE] Carpeta encontrada: %s", folder['folderid'])
-                        return folder['folderid']
-                        
-                # Crear nueva carpeta
-                _logger.info("[GET_OR_CREATE] Creando nueva carpeta: %s", folder_name)
-                create_url = f"{pcloud_config.hostname}/createfolder"
-                create_params = {
-                    'access_token': pcloud_config.access_token,
-                    'name': folder_name,
-                    'folderid': parent_id
-                }
-                
-                create_response = requests.get(create_url, params=create_params)
-                create_result = create_response.json()
-                
-                if create_result.get('result') == 0:
-                    _logger.info("[GET_OR_CREATE] Carpeta creada: %s", 
-                               create_result['metadata']['folderid'])
-                    return create_result['metadata']['folderid']
-                
-                _logger.error("[GET_OR_CREATE] Error al crear carpeta: %s", create_result)
-                    
-            _logger.error("[GET_OR_CREATE] Error al listar/crear carpeta: %s", result)
+
+                contents = result.get('metadata', {}).get('contents', [])
+
+                for folder in contents:
+                    if folder.get('isfolder') and folder.get('name') == folder_name:
+                        folder_id = folder.get('folderid')
+                        _logger.info(
+                            "[GET_OR_CREATE] Carpeta encontrada '%s' con ID: %s",
+                            folder_name,
+                            folder_id
+                        )
+                        return folder_id
+
+            else:
+                _logger.warning(
+                    "[GET_OR_CREATE] Error al listar carpeta padre %s -> %s",
+                    parent_id,
+                    result
+                )
+
+            # -----------------------------
+            # 2️⃣ Crear carpeta
+            # -----------------------------
+            _logger.info("[GET_OR_CREATE] Carpeta '%s' no existe, creando...", folder_name)
+
+            create_url = f"{pcloud_config.hostname}/createfolder"
+
+            create_params = {
+                'access_token': pcloud_config.access_token,
+                'name': folder_name,
+                'folderid': parent_id
+            }
+
+            create_response = requests.get(create_url, params=create_params, timeout=15)
+
+            _logger.info("[GET_OR_CREATE] HTTP Status createfolder: %s", create_response.status_code)
+
+            create_result = create_response.json()
+
+            _logger.debug("[GET_OR_CREATE] Respuesta createfolder: %s", create_result)
+
+            # -----------------------------
+            # 3️⃣ Carpeta creada correctamente
+            # -----------------------------
+            if create_result.get('result') == 0:
+
+                folder_id = create_result['metadata']['folderid']
+
+                _logger.info(
+                    "[GET_OR_CREATE] Carpeta creada exitosamente '%s' con ID: %s",
+                    folder_name,
+                    folder_id
+                )
+
+                return folder_id
+
+            # -----------------------------
+            # 4️⃣ Carpeta ya existe (ERROR 2004)
+            # -----------------------------
+            if create_result.get('result') == 2004:
+
+                _logger.warning(
+                    "[GET_OR_CREATE] Carpeta '%s' ya existe (result=2004). Buscando nuevamente...",
+                    folder_name
+                )
+
+                # Volver a listar carpeta
+                retry_response = requests.get(list_url, params=params, timeout=15)
+
+                retry_result = retry_response.json()
+
+                if retry_result.get('result') == 0:
+
+                    for folder in retry_result.get('metadata', {}).get('contents', []):
+
+                        if folder.get('isfolder') and folder.get('name') == folder_name:
+
+                            folder_id = folder.get('folderid')
+
+                            _logger.info(
+                                "[GET_OR_CREATE] Carpeta encontrada después de retry '%s' ID=%s",
+                                folder_name,
+                                folder_id
+                            )
+
+                            return folder_id
+
+                _logger.error(
+                    "[GET_OR_CREATE] Carpeta '%s' existe pero no se pudo recuperar ID",
+                    folder_name
+                )
+
+                return False
+
+            # -----------------------------
+            # 5️⃣ Error real
+            # -----------------------------
+            _logger.error(
+                "[GET_OR_CREATE] Error al crear carpeta '%s': %s",
+                folder_name,
+                create_result
+            )
+
             return False
-            
+
         except Exception as e:
-            _logger.exception("[GET_OR_CREATE] Error: %s", str(e))
+
+            _logger.exception(
+                "[GET_OR_CREATE] Excepción creando carpeta '%s': %s",
+                folder_name,
+                str(e)
+            )
+
             return False
 
     def get_download_content(self):

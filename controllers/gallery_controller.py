@@ -408,18 +408,56 @@ class GalleryController(http.Controller):
         - Carpeta raíz: 'fotos_reparaciones' (parent_id=0)
         - Carpeta por reparación: <maquina>_<serie>
         """
+
+        # -------------------------------------------------
+        # 1️⃣ Usar folder_id guardado si existe
+        # -------------------------------------------------
+        if reparacion.pcloud_folder_id:
+            _logger.info(
+                "[ENSURE_FOLDER] Usando folder_id almacenado en reparación %s: %s",
+                reparacion.id,
+                reparacion.pcloud_folder_id
+            )
+            return reparacion.pcloud_folder_id
+
+        _logger.info(
+            "[ENSURE_FOLDER] No existe folder_id almacenado. Creando estructura en pCloud..."
+        )
+
         try:
             raiz_id = self._get_or_create_folder('fotos_reparaciones', 0, pconf, timeout=6)
+
             if not raiz_id:
+                _logger.error("[ENSURE_FOLDER] No se pudo obtener carpeta raíz fotos_reparaciones")
                 return None
 
             machine = reparacion.maquina_id.name.name if reparacion.maquina_id and reparacion.maquina_id.name else 'Sin_Maquina'
             serie = reparacion.serie_id or 'Sin_Serie'
             name = f"{machine}_{serie}"
+
             folder_id = self._get_or_create_folder(name, raiz_id, pconf, timeout=8)
+
+            if not folder_id:
+                _logger.error("[ENSURE_FOLDER] No se pudo crear carpeta de reparación: %s", name)
+                return None
+
+            # -------------------------------------------------
+            # 2️⃣ Guardar folder_id en reparación
+            # -------------------------------------------------
+            reparacion.sudo().write({
+                'pcloud_folder_id': str(folder_id)
+            })
+
+            _logger.info(
+                "[ENSURE_FOLDER] Carpeta creada y guardada en reparación %s: %s",
+                reparacion.id,
+                folder_id
+            )
+
             return folder_id
+
         except Exception as e:
-            _logger.error("[ENSURE_FOLDER] Error: %s", e)
+            _logger.exception("[ENSURE_FOLDER] Error: %s", e)
             return None
 
     def _get_or_create_folder(self, folder_name, parent_id, pconf, timeout=6):
