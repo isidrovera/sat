@@ -222,6 +222,7 @@ class GalleryWidget extends Component {
     }
 
     async downloadSelectedPhotos() {
+
         if (this.state.selectedPhotos.size === 0) {
             this.notification.add("Selecciona al menos una foto", {
                 type: "warning",
@@ -232,14 +233,16 @@ class GalleryWidget extends Component {
         const selectedIds = Array.from(this.state.selectedPhotos.keys());
 
         try {
+
             const result = await this.orm.call(
                 "reparaciones.foto",
                 "get_photos_zip",
-                [],
+                [[]],                     // IMPORTANTE
                 { foto_ids: selectedIds }
             );
 
             if (result && result.content) {
+
                 const blob = new Blob(
                     [Uint8Array.from(atob(result.content), c => c.charCodeAt(0))],
                     { type: result.mimetype }
@@ -247,10 +250,13 @@ class GalleryWidget extends Component {
 
                 const url = window.URL.createObjectURL(blob);
                 const link = document.createElement("a");
+
                 link.href = url;
                 link.download = result.filename;
+
                 document.body.appendChild(link);
                 link.click();
+
                 document.body.removeChild(link);
                 window.URL.revokeObjectURL(url);
 
@@ -259,17 +265,21 @@ class GalleryWidget extends Component {
                 this.notification.add("Fotos descargadas exitosamente", {
                     type: "success",
                 });
+
             } else {
-                throw new Error("No se pudo crear el ZIP");
+                throw new Error("No se pudo generar el ZIP");
             }
+
         } catch (error) {
+
             console.error("Error al descargar fotos:", error);
+
             this.notification.add("Error al descargar las fotos", {
                 type: "danger",
             });
         }
     }
-        
+            
         
 
     toggleSelectMode() {
