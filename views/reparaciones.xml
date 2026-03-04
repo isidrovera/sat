@@ -368,8 +368,8 @@
               <!-- PESTAÑA: GALERÍA DE FOTOS -->
               <page string="Galería de Fotos" name="fotos" groups="base.group_system">
                 <!-- Galería de imágenes -->
-                <div style="margin: 15px 0;">
-                  <field name="fotos_ids" widget="gallery_widget" />
+                <div class="w-100" style="margin:15px 0;">
+                    <field name="fotos_ids" widget="gallery_widget" class="w-100"/>
                 </div>
               </page>
             </notebook>
