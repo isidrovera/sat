@@ -366,7 +366,7 @@
               </page>
               
               <!-- PESTAÑA: GALERÍA DE FOTOS -->
-              <page string="Galería de Fotos" name="fotos" groups="base.group_system">
+              <page string="Galería de Fotos" name="fotos">
                 <!-- Galería de imágenes -->
                 <div class="w-100" style="margin:15px 0;">
                     <field name="fotos_ids" widget="gallery_widget" class="w-100"/>

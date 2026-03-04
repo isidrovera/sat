@@ -223,65 +223,54 @@ class GalleryWidget extends Component {
 
     async downloadSelectedPhotos() {
         if (this.state.selectedPhotos.size === 0) {
-            console.log("No se seleccionaron fotos para descargar.");
             this.notification.add("Selecciona al menos una foto", {
-                type: 'warning',
+                type: "warning",
             });
             return;
         }
-    
-        // Obtener los IDs de las fotos seleccionadas
+
         const selectedIds = Array.from(this.state.selectedPhotos.keys());
-        console.log("IDs de fotos seleccionadas para el ZIP:", selectedIds);
-    
+
         try {
-            console.log("Iniciando llamada al backend para obtener el ZIP...");
-            
-            // Llamada al backend
             const result = await this.orm.call(
-                'reparaciones.foto',
-                'get_photos_zip',
-                [selectedIds]
+                "reparaciones.foto",
+                "get_photos_zip",
+                [],
+                { foto_ids: selectedIds }
             );
-    
-            // Verificar respuesta del backend
-            console.log("Respuesta del backend para ZIP:", result);
-    
+
             if (result && result.content) {
-                console.log("Contenido del ZIP recibido, iniciando descarga...");
-                
-                // Crear blob y forzar descarga
                 const blob = new Blob(
                     [Uint8Array.from(atob(result.content), c => c.charCodeAt(0))],
                     { type: result.mimetype }
                 );
+
                 const url = window.URL.createObjectURL(blob);
-                const link = document.createElement('a');
+                const link = document.createElement("a");
                 link.href = url;
                 link.download = result.filename;
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
                 window.URL.revokeObjectURL(url);
-                
-                console.log("Descarga completada. Limpiando selección...");
+
                 this.toggleSelectMode();
+
                 this.notification.add("Fotos descargadas exitosamente", {
-                    type: 'success',
+                    type: "success",
                 });
             } else {
-                console.error("No se pudo crear el archivo ZIP. Respuesta del backend:", result);
-                throw new Error("No se pudo crear el archivo ZIP");
+                throw new Error("No se pudo crear el ZIP");
             }
         } catch (error) {
             console.error("Error al descargar fotos:", error);
             this.notification.add("Error al descargar las fotos", {
-                type: 'danger',
+                type: "danger",
             });
         }
     }
-    
-    
+        
+        
 
     toggleSelectMode() {
         this.state.selectMode = !this.state.selectMode;
