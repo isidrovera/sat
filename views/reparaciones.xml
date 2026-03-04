@@ -170,6 +170,7 @@
                 <field name="autorizacion_cambio_digitos" invisible="1" />
                 <field name="autenticacion_correcta" invisible="1" />
                 <field name="pcloud_folder_id"/>
+                <field name="thumb_url" />
               </group>
             </group>
             
