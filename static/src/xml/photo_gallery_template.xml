@@ -129,12 +129,12 @@
                         <!-- Imagen -->
                         <div class="o_gallery_image_container">
                             <img 
-                                t-att-src="photo.thumb_url if photo.thumb_url else '/gallery/preview/' + photo.id"
-                                t-att-alt="photo.nombre_foto or 'Foto'"
+                                t-att-src="photo.thumb_url ? photo.thumb_url : '/gallery/preview/' + photo.id"
+                                t-att-alt="photo.nombre_foto || 'Foto'"
                                 class="o_gallery_image"
                                 loading="lazy"
                                 onerror="this.src='/sat/static/src/img/placeholder.png'; this.onerror=null;"/>
-                            
+                                                        
                             <!-- Badge de secuencia -->
                             <span class="o_gallery_badge">
                                 #<t t-esc="photo.sequence || 0"/>
