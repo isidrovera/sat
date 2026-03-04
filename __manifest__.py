@@ -207,6 +207,7 @@
             '/sat/static/src/scss/list_dashboard.scss',
             'sat/static/src/scss/sat_dashboard.scss',
             'sat/static/src/scss/alquiler_dashboard.scss',
+            'sat/static/src/scss/gallery_widget.scss',
       
             
             

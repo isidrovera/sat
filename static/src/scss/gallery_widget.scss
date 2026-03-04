@@ -1,0 +1,162 @@
+.o_gallery_widget {
+    padding: 10px;
+
+    .o_gallery_toolbar {
+        background: #f8f9fa;
+        padding: 10px;
+        border-radius: 8px;
+        margin-bottom: 15px;
+    }
+}
+
+/* GRID DE GALERÍA */
+
+.o_gallery_grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 16px;
+    width: 100%;
+}
+
+/* ITEM */
+
+.o_gallery_item {
+    background: white;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid #e5e5e5;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+
+    &:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 18px rgba(0,0,0,0.15);
+    }
+}
+
+/* MODO SELECCIÓN */
+
+.o_gallery_item_selectable {
+    cursor: pointer;
+}
+
+.o_gallery_item_selected {
+    border: 2px solid #0d6efd;
+    box-shadow: 0 0 0 3px rgba(13,110,253,0.15);
+}
+
+/* CHECKBOX */
+
+.o_gallery_checkbox {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    z-index: 5;
+    background: white;
+    padding: 4px;
+    border-radius: 6px;
+}
+
+/* CONTENEDOR IMAGEN */
+
+.o_gallery_image_container {
+    position: relative;
+    width: 100%;
+    height: 190px;
+    overflow: hidden;
+    background: #f1f1f1;
+}
+
+/* IMAGEN */
+
+.o_gallery_image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.25s ease;
+}
+
+.o_gallery_item:hover .o_gallery_image {
+    transform: scale(1.05);
+}
+
+/* BADGE SECUENCIA */
+
+.o_gallery_badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: rgba(0,0,0,0.7);
+    color: white;
+    padding: 3px 7px;
+    border-radius: 6px;
+    font-size: 12px;
+}
+
+/* INFO */
+
+.o_gallery_info {
+    padding: 10px 12px;
+}
+
+.o_gallery_name {
+    font-weight: 600;
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.o_gallery_meta {
+    margin-top: 3px;
+}
+
+/* BOTÓN DESCARGAR */
+
+.o_gallery_download_btn {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.o_gallery_item:hover .o_gallery_download_btn {
+    opacity: 1;
+}
+
+/* MODAL */
+
+.o_gallery_modal {
+
+    .modal-content {
+        border-radius: 10px;
+        overflow: hidden;
+    }
+
+    img {
+        max-width: 100%;
+        height: auto;
+    }
+}
+
+/* RESPONSIVE */
+
+@media (max-width: 1200px) {
+    .o_gallery_grid {
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .o_gallery_grid {
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    }
+}
+
+@media (max-width: 480px) {
+    .o_gallery_grid {
+        grid-template-columns: repeat(1, 1fr);
+    }
+}
