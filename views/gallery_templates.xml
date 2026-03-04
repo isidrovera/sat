@@ -690,7 +690,7 @@
                   <span class="photo-badge">
                     <i class="fa-solid fa-image"></i> Foto
                   </span>
-                  <img t-att-src="f.get('thumb_url') or ('/gallery/preview/%s' % f['id'])" alt="Foto" loading="lazy"/>
+                  <img t-att-src="f['thumb_url'] if f.get('thumb_url') else ('/gallery/preview/%s' % f['id'])" alt="Foto" loading="lazy"/>
                 </div>
                 <div class="photo-info">
                   <span>
