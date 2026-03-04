@@ -1310,23 +1310,58 @@ class ReparacionFoto(models.Model):
         Crea el registro 'reparaciones.foto' para un archivo que ya fue subido
         directamente a pCloud en la carpeta de la reparación.
         """
-        _logger.info("[REGISTER_FROM_PCLOUD] reparacion_id=%s filename=%s sequence=%s", reparacion_id, filename, sequence)
+
+        _logger.info("[REGISTER_FROM_PCLOUD] reparacion_id=%s filename=%s sequence=%s",
+                    reparacion_id, filename, sequence)
+
         rep = self.env['reparaciones.reparaciones'].sudo().browse(reparacion_id)
+
         if not rep.exists():
+            _logger.error("[REGISTER_FROM_PCLOUD] Reparación no encontrada: %s", reparacion_id)
             raise ValidationError('Reparación no encontrada')
+
         cfg = self.env['pcloud.configuracion'].sudo().search([], limit=1)
+
         if not cfg or not cfg.access_token or not cfg.hostname:
+            _logger.error("[REGISTER_FROM_PCLOUD] Configuración de pCloud no encontrada")
             raise ValidationError("Configuración de pCloud no encontrada")
 
+        # -------------------------------------------------
+        # Obtener carpeta pCloud
+        # -------------------------------------------------
         folder_id = self._obtener_folder_id(rep, cfg)
+
+        _logger.info("[REGISTER_FROM_PCLOUD] folder_id obtenido: %s", folder_id)
+
+        # -------------------------------------------------
+        # Buscar archivo en la carpeta
+        # -------------------------------------------------
         meta = self._find_file_in_folder(folder_id, filename, cfg)
+
         if not meta:
+            _logger.error("[REGISTER_FROM_PCLOUD] Archivo no encontrado en pCloud: %s", filename)
             raise ValidationError("Archivo no encontrado en la carpeta de la reparación")
 
+        _logger.info("[REGISTER_FROM_PCLOUD] Archivo encontrado file_id=%s", meta['file_id'])
+
+        # -------------------------------------------------
+        # Obtener secuencia
+        # -------------------------------------------------
         if sequence is None:
-            last = self.search([('reparacion_id','=', reparacion_id)], order='sequence desc', limit=1)
+
+            last = self.search(
+                [('reparacion_id', '=', reparacion_id)],
+                order='sequence desc',
+                limit=1
+            )
+
             sequence = (last.sequence or 0) + 1
 
+            _logger.info("[REGISTER_FROM_PCLOUD] Secuencia calculada: %s", sequence)
+
+        # -------------------------------------------------
+        # Crear registro
+        # -------------------------------------------------
         vals = {
             'reparacion_id': reparacion_id,
             'nombre_foto': filename,
@@ -1336,8 +1371,37 @@ class ReparacionFoto(models.Model):
             'sequence': sequence,
             'state': 'done',
         }
+
         rec = self.sudo().create(vals)
-        thumb = self._get_thumb_url(rec.file_id, cfg) or f'/gallery/preview/{rec.id}'
+
+        _logger.info("[REGISTER_FROM_PCLOUD] Registro creado ID=%s", rec.id)
+
+        # -------------------------------------------------
+        # Generar thumbnail
+        # -------------------------------------------------
+        _logger.info("[REGISTER_FROM_PCLOUD] Generando thumbnail para file_id=%s", rec.file_id)
+
+        thumb = self._get_thumb_url(rec.file_id, cfg)
+
+        # -------------------------------------------------
+        # Guardar thumbnail en BD
+        # -------------------------------------------------
+        if thumb:
+
+            _logger.info("[REGISTER_FROM_PCLOUD] Thumbnail obtenido: %s", thumb)
+
+            rec.sudo().write({
+                'thumb_url': thumb
+            })
+
+            _logger.info("[REGISTER_FROM_PCLOUD] Thumbnail guardado en BD para foto %s", rec.id)
+
+        else:
+
+            thumb = f'/gallery/preview/{rec.id}'
+
+            _logger.warning("[REGISTER_FROM_PCLOUD] Thumbnail no generado, usando fallback")
+
         return {
             'id': rec.id,
             'sequence': rec.sequence,
