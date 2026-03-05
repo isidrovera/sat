@@ -1,5 +1,6 @@
 from odoo import models, fields, api
 from odoo.exceptions import ValidationError
+from psycopg2.errors import SerializationFailure
 import logging
 import requests
 import time
@@ -63,6 +64,8 @@ class ReparacionFoto(models.Model):
     ]
 
     
+
+
     @api.model_create_multi
     def create(self, vals_list):
 
@@ -72,28 +75,52 @@ class ReparacionFoto(models.Model):
 
             reparacion_id = vals.get('reparacion_id')
 
-            # --------------------------------------------------
-            # ASIGNAR SECUENCIA SEGURA (SIN COLISIONES)
-            # --------------------------------------------------
+            # ---------------------------------------------
+            # ASIGNAR SECUENCIA SEGURA CON RETRY
+            # ---------------------------------------------
             if reparacion_id:
 
-                # incremento atómico en PostgreSQL
-                self.env.cr.execute("""
-                    UPDATE reparaciones_reparaciones
-                    SET last_photo_sequence = COALESCE(last_photo_sequence,0) + 1
-                    WHERE id = %s
-                    RETURNING last_photo_sequence
-                """, [reparacion_id])
+                max_retry = 5
+                attempt = 0
 
-                seq = self.env.cr.fetchone()[0]
+                while True:
 
-                vals['sequence'] = seq
+                    try:
 
-                _logger.info("[CREATE] Secuencia asignada automáticamente: %s", seq)
+                        self.env.cr.execute("""
+                            UPDATE reparaciones_reparaciones
+                            SET last_photo_sequence = COALESCE(last_photo_sequence,0) + 1
+                            WHERE id = %s
+                            RETURNING last_photo_sequence
+                        """, [reparacion_id])
 
-            # --------------------------------------------------
+                        seq = self.env.cr.fetchone()[0]
+
+                        vals['sequence'] = seq
+
+                        _logger.info("[CREATE] Secuencia asignada automáticamente: %s", seq)
+
+                        break
+
+                    except SerializationFailure:
+
+                        attempt += 1
+                        self.env.cr.rollback()
+
+                        if attempt >= max_retry:
+                            raise
+
+                        _logger.warning(
+                            "[CREATE] Retry secuencia (%s/%s)",
+                            attempt,
+                            max_retry
+                        )
+
+                        time.sleep(0.1)
+
+            # ---------------------------------------------
             # GENERAR ID ÚNICO
-            # --------------------------------------------------
+            # ---------------------------------------------
             timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
             random_string = hashlib.md5(
                 str(datetime.now().timestamp()).encode()
@@ -103,9 +130,9 @@ class ReparacionFoto(models.Model):
 
             _logger.info("[CREATE] Generado ID único: %s", vals['unique_id'])
 
-            # --------------------------------------------------
+            # ---------------------------------------------
             # SUBIDA A PCLOUD SI HAY BINARIO
-            # --------------------------------------------------
+            # ---------------------------------------------
             if 'foto_binario' in vals:
 
                 try:
@@ -115,7 +142,6 @@ class ReparacionFoto(models.Model):
                     reparacion = self.env['reparaciones.reparaciones'].browse(reparacion_id)
 
                     if not reparacion.exists():
-                        _logger.error("[CREATE] No se encontró la reparación: %s", reparacion_id)
                         raise ValidationError("No se encontró la reparación relacionada")
 
                     archivo_binario = base64.b64decode(vals['foto_binario'])
@@ -125,14 +151,9 @@ class ReparacionFoto(models.Model):
                     pcloud_config = self.env['pcloud.configuracion'].search([], limit=1)
 
                     if not pcloud_config or not pcloud_config.access_token:
-
-                        _logger.error("[CREATE] No se encontró configuración de pCloud válida")
-
                         raise ValidationError("Configuración de pCloud no encontrada")
 
                     folder_id = self._obtener_folder_id(reparacion, pcloud_config)
-
-                    _logger.info("[CREATE] Carpeta pCloud obtenida: %s", folder_id)
 
                     result = self._upload_to_pcloud(
                         archivo_binario,
@@ -158,7 +179,6 @@ class ReparacionFoto(models.Model):
                     else:
 
                         vals['state'] = 'error'
-
                         raise ValidationError("Error al subir la foto a pCloud")
 
                 except Exception as e:
@@ -170,6 +190,7 @@ class ReparacionFoto(models.Model):
                     raise ValidationError(f"Error al subir la foto: {str(e)}")
 
         return super().create(vals_list)
+
 
 
     
