@@ -400,17 +400,14 @@
     },
 
     async uploadOneDirectToPcloud(file) {
+
       try {
-        // Obtener siguiente secuencia
-        const seq = await this.getNextSequence();
-        
-        // Crear FormData con el archivo y secuencia
+
         const fd = new FormData();
         fd.append('file', file);
-        fd.append('sequence', seq);
 
-        // Subir directamente al endpoint que maneja pCloud
         const url = `/gallery/pcloud/upload-direct/${this.reparacionId}`;
+
         const resp = await fetch(url, {
           method: 'POST',
           body: fd
@@ -422,30 +419,25 @@
         }
 
         const result = await resp.json();
-        
+
         if (!result.success) {
           throw new Error(result.error || 'Error desconocido al subir');
         }
 
         console.log('✓ Subida exitosa:', result);
+
         return result;
 
       } catch (error) {
+
         console.error('Error en uploadOneDirectToPcloud:', error);
+
         throw error;
+
       }
     },
 
-    async getNextSequence() {
-      try {
-        const r = await fetch(`/gallery/next-sequence/${this.reparacionId}`);
-        const j = await r.json();
-        return j.next_sequence || 1;
-      } catch (e) {
-        console.warn('Error obteniendo secuencia, usando 1', e);
-        return 1;
-      }
-    },
+   
 
     // --------------- UI: grid existente ---------------
     appendPhotoCard(f) {
