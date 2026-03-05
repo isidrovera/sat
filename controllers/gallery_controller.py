@@ -432,15 +432,17 @@ class GalleryController(http.Controller):
         return Response(json.dumps(data), status=status, headers=[('Content-Type', 'application/json')])
 
     def _next_sequence_value(self, reparacion_id):
-        # Lock al padre para serializar inserts concurrentes de la misma reparación
+        # 1. Lock exclusivo sobre la reparación padre
         request.env.cr.execute(
-            "SELECT id FROM reparaciones_reparaciones WHERE id = %s FOR UPDATE",
+            "SELECT id FROM reparaciones_reparaciones WHERE id = %s FOR UPDATE NOWAIT",
             [reparacion_id]
         )
-        Foto = request.env['reparaciones.foto'].sudo()
-        last = Foto.search([('reparacion_id', '=', reparacion_id)], order='sequence desc', limit=1)
-        return (last.sequence if last else 0) + 1
-
+        # 2. Leer MAX directo desde SQL (sin caché ORM)
+        request.env.cr.execute(
+            "SELECT COALESCE(MAX(sequence), 0) + 1 FROM reparaciones_foto WHERE reparacion_id = %s",
+            [reparacion_id]
+        )
+    return request.env.cr.fetchone()[0]
     def _ensure_folder_in_pcloud(self, reparacion, pconf):
         """
         Garantiza:
