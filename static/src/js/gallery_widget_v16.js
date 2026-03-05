@@ -1,4 +1,4 @@
-// sat/static/src/js/gallery_widget_v15.js
+// sat/static/src/js/gallery_widget_v16.js
 // Galería: cámara continua + lote + pCloud directo + eliminar + visor con zoom + compartir + modales propios
 (function () {
   'use strict';
