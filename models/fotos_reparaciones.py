@@ -1304,76 +1304,76 @@ class ReparacionFoto(models.Model):
             return None
 
     @api.model
-def register_from_pcloud(self, reparacion_id, filename, sequence=None):
-    _logger.info("[REGISTER_FROM_PCLOUD] reparacion_id=%s filename=%s sequence=%s",
-                reparacion_id, filename, sequence)
+    def register_from_pcloud(self, reparacion_id, filename, sequence=None):
+        _logger.info("[REGISTER_FROM_PCLOUD] reparacion_id=%s filename=%s sequence=%s",
+                    reparacion_id, filename, sequence)
 
-    rep = self.env['reparaciones.reparaciones'].sudo().browse(reparacion_id)
+        rep = self.env['reparaciones.reparaciones'].sudo().browse(reparacion_id)
 
-    if not rep.exists():
-        _logger.error("[REGISTER_FROM_PCLOUD] Reparación no encontrada: %s", reparacion_id)
-        raise ValidationError('Reparación no encontrada')
+        if not rep.exists():
+            _logger.error("[REGISTER_FROM_PCLOUD] Reparación no encontrada: %s", reparacion_id)
+            raise ValidationError('Reparación no encontrada')
 
-    cfg = self.env['pcloud.configuracion'].sudo().search([], limit=1)
+        cfg = self.env['pcloud.configuracion'].sudo().search([], limit=1)
 
-    if not cfg or not cfg.access_token or not cfg.hostname:
-        _logger.error("[REGISTER_FROM_PCLOUD] Configuración de pCloud no encontrada")
-        raise ValidationError("Configuración de pCloud no encontrada")
+        if not cfg or not cfg.access_token or not cfg.hostname:
+            _logger.error("[REGISTER_FROM_PCLOUD] Configuración de pCloud no encontrada")
+            raise ValidationError("Configuración de pCloud no encontrada")
 
-    folder_id = self._obtener_folder_id(rep, cfg)
-    _logger.info("[REGISTER_FROM_PCLOUD] folder_id obtenido: %s", folder_id)
+        folder_id = self._obtener_folder_id(rep, cfg)
+        _logger.info("[REGISTER_FROM_PCLOUD] folder_id obtenido: %s", folder_id)
 
-    meta = self._find_file_in_folder(folder_id, filename, cfg)
+        meta = self._find_file_in_folder(folder_id, filename, cfg)
 
-    if not meta:
-        _logger.error("[REGISTER_FROM_PCLOUD] Archivo no encontrado en pCloud: %s", filename)
-        raise ValidationError("Archivo no encontrado en la carpeta de la reparación")
+        if not meta:
+            _logger.error("[REGISTER_FROM_PCLOUD] Archivo no encontrado en pCloud: %s", filename)
+            raise ValidationError("Archivo no encontrado en la carpeta de la reparación")
 
-    _logger.info("[REGISTER_FROM_PCLOUD] Archivo encontrado file_id=%s", meta['file_id'])
+        _logger.info("[REGISTER_FROM_PCLOUD] Archivo encontrado file_id=%s", meta['file_id'])
 
-    if sequence is None:
-        # Lock al padre para serializar inserts concurrentes
-        self.env.cr.execute(
-            "SELECT id FROM reparaciones_reparaciones WHERE id = %s FOR UPDATE",
-            [reparacion_id]
-        )
+        if sequence is None:
+            # Lock al padre para serializar inserts concurrentes
+            self.env.cr.execute(
+                "SELECT id FROM reparaciones_reparaciones WHERE id = %s FOR UPDATE",
+                [reparacion_id]
+            )
 
-        last = self.search(
-            [('reparacion_id', '=', reparacion_id)],
-            order='sequence desc',
-            limit=1
-        )
+            last = self.search(
+                [('reparacion_id', '=', reparacion_id)],
+                order='sequence desc',
+                limit=1
+            )
 
-        sequence = (last.sequence or 0) + 1
-        _logger.info("[REGISTER_FROM_PCLOUD] Secuencia calculada: %s", sequence)
+            sequence = (last.sequence or 0) + 1
+            _logger.info("[REGISTER_FROM_PCLOUD] Secuencia calculada: %s", sequence)
 
-    vals = {
-        'reparacion_id': reparacion_id,
-        'nombre_foto': filename,
-        'file_id': meta['file_id'],
-        'size': meta.get('size') or 0,
-        'mimetype': meta.get('contenttype') or 'application/octet-stream',
-        'sequence': sequence,
-        'state': 'done',
-    }
+        vals = {
+            'reparacion_id': reparacion_id,
+            'nombre_foto': filename,
+            'file_id': meta['file_id'],
+            'size': meta.get('size') or 0,
+            'mimetype': meta.get('contenttype') or 'application/octet-stream',
+            'sequence': sequence,
+            'state': 'done',
+        }
 
-    rec = self.sudo().create(vals)
-    _logger.info("[REGISTER_FROM_PCLOUD] Registro creado ID=%s", rec.id)
+        rec = self.sudo().create(vals)
+        _logger.info("[REGISTER_FROM_PCLOUD] Registro creado ID=%s", rec.id)
 
-    _logger.info("[REGISTER_FROM_PCLOUD] Generando thumbnail para file_id=%s", rec.file_id)
-    thumb = self._get_thumb_url(rec.file_id, cfg)
+        _logger.info("[REGISTER_FROM_PCLOUD] Generando thumbnail para file_id=%s", rec.file_id)
+        thumb = self._get_thumb_url(rec.file_id, cfg)
 
-    if thumb:
-        _logger.info("[REGISTER_FROM_PCLOUD] Thumbnail obtenido: %s", thumb)
-        rec.sudo().write({'thumb_url': thumb})
-        _logger.info("[REGISTER_FROM_PCLOUD] Thumbnail guardado en BD para foto %s", rec.id)
-    else:
-        thumb = f'/gallery/preview/{rec.id}'
-        _logger.warning("[REGISTER_FROM_PCLOUD] Thumbnail no generado, usando fallback")
+        if thumb:
+            _logger.info("[REGISTER_FROM_PCLOUD] Thumbnail obtenido: %s", thumb)
+            rec.sudo().write({'thumb_url': thumb})
+            _logger.info("[REGISTER_FROM_PCLOUD] Thumbnail guardado en BD para foto %s", rec.id)
+        else:
+            thumb = f'/gallery/preview/{rec.id}'
+            _logger.warning("[REGISTER_FROM_PCLOUD] Thumbnail no generado, usando fallback")
 
-    return {
-        'id': rec.id,
-        'sequence': rec.sequence,
-        'nombre_foto': rec.nombre_foto,
-        'thumb_url': thumb,
-    }
+        return {
+            'id': rec.id,
+            'sequence': rec.sequence,
+            'nombre_foto': rec.nombre_foto,
+            'thumb_url': thumb,
+        }
