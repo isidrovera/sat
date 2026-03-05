@@ -63,77 +63,131 @@ class ReparacionFoto(models.Model):
     ]
 
     
+    
     @api.model_create_multi
     def create(self, vals_list):
-        """Sobrescribe el método create para manejar la subida de fotos"""
-        for vals in vals_list:
-            _logger.info("[CREATE] Iniciando creación de foto con valores: %s", vals)
-            
-            if 'reparacion_id' in vals:
-                # Obtener la siguiente secuencia
-                existing_photos = self.search([
-                    ('reparacion_id', '=', vals['reparacion_id'])
-                ], order='sequence desc', limit=1)
-                vals['sequence'] = (existing_photos.sequence or 0) + 1
-                _logger.info("[CREATE] Asignada secuencia: %s", vals['sequence'])
+        """Sobrescribe el método create para manejar la subida de fotos con control de concurrencia"""
 
-            # Generar ID único
-            timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-            random_string = hashlib.md5(str(datetime.now().timestamp()).encode()).hexdigest()[:6]
-            vals['unique_id'] = f"{timestamp}_{random_string}"
-            _logger.info("[CREATE] Generado ID único: %s", vals['unique_id'])
+        max_retries = 3
 
-            if 'foto_binario' in vals:
-                try:
-                    vals['state'] = 'uploading'
-                    # Obtener la reparación
-                    reparacion = self.env['reparaciones.reparaciones'].browse(vals['reparacion_id'])
-                    if not reparacion:
-                        _logger.error("[CREATE] No se encontró la reparación: %s", vals['reparacion_id'])
-                        raise ValidationError("No se encontró la reparación relacionada")
+        for attempt in range(max_retries):
 
-                    archivo_binario = base64.b64decode(vals['foto_binario'])
-                    vals['size'] = len(archivo_binario)
-                    
-                    # Configuración pCloud
-                    pcloud_config = self.env['pcloud.configuracion'].search([], limit=1)
-                    if not pcloud_config or not pcloud_config.access_token:
-                        _logger.error("[CREATE] No se encontró configuración de pCloud válida")
-                        raise ValidationError("Configuración de pCloud no encontrada")
+            try:
 
-                    # Obtener folder_id
-                    folder_id = self._obtener_folder_id(reparacion, pcloud_config)
-                    _logger.info("[CREATE] Carpeta pCloud obtenida: %s", folder_id)
-                    
-                    # Subir archivo
-                    result = self._upload_to_pcloud(
-                        archivo_binario,
-                        vals['nombre_foto'],
-                        folder_id,
-                        pcloud_config
+                for vals in vals_list:
+
+                    _logger.info("[CREATE] Iniciando creación de foto con valores: %s", vals)
+
+                    # -------------------------------------------------
+                    # SECUENCIA SEGURA DESDE SQL
+                    # -------------------------------------------------
+                    if 'reparacion_id' in vals:
+
+                        self.env.cr.execute("""
+                            SELECT COALESCE(MAX(sequence),0) + 1
+                            FROM reparaciones_foto
+                            WHERE reparacion_id = %s
+                        """, (vals['reparacion_id'],))
+
+                        vals['sequence'] = self.env.cr.fetchone()[0]
+
+                        _logger.info("[CREATE] Secuencia segura asignada: %s", vals['sequence'])
+
+                    # -------------------------------------------------
+                    # GENERAR ID ÚNICO
+                    # -------------------------------------------------
+                    timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+                    random_string = hashlib.md5(
+                        str(datetime.now().timestamp()).encode()
+                    ).hexdigest()[:6]
+
+                    vals['unique_id'] = f"{timestamp}_{random_string}"
+
+                    _logger.info("[CREATE] Generado ID único: %s", vals['unique_id'])
+
+                    # -------------------------------------------------
+                    # SI HAY ARCHIVO BINARIO → SUBIR A PCLOUD
+                    # -------------------------------------------------
+                    if 'foto_binario' in vals:
+
+                        try:
+
+                            vals['state'] = 'uploading'
+
+                            reparacion = self.env['reparaciones.reparaciones'].browse(vals['reparacion_id'])
+
+                            if not reparacion:
+                                raise ValidationError("No se encontró la reparación relacionada")
+
+                            archivo_binario = base64.b64decode(vals['foto_binario'])
+                            vals['size'] = len(archivo_binario)
+
+                            # configuración pcloud
+                            pcloud_config = self.env['pcloud.configuracion'].search([], limit=1)
+
+                            if not pcloud_config or not pcloud_config.access_token:
+                                raise ValidationError("Configuración de pCloud no encontrada")
+
+                            # obtener carpeta
+                            folder_id = self._obtener_folder_id(reparacion, pcloud_config)
+
+                            _logger.info("[CREATE] Carpeta pCloud obtenida: %s", folder_id)
+
+                            # subir archivo
+                            result = self._upload_to_pcloud(
+                                archivo_binario,
+                                vals['nombre_foto'],
+                                folder_id,
+                                pcloud_config
+                            )
+
+                            if result:
+
+                                vals.update({
+                                    'file_id': result['file_id'],
+                                    'url_foto': result['url'],
+                                    'public_link': result.get('public_link'),
+                                    'thumb_url': result.get('thumb_url'),
+                                    'state': 'done',
+                                    'size': result.get('size', vals['size']),
+                                    'mimetype': result.get('content_type', 'application/octet-stream')
+                                })
+
+                                del vals['foto_binario']
+
+                            else:
+
+                                vals['state'] = 'error'
+                                raise ValidationError("Error al subir la foto a pCloud")
+
+                        except Exception as e:
+
+                            _logger.exception("[CREATE] Error durante la subida: %s", str(e))
+                            vals['state'] = 'error'
+                            raise ValidationError(f"Error al subir la foto: {str(e)}")
+
+                # -------------------------------------------------
+                # CREAR REGISTROS
+                # -------------------------------------------------
+                return super().create(vals_list)
+
+            # -------------------------------------------------
+            # MANEJO DE COLISIÓN DE SECUENCIA
+            # -------------------------------------------------
+            except errors.UniqueViolation:
+
+                _logger.warning(
+                    "[CREATE] Colisión de secuencia detectada. Reintentando intento %s/%s",
+                    attempt + 1,
+                    max_retries
+                )
+
+                self.env.cr.rollback()
+
+                if attempt == max_retries - 1:
+                    raise ValidationError(
+                        "No se pudo crear la foto por colisión de secuencia. Intente nuevamente."
                     )
-
-                    if result:
-                        vals.update({
-                            'file_id': result['file_id'],
-                            'url_foto': result['url'],
-                            'public_link': result.get('public_link'),
-                            'thumb_url': result.get('thumb_url'),
-                            'state': 'done',
-                            'size': result.get('size', vals['size']),
-                            'mimetype': result.get('content_type', 'application/octet-stream')
-                        })
-                        del vals['foto_binario']
-                    else:
-                        vals['state'] = 'error'
-                        raise ValidationError("Error al subir la foto a pCloud")
-
-                except Exception as e:
-                    _logger.exception("[CREATE] Error durante la creación: %s", str(e))
-                    vals['state'] = 'error'
-                    raise ValidationError(f"Error al subir la foto: {str(e)}")
-
-        return super().create(vals_list)
     
     def upload_to_pcloud(self):
         pcloud_config = self.env['pcloud.configuracion'].sudo().search([], limit=1)

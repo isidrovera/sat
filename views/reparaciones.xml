@@ -49,11 +49,11 @@
               type="object"
               string="Imprimir"
               class="btn-primary"/>
-            <button name="action_reset_all_migration_finalizados" 
+           <!-- <button name="action_reset_all_migration_finalizados" 
               string="Resetear Migración"
               type="object"
               class="btn-warning"
-              confirm="¿Está seguro de resetear la migración de todos los registros finalizados seleccionados?"/>
+              confirm="¿Está seguro de resetear la migración de todos los registros finalizados seleccionados?"/>-->
 
             <field name="estado_id" widget="statusbar" statusbar_visible="true" />
             <button
