@@ -432,6 +432,11 @@ class GalleryController(http.Controller):
         return Response(json.dumps(data), status=status, headers=[('Content-Type', 'application/json')])
 
     def _next_sequence_value(self, reparacion_id):
+        # Lock al padre para serializar inserts concurrentes de la misma reparación
+        request.env.cr.execute(
+            "SELECT id FROM reparaciones_reparaciones WHERE id = %s FOR UPDATE",
+            [reparacion_id]
+        )
         Foto = request.env['reparaciones.foto'].sudo()
         last = Foto.search([('reparacion_id', '=', reparacion_id)], order='sequence desc', limit=1)
         return (last.sequence if last else 0) + 1
