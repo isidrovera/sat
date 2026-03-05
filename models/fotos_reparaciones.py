@@ -65,19 +65,22 @@ class ReparacionFoto(models.Model):
     
     @api.model_create_multi
     def create(self, vals_list):
-        """Sobrescribe el método create para manejar la subida de fotos"""
         for vals in vals_list:
             _logger.info("[CREATE] Iniciando creación de foto con valores: %s", vals)
-            
+
             if 'reparacion_id' in vals:
-                # Obtener la siguiente secuencia
+                # Lock al padre para serializar inserts concurrentes
+                self.env.cr.execute(
+                    "SELECT id FROM reparaciones_reparaciones WHERE id = %s FOR UPDATE",
+                    [vals['reparacion_id']]
+                )
+
                 existing_photos = self.search([
                     ('reparacion_id', '=', vals['reparacion_id'])
                 ], order='sequence desc', limit=1)
                 vals['sequence'] = (existing_photos.sequence or 0) + 1
                 _logger.info("[CREATE] Asignada secuencia: %s", vals['sequence'])
 
-            # Generar ID único
             timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
             random_string = hashlib.md5(str(datetime.now().timestamp()).encode()).hexdigest()[:6]
             vals['unique_id'] = f"{timestamp}_{random_string}"
@@ -86,7 +89,6 @@ class ReparacionFoto(models.Model):
             if 'foto_binario' in vals:
                 try:
                     vals['state'] = 'uploading'
-                    # Obtener la reparación
                     reparacion = self.env['reparaciones.reparaciones'].browse(vals['reparacion_id'])
                     if not reparacion:
                         _logger.error("[CREATE] No se encontró la reparación: %s", vals['reparacion_id'])
@@ -94,18 +96,15 @@ class ReparacionFoto(models.Model):
 
                     archivo_binario = base64.b64decode(vals['foto_binario'])
                     vals['size'] = len(archivo_binario)
-                    
-                    # Configuración pCloud
+
                     pcloud_config = self.env['pcloud.configuracion'].search([], limit=1)
                     if not pcloud_config or not pcloud_config.access_token:
                         _logger.error("[CREATE] No se encontró configuración de pCloud válida")
                         raise ValidationError("Configuración de pCloud no encontrada")
 
-                    # Obtener folder_id
                     folder_id = self._obtener_folder_id(reparacion, pcloud_config)
                     _logger.info("[CREATE] Carpeta pCloud obtenida: %s", folder_id)
-                    
-                    # Subir archivo
+
                     result = self._upload_to_pcloud(
                         archivo_binario,
                         vals['nombre_foto'],
@@ -1305,106 +1304,76 @@ class ReparacionFoto(models.Model):
             return None
 
     @api.model
-    def register_from_pcloud(self, reparacion_id, filename, sequence=None):
-        """
-        Crea el registro 'reparaciones.foto' para un archivo que ya fue subido
-        directamente a pCloud en la carpeta de la reparación.
-        """
+def register_from_pcloud(self, reparacion_id, filename, sequence=None):
+    _logger.info("[REGISTER_FROM_PCLOUD] reparacion_id=%s filename=%s sequence=%s",
+                reparacion_id, filename, sequence)
 
-        _logger.info("[REGISTER_FROM_PCLOUD] reparacion_id=%s filename=%s sequence=%s",
-                    reparacion_id, filename, sequence)
+    rep = self.env['reparaciones.reparaciones'].sudo().browse(reparacion_id)
 
-        rep = self.env['reparaciones.reparaciones'].sudo().browse(reparacion_id)
+    if not rep.exists():
+        _logger.error("[REGISTER_FROM_PCLOUD] Reparación no encontrada: %s", reparacion_id)
+        raise ValidationError('Reparación no encontrada')
 
-        if not rep.exists():
-            _logger.error("[REGISTER_FROM_PCLOUD] Reparación no encontrada: %s", reparacion_id)
-            raise ValidationError('Reparación no encontrada')
+    cfg = self.env['pcloud.configuracion'].sudo().search([], limit=1)
 
-        cfg = self.env['pcloud.configuracion'].sudo().search([], limit=1)
+    if not cfg or not cfg.access_token or not cfg.hostname:
+        _logger.error("[REGISTER_FROM_PCLOUD] Configuración de pCloud no encontrada")
+        raise ValidationError("Configuración de pCloud no encontrada")
 
-        if not cfg or not cfg.access_token or not cfg.hostname:
-            _logger.error("[REGISTER_FROM_PCLOUD] Configuración de pCloud no encontrada")
-            raise ValidationError("Configuración de pCloud no encontrada")
+    folder_id = self._obtener_folder_id(rep, cfg)
+    _logger.info("[REGISTER_FROM_PCLOUD] folder_id obtenido: %s", folder_id)
 
-        # -------------------------------------------------
-        # Obtener carpeta pCloud
-        # -------------------------------------------------
-        folder_id = self._obtener_folder_id(rep, cfg)
+    meta = self._find_file_in_folder(folder_id, filename, cfg)
 
-        _logger.info("[REGISTER_FROM_PCLOUD] folder_id obtenido: %s", folder_id)
+    if not meta:
+        _logger.error("[REGISTER_FROM_PCLOUD] Archivo no encontrado en pCloud: %s", filename)
+        raise ValidationError("Archivo no encontrado en la carpeta de la reparación")
 
-        # -------------------------------------------------
-        # Buscar archivo en la carpeta
-        # -------------------------------------------------
-        meta = self._find_file_in_folder(folder_id, filename, cfg)
+    _logger.info("[REGISTER_FROM_PCLOUD] Archivo encontrado file_id=%s", meta['file_id'])
 
-        if not meta:
-            _logger.error("[REGISTER_FROM_PCLOUD] Archivo no encontrado en pCloud: %s", filename)
-            raise ValidationError("Archivo no encontrado en la carpeta de la reparación")
+    if sequence is None:
+        # Lock al padre para serializar inserts concurrentes
+        self.env.cr.execute(
+            "SELECT id FROM reparaciones_reparaciones WHERE id = %s FOR UPDATE",
+            [reparacion_id]
+        )
 
-        _logger.info("[REGISTER_FROM_PCLOUD] Archivo encontrado file_id=%s", meta['file_id'])
+        last = self.search(
+            [('reparacion_id', '=', reparacion_id)],
+            order='sequence desc',
+            limit=1
+        )
 
-        # -------------------------------------------------
-        # Obtener secuencia
-        # -------------------------------------------------
-        if sequence is None:
+        sequence = (last.sequence or 0) + 1
+        _logger.info("[REGISTER_FROM_PCLOUD] Secuencia calculada: %s", sequence)
 
-            last = self.search(
-                [('reparacion_id', '=', reparacion_id)],
-                order='sequence desc',
-                limit=1
-            )
+    vals = {
+        'reparacion_id': reparacion_id,
+        'nombre_foto': filename,
+        'file_id': meta['file_id'],
+        'size': meta.get('size') or 0,
+        'mimetype': meta.get('contenttype') or 'application/octet-stream',
+        'sequence': sequence,
+        'state': 'done',
+    }
 
-            sequence = (last.sequence or 0) + 1
+    rec = self.sudo().create(vals)
+    _logger.info("[REGISTER_FROM_PCLOUD] Registro creado ID=%s", rec.id)
 
-            _logger.info("[REGISTER_FROM_PCLOUD] Secuencia calculada: %s", sequence)
+    _logger.info("[REGISTER_FROM_PCLOUD] Generando thumbnail para file_id=%s", rec.file_id)
+    thumb = self._get_thumb_url(rec.file_id, cfg)
 
-        # -------------------------------------------------
-        # Crear registro
-        # -------------------------------------------------
-        vals = {
-            'reparacion_id': reparacion_id,
-            'nombre_foto': filename,
-            'file_id': meta['file_id'],
-            'size': meta.get('size') or 0,
-            'mimetype': meta.get('contenttype') or 'application/octet-stream',
-            'sequence': sequence,
-            'state': 'done',
-        }
+    if thumb:
+        _logger.info("[REGISTER_FROM_PCLOUD] Thumbnail obtenido: %s", thumb)
+        rec.sudo().write({'thumb_url': thumb})
+        _logger.info("[REGISTER_FROM_PCLOUD] Thumbnail guardado en BD para foto %s", rec.id)
+    else:
+        thumb = f'/gallery/preview/{rec.id}'
+        _logger.warning("[REGISTER_FROM_PCLOUD] Thumbnail no generado, usando fallback")
 
-        rec = self.sudo().create(vals)
-
-        _logger.info("[REGISTER_FROM_PCLOUD] Registro creado ID=%s", rec.id)
-
-        # -------------------------------------------------
-        # Generar thumbnail
-        # -------------------------------------------------
-        _logger.info("[REGISTER_FROM_PCLOUD] Generando thumbnail para file_id=%s", rec.file_id)
-
-        thumb = self._get_thumb_url(rec.file_id, cfg)
-
-        # -------------------------------------------------
-        # Guardar thumbnail en BD
-        # -------------------------------------------------
-        if thumb:
-
-            _logger.info("[REGISTER_FROM_PCLOUD] Thumbnail obtenido: %s", thumb)
-
-            rec.sudo().write({
-                'thumb_url': thumb
-            })
-
-            _logger.info("[REGISTER_FROM_PCLOUD] Thumbnail guardado en BD para foto %s", rec.id)
-
-        else:
-
-            thumb = f'/gallery/preview/{rec.id}'
-
-            _logger.warning("[REGISTER_FROM_PCLOUD] Thumbnail no generado, usando fallback")
-
-        return {
-            'id': rec.id,
-            'sequence': rec.sequence,
-            'nombre_foto': rec.nombre_foto,
-            'thumb_url': thumb,
-        }
+    return {
+        'id': rec.id,
+        'sequence': rec.sequence,
+        'nombre_foto': rec.nombre_foto,
+        'thumb_url': thumb,
+    }
