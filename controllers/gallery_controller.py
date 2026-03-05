@@ -10,6 +10,7 @@ import time
 import uuid
 from urllib.parse import quote
 from werkzeug.exceptions import RequestEntityTooLarge
+from psycopg2.errors import SerializationFailure
 
 _logger = logging.getLogger(__name__)
 
@@ -176,6 +177,8 @@ class GalleryController(http.Controller):
     @http.route('/gallery/pcloud/upload-direct/<int:reparacion_id>', type='http', auth='user', methods=['POST'], csrf=False)
     def pcloud_upload_direct(self, reparacion_id, **kwargs):
 
+        from psycopg2.errors import SerializationFailure
+
         if not request.env.user or request.env.user._is_public():
             return _login_redirect_response()
 
@@ -199,7 +202,6 @@ class GalleryController(http.Controller):
                 return self._json({'success': False, 'error': 'No se recibió archivo'}, status=400)
 
             file = files[0]
-           
 
             folder_id = self._ensure_folder_in_pcloud(reparacion, pconf)
 
@@ -240,15 +242,46 @@ class GalleryController(http.Controller):
 
             Foto = request.env['reparaciones.foto'].sudo()
 
-            rec = Foto.create({
-                'reparacion_id': reparacion_id,
-                'nombre_foto': file.filename,
-                'file_id': str(file_id),
-                'state': 'done',
-                'size': meta.get('size') or 0,
-                'mimetype': meta.get('contenttype') or file.mimetype or 'image/jpeg',
-            })
+            # -------------------------
+            # CREATE CON RETRY
+            # -------------------------
+            max_retry = 5
+            attempt = 0
 
+            while True:
+
+                try:
+
+                    rec = Foto.create({
+                        'reparacion_id': reparacion_id,
+                        'nombre_foto': file.filename,
+                        'file_id': str(file_id),
+                        'state': 'done',
+                        'size': meta.get('size') or 0,
+                        'mimetype': meta.get('contenttype') or file.mimetype or 'image/jpeg',
+                    })
+
+                    break
+
+                except SerializationFailure:
+
+                    attempt += 1
+                    request.env.cr.rollback()
+
+                    if attempt >= max_retry:
+                        raise
+
+                    _logger.warning(
+                        "[PCL_UPLOAD_DIRECT] Retry create foto (%s/%s)",
+                        attempt,
+                        max_retry
+                    )
+
+                    time.sleep(0.2)
+
+            # -------------------------
+            # GENERAR URLs
+            # -------------------------
             try:
 
                 file_url = rec._get_file_url(rec.file_id, pconf)
@@ -267,7 +300,13 @@ class GalleryController(http.Controller):
 
                 _logger.warning("[PCL_UPLOAD_DIRECT] No se pudieron generar URLs: %s", e)
 
-            _logger.info("[PCL_UPLOAD_DIRECT] OK -> foto_id=%s file_id=%s seq=%s", rec.id, file_id, rec.sequence)
+            _logger.info(
+                "[PCL_UPLOAD_DIRECT] OK -> foto_id=%s file_id=%s seq=%s",
+                rec.id,
+                file_id,
+                rec.sequence
+            )
+
             return self._json({
                 'success': True,
                 'foto_id': rec.id,
