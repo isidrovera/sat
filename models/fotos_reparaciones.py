@@ -68,13 +68,11 @@ class ReparacionFoto(models.Model):
         for vals in vals_list:
             _logger.info("[CREATE] Iniciando creación de foto con valores: %s", vals)
 
-            if 'reparacion_id' in vals:
-                # Lock al padre para serializar inserts concurrentes
+            if 'reparacion_id' in vals and 'sequence' not in vals:
                 self.env.cr.execute(
                     "SELECT id FROM reparaciones_reparaciones WHERE id = %s FOR UPDATE",
                     [vals['reparacion_id']]
                 )
-
                 existing_photos = self.search([
                     ('reparacion_id', '=', vals['reparacion_id'])
                 ], order='sequence desc', limit=1)
