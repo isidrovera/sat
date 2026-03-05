@@ -442,7 +442,7 @@ class GalleryController(http.Controller):
             "SELECT COALESCE(MAX(sequence), 0) + 1 FROM reparaciones_foto WHERE reparacion_id = %s",
             [reparacion_id]
         )
-    return request.env.cr.fetchone()[0]
+        return request.env.cr.fetchone()[0]
     def _ensure_folder_in_pcloud(self, reparacion, pconf):
         """
         Garantiza:
