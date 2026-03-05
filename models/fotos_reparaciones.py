@@ -72,41 +72,40 @@ class ReparacionFoto(models.Model):
 
             reparacion_id = vals.get('reparacion_id')
 
-            # -----------------------------------
-            # ASIGNAR SECUENCIA (CRÍTICO)
-            # -----------------------------------
+            # --------------------------------------------------
+            # ASIGNAR SECUENCIA SEGURA (SIN COLISIONES)
+            # --------------------------------------------------
             if reparacion_id:
 
-                # lock de la reparación para evitar colisiones
-                self.env.cr.execute(
-                    "SELECT id FROM reparaciones_reparaciones WHERE id = %s FOR UPDATE",
-                    [reparacion_id]
-                )
+                # incremento atómico en PostgreSQL
+                self.env.cr.execute("""
+                    UPDATE reparaciones_reparaciones
+                    SET last_photo_sequence = COALESCE(last_photo_sequence,0) + 1
+                    WHERE id = %s
+                    RETURNING last_photo_sequence
+                """, [reparacion_id])
 
-                last = self.search(
-                    [('reparacion_id', '=', reparacion_id)],
-                    order='sequence desc',
-                    limit=1
-                )
+                seq = self.env.cr.fetchone()[0]
 
-                next_sequence = (last.sequence or 0) + 1
-                vals['sequence'] = next_sequence
+                vals['sequence'] = seq
 
-                _logger.info("[CREATE] Secuencia asignada automáticamente: %s", next_sequence)
+                _logger.info("[CREATE] Secuencia asignada automáticamente: %s", seq)
 
-            # -----------------------------------
+            # --------------------------------------------------
             # GENERAR ID ÚNICO
-            # -----------------------------------
+            # --------------------------------------------------
             timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-            random_string = hashlib.md5(str(datetime.now().timestamp()).encode()).hexdigest()[:6]
+            random_string = hashlib.md5(
+                str(datetime.now().timestamp()).encode()
+            ).hexdigest()[:6]
 
             vals['unique_id'] = f"{timestamp}_{random_string}"
 
             _logger.info("[CREATE] Generado ID único: %s", vals['unique_id'])
 
-            # -----------------------------------
-            # SUBIDA A PCLOUD SI ES BINARIO
-            # -----------------------------------
+            # --------------------------------------------------
+            # SUBIDA A PCLOUD SI HAY BINARIO
+            # --------------------------------------------------
             if 'foto_binario' in vals:
 
                 try:
@@ -120,12 +119,15 @@ class ReparacionFoto(models.Model):
                         raise ValidationError("No se encontró la reparación relacionada")
 
                     archivo_binario = base64.b64decode(vals['foto_binario'])
+
                     vals['size'] = len(archivo_binario)
 
                     pcloud_config = self.env['pcloud.configuracion'].search([], limit=1)
 
                     if not pcloud_config or not pcloud_config.access_token:
+
                         _logger.error("[CREATE] No se encontró configuración de pCloud válida")
+
                         raise ValidationError("Configuración de pCloud no encontrada")
 
                     folder_id = self._obtener_folder_id(reparacion, pcloud_config)
@@ -156,6 +158,7 @@ class ReparacionFoto(models.Model):
                     else:
 
                         vals['state'] = 'error'
+
                         raise ValidationError("Error al subir la foto a pCloud")
 
                 except Exception as e:
@@ -167,6 +170,8 @@ class ReparacionFoto(models.Model):
                     raise ValidationError(f"Error al subir la foto: {str(e)}")
 
         return super().create(vals_list)
+
+
     
     def upload_to_pcloud(self):
         pcloud_config = self.env['pcloud.configuracion'].sudo().search([], limit=1)

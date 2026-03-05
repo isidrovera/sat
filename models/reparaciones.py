@@ -250,6 +250,10 @@ class Reparaciones(models.Model):
         _logger.info(f"✅ Creados {accesorios_creados} accesorios para reparación {self.id}")
         _logger.info(f"🎉 Total evaluaciones auto-cargadas: {componentes_creados + accesorios_creados}")
     # --- NUEVOS CAMPOS EN Reparaciones ---
+    last_photo_sequence = fields.Integer(
+    string="Última secuencia de foto",
+    default=0
+)
     pcloud_folder_id = fields.Char(string='pCloud Folder ID', copy=False)
     pcloud_upload_code = fields.Char(string='pCloud Upload Code', copy=False)
     pcloud_upload_expires = fields.Datetime(string='pCloud Upload Expira', copy=False)
