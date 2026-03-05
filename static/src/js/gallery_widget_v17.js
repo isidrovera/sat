@@ -364,38 +364,56 @@
 
     // --------------- subida DIRECTA ---------------
     async uploadBatch() {
+
       if (!(await this.ensureAuthOrRedirect())) return;
 
       if (this.uploadingBatch || this.capturedPhotos.length === 0) return;
 
       this.uploadingBatch = true;
       this.updateBatchUI();
-      this.showLoading(true, 'Subiendo lote...');
+
+      const total = this.capturedPhotos.length;
+      let uploaded = 0;
+
+      this.showLoading(true, `Subiendo 0 / ${total}`);
 
       try {
 
         for (const item of this.capturedPhotos) {
-          await this.uploadOneDirectToPcloud(item.file);
-        }
 
-        await Promise.all(uploads);
+          await this.uploadOneDirectToPcloud(item.file);
+
+          uploaded++;
+
+          this.showLoading(true, `Subiendo ${uploaded} / ${total}`);
+        }
 
         this.clearPending();
 
         await this.showModal({
           title: 'Lote subido',
-          message: 'Las fotos fueron subidas correctamente.',
+          message: `${uploaded} fotos fueron subidas correctamente.`,
           variant: 'success',
         });
 
         setTimeout(() => window.location.reload(), 400);
 
       } catch (e) {
+
         console.error('Error en subida por lotes', e);
+
+        await this.showModal({
+          title: 'Error',
+          message: 'Ocurrió un problema durante la subida.',
+          variant: 'error',
+        });
+
       } finally {
+
         this.uploadingBatch = false;
         this.updateBatchUI();
         this.showLoading(false);
+
       }
     },
 
