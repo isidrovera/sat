@@ -65,42 +65,71 @@ class ReparacionFoto(models.Model):
     
     @api.model_create_multi
     def create(self, vals_list):
+
         for vals in vals_list:
+
             _logger.info("[CREATE] Iniciando creación de foto con valores: %s", vals)
 
-            if 'reparacion_id' in vals and 'sequence' not in vals:
+            reparacion_id = vals.get('reparacion_id')
+
+            # -----------------------------------
+            # ASIGNAR SECUENCIA (CRÍTICO)
+            # -----------------------------------
+            if reparacion_id:
+
+                # lock de la reparación para evitar colisiones
                 self.env.cr.execute(
                     "SELECT id FROM reparaciones_reparaciones WHERE id = %s FOR UPDATE",
-                    [vals['reparacion_id']]
+                    [reparacion_id]
                 )
-                existing_photos = self.search([
-                    ('reparacion_id', '=', vals['reparacion_id'])
-                ], order='sequence desc', limit=1)
-                vals['sequence'] = (existing_photos.sequence or 0) + 1
-                _logger.info("[CREATE] Asignada secuencia: %s", vals['sequence'])
 
+                last = self.search(
+                    [('reparacion_id', '=', reparacion_id)],
+                    order='sequence desc',
+                    limit=1
+                )
+
+                next_sequence = (last.sequence or 0) + 1
+                vals['sequence'] = next_sequence
+
+                _logger.info("[CREATE] Secuencia asignada automáticamente: %s", next_sequence)
+
+            # -----------------------------------
+            # GENERAR ID ÚNICO
+            # -----------------------------------
             timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
             random_string = hashlib.md5(str(datetime.now().timestamp()).encode()).hexdigest()[:6]
+
             vals['unique_id'] = f"{timestamp}_{random_string}"
+
             _logger.info("[CREATE] Generado ID único: %s", vals['unique_id'])
 
+            # -----------------------------------
+            # SUBIDA A PCLOUD SI ES BINARIO
+            # -----------------------------------
             if 'foto_binario' in vals:
+
                 try:
+
                     vals['state'] = 'uploading'
-                    reparacion = self.env['reparaciones.reparaciones'].browse(vals['reparacion_id'])
-                    if not reparacion:
-                        _logger.error("[CREATE] No se encontró la reparación: %s", vals['reparacion_id'])
+
+                    reparacion = self.env['reparaciones.reparaciones'].browse(reparacion_id)
+
+                    if not reparacion.exists():
+                        _logger.error("[CREATE] No se encontró la reparación: %s", reparacion_id)
                         raise ValidationError("No se encontró la reparación relacionada")
 
                     archivo_binario = base64.b64decode(vals['foto_binario'])
                     vals['size'] = len(archivo_binario)
 
                     pcloud_config = self.env['pcloud.configuracion'].search([], limit=1)
+
                     if not pcloud_config or not pcloud_config.access_token:
                         _logger.error("[CREATE] No se encontró configuración de pCloud válida")
                         raise ValidationError("Configuración de pCloud no encontrada")
 
                     folder_id = self._obtener_folder_id(reparacion, pcloud_config)
+
                     _logger.info("[CREATE] Carpeta pCloud obtenida: %s", folder_id)
 
                     result = self._upload_to_pcloud(
@@ -111,6 +140,7 @@ class ReparacionFoto(models.Model):
                     )
 
                     if result:
+
                         vals.update({
                             'file_id': result['file_id'],
                             'url_foto': result['url'],
@@ -120,14 +150,20 @@ class ReparacionFoto(models.Model):
                             'size': result.get('size', vals['size']),
                             'mimetype': result.get('content_type', 'application/octet-stream')
                         })
+
                         del vals['foto_binario']
+
                     else:
+
                         vals['state'] = 'error'
                         raise ValidationError("Error al subir la foto a pCloud")
 
                 except Exception as e:
+
                     _logger.exception("[CREATE] Error durante la creación: %s", str(e))
+
                     vals['state'] = 'error'
+
                     raise ValidationError(f"Error al subir la foto: {str(e)}")
 
         return super().create(vals_list)

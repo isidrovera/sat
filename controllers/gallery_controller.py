@@ -199,13 +199,7 @@ class GalleryController(http.Controller):
                 return self._json({'success': False, 'error': 'No se recibió archivo'}, status=400)
 
             file = files[0]
-
-            sequence = request.httprequest.form.get('sequence')
-
-            if sequence and sequence.isdigit():
-                sequence = int(sequence)
-            else:
-                sequence = self._next_sequence_value(reparacion_id)
+           
 
             folder_id = self._ensure_folder_in_pcloud(reparacion, pconf)
 
@@ -249,7 +243,6 @@ class GalleryController(http.Controller):
             rec = Foto.create({
                 'reparacion_id': reparacion_id,
                 'nombre_foto': file.filename,
-                'sequence': sequence,
                 'file_id': str(file_id),
                 'state': 'done',
                 'size': meta.get('size') or 0,
@@ -274,8 +267,7 @@ class GalleryController(http.Controller):
 
                 _logger.warning("[PCL_UPLOAD_DIRECT] No se pudieron generar URLs: %s", e)
 
-            _logger.info("[PCL_UPLOAD_DIRECT] OK -> foto_id=%s file_id=%s seq=%s", rec.id, file_id, sequence)
-
+            _logger.info("[PCL_UPLOAD_DIRECT] OK -> foto_id=%s file_id=%s seq=%s", rec.id, file_id, rec.sequence)
             return self._json({
                 'success': True,
                 'foto_id': rec.id,
