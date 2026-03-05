@@ -374,9 +374,9 @@
 
       try {
 
-        const uploads = this.capturedPhotos.map(item =>
-          this.uploadOneDirectToPcloud(item.file)
-        );
+        for (const item of this.capturedPhotos) {
+          await this.uploadOneDirectToPcloud(item.file);
+        }
 
         await Promise.all(uploads);
 
