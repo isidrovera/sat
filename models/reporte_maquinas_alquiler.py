@@ -654,14 +654,14 @@ class ReporteEstadoMaquina(models.Model):
         for solicitud in solicitudes_partes:
             for linea in solicitud.parte_ids:
 
-                # Solo registrar partes realmente retiradas o reemplazadas
+                # Solo registrar partes retiradas o reemplazadas
                 if linea.estado not in ['retirado', 'reemplazado']:
                     continue
 
                 self.env['reporte.estado.maquina.parte'].create({
                     'reporte_id': reporte.id,
                     'solicitud_partes_id': solicitud.id,
-                    'nombre_parte': linea.nombre,
+                    'nombre_parte': linea.parte,   # ← ESTE ES EL CAMBIO
                     'descripcion': linea.descripcion,
                     'estado_parte': linea.estado,
                     'condicion': linea.condicion,
