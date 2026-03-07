@@ -650,9 +650,14 @@ class ReporteEstadoMaquina(models.Model):
             ('maquina_origen_id', '=', maquina.id),
             ('state', 'in', ['completed', 'replaced'])
         ])
-        
+
         for solicitud in solicitudes_partes:
             for linea in solicitud.parte_ids:
+
+                # Solo registrar partes realmente retiradas o reemplazadas
+                if linea.estado not in ['retirado', 'reemplazado']:
+                    continue
+
                 self.env['reporte.estado.maquina.parte'].create({
                     'reporte_id': reporte.id,
                     'solicitud_partes_id': solicitud.id,
@@ -660,7 +665,7 @@ class ReporteEstadoMaquina(models.Model):
                     'descripcion': linea.descripcion,
                     'estado_parte': linea.estado,
                     'condicion': linea.condicion,
-                    'fecha_solicitud': solicitud.fecha_solicitud.date(),
+                    'fecha_solicitud': solicitud.fecha_solicitud.date() if solicitud.fecha_solicitud else False,
                     'maquina_destino': solicitud.maquina_destino_id.serie if solicitud.maquina_destino_id else ''
                 })
 
