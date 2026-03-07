@@ -381,6 +381,11 @@ class ReporteEstadoMaquina(models.Model):
         'reporte_id',
         string='Partes Retiradas/Reemplazadas'
     )
+    partes_tecnico_ids = fields.One2many(
+        'reporte.gestion.partes.tecnico',
+        'maquina_id',
+        string='Partes Técnicos'
+    )
     
     # Historial de alquileres
     historial_alquileres_ids = fields.One2many(
@@ -668,6 +673,29 @@ class ReporteEstadoMaquina(models.Model):
                     'fecha_solicitud': solicitud.fecha_solicitud.date() if solicitud.fecha_solicitud else False,
                     'maquina_destino': solicitud.maquina_destino_id.serie if solicitud.maquina_destino_id else ''
                 })
+
+
+    @api.model
+    def generar_reporte_partes_tecnicos(self):
+
+        # limpiar reporte anterior
+        self.search([]).unlink()
+
+        lineas = self.env['solicitud.parte.tecnico.linea'].search([])
+
+        for linea in lineas:
+
+            origen = linea._get_origen_display()
+
+            self.create({
+                'fecha': linea.solicitud_id.fecha_solicitud,
+                'solicitud_id': linea.solicitud_id.id,
+                'tecnico_id': linea.solicitud_id.tecnico_id.id,
+                'maquina_id': linea.solicitud_id.maquina_id.id,
+                'parte': linea.parte,
+                'estado': linea.state,
+                'origen': origen
+            })
 
     def _generar_pdf_reporte(self, fecha_reporte):
         """
@@ -1493,3 +1521,36 @@ class ReporteEstadoMaquinaWizard(models.TransientModel):
         """
         if self.estados_maquina != 'personalizado':
             self.estados_personalizados = False
+
+class ReporteGestionPartesTecnico(models.Model):
+    _name = 'reporte.gestion.partes.tecnico'
+    _description = 'Reporte Gestión de Partes Técnicos'
+    _order = 'fecha desc'
+
+    fecha = fields.Datetime(string="Fecha")
+
+    solicitud_id = fields.Many2one(
+        'solicitud.parte.tecnico',
+        string="Solicitud"
+    )
+
+    tecnico_id = fields.Many2one(
+        'res.users',
+        string="Técnico"
+    )
+
+    maquina_id = fields.Many2one(
+        'sat.sat',
+        string="Máquina"
+    )
+
+    parte = fields.Char(string="Parte")
+
+    estado = fields.Selection([
+        ('buscando', 'Buscando'),
+        ('encontrada', 'Encontrada'),
+        ('por_conseguir', 'Por Conseguir'),
+        ('entregada', 'Entregada'),
+    ], string="Estado")
+
+    origen = fields.Char(string="Origen")

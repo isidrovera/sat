@@ -182,6 +182,17 @@
                                 </list>
                             </field>
                         </page>
+                        <page string="Partes Técnicos Corapsac" name="partes_tecnico">
+                            <field name="partes_tecnico_ids">
+                                <list>
+                                    <field name="solicitud_id"/>
+                                    <field name="tecnico_id"/>
+                                    <field name="parte"/>
+                                    <field name="estado"/>
+                                    <field name="origen"/>
+                                </list>
+                            </field>
+                        </page>
 
                         <page string="Historial de Alquileres" name="historial_alquileres">
                             <field name="historial_alquileres_ids">
