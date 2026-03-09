@@ -83,7 +83,7 @@ if config:
             <field name="nextcall" eval="(DateTime.now() + timedelta(minutes=5)).strftime('%Y-%m-%d %H:%M:%S')"/>
             <field name="active" eval="True"/>
             <field name="priority">10</field>
-            <field name="user_id" ref="base.user_admin"/>
+            <field name="user_id" ref="base.user_root"/>
         </record>
         <record id="cron_ticket_en_revision" model="ir.cron">
             <field name="name">Tracking: en_sitio → en_revision automático</field>
