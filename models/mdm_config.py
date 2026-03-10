@@ -72,7 +72,8 @@ class MdmConfig(models.Model):
     # ---------------------------------------------------------
 
     def _get_password_md5(self):
-        md5 = hashlib.md5(self.password.encode()).hexdigest().upper()
+        # Sin .upper() — Headwind espera minúsculas
+        md5 = hashlib.md5(self.password.encode()).hexdigest()
         _logger.info("[MDM] Password MD5 generado")
         return md5
 
@@ -121,21 +122,17 @@ class MdmConfig(models.Model):
 
         _logger.info("[MDM] Solicitando nuevo JWT")
 
-        # Paso 1: Login
-        login_url = f"{self.url}/rest/public/auth/login"
+        # Un solo paso: /rest/public/login
+        login_url = f"{self.url}/rest/public/login"
 
         payload = {
             'login': self.login,
-            'password': self._get_password_md5()
+            'password': self._get_password_md5()  # ← también corregir el MD5
         }
 
         _logger.info("[MDM] Login URL: %s", login_url)
 
-        resp = requests.post(
-            login_url,
-            json=payload,
-            timeout=10
-        )
+        resp = requests.post(login_url, json=payload, timeout=10)
 
         _logger.info("[MDM] Login status: %s", resp.status_code)
         _logger.debug("[MDM] Login response: %s", resp.text)
@@ -147,33 +144,11 @@ class MdmConfig(models.Model):
         if data.get('status') != 'OK':
             raise UserError('Login fallido en Headwind MDM')
 
-        auth_token = data.get('data', {}).get('authToken')
-
-        if not auth_token:
-            raise UserError('No se recibió authToken')
-
-        _logger.info("[MDM] AuthToken recibido")
-
-        # Paso 2: Obtener JWT
-        jwt_url = f"{self.url}/rest/public/jwt/login"
-
-        _logger.info("[MDM] Solicitando JWT")
-
-        resp2 = requests.post(
-            jwt_url,
-            json={'authToken': auth_token},
-            timeout=10
-        )
-
-        _logger.info("[MDM] JWT status: %s", resp2.status_code)
-        _logger.debug("[MDM] JWT response: %s", resp2.text)
-
-        resp2.raise_for_status()
-
-        token = resp2.json().get('id_token')
+        # Token viene directo en data['data']['token']
+        token = data.get('data', {}).get('token')
 
         if not token:
-            raise UserError('No se obtuvo JWT token')
+            raise UserError('No se recibió JWT token')
 
         expiry = now + datetime.timedelta(hours=23)
 
@@ -183,7 +158,6 @@ class MdmConfig(models.Model):
         })
 
         _logger.info("[MDM] JWT guardado correctamente")
-
         return token
 
     # ---------------------------------------------------------
