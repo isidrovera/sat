@@ -58,49 +58,54 @@ class MdmConfig(models.Model):
             raise UserError(f'Error de conexión: {str(e)}')
 
     def _get_jwt_token(self):
-        """Obtiene o refresca el JWT token"""
         self.ensure_one()
         import datetime
+
         now = fields.Datetime.now()
 
-        # Si hay token válido, reutilizarlo
         if self.jwt_token and self.token_expiry and self.token_expiry > now:
             return self.jwt_token
 
-        # Login paso 1: obtener authToken con MD5
+        # Paso 1: login
         login_url = f"{self.url}/rest/public/auth/login"
         resp = requests.post(login_url, json={
             'login': self.login,
             'password': self._get_password_md5()
         }, timeout=10)
+
         resp.raise_for_status()
         data = resp.json()
+
         if data.get('status') != 'OK':
             raise UserError('Login fallido en Headwind MDM')
 
-        # Login paso 2: obtener JWT
+        auth_token = data.get('data', {}).get('authToken')
+
+        # Paso 2: obtener JWT
         jwt_url = f"{self.url}/rest/public/jwt/login"
         resp2 = requests.post(jwt_url, json={
-            'login': self.login,
-            'password': self._get_password_md5()
+            'authToken': auth_token
         }, timeout=10)
+
         resp2.raise_for_status()
         token = resp2.json().get('id_token')
+
         if not token:
             raise UserError('No se obtuvo JWT token')
 
-        # Guardar token con expiración de 23 horas
         expiry = now + datetime.timedelta(hours=23)
+
         self.sudo().write({
             'jwt_token': token,
             'token_expiry': expiry,
         })
+
         return token
 
     def _get_headers(self):
         return {
-            'Content-Type': 'application/json',
-            'Authorization': f'Bearer {self._get_jwt_token()}'
+            "Authorization": f"Bearer {self._get_jwt_token()}",
+            "Content-Type": "application/json"
         }
 
     def action_sync_devices(self):
