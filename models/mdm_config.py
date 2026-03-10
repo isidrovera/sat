@@ -140,6 +140,20 @@ class MdmConfig(models.Model):
 
         return auth_token
 
+
+    def _get_headers(self):
+        """
+        Genera los headers necesarios para llamar a la API de Headwind MDM
+        """
+        self.ensure_one()
+
+        token = self._get_jwt_token()
+
+        return {
+            'Authorization': token,
+            'Content-Type': 'application/json'
+        }
+
     # ---------------------------------------------------------
     # SINCRONIZAR DISPOSITIVOS
     # ---------------------------------------------------------
