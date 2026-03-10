@@ -170,12 +170,17 @@ class MdmConfig(models.Model):
 
         _logger.info("[MDM] Endpoint: %s", url)
 
-        resp = requests.get(
-            f"{url}?pageNum=1&pageSize=200",
+        payload = {
+            "pageNum": 1,
+            "pageSize": 200
+        }
+
+        resp = requests.post(
+            url,
             headers=headers,
+            json=payload,
             timeout=15
         )
-
         _logger.info("[MDM] Status API: %s", resp.status_code)
         _logger.debug("[MDM] Respuesta API: %s", resp.text)
 
