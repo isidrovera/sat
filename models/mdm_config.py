@@ -67,15 +67,7 @@ class MdmConfig(models.Model):
                 ('config_id', '=', rec.id)
             ])
 
-    # ---------------------------------------------------------
-    # UTILIDADES
-    # ---------------------------------------------------------
-
-    def _get_password_md5(self):
-        # SIN .upper() — Headwind MDM espera minúsculas
-        md5 = hashlib.md5(self.password.encode()).hexdigest()
-        _logger.info("[MDM] Password MD5 generado")
-        return md5
+   
 
     # ---------------------------------------------------------
     # TEST CONEXION
@@ -111,6 +103,11 @@ class MdmConfig(models.Model):
     # OBTENER JWT TOKEN
     # ---------------------------------------------------------
 
+    def _get_password_md5(self):
+        md5 = hashlib.md5(self.password.encode()).hexdigest()  # SIN .upper()
+        _logger.info("[MDM] Password MD5 generado: %s", md5)
+        return md5
+
     def _get_jwt_token(self):
         self.ensure_one()
 
@@ -139,27 +136,23 @@ class MdmConfig(models.Model):
         )
 
         _logger.info("[MDM] Login status: %s", resp.status_code)
-        _logger.info("[MDM] Login response raw: %s", resp.text)  # VER RESPUESTA REAL
+        _logger.info("[MDM] Login response raw: %s", resp.text)
 
         resp.raise_for_status()
 
         data = resp.json()
 
-        _logger.info("[MDM] Login response parsed: %s", data)  # VER ESTRUCTURA JSON
+        _logger.info("[MDM] Login response parsed: %s", data)
 
-        # Intentar extraer authToken con múltiples estructuras posibles
-        auth_token = (
-            data.get('authToken')                        # estructura plana
-            or data.get('data', {}).get('authToken')     # estructura anidada en 'data'
-            or data.get('token')                         # campo alternativo
-            or data.get('data', {}).get('token')         # anidado alternativo
-        )
+        if data.get('status') != 'OK':
+            _logger.error("[MDM] Login rechazado por servidor: %s", data)
+            raise UserError(f'Login fallido en Headwind MDM. Respuesta: {data}')
 
-        _logger.info("[MDM] AuthToken extraído: %s", bool(auth_token))
+        auth_token = data.get('data', {}).get('authToken')
 
         if not auth_token:
-            _logger.error("[MDM] No se encontró authToken en: %s", data)
-            raise UserError(f'No se recibió authToken. Respuesta: {data}')
+            _logger.error("[MDM] No se encontró authToken en data: %s", data.get('data'))
+            raise UserError(f'No se recibió authToken. Data: {data.get("data")}')
 
         _logger.info("[MDM] AuthToken recibido OK")
 
@@ -175,20 +168,19 @@ class MdmConfig(models.Model):
         )
 
         _logger.info("[MDM] JWT status: %s", resp2.status_code)
-        _logger.info("[MDM] JWT response raw: %s", resp2.text)  # VER RESPUESTA REAL
+        _logger.info("[MDM] JWT response raw: %s", resp2.text)
 
         resp2.raise_for_status()
 
         data2 = resp2.json()
 
-        _logger.info("[MDM] JWT response parsed: %s", data2)  # VER ESTRUCTURA JSON
+        _logger.info("[MDM] JWT response parsed: %s", data2)
 
-        # Intentar extraer token con múltiples estructuras posibles
         token = (
-            data2.get('id_token')                    # estructura típica JWT
-            or data2.get('token')                    # alternativo
-            or data2.get('data', {}).get('token')    # anidado
-            or data2.get('jwtToken')                 # otro posible nombre
+            data2.get('id_token')
+            or data2.get('token')
+            or data2.get('data', {}).get('token')
+            or data2.get('jwtToken')
         )
 
         if not token:
@@ -205,22 +197,6 @@ class MdmConfig(models.Model):
         _logger.info("[MDM] JWT guardado correctamente")
 
         return token
-    # ---------------------------------------------------------
-    # HEADERS API
-    # ---------------------------------------------------------
-
-    def _get_headers(self):
-
-        token = self._get_jwt_token()
-
-        headers = {
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json"
-        }
-
-        _logger.debug("[MDM] Headers generados")
-
-        return headers
 
     # ---------------------------------------------------------
     # SINCRONIZAR DISPOSITIVOS
