@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 import hashlib
-from odoo import models, fields, api, _
-from odoo.exceptions import UserError
+import datetime
 import requests
 import logging
+
+from odoo import models, fields, api, _
+from odoo.exceptions import UserError
 
 _logger = logging.getLogger(__name__)
 
@@ -16,34 +18,79 @@ class MdmConfig(models.Model):
     url = fields.Char(
         string='URL del servidor',
         required=True,
-        default='https://it.andessolutioncopiers.com',
-        help='URL base del servidor Headwind MDM'
+        default='https://it.andessolutioncopiers.com'
     )
-    login = fields.Char(string='Usuario', required=True, default='admin')
-    password = fields.Char(string='Contraseña', required=True)
-    active = fields.Boolean(string='Activo', default=True)
-    jwt_token = fields.Char(string='JWT Token', readonly=True)
-    token_expiry = fields.Datetime(string='Expiración Token', readonly=True)
-    last_sync = fields.Datetime(string='Última sincronización', readonly=True)
+
+    login = fields.Char(
+        string='Usuario',
+        required=True,
+        default='admin'
+    )
+
+    password = fields.Char(
+        string='Contraseña',
+        required=True
+    )
+
+    active = fields.Boolean(
+        string='Activo',
+        default=True
+    )
+
+    jwt_token = fields.Char(
+        string='JWT Token',
+        readonly=True
+    )
+
+    token_expiry = fields.Datetime(
+        string='Expiración Token',
+        readonly=True
+    )
+
+    last_sync = fields.Datetime(
+        string='Última sincronización',
+        readonly=True
+    )
+
     device_count = fields.Integer(
         string='Dispositivos',
         compute='_compute_device_count'
     )
 
+    # ---------------------------------------------------------
+    # COMPUTE
+    # ---------------------------------------------------------
+
     def _compute_device_count(self):
         for rec in self:
-            rec.device_count = self.env['mdm.device'].search_count(
-                [('config_id', '=', rec.id)]
-            )
+            rec.device_count = self.env['mdm.device'].search_count([
+                ('config_id', '=', rec.id)
+            ])
+
+    # ---------------------------------------------------------
+    # UTILIDADES
+    # ---------------------------------------------------------
 
     def _get_password_md5(self):
-        return hashlib.md5(self.password.encode()).hexdigest().upper()
+        md5 = hashlib.md5(self.password.encode()).hexdigest().upper()
+        _logger.info("[MDM] Password MD5 generado")
+        return md5
+
+    # ---------------------------------------------------------
+    # TEST CONEXION
+    # ---------------------------------------------------------
 
     def action_test_connection(self):
         self.ensure_one()
+
+        _logger.info("[MDM] Probando conexión con servidor %s", self.url)
+
         try:
             token = self._get_jwt_token()
+
             if token:
+                _logger.info("[MDM] Conexión exitosa. JWT recibido")
+
                 return {
                     'type': 'ir.actions.client',
                     'tag': 'display_notification',
@@ -54,26 +101,47 @@ class MdmConfig(models.Model):
                         'sticky': False,
                     }
                 }
+
         except Exception as e:
+            _logger.error("[MDM] Error conexión: %s", e)
             raise UserError(f'Error de conexión: {str(e)}')
+
+    # ---------------------------------------------------------
+    # OBTENER JWT TOKEN
+    # ---------------------------------------------------------
 
     def _get_jwt_token(self):
         self.ensure_one()
-        import datetime
 
         now = fields.Datetime.now()
 
         if self.jwt_token and self.token_expiry and self.token_expiry > now:
+            _logger.info("[MDM] Reutilizando JWT existente")
             return self.jwt_token
 
-        # Paso 1: login
+        _logger.info("[MDM] Solicitando nuevo JWT")
+
+        # Paso 1: Login
         login_url = f"{self.url}/rest/public/auth/login"
-        resp = requests.post(login_url, json={
+
+        payload = {
             'login': self.login,
             'password': self._get_password_md5()
-        }, timeout=10)
+        }
+
+        _logger.info("[MDM] Login URL: %s", login_url)
+
+        resp = requests.post(
+            login_url,
+            json=payload,
+            timeout=10
+        )
+
+        _logger.info("[MDM] Login status: %s", resp.status_code)
+        _logger.debug("[MDM] Login response: %s", resp.text)
 
         resp.raise_for_status()
+
         data = resp.json()
 
         if data.get('status') != 'OK':
@@ -81,13 +149,27 @@ class MdmConfig(models.Model):
 
         auth_token = data.get('data', {}).get('authToken')
 
-        # Paso 2: obtener JWT
+        if not auth_token:
+            raise UserError('No se recibió authToken')
+
+        _logger.info("[MDM] AuthToken recibido")
+
+        # Paso 2: Obtener JWT
         jwt_url = f"{self.url}/rest/public/jwt/login"
-        resp2 = requests.post(jwt_url, json={
-            'authToken': auth_token
-        }, timeout=10)
+
+        _logger.info("[MDM] Solicitando JWT")
+
+        resp2 = requests.post(
+            jwt_url,
+            json={'authToken': auth_token},
+            timeout=10
+        )
+
+        _logger.info("[MDM] JWT status: %s", resp2.status_code)
+        _logger.debug("[MDM] JWT response: %s", resp2.text)
 
         resp2.raise_for_status()
+
         token = resp2.json().get('id_token')
 
         if not token:
@@ -97,36 +179,72 @@ class MdmConfig(models.Model):
 
         self.sudo().write({
             'jwt_token': token,
-            'token_expiry': expiry,
+            'token_expiry': expiry
         })
+
+        _logger.info("[MDM] JWT guardado correctamente")
 
         return token
 
+    # ---------------------------------------------------------
+    # HEADERS API
+    # ---------------------------------------------------------
+
     def _get_headers(self):
-        return {
-            "Authorization": f"Bearer {self._get_jwt_token()}",
+
+        token = self._get_jwt_token()
+
+        headers = {
+            "Authorization": f"Bearer {token}",
             "Content-Type": "application/json"
         }
 
+        _logger.debug("[MDM] Headers generados")
+
+        return headers
+
+    # ---------------------------------------------------------
+    # SINCRONIZAR DISPOSITIVOS
+    # ---------------------------------------------------------
+
     def action_sync_devices(self):
+
         self.ensure_one()
+
+        _logger.info("[MDM] Iniciando sincronización manual")
+
         headers = self._get_headers()
+
         url = f"{self.url}/rest/private/devices/search"
-        resp = requests.post(url, headers=headers, json={
-            'pageNum': 1,
-            'pageSize': 200
-        }, timeout=15)
+
+        _logger.info("[MDM] Endpoint: %s", url)
+
+        resp = requests.get(
+            f"{url}?pageNum=1&pageSize=200",
+            headers=headers,
+            timeout=15
+        )
+
+        _logger.info("[MDM] Status API: %s", resp.status_code)
+        _logger.debug("[MDM] Respuesta API: %s", resp.text)
+
         resp.raise_for_status()
+
         data = resp.json()
+
         if data.get('status') != 'OK':
             raise UserError('Error al obtener dispositivos')
 
         devices = data['data']['devices']['items']
+
         MdmDevice = self.env['mdm.device']
+
         synced = 0
 
         for dev in devices:
+
             info = dev.get('info') or {}
+
             existing = MdmDevice.search([
                 ('device_number', '=', dev['number']),
                 ('config_id', '=', self.id)
@@ -150,11 +268,18 @@ class MdmConfig(models.Model):
 
             if existing:
                 existing.write(vals)
+                _logger.info("[MDM] Dispositivo actualizado: %s", dev['number'])
             else:
                 MdmDevice.create(vals)
+                _logger.info("[MDM] Dispositivo creado: %s", dev['number'])
+
             synced += 1
 
-        self.sudo().write({'last_sync': fields.Datetime.now()})
+        self.sudo().write({
+            'last_sync': fields.Datetime.now()
+        })
+
+        _logger.info("[MDM] Sincronización completada (%s dispositivos)", synced)
 
         return {
             'type': 'ir.actions.client',
@@ -167,56 +292,65 @@ class MdmConfig(models.Model):
             }
         }
 
+    # ---------------------------------------------------------
+    # CRON SINCRONIZACION
+    # ---------------------------------------------------------
+
     @api.model
     def cron_sync_all_devices(self):
-        """
-        Ejecutar cada 10 minutos.
-        Sincroniza estado, batería y conexión de todos los dispositivos
-        de todas las configuraciones MDM activas.
-        """
-        configs = self.sudo().search([('active', '=', True)])
-        if not configs:
-            _logger.info("[MDM-CRON] Sin configuraciones activas")
-            return
 
-        _logger.info("[MDM-CRON] Sincronizando %d configuración(es)", len(configs))
+        configs = self.sudo().search([
+            ('active', '=', True)
+        ])
+
+        _logger.info("[MDM-CRON] Configuraciones activas: %s", len(configs))
 
         for config in configs:
             try:
                 config._sync_devices_silencioso()
-                _logger.info("[MDM-CRON] ✅ Config %s sincronizada", config.url)
             except Exception as e:
-                _logger.error("[MDM-CRON] ❌ Error sincronizando %s: %s", config.url, e)
+                _logger.error("[MDM-CRON] Error: %s", e)
+
+    # ---------------------------------------------------------
+    # SYNC SILENCIOSO
+    # ---------------------------------------------------------
 
     def _sync_devices_silencioso(self):
-        """
-        Igual que action_sync_devices pero sin retornar notificación UI.
-        Para uso desde cron.
-        """
+
         self.ensure_one()
+
+        _logger.info("[MDM-CRON] Sincronizando %s", self.url)
+
         headers = self._get_headers()
+
         url = f"{self.url}/rest/private/devices/search"
 
-        resp = requests.post(url, headers=headers, json={
-            'pageNum': 1,
-            'pageSize': 200,
-        }, timeout=15)
+        resp = requests.get(
+            f"{url}?pageNum=1&pageSize=200",
+            headers=headers,
+            timeout=15
+        )
+
         resp.raise_for_status()
+
         data = resp.json()
 
         if data.get('status') != 'OK':
-            raise Exception(f'API respondió: {data.get("status")}')
+            raise Exception("API error")
 
         devices = data['data']['devices']['items']
+
         MdmDevice = self.env['mdm.device']
-        synced = 0
-        ahora = fields.Datetime.now()
+
+        now = fields.Datetime.now()
 
         for dev in devices:
+
             info = dev.get('info') or {}
+
             existing = MdmDevice.search([
                 ('device_number', '=', dev['number']),
-                ('config_id', '=', self.id),
+                ('config_id', '=', self.id)
             ], limit=1)
 
             vals = {
@@ -224,28 +358,27 @@ class MdmConfig(models.Model):
                 'device_number': dev['number'],
                 'device_id_mdm': dev.get('id'),
                 'status_code': dev.get('statusCode', 'grey'),
-                'model': info.get('model', ''),
-                'android_version': info.get('androidVersion', ''),
-                'imei': info.get('imei', ''),
-                'phone': info.get('phone', ''),
                 'battery_level': info.get('batteryLevel', 0),
-                'launcher_version': dev.get('launcherVersion', ''),
-                'last_update': ahora,
-                'mdm_mode': info.get('mdmMode', False),
-                'kiosk_mode': info.get('kioskMode', False),
+                'last_update': now,
             }
 
             if existing:
                 existing.write(vals)
             else:
                 MdmDevice.create(vals)
-            synced += 1
 
-        self.sudo().write({'last_sync': ahora})
-        _logger.info("[MDM-CRON] %d dispositivos actualizados en %s", synced, self.url)
+        self.sudo().write({'last_sync': now})
+
+        _logger.info("[MDM-CRON] Sync finalizado")
+
+    # ---------------------------------------------------------
+    # VER DISPOSITIVOS
+    # ---------------------------------------------------------
 
     def action_view_devices(self):
+
         self.ensure_one()
+
         return {
             'type': 'ir.actions.act_window',
             'name': 'Dispositivos MDM',
