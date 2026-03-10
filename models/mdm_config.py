@@ -144,7 +144,10 @@ class MdmConfig(models.Model):
         headers = {
             "Authorization": token,
             "Content-Type": "application/json",
-            "Accept": "application/json"
+            "Accept": "application/json",
+            "User-Agent": "Mozilla/5.0",
+            "Origin": self.url,
+            "Referer": f"{self.url}/"
         }
 
         _logger.info("[MDM] Headers generados: %s", headers)
