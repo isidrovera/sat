@@ -139,26 +139,34 @@ class MdmConfig(models.Model):
         )
 
         _logger.info("[MDM] Login status: %s", resp.status_code)
-        _logger.debug("[MDM] Login response: %s", resp.text)
+        _logger.info("[MDM] Login response raw: %s", resp.text)  # VER RESPUESTA REAL
 
         resp.raise_for_status()
 
         data = resp.json()
 
-        if data.get('status') != 'OK':
-            raise UserError('Login fallido en Headwind MDM')
+        _logger.info("[MDM] Login response parsed: %s", data)  # VER ESTRUCTURA JSON
 
-        auth_token = data.get('data', {}).get('authToken')
+        # Intentar extraer authToken con múltiples estructuras posibles
+        auth_token = (
+            data.get('authToken')                        # estructura plana
+            or data.get('data', {}).get('authToken')     # estructura anidada en 'data'
+            or data.get('token')                         # campo alternativo
+            or data.get('data', {}).get('token')         # anidado alternativo
+        )
+
+        _logger.info("[MDM] AuthToken extraído: %s", bool(auth_token))
 
         if not auth_token:
-            raise UserError('No se recibió authToken')
+            _logger.error("[MDM] No se encontró authToken en: %s", data)
+            raise UserError(f'No se recibió authToken. Respuesta: {data}')
 
-        _logger.info("[MDM] AuthToken recibido")
+        _logger.info("[MDM] AuthToken recibido OK")
 
         # Paso 2: Obtener JWT
         jwt_url = f"{self.url}/rest/public/jwt/login"
 
-        _logger.info("[MDM] Solicitando JWT")
+        _logger.info("[MDM] Solicitando JWT en: %s", jwt_url)
 
         resp2 = requests.post(
             jwt_url,
@@ -167,14 +175,25 @@ class MdmConfig(models.Model):
         )
 
         _logger.info("[MDM] JWT status: %s", resp2.status_code)
-        _logger.debug("[MDM] JWT response: %s", resp2.text)
+        _logger.info("[MDM] JWT response raw: %s", resp2.text)  # VER RESPUESTA REAL
 
         resp2.raise_for_status()
 
-        token = resp2.json().get('id_token')
+        data2 = resp2.json()
+
+        _logger.info("[MDM] JWT response parsed: %s", data2)  # VER ESTRUCTURA JSON
+
+        # Intentar extraer token con múltiples estructuras posibles
+        token = (
+            data2.get('id_token')                    # estructura típica JWT
+            or data2.get('token')                    # alternativo
+            or data2.get('data', {}).get('token')    # anidado
+            or data2.get('jwtToken')                 # otro posible nombre
+        )
 
         if not token:
-            raise UserError('No se obtuvo JWT token')
+            _logger.error("[MDM] No se encontró JWT en: %s", data2)
+            raise UserError(f'No se obtuvo JWT token. Respuesta: {data2}')
 
         expiry = now + datetime.timedelta(hours=23)
 
@@ -186,7 +205,6 @@ class MdmConfig(models.Model):
         _logger.info("[MDM] JWT guardado correctamente")
 
         return token
-
     # ---------------------------------------------------------
     # HEADERS API
     # ---------------------------------------------------------
