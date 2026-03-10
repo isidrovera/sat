@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import hashlib
-import datetime
 import requests
 import logging
 
@@ -73,15 +72,11 @@ class MdmConfig(models.Model):
 
     def action_test_connection(self):
         self.ensure_one()
-
         _logger.info("[MDM] Probando conexión con servidor %s", self.url)
-
         try:
             token = self._get_jwt_token()
-
             if token:
                 _logger.info("[MDM] Conexión exitosa. JWT recibido")
-
                 return {
                     'type': 'ir.actions.client',
                     'tag': 'display_notification',
@@ -92,13 +87,14 @@ class MdmConfig(models.Model):
                         'sticky': False,
                     }
                 }
-
         except Exception as e:
             _logger.error("[MDM] Error conexión: %s", e)
             raise UserError(f'Error de conexión: {str(e)}')
 
     # ---------------------------------------------------------
     # OBTENER JWT TOKEN
+    # FIX: usar /rest/public/jwt/login (no auth/login)
+    #      que devuelve id_token JWT real para la API privada
     # ---------------------------------------------------------
 
     def _get_password_md5(self):
@@ -107,48 +103,34 @@ class MdmConfig(models.Model):
         return md5
 
     def _get_jwt_token(self):
-
-        login_url = f"{self.url}/rest/public/auth/login"
+        # CORRECTO: jwt/login devuelve id_token (JWT largo)
+        # INCORRECTO: auth/login devuelve authToken (solo para la UI web)
+        login_url = f"{self.url}/rest/public/jwt/login"
 
         payload = {
             "login": self.login,
             "password": self._get_password_md5()
         }
 
-        resp = requests.post(
-            login_url,
-            json=payload,
-            timeout=10
-        )
-
+        resp = requests.post(login_url, json=payload, timeout=10)
         resp.raise_for_status()
-
         data = resp.json()
 
-        if data.get("status") != "OK":
-            raise UserError(f"Login fallido: {data}")
+        token = data.get("id_token")
+        if not token:
+            raise UserError(f"Login JWT fallido, respuesta: {data}")
 
-        token = data["data"]["authToken"]
-
-        _logger.info("[MDM] Nuevo authToken obtenido: %s", token)
-
+        _logger.info("[MDM] JWT obtenido correctamente")
         return token
 
     def _get_headers(self):
-
         token = self._get_jwt_token()
-
         headers = {
-            "Authorization": f"Bearer {token}",  # FIX: prefijo Bearer requerido
+            "Authorization": f"Bearer {token}",
             "Content-Type": "application/json",
             "Accept": "application/json",
-            "User-Agent": "Mozilla/5.0",
-            "Origin": self.url,
-            "Referer": f"{self.url}/"
         }
-
-        _logger.info("[MDM] Headers generados: %s", headers)
-
+        _logger.info("[MDM] Headers listos (token JWT)")
         return headers
 
     # ---------------------------------------------------------
@@ -156,48 +138,29 @@ class MdmConfig(models.Model):
     # ---------------------------------------------------------
 
     def action_sync_devices(self):
-
         self.ensure_one()
-
         _logger.info("[MDM] Iniciando sincronización manual")
 
         headers = self._get_headers()
-
         url = f"{self.url}/rest/private/devices/search"
-
         _logger.info("[MDM] Endpoint: %s", url)
 
-        payload = {
-            "pageNum": 1,
-            "pageSize": 200
-        }
+        payload = {"pageNum": 1, "pageSize": 200}
 
-        resp = requests.post(
-            url,
-            headers=headers,
-            json=payload,
-            timeout=15
-        )
+        resp = requests.post(url, headers=headers, json=payload, timeout=15)
         _logger.info("[MDM] Status API: %s", resp.status_code)
-        _logger.debug("[MDM] Respuesta API: %s", resp.text)
-
         resp.raise_for_status()
 
         data = resp.json()
-
         if data.get('status') != 'OK':
-            raise UserError('Error al obtener dispositivos')
+            raise UserError(f"Error al obtener dispositivos: {data}")
 
         devices = data['data']['devices']['items']
-
         MdmDevice = self.env['mdm.device']
-
         synced = 0
 
         for dev in devices:
-
             info = dev.get('info') or {}
-
             existing = MdmDevice.search([
                 ('device_number', '=', dev['number']),
                 ('config_id', '=', self.id)
@@ -228,10 +191,7 @@ class MdmConfig(models.Model):
 
             synced += 1
 
-        self.sudo().write({
-            'last_sync': fields.Datetime.now()
-        })
-
+        self.sudo().write({'last_sync': fields.Datetime.now()})
         _logger.info("[MDM] Sincronización completada (%s dispositivos)", synced)
 
         return {
@@ -251,13 +211,8 @@ class MdmConfig(models.Model):
 
     @api.model
     def cron_sync_all_devices(self):
-
-        configs = self.sudo().search([
-            ('active', '=', True)
-        ])
-
+        configs = self.sudo().search([('active', '=', True)])
         _logger.info("[MDM-CRON] Configuraciones activas: %s", len(configs))
-
         for config in configs:
             try:
                 config._sync_devices_silencioso()
@@ -269,44 +224,26 @@ class MdmConfig(models.Model):
     # ---------------------------------------------------------
 
     def _sync_devices_silencioso(self):
-
         self.ensure_one()
-
         _logger.info("[MDM-CRON] Sincronizando %s", self.url)
 
         headers = self._get_headers()
-
         url = f"{self.url}/rest/private/devices/search"
+        payload = {"pageNum": 1, "pageSize": 200}
 
-        payload = {
-            "pageNum": 1,
-            "pageSize": 200
-        }
-
-        resp = requests.post(  # FIX: cambiado GET a POST (igual que action_sync_devices)
-            url,
-            headers=headers,
-            json=payload,
-            timeout=15
-        )
-
+        resp = requests.post(url, headers=headers, json=payload, timeout=15)
         resp.raise_for_status()
 
         data = resp.json()
-
         if data.get('status') != 'OK':
-            raise Exception("API error")
+            raise Exception(f"API error: {data}")
 
         devices = data['data']['devices']['items']
-
         MdmDevice = self.env['mdm.device']
-
         now = fields.Datetime.now()
 
         for dev in devices:
-
             info = dev.get('info') or {}
-
             existing = MdmDevice.search([
                 ('device_number', '=', dev['number']),
                 ('config_id', '=', self.id)
@@ -327,7 +264,6 @@ class MdmConfig(models.Model):
                 MdmDevice.create(vals)
 
         self.sudo().write({'last_sync': now})
-
         _logger.info("[MDM-CRON] Sync finalizado")
 
     # ---------------------------------------------------------
@@ -335,9 +271,7 @@ class MdmConfig(models.Model):
     # ---------------------------------------------------------
 
     def action_view_devices(self):
-
         self.ensure_one()
-
         return {
             'type': 'ir.actions.act_window',
             'name': 'Dispositivos MDM',
