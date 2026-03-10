@@ -109,13 +109,12 @@ class MdmConfig(models.Model):
         return md5
 
     def _get_jwt_token(self):
-        self.ensure_one()
 
         login_url = f"{self.url}/rest/public/auth/login"
 
         payload = {
-            'login': self.login,
-            'password': self._get_password_md5()
+            "login": self.login,
+            "password": self._get_password_md5()
         }
 
         resp = requests.post(
@@ -128,17 +127,14 @@ class MdmConfig(models.Model):
 
         data = resp.json()
 
-        if data.get('status') != 'OK':
-            raise UserError(f'Login fallido: {data}')
+        if data.get("status") != "OK":
+            raise UserError(f"Login fallido: {data}")
 
-        auth_token = data['data']['authToken']
+        token = data["data"]["authToken"]
 
-        self.sudo().write({
-            'jwt_token': auth_token,
-            'token_expiry': fields.Datetime.now() + datetime.timedelta(hours=12)
-        })
+        _logger.info("[MDM] Nuevo authToken obtenido: %s", token)
 
-        return auth_token
+        return token
 
 
     def _get_headers(self):
