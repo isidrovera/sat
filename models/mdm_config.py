@@ -67,8 +67,6 @@ class MdmConfig(models.Model):
                 ('config_id', '=', rec.id)
             ])
 
-   
-
     # ---------------------------------------------------------
     # TEST CONEXION
     # ---------------------------------------------------------
@@ -136,13 +134,12 @@ class MdmConfig(models.Model):
 
         return token
 
-
     def _get_headers(self):
 
         token = self._get_jwt_token()
 
         headers = {
-            "Authorization": token,
+            "Authorization": f"Bearer {token}",  # FIX: prefijo Bearer requerido
             "Content-Type": "application/json",
             "Accept": "application/json",
             "User-Agent": "Mozilla/5.0",
@@ -281,9 +278,15 @@ class MdmConfig(models.Model):
 
         url = f"{self.url}/rest/private/devices/search"
 
-        resp = requests.get(
-            f"{url}?pageNum=1&pageSize=200",
+        payload = {
+            "pageNum": 1,
+            "pageSize": 200
+        }
+
+        resp = requests.post(  # FIX: cambiado GET a POST (igual que action_sync_devices)
+            url,
             headers=headers,
+            json=payload,
             timeout=15
         )
 
