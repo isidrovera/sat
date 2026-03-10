@@ -104,22 +104,13 @@ class MdmConfig(models.Model):
     # ---------------------------------------------------------
 
     def _get_password_md5(self):
-        md5 = hashlib.md5(self.password.encode()).hexdigest()  # SIN .upper()
+        md5 = hashlib.md5(self.password.encode()).hexdigest().upper()
         _logger.info("[MDM] Password MD5 generado: %s", md5)
         return md5
 
     def _get_jwt_token(self):
         self.ensure_one()
 
-        now = fields.Datetime.now()
-
-        if self.jwt_token and self.token_expiry and self.token_expiry > now:
-            _logger.info("[MDM] Reutilizando JWT existente")
-            return self.jwt_token
-
-        _logger.info("[MDM] Solicitando nuevo JWT")
-
-        # Paso 1: Login
         login_url = f"{self.url}/rest/public/auth/login"
 
         payload = {
@@ -127,76 +118,27 @@ class MdmConfig(models.Model):
             'password': self._get_password_md5()
         }
 
-        _logger.info("[MDM] Login URL: %s", login_url)
-
         resp = requests.post(
             login_url,
             json=payload,
             timeout=10
         )
 
-        _logger.info("[MDM] Login status: %s", resp.status_code)
-        _logger.info("[MDM] Login response raw: %s", resp.text)
-
         resp.raise_for_status()
 
         data = resp.json()
 
-        _logger.info("[MDM] Login response parsed: %s", data)
-
         if data.get('status') != 'OK':
-            _logger.error("[MDM] Login rechazado por servidor: %s", data)
-            raise UserError(f'Login fallido en Headwind MDM. Respuesta: {data}')
+            raise UserError(f'Login fallido: {data}')
 
-        auth_token = data.get('data', {}).get('authToken')
-
-        if not auth_token:
-            _logger.error("[MDM] No se encontró authToken en data: %s", data.get('data'))
-            raise UserError(f'No se recibió authToken. Data: {data.get("data")}')
-
-        _logger.info("[MDM] AuthToken recibido OK")
-
-        # Paso 2: Obtener JWT
-        jwt_url = f"{self.url}/rest/public/jwt/login"
-
-        _logger.info("[MDM] Solicitando JWT en: %s", jwt_url)
-
-        resp2 = requests.post(
-            jwt_url,
-            json={'authToken': auth_token},
-            timeout=10
-        )
-
-        _logger.info("[MDM] JWT status: %s", resp2.status_code)
-        _logger.info("[MDM] JWT response raw: %s", resp2.text)
-
-        resp2.raise_for_status()
-
-        data2 = resp2.json()
-
-        _logger.info("[MDM] JWT response parsed: %s", data2)
-
-        token = (
-            data2.get('id_token')
-            or data2.get('token')
-            or data2.get('data', {}).get('token')
-            or data2.get('jwtToken')
-        )
-
-        if not token:
-            _logger.error("[MDM] No se encontró JWT en: %s", data2)
-            raise UserError(f'No se obtuvo JWT token. Respuesta: {data2}')
-
-        expiry = now + datetime.timedelta(hours=23)
+        auth_token = data['data']['authToken']
 
         self.sudo().write({
-            'jwt_token': token,
-            'token_expiry': expiry
+            'jwt_token': auth_token,
+            'token_expiry': fields.Datetime.now() + datetime.timedelta(hours=12)
         })
 
-        _logger.info("[MDM] JWT guardado correctamente")
-
-        return token
+        return auth_token
 
     # ---------------------------------------------------------
     # SINCRONIZAR DISPOSITIVOS
