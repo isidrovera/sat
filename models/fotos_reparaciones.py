@@ -89,10 +89,17 @@ class ReparacionFoto(models.Model):
 
                         self.env.cr.execute("""
                             UPDATE reparaciones_reparaciones
-                            SET last_photo_sequence = COALESCE(last_photo_sequence,0) + 1
+                            SET last_photo_sequence = GREATEST(
+                                COALESCE(last_photo_sequence, 0),
+                                COALESCE(
+                                    (SELECT MAX(sequence) FROM reparaciones_foto 
+                                    WHERE reparacion_id = %s),
+                                    0
+                                )
+                            ) + 1
                             WHERE id = %s
                             RETURNING last_photo_sequence
-                        """, [reparacion_id])
+                        """, [reparacion_id, reparacion_id])
 
                         seq = self.env.cr.fetchone()[0]
 
