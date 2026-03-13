@@ -135,7 +135,7 @@ class SoporteMensajes(models.Model):
         mensaje += f"*INFORMACIÓN DE LA VISITA*\n"
         mensaje += f"📅 Fecha de Visita: {fecha_visita}\n"
         mensaje += f"📍 Dirección: {direccion}\n"
-        mensaje += f"👨‍🔧 Técnico Asignado: {tecnico_name}\n"
+        mensaje += f"👨‍🔧 Técnico: {tecnico_name}\n"
         mensaje += f"🆔 DNI: {tecnico_dni}\n\n"
         
         # Agrupar por tipo de servicio
@@ -550,7 +550,7 @@ Para finalizar rápidamente un ticket, ingresa a Odoo y usa la opción "Finaliza
 
         # Mensaje para el cliente
         try:
-            msg_cliente = "Estimado/a *{}*,\n\nLe informamos que hemos programado una visita técnica para atender su requerimiento. A continuación, le detallamos la información correspondiente:\n\n*Ticket #:* {}\n*Fecha de Visita:* {}\n*Tipo de servicio:* {}\n*Dirección:* {}\n*Técnico Asignado:* {}\n*DNI:* {}\n\n*ESPECIFICACIONES DEL EQUIPO*\n*Marca:* {}\n*Modelo:* {}\n*Serie:* {}\n\n*PROBLEMA REPORTADO*\n{}\n\n1. Dar autorización para el ingreso de nuestro personal a sus oficinas o el espacio donde se encuentre nuestro equipo.\n2. Disponibilidad de espacio y tiempo para que nuestro personal pueda desarrollar su labor.\n\nGracias por su atención.".format(
+            msg_cliente = "Estimado/a *{}*,\n\nLe informamos que hemos programado una visita técnica para atender su requerimiento. A continuación, le detallamos la información correspondiente:\n\n*Ticket #:* {}\n*Fecha de Visita:* {}\n*Tipo de servicio:* {}\n*Dirección:* {}\n*Técnico:* {}\n*DNI:* {}\n\n*ESPECIFICACIONES DEL EQUIPO*\n*Marca:* {}\n*Modelo:* {}\n*Serie:* {}\n\n*PROBLEMA REPORTADO*\n{}\n\n1. Dar autorización para el ingreso de nuestro personal a sus oficinas o el espacio donde se encuentre nuestro equipo.\n2. Disponibilidad de espacio y tiempo para que nuestro personal pueda desarrollar su labor.\n\nGracias por su atención.".format(
                 self.partner_id.name if self.partner_id and self.partner_id.name else 'NA',
                 self.name if self.name else 'NA',
                 self.agenda_local if self.agenda_local else 'NA',
