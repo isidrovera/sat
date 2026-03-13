@@ -775,7 +775,7 @@ class Reparaciones(models.Model):
 
     foto_problema = fields.Binary(related='maquina_id.foto_problema', string="Foto de problema")
     # Campo de descripción
-    informe = fields.Html(string='Descripción Detallada de la Revisión')
+    informe = fields.Html(string='Descripción Detallada de la Revisión',tracking=True)
     contometrok_id = fields.Char(string="Contometro", related='maquina_id.contometro', readonly=False, store=True,  tracking=True)
     contometro_inicial = fields.Char(string="Contometro Inicial", readonly=True, tracking=True )
     responsable_id = fields.Many2one( 'res.users', string='Responsable', tracking=True )
