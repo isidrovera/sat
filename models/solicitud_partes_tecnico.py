@@ -232,7 +232,8 @@ class SolicitudParteTecnico(models.Model):
                 _('Solo se pueden aprobar solicitudes en estado Pendiente de Aprobación.'))
         self.write({'state': 'aprobada'})
         self.message_post(
-            body="✅ <b>Aprobada por Gerencia.</b> Técnico notificado para retirar.")
+            body=f"✅ <b>Aprobada por Gerencia.</b><br/>Usuario: {self.env.user.name}"
+        )
         self._notificar_tecnico_retiro()
 
     def _notificar_tecnico_retiro(self):
@@ -278,7 +279,8 @@ class SolicitudParteTecnico(models.Model):
             linea.write({'state': 'entregada'})
 
         self.message_post(
-            body=f"📦 <b>Retiro confirmado.</b> Solicitud completada.")
+            body=f"📦 <b>Retiro confirmado</b><br/>Confirmado por: {self.env.user.name}"
+        )
 
         self._notificar_completada()
 
@@ -445,8 +447,10 @@ class SolicitudParteGestionarWizard(models.TransientModel):
     ], string='Sacar de')
 
     maquina_origen_alquiler_id = fields.Many2one(
-        'alquiler', string='Máquina Alquiler',
-        domain="[('estado_alquiler_id', 'not in', ['vendida', 'partes'])]")
+        'alquiler',
+        string='Máquina Alquiler',
+        domain="[('estado_alquiler_id', 'not in', ['vendida','externo','alquilada'])]"
+    )
     maquina_origen_sat_id = fields.Many2one('sat.sat', string='Máquina SAT')
     notas = fields.Text(string='Notas')
 
@@ -493,8 +497,8 @@ class SolicitudParteGestionarWizard(models.TransientModel):
         linea.solicitud_id.message_post(
             body=(
                 f"{emoji} <b>{linea.parte}</b>: {estado_label}"
-                f" → {linea._get_origen_display()}"
-                + (f"<br/>Notas: {self.notas}" if self.notas else "")
+                f" → {linea._get_origen_display()}<br/>"
+                f"Gestionado por: {self.env.user.name}"
             )
         )
 
