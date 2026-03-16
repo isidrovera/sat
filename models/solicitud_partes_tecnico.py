@@ -504,7 +504,9 @@ class SolicitudParteGestionarWizard(models.TransientModel):
 
         # Avanzar solicitud a en_gestion si es la primera línea gestionada
         solicitud = linea.solicitud_id
-        if solicitud.state == 'enviada':
+
+        # Si estaba enviada o por_conseguir vuelve a gestionarse
+        if solicitud.state in ['enviada', 'por_conseguir']:
             solicitud.write({'state': 'en_gestion'})
 
         # Verificar si ya se gestionaron todas las líneas
