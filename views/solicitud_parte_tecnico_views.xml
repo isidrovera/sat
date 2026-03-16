@@ -82,6 +82,7 @@
                                         <group>
                                             <field name="parte"/>
                                             <field name="descripcion"/>
+                                            
                                         </group>
                                         <group>
                                             <field name="foto_referencia" widget="image"/>
@@ -95,6 +96,11 @@
                                                invisible="tipo_origen != 'alquiler'"/>
                                         <field name="maquina_origen_sat_id" readonly="1"
                                                invisible="tipo_origen != 'sat'"/>
+                                        <field name="maquina_origen_alquiler_id"
+                                            invisible="tipo_origen != 'alquiler'"/>
+
+                                        <field name="maquina_origen_sat_id"
+                                            invisible="tipo_origen != 'sat'"/>
                                         <field name="notas_jefe" readonly="1"/>
                                         <field name="gestionado_por" readonly="1"/>
                                         <field name="fecha_gestion" readonly="1"/>

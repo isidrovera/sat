@@ -444,7 +444,8 @@ class SolicitudParteGestionarWizard(models.TransientModel):
     tipo_origen = fields.Selection([
         ('alquiler', 'Máquina de Alquiler'),
         ('sat',      'Máquina SAT'),
-    ], string='Sacar de')
+        ('compra',   'Compra / Logística'),
+    ], string='Origen')
 
     maquina_origen_alquiler_id = fields.Many2one(
         'alquiler',
@@ -462,14 +463,17 @@ class SolicitudParteGestionarWizard(models.TransientModel):
             self.maquina_origen_sat_id = False
 
     @api.constrains('resultado', 'tipo_origen',
-                    'maquina_origen_alquiler_id', 'maquina_origen_sat_id')
+                'maquina_origen_alquiler_id', 'maquina_origen_sat_id')
     def _check_origen(self):
         for rec in self:
             if rec.resultado == 'encontrada':
+
                 if not rec.tipo_origen:
-                    raise ValidationError(_('Debe indicar de dónde se saca la parte.'))
+                    raise ValidationError(_('Debe indicar de dónde se obtiene la parte.'))
+
                 if rec.tipo_origen == 'alquiler' and not rec.maquina_origen_alquiler_id:
                     raise ValidationError(_('Seleccione la máquina de alquiler origen.'))
+
                 if rec.tipo_origen == 'sat' and not rec.maquina_origen_sat_id:
                     raise ValidationError(_('Seleccione la máquina SAT origen.'))
 
