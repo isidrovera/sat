@@ -73,7 +73,7 @@
                                     <button name="action_gestionar"
                                             string="Gestionar" type="object"
                                             icon="fa-search"
-                                            invisible="state != 'buscando'"
+                                            invisible="state not in ['buscando','por_conseguir']"
                                             groups="base.group_system"/>
                                     
                                 </list>
