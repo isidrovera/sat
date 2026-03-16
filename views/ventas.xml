@@ -28,6 +28,17 @@
               icon="fa-images"
               class="btn-secondary"
               invisible="reparaciones_count == 0" />
+              <button name="action_entregar"
+                string="Entregar"
+                type="object"
+                class="btn-primary"
+                invisible="estado_ventas_id != 'finalizado'"/>
+
+              <button name="action_regresar_a_finalizado"
+              string="Regresar a Finalizado"
+              type="object"
+              class="btn-secondary"
+              invisible="estado_ventas_id != 'entregada'"/>
              
 
             <!--<button
@@ -355,6 +366,17 @@
               icon="fa-camera" invisible="estado_ventas_id != 'finalizado'"
               help="Abre el visor de fotos de la reparación"
           />
+           <button name="action_entregar"
+                string="Entregar"
+                type="object"
+                class="btn-primary"
+                invisible="estado_ventas_id != 'finalizado'"/>
+
+              <button name="action_regresar_a_finalizado"
+              string="Regresar a Finalizado"
+              type="object"
+              class="btn-secondary"
+              invisible="estado_ventas_id != 'entregada'"/>
         </list>
       </field>
     </record>

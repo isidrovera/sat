@@ -1949,3 +1949,37 @@ class SatSat(models.Model):
             'stock_value_available': round(stock_value_available, 2),
             'avg_precio_compra': round(avg_precio_compra, 2),
         }
+
+    def action_entregar(self):
+        """
+        Abre el wizard para registrar factura y fecha de entrega.
+        """
+        self.ensure_one()
+
+        return {
+            'name': 'Registrar entrega',
+            'type': 'ir.actions.act_window',
+            'res_model': 'sat.entrega.wizard',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {
+                'default_maquina_id': self.id,
+            }
+        }
+
+
+    def action_regresar_a_finalizado(self):
+        """
+        Regresa el estado de entregada a finalizado
+        y limpia factura y fecha.
+        """
+        for record in self:
+            record.write({
+                'estado_ventas_id': 'finalizado',
+                'factura_venta': False,
+                'fecha_entrega': False,
+            })
+
+            record.message_post(
+                body="Se regresó el estado de 'Entregada' a 'Finalizado'. Se limpiaron factura y fecha de entrega."
+            )
