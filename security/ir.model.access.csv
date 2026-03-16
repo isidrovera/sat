@@ -232,3 +232,4 @@ access_solicitud_parte_tecnico_wizard_user,solicitud.parte.tecnico.wizard user,m
 access_solicitud_parte_tecnico_wizard_linea_user,solicitud.parte.tecnico.wizard.linea user,model_solicitud_parte_tecnico_wizard_linea,base.group_user,1,1,1,1
 access_solicitud_parte_gestionar_wizard_user,solicitud.parte.gestionar.wizard user,model_solicitud_parte_gestionar_wizard,base.group_user,1,1,1,1
 access_reporte_gestion_partes_tecnico_user,reporte.gestion.partes.tecnico,model_reporte_gestion_partes_tecnico,base.group_user,1,1,1,1
+access_sat_entrega_wizard_user,sat.entrega.wizard.user,model_sat_entrega_wizard,base.group_user,1,1,1,0
