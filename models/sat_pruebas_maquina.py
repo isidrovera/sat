@@ -6,6 +6,7 @@ class SatPruebaMaquina(models.Model):
     _name = 'sat.prueba.maquina'
     _description = 'Pruebas técnicas de máquina (control de contadores)'
     _inherit = ['mail.thread', 'mail.activity.mixin']
+    _order = 'fecha_ultima_actualizacion desc, id desc'
 
     # =========================
     # RELACIONES
@@ -47,6 +48,20 @@ class SatPruebaMaquina(models.Model):
     )
 
     # =========================
+    # CONTROL HISTÓRICO
+    # =========================
+    es_snapshot = fields.Boolean(
+        string='Es snapshot inicial',
+        default=False
+    )
+
+    origen = fields.Selection([
+        ('inicio', 'Inicio'),
+        ('snmp', 'SNMP'),
+        ('manual', 'Manual'),
+    ], string='Origen', default='snmp')
+
+    # =========================
     # CONTADORES INICIALES (SNAPSHOT)
     # =========================
     contador_inicial_total = fields.Integer(string='Inicial Total')
@@ -68,6 +83,13 @@ class SatPruebaMaquina(models.Model):
     contador_copias = fields.Integer(string='Copias')
     contador_scanner = fields.Integer(string='Scanner')
     contador_duplex = fields.Integer(string='Duplex')
+
+    # =========================
+    # DELTAS (AUDITORÍA)
+    # =========================
+    delta_total = fields.Integer(string='Δ Total')
+    delta_impresiones = fields.Integer(string='Δ Impresiones')
+    delta_copias = fields.Integer(string='Δ Copias')
 
     # =========================
     # VALIDACIÓN AUTOMÁTICA
@@ -110,6 +132,12 @@ class SatPruebaMaquina(models.Model):
     toner_magenta = fields.Float(string='Tóner Magenta (%)')
     toner_amarillo = fields.Float(string='Tóner Amarillo (%)')
 
+    estado_toner = fields.Selection([
+        ('ok', 'OK'),
+        ('bajo', 'Bajo'),
+        ('critico', 'Crítico')
+    ], compute="_compute_estado_toner", store=True)
+
     # =========================
     # ESTADO GENERAL
     # =========================
@@ -125,11 +153,7 @@ class SatPruebaMaquina(models.Model):
         ('intermedio', 'Intermedio (+ Duplex)'),
         ('avanzado', 'Avanzado (+ Scanner/Color)'),
     ], string='Nivel de prueba', compute='_compute_nivel_prueba', store=True)
-    estado_toner = fields.Selection([
-        ('ok', 'OK'),
-        ('bajo', 'Bajo'),
-        ('critico', 'Crítico')
-    ], compute="_compute_estado_toner", store=True)
+
     # =========================
     # EVIDENCIA
     # =========================
@@ -154,29 +178,23 @@ class SatPruebaMaquina(models.Model):
     def _compute_pruebas(self):
         for rec in self:
 
-            # ✔ OBLIGATORIOS (comparando contra inicial)
             rec.prueba_impresion_ok = rec.contador_impresiones > rec.contador_inicial_impresiones
             rec.prueba_copia_ok = rec.contador_copias > rec.contador_inicial_copias
 
-            # ✔ OPCIONALES
             rec.prueba_scanner_ok = rec.contador_scanner > rec.contador_inicial_scanner
             rec.prueba_color_ok = rec.contador_actual_color > rec.contador_inicial_color
             rec.prueba_duplex_ok = rec.contador_duplex > rec.contador_inicial_duplex
 
-            # =========================
-            # ESTADO AUTOMÁTICO
-            # =========================
             if not rec.contador_actual_total:
                 rec.estado_prueba = 'pendiente'
             else:
-                # SOLO impresión + copia son obligatorios
                 if rec.prueba_impresion_ok and rec.prueba_copia_ok:
                     rec.estado_prueba = 'completado'
                 else:
                     rec.estado_prueba = 'incompleto'
 
     # =========================
-    # COMPUTE: NIVEL DE PRUEBA
+    # COMPUTE: NIVEL
     # =========================
     @api.depends(
         'prueba_impresion_ok',
@@ -199,14 +217,17 @@ class SatPruebaMaquina(models.Model):
             else:
                 rec.nivel_prueba = False
 
-
+    # =========================
+    # COMPUTE: TONER
+    # =========================
+    @api.depends('toner_negro', 'toner_cyan', 'toner_magenta', 'toner_amarillo')
     def _compute_estado_toner(self):
         for rec in self:
             niveles = [
-                rec.toner_black,
+                rec.toner_negro,
                 rec.toner_cyan,
                 rec.toner_magenta,
-                rec.toner_yellow
+                rec.toner_amarillo
             ]
             niveles = [n for n in niveles if n is not None]
 

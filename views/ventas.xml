@@ -401,7 +401,7 @@
                 string="Entregar"
                 type="object"
                 class="btn-primary"
-                invisible="estado_ventas_id != 'finalizado'"/>
+                invisible="estado_ventas_id != 'entregada'"/>
 
               <button name="action_regresar_a_finalizado"
               string="Regresar a Finalizado"
