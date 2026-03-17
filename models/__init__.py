@@ -88,3 +88,4 @@ from . import ticket_notificaciones_tracking
 from . import tracking_diagnostico
 from . import solicitud_partes_tecnico
 from . import sat_entrega_wizard
+from . import sat_pruebas_maquina

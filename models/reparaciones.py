@@ -94,7 +94,55 @@ class Reparaciones(models.Model):
             if 'contometrok_id' in vals:
                 vals['contometro_inicial'] = vals['contometrok_id']
                 _logger.info("Asignado 'contometro_inicial' a partir de 'contometrok_id': %s", vals['contometro_inicial'])
+        # ========================================
+        # CREAR REGISTRO DE PRUEBA AUTOMÁTICA
+        # ========================================
+        for record in records:
+            maquina = record.maquina_id
 
+            if not maquina:
+                continue
+
+            def to_int(value):
+                import re
+                digits = re.sub(r'[^\d]', '', str(value or '0'))
+                return int(digits) if digits else 0
+
+            # Evitar duplicados (por seguridad)
+            existe = self.env['sat.prueba.maquina'].search([
+                ('reparacion_id', '=', record.id)
+            ], limit=1)
+
+            if existe:
+                _logger.warning(f"[PRUEBA] Ya existe registro para reparación {record.id}")
+                continue
+
+            try:
+                self.env['sat.prueba.maquina'].create({
+                    'maquina_id': maquina.id,
+                    'reparacion_id': record.id,
+                    'tecnico_id': record.responsable_id.id if record.responsable_id else False,
+
+                    # =========================
+                    # SNAPSHOT INICIAL REAL
+                    # =========================
+                    'contador_inicial_total': to_int(maquina.contometro),
+
+                    # ⚠️ Estos luego los llenamos con SNMP
+                    'contador_inicial_bn': 0,
+                    'contador_inicial_color': 0,
+                    'contador_inicial_impresiones': 0,
+                    'contador_inicial_copias': 0,
+                    'contador_inicial_scanner': 0,
+                    'contador_inicial_duplex': 0,
+
+                    'fecha_inicio': fields.Datetime.now(),
+                })
+
+                _logger.info(f"[PRUEBA] Registro creado para reparación {record.id}")
+
+            except Exception as e:
+                _logger.error(f"[PRUEBA] Error creando prueba para reparación {record.id}: {e}")
         try:
             records = super(Reparaciones, self).create(vals_list)
             for record in records:

@@ -1011,8 +1011,51 @@ class SatSat(models.Model):
                     record.ingreso_fuente,
                 )
 
-        return result
+            # =========================================
+            # ACTUALIZAR PRUEBA TÉCNICA DESDE SNMP
+            # =========================================
+            try:
+                Prueba = self.env['sat.prueba.maquina']
 
+                prueba = Prueba.search([
+                    ('maquina_id', '=', record.id),
+                ], order='id desc', limit=1)
+
+                if prueba:
+                    def to_int(value):
+                        import re
+                        digits = re.sub(r'[^\d]', '', str(value or '0'))
+                        return int(digits) if digits else 0
+
+                    prueba.write({
+                        'contador_actual_total': to_int(record.contometro),
+
+                        # 🔥 Aquí luego conectas OIDs reales
+                        # Por ahora dejamos placeholders seguros
+                        'contador_impresiones': to_int(record.contometro),
+                        'contador_copias': to_int(record.contometro),
+
+                        # opcionales (cuando tengas OIDs)
+                        'contador_scanner': 0,
+                        'contador_duplex': 0,
+
+                        'fecha_ultima_actualizacion': fields.Datetime.now(),
+                    })
+
+                    _logger.info(f"[PRUEBA] SNMP actualizado en prueba ID {prueba.id}")
+
+                else:
+                    _logger.warning(f"[PRUEBA] No se encontró prueba activa para máquina {record.id}")
+
+            except Exception as e:
+                _logger.error(f"[PRUEBA] Error actualizando desde SNMP: {e}")
+
+        return result
+    prueba_ids = fields.One2many(
+        'sat.prueba.maquina',
+        'maquina_id',
+        string='Pruebas técnicas'
+    )
     def _is_counter_anomaly(self, old_val, new_val):
         """
         Detecta si un cambio de contador es anómalo para RECLAMAR al proveedor.
