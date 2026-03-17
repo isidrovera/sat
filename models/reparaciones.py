@@ -58,8 +58,6 @@ class Reparaciones(models.Model):
                         ('modelo_id', '=', modelo.id)
                     ])
 
-                    _logger.info("[CREATE] Modelo '%s' — componentes: %s, accesorios: %s", modelo.name, componentes, accesorios)
-
                     if componentes == 0 and accesorios == 0:
                         raise ValidationError(_(
                             "⚠️ Configuración Incompleta del Modelo\n\n"
@@ -79,29 +77,24 @@ class Reparaciones(models.Model):
                         ) % modelo.name)
 
                     if accesorios == 0:
-                        _logger.warning("[CREATE] ⚠️ Modelo '%s' no tiene accesorios configurados", modelo.name)
+                        _logger.warning(f"⚠️ Modelo {modelo.name} no tiene accesorios configurados")
 
         # ========================================
-        # ASIGNAR SECUENCIA Y VALORES INICIALES
+        # CONTINUAR CON CREACIÓN NORMAL
         # ========================================
         for vals in vals_list:
             if vals.get('name', _('New')) == _('New'):
                 vals['name'] = self.env['ir.sequence'].sudo().next_by_code('reparaciones.reparaciones') or '/'
-                _logger.info("[CREATE] Número secuencial asignado: %s", vals['name'])
+                _logger.info("Número secuencial asignado al campo 'name': %s", vals['name'])
 
             if 'contometrok_id' in vals:
                 vals['contometro_inicial'] = vals['contometrok_id']
-                _logger.info("[CREATE] 'contometro_inicial' asignado desde 'contometrok_id': %s", vals['contometro_inicial'])
+                _logger.info("Asignado 'contometro_inicial' a partir de 'contometrok_id': %s", vals['contometro_inicial'])
 
-        # ========================================
-        # CREAR REGISTROS
-        # ========================================
         try:
             records = super(Reparaciones, self).create(vals_list)
-            _logger.info("[CREATE] %s registro(s) creado(s) correctamente", len(records))
-
             for record in records:
-                _logger.info("[CREATE] Procesando post-creación para reparación ID: %s — %s", record.id, record.name)
+                _logger.info("Registro de reparación creado exitosamente con ID: %s", record.id)
 
                 # ----------------------------------------
                 # CREAR REGISTRO DE PRUEBA AUTOMÁTICA
@@ -118,27 +111,42 @@ class Reparaciones(models.Model):
                     ], limit=1)
 
                     if existe:
-                        _logger.warning("[PRUEBA] Ya existe registro de prueba para reparación ID: %s, se omite creación", record.id)
+                        _logger.warning("[PRUEBA] Ya existe registro para reparación ID %s, se omite", record.id)
                     else:
+                        # Validar que responsable_id exista como hr.employee
+                        tecnico_id = False
+                        if record.responsable_id:
+                            empleado = self.env['hr.employee'].search([
+                                ('id', '=', record.responsable_id.id)
+                            ], limit=1)
+                            if empleado:
+                                tecnico_id = empleado.id
+                            else:
+                                _logger.warning(
+                                    "[PRUEBA] responsable_id=%s no existe en hr.employee, tecnico_id quedará False",
+                                    record.responsable_id.id
+                                )
+
                         try:
-                            self.env['sat.prueba.maquina'].create({
-                                'maquina_id': maquina.id,
-                                'reparacion_id': record.id,
-                                'tecnico_id': record.responsable_id.id if record.responsable_id else False,
-                                'contador_inicial_total': to_int(maquina.contometro),
-                                'contador_inicial_bn': 0,
-                                'contador_inicial_color': 0,
-                                'contador_inicial_impresiones': 0,
-                                'contador_inicial_copias': 0,
-                                'contador_inicial_scanner': 0,
-                                'contador_inicial_duplex': 0,
-                                'fecha_inicio': fields.Datetime.now(),
-                            })
-                            _logger.info("[PRUEBA] Registro de prueba creado para reparación ID: %s", record.id)
+                            with self.env.cr.savepoint():
+                                self.env['sat.prueba.maquina'].create({
+                                    'maquina_id': maquina.id,
+                                    'reparacion_id': record.id,
+                                    'tecnico_id': tecnico_id,
+                                    'contador_inicial_total': to_int(maquina.contometro),
+                                    'contador_inicial_bn': 0,
+                                    'contador_inicial_color': 0,
+                                    'contador_inicial_impresiones': 0,
+                                    'contador_inicial_copias': 0,
+                                    'contador_inicial_scanner': 0,
+                                    'contador_inicial_duplex': 0,
+                                    'fecha_inicio': fields.Datetime.now(),
+                                })
+                            _logger.info("[PRUEBA] Registro creado para reparación ID %s — tecnico_id: %s", record.id, tecnico_id)
                         except Exception as e:
-                            _logger.error("[PRUEBA] Error al crear registro de prueba para reparación ID %s: %s", record.id, str(e))
+                            _logger.error("[PRUEBA] Error al crear prueba para reparación ID %s: %s", record.id, str(e))
                 else:
-                    _logger.warning("[PRUEBA] Reparación ID %s no tiene máquina asociada, se omite creación de prueba", record.id)
+                    _logger.warning("[PRUEBA] Reparación ID %s sin máquina asociada, se omite prueba", record.id)
 
                 # ----------------------------------------
                 # CREAR CARPETA EN PCLOUD
@@ -149,9 +157,9 @@ class Reparaciones(models.Model):
                         'pcloud_folder_id': str(folder_id),
                         'foto_galeria_nombre': f"{record.maquina_id.name.name}_{record.serie_id or 'sin_serie'}"
                     })
-                    _logger.info("[PCLOUD] Carpeta creada/asignada para reparación ID: %s — folder_id: %s", record.id, folder_id)
+                    _logger.info("Carpeta en pCloud creada o asignada correctamente para el registro ID: %s", record.id)
                 except Exception as folder_error:
-                    _logger.error("[PCLOUD] Error al crear carpeta para reparación ID %s: %s", record.id, str(folder_error))
+                    _logger.error("Error al crear la carpeta en pCloud para el registro ID %s: %s", record.id, str(folder_error))
                     raise ValidationError(_("Error al crear la carpeta en pCloud: %s") % str(folder_error))
 
                 # ----------------------------------------
@@ -159,27 +167,27 @@ class Reparaciones(models.Model):
                 # ----------------------------------------
                 try:
                     record.sudo().generate_qr_code()
-                    _logger.info("[QR] Código QR generado para reparación ID: %s", record.id)
+                    _logger.info("Código QR generado correctamente para el registro ID: %s", record.id)
                 except Exception as qr_error:
-                    _logger.error("[QR] Error al generar QR para reparación ID %s: %s", record.id, str(qr_error))
+                    _logger.error("Error al generar el código QR para el registro ID %s: %s", record.id, str(qr_error))
 
                 # ----------------------------------------
                 # AUTO-CARGAR EVALUACIONES
                 # ----------------------------------------
                 try:
                     record._seed_evaluaciones_from_modelo()
-                    _logger.info("[EVAL] Evaluaciones auto-cargadas para reparación ID: %s", record.id)
+                    _logger.info("Evaluaciones auto-cargadas para reparación ID: %s", record.id)
                 except Exception as eval_error:
-                    _logger.warning("[EVAL] No se pudieron auto-cargar evaluaciones para reparación ID %s: %s", record.id, str(eval_error))
+                    _logger.warning("No se pudieron auto-cargar evaluaciones para reparación ID %s: %s", record.id, str(eval_error))
 
             return records
 
         except KeyError as e:
-            _logger.error("[CREATE] KeyError — campo faltante o no definido: %s", str(e))
+            _logger.error("KeyError: Campo faltante o no definido - %s", str(e))
             raise ValidationError(_("Ocurrió un error al intentar crear la reparación. Verifique los campos: %s") % str(e))
 
         except Exception as create_error:
-            _logger.error("[CREATE] Error inesperado durante la creación de la reparación: %s", str(create_error))
+            _logger.error("Error durante la creación de la reparación: %s", str(create_error))
             raise
     def _seed_evaluaciones_from_modelo(self):
         """Carga automáticamente componentes y accesorios según el modelo"""
