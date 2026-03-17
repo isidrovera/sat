@@ -266,10 +266,10 @@
         <field name="contador_copias"/>
 
         <!-- TONER -->
-        <field name="toner_black" widget="progressbar"/>
+        <field name="toner_negro" widget="progressbar"/>
         <field name="toner_cyan" widget="progressbar"/>
         <field name="toner_magenta" widget="progressbar"/>
-        <field name="toner_yellow" widget="progressbar"/>
+        <field name="toner_amarillo" widget="progressbar"/>
 
         <!-- ESTADO -->
         <field name="estado_toner"/>
