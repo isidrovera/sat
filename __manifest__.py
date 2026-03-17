@@ -158,6 +158,7 @@
         'views/mdm_views.xml',
         'views/tracking_diagnostico_views.xml',      
         'wizards/sat_import_assign_header_wizard_views.xml',
+        'wizard/sat_entrega_wizard_view.xml',
         'views/solicitud_parte_tecnico_views.xml',
         'views/acciones_menus.xml',
     ],
