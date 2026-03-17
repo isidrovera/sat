@@ -398,10 +398,10 @@
               help="Abre el visor de fotos de la reparación"
           />
            <button name="action_entregar"
-                string="Entregar"
-                type="object"
-                class="btn-primary"
-                invisible="estado_ventas_id != 'entregada'"/>
+        string="Entregar"
+        type="object"
+        class="btn-primary"
+        invisible="estado_ventas_id == 'entregada'"/>
 
               <button name="action_regresar_a_finalizado"
               string="Regresar a Finalizado"
