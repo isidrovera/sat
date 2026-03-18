@@ -627,7 +627,12 @@ class SNMPPublicController(http.Controller):
                 "[SNMP] ⚠️ No se pudo extraer núcleo: %s",
                 model_snmp
             )
-            self._safe_update_counters(sat, total_counter)
+            self._safe_update_counters(
+                sat,
+                total_counter,
+                counters=payload.get('counters') or {},
+                toner=payload.get('toner') or {},
+            )
             sat.message_post(
                 body=_(
                     "SNMP recibido sin núcleo identificable. Modelo: %s"
@@ -682,7 +687,12 @@ class SNMPPublicController(http.Controller):
             )
 
             # 5.1) Actualizar contador igual
-            self._safe_update_counters(sat, total_counter)
+            self._safe_update_counters(
+                sat,
+                total_counter,
+                counters=payload.get('counters') or {},
+                toner=payload.get('toner') or {},
+            )
 
             # 5.2) Intentar ENCONTRAR/CREAR el modelo correcto igual que en el flujo normal
             target_model, action, modified = find_and_update_model(
@@ -772,7 +782,12 @@ class SNMPPublicController(http.Controller):
 
         if not target_model:
             _logger.warning("[SNMP] ⚠️ No se pudo procesar el modelo")
-            self._safe_update_counters(sat, total_counter)
+            self._safe_update_counters(
+                sat,
+                total_counter,
+                counters=payload.get('counters') or {},
+                toner=payload.get('toner') or {},
+            )
             self._suggest_model(sat, model_snmp)
             return {
                 'ok': True,
@@ -783,7 +798,12 @@ class SNMPPublicController(http.Controller):
         # ==========================
         # 7) Actualizar contador
         # ==========================
-        self._safe_update_counters(sat, total_counter)
+        self._safe_update_counters(
+            sat,
+            total_counter,
+            counters=payload.get('counters') or {},
+            toner=payload.get('toner') or {},
+        )
 
         # ==========================
         # 8) Asignar modelo al equipo si es necesario
@@ -893,13 +913,11 @@ class SNMPPublicController(http.Controller):
             'tipo_changed': tipo_anterior != tipo_nuevo if (tipo_anterior and tipo_nuevo) else False  # 🆕
         }
 
-    def _safe_update_counters(self, sat, total_counter):
+    def _safe_update_counters(self, sat, total_counter, counters=None, toner=None):
         """
         Actualiza contador con registro de historial SNMP.
-        
-        IMPORTANTE: Este método SOLO actualiza los campos.
-        Toda la lógica de detección de anomalías y notificaciones
-        se maneja automáticamente en sat.sat.write()
+        Pasa counters y toner por context para que sat.sat.write()
+        los use al actualizar sat.prueba.maquina.
         """
         if total_counter is None:
             _logger.debug("[SNMP Contador] No se recibió contador, saltando actualización")
@@ -909,7 +927,6 @@ class SNMPPublicController(http.Controller):
             contador_actual_str = str(sat.contometro or '0')
             contador_nuevo_str = str(total_counter)
 
-            # Limpiar y convertir a enteros para logging
             contador_actual = int(re.sub(r'[^\d]', '', contador_actual_str))
             contador_nuevo = int(re.sub(r'[^\d]', '', contador_nuevo_str))
 
@@ -918,7 +935,6 @@ class SNMPPublicController(http.Controller):
                 sat.id, contador_actual, contador_nuevo
             )
 
-            # Preparar valores a actualizar
             vals = {
                 'contometro': contador_nuevo_str,
                 'contador_antes_snmp': contador_actual_str,
@@ -927,16 +943,20 @@ class SNMPPublicController(http.Controller):
                 'ultima_fuente_actualizacion': 'snmp',
             }
 
-            # Actualizar usando sudo() - el write() de sat.sat se encargará de:
-            # 1. Detectar anomalías (decremento, saltos x10, cambios de dígitos)
-            # 2. Comparar con contometro_proveedor si existe
-            # 3. Enviar notificaciones WhatsApp/Correo según corresponda
-            # 4. Registrar en chatter
-            sat.sudo().write(vals)
-            
+            # Pasar counters y toner por context para que write() los use
+            ctx = dict(sat.env.context or {})
+            if counters and isinstance(counters, dict):
+                ctx['snmp_counters'] = counters
+            if toner and isinstance(toner, dict):
+                ctx['snmp_toner'] = toner
+
+            sat.sudo().with_context(ctx).write(vals)
+
             _logger.info(
-                "[SNMP] ✅ Contador actualizado correctamente: %s → %s (ID: %s)",
-                contador_actual, contador_nuevo, sat.id
+                "[SNMP] ✅ Contador actualizado: %s → %s (ID: %s) | counters=%s | toner=%s",
+                contador_actual, contador_nuevo, sat.id,
+                list(counters.keys()) if counters else [],
+                list(toner.keys()) if toner else [],
             )
 
         except ValueError as e:
