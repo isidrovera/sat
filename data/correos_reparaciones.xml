@@ -1,8 +1,339 @@
 <?xml version='1.0' encoding='utf-8'?>
 <odoo>
     <data>
+        <record id="email_template_reparaciones" model="mail.template">
+            <field name="name">Correo de asignación de orden de reparación</field>
+            <field name="subject">🔧 Nueva Orden de Reparación #{{object.name}}</field>
+            <field name="model_id" ref="model_reparaciones_reparaciones" />
+            <field name="auto_delete" eval="True" />
+            <field name="email_from">soporte@andescopiers.com.pe</field>
+            <field name="email_to">{{object.responsable_id.email}}</field>
+            <field name="body_html"><![CDATA[
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    </head>
+    <body bgcolor="#f5f5f5" style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif;">
+        <!-- Contenedor Principal -->
+        <div style="max-width: 800px; margin: 0 auto; background-color: #ffffff;">
+            
+            <!-- Encabezado -->
+            <div style="background-color: #4a5568; padding: 20px; text-align: center;">
+                <div style="color: #ffffff; font-size: 24px; font-weight: bold;">🔧 Nueva Orden de Reparación</div>
+                <div style="color: #ffffff; margin-top: 10px;">#<t t-out="object.name"/></div>
+            </div>
+            
+            <!-- Contenido Principal -->
+            <div style="padding: 25px; background-color: #ffffff; border: 1px solid #e2e8f0;">
+                <!-- Saludo -->
+                <div style="margin-bottom: 20px;">
+                    Estimado/a <strong><t t-out="object.responsable_id.name"/></strong>,
+                </div>
+    
+                <!-- Detalles de la Orden -->
+                <div style="background-color: #f7fafc; padding: 20px; margin: 15px 0; border-left: 4px solid #4a5568;">
+                    <div style="font-size: 20px; font-weight: bold; margin-bottom: 15px;">📋 Detalles de la Orden</div>
+                    <div style="margin: 5px 0;">👤 Cliente: <strong><t t-out="object.cliente_id.name"/></strong></div>
+                    <div style="margin: 5px 0;">💼 Asesora: <strong><t t-out="object.maquina_id.asesora_id"/></strong></div>
+                    <div style="margin: 5px 0;">📍 Ubicación: <strong><t t-out="object.obtener_ubicacion_legible()"/></strong></div>
+                </div>
+    
+                <!-- Información del Equipo -->
+                <div style="background-color: #edf2f7; padding: 20px; margin: 15px 0;">
+                    <div style="font-size: 20px; font-weight: bold; margin-bottom: 15px;">🖨️ Información del Equipo</div>
+                    <div style="margin: 5px 0;">Tipo: <strong><t t-out="object.tipo_machine"/></strong></div>
+                    <div style="margin: 5px 0;">Marca: <strong><t t-out="object.marca"/></strong></div>
+                    <div style="margin: 5px 0;">Modelo: <strong><t t-out="object.maquina_id.name.name"/></strong></div>
+                    <div style="margin: 5px 0;">Serie: <strong><t t-out="object.serie_id"/></strong></div>
+                </div>
+    
+                <!-- Estado y Prioridad -->
+                <div style="margin: 15px 0;">
+                    <!-- Estado -->
+                    <div style="display: inline-block; background-color: #c6f6d5; padding: 8px 16px; margin-right: 10px; margin-bottom: 10px;">
+                        <span style="color: #2f855a;">
+                            📊 Estado: <strong><t t-out="object.obtener_estado_legible()"/></strong>
+                        </span>
+                    </div>
+                    
+                    <!-- Prioridad -->
+                    <div style="display: inline-block; background-color: #fed7d7; padding: 8px 16px; margin-bottom: 10px;">
+                        <span style="color: #c53030;">
+                            ⚡ Prioridad: <strong><t t-out="object.obtener_prioridad_legible()"/></strong>
+                        </span>
+                    </div>
+                </div>
+    
+                <!-- Tipo de Revisión -->
+                <div style="background-color: #ebf8ff; padding: 20px; margin: 15px 0; border-left: 4px solid #4299e1;">
+                    <div style="font-size: 18px; font-weight: bold; margin-bottom: 10px;">🔍 Tipo de Revisión</div>
+                    <div style="margin: 5px 0;"><strong><t t-out="object.obtener_tipo_revision_legible()"/></strong></div>
+                </div>
+    
+                <!-- Mensaje Final -->
+                <div style="margin: 20px 0;">
+                    Confiamos en tu experiencia técnica para realizar esta reparación de manera eficiente. Por favor revisa cuidadosamente la información proporcionada.
+                </div>
+    
+                <!-- Firma -->
+                <div style="margin-top: 30px; color: #718096;">
+                    <div style="margin: 5px 0;">
+                        Saludos cordiales,<br>
+                        <strong>Equipo de Soporte Técnico</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
+    </html>
+        ]]></field>
+        </record>
+        <record id="email_template_finalizacion_reparacion" model="mail.template">
+            <field name="name">Correo de finalización de reparación</field>
+            <field name="subject">✅ Reparación Completada #{{object.name}}</field>
+            <field name="model_id" ref="model_reparaciones_reparaciones" />
+            <field name="auto_delete" eval="True" />
+            <field name="email_from">soporte@andescopiers.com.pe</field>
+            <field name="email_to">{{object.cliente_id.asesora_id.email}}</field>
+            <field name="body_html"><![CDATA[
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    </head>
+    <body bgcolor="#f5f5f5" style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; line-height: 1.6; color: #2d3748;">
+        <!-- Contenedor Principal -->
+        <div style="max-width: 800px; margin: 0 auto; background-color: #ffffff;">
+            
+            <!-- Encabezado -->
+            <div style="background-color: #48bb78; padding: 20px; text-align: center;">
+                <div style="color: #ffffff; font-size: 24px; font-weight: bold;">✅ Reparación Finalizada</div>
+            </div>
+            
+            <!-- Contenido Principal -->
+            <div style="padding: 25px; background-color: #ffffff; border: 1px solid #e2e8f0;">
+                <div style="margin-bottom: 20px;">
+                    Estimada <strong><t t-out="object.maquina_id.asesora_id"/></strong>,
+                </div>
+                
+                <!-- Aviso de Finalización -->
+                <div style="background-color: #f7fafc; padding: 20px; margin: 15px 0; border-left: 4px solid #48bb78;">
+                    <div style="margin: 0;">
+                        Nos complace informarte que la máquina ha sido reparada exitosamente. Los detalles completos se encuentran en el archivo adjunto.
+                    </div>
+                </div>
+    
+                <!-- Información de Reparación -->
+                <div style="background-color: #f0fff4; padding: 20px; margin: 15px 0; border: 1px solid #e2e8f0;">
+                    <div style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">📋 Detalles de la Reparación</div>
+                    
+                    <div style="margin: 10px 0;">
+                        <span style="margin-right: 5px;">🔧 Reparación #:</span>
+                        <strong><t t-out="object.name"/></strong>
+                    </div>
+                    
+                    <div style="margin: 10px 0;">
+                        <span style="margin-right: 5px;">👥 Cliente:</span>
+                        <strong><t t-out="object.cliente_id.name"/></strong>
+                    </div>
+                    
+                    <div style="margin: 10px 0;">
+                        <span style="margin-right: 5px;">📱 Modelo:</span>
+                        <strong><t t-out="object.maquina_id.name.name"/></strong>
+                    </div>
+                    
+                    <div style="margin: 10px 0;">
+                        <span style="margin-right: 5px;">🔢 Serie:</span>
+                        <strong><t t-out="object.serie_id"/></strong>
+                    </div>
+                    
+                    <div style="margin: 10px 0;">
+                        <span style="margin-right: 5px;">👨‍🔧 Técnico:</span>
+                        <strong><t t-out="object.responsable_id.name"/></strong>
+                    </div>
+                </div>
+    
+                <!-- Mensaje Final -->
+                <div style="margin: 20px 0;">
+                    La máquina está lista para su entrega. Contáctanos si necesitas información adicional.
+                </div>
+    
+                <!-- Firma -->
+                <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
+                    <div style="margin: 0;">
+                        Atentamente,<br>
+                        <strong>Equipo Técnico</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
+    </html>
+        ]]></field>
+        </record>
 
-        <!-- ══════════════════════════════════════════════════════════════════
+
+        <record id="email_template_parts_request" model="mail.template">
+        <field name="name">Solicitud de Partes para Aprobación</field>
+        <field name="subject">🔧 Nueva Solicitud de Partes #{{object.name}}</field>
+        <field name="model_id" ref="model_copier_parts_request"/>
+        <field name="auto_delete" eval="True"/>
+        <field name="email_from">soporte@andescopiers.com.pe</field>
+        <field name="email_to">campuero@corapsac.com.pe</field>
+        <field name="email_cc">lincoln@corapsac.com, asistentecontable@corapsac.com</field>
+        <field name="body_html"><![CDATA[
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+</head>
+<body bgcolor="#f5f5f5" style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif;">
+    <div style="max-width: 800px; margin: 0 auto; background-color: #ffffff;">
+        <!-- Encabezado -->
+        <div style="background-color: #4a5568; padding: 20px; text-align: center;">
+            <div style="color: #ffffff; font-size: 24px; font-weight: bold;">🔧 Nueva Solicitud de Partes</div>
+            <div style="color: #ffffff; margin-top: 10px;">#<t t-out="object.name"/></div>
+        </div>
+        
+        <!-- Contenido Principal -->
+        <div style="padding: 25px; background-color: #ffffff; border: 1px solid #e2e8f0;">
+            
+
+            <!-- Detalles de la Máquina -->
+            <div style="background-color: #edf2f7; padding: 20px; margin: 15px 0;">
+                <div style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">🖨️ Información del Equipo</div>
+                <div style="margin: 5px 0;">Proveedor: <strong><t t-out="object.proveedor"/></strong></div>
+                <div style="margin: 5px 0;">Importación: <strong><t t-out="object.importacion"/></strong></div>
+                <div style="margin: 5px 0;">Marca: <strong><t t-out="object.marca"/></strong></div>
+                <div style="margin: 5px 0;">Modelo: <strong><t t-out="object.modelo"/></strong></div>
+                <div style="margin: 5px 0;">Serie: <strong><t t-out="object.serie"/></strong></div>
+                <div style="margin: 5px 0;">Contómetro: <strong><t t-out="object.contometro"/></strong></div>
+            </div>
+            <!-- Solicitante -->
+            <div style="margin: 20px 0;">
+                <div style="font-weight: bold;">👤 Solicitante:</div>
+                <div><t t-out="object.solicitante_id.name"/></div>
+            </div>
+
+            <!-- Partes a Entregar -->
+            <div style="background-color: #f7fafc; padding: 20px; margin: 15px 0;">
+                <div style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">📦 Partes a Entregar</div>
+                <t t-if="object.disco_duro_requerido">
+                    <div style="margin: 5px 0; padding: 10px; background-color: #fff; border-left: 4px solid #48bb78;">
+                        <div style="font-weight: bold;">💽 Disco Duro</div>
+                        <div>Motivo: <strong><t t-out="object.get_motivo_disco_display()"/></strong></div>
+                    </div>
+                </t>
+                <t t-if="object.ruedas_requeridas">
+                    <div style="margin: 5px 0; padding: 10px; background-color: #fff; border-left: 4px solid #4299e1;">
+                        <div style="font-weight: bold;">⚙️ Ruedas</div>
+                        <div>Cantidad: <strong>4 unidades</strong></div>
+                    </div>
+                </t>
+                <t t-if="object.cable_poder_requerido">
+                    <div style="margin: 5px 0; padding: 10px; background-color: #fff; border-left: 4px solid #ed8936;">
+                        <div style="font-weight: bold;">🔌 Cable de Poder</div>
+                        <div>Motivo: <strong><t t-out="object.motivo_cable_display"/></strong></div>
+                    </div>
+                </t>
+            </div>
+
+            <!-- Botón de Aprobación -->
+            <div style="text-align: center; margin: 30px 0;">
+                <a t-attf-href="/parts/approve/{{ object.access_token }}" 
+                   style="background-color: #48bb78; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">
+                    APROBAR SOLICITUD
+                </a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+        ]]></field>
+    </record>
+
+
+    <record id="email_template_logistics_approval" model="mail.template">
+        <field name="name">Solicitud de Partes Aprobada - Para Entrega</field>
+        <field name="subject">✅ Solicitud de Partes Aprobada #{{object.name}} - Para Entrega</field>
+        <field name="model_id" ref="model_copier_parts_request"/>
+        <field name="auto_delete" eval="True"/>
+        <field name="email_from">soporte@andescopiers.com.pe</field>
+        <field name="email_to">logistica@corapsac.com</field>
+        <field name="body_html"><![CDATA[
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+</head>
+<body bgcolor="#f5f5f5" style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif;">
+    <div style="max-width: 800px; margin: 0 auto; background-color: #ffffff;">
+        <div style="background-color: #4a5568; padding: 20px; text-align: center;">
+            <div style="color: #ffffff; font-size: 24px; font-weight: bold;">✅ Solicitud Aprobada - Por Entregar</div>
+            <div style="color: #ffffff; margin-top: 10px;">#<t t-out="object.name"/></div>
+        </div>
+        
+        <div style="padding: 25px; background-color: #ffffff; border: 1px solid #e2e8f0;">
+            <!-- Partes a Entregar -->
+            <div style="background-color: #f7fafc; padding: 20px; margin: 15px 0;">
+                <div style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">📦 Entregar las siguientes partes:</div>
+
+                <t t-if="object.disco_duro_requerido">
+                    <div style="margin: 5px 0; padding: 10px; background-color: #fff; border-left: 4px solid #48bb78;">
+                        <div style="font-weight: bold;">💽 Disco Duro</div>
+                        <div>Motivo: <strong><t t-out="object.get_motivo_disco_display()"/></strong></div>
+                    </div>
+                </t>
+
+                <t t-if="object.ruedas_requeridas">
+                    <div style="margin: 5px 0; padding: 10px; background-color: #fff; border-left: 4px solid #4299e1;">
+                        <div style="font-weight: bold;">⚙️ Ruedas</div>
+                        <div>Cantidad: <strong>4 unidades</strong></div>
+                    </div>
+                </t>
+
+                <t t-if="object.cable_poder_requerido">
+                    <div style="margin: 5px 0; padding: 10px; background-color: #fff; border-left: 4px solid #ed8936;">
+                        <div style="font-weight: bold;">🔌 Cable de Poder</div>
+                        <div>Motivo: <strong><t t-out="object.motivo_cable_display"/></strong></div>
+                    </div>
+                </t>
+
+            </div>
+
+             <!-- Detalles de la Máquina -->
+            <div style="background-color: #edf2f7; padding: 20px; margin: 15px 0;">
+                <div style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">🖨️ Información del Equipo</div>
+                <div style="margin: 5px 0;">Proveedor: <strong><t t-out="object.proveedor"/></strong></div>
+                <div style="margin: 5px 0;">Importación: <strong><t t-out="object.importacion"/></strong></div>
+                <div style="margin: 5px 0;">Marca: <strong><t t-out="object.marca"/></strong></div>
+                <div style="margin: 5px 0;">Modelo: <strong><t t-out="object.modelo"/></strong></div>
+                <div style="margin: 5px 0;">Serie: <strong><t t-out="object.serie"/></strong></div>
+                <div style="margin: 5px 0;">Contómetro: <strong><t t-out="object.contometro"/></strong></div>
+            </div>
+
+            <!-- Solicitante -->
+            <div style="margin: 20px 0;">
+                <div style="font-weight: bold;">👤 Solicitante:</div>
+                <div><t t-out="object.solicitante_id.name"/></div>
+            </div>
+           
+
+            <!-- Botón de Confirmación -->
+            <div style="text-align: center; margin: 30px 0;">
+                <a t-attf-href="/parts/deliver/{{ object.access_token }}" 
+                   style="background-color: #4299e1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">
+                    CONFIRMAR ENTREGA
+                </a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+        ]]></field>
+</record>
+ <!-- ══════════════════════════════════════════════════════════════════
              PLANTILLA 1: Técnico crea solicitud → Jefe de Área
              + cliente agregado
         ══════════════════════════════════════════════════════════════════════ -->
