@@ -643,11 +643,19 @@ class ReporteEstadoMaquina(models.Model):
 
     def _crear_registro_partes_retiradas(self, reporte, maquina):
         """
-        Crea registros de partes retiradas para máquinas de partes o con problemas.
+        Crea registros de partes retiradas.
         Fuente 1: solicitud.partes (flujo bodega/alquiler)
         Fuente 2: solicitud.parte.tecnico.linea (flujo técnico → jefe → gerencia)
         """
-        # ── Fuente 1: solicitud.partes (sin cambios) ──────────────────────────
+        # Mapa de condiciones válidas — normaliza valores fuera del Selection
+        CONDICION_MAP = {
+            'bueno':      'bueno',
+            'regular':    'regular',
+            'malo':       'malo',
+            'defectuoso': 'malo',   # ← mapear defectuoso → malo
+        }
+
+        # ── Fuente 1: solicitud.partes ────────────────────────────────────────
         solicitudes_partes = self.env['solicitud.partes'].search([
             ('maquina_origen_id', '=', maquina.id),
             ('state', 'in', ['completed', 'replaced'])
@@ -656,15 +664,16 @@ class ReporteEstadoMaquina(models.Model):
             for linea in solicitud.parte_ids:
                 if linea.estado not in ['retirado', 'reemplazado']:
                     continue
+                condicion_raw = linea.condicion or ''
                 self.env['reporte.estado.maquina.parte'].create({
-                    'reporte_id': reporte.id,
+                    'reporte_id':         reporte.id,
                     'solicitud_partes_id': solicitud.id,
-                    'nombre_parte': linea.parte,
-                    'descripcion': linea.descripcion,
-                    'estado_parte': linea.estado,
-                    'condicion': linea.condicion,
-                    'fecha_solicitud': solicitud.fecha_solicitud.date() if solicitud.fecha_solicitud else False,
-                    'maquina_destino': solicitud.maquina_destino_id.serie if solicitud.maquina_destino_id else ''
+                    'nombre_parte':       linea.parte,
+                    'descripcion':        linea.descripcion,
+                    'estado_parte':       linea.estado,
+                    'condicion':          CONDICION_MAP.get(condicion_raw, False),
+                    'fecha_solicitud':    solicitud.fecha_solicitud.date() if solicitud.fecha_solicitud else False,
+                    'maquina_destino':    solicitud.maquina_destino_id.serie if solicitud.maquina_destino_id else ''
                 })
 
         # ── Fuente 2: solicitud.parte.tecnico.linea ───────────────────────────
@@ -674,17 +683,23 @@ class ReporteEstadoMaquina(models.Model):
         ])
         for linea in lineas_tecnico:
             solicitud = linea.solicitud_id
+            # sat.sat usa serie_id, no serie
+            maquina_destino_serie = ''
+            if solicitud.maquina_id:
+                maquina_destino_serie = getattr(
+                    solicitud.maquina_id, 'serie_id', None
+                ) or getattr(
+                    solicitud.maquina_id, 'serie', None
+                ) or ''
             self.env['reporte.estado.maquina.parte'].create({
-                'reporte_id': reporte.id,
-                'solicitud_partes_id': False,          # no aplica este flujo
-                'nombre_parte': linea.parte,
-                'descripcion': linea.descripcion,
-                'estado_parte': 'retirado',
-                'condicion': False,
-                'fecha_solicitud': solicitud.fecha_solicitud.date() if solicitud.fecha_solicitud else False,
-                'maquina_destino': (
-                    solicitud.maquina_id.serie if solicitud.maquina_id else ''
-                ),
+                'reporte_id':          reporte.id,
+                'solicitud_partes_id': False,
+                'nombre_parte':        linea.parte,
+                'descripcion':         linea.descripcion,
+                'estado_parte':        'retirado',
+                'condicion':           False,
+                'fecha_solicitud':     solicitud.fecha_solicitud.date() if solicitud.fecha_solicitud else False,
+                'maquina_destino':     str(maquina_destino_serie),
             })
 
     @api.model
