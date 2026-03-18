@@ -649,24 +649,23 @@ class ReporteEstadoMaquina(models.Model):
 
     def _crear_registro_partes_retiradas(self, reporte, maquina):
         """
-        Crea registros de partes retiradas para máquinas de partes o con problemas
+        Crea registros de partes retiradas para máquinas de partes o con problemas.
+        Fuente 1: solicitud.partes (flujo bodega/alquiler)
+        Fuente 2: solicitud.parte.tecnico.linea (flujo técnico → jefe → gerencia)
         """
+        # ── Fuente 1: solicitud.partes (sin cambios) ──────────────────────────
         solicitudes_partes = self.env['solicitud.partes'].search([
             ('maquina_origen_id', '=', maquina.id),
             ('state', 'in', ['completed', 'replaced'])
         ])
-
         for solicitud in solicitudes_partes:
             for linea in solicitud.parte_ids:
-
-                # Solo registrar partes retiradas o reemplazadas
                 if linea.estado not in ['retirado', 'reemplazado']:
                     continue
-
                 self.env['reporte.estado.maquina.parte'].create({
                     'reporte_id': reporte.id,
                     'solicitud_partes_id': solicitud.id,
-                    'nombre_parte': linea.parte,   # ← ESTE ES EL CAMBIO
+                    'nombre_parte': linea.parte,
                     'descripcion': linea.descripcion,
                     'estado_parte': linea.estado,
                     'condicion': linea.condicion,
@@ -674,6 +673,25 @@ class ReporteEstadoMaquina(models.Model):
                     'maquina_destino': solicitud.maquina_destino_id.serie if solicitud.maquina_destino_id else ''
                 })
 
+        # ── Fuente 2: solicitud.parte.tecnico.linea ───────────────────────────
+        lineas_tecnico = self.env['solicitud.parte.tecnico.linea'].search([
+            ('maquina_origen_alquiler_id', '=', maquina.id),
+            ('state', 'in', ['entregada', 'en_stock_logistica']),
+        ])
+        for linea in lineas_tecnico:
+            solicitud = linea.solicitud_id
+            self.env['reporte.estado.maquina.parte'].create({
+                'reporte_id': reporte.id,
+                'solicitud_partes_id': False,          # no aplica este flujo
+                'nombre_parte': linea.parte,
+                'descripcion': linea.descripcion,
+                'estado_parte': 'retirado',
+                'condicion': False,
+                'fecha_solicitud': solicitud.fecha_solicitud.date() if solicitud.fecha_solicitud else False,
+                'maquina_destino': (
+                    solicitud.maquina_id.serie if solicitud.maquina_id else ''
+                ),
+            })
 
     @api.model
     def generar_reporte_partes_tecnicos(self):
@@ -1005,6 +1023,7 @@ class ReporteEstadoMaquinaWizard(models.TransientModel):
         self._setup_palette(workbook)
         self._crear_hoja_resumen(workbook, reportes)
         self._crear_hoja_detalle(workbook, reportes)
+        self._crear_hoja_partes_retiradas(workbook, reportes)
 
         output = BytesIO()
         workbook.save(output)
@@ -1317,14 +1336,30 @@ class ReporteEstadoMaquinaWizard(models.TransientModel):
 
     def _crear_hoja_detalle(self, workbook, reportes):
         """
-        Crea hoja con detalles simplificados - Solo los campos solicitados
+        Crea hoja con detalles simplificados + columnas de partes retiradas
         """
         import xlwt
         import re
 
         worksheet = workbook.add_sheet('Detalles Completos')
 
-        # ESTILOS
+        # ── Helper partes retiradas ───────────────────────────────────────────
+        def _build_partes_texto(reporte):
+            partes = reporte.partes_retiradas_ids
+            if not partes:
+                return '', '', '', ''
+            nombres, fechas, destinos, fuentes = [], [], [], []
+            for p in partes:
+                nombres.append(p.nombre_parte or '-')
+                fechas.append(
+                    p.fecha_solicitud.strftime('%d/%m/%Y') if p.fecha_solicitud else '-'
+                )
+                destinos.append(p.maquina_destino or '-')
+                fuentes.append('Técnico' if not p.solicitud_partes_id else 'Bodega')
+            sep = '\n'
+            return sep.join(nombres), sep.join(fechas), sep.join(destinos), sep.join(fuentes)
+
+        # ── ESTILOS ───────────────────────────────────────────────────────────
         header_main = xlwt.easyxf(
             'pattern: pattern solid, fore_colour dark_header;'
             'font: bold 1, colour white, height 240;'
@@ -1334,59 +1369,87 @@ class ReporteEstadoMaquinaWizard(models.TransientModel):
 
         def get_row_style(estado_maquina):
             estado_styles = {
-                'lista': xlwt.easyxf('pattern: pattern solid, fore_colour lista_color; borders: left thin, right thin, top thin, bottom thin'),
-                'revisada': xlwt.easyxf('pattern: pattern solid, fore_colour revisada_color; borders: left thin, right thin, top thin, bottom thin'),
-                'sin_revisar': xlwt.easyxf('pattern: pattern solid, fore_colour sin_revisar_color; borders: left thin, right thin, top thin, bottom thin'),
-                'con_problemas': xlwt.easyxf('pattern: pattern solid, fore_colour con_problemas_color; borders: left thin, right thin, top thin, bottom thin'),
-                'partes': xlwt.easyxf('pattern: pattern solid, fore_colour partes_color; borders: left thin, right thin, top thin, bottom thin'),
-                'alquilada': xlwt.easyxf('pattern: pattern solid, fore_colour alquilada_color; borders: left thin, right thin, top thin, bottom thin'),
+                'lista':         xlwt.easyxf('pattern: pattern solid, fore_colour lista_color; borders: left thin, right thin, top thin, bottom thin; align: vert top'),
+                'revisada':      xlwt.easyxf('pattern: pattern solid, fore_colour revisada_color; borders: left thin, right thin, top thin, bottom thin; align: vert top'),
+                'sin_revisar':   xlwt.easyxf('pattern: pattern solid, fore_colour sin_revisar_color; borders: left thin, right thin, top thin, bottom thin; align: vert top'),
+                'con_problemas': xlwt.easyxf('pattern: pattern solid, fore_colour con_problemas_color; borders: left thin, right thin, top thin, bottom thin; align: vert top'),
+                'partes':        xlwt.easyxf('pattern: pattern solid, fore_colour partes_color; borders: left thin, right thin, top thin, bottom thin; align: vert top'),
+                'alquilada':     xlwt.easyxf('pattern: pattern solid, fore_colour alquilada_color; borders: left thin, right thin, top thin, bottom thin; align: vert top'),
             }
-            return estado_styles.get(estado_maquina, xlwt.easyxf('borders: left thin, right thin, top thin, bottom thin'))
+            return estado_styles.get(
+                estado_maquina,
+                xlwt.easyxf('borders: left thin, right thin, top thin, bottom thin; align: vert top')
+            )
 
         def get_number_style(estado_maquina):
             estado_styles = {
-                'lista': xlwt.easyxf('pattern: pattern solid, fore_colour lista_color; borders: left thin, right thin, top thin, bottom thin; align: horiz right', num_format_str='#,##0'),
-                'revisada': xlwt.easyxf('pattern: pattern solid, fore_colour revisada_color; borders: left thin, right thin, top thin, bottom thin; align: horiz right', num_format_str='#,##0'),
-                'sin_revisar': xlwt.easyxf('pattern: pattern solid, fore_colour sin_revisar_color; borders: left thin, right thin, top thin, bottom thin; align: horiz right', num_format_str='#,##0'),
-                'con_problemas': xlwt.easyxf('pattern: pattern solid, fore_colour con_problemas_color; borders: left thin, right thin, top thin, bottom thin; align: horiz right', num_format_str='#,##0'),
-                'partes': xlwt.easyxf('pattern: pattern solid, fore_colour partes_color; borders: left thin, right thin, top thin, bottom thin; align: horiz right', num_format_str='#,##0'),
-                'alquilada': xlwt.easyxf('pattern: pattern solid, fore_colour alquilada_color; borders: left thin, right thin, top thin, bottom thin; align: horiz right', num_format_str='#,##0'),
+                'lista':         xlwt.easyxf('pattern: pattern solid, fore_colour lista_color; borders: left thin, right thin, top thin, bottom thin; align: horiz right, vert top', num_format_str='#,##0'),
+                'revisada':      xlwt.easyxf('pattern: pattern solid, fore_colour revisada_color; borders: left thin, right thin, top thin, bottom thin; align: horiz right, vert top', num_format_str='#,##0'),
+                'sin_revisar':   xlwt.easyxf('pattern: pattern solid, fore_colour sin_revisar_color; borders: left thin, right thin, top thin, bottom thin; align: horiz right, vert top', num_format_str='#,##0'),
+                'con_problemas': xlwt.easyxf('pattern: pattern solid, fore_colour con_problemas_color; borders: left thin, right thin, top thin, bottom thin; align: horiz right, vert top', num_format_str='#,##0'),
+                'partes':        xlwt.easyxf('pattern: pattern solid, fore_colour partes_color; borders: left thin, right thin, top thin, bottom thin; align: horiz right, vert top', num_format_str='#,##0'),
+                'alquilada':     xlwt.easyxf('pattern: pattern solid, fore_colour alquilada_color; borders: left thin, right thin, top thin, bottom thin; align: horiz right, vert top', num_format_str='#,##0'),
             }
-            return estado_styles.get(estado_maquina, xlwt.easyxf('borders: left thin, right thin, top thin, bottom thin; align: horiz right', num_format_str='#,##0'))
+            return estado_styles.get(
+                estado_maquina,
+                xlwt.easyxf('borders: left thin, right thin, top thin, bottom thin; align: horiz right, vert top', num_format_str='#,##0')
+            )
 
         def get_date_style(estado_maquina):
             estado_styles = {
-                'lista': xlwt.easyxf('pattern: pattern solid, fore_colour lista_color; borders: left thin, right thin, top thin, bottom thin', num_format_str='DD/MM/YYYY'),
-                'revisada': xlwt.easyxf('pattern: pattern solid, fore_colour revisada_color; borders: left thin, right thin, top thin, bottom thin', num_format_str='DD/MM/YYYY'),
-                'sin_revisar': xlwt.easyxf('pattern: pattern solid, fore_colour sin_revisar_color; borders: left thin, right thin, top thin, bottom thin', num_format_str='DD/MM/YYYY'),
-                'con_problemas': xlwt.easyxf('pattern: pattern solid, fore_colour con_problemas_color; borders: left thin, right thin, top thin, bottom thin', num_format_str='DD/MM/YYYY'),
-                'partes': xlwt.easyxf('pattern: pattern solid, fore_colour partes_color; borders: left thin, right thin, top thin, bottom thin', num_format_str='DD/MM/YYYY'),
-                'alquilada': xlwt.easyxf('pattern: pattern solid, fore_colour alquilada_color; borders: left thin, right thin, top thin, bottom thin', num_format_str='DD/MM/YYYY'),
+                'lista':         xlwt.easyxf('pattern: pattern solid, fore_colour lista_color; borders: left thin, right thin, top thin, bottom thin; align: vert top', num_format_str='DD/MM/YYYY'),
+                'revisada':      xlwt.easyxf('pattern: pattern solid, fore_colour revisada_color; borders: left thin, right thin, top thin, bottom thin; align: vert top', num_format_str='DD/MM/YYYY'),
+                'sin_revisar':   xlwt.easyxf('pattern: pattern solid, fore_colour sin_revisar_color; borders: left thin, right thin, top thin, bottom thin; align: vert top', num_format_str='DD/MM/YYYY'),
+                'con_problemas': xlwt.easyxf('pattern: pattern solid, fore_colour con_problemas_color; borders: left thin, right thin, top thin, bottom thin; align: vert top', num_format_str='DD/MM/YYYY'),
+                'partes':        xlwt.easyxf('pattern: pattern solid, fore_colour partes_color; borders: left thin, right thin, top thin, bottom thin; align: vert top', num_format_str='DD/MM/YYYY'),
+                'alquilada':     xlwt.easyxf('pattern: pattern solid, fore_colour alquilada_color; borders: left thin, right thin, top thin, bottom thin; align: vert top', num_format_str='DD/MM/YYYY'),
             }
-            return estado_styles.get(estado_maquina, xlwt.easyxf('borders: left thin, right thin, top thin, bottom thin', num_format_str='DD/MM/YYYY'))
+            return estado_styles.get(
+                estado_maquina,
+                xlwt.easyxf('borders: left thin, right thin, top thin, bottom thin; align: vert top', num_format_str='DD/MM/YYYY')
+            )
 
-        # ENCABEZADOS - Solo los 7 campos solicitados
+        def get_wrap_style(estado_maquina):
+            """Estilo con wrap para columnas de partes (texto multilínea)"""
+            estado_styles = {
+                'lista':         xlwt.easyxf('pattern: pattern solid, fore_colour lista_color; borders: left thin, right thin, top thin, bottom thin; align: vert top, wrap 1'),
+                'revisada':      xlwt.easyxf('pattern: pattern solid, fore_colour revisada_color; borders: left thin, right thin, top thin, bottom thin; align: vert top, wrap 1'),
+                'sin_revisar':   xlwt.easyxf('pattern: pattern solid, fore_colour sin_revisar_color; borders: left thin, right thin, top thin, bottom thin; align: vert top, wrap 1'),
+                'con_problemas': xlwt.easyxf('pattern: pattern solid, fore_colour con_problemas_color; borders: left thin, right thin, top thin, bottom thin; align: vert top, wrap 1'),
+                'partes':        xlwt.easyxf('pattern: pattern solid, fore_colour partes_color; borders: left thin, right thin, top thin, bottom thin; align: vert top, wrap 1'),
+                'alquilada':     xlwt.easyxf('pattern: pattern solid, fore_colour alquilada_color; borders: left thin, right thin, top thin, bottom thin; align: vert top, wrap 1'),
+            }
+            return estado_styles.get(
+                estado_maquina,
+                xlwt.easyxf('borders: left thin, right thin, top thin, bottom thin; align: vert top, wrap 1')
+            )
+
+        # ── ENCABEZADOS ───────────────────────────────────────────────────────
         headers = [
-            'Fecha', 
-            'Marca', 
-            'Modelo', 
-            'Serie', 
-            'Estado', 
-            'Total Contómetro', 
-            'Informe Técnico'
+            'Fecha',
+            'Marca',
+            'Modelo',
+            'Serie',
+            'Estado',
+            'Total Contómetro',
+            'Informe Técnico',
+            'Partes Retiradas',
+            'Fechas Solicitud',
+            'Máquinas Destino',
+            'Fuente',
         ]
 
-        # Escribir encabezados
         for col, header in enumerate(headers):
             worksheet.write(0, col, header, header_main)
 
-        # FILAS DE DATOS
+        # ── FILAS DE DATOS ────────────────────────────────────────────────────
         row = 1
         for reporte in reportes:
             estado = reporte.estado_maquina
-            row_style = get_row_style(estado)
+            row_style    = get_row_style(estado)
             number_style = get_number_style(estado)
-            date_style = get_date_style(estado)
+            date_style   = get_date_style(estado)
+            wrap_style   = get_wrap_style(estado)
 
             col = 0
 
@@ -1415,83 +1478,83 @@ class ReporteEstadoMaquinaWizard(models.TransientModel):
             worksheet.write(row, col, reporte.contador_total or 0, number_style)
             col += 1
 
-            # 7. Informe Técnico (limpiar HTML y limitar caracteres)
-            informe_html = reporte.informe_tecnico or ''
-            informe_limpio = re.sub('<.*?>', '', informe_html or '')
-            informe_limpio = informe_limpio.replace('&nbsp;', ' ').strip()
+            # 7. Informe Técnico
+            informe_html  = reporte.informe_tecnico or ''
+            informe_limpio = re.sub('<.*?>', '', informe_html).replace('&nbsp;', ' ').strip()
             if len(informe_limpio) > 500:
                 informe_limpio = informe_limpio[:497] + '...'
             worksheet.write(row, col, informe_limpio, row_style)
+            col += 1
+
+            # 8-11. Partes retiradas
+            nombres_txt, fechas_txt, destinos_txt, fuentes_txt = _build_partes_texto(reporte)
+            worksheet.write(row, col, nombres_txt,   wrap_style); col += 1
+            worksheet.write(row, col, fechas_txt,    wrap_style); col += 1
+            worksheet.write(row, col, destinos_txt,  wrap_style); col += 1
+            worksheet.write(row, col, fuentes_txt,   wrap_style)
+
+            # Altura proporcional al número de partes (mínimo 400)
+            num_partes = len(reporte.partes_retiradas_ids)
+            worksheet.row(row).height = max(400, num_partes * 320)
 
             row += 1
 
-        # AUTO-AJUSTAR ANCHOS DE COLUMNA basado en contenido
-        def auto_adjust_column_width(worksheet, col_index, header_text, data_values):
-            """Calcula el ancho óptimo para una columna basado en su contenido"""
-            # Calcular ancho basado en el encabezado
+        # ── AUTO-AJUSTE DE COLUMNAS ───────────────────────────────────────────
+        column_data = [[] for _ in range(len(headers))]
+
+        for reporte in reportes:
+            estado = reporte.estado_maquina
+
+            informe_html   = reporte.informe_tecnico or ''
+            informe_limpio = re.sub('<br[^>]*>',  '\n', informe_html)
+            informe_limpio = re.sub('<p[^>]*>',   '\n', informe_limpio)
+            informe_limpio = re.sub('</p>',       '\n', informe_limpio)
+            informe_limpio = re.sub('<div[^>]*>', '\n', informe_limpio)
+            informe_limpio = re.sub('</div>',     '\n', informe_limpio)
+            informe_limpio = re.sub('<.*?>',       '',  informe_limpio)
+            informe_limpio = informe_limpio.replace('&nbsp;', ' ').replace('&amp;', '&')
+            lineas = [l.strip() for l in informe_limpio.split('\n') if l.strip()]
+            informe_organizado = '\n'.join(lineas)
+            if len(informe_organizado) > 1000:
+                informe_organizado = informe_organizado[:997] + '...'
+
+            nombres_txt, fechas_txt, destinos_txt, fuentes_txt = _build_partes_texto(reporte)
+
+            column_data[0].append(str(reporte.fecha_generacion or ''))
+            column_data[1].append(reporte.marca or '')
+            column_data[2].append(reporte.modelo or '')
+            column_data[3].append(reporte.serie or '')
+            column_data[4].append(dict(reporte._fields['estado_maquina'].selection).get(estado, ''))
+            column_data[5].append(str(reporte.contador_total or 0))
+            column_data[6].append(informe_organizado)
+            column_data[7].append(nombres_txt)
+            column_data[8].append(fechas_txt)
+            column_data[9].append(destinos_txt)
+            column_data[10].append(fuentes_txt)
+
+        def auto_adjust_column_width(col_index, header_text, data_values):
             header_width = len(header_text) * 256 + 500
-            
-            # Calcular ancho basado en el contenido más largo
             max_content_width = 0
             for value in data_values:
                 if value:
-                    # Para texto multilínea, tomar la línea más larga
                     if isinstance(value, str) and '\n' in value:
                         lines = value.split('\n')
                         content_width = max(len(line) for line in lines) * 256
                     else:
                         content_width = len(str(value)) * 256
                     max_content_width = max(max_content_width, content_width)
-            
-            # Usar el mayor entre encabezado y contenido, con límites
             optimal_width = max(header_width, max_content_width)
-            
-            # Establecer límites mínimos y máximos
-            min_width = 2000   # Mínimo 2000 unidades
-            max_width = 20000  # Máximo 20000 unidades (para evitar columnas demasiado anchas)
-            
-            return max(min_width, min(optimal_width, max_width))
+            return max(2000, min(optimal_width, 20000))
 
-        # Recopilar datos de cada columna para calcular anchos
-        column_data = [[] for _ in range(len(headers))]
-        
-        # Llenar datos de cada columna (re-iterar reportes para recopilar datos)
-        for reporte in reportes:
-            estado = reporte.estado_maquina
-            
-            # Recopilar datos por columna
-            column_data[0].append(str(reporte.fecha_generacion or ''))  # Fecha
-            column_data[1].append(reporte.marca or '')                   # Marca
-            column_data[2].append(reporte.modelo or '')                  # Modelo
-            column_data[3].append(reporte.serie or '')                   # Serie
-            column_data[4].append(dict(reporte._fields['estado_maquina'].selection).get(estado, ''))  # Estado
-            column_data[5].append(str(reporte.contador_total or 0))      # Total Contómetro
-            
-            # Informe técnico procesado
-            informe_html = reporte.informe_tecnico or ''
-            informe_limpio = re.sub('<br[^>]*>', '\n', informe_html)
-            informe_limpio = re.sub('<p[^>]*>', '\n', informe_limpio)
-            informe_limpio = re.sub('</p>', '\n', informe_limpio)
-            informe_limpio = re.sub('<div[^>]*>', '\n', informe_limpio)
-            informe_limpio = re.sub('</div>', '\n', informe_limpio)
-            informe_limpio = re.sub('<.*?>', '', informe_limpio)
-            informe_limpio = informe_limpio.replace('&nbsp;', ' ').replace('&amp;', '&')
-            lineas = [linea.strip() for linea in informe_limpio.split('\n') if linea.strip()]
-            informe_organizado = '\n'.join(lineas)
-            if len(informe_organizado) > 1000:
-                informe_organizado = informe_organizado[:997] + '...'
-            column_data[6].append(informe_organizado)                    # Informe Técnico
-        
-        # Aplicar auto-ajuste a cada columna
         for col_index, header in enumerate(headers):
-            optimal_width = auto_adjust_column_width(worksheet, col_index, header, column_data[col_index])
-            worksheet.col(col_index).width = optimal_width
+            worksheet.col(col_index).width = auto_adjust_column_width(
+                col_index, header, column_data[col_index]
+            )
 
-        # CONGELAR PANELES PARA NAVEGACIÓN
+        # ── CONGELAR PANELES ──────────────────────────────────────────────────
         worksheet.set_panes_frozen(True)
-        worksheet.set_horz_split_pos(1)  # Congelar encabezado
-        worksheet.set_vert_split_pos(4)  # Congelar primeras 4 columnas (hasta Serie)
-
+        worksheet.set_horz_split_pos(1)   # encabezado fijo
+        worksheet.set_vert_split_pos(4)   # primeras 4 cols fijas (hasta Serie)
 
     def action_generar_reporte_ahora(self):
         """
