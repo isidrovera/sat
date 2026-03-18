@@ -57,6 +57,10 @@ class SolicitudParteTecnico(models.Model):
     access_token = fields.Char(
         string='Token', copy=False, readonly=True, index=True)
 
+    # ── NUEVO: token exclusivo para el flujo de Logística ─────────────────
+    access_token_logistica = fields.Char(
+        string='Token Logística', copy=False, readonly=True, index=True)
+
     # ── Relaciones ────────────────────────────────────────────────────────
     reparacion_id = fields.Many2one(
         'reparaciones.reparaciones', string='Reparación',
@@ -80,13 +84,15 @@ class SolicitudParteTecnico(models.Model):
 
     # ── Estado ────────────────────────────────────────────────────────────
     state = fields.Selection([
-        ('enviada',              'Enviada'),
-        ('en_gestion',           'En Gestión'),
-        ('pendiente_aprobacion', 'Pendiente Aprobación'),
-        ('por_conseguir',        'Por Conseguir'),
-        ('aprobada',             'Aprobada'),
-        ('completada',           'Completada'),
-        ('cancelada',            'Cancelada'),
+        ('enviada',                    'Enviada'),
+        ('en_gestion',                 'En Gestión'),
+        ('consulta_logistica',         'Consulta a Logística'),   # NUEVO
+        ('pendiente_aprobacion',       'Pendiente Aprobación'),
+        ('pendiente_aprobacion_compra','Pendiente Aprobación Compra'),  # NUEVO
+        ('por_conseguir',              'Por Conseguir'),
+        ('aprobada',                   'Aprobada'),
+        ('completada',                 'Completada'),
+        ('cancelada',                  'Cancelada'),
     ], string='Estado', default='enviada', tracking=True)
 
     # ── Líneas ────────────────────────────────────────────────────────────
@@ -104,7 +110,7 @@ class SolicitudParteTecnico(models.Model):
         for rec in self:
             rec.total_partes         = len(rec.linea_ids)
             rec.partes_encontradas   = len(rec.linea_ids.filtered(lambda l: l.state == 'encontrada'))
-            rec.partes_por_conseguir = len(rec.linea_ids.filtered(lambda l: l.state == 'por_conseguir'))
+            rec.partes_por_conseguir = len(rec.linea_ids.filtered(lambda l: l.state in ('por_conseguir', 'compra_externa')))
             rec.partes_pendientes    = len(rec.linea_ids.filtered(lambda l: l.state == 'buscando'))
 
     # ── Crear ─────────────────────────────────────────────────────────────
@@ -115,6 +121,9 @@ class SolicitudParteTecnico(models.Model):
                 'solicitud.parte.tecnico') or 'Nuevo'
         if not vals.get('access_token'):
             vals['access_token'] = str(uuid.uuid4())
+        # NUEVO: generar token logística al crear
+        if not vals.get('access_token_logistica'):
+            vals['access_token_logistica'] = str(uuid.uuid4())
         return super().create(vals)
 
     # ── URLs token ────────────────────────────────────────────────────────
@@ -136,9 +145,19 @@ class SolicitudParteTecnico(models.Model):
             return (f"{self._get_base_url()}/web#id={self.id}"
                     f"&view_type=form&model=solicitud.parte.tecnico")
 
+    # NUEVO: URLs para el flujo de Logística
+    def _url_logistica_tiene(self):
+        return f"{self._get_base_url()}/solicitud-parte/logistica/{self.access_token_logistica}/tiene"
+
+    def _url_logistica_no_tiene(self):
+        return f"{self._get_base_url()}/solicitud-parte/logistica/{self.access_token_logistica}/no-tiene"
+
+    # NUEVO: URL aprobación de compra externa (usa mismo access_token pero ruta distinta)
+    def _url_aprobar_compra(self):
+        return f"{self._get_base_url()}/solicitud-parte/aprobar-compra/{self.access_token}"
+
     # ── Enviar template de correo ─────────────────────────────────────────
     def _enviar_template(self, xml_id, email_to_override=None):
-        """Envía un mail.template. Si email_to_override se pasa, sobreescribe el destinatario."""
         self.ensure_one()
         try:
             template = self.env.ref(xml_id)
@@ -171,8 +190,6 @@ class SolicitudParteTecnico(models.Model):
             f"👉 {self._url_odoo()}"
         )
         _send_whatsapp(JEFE_AREA_PHONE, msg_wa)
-
-        # Email via template
         self._enviar_template('sat.email_template_solicitud_parte_nueva')
 
     # ══════════════════════════════════════════════════════════════════════
@@ -195,37 +212,118 @@ class SolicitudParteTecnico(models.Model):
         )
         _send_whatsapp(GERENCIA_PHONE, msg_wa)
         _send_whatsapp(LOGISTICA_PHONE, msg_wa)
-
-        # Email via template
         self._enviar_template('sat.email_template_solicitud_parte_aprobacion')
 
     # ══════════════════════════════════════════════════════════════════════
-    # PASO 2B: Jefe gestiona → NO hay partes → notifica Gerencia para compra
+    # PASO 2B: Jefe gestiona → NO hay partes → consulta a Logística
     # ══════════════════════════════════════════════════════════════════════
-    def _notificar_gerencia_por_conseguir(self):
+    def _notificar_logistica_consulta(self):
+        """
+        NUEVO — Cuando todas las líneas quedan 'por_conseguir',
+        se consulta a Logística si tiene en stock antes de ir a Gerencia.
+        """
         self.ensure_one()
         por_conseguir = self.linea_ids.filtered(lambda l: l.state == 'por_conseguir')
-        partes_wa = "\n".join([f"  • {l.parte}" for l in por_conseguir])
+        partes_wa = "\n".join([f"  • {l.parte}" + (f": {l.descripcion}" if l.descripcion else "") for l in por_conseguir])
 
         msg_wa = (
-            f"⏳ *Partes por Conseguir/Comprar*\n\n"
+            f"📦 *Consulta de Stock - Solicitud de Parte*\n\n"
             f"*Solicitud:* {self.name}\n"
             f"*Técnico:* {self.tecnico_id.name}\n"
             f"*Máquina:* {self.marca or ''} {self.modelo or ''}\n"
             f"*Serie:* {self.serie or ''}\n\n"
-            f"*Partes que NO están disponibles:*\n{partes_wa}\n\n"
-            f"⚠️ Se requiere gestionar la compra/consecución de estas partes."
+            f"*Repuestos requeridos:*\n{partes_wa}\n\n"
+            f"¿Tienes estos repuestos en tu stock?\n\n"
+            f"✅ *SÍ TENGO:*\n{self._url_logistica_tiene()}\n\n"
+            f"❌ *NO TENGO:*\n{self._url_logistica_no_tiene()}"
+        )
+        _send_whatsapp(LOGISTICA_PHONE, msg_wa)
+        self._enviar_template('sat.email_template_solicitud_parte_consulta_logistica')
+
+    # ══════════════════════════════════════════════════════════════════════
+    # PASO 3A-NUEVO: Logística confirma que SÍ tiene → notifica Gerencia
+    # ══════════════════════════════════════════════════════════════════════
+    def action_logistica_tiene(self):
+        """
+        NUEVO — Llamado desde el link token cuando Logística confirma stock.
+        Marca líneas por_conseguir como en_stock_logistica y notifica Gerencia.
+        """
+        self.ensure_one()
+        if self.state != 'consulta_logistica':
+            raise UserError(_('Esta solicitud no está en espera de respuesta de Logística.'))
+
+        lineas = self.linea_ids.filtered(lambda l: l.state == 'por_conseguir')
+        lineas.write({'state': 'en_stock_logistica'})
+
+        self.write({'state': 'pendiente_aprobacion'})
+        self.message_post(
+            body="📦 <b>Logística confirmó disponibilidad en stock.</b> Esperando aprobación de Gerencia para salida.")
+
+        self._notificar_gerencia_aprobacion_stock_logistica()
+
+    def _notificar_gerencia_aprobacion_stock_logistica(self):
+        """NUEVO — Gerencia aprueba la salida del stock de Logística."""
+        self.ensure_one()
+        en_stock = self.linea_ids.filtered(lambda l: l.state == 'en_stock_logistica')
+        partes_wa = "\n".join([f"  • {l.parte}" for l in en_stock])
+
+        msg_wa = (
+            f"📦 *Autorización Requerida - Salida de Stock Logística*\n\n"
+            f"*Solicitud:* {self.name}\n"
+            f"*Técnico:* {self.tecnico_id.name}\n"
+            f"*Máquina:* {self.marca or ''} {self.modelo or ''}\n"
+            f"*Serie:* {self.serie or ''}\n\n"
+            f"*Logística confirma disponibilidad de:*\n{partes_wa}\n\n"
+            f"¿Autorizas la salida de stock?\n\n"
+            f"👉 *APROBAR SALIDA:*\n{self._url_aprobar_gerencia()}"
         )
         _send_whatsapp(GERENCIA_PHONE, msg_wa)
-        _send_whatsapp(LOGISTICA_PHONE, msg_wa)
-
-        # Email via template
-        self._enviar_template('sat.email_template_solicitud_parte_por_conseguir')
+        self._enviar_template('sat.email_template_solicitud_parte_aprobacion_stock')
 
     # ══════════════════════════════════════════════════════════════════════
-    # PASO 3: Gerencia aprueba (desde link token o botón Odoo)
+    # PASO 3B-NUEVO: Logística confirma que NO tiene → notifica Gerencia compra
+    # ══════════════════════════════════════════════════════════════════════
+    def action_logistica_no_tiene(self):
+        """
+        NUEVO — Llamado desde el link token cuando Logística no tiene stock.
+        Marca líneas como compra_externa y notifica Gerencia para autorizar compra.
+        """
+        self.ensure_one()
+        if self.state != 'consulta_logistica':
+            raise UserError(_('Esta solicitud no está en espera de respuesta de Logística.'))
+
+        lineas = self.linea_ids.filtered(lambda l: l.state == 'por_conseguir')
+        lineas.write({'state': 'compra_externa'})
+
+        self.write({'state': 'pendiente_aprobacion_compra'})
+        self.message_post(
+            body="❌ <b>Logística sin stock.</b> Notificando a Gerencia para autorizar compra externa.")
+
+        self._notificar_gerencia_aprobacion_compra()
+
+    def _notificar_gerencia_aprobacion_compra(self):
+        """NUEVO — Gerencia autoriza la compra externa."""
+        self.ensure_one()
+        compra = self.linea_ids.filtered(lambda l: l.state == 'compra_externa')
+        partes_wa = "\n".join([f"  • {l.parte}" for l in compra])
+
+        msg_wa = (
+            f"🛒 *Autorización de Compra Externa Requerida*\n\n"
+            f"*Solicitud:* {self.name}\n"
+            f"*Técnico:* {self.tecnico_id.name}\n"
+            f"*Máquina:* {self.marca or ''} {self.modelo or ''}\n"
+            f"*Serie:* {self.serie or ''}\n\n"
+            f"*Repuestos que NO hay en stock y se deben comprar:*\n{partes_wa}\n\n"
+            f"👉 *APROBAR COMPRA:*\n{self._url_aprobar_compra()}"
+        )
+        _send_whatsapp(GERENCIA_PHONE, msg_wa)
+        self._enviar_template('sat.email_template_solicitud_parte_aprobacion_compra')
+
+    # ══════════════════════════════════════════════════════════════════════
+    # PASO 4A-NUEVO: Gerencia aprueba salida de stock Logística
     # ══════════════════════════════════════════════════════════════════════
     def action_aprobar(self):
+        """Aprobación de Gerencia — salida de máquinas internas O salida de stock Logística."""
         self.ensure_one()
         if self.state != 'pendiente_aprobacion':
             raise UserError(
@@ -234,13 +332,102 @@ class SolicitudParteTecnico(models.Model):
         self.message_post(
             body=f"✅ <b>Aprobada por Gerencia.</b><br/>Usuario: {self.env.user.name}"
         )
+
+        # Determinar si hay partes de stock Logística para notificarles
+        en_stock_logistica = self.linea_ids.filtered(lambda l: l.state == 'en_stock_logistica')
+        if en_stock_logistica:
+            self._notificar_logistica_entregar()
+
         self._notificar_tecnico_retiro()
 
+    def _notificar_logistica_entregar(self):
+        """
+        NUEVO — Notifica a Logística que Gerencia aprobó y debe entregar el repuesto.
+        Sirve como registro de la salida autorizada.
+        """
+        self.ensure_one()
+        en_stock = self.linea_ids.filtered(lambda l: l.state == 'en_stock_logistica')
+        partes_wa = "\n".join([f"  • {l.parte}" for l in en_stock])
+
+        msg_wa = (
+            f"✅ *Gerencia Aprobó — Entregar Repuesto*\n\n"
+            f"*Solicitud:* {self.name}\n"
+            f"*Técnico:* {self.tecnico_id.name}\n"
+            f"*Reparación:* {self.reparacion_id.name}\n"
+            f"*Máquina:* {self.marca or ''} {self.modelo or ''}\n\n"
+            f"*Repuestos a entregar (registrar salida en tu sistema):*\n{partes_wa}\n\n"
+            f"⚠️ Registra la salida en tu sistema de stock."
+        )
+        _send_whatsapp(LOGISTICA_PHONE, msg_wa)
+        self._enviar_template('sat.email_template_solicitud_parte_logistica_entregar')
+
+    # ══════════════════════════════════════════════════════════════════════
+    # PASO 4B-NUEVO: Gerencia aprueba compra externa
+    # ══════════════════════════════════════════════════════════════════════
+    def action_aprobar_compra(self):
+        """
+        NUEVO — Gerencia autoriza la compra externa.
+        Llamado desde link token /aprobar-compra/<token>.
+        """
+        self.ensure_one()
+        if self.state != 'pendiente_aprobacion_compra':
+            raise UserError(
+                _('Solo se pueden aprobar compras en estado Pendiente Aprobación Compra.'))
+
+        self.write({'state': 'por_conseguir'})
+        self.message_post(
+            body=f"🛒 <b>Compra externa aprobada por Gerencia.</b><br/>Usuario: {self.env.user.name}"
+        )
+        self._notificar_logistica_gestionar_compra()
+        self._notificar_tecnico_en_espera()
+
+    def _notificar_logistica_gestionar_compra(self):
+        """NUEVO — Logística recibe la orden de gestionar la compra externa."""
+        self.ensure_one()
+        compra = self.linea_ids.filtered(lambda l: l.state == 'compra_externa')
+        partes_wa = "\n".join([
+            f"  • {l.parte}" + (f": {l.descripcion}" if l.descripcion else "")
+            for l in compra
+        ])
+
+        msg_wa = (
+            f"🛒 *Compra Autorizada por Gerencia*\n\n"
+            f"*Solicitud:* {self.name}\n"
+            f"*Técnico:* {self.tecnico_id.name}\n"
+            f"*Máquina:* {self.marca or ''} {self.modelo or ''}\n"
+            f"*Serie:* {self.serie or ''}\n\n"
+            f"*Repuestos a conseguir/comprar:*\n{partes_wa}\n\n"
+            f"⚠️ Gestiona la compra y notifica cuando esté disponible."
+        )
+        _send_whatsapp(LOGISTICA_PHONE, msg_wa)
+        self._enviar_template('sat.email_template_solicitud_parte_logistica_compra')
+
+    def _notificar_tecnico_en_espera(self):
+        """NUEVO — Técnico es informado que su repuesto está siendo conseguido."""
+        self.ensure_one()
+        compra = self.linea_ids.filtered(lambda l: l.state == 'compra_externa')
+        partes_wa = "\n".join([f"  • {l.parte}" for l in compra])
+
+        msg_wa = (
+            f"⏳ *Repuesto en Gestión de Compra*\n\n"
+            f"*Solicitud:* {self.name}\n"
+            f"*Reparación:* {self.reparacion_id.name}\n\n"
+            f"*Repuestos que se están consiguiendo:*\n{partes_wa}\n\n"
+            f"Serás notificado cuando estén disponibles."
+        )
+        if self.tecnico_id.mobile_phone:
+            _send_whatsapp(_clean_phone(self.tecnico_id.mobile_phone), msg_wa)
+
+    # ══════════════════════════════════════════════════════════════════════
+    # PASO 3: Gerencia aprueba (desde link token o botón Odoo) — SIN CAMBIOS
+    # ══════════════════════════════════════════════════════════════════════
     def _notificar_tecnico_retiro(self):
         self.ensure_one()
-        encontradas = self.linea_ids.filtered(lambda l: l.state == 'encontrada')
+        # Incluir tanto partes encontradas en máquinas como en stock Logística
+        retirables = self.linea_ids.filtered(
+            lambda l: l.state in ('encontrada', 'en_stock_logistica'))
         partes_wa = "\n".join([
-            f"  • {l.parte} → {l._get_origen_display()}" for l in encontradas])
+            f"  • {l.parte} → {l._get_origen_display()}" for l in retirables])
 
         msg_wa = (
             f"✅ *¡Solicitud Aprobada! Puedes retirar las partes*\n\n"
@@ -250,13 +437,10 @@ class SolicitudParteTecnico(models.Model):
             f"Una vez retiradas confirma aquí:\n"
             f"👉 {self._url_confirmar_retiro()}"
         )
-        # WhatsApp al técnico
         if self.tecnico_id.mobile_phone:
             _send_whatsapp(_clean_phone(self.tecnico_id.mobile_phone), msg_wa)
-        # WhatsApp al jefe también para que sepa
         _send_whatsapp(JEFE_AREA_PHONE, msg_wa)
 
-        # Email al técnico via template (sobreescribir destinatario)
         email_tecnico = self.tecnico_id.email
         if email_tecnico:
             self._enviar_template(
@@ -264,7 +448,7 @@ class SolicitudParteTecnico(models.Model):
                 email_to_override=email_tecnico)
 
     # ══════════════════════════════════════════════════════════════════════
-    # PASO 4: Técnico confirma retiro (desde link token)
+    # PASO 4: Técnico confirma retiro — SIN CAMBIOS
     # ══════════════════════════════════════════════════════════════════════
     def action_confirmar_retiro(self):
         self.ensure_one()
@@ -273,15 +457,14 @@ class SolicitudParteTecnico(models.Model):
 
         self.write({'state': 'completada'})
 
-        # Registrar en máquinas origen y marcar líneas como entregadas
-        for linea in self.linea_ids.filtered(lambda l: l.state == 'encontrada'):
+        for linea in self.linea_ids.filtered(
+                lambda l: l.state in ('encontrada', 'en_stock_logistica')):
             linea._registrar_en_maquina_origen()
             linea.write({'state': 'entregada'})
 
         self.message_post(
             body=f"📦 <b>Retiro confirmado</b><br/>Confirmado por: {self.env.user.name}"
         )
-
         self._notificar_completada()
 
     def _notificar_completada(self):
@@ -304,9 +487,9 @@ class SolicitudParteTecnico(models.Model):
         """
         Se llama después de que el jefe gestiona cada línea.
         Solo avanza cuando NO quedan líneas en estado 'buscando'.
+        MODIFICADO: cuando hay por_conseguir ahora va a consulta_logistica primero.
         """
         self.ensure_one()
-        # Aún hay líneas sin gestionar → no avanzar
         if self.linea_ids.filtered(lambda l: l.state == 'buscando'):
             return
 
@@ -314,31 +497,32 @@ class SolicitudParteTecnico(models.Model):
         por_conseguir = self.linea_ids.filtered(lambda l: l.state == 'por_conseguir')
 
         if encontradas and not por_conseguir:
-            # Todo encontrado → pedir aprobación gerencia
+            # Todo encontrado en máquinas → pedir aprobación gerencia directo
             self.write({'state': 'pendiente_aprobacion'})
             self.message_post(
                 body="📋 Todas las partes encontradas. Esperando aprobación de Gerencia.")
             self._notificar_gerencia_aprobacion()
 
         elif por_conseguir and not encontradas:
-            # Nada en stock → gestionar compra
-            self.write({'state': 'por_conseguir'})
+            # Nada en stock interno → consultar a Logística primero
+            self.write({'state': 'consulta_logistica'})
             self.message_post(
-                body="⏳ No hay partes disponibles. Gerencia notificada para gestionar compra.")
-            self._notificar_gerencia_por_conseguir()
+                body="📦 No hay partes en máquinas. Consultando disponibilidad a Logística.")
+            self._notificar_logistica_consulta()
 
         else:
             # Mezcla: algunas encontradas + otras por conseguir
-            self.write({'state': 'pendiente_aprobacion'})
+            # Las encontradas van a aprobación; las por_conseguir van a Logística
+            self.write({'state': 'consulta_logistica'})
             self.message_post(
                 body=(
-                    f"📋 Gestión mixta: {len(encontradas)} encontrada(s), "
+                    f"📋 Gestión mixta: {len(encontradas)} encontrada(s) en máquinas, "
                     f"{len(por_conseguir)} por conseguir.<br/>"
-                    f"Gerencia notificada de ambas situaciones."
+                    f"Notificando a Gerencia por las encontradas y consultando a Logística."
                 )
             )
             self._notificar_gerencia_aprobacion()
-            self._notificar_gerencia_por_conseguir()
+            self._notificar_logistica_consulta()
 
     def action_cancelar(self):
         self.ensure_one()
@@ -363,16 +547,19 @@ class SolicitudParteTecnicoLinea(models.Model):
     foto_referencia_filename = fields.Char()
 
     state = fields.Selection([
-        ('buscando',      'Buscando'),
-        ('encontrada',    'Encontrada'),
-        ('por_conseguir', 'Por Conseguir'),
-        ('entregada',     'Entregada'),
+        ('buscando',           'Buscando'),
+        ('encontrada',         'Encontrada'),
+        ('por_conseguir',      'Por Conseguir'),
+        ('en_stock_logistica', 'En Stock Logística'),   # NUEVO
+        ('compra_externa',     'Compra Externa'),        # NUEVO
+        ('entregada',          'Entregada'),
     ], string='Estado', default='buscando', tracking=True)
 
     tipo_origen = fields.Selection([
-        ('alquiler', 'Máquina de Alquiler'),
-        ('sat',      'Máquina SAT'),
-        ('compra',   'Compra/Conseguir'),
+        ('alquiler',  'Máquina de Alquiler'),
+        ('sat',       'Máquina SAT'),
+        ('logistica', 'Stock Logística'),   # NUEVO
+        ('compra',    'Compra/Conseguir'),
     ], string='Origen')
 
     maquina_origen_alquiler_id = fields.Many2one(
@@ -393,6 +580,8 @@ class SolicitudParteTecnicoLinea(models.Model):
         elif self.tipo_origen == 'sat' and self.maquina_origen_sat_id:
             m = self.maquina_origen_sat_id
             return f"SAT: {m.marca} {m.name.name} (Serie: {m.serie_id})"
+        elif self.tipo_origen == 'logistica':
+            return "Stock Logística"   # NUEVO
         elif self.tipo_origen == 'compra':
             return "Por comprar/conseguir"
         return "Sin definir"
@@ -422,10 +611,12 @@ class SolicitudParteTecnicoLinea(models.Model):
             self.maquina_origen_alquiler_id.message_post(body=msg)
         elif self.tipo_origen == 'sat' and self.maquina_origen_sat_id:
             self.maquina_origen_sat_id.message_post(body=msg)
+        # Para logistica: el registro en su sistema externo lo hace ellos
+        # El chatter de la solicitud ya queda como trazabilidad
 
 
 # ══════════════════════════════════════════════════════════════════════════
-# WIZARD JEFE — Gestionar disponibilidad de una línea
+# WIZARD JEFE — Gestionar disponibilidad de una línea — SIN CAMBIOS
 # ══════════════════════════════════════════════════════════════════════════
 
 class SolicitudParteGestionarWizard(models.TransientModel):
@@ -467,13 +658,10 @@ class SolicitudParteGestionarWizard(models.TransientModel):
     def _check_origen(self):
         for rec in self:
             if rec.resultado == 'encontrada':
-
                 if not rec.tipo_origen:
                     raise ValidationError(_('Debe indicar de dónde se obtiene la parte.'))
-
                 if rec.tipo_origen == 'alquiler' and not rec.maquina_origen_alquiler_id:
                     raise ValidationError(_('Seleccione la máquina de alquiler origen.'))
-
                 if rec.tipo_origen == 'sat' and not rec.maquina_origen_sat_id:
                     raise ValidationError(_('Seleccione la máquina SAT origen.'))
 
@@ -495,7 +683,6 @@ class SolicitudParteGestionarWizard(models.TransientModel):
                 if self.resultado == 'encontrada' else False),
         })
 
-        # Chatter en solicitud
         emoji        = '✅' if self.resultado == 'encontrada' else '⏳'
         estado_label = dict(linea._fields['state'].selection).get(self.resultado, '')
         linea.solicitud_id.message_post(
@@ -506,21 +693,17 @@ class SolicitudParteGestionarWizard(models.TransientModel):
             )
         )
 
-        # Avanzar solicitud a en_gestion si es la primera línea gestionada
         solicitud = linea.solicitud_id
-
-        # Si estaba enviada o por_conseguir vuelve a gestionarse
         if solicitud.state in ['enviada', 'por_conseguir']:
             solicitud.write({'state': 'en_gestion'})
 
-        # Verificar si ya se gestionaron todas las líneas
         solicitud._check_avanzar_estado()
 
         return {'type': 'ir.actions.act_window_close'}
 
 
 # ══════════════════════════════════════════════════════════════════════════
-# WIZARD TÉCNICO — Solicitar parte desde reparación
+# WIZARD TÉCNICO — Solicitar parte desde reparación — SIN CAMBIOS
 # ══════════════════════════════════════════════════════════════════════════
 
 class SolicitudParteTecnicoWizard(models.TransientModel):
@@ -557,10 +740,8 @@ class SolicitudParteTecnicoWizard(models.TransientModel):
                 'foto_referencia_filename': l.foto_referencia_filename,
             })
 
-        # Notificar al jefe de área (WhatsApp + email template)
         solicitud._notificar_jefe_nueva_solicitud()
 
-        # Chatter en reparación
         partes_txt = ', '.join(self.linea_ids.mapped('parte'))
         self.reparacion_id.message_post(
             body=(
@@ -590,4 +771,3 @@ class SolicitudParteTecnicoWizardLinea(models.TransientModel):
     descripcion = fields.Text(string='Descripción')
     foto_referencia          = fields.Binary(string='Foto Referencia', attachment=True)
     foto_referencia_filename = fields.Char()
-
