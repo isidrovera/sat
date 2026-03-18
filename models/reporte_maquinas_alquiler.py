@@ -1023,7 +1023,7 @@ class ReporteEstadoMaquinaWizard(models.TransientModel):
         self._setup_palette(workbook)
         self._crear_hoja_resumen(workbook, reportes)
         self._crear_hoja_detalle(workbook, reportes)
-        self._crear_hoja_partes_retiradas(workbook, reportes)
+        
 
         output = BytesIO()
         workbook.save(output)
