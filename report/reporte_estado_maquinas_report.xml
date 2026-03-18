@@ -1,405 +1,746 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+
+    <!-- ══════════════════════════════════════════════════════════════
+         PAPER FORMAT — A4 Horizontal
+    ══════════════════════════════════════════════════════════════ -->
+    <record id="paperformat_landscape_reporte_maquinas" model="report.paperformat">
+        <field name="name">A4 Horizontal — Reporte Máquinas</field>
+        <field name="default">False</field>
+        <field name="format">A4</field>
+        <field name="orientation">Landscape</field>
+        <field name="margin_top">10</field>
+        <field name="margin_bottom">10</field>
+        <field name="margin_left">8</field>
+        <field name="margin_right">8</field>
+        <field name="header_line">False</field>
+        <field name="header_spacing">3</field>
+        <field name="dpi">96</field>
+    </record>
+
+    <!-- ══════════════════════════════════════════════════════════════
+         ACCIÓN DE REPORTE
+    ══════════════════════════════════════════════════════════════ -->
     <record id="action_reporte_estado_maquinas_pdf" model="ir.actions.report">
         <field name="name">Reporte de Estado de Máquinas</field>
         <field name="model">reporte.estado.maquina</field>
         <field name="report_type">qweb-pdf</field>
         <field name="report_name">sat.reporte_estado_maquinas_pdf</field>
         <field name="report_file">sat.reporte_estado_maquinas_pdf</field>
+        <field name="paperformat_id" ref="paperformat_landscape_reporte_maquinas"/>
         <field name="print_report_name">
             'Reporte_Estado_Maquinas_%s' % (object.semana_reporte or object.fecha_generacion or '')
         </field>
         <field name="binding_type">report</field>
     </record>
 
+    <!-- ══════════════════════════════════════════════════════════════
+         PLANTILLA QWEB
+    ══════════════════════════════════════════════════════════════ -->
     <template id="reporte_estado_maquinas_pdf" name="Reporte Estado de Máquinas">
         <t t-call="web.html_container">
             <t t-call="web.external_layout">
+
                 <t t-set="base_url" t-value="env['ir.config_parameter'].sudo().get_param('web.base.url') or ''"/>
-                <t t-set="tz" t-value="env.user.tz or 'UTC'"/>
 
                 <div class="page">
                     <style>
+                        /* ── Variables ─────────────────────────────── */
                         :root {
-                            --ink: #0f172a;
-                            --muted: #64748b;
-                            --line: #e2e8f0;
-                            --panel: #f8fafc;
-                            --zebra: #fbfdff;
-                            --ok: #16a34a;
-                            --good: #3b82f6;
-                            --warn: #f59e0b;
-                            --attn: #f97316;
-                            --bad: #dc2626;
-                            --thead: #0b1220;
-                            --theadText: #ffffff;
-                            --partes-thead: #1e3a5f;
+                            --ink:       #0f172a;
+                            --muted:     #64748b;
+                            --line:      #dde3ec;
+                            --panel:     #f8fafc;
+                            --zebra:     #fafbfd;
+                            --ok:        #15803d;
+                            --ok-bg:     #dcfce7;
+                            --good:      #1d4ed8;
+                            --good-bg:   #dbeafe;
+                            --warn:      #b45309;
+                            --warn-bg:   #fef3c7;
+                            --attn:      #c2410c;
+                            --attn-bg:   #ffedd5;
+                            --bad:       #b91c1c;
+                            --bad-bg:    #fee2e2;
+                            --alq:       #0369a1;
+                            --alq-bg:    #e0f2fe;
+                            --thead:     #0f172a;
+                            --subhead:   #1e3a5f;
+                            --accent:    #f59e0b;
                         }
 
-                        body { font-size: 12px; line-height: 1.28; color: var(--ink); }
-                        h1, h2, h3 { margin: 0; }
-                        .wrap { padding: 8px 6px; }
-                        .tiny { font-size: 10px; color: var(--muted); }
-                        .muted { color: var(--muted); }
-                        .sec-title { margin: 12px 0 6px 0; font-weight: 700; font-size: 14px; }
-                        .report-header { padding: 6px 0 10px 0; border-bottom: 2px solid var(--line); }
+                        /* ── Reset base ─────────────────────────────── */
+                        * { box-sizing: border-box; }
+                        body {
+                            font-family: 'DejaVu Sans', Arial, sans-serif;
+                            font-size: 11px;
+                            line-height: 1.35;
+                            color: var(--ink);
+                            margin: 0;
+                        }
+                        h1, h2, h3, h4 { margin: 0; padding: 0; }
 
-                        /* Botón-link */
-                        .btn {
-                            display: inline-block; padding: 4px 9px; border-radius: 6px;
-                            border: 1px solid var(--good); background: #eef6ff; color: #0b5ed7;
-                            font-size: 10px; font-weight: 700; text-decoration: none;
+                        /* ── Utilidades ─────────────────────────────── */
+                        .wrap       { padding: 8px 6px; }
+                        .tiny       { font-size: 9px;  color: var(--muted); }
+                        .small      { font-size: 10px; }
+                        .muted      { color: var(--muted); }
+                        .bold       { font-weight: 700; }
+                        .num        { text-align: right; white-space: nowrap; }
+                        .nowrap     { white-space: nowrap; }
+                        .center     { text-align: center; }
+                        .upper      { text-transform: uppercase; letter-spacing: 0.5px; }
+
+                        /* ── Encabezado del reporte ─────────────────── */
+                        .report-header {
+                            background: var(--thead);
+                            color: #fff;
+                            padding: 10px 14px;
+                            border-radius: 6px 6px 0 0;
+                            margin-bottom: 12px;
+                        }
+                        .report-header h2 {
+                            font-size: 16px;
+                            font-weight: 800;
+                            letter-spacing: 0.3px;
+                        }
+                        .report-header .meta {
+                            font-size: 10px;
+                            color: #94a3b8;
+                            margin-top: 3px;
+                        }
+                        .report-header .total-badge {
+                            background: var(--accent);
+                            color: var(--ink);
+                            font-weight: 800;
+                            font-size: 13px;
+                            padding: 5px 14px;
+                            border-radius: 20px;
+                            display: inline-block;
                         }
 
-                        /* Badges de estado */
+                        /* ── KPIs ───────────────────────────────────── */
+                        .kpi-section {
+                            margin-bottom: 14px;
+                        }
+                        .kpi-section-title {
+                            font-size: 11px;
+                            font-weight: 700;
+                            color: var(--muted);
+                            text-transform: uppercase;
+                            letter-spacing: 0.8px;
+                            margin-bottom: 6px;
+                            padding-left: 2px;
+                            border-left: 3px solid var(--accent);
+                            padding-left: 6px;
+                        }
+                        table.kpi-grid {
+                            width: 100%;
+                            border-collapse: separate;
+                            border-spacing: 5px;
+                            table-layout: fixed;
+                        }
+                        table.kpi-grid td {
+                            border-radius: 6px;
+                            padding: 8px 6px 6px 6px;
+                            text-align: center;
+                            vertical-align: middle;
+                            border: 1.5px solid transparent;
+                        }
+                        .kpi-number {
+                            font-size: 26px;
+                            font-weight: 900;
+                            line-height: 1;
+                            display: block;
+                        }
+                        .kpi-label {
+                            font-size: 9px;
+                            font-weight: 700;
+                            text-transform: uppercase;
+                            letter-spacing: 0.6px;
+                            margin-top: 3px;
+                            display: block;
+                        }
+                        .kpi-icon {
+                            font-size: 16px;
+                            display: block;
+                            margin-bottom: 2px;
+                        }
+                        /* Colores KPI */
+                        .kpi-total    { background: var(--ink);    color: #fff; border-color: var(--ink); }
+                        .kpi-lista    { background: var(--ok-bg);  color: var(--ok);   border-color: var(--ok); }
+                        .kpi-revisada { background: var(--good-bg);color: var(--good); border-color: var(--good); }
+                        .kpi-sr       { background: var(--warn-bg);color: var(--warn); border-color: var(--warn); }
+                        .kpi-cp       { background: var(--attn-bg);color: var(--attn); border-color: var(--attn); }
+                        .kpi-partes   { background: var(--bad-bg); color: var(--bad);  border-color: var(--bad); }
+                        .kpi-alq      { background: var(--alq-bg); color: var(--alq);  border-color: var(--alq); }
+
+                        /* ── Tabla distribución ─────────────────────── */
+                        table.dist {
+                            width: 100%;
+                            border-collapse: collapse;
+                            margin-bottom: 14px;
+                            table-layout: fixed;
+                        }
+                        table.dist th {
+                            background: var(--thead);
+                            color: #fff;
+                            font-size: 10px;
+                            font-weight: 700;
+                            padding: 5px 8px;
+                            text-transform: uppercase;
+                            letter-spacing: 0.5px;
+                        }
+                        table.dist td {
+                            padding: 5px 8px;
+                            border-bottom: 1px solid var(--line);
+                            font-size: 11px;
+                            vertical-align: middle;
+                        }
+                        table.dist tbody tr:hover td { background: #f1f5f9; }
+
+                        /* ── Badges de estado ───────────────────────── */
                         .badge {
-                            display: inline-block; padding: 3px 10px; border-radius: 999px;
-                            font-size: 11px; font-weight: 700; color: #fff;
+                            display: inline-block;
+                            padding: 2px 9px;
+                            border-radius: 999px;
+                            font-size: 10px;
+                            font-weight: 700;
+                            color: #fff;
+                            white-space: nowrap;
                         }
-                        .b-lista          { background: var(--ok); }
-                        .b-revisada       { background: var(--good); }
-                        .b-sin_revisar    { background: var(--warn); }
-                        .b-con_problemas  { background: var(--attn); }
-                        .b-partes         { background: var(--bad); }
-                        .b-alquilada      { background: #0ea5e9; }
-                        .b-externo        { background: #8b5cf6; }
-                        .b-vendida        { background: #6b7280; }
+                        .b-lista         { background: var(--ok); }
+                        .b-revisada      { background: var(--good); }
+                        .b-sin_revisar   { background: var(--warn); }
+                        .b-con_problemas { background: var(--attn); }
+                        .b-partes        { background: var(--bad); }
+                        .b-alquilada     { background: var(--alq); }
+                        .b-externo       { background: #7c3aed; }
+                        .b-vendida       { background: #475569; }
 
-                        /* Badges de fuente */
-                        .badge-tecnico { background: #16a34a; }
-                        .badge-bodega  { background: #3b82f6; }
+                        /* Badges fuente */
+                        .badge-tecnico { background: var(--ok);   font-size: 9px; padding: 2px 7px; }
+                        .badge-bodega  { background: var(--good); font-size: 9px; padding: 2px 7px; }
 
-                        /* Tabla principal */
+                        /* ── Barra de grupo de estado ───────────────── */
+                        .estado-grupo-bar {
+                            margin-top: 16px;
+                            margin-bottom: 0;
+                            padding: 6px 10px;
+                            border-radius: 5px 5px 0 0;
+                            display: table;
+                            width: 100%;
+                        }
+                        .estado-grupo-bar .left  { display: table-cell; vertical-align: middle; }
+                        .estado-grupo-bar .right { display: table-cell; text-align: right; vertical-align: middle; font-size: 10px; color: #fff; opacity: 0.75; }
+
+                        /* Colores barra por estado */
+                        .bar-lista         { background: #14532d; }
+                        .bar-revisada      { background: #1e3a8a; }
+                        .bar-sin_revisar   { background: #78350f; }
+                        .bar-con_problemas { background: #7c2d12; }
+                        .bar-partes        { background: #7f1d1d; }
+                        .bar-alquilada     { background: #0c4a6e; }
+                        .bar-externo       { background: #4c1d95; }
+                        .bar-vendida       { background: #1e293b; }
+
+                        /* ── Tabla principal de equipos ─────────────── */
                         table.main {
-                            width: 100%; border-collapse: collapse;
-                            table-layout: fixed; margin-top: 8px;
-                        }
-                        table.main thead { display: table-header-group; }
-                        table.main th, table.main td {
-                            border: 1px solid var(--line); padding: 6px 7px;
-                            vertical-align: top; word-wrap: break-word;
-                            overflow-wrap: break-word; hyphens: auto;
+                            width: 100%;
+                            border-collapse: collapse;
+                            table-layout: fixed;
+                            border: 1px solid var(--line);
                         }
                         table.main thead th {
-                            background: var(--thead); color: var(--theadText); font-weight: 700;
+                            background: var(--thead);
+                            color: #fff;
+                            font-size: 10px;
+                            font-weight: 700;
+                            padding: 6px 8px;
+                            text-transform: uppercase;
+                            letter-spacing: 0.4px;
+                            border-right: 1px solid #1e293b;
                         }
-                        tbody tr:nth-child(odd) td { background: var(--zebra); }
+                        table.main td {
+                            border: 1px solid var(--line);
+                            padding: 6px 8px;
+                            vertical-align: top;
+                            word-wrap: break-word;
+                            overflow-wrap: break-word;
+                        }
+                        table.main tbody tr:nth-child(odd) td  { background: var(--zebra); }
+                        table.main tbody tr:nth-child(even) td { background: #fff; }
 
-                        /* Sub-tabla partes retiradas */
-                        table.main td.partes-cell { padding: 0 !important; border-top: none !important; }
+                        /* Anchos columna principal — landscape */
+                        .w-marca  { width: 9%; }
+                        .w-modelo { width: 14%; }
+                        .w-serie  { width: 12%; }
+                        .w-tipo   { width: 8%; }
+                        .w-ubic   { width: 9%; }
+                        .w-cont   { width: 8%; }
+                        .w-info   { width: 28%; }
+                        .w-accion { width: 8%; }
+
+                        /* ── Bloque de contexto partes ──────────────── */
+                        .partes-context {
+                            background: var(--subhead);
+                            color: #fff;
+                            padding: 5px 10px;
+                            font-size: 10px;
+                            font-weight: 700;
+                            letter-spacing: 0.3px;
+                            border-left: 4px solid var(--accent);
+                        }
+                        .partes-context .maquina-ref {
+                            background: rgba(255,255,255,0.12);
+                            border-radius: 4px;
+                            padding: 2px 10px;
+                            font-size: 11px;
+                            margin-left: 8px;
+                            letter-spacing: 0.4px;
+                        }
+                        .partes-context .count-ref {
+                            color: #94a3b8;
+                            font-weight: 400;
+                            font-size: 9px;
+                            margin-left: 8px;
+                        }
+
+                        /* ── Sub-tabla partes ───────────────────────── */
                         table.partes {
-                            width: 100%; border-collapse: collapse;
-                            margin: 0; font-size: 11px;
+                            width: 100%;
+                            border-collapse: collapse;
+                            font-size: 10px;
                         }
                         table.partes thead th {
-                            background: var(--partes-thead); color: #fff;
-                            font-weight: 700; padding: 4px 7px;
-                            font-size: 10px; letter-spacing: 0.3px;
+                            background: #263550;
+                            color: #cbd5e1;
+                            font-size: 9px;
+                            font-weight: 700;
+                            padding: 4px 8px;
+                            text-transform: uppercase;
+                            letter-spacing: 0.4px;
+                            border-right: 1px solid #1e3a5f;
                         }
                         table.partes td {
-                            padding: 3px 7px; border: 1px solid #dde3ec;
-                            vertical-align: top; word-wrap: break-word;
+                            padding: 4px 8px;
+                            border-bottom: 1px solid #e8edf4;
+                            border-right: 1px solid #e8edf4;
+                            vertical-align: top;
                         }
                         table.partes tbody tr:nth-child(odd)  td { background: #fffbeb; }
                         table.partes tbody tr:nth-child(even) td { background: #fef9e7; }
 
-                        .num    { text-align: right; white-space: nowrap; }
-                        .nowrap { white-space: nowrap; }
-                        .bold   { font-weight: 700; }
-                        .small  { font-size: 10px; }
-                        .color-muted { color: var(--muted); }
+                        /* Anchos sub-tabla partes */
+                        .wp-parte   { width: 26%; }
+                        .wp-desc    { width: 22%; }
+                        .wp-fecha   { width: 11%; }
+                        .wp-estado  { width: 11%; }
+                        .wp-destino { width: 16%; }
+                        .wp-fuente  { width: 14%; }
 
-                        /* Anchos columna tabla principal */
-                        .w-marca  { width: 11%; }
-                        .w-modelo { width: 15%; }
-                        .w-serie  { width: 15%; }
-                        .w-total  { width: 11%; }
-                        .w-info   { width: 24%; }
-                        .w-accion { width: 11%; }
-                        .w-estado-parte { width: 13%; }
-
-                        /* Anchos columna sub-tabla partes */
-                        .wp-parte   { width: 28%; }
-                        .wp-fecha   { width: 14%; }
-                        .wp-estado  { width: 14%; }
-                        .wp-destino { width: 22%; }
-                        .wp-fuente  { width: 22%; }
-
-                        .no-break { page-break-inside: avoid; break-inside: avoid; }
-                        tr        { page-break-inside: avoid; break-inside: avoid; }
-                        .page-break-before { page-break-before: always; break-before: page; }
-
-                        /* Tabla KPIs resumen */
-                        table.kpi {
-                            width: 100%; border-collapse: collapse;
-                            margin-top: 6px; table-layout: fixed;
+                        /* ── Celda que contiene la sub-tabla ────────── */
+                        td.partes-cell {
+                            padding: 0 !important;
+                            border-top: none !important;
+                            background: #f0f4f8 !important;
                         }
-                        table.kpi td {
-                            border: 1px solid var(--line); padding: 8px 10px;
-                            text-align: center; vertical-align: middle;
+
+                        /* ── Botón enlace ───────────────────────────── */
+                        .btn {
+                            display: inline-block;
+                            padding: 3px 8px;
+                            border-radius: 4px;
+                            border: 1px solid #1d4ed8;
+                            background: #eff6ff;
+                            color: #1d4ed8;
+                            font-size: 9px;
+                            font-weight: 700;
+                            text-decoration: none;
+                            white-space: nowrap;
                         }
-                        .kpi-value { font-size: 22px; font-weight: 800; color: var(--ink); }
-                        .kpi-label { font-size: 10px; color: var(--muted); margin-top: 2px; }
-                        .kpi-ok    { background: #dcfce7; }
-                        .kpi-warn  { background: #fef9c3; }
-                        .kpi-bad   { background: #fee2e2; }
-                        .kpi-info  { background: #dbeafe; }
-                        .kpi-neutral { background: var(--panel); }
+
+                        /* ── Separadores de sección ─────────────────── */
+                        .sec-title {
+                            font-size: 11px;
+                            font-weight: 700;
+                            color: var(--muted);
+                            text-transform: uppercase;
+                            letter-spacing: 0.8px;
+                            margin: 12px 0 6px 0;
+                            padding-left: 6px;
+                            border-left: 3px solid var(--accent);
+                        }
+
+                        /* ── Pie de página ──────────────────────────── */
+                        .report-footer {
+                            margin-top: 14px;
+                            padding-top: 6px;
+                            border-top: 1px solid var(--line);
+                            font-size: 9px;
+                            color: var(--muted);
+                        }
+
+                        /* ── Control de páginas ─────────────────────── */
+                        .no-break            { page-break-inside: avoid; break-inside: avoid; }
+                        tr                   { page-break-inside: avoid; break-inside: avoid; }
+                        .page-break-before   { page-break-before: always; break-before: page; }
+
+                        /* ── Barra de porcentaje ─────────────────────── */
+                        .pct-bar-wrap {
+                            background: #e2e8f0;
+                            border-radius: 3px;
+                            height: 5px;
+                            width: 100%;
+                            margin-top: 3px;
+                            overflow: hidden;
+                        }
+                        .pct-bar-fill {
+                            height: 5px;
+                            border-radius: 3px;
+                            background: var(--accent);
+                        }
                     </style>
 
-                    <!-- ══════════════════════════════════════════════════
+                    <!-- ════════════════════════════════════════════════
                          ENCABEZADO
-                    ══════════════════════════════════════════════════ -->
-                    <div class="report-header wrap no-break">
+                    ════════════════════════════════════════════════ -->
+                    <div class="report-header no-break">
                         <table style="width:100%; border:none;">
                             <tr>
                                 <td style="border:none; padding:0; vertical-align:middle;">
-                                    <h2 style="font-weight:800; font-size:18px;">
-                                        📊 Estado de Máquinas — Inventario Alquiler
-                                    </h2>
-                                    <div class="tiny" style="margin-top:4px;">
-                                        Generado: <t t-esc="date_print"/>
+                                    <h2>📊 Reporte de Estado de Máquinas — Inventario Alquiler</h2>
+                                    <div class="meta">
+                                        Generado: <t t-esc="date_print"/> &#160;·&#160;
+                                        Sistema: Andes Solution Copiers
                                     </div>
                                 </td>
-                                <td style="border:none; padding:0; text-align:right; vertical-align:middle; width:30%;">
-                                    <span class="badge" style="font-size:13px; padding:6px 16px; background:var(--thead);">
-                                        <t t-esc="len(docs)"/> equipos
+                                <td style="border:none; padding:0; text-align:right; vertical-align:middle; width:25%;">
+                                    <span class="total-badge">
+                                        <t t-esc="len(docs)"/> equipos en reporte
                                     </span>
                                 </td>
                             </tr>
                         </table>
                     </div>
 
-                    <!-- ══════════════════════════════════════════════════
-                         KPIs PRINCIPALES
-                    ══════════════════════════════════════════════════ -->
-                    <div class="wrap no-break">
-                        <div class="sec-title">Resumen Ejecutivo</div>
-                        <t t-set="total"          t-value="len(docs)"/>
-                        <t t-set="total_lista"    t-value="len(docs.filtered(lambda r: r.estado_maquina == 'lista'))"/>
-                        <t t-set="total_revisada" t-value="len(docs.filtered(lambda r: r.estado_maquina == 'revisada'))"/>
-                        <t t-set="total_sr"       t-value="len(docs.filtered(lambda r: r.estado_maquina == 'sin_revisar'))"/>
-                        <t t-set="total_cp"       t-value="len(docs.filtered(lambda r: r.estado_maquina == 'con_problemas'))"/>
-                        <t t-set="total_partes"   t-value="len(docs.filtered(lambda r: r.estado_maquina == 'partes'))"/>
-                        <t t-set="total_alq"      t-value="len(docs.filtered(lambda r: r.estado_maquina == 'alquilada'))"/>
+                    <!-- ════════════════════════════════════════════════
+                         KPIs — TARJETAS VISUALES
+                    ════════════════════════════════════════════════ -->
+                    <t t-set="total"          t-value="len(docs)"/>
+                    <t t-set="total_lista"    t-value="len(docs.filtered(lambda r: r.estado_maquina == 'lista'))"/>
+                    <t t-set="total_revisada" t-value="len(docs.filtered(lambda r: r.estado_maquina == 'revisada'))"/>
+                    <t t-set="total_sr"       t-value="len(docs.filtered(lambda r: r.estado_maquina == 'sin_revisar'))"/>
+                    <t t-set="total_cp"       t-value="len(docs.filtered(lambda r: r.estado_maquina == 'con_problemas'))"/>
+                    <t t-set="total_partes"   t-value="len(docs.filtered(lambda r: r.estado_maquina == 'partes'))"/>
+                    <t t-set="total_alq"      t-value="len(docs.filtered(lambda r: r.estado_maquina == 'alquilada'))"/>
+                    <t t-set="total_criticos" t-value="total_cp + total_partes"/>
 
-                        <table class="kpi">
+                    <div class="kpi-section no-break">
+                        <div class="kpi-section-title">Resumen Ejecutivo del Inventario</div>
+                        <table class="kpi-grid">
                             <tr>
-                                <td class="kpi-neutral">
-                                    <div class="kpi-value"><t t-esc="total"/></div>
-                                    <div class="kpi-label">TOTAL EQUIPOS</div>
+                                <!-- Total -->
+                                <td class="kpi-total">
+                                    <span class="kpi-icon">🏭</span>
+                                    <span class="kpi-number"><t t-esc="total"/></span>
+                                    <span class="kpi-label">Total Equipos</span>
                                 </td>
-                                <td class="kpi-ok">
-                                    <div class="kpi-value"><t t-esc="total_lista"/></div>
-                                    <div class="kpi-label">LISTAS</div>
+                                <!-- Listas para alquilar -->
+                                <td class="kpi-lista">
+                                    <span class="kpi-icon">✅</span>
+                                    <span class="kpi-number"><t t-esc="total_lista"/></span>
+                                    <span class="kpi-label">Listas p/ Alquilar</span>
                                 </td>
-                                <td class="kpi-info">
-                                    <div class="kpi-value"><t t-esc="total_revisada"/></div>
-                                    <div class="kpi-label">REVISADAS</div>
+                                <!-- Revisadas -->
+                                <td class="kpi-revisada">
+                                    <span class="kpi-icon">🔵</span>
+                                    <span class="kpi-number"><t t-esc="total_revisada"/></span>
+                                    <span class="kpi-label">Revisadas</span>
                                 </td>
-                                <td class="kpi-warn">
-                                    <div class="kpi-value"><t t-esc="total_sr"/></div>
-                                    <div class="kpi-label">SIN REVISAR</div>
+                                <!-- Sin revisar -->
+                                <td class="kpi-sr">
+                                    <span class="kpi-icon">⏳</span>
+                                    <span class="kpi-number"><t t-esc="total_sr"/></span>
+                                    <span class="kpi-label">Pendientes Revisión</span>
                                 </td>
-                                <td class="kpi-bad">
-                                    <div class="kpi-value"><t t-esc="total_cp"/></div>
-                                    <div class="kpi-label">CON PROBLEMAS</div>
+                                <!-- Con problemas -->
+                                <td class="kpi-cp">
+                                    <span class="kpi-icon">⚠️</span>
+                                    <span class="kpi-number"><t t-esc="total_cp"/></span>
+                                    <span class="kpi-label">Con Problemas</span>
                                 </td>
-                                <td class="kpi-bad">
-                                    <div class="kpi-value"><t t-esc="total_partes"/></div>
-                                    <div class="kpi-label">DE PARTES</div>
+                                <!-- De partes -->
+                                <td class="kpi-partes">
+                                    <span class="kpi-icon">🔩</span>
+                                    <span class="kpi-number"><t t-esc="total_partes"/></span>
+                                    <span class="kpi-label">De Partes</span>
                                 </td>
-                                <td class="kpi-info">
-                                    <div class="kpi-value"><t t-esc="total_alq"/></div>
-                                    <div class="kpi-label">ALQUILADAS</div>
+                                <!-- Alquiladas -->
+                                <td class="kpi-alq">
+                                    <span class="kpi-icon">📋</span>
+                                    <span class="kpi-number"><t t-esc="total_alq"/></span>
+                                    <span class="kpi-label">En Servicio</span>
+                                </td>
+                                <!-- Críticos total -->
+                                <td style="background:#fef2f2; color:#991b1b; border:1.5px solid #fca5a5; border-radius:6px;">
+                                    <span class="kpi-icon">🚨</span>
+                                    <span class="kpi-number"><t t-esc="total_criticos"/></span>
+                                    <span class="kpi-label">Total Críticos</span>
                                 </td>
                             </tr>
                         </table>
                     </div>
 
-                    <!-- ══════════════════════════════════════════════════
-                         DISTRIBUCIÓN POR ESTADOS
-                    ══════════════════════════════════════════════════ -->
-                    <div class="wrap no-break">
+                    <!-- ════════════════════════════════════════════════
+                         DISTRIBUCIÓN POR ESTADOS CON BARRA
+                    ════════════════════════════════════════════════ -->
+                    <div class="no-break">
                         <div class="sec-title">Distribución por Estados</div>
-                        <table class="main" style="table-layout:fixed;">
+                        <table class="dist">
                             <colgroup>
-                                <col style="width:40%;"/>
-                                <col style="width:30%;"/>
-                                <col style="width:30%;"/>
+                                <col style="width:28%;"/>
+                                <col style="width:12%;"/>
+                                <col style="width:12%;"/>
+                                <col style="width:48%;"/>
                             </colgroup>
                             <thead>
                                 <tr>
                                     <th>Estado</th>
                                     <th class="num">Cantidad</th>
-                                    <th class="num">%</th>
+                                    <th class="num">Porcentaje</th>
+                                    <th>Representación visual</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <t t-foreach="by_state" t-as="s" t-key="s['label']">
                                     <tr>
-                                        <td><t t-esc="s['label']"/></td>
+                                        <td><span class="bold"><t t-esc="s['label']"/></span></td>
                                         <td class="num bold"><t t-esc="s['qty']"/></td>
                                         <td class="num"><t t-esc="s['pct_str']"/></td>
+                                        <td style="vertical-align:middle; padding-top:8px;">
+                                            <div class="pct-bar-wrap">
+                                                <div class="pct-bar-fill"
+                                                     t-attf-style="width:#{s['pct_str']};"/>
+                                            </div>
+                                        </td>
                                     </tr>
                                 </t>
                             </tbody>
                         </table>
                     </div>
 
-                    <!-- ══════════════════════════════════════════════════
+                    <!-- ════════════════════════════════════════════════
                          DETALLE POR ESTADO
-                    ══════════════════════════════════════════════════ -->
-                    <div class="wrap">
-                        <div class="sec-title">Detalle de Equipos por Estado</div>
+                    ════════════════════════════════════════════════ -->
+                    <div class="sec-title" style="margin-top:16px;">Detalle de Equipos por Estado</div>
 
-                        <t t-set="estados_order" t-value="[
-                            ('lista',          'Lista'),
-                            ('revisada',       'Revisada'),
-                            ('sin_revisar',    'Sin Revisar'),
-                            ('con_problemas',  'Con Problemas'),
-                            ('partes',         'De Partes'),
-                            ('alquilada',      'Alquilada'),
-                            ('externo',        'Externo'),
-                            ('vendida',        'Vendida')
-                        ]"/>
+                    <t t-set="estados_order" t-value="[
+                        ('lista',         'Lista — Disponible para alquilar'),
+                        ('revisada',      'Revisada — En preparación'),
+                        ('sin_revisar',   'Sin Revisar — Pendiente de evaluación'),
+                        ('con_problemas', 'Con Problemas — Requiere atención'),
+                        ('partes',        'De Partes — Solo para repuestos'),
+                        ('alquilada',     'Alquilada — En servicio con cliente'),
+                        ('externo',       'Externo'),
+                        ('vendida',       'Vendida')
+                    ]"/>
 
-                        <t t-set="primero" t-value="True"/>
-                        <t t-foreach="estados_order" t-as="st">
-                            <t t-set="code"  t-value="st[0]"/>
-                            <t t-set="label" t-value="st[1]"/>
-                            <t t-set="rows"  t-value="docs.filtered(lambda r: r.estado_maquina == code)"/>
+                    <t t-set="primero" t-value="True"/>
+                    <t t-foreach="estados_order" t-as="st">
+                        <t t-set="code"  t-value="st[0]"/>
+                        <t t-set="label" t-value="st[1]"/>
+                        <t t-set="rows"  t-value="docs.filtered(lambda r: r.estado_maquina == code)"/>
 
-                            <t t-if="rows">
-                                <div t-attf-class="#{'' if primero else 'page-break-before'}"/>
-                                <t t-set="primero" t-value="False"/>
+                        <t t-if="rows">
+                            <div t-attf-class="#{'' if primero else 'page-break-before'}"/>
+                            <t t-set="primero" t-value="False"/>
 
-                                <!-- Título de grupo -->
-                                <div class="sec-title no-break"
-                                     style="display:flex; align-items:center; gap:10px; margin-top:14px;">
-                                    <span class="badge" t-att-class="'badge b-' + code">
-                                        <t t-esc="label"/> — <t t-esc="len(rows)"/> equipo(s)
-                                    </span>
-                                </div>
+                            <!-- Barra de grupo -->
+                            <div class="estado-grupo-bar no-break"
+                                 t-att-class="'estado-grupo-bar bar-' + code">
+                                <table style="width:100%; border:none;">
+                                    <tr>
+                                        <td style="border:none; padding:0; vertical-align:middle;">
+                                            <span class="badge" t-att-class="'badge b-' + code"
+                                                  style="font-size:11px; padding:3px 12px;">
+                                                <t t-esc="label"/>
+                                            </span>
+                                        </td>
+                                        <td style="border:none; padding:0; text-align:right; vertical-align:middle; color:#fff; font-size:10px; opacity:0.8;">
+                                            <t t-esc="len(rows)"/> equipo(s) en este estado
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
 
-                                <table class="main">
-                                    <colgroup>
-                                        <col class="w-marca"/>
-                                        <col class="w-modelo"/>
-                                        <col class="w-serie"/>
-                                        <col class="w-total"/>
-                                        <col class="w-info"/>
-                                        <col class="w-accion"/>
-                                    </colgroup>
-                                    <thead>
-                                        <tr>
-                                            <th class="w-marca">Marca</th>
-                                            <th class="w-modelo">Modelo</th>
-                                            <th class="w-serie">Serie</th>
-                                            <th class="w-total num">Contómetro</th>
-                                            <th class="w-info">Informe Técnico</th>
-                                            <th class="w-accion">Acción</th>
+                            <!-- Tabla de equipos -->
+                            <table class="main">
+                                <colgroup>
+                                    <col class="w-marca"/>
+                                    <col class="w-modelo"/>
+                                    <col class="w-serie"/>
+                                    <col class="w-tipo"/>
+                                    <col class="w-ubic"/>
+                                    <col class="w-cont"/>
+                                    <col class="w-info"/>
+                                    <col class="w-accion"/>
+                                </colgroup>
+                                <thead>
+                                    <tr>
+                                        <th class="w-marca">Marca</th>
+                                        <th class="w-modelo">Modelo</th>
+                                        <th class="w-serie">Serie</th>
+                                        <th class="w-tipo">Tipo</th>
+                                        <th class="w-ubic">Ubicación</th>
+                                        <th class="w-cont num">Contómetro</th>
+                                        <th class="w-info">Informe Técnico</th>
+                                        <th class="w-accion center">Ver</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-foreach="rows" t-as="r" t-key="r.id">
+
+                                        <!-- ── Fila principal del equipo ── -->
+                                        <tr class="no-break">
+                                            <td class="bold small"><t t-esc="r.marca or ''"/></td>
+                                            <td class="small"><t t-esc="r.modelo or ''"/></td>
+                                            <td class="bold nowrap" style="font-size:11px; color:#1e3a5f;">
+                                                <t t-esc="r.serie or ''"/>
+                                            </td>
+                                            <td class="small center">
+                                                <t t-if="r.tipo_maquina == 'color'">🎨 Color</t>
+                                                <t t-elif="r.tipo_maquina == 'monocromatica'">⬛ Mono</t>
+                                                <t t-else="">—</t>
+                                            </td>
+                                            <td class="small">
+                                                <t t-if="r.ubicacion_fisica == 'primer_piso'">1° Piso</t>
+                                                <t t-elif="r.ubicacion_fisica == 'tercer_piso'">3° Piso</t>
+                                                <t t-elif="r.ubicacion_fisica == 'segundo_local'">2° Local</t>
+                                                <t t-elif="r.ubicacion_fisica == 'covida'">Covida</t>
+                                                <t t-else="">—</t>
+                                            </td>
+                                            <td class="num bold" style="font-size:11px;">
+                                                <t t-esc="'{:,}'.format(r.contador_total or 0)"/>
+                                            </td>
+                                            <td class="small" style="font-size:10px; line-height:1.3;">
+                                                <t t-esc="informes_limpios.get(r.id) or '—'"/>
+                                            </td>
+                                            <td class="center">
+                                                <a class="btn"
+                                                   t-attf-href="#{base_url}/web#id=#{r.id}&amp;model=reporte.estado.maquina&amp;view_type=form"
+                                                   target="_blank">Ver detalle</a>
+                                            </td>
                                         </tr>
-                                    </thead>
-                                    <tbody>
-                                        <t t-foreach="rows" t-as="r" t-key="r.id">
 
-                                            <!-- Fila principal del equipo -->
+                                        <!-- ── Fila de partes retiradas ── -->
+                                        <t t-if="r.partes_retiradas_ids">
                                             <tr>
-                                                <td><t t-esc="r.marca or ''"/></td>
-                                                <td><t t-esc="r.modelo or ''"/></td>
-                                                <td class="nowrap bold"><t t-esc="r.serie or ''"/></td>
-                                                <td class="num"><t t-esc="r.contador_total or 0"/></td>
-                                                <td class="small">
-                                                    <t t-esc="informes_limpios.get(r.id) or ''"/>
-                                                </td>
-                                                <td>
-                                                    <a class="btn"
-                                                       t-attf-href="#{base_url}/web#id=#{r.id}&amp;model=reporte.estado.maquina&amp;view_type=form"
-                                                       target="_blank">Ver detalle</a>
+                                                <td class="partes-cell" colspan="8">
+
+                                                    <!-- Cabecera de contexto -->
+                                                    <div class="partes-context">
+                                                        <table style="width:100%; border:none;">
+                                                            <tr>
+                                                                <td style="border:none; padding:0; vertical-align:middle;">
+                                                                    🔩 PARTES RETIRADAS DE:
+                                                                    <span class="maquina-ref">
+                                                                        <t t-esc="r.marca or ''"/>
+                                                                        &#160;
+                                                                        <t t-esc="r.modelo or ''"/>
+                                                                        &#160;—&#160;
+                                                                        Serie: <t t-esc="r.serie or ''"/>
+                                                                    </span>
+                                                                    <span class="count-ref">
+                                                                        (<t t-esc="len(r.partes_retiradas_ids)"/> parte(s) registrada(s))
+                                                                    </span>
+                                                                </td>
+                                                            </tr>
+                                                        </table>
+                                                    </div>
+
+                                                    <!-- Sub-tabla de partes -->
+                                                    <table class="partes">
+                                                        <thead>
+                                                            <tr>
+                                                                <th class="wp-parte">Parte / Componente</th>
+                                                                <th class="wp-desc">Descripción</th>
+                                                                <th class="wp-fecha">Fecha Solicitud</th>
+                                                                <th class="wp-estado">Estado</th>
+                                                                <th class="wp-destino">Instalada en (Serie)</th>
+                                                                <th class="wp-fuente">Origen</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            <t t-foreach="r.partes_retiradas_ids" t-as="p" t-key="p.id">
+                                                                <tr>
+                                                                    <td class="bold" style="font-size:10px;">
+                                                                        <t t-esc="p.nombre_parte or ''"/>
+                                                                    </td>
+                                                                    <td style="font-size:9px; color:#475569;">
+                                                                        <t t-esc="p.descripcion or '—'"/>
+                                                                    </td>
+                                                                    <td class="nowrap center" style="font-size:10px;">
+                                                                        <t t-if="p.fecha_solicitud">
+                                                                            <t t-esc="p.fecha_solicitud.strftime('%d/%m/%Y')"/>
+                                                                        </t>
+                                                                        <t t-else="">—</t>
+                                                                    </td>
+                                                                    <td class="center" style="font-size:10px;">
+                                                                        <t t-esc="p.estado_parte or '—'"/>
+                                                                    </td>
+                                                                    <td class="nowrap bold" style="font-size:10px; color:#1e3a5f;">
+                                                                        <t t-esc="p.maquina_destino or '—'"/>
+                                                                    </td>
+                                                                    <td class="center">
+                                                                        <t t-if="not p.solicitud_partes_id">
+                                                                            <span class="badge badge-tecnico">
+                                                                                🔧 Técnico
+                                                                            </span>
+                                                                        </t>
+                                                                        <t t-else="">
+                                                                            <span class="badge badge-bodega">
+                                                                                📦 Bodega
+                                                                            </span>
+                                                                        </t>
+                                                                    </td>
+                                                                </tr>
+                                                            </t>
+                                                        </tbody>
+                                                    </table>
+
                                                 </td>
                                             </tr>
-
-                                            <!-- Fila de partes retiradas (solo si existen) -->
-                                            <t t-if="r.partes_retiradas_ids">
-                                                <tr>
-                                                    <td class="partes-cell" colspan="6">
-                                                        <table class="partes">
-                                                            <thead>
-                                                                <tr>
-                                                                    <th class="wp-parte">🔩 Parte Retirada</th>
-                                                                    <th class="wp-fecha">Fecha Solicitud</th>
-                                                                    <th class="wp-estado">Estado</th>
-                                                                    <th class="wp-destino">Destino (Serie)</th>
-                                                                    <th class="wp-fuente">Fuente</th>
-                                                                </tr>
-                                                            </thead>
-                                                            <tbody>
-                                                                <t t-foreach="r.partes_retiradas_ids" t-as="p" t-key="p.id">
-                                                                    <tr>
-                                                                        <td>
-                                                                            <span class="bold">
-                                                                                <t t-esc="p.nombre_parte or ''"/>
-                                                                            </span>
-                                                                            <t t-if="p.descripcion">
-                                                                                <br/>
-                                                                                <span class="small color-muted">
-                                                                                    <t t-esc="p.descripcion"/>
-                                                                                </span>
-                                                                            </t>
-                                                                        </td>
-                                                                        <td class="nowrap small">
-                                                                            <t t-if="p.fecha_solicitud">
-                                                                                <t t-esc="p.fecha_solicitud.strftime('%d/%m/%Y')"/>
-                                                                            </t>
-                                                                            <t t-else="">—</t>
-                                                                        </td>
-                                                                        <td class="small">
-                                                                            <t t-esc="p.estado_parte or '—'"/>
-                                                                        </td>
-                                                                        <td class="small nowrap">
-                                                                            <t t-esc="p.maquina_destino or '—'"/>
-                                                                        </td>
-                                                                        <td class="small">
-                                                                            <t t-if="not p.solicitud_partes_id">
-                                                                                <span class="badge badge-tecnico"
-                                                                                      style="font-size:9px; padding:2px 7px;">
-                                                                                    Técnico
-                                                                                </span>
-                                                                            </t>
-                                                                            <t t-else="">
-                                                                                <span class="badge badge-bodega"
-                                                                                      style="font-size:9px; padding:2px 7px;">
-                                                                                    Bodega
-                                                                                </span>
-                                                                            </t>
-                                                                        </td>
-                                                                    </tr>
-                                                                </t>
-                                                            </tbody>
-                                                        </table>
-                                                    </td>
-                                                </tr>
-                                            </t>
-                                            <!-- fin partes retiradas -->
-
                                         </t>
-                                    </tbody>
-                                </table>
-                            </t>
-                        </t>
-                    </div>
+                                        <!-- fin partes retiradas -->
 
-                    <!-- ══════════════════════════════════════════════════
+                                    </t>
+                                </tbody>
+                            </table>
+                        </t>
+                    </t>
+
+                    <!-- ════════════════════════════════════════════════
                          PIE DE PÁGINA
-                    ══════════════════════════════════════════════════ -->
-                    <div class="tiny wrap" style="margin-top:14px; border-top:1px solid var(--line); padding-top:6px;">
-                        Generado por el sistema Andes Solution Copiers —
-                        <t t-esc="date_print"/>
+                    ════════════════════════════════════════════════ -->
+                    <div class="report-footer">
+                        <table style="width:100%; border:none;">
+                            <tr>
+                                <td style="border:none; padding:0;">
+                                    🏢 Andes Solution Copiers &#160;·&#160;
+                                    Sistema de Gestión de Inventario &#160;·&#160;
+                                    Generado: <t t-esc="date_print"/>
+                                </td>
+                                <td style="border:none; padding:0; text-align:right;">
+                                    Documento generado automáticamente — No requiere firma
+                                </td>
+                            </tr>
+                        </table>
                     </div>
 
                 </div>
             </t>
         </t>
     </template>
+
 </odoo>
