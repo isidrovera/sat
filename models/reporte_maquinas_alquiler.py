@@ -470,10 +470,10 @@ class ReporteEstadoMaquina(models.Model):
             ('product_alquiler', '=', maquina.id),
             ('estado', '=', 'finalizado')
         ], order='agenda desc', limit=1)
-        
-        # Obtener cliente anterior (último cliente donde estuvo alquilada)
+
+        # Obtener cliente anterior
         cliente_anterior = self._obtener_cliente_anterior(maquina)
-        
+
         # Crear el registro del reporte
         valores_reporte = {
             'fecha_generacion': fecha_reporte,
@@ -485,28 +485,22 @@ class ReporteEstadoMaquina(models.Model):
             'estado_maquina': maquina.estado_alquiler_id,
             'ubicacion_fisica': maquina.ubicacion_id,
         }
-        
-        # Agregar datos del cliente anterior
+
         if cliente_anterior:
             valores_reporte.update({
                 'cliente_anterior_id': cliente_anterior['cliente_id'],
                 'direccion_anterior': cliente_anterior['direccion'],
                 'fecha_ultimo_retiro': cliente_anterior['fecha_retiro']
             })
-        
-        # Agregar datos del último ticket si existe
+
         if ultimo_ticket:
             valores_reporte.update(self._extraer_datos_ticket(ultimo_ticket))
-        
-        # Crear el registro
+
         reporte = self.create(valores_reporte)
-        
-        # Crear registros relacionados
+
         self._crear_historial_alquileres(reporte, maquina)
-        
-        if maquina.estado_alquiler_id in ['con_problemas', 'partes']:
-            self._crear_registro_partes_retiradas(reporte, maquina)
-        
+        self._crear_registro_partes_retiradas(reporte, maquina)  # ← siempre, sin condición
+
         return reporte
 
     def _obtener_cliente_anterior(self, maquina):
@@ -759,7 +753,7 @@ class ReporteEstadoMaquinaParte(models.Model):
     solicitud_partes_id = fields.Many2one(
         'solicitud.partes',
         string='Solicitud de Partes',
-        required=True
+        required=False
     )
     
     nombre_parte = fields.Char(string='Nombre de la Parte', required=True)
