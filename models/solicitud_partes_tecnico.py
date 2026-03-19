@@ -9,8 +9,8 @@ _logger = logging.getLogger(__name__)
 
 # ── Constantes ────────────────────────────────────────────────────────────
 JEFE_AREA_PHONE   = '51975399303'
-LOGISTICA_PHONE   = '51922541085'
-GERENCIA_PHONE    = '51998319547'
+LOGISTICA_PHONE   = '51999332773'
+GERENCIA_PHONE    = '51922541085'
 WA_API_URL        = 'https://boot.andessolutioncopiers.com/api/send-message'
 WA_API_KEY        = 'sk_2312cac15276b4a3ca124e66a78fdde6428c626eb7184f26d3fa62037aaae816'
 
