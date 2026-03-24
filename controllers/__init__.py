@@ -17,3 +17,4 @@ from . import sat_api
 from . import portal
 from . import traccar_api
 from . import solicitud_parte_controller
+from . import solicitud_partes_controller

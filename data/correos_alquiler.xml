@@ -385,97 +385,515 @@
 </html>
             ]]></field>
         </record>
-        <record id="email_template_solicitud_partes_alquiler" model="mail.template">
-    <field name="name">Solicitud de Partes para Aprobación Alquiler</field>
-    <field name="subject">🔧 Nueva Solicitud de Partes #{{object.name}}</field>
+        
+<!-- =========================================================================
+     ESTILOS BASE (reutilizados en todos los templates)
+     Colores: Gerencia #2d3748 | Retiro #2b6cb0 | Reposición #276749
+     ========================================================================= -->
+ 
+<!-- =========================================================================
+     1. GERENCIA — Nueva solicitud (aprobar / rechazar)
+     Destinatario: Gerencia
+     Trigger: SolicitudPartes.create()
+     ========================================================================= -->
+<record id="email_template_solicitud_gerencia" model="mail.template">
+    <field name="name">Solicitud de Partes para Gerencia</field>
     <field name="model_id" ref="model_solicitud_partes"/>
+    <field name="subject">🔧 Nueva Solicitud de Partes #{{ object.name }} — Requiere Aprobación</field>
+    <field name="email_from">soporte@andescopiers.com.pe</field>    
+    <field name="email_to">campuero@corapsac.com.pe</field>
+    <field name="email_cc">gerencia@corapsac.com, lincoln@corapsac.com</field>
     <field name="auto_delete" eval="True"/>
-    <field name="email_from">soporte@andescopiers.com.pe</field>
-    
-    <field name="email_cc"></field>
     <field name="body_html"><![CDATA[
 <!DOCTYPE html>
 <html>
-<head>
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-</head>
-<body bgcolor="#f5f5f5" style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif;">
-    <div style="max-width: 800px; margin: 0 auto; background-color: #ffffff;">
-        <!-- Encabezado -->
-        <div style="background-color: #4a5568; padding: 20px; text-align: center;">
-            <div style="color: #ffffff; font-size: 24px; font-weight: bold;">🔧 Nueva Solicitud de Partes</div>
-            <div style="color: #ffffff; margin-top: 10px;">#<t t-out="object.name"/></div>
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"></head>
+<body bgcolor="#f7f8fa" style="margin:0;padding:0;font-family:Arial,sans-serif;color:#2d3748;">
+<div style="max-width:680px;margin:0 auto;padding:24px 16px;">
+ 
+    <!-- Header -->
+    <div style="background:#2d3748;color:#fff;border-radius:10px 10px 0 0;padding:24px 32px;text-align:center;">
+        <div style="font-size:26px;font-weight:bold;margin-bottom:6px;">🔧 Nueva Solicitud de Partes</div>
+        <div style="font-size:16px;opacity:0.8;">#<t t-out="object.name"/></div>
+    </div>
+ 
+    <div style="background:#fff;border:1px solid #e2e8f0;border-top:none;padding:28px 32px;">
+ 
+        <!-- Intro -->
+        <p style="font-size:15px;margin:0 0 20px 0;">
+            Se requiere su <strong>aprobación</strong> para el retiro de partes solicitado por
+            <strong><t t-out="object.solicitante_id.name"/></strong>.
+        </p>
+ 
+        <!-- Solicitante y fecha -->
+        <table style="width:100%;border-collapse:collapse;font-size:14px;margin-bottom:20px;">
+            <tr>
+                <td style="color:#718096;padding:6px 0;width:35%;">Solicitante</td>
+                <td style="color:#2d3748;font-weight:bold;"><t t-out="object.solicitante_id.name"/></td>
+            </tr>
+            <tr>
+                <td style="color:#718096;padding:6px 0;">Fecha</td>
+                <td style="color:#2d3748;"><t t-out="object.fecha_solicitud"/></td>
+            </tr>
+        </table>
+ 
+        <!-- Máquina Origen -->
+        <div style="background:#f7fafc;border-radius:8px;padding:16px 20px;margin-bottom:16px;">
+            <div style="font-weight:bold;color:#4a5568;margin-bottom:10px;">🖨️ Máquina Origen</div>
+            <table style="width:100%;border-collapse:collapse;font-size:14px;">
+                <tr>
+                    <td style="color:#718096;padding:4px 0;width:35%;">Modelo</td>
+                    <td style="font-weight:bold;color:#2d3748;"><t t-out="object.maquina_origen_id.name.name"/></td>
+                </tr>
+                <tr>
+                    <td style="color:#718096;padding:4px 0;">Serie</td>
+                    <td><t t-out="object.maquina_origen_id.serie"/></td>
+                </tr>
+                <tr>
+                    <td style="color:#718096;padding:4px 0;">Marca</td>
+                    <td><t t-out="object.maquina_origen_id.marca"/></td>
+                </tr>
+                <t t-if="object.maquina_origen_id.cliente_id">
+                    <tr>
+                        <td style="color:#718096;padding:4px 0;">Cliente</td>
+                        <td><t t-out="object.maquina_origen_id.cliente_id.name"/></td>
+                    </tr>
+                </t>
+                <t t-if="object.maquina_origen_id.direccion">
+                    <tr>
+                        <td style="color:#718096;padding:4px 0;">Ubicación</td>
+                        <td><t t-out="object.maquina_origen_id.direccion"/></td>
+                    </tr>
+                </t>
+            </table>
         </div>
-        
-        <!-- Contenido Principal -->
-        <div style="padding: 25px; background-color: #ffffff; border: 1px solid #e2e8f0;">
-            <!-- Mensaje de Solicitud -->
-            <div style="margin-bottom: 20px; padding: 15px; background-color: #ebf8ff; border-radius: 4px;">
-                <p style="margin: 0; font-size: 16px;">
-                    Se solicita su aprobación para el retiro de la(s) siguiente(s) parte(s) de la máquina 
-                    <strong><t t-out="object.maquina_origen_id.name.name"/> (Serie: <t t-out="object.maquina_origen_id.serie"/>)</strong>
-                    <t t-if="object.maquina_destino_id">
-                        para ser instalada(s) en la máquina destino 
-                        <strong><t t-out="object.maquina_destino_id.name.name"/> (Serie: <t t-out="object.maquina_destino_id.serie"/>)</strong>.
+ 
+        <!-- Máquina Destino -->
+        <t t-if="object.maquina_destino_id">
+            <div style="background:#f0fff4;border-radius:8px;padding:16px 20px;margin-bottom:16px;">
+                <div style="font-weight:bold;color:#276749;margin-bottom:10px;">🖨️ Máquina Destino</div>
+                <table style="width:100%;border-collapse:collapse;font-size:14px;">
+                    <tr>
+                        <td style="color:#718096;padding:4px 0;width:35%;">Modelo</td>
+                        <td style="font-weight:bold;color:#2d3748;"><t t-out="object.maquina_destino_id.name.name"/></td>
+                    </tr>
+                    <tr>
+                        <td style="color:#718096;padding:4px 0;">Serie</td>
+                        <td><t t-out="object.maquina_destino_id.serie"/></td>
+                    </tr>
+                </table>
+            </div>
+        </t>
+ 
+        <!-- Partes solicitadas -->
+        <div style="margin-bottom:24px;">
+            <div style="font-weight:bold;color:#4a5568;margin-bottom:10px;">📦 Partes Solicitadas</div>
+            <t t-foreach="object.parte_ids" t-as="parte">
+                <div style="background:#f7fafc;border-left:4px solid #4299e1;padding:10px 14px;margin-bottom:6px;border-radius:0 6px 6px 0;">
+                    <div style="font-weight:bold;font-size:14px;"><t t-out="parte.parte"/></div>
+                    <t t-if="parte.descripcion">
+                        <div style="color:#718096;font-size:13px;margin-top:2px;"><t t-out="parte.descripcion"/></div>
                     </t>
-                </p>
-            </div>
-
-            <!-- Detalles de la Máquina Origen -->
-            <div style="background-color: #edf2f7; padding: 20px; margin: 15px 0;">
-                <div style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">🖨️ Máquina Origen</div>
-                <div style="margin: 5px 0;">Máquina: <strong><t t-out="object.maquina_origen_id.name.name"/></strong></div>
-                <div style="margin: 5px 0;">Serie: <strong><t t-out="object.maquina_origen_id.serie"/></strong></div>
-                <div style="margin: 5px 0;">Marca: <strong><t t-out="object.maquina_origen_id.marca"/></strong></div>
-                <div style="margin: 5px 0;">Tipo: <strong><t t-out="object.maquina_origen_id.tipo_maquina"/></strong></div>
-            </div>
-
-            <!-- Máquina Destino (si existe) -->
-            <t t-if="object.maquina_destino_id">
-                <div style="background-color: #edf2f7; padding: 20px; margin: 15px 0;">
-                    <div style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">🖨️ Máquina Destino</div>
-                    <div style="margin: 5px 0;">Cliente: <strong><t t-out="object.maquina_destino_id.cliente_id.name"/></strong></div>
-                    <div style="margin: 5px 0;">Máquina: <strong><t t-out="object.maquina_destino_id.name.name"/></strong></div>
-                    <div style="margin: 5px 0;">Serie: <strong><t t-out="object.maquina_destino_id.serie"/></strong></div>
-                    <div style="margin: 5px 0;">Marca: <strong><t t-out="object.maquina_destino_id.marca"/></strong></div>
-                    <div style="margin: 5px 0;">Tipo: <strong><t t-out="object.maquina_destino_id.tipo_maquina"/></strong></div>
                 </div>
             </t>
-
-            <!-- Solicitante -->
-            <div style="margin: 20px 0;">
-                <div style="font-weight: bold;">👤 Solicitante:</div>
-                <div><t t-out="object.solicitante_id.name"/></div>
-                <div style="margin-top: 10px;">Fecha: <t t-out="object.fecha_solicitud"/></div>
-            </div>
-
-            <!-- Partes Solicitadas -->
-            <div style="background-color: #f7fafc; padding: 20px; margin: 15px 0;">
-                <div style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">📦 Partes Solicitadas</div>
-                <t t-foreach="object.parte_ids" t-as="parte">
-                    <div style="margin: 5px 0; padding: 10px; background-color: #fff; border-left: 4px solid #48bb78;">
-                        <div style="font-weight: bold;"><t t-out="parte.parte"/></div>
-                        <div>Descripción: <strong><t t-out="parte.descripcion"/></strong></div>
-                    </div>
-                </t>
-            </div>
-
-            <!-- Instrucciones de Aprobación -->
-            <div style="margin: 20px 0; padding: 15px; background-color: #fdf6b2; border-radius: 4px;">
-                <p style="margin: 0; text-align: center; font-size: 16px;">
-                    Para aprobar esta solicitud, por favor haga clic en el botón verde de abajo.
-                </p>
-            </div>
-
-            <!-- Botón de Aprobación -->
-            <div style="text-align: center; margin: 30px 0;">
-                <a t-attf-href="/partes/approve/alquiler/{{ object.access_token }}" 
-                   style="background-color: #48bb78; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">
-                    APROBAR SOLICITUD
-                </a>
-            </div>
         </div>
+ 
+        <!-- Aviso -->
+        <div style="background:#fffbeb;border:1px solid #fbd38d;border-radius:6px;padding:14px 18px;margin-bottom:24px;font-size:14px;">
+            ⚠️ Al aprobar, deberá <strong>seleccionar el técnico</strong> que realizará el retiro de las partes.
+        </div>
+ 
+        <!-- Botones -->
+        <div style="text-align:center;margin:28px 0;">
+            <a t-attf-href="{{ ctx.get('url_aprobar', '') }}"
+               style="display:inline-block;background:#38a169;color:#fff;padding:14px 36px;text-decoration:none;border-radius:8px;font-weight:bold;font-size:16px;margin:0 8px;">
+                ✅ Aprobar
+            </a>
+            <a t-attf-href="{{ ctx.get('url_rechazar', '') }}"
+               style="display:inline-block;background:#e53e3e;color:#fff;padding:14px 36px;text-decoration:none;border-radius:8px;font-weight:bold;font-size:16px;margin:0 8px;">
+                ❌ Rechazar
+            </a>
+        </div>
+ 
+        <p style="font-size:12px;color:#a0aec0;text-align:center;margin:0;">
+            Cada enlace es de <strong>uso único</strong>. Una vez utilizado no podrá volver a procesarse.
+        </p>
+ 
     </div>
+ 
+    <!-- Footer -->
+    <div style="text-align:center;padding:16px;font-size:12px;color:#a0aec0;">
+        📞 (51) 924 894 829 · soporte@andescopiers.com.pe<br/>
+        Andes Solution Copiers · Sistema de Gestión SAT
+    </div>
+</div>
+</body>
+</html>
+    ]]></field>
+</record>
+ 
+<!-- =========================================================================
+     2. SOLICITANTE — Notificación de aprobación
+     Destinatario: Técnico solicitante
+     Trigger: SolicitudPartes._aprobar()
+     ========================================================================= -->
+<record id="email_template_solicitud_aprobada_solicitante" model="mail.template">
+    <field name="name">Solicitud Aprobada (Solicitante)</field>
+    <field name="model_id" ref="model_solicitud_partes"/>
+    <field name="subject">✅ Solicitud #{{ object.name }} Aprobada por Gerencia</field>
+    <field name="email_from">soporte@andescopiers.com.pe</field>
+    <field name="email_to">{{ object.solicitante_id.email }}</field>
+    <field name="auto_delete" eval="True"/>
+    <field name="body_html"><![CDATA[
+<!DOCTYPE html>
+<html>
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"></head>
+<body bgcolor="#f7f8fa" style="margin:0;padding:0;font-family:Arial,sans-serif;color:#2d3748;">
+<div style="max-width:680px;margin:0 auto;padding:24px 16px;">
+ 
+    <div style="background:#276749;color:#fff;border-radius:10px 10px 0 0;padding:24px 32px;text-align:center;">
+        <div style="font-size:26px;font-weight:bold;margin-bottom:6px;">✅ Solicitud Aprobada</div>
+        <div style="font-size:16px;opacity:0.8;">#<t t-out="object.name"/></div>
+    </div>
+ 
+    <div style="background:#fff;border:1px solid #e2e8f0;border-top:none;padding:28px 32px;">
+ 
+        <p style="font-size:15px;margin:0 0 20px 0;">
+            Estimado(a) <strong><t t-out="object.solicitante_id.name"/></strong>,<br/><br/>
+            Su solicitud de partes fue <strong>aprobada por Gerencia</strong> y ya está en proceso de retiro.
+        </p>
+ 
+        <div style="background:#f0fff4;border-radius:8px;padding:16px 20px;margin-bottom:20px;">
+            <table style="width:100%;border-collapse:collapse;font-size:14px;">
+                <tr>
+                    <td style="color:#718096;padding:4px 0;width:40%;">Solicitud</td>
+                    <td style="font-weight:bold;"><t t-out="object.name"/></td>
+                </tr>
+                <tr>
+                    <td style="color:#718096;padding:4px 0;">Máquina</td>
+                    <td><t t-out="object.maquina_origen_id.name.name"/></td>
+                </tr>
+                <tr>
+                    <td style="color:#718096;padding:4px 0;">Técnico asignado</td>
+                    <td style="font-weight:bold;color:#276749;"><t t-out="object.tecnico_asignado_id.name"/></td>
+                </tr>
+                <tr>
+                    <td style="color:#718096;padding:4px 0;">Fecha aprobación</td>
+                    <td><t t-out="object.fecha_autorizacion"/></td>
+                </tr>
+            </table>
+        </div>
+ 
+        <div style="background:#f7fafc;border-radius:8px;padding:16px 20px;margin-bottom:20px;">
+            <div style="font-weight:bold;color:#4a5568;margin-bottom:10px;">📦 Partes</div>
+            <t t-foreach="object.parte_ids" t-as="parte">
+                <div style="border-left:4px solid #38a169;padding:8px 12px;margin-bottom:6px;">
+                    <strong><t t-out="parte.parte"/></strong>
+                    <t t-if="parte.descripcion">
+                        <span style="color:#718096;font-size:13px;"> — <t t-out="parte.descripcion"/></span>
+                    </t>
+                </div>
+            </t>
+        </div>
+ 
+    </div>
+ 
+    <div style="text-align:center;padding:16px;font-size:12px;color:#a0aec0;">
+        📞 (51) 924 894 829 · soporte@andescopiers.com.pe<br/>
+        Andes Solution Copiers · Sistema de Gestión SAT
+    </div>
+</div>
+</body>
+</html>
+    ]]></field>
+</record>
+ 
+<!-- =========================================================================
+     3. TÉCNICO ASIGNADO — Instrucciones de retiro con link
+     Destinatario: Técnico asignado para retirar
+     Trigger: SolicitudPartes._aprobar()
+     ========================================================================= -->
+<record id="email_template_solicitud_retiro_tecnico" model="mail.template">
+    <field name="name">Retiro de Partes (Técnico)</field>
+    <field name="model_id" ref="model_solicitud_partes"/>
+    <field name="subject">📦 Retiro Autorizado — Solicitud #{{ object.name }}</field>
+    <field name="email_from">soporte@andescopiers.com.pe</field>
+    <field name="email_to">{{ object.tecnico_asignado_id.email }}</field>
+    <field name="auto_delete" eval="True"/>
+    <field name="body_html"><![CDATA[
+<!DOCTYPE html>
+<html>
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"></head>
+<body bgcolor="#f7f8fa" style="margin:0;padding:0;font-family:Arial,sans-serif;color:#2d3748;">
+<div style="max-width:680px;margin:0 auto;padding:24px 16px;">
+ 
+    <div style="background:#2b6cb0;color:#fff;border-radius:10px 10px 0 0;padding:24px 32px;text-align:center;">
+        <div style="font-size:26px;font-weight:bold;margin-bottom:6px;">📦 Retiro de Partes Autorizado</div>
+        <div style="font-size:16px;opacity:0.8;">#<t t-out="object.name"/></div>
+    </div>
+ 
+    <div style="background:#fff;border:1px solid #e2e8f0;border-top:none;padding:28px 32px;">
+ 
+        <p style="font-size:15px;margin:0 0 20px 0;">
+            Hola <strong><t t-out="object.tecnico_asignado_id.name"/></strong>,<br/><br/>
+            Has sido asignado para retirar las siguientes partes. Ingresa al enlace para confirmar el retiro.
+        </p>
+ 
+        <!-- Máquina -->
+        <div style="background:#ebf8ff;border-radius:8px;padding:16px 20px;margin-bottom:20px;">
+            <div style="font-weight:bold;color:#2b6cb0;margin-bottom:10px;">🖨️ Máquina a Intervenir</div>
+            <table style="width:100%;border-collapse:collapse;font-size:14px;">
+                <tr>
+                    <td style="color:#718096;padding:4px 0;width:35%;">Modelo</td>
+                    <td style="font-weight:bold;"><t t-out="object.maquina_origen_id.name.name"/></td>
+                </tr>
+                <tr>
+                    <td style="color:#718096;padding:4px 0;">Serie</td>
+                    <td><t t-out="object.maquina_origen_id.serie"/></td>
+                </tr>
+                <tr>
+                    <td style="color:#718096;padding:4px 0;">Marca</td>
+                    <td><t t-out="object.maquina_origen_id.marca"/></td>
+                </tr>
+                <t t-if="object.maquina_origen_id.cliente_id">
+                    <tr>
+                        <td style="color:#718096;padding:4px 0;">Cliente</td>
+                        <td><t t-out="object.maquina_origen_id.cliente_id.name"/></td>
+                    </tr>
+                </t>
+                <t t-if="object.maquina_origen_id.direccion">
+                    <tr>
+                        <td style="color:#718096;padding:4px 0;">Ubicación</td>
+                        <td><t t-out="object.maquina_origen_id.direccion"/></td>
+                    </tr>
+                </t>
+            </table>
+        </div>
+ 
+        <!-- Partes -->
+        <div style="margin-bottom:24px;">
+            <div style="font-weight:bold;color:#4a5568;margin-bottom:10px;">📋 Partes a Retirar</div>
+            <t t-foreach="object.parte_ids" t-as="parte">
+                <div style="background:#f7fafc;border-left:4px solid #4299e1;padding:10px 14px;margin-bottom:6px;border-radius:0 6px 6px 0;">
+                    <strong><t t-out="parte.parte"/></strong>
+                    <t t-if="parte.descripcion">
+                        <span style="color:#718096;font-size:13px;"> — <t t-out="parte.descripcion"/></span>
+                    </t>
+                </div>
+            </t>
+        </div>
+ 
+        <!-- Responsable reposición -->
+        <t t-if="object.responsable_reposicion_id">
+            <div style="background:#fffbeb;border:1px solid #fbd38d;border-radius:6px;padding:12px 16px;margin-bottom:24px;font-size:14px;">
+                <strong>📋 Responsable de reposición:</strong>
+                <t t-out="object.responsable_reposicion_id.name"/>
+            </div>
+        </t>
+ 
+        <!-- Botón -->
+        <div style="text-align:center;margin:28px 0;">
+            <a t-attf-href="{{ ctx.get('url_retiro', '') }}"
+               style="display:inline-block;background:#2b6cb0;color:#fff;padding:14px 40px;text-decoration:none;border-radius:8px;font-weight:bold;font-size:16px;">
+                ✅ Confirmar Retiro
+            </a>
+        </div>
+ 
+        <p style="font-size:12px;color:#a0aec0;text-align:center;margin:0;">
+            Este enlace te llevará a la página de confirmación donde podrás marcar las partes retiradas.
+        </p>
+ 
+    </div>
+ 
+    <div style="text-align:center;padding:16px;font-size:12px;color:#a0aec0;">
+        📞 (51) 924 894 829 · soporte@andescopiers.com.pe<br/>
+        Andes Solution Copiers · Sistema de Gestión SAT
+    </div>
+</div>
+</body>
+</html>
+    ]]></field>
+</record>
+ 
+<!-- =========================================================================
+     4. RESPONSABLE DE REPOSICIÓN — Instrucciones con link y foto
+     Destinatario: Responsable de reposición
+     Trigger: SolicitudPartes._completar_retiro()
+     ========================================================================= -->
+<record id="email_template_solicitud_reposicion" model="mail.template">
+    <field name="name">Reposición de Partes (Responsable)</field>
+    <field name="model_id" ref="model_solicitud_partes"/>
+    <field name="subject">🔄 Reposición Pendiente — Solicitud #{{ object.name }}</field>
+    <field name="email_from">soporte@andescopiers.com.pe</field>
+    <field name="email_to">{{ object.responsable_reposicion_id.email }}</field>
+    <field name="auto_delete" eval="True"/>
+    <field name="body_html"><![CDATA[
+<!DOCTYPE html>
+<html>
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"></head>
+<body bgcolor="#f7f8fa" style="margin:0;padding:0;font-family:Arial,sans-serif;color:#2d3748;">
+<div style="max-width:680px;margin:0 auto;padding:24px 16px;">
+ 
+    <div style="background:#276749;color:#fff;border-radius:10px 10px 0 0;padding:24px 32px;text-align:center;">
+        <div style="font-size:26px;font-weight:bold;margin-bottom:6px;">🔄 Reposición de Partes</div>
+        <div style="font-size:16px;opacity:0.8;">#<t t-out="object.name"/></div>
+    </div>
+ 
+    <div style="background:#fff;border:1px solid #e2e8f0;border-top:none;padding:28px 32px;">
+ 
+        <p style="font-size:15px;margin:0 0 20px 0;">
+            Hola <strong><t t-out="object.responsable_reposicion_id.name"/></strong>,<br/><br/>
+            Las partes listadas a continuación ya fueron <strong>retiradas</strong> y necesitan ser repuestas.
+            Ingresa al enlace para registrar la reposición con foto.
+        </p>
+ 
+        <!-- Máquina -->
+        <div style="background:#f0fff4;border-radius:8px;padding:16px 20px;margin-bottom:20px;">
+            <div style="font-weight:bold;color:#276749;margin-bottom:10px;">🖨️ Máquina</div>
+            <table style="width:100%;border-collapse:collapse;font-size:14px;">
+                <tr>
+                    <td style="color:#718096;padding:4px 0;width:35%;">Modelo</td>
+                    <td style="font-weight:bold;"><t t-out="object.maquina_origen_id.name.name"/></td>
+                </tr>
+                <tr>
+                    <td style="color:#718096;padding:4px 0;">Serie</td>
+                    <td><t t-out="object.maquina_origen_id.serie"/></td>
+                </tr>
+                <t t-if="object.maquina_origen_id.cliente_id">
+                    <tr>
+                        <td style="color:#718096;padding:4px 0;">Cliente</td>
+                        <td><t t-out="object.maquina_origen_id.cliente_id.name"/></td>
+                    </tr>
+                </t>
+                <t t-if="object.maquina_origen_id.direccion">
+                    <tr>
+                        <td style="color:#718096;padding:4px 0;">Ubicación</td>
+                        <td><t t-out="object.maquina_origen_id.direccion"/></td>
+                    </tr>
+                </t>
+            </table>
+        </div>
+ 
+        <!-- Partes retiradas -->
+        <div style="margin-bottom:24px;">
+            <div style="font-weight:bold;color:#4a5568;margin-bottom:10px;">📦 Partes a Reponer</div>
+            <t t-foreach="object.parte_ids.filtered(lambda l: l.estado == 'retirado')" t-as="parte">
+                <div style="background:#f7fafc;border-left:4px solid #38a169;padding:10px 14px;margin-bottom:6px;border-radius:0 6px 6px 0;">
+                    <strong><t t-out="parte.parte"/></strong>
+                    <t t-if="parte.descripcion">
+                        <span style="color:#718096;font-size:13px;"> — <t t-out="parte.descripcion"/></span>
+                    </t>
+                </div>
+            </t>
+        </div>
+ 
+        <!-- Aviso foto -->
+        <div style="background:#fffbeb;border:1px solid #fbd38d;border-radius:6px;padding:14px 18px;margin-bottom:24px;font-size:14px;">
+            ⚠️ Para cada parte debe adjuntar <strong>foto como evidencia</strong> e indicar su condición.
+        </div>
+ 
+        <!-- Botón -->
+        <div style="text-align:center;margin:28px 0;">
+            <a t-attf-href="{{ ctx.get('url_reponer', '') }}"
+               style="display:inline-block;background:#276749;color:#fff;padding:14px 40px;text-decoration:none;border-radius:8px;font-weight:bold;font-size:16px;">
+                ✅ Registrar Reposición
+            </a>
+        </div>
+ 
+        <p style="font-size:12px;color:#a0aec0;text-align:center;margin:0;">
+            Este enlace permanece activo hasta que todas las partes sean repuestas.
+        </p>
+ 
+    </div>
+ 
+    <div style="text-align:center;padding:16px;font-size:12px;color:#a0aec0;">
+        📞 (51) 924 894 829 · soporte@andescopiers.com.pe<br/>
+        Andes Solution Copiers · Sistema de Gestión SAT
+    </div>
+</div>
+</body>
+</html>
+    ]]></field>
+</record>
+ 
+<!-- =========================================================================
+     5. RECORDATORIO — Reposición pendiente > 48h
+     Destinatario: Responsable de reposición
+     Trigger: Cron action_check_reposiciones_pendientes()
+     ========================================================================= -->
+<record id="email_template_recordatorio_reposicion" model="mail.template">
+    <field name="name"> Recordatorio Reposición Pendiente</field>
+    <field name="model_id" ref="model_solicitud_partes"/>
+    <field name="subject">⚠️ Recordatorio: Reposición Pendiente — Solicitud #{{ object.name }}</field>
+    <field name="email_from">soporte@andescopiers.com.pe</field>
+    <field name="email_to">{{ object.responsable_reposicion_id.email }}</field>
+    <field name="auto_delete" eval="True"/>
+    <field name="body_html"><![CDATA[
+<!DOCTYPE html>
+<html>
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"></head>
+<body bgcolor="#f7f8fa" style="margin:0;padding:0;font-family:Arial,sans-serif;color:#2d3748;">
+<div style="max-width:680px;margin:0 auto;padding:24px 16px;">
+ 
+    <div style="background:#c05621;color:#fff;border-radius:10px 10px 0 0;padding:24px 32px;text-align:center;">
+        <div style="font-size:26px;font-weight:bold;margin-bottom:6px;">⚠️ Reposición Pendiente</div>
+        <div style="font-size:16px;opacity:0.8;">#<t t-out="object.name"/></div>
+    </div>
+ 
+    <div style="background:#fff;border:1px solid #e2e8f0;border-top:none;padding:28px 32px;">
+ 
+        <p style="font-size:15px;margin:0 0 20px 0;">
+            Hola <strong><t t-out="object.responsable_reposicion_id.name"/></strong>,<br/><br/>
+            Tienes partes <strong>pendientes de reposición</strong> con más de 48 horas de espera.
+            Por favor, registra la reposición a la brevedad.
+        </p>
+ 
+        <!-- Máquina -->
+        <div style="background:#fff5f0;border:1px solid #fbd38d;border-radius:8px;padding:16px 20px;margin-bottom:20px;">
+            <table style="width:100%;border-collapse:collapse;font-size:14px;">
+                <tr>
+                    <td style="color:#718096;padding:4px 0;width:35%;">Solicitud</td>
+                    <td style="font-weight:bold;"><t t-out="object.name"/></td>
+                </tr>
+                <tr>
+                    <td style="color:#718096;padding:4px 0;">Máquina</td>
+                    <td><t t-out="object.maquina_origen_id.name.name"/></td>
+                </tr>
+                <tr>
+                    <td style="color:#718096;padding:4px 0;">Serie</td>
+                    <td><t t-out="object.maquina_origen_id.serie"/></td>
+                </tr>
+            </table>
+        </div>
+ 
+        <!-- Partes pendientes -->
+        <div style="margin-bottom:24px;">
+            <div style="font-weight:bold;color:#4a5568;margin-bottom:10px;">📦 Partes Pendientes</div>
+            <t t-foreach="object.parte_ids.filtered(lambda l: l.estado == 'retirado')" t-as="parte">
+                <div style="background:#fff5f0;border-left:4px solid #e53e3e;padding:10px 14px;margin-bottom:6px;border-radius:0 6px 6px 0;">
+                    <strong><t t-out="parte.parte"/></strong>
+                    <t t-if="parte.descripcion">
+                        <span style="color:#718096;font-size:13px;"> — <t t-out="parte.descripcion"/></span>
+                    </t>
+                </div>
+            </t>
+        </div>
+ 
+        <!-- Botón -->
+        <div style="text-align:center;margin:28px 0;">
+            <a t-attf-href="{{ ctx.get('url_reponer', '') }}"
+               style="display:inline-block;background:#c05621;color:#fff;padding:14px 40px;text-decoration:none;border-radius:8px;font-weight:bold;font-size:16px;">
+                ✅ Registrar Reposición Ahora
+            </a>
+        </div>
+ 
+    </div>
+ 
+    <div style="text-align:center;padding:16px;font-size:12px;color:#a0aec0;">
+        📞 (51) 924 894 829 · soporte@andescopiers.com.pe<br/>
+        Andes Solution Copiers · Sistema de Gestión SAT
+    </div>
+</div>
 </body>
 </html>
     ]]></field>
