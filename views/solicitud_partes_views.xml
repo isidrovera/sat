@@ -183,13 +183,11 @@
                                 <form>
                                     <sheet>
 
-                                        <!-- Stat button foto -->
+                                        <!-- Stat button foto — solo informativo -->
                                         <div class="oe_button_box" name="button_box">
                                             <button class="oe_stat_button"
                                                     icon="fa-camera"
-                                                    invisible="not foto_reposicion"
-                                                    type="object"
-                                                    name="action_ver_foto">
+                                                    invisible="not foto_reposicion">
                                                 <div class="o_field_widget o_stat_info">
                                                     <span class="o_stat_text">Foto</span>
                                                     <span class="o_stat_text">Adjuntada</span>
