@@ -18,3 +18,4 @@ from . import portal
 from . import traccar_api
 from . import solicitud_parte_controller
 from . import solicitud_partes_controller
+from . import copier_parts_controller

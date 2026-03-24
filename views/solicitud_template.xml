@@ -1,144 +1,508 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <data>
-        <!-- Template de Éxito para Aprobación -->
-        <template id="parts_request_approval_success">
-            <t t-call="web.layout">  <!-- Cambiado de website.layout a web.layout -->
-                <div class="container min-vh-100 d-flex align-items-center py-5">
-                    <div class="row justify-content-center w-100">
-                        <div class="col-md-6 col-lg-5 col-xl-4">
-                            <div t-attf-class="card rounded-4 shadow-sm border-0" 
-                                 style="animation: fadeInUp 0.6s ease;">
-                                <div class="card-body p-4 text-center">
-                                    <div class="rounded-circle d-inline-flex align-items-center justify-content-center mb-4" 
-                                         style="width: 90px; height: 90px; background: linear-gradient(135deg, #28a745, #20c997);">
-                                        <i class="fa fa-check fa-2x text-white"/>
-                                    </div>
-                                    <h2 class="fw-bold text-success mb-3">¡Solicitud Aprobada!</h2>
-                                    <p class="text-muted mb-4">La solicitud de partes ha sido aprobada correctamente y se ha notificado a logística.</p>
-                                    <div class="py-2 px-3 bg-light rounded-3 text-muted small">
-                                        Esta ventana se cerrará automáticamente
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <style>
-                    @keyframes fadeInUp {
-                        from {
-                            opacity: 0;
-                            transform: translateY(20px);
-                        }
-                        to {
-                            opacity: 1;
-                            transform: translateY(0);
-                        }
-                    }
-                </style>
-                <script type="text/javascript">
-                    setTimeout(function() {
-                        window.close();
-                    }, 10000);
-                </script>
-            </t>
-        </template>
+<data>
 
-        <!-- Template de Éxito para Entrega -->
-        <template id="parts_request_delivery_success">
-            <t t-call="web.layout">  <!-- Cambiado de website.layout a web.layout -->
-                <div class="container min-vh-100 d-flex align-items-center py-5">
-                    <div class="row justify-content-center w-100">
-                        <div class="col-md-6 col-lg-5 col-xl-4">
-                            <div t-attf-class="card rounded-4 shadow-sm border-0" 
-                                 style="animation: fadeInUp 0.6s ease;">
-                                <div class="card-body p-4 text-center">
-                                    <div class="rounded-circle d-inline-flex align-items-center justify-content-center mb-4" 
-                                         style="width: 90px; height: 90px; background: linear-gradient(135deg, #28a745, #20c997);">
-                                        <i class="fa fa-truck fa-2x text-white"/>
-                                    </div>
-                                    <h2 class="fw-bold text-success mb-3">¡Entrega Confirmada!</h2>
-                                    <p class="text-muted mb-4">La entrega de las partes ha sido confirmada exitosamente.</p>
-                                    <div class="py-2 px-3 bg-light rounded-3 text-muted small">
-                                        Esta ventana se cerrará automáticamente
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <style>
-                    @keyframes fadeInUp {
-                        from {
-                            opacity: 0;
-                            transform: translateY(20px);
-                        }
-                        to {
-                            opacity: 1;
-                            transform: translateY(0);
-                        }
-                    }
-                </style>
-                <script type="text/javascript">
-                    setTimeout(function() {
-                        window.close();
-                    }, 10000);
-                </script>
-            </t>
-        </template>
+<!-- ==========================================================================
+     ESTILOS COMUNES
+     ========================================================================== -->
+<template id="portal_copier_parts_assets" name="SAT - Copier Parts Assets">
+    <style>
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .sat-card {
+            animation: fadeInUp 0.6s ease;
+            border-radius: 16px;
+            border: none;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.10);
+        }
+        .sat-icon-circle {
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        .sat-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .sat-table td {
+            padding: 8px 4px;
+            font-size: 14px;
+            vertical-align: top;
+        }
+        .sat-table td:first-child {
+            color: #6c757d;
+            width: 40%;
+            white-space: nowrap;
+        }
+        .sat-table td:last-child {
+            font-weight: 600;
+            color: #2d3748;
+        }
+        .sat-parte-item {
+            background: #f8f9fa;
+            border-left: 4px solid #4299e1;
+            border-radius: 0 8px 8px 0;
+            padding: 10px 14px;
+            margin-bottom: 8px;
+        }
+        .sat-footer {
+            font-size: 12px;
+            color: #adb5bd;
+            text-align: center;
+            padding: 16px 0 8px 0;
+        }
+        .btn-sat-approve {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            border: none;
+            border-radius: 10px;
+            color: #fff;
+            font-weight: bold;
+            font-size: 16px;
+            padding: 14px 32px;
+            width: 100%;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .btn-sat-approve:hover { opacity: 0.92; }
+        .btn-sat-deliver {
+            background: linear-gradient(135deg, #2b6cb0, #4299e1);
+            border: none;
+            border-radius: 10px;
+            color: #fff;
+            font-weight: bold;
+            font-size: 16px;
+            padding: 14px 32px;
+            width: 100%;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .btn-sat-deliver:hover { opacity: 0.92; }
+        .sat-reject-link {
+            color: #dc3545;
+            font-size: 14px;
+            text-decoration: none;
+            display: block;
+            text-align: center;
+            margin-top: 14px;
+        }
+        .sat-reject-link:hover { text-decoration: underline; }
+    </style>
+</template>
 
-        <!-- Template de Error -->
-        <template id="parts_request_invalid">
-            <t t-call="web.layout">  <!-- Cambiado de website.layout a web.layout -->
-                <div class="container min-vh-100 d-flex align-items-center py-5">
-                    <div class="row justify-content-center w-100">
-                        <div class="col-md-6 col-lg-5 col-xl-4">
-                            <div t-attf-class="card rounded-4 shadow-sm border-0" 
-                                 style="animation: fadeInUp 0.6s ease;">
-                                <div class="card-body p-4 text-center">
-                                    <div class="rounded-circle d-inline-flex align-items-center justify-content-center mb-4" 
-                                         style="width: 90px; height: 90px; background: linear-gradient(135deg, #dc3545, #ff6b6b);">
-                                        <i class="fa fa-exclamation-triangle fa-2x text-white"/>
-                                    </div>
-                                    <h2 class="fw-bold text-danger mb-3">Solicitud Inválida</h2>
-                                    <t t-if="error_message">
-                                        <p class="text-muted mb-4"><t t-esc="error_message"/></p>
-                                    </t>
-                                    <t t-else="">
-                                        <p class="text-muted mb-3">La solicitud no puede ser procesada. Esto puede deberse a que:</p>
-                                        <ul class="list-unstyled text-muted small mb-4">
-                                            <li class="mb-2">• La solicitud ya ha sido procesada</li>
-                                            <li class="mb-2">• El enlace ha expirado</li>
-                                            <li class="mb-2">• El enlace no es válido</li>
-                                        </ul>
-                                    </t>
-                                    <p class="text-muted small mb-4">Por favor, contacte al administrador si el problema persiste.</p>
-                                    <div class="py-2 px-3 bg-light rounded-3 text-muted small">
-                                        Esta ventana se cerrará automáticamente
-                                    </div>
-                                </div>
+<!-- ==========================================================================
+     PÁGINA: ERROR
+     Usado por: _render_error() en el controller
+     Variables: titulo, mensaje
+     ========================================================================== -->
+<template id="portal_copier_parts_error" name="SAT - Copier Parts Error">
+    <t t-call="web.layout">
+        <t t-set="head_title">Solicitud de Partes</t>
+        <t t-call="sat.portal_copier_parts_assets"/>
+        <div class="container min-vh-100 d-flex align-items-center py-5">
+            <div class="row justify-content-center w-100">
+                <div class="col-md-6 col-lg-5 col-xl-4">
+                    <div class="card sat-card">
+                        <div class="card-body p-4 text-center">
+                            <div class="sat-icon-circle"
+                                 style="background: linear-gradient(135deg, #dc3545, #ff6b6b);">
+                                <i class="fa fa-exclamation-triangle fa-2x text-white"/>
+                            </div>
+                            <h2 class="fw-bold text-danger mb-3" t-esc="titulo"/>
+                            <p class="text-muted mb-4" t-raw="mensaje"/>
+                            <p class="text-muted small mb-4">
+                                Por favor contacte al administrador si el problema persiste.
+                            </p>
+                            <div class="py-2 px-3 bg-light rounded-3 text-muted small">
+                                Esta ventana se cerrará automáticamente
                             </div>
                         </div>
                     </div>
+                    <div class="sat-footer">
+                        Andes Solution Copiers · Sistema de Gestión SAT
+                    </div>
                 </div>
-                <style>
-                    @keyframes fadeInUp {
-                        from {
-                            opacity: 0;
-                            transform: translateY(20px);
-                        }
-                        to {
-                            opacity: 1;
-                            transform: translateY(0);
-                        }
-                    }
-                </style>
-                <script type="text/javascript">
-                    setTimeout(function() {
-                        window.close();
-                    }, 10000);
-                </script>
-            </t>
-        </template>
-    </data>
+            </div>
+        </div>
+        <script type="text/javascript">
+            setTimeout(function() { window.close(); }, 10000);
+        </script>
+    </t>
+</template>
+
+<!-- ==========================================================================
+     PÁGINA: ÉXITO
+     Usado por: _render_ok() en el controller
+     Variables: titulo, mensaje, detalle (opcional)
+     ========================================================================== -->
+<template id="portal_copier_parts_ok" name="SAT - Copier Parts OK">
+    <t t-call="web.layout">
+        <t t-set="head_title">Solicitud de Partes</t>
+        <t t-call="sat.portal_copier_parts_assets"/>
+        <div class="container min-vh-100 d-flex align-items-center py-5">
+            <div class="row justify-content-center w-100">
+                <div class="col-md-6 col-lg-5 col-xl-4">
+                    <div class="card sat-card">
+                        <div class="card-body p-4 text-center">
+                            <div class="sat-icon-circle"
+                                 style="background: linear-gradient(135deg, #28a745, #20c997);">
+                                <i class="fa fa-check fa-2x text-white"/>
+                            </div>
+                            <h2 class="fw-bold text-success mb-3" t-esc="titulo"/>
+                            <p class="text-muted mb-2" t-raw="mensaje"/>
+                            <t t-if="detalle">
+                                <p class="text-muted small mb-4" t-raw="detalle"/>
+                            </t>
+                            <div class="py-2 px-3 bg-light rounded-3 text-muted small mt-3">
+                                Esta ventana se cerrará automáticamente
+                            </div>
+                        </div>
+                    </div>
+                    <div class="sat-footer">
+                        Andes Solution Copiers · Sistema de Gestión SAT
+                    </div>
+                </div>
+            </div>
+        </div>
+        <script type="text/javascript">
+            setTimeout(function() { window.close(); }, 10000);
+        </script>
+    </t>
+</template>
+
+<!-- ==========================================================================
+     PÁGINA: GERENCIA — APROBAR SOLICITUD
+     Ruta: GET/POST /parts/gerencia/<token>/aprobar
+     Variables: solicitud, error
+     ========================================================================== -->
+<template id="portal_copier_parts_gerencia_aprobar" name="SAT - Copier Parts Gerencia Aprobar">
+    <t t-call="web.layout">
+        <t t-set="head_title">Aprobar Solicitud de Partes</t>
+        <t t-call="sat.portal_copier_parts_assets"/>
+        <div class="container py-5">
+            <div class="row justify-content-center">
+                <div class="col-md-7 col-lg-6">
+
+                    <!-- Header -->
+                    <div class="card sat-card mb-0"
+                         style="border-radius:16px 16px 0 0 !important;">
+                        <div class="card-body p-4 text-center"
+                             style="background: linear-gradient(135deg, #2d3748, #4a5568);
+                                    border-radius:14px 14px 0 0;">
+                            <div class="sat-icon-circle mb-2"
+                                 style="background:rgba(255,255,255,0.15); width:64px; height:64px;">
+                                <i class="fa fa-cogs fa-xl text-white"/>
+                            </div>
+                            <h4 class="fw-bold text-white mb-1">Solicitud de Partes</h4>
+                            <span class="sat-badge"
+                                  style="background:rgba(255,255,255,0.2); color:#fff;">
+                                <t t-esc="solicitud.name"/>
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Alerta error -->
+                    <t t-if="error">
+                        <div class="alert alert-danger rounded-0 mb-0 py-2 px-3"
+                             style="font-size:14px;">
+                            ⚠️ <t t-esc="error"/>
+                        </div>
+                    </t>
+
+                    <!-- Cuerpo -->
+                    <div class="card sat-card"
+                         style="border-radius:0 0 16px 16px !important; border-top:1px solid #e2e8f0;">
+                        <div class="card-body p-4">
+
+                            <!-- Solicitante -->
+                            <table class="sat-table w-100 mb-3">
+                                <tr>
+                                    <td>Solicitante</td>
+                                    <td><t t-esc="solicitud.solicitante_id.name"/></td>
+                                </tr>
+                                <tr>
+                                    <td>Fecha</td>
+                                    <td><t t-esc="solicitud.fecha"/></td>
+                                </tr>
+                            </table>
+
+                            <!-- Máquina -->
+                            <div class="p-3 rounded-3 mb-3"
+                                 style="background:#f7fafc; border-left:4px solid #4a5568;">
+                                <div class="fw-bold text-secondary mb-2" style="font-size:13px;">
+                                    🖨️ MÁQUINA
+                                </div>
+                                <table class="sat-table w-100">
+                                    <tr>
+                                        <td>Marca / Modelo</td>
+                                        <td>
+                                            <t t-esc="solicitud.marca"/>
+                                            <t t-esc="solicitud.modelo"/>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Serie</td>
+                                        <td><t t-esc="solicitud.serie"/></td>
+                                    </tr>
+                                    <t t-if="solicitud.proveedor">
+                                        <tr>
+                                            <td>Proveedor</td>
+                                            <td><t t-esc="solicitud.proveedor"/></td>
+                                        </tr>
+                                    </t>
+                                    <t t-if="solicitud.importacion">
+                                        <tr>
+                                            <td>Importación</td>
+                                            <td><t t-esc="solicitud.importacion"/></td>
+                                        </tr>
+                                    </t>
+                                </table>
+                            </div>
+
+                            <!-- Reparación asociada -->
+                            <t t-if="solicitud.reparacion_id">
+                                <div class="p-3 rounded-3 mb-3"
+                                     style="background:#fffbeb; border-left:4px solid #f6ad55;">
+                                    <div class="fw-bold mb-1" style="font-size:13px; color:#975a16;">
+                                        🔧 REPARACIÓN ASOCIADA
+                                    </div>
+                                    <div style="font-size:14px; color:#2d3748;">
+                                        <t t-esc="solicitud.reparacion_id.name"/>
+                                    </div>
+                                </div>
+                            </t>
+
+                            <!-- Partes solicitadas -->
+                            <div class="mb-4">
+                                <div class="fw-bold text-secondary mb-2" style="font-size:13px;">
+                                    📦 PARTES SOLICITADAS
+                                </div>
+                                <t t-if="solicitud.disco_duro_requerido">
+                                    <div class="sat-parte-item">
+                                        <div class="fw-bold" style="font-size:14px;">
+                                            💾 Disco Duro
+                                        </div>
+                                        <div class="text-muted" style="font-size:13px;">
+                                            <t t-esc="solicitud.get_motivo_disco_display()"/>
+                                        </div>
+                                    </div>
+                                </t>
+                                <t t-if="solicitud.ruedas_requeridas">
+                                    <div class="sat-parte-item">
+                                        <div class="fw-bold" style="font-size:14px;">
+                                            ⚙️ Ruedas
+                                        </div>
+                                        <div class="text-muted" style="font-size:13px;">
+                                            Cantidad: <t t-esc="solicitud.cantidad_ruedas"/>
+                                        </div>
+                                    </div>
+                                </t>
+                                <t t-if="solicitud.cable_poder_requerido">
+                                    <div class="sat-parte-item">
+                                        <div class="fw-bold" style="font-size:14px;">
+                                            🔌 Cable de Poder
+                                        </div>
+                                        <div class="text-muted" style="font-size:13px;">
+                                            <t t-esc="solicitud.motivo_cable_display"/>
+                                        </div>
+                                    </div>
+                                </t>
+                            </div>
+
+                            <!-- Formulario de aprobación -->
+                            <form method="POST">
+                                <input type="hidden" name="csrf_token"
+                                       t-att-value="request.csrf_token()"/>
+                                <button type="submit" class="btn-sat-approve">
+                                    ✅ Aprobar Solicitud
+                                </button>
+                            </form>
+
+                            <!-- Link rechazar -->
+                            <a t-attf-href="/parts/gerencia/#{solicitud.token_gerencia}/rechazar"
+                               class="sat-reject-link">
+                                ❌ Rechazar esta solicitud
+                            </a>
+
+                        </div>
+                    </div>
+
+                    <div class="sat-footer">
+                        Andes Solution Copiers · Sistema de Gestión SAT
+                    </div>
+                </div>
+            </div>
+        </div>
+    </t>
+</template>
+
+<!-- ==========================================================================
+     PÁGINA: LOGÍSTICA — CONFIRMAR ENTREGA
+     Ruta: GET/POST /parts/logistica/<token>/entregar
+     Variables: solicitud, error
+     ========================================================================== -->
+<template id="portal_copier_parts_logistica_entregar"
+          name="SAT - Copier Parts Logística Entregar">
+    <t t-call="web.layout">
+        <t t-set="head_title">Confirmar Entrega de Partes</t>
+        <t t-call="sat.portal_copier_parts_assets"/>
+        <div class="container py-5">
+            <div class="row justify-content-center">
+                <div class="col-md-7 col-lg-6">
+
+                    <!-- Header -->
+                    <div class="card sat-card mb-0"
+                         style="border-radius:16px 16px 0 0 !important;">
+                        <div class="card-body p-4 text-center"
+                             style="background: linear-gradient(135deg, #2b6cb0, #4299e1);
+                                    border-radius:14px 14px 0 0;">
+                            <div class="sat-icon-circle mb-2"
+                                 style="background:rgba(255,255,255,0.15); width:64px; height:64px;">
+                                <i class="fa fa-truck fa-xl text-white"/>
+                            </div>
+                            <h4 class="fw-bold text-white mb-1">Confirmar Entrega</h4>
+                            <span class="sat-badge"
+                                  style="background:rgba(255,255,255,0.2); color:#fff;">
+                                <t t-esc="solicitud.name"/>
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Alerta error -->
+                    <t t-if="error">
+                        <div class="alert alert-danger rounded-0 mb-0 py-2 px-3"
+                             style="font-size:14px;">
+                            ⚠️ <t t-esc="error"/>
+                        </div>
+                    </t>
+
+                    <!-- Cuerpo -->
+                    <div class="card sat-card"
+                         style="border-radius:0 0 16px 16px !important; border-top:1px solid #e2e8f0;">
+                        <div class="card-body p-4">
+
+                            <!-- Info solicitud -->
+                            <table class="sat-table w-100 mb-3">
+                                <tr>
+                                    <td>Solicitante</td>
+                                    <td><t t-esc="solicitud.solicitante_id.name"/></td>
+                                </tr>
+                                <tr>
+                                    <td>Fecha solicitud</td>
+                                    <td><t t-esc="solicitud.fecha"/></td>
+                                </tr>
+                                <t t-if="solicitud.aprobado_fecha">
+                                    <tr>
+                                        <td>Aprobada el</td>
+                                        <td><t t-esc="solicitud.aprobado_fecha"/></td>
+                                    </tr>
+                                </t>
+                            </table>
+
+                            <!-- Máquina -->
+                            <div class="p-3 rounded-3 mb-3"
+                                 style="background:#ebf8ff; border-left:4px solid #2b6cb0;">
+                                <div class="fw-bold mb-2" style="font-size:13px; color:#2b6cb0;">
+                                    🖨️ MÁQUINA
+                                </div>
+                                <table class="sat-table w-100">
+                                    <tr>
+                                        <td>Marca / Modelo</td>
+                                        <td>
+                                            <t t-esc="solicitud.marca"/>
+                                            <t t-esc="solicitud.modelo"/>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Serie</td>
+                                        <td><t t-esc="solicitud.serie"/></td>
+                                    </tr>
+                                    <t t-if="solicitud.contometro">
+                                        <tr>
+                                            <td>Contómetro</td>
+                                            <td><t t-esc="solicitud.contometro"/></td>
+                                        </tr>
+                                    </t>
+                                </table>
+                            </div>
+
+                            <!-- Partes a entregar -->
+                            <div class="mb-4">
+                                <div class="fw-bold mb-2"
+                                     style="font-size:13px; color:#2b6cb0;">
+                                    📦 PARTES A ENTREGAR
+                                </div>
+                                <t t-if="solicitud.disco_duro_requerido">
+                                    <div class="sat-parte-item"
+                                         style="border-left-color:#2b6cb0;">
+                                        <div class="fw-bold" style="font-size:14px;">
+                                            💾 Disco Duro
+                                        </div>
+                                        <div class="text-muted" style="font-size:13px;">
+                                            <t t-esc="solicitud.get_motivo_disco_display()"/>
+                                        </div>
+                                    </div>
+                                </t>
+                                <t t-if="solicitud.ruedas_requeridas">
+                                    <div class="sat-parte-item"
+                                         style="border-left-color:#2b6cb0;">
+                                        <div class="fw-bold" style="font-size:14px;">
+                                            ⚙️ Ruedas
+                                        </div>
+                                        <div class="text-muted" style="font-size:13px;">
+                                            Cantidad: <t t-esc="solicitud.cantidad_ruedas"/>
+                                        </div>
+                                    </div>
+                                </t>
+                                <t t-if="solicitud.cable_poder_requerido">
+                                    <div class="sat-parte-item"
+                                         style="border-left-color:#2b6cb0;">
+                                        <div class="fw-bold" style="font-size:14px;">
+                                            🔌 Cable de Poder
+                                        </div>
+                                        <div class="text-muted" style="font-size:13px;">
+                                            <t t-esc="solicitud.motivo_cable_display"/>
+                                        </div>
+                                    </div>
+                                </t>
+                            </div>
+
+                            <!-- Aviso -->
+                            <div class="alert mb-4 py-2 px-3"
+                                 style="background:#fffbeb; border:1px solid #fbd38d;
+                                        border-radius:8px; font-size:13px; color:#975a16;">
+                                ⚠️ Al confirmar, el técnico solicitante recibirá una
+                                notificación para pasar a recoger las partes.
+                            </div>
+
+                            <!-- Formulario de confirmación -->
+                            <form method="POST">
+                                <input type="hidden" name="csrf_token"
+                                       t-att-value="request.csrf_token()"/>
+                                <button type="submit" class="btn-sat-deliver">
+                                    📦 Confirmar Entrega
+                                </button>
+                            </form>
+
+                        </div>
+                    </div>
+
+                    <div class="sat-footer">
+                        Andes Solution Copiers · Sistema de Gestión SAT
+                    </div>
+                </div>
+            </div>
+        </div>
+    </t>
+</template>
+
+</data>
 </odoo>

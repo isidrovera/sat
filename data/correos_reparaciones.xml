@@ -174,164 +174,428 @@
         </record>
 
 
-        <record id="email_template_parts_request" model="mail.template">
-        <field name="name">Solicitud de Partes para Aprobación</field>
-        <field name="subject">🔧 Nueva Solicitud de Partes #{{object.name}}</field>
-        <field name="model_id" ref="model_copier_parts_request"/>
-        <field name="auto_delete" eval="True"/>
-        <field name="email_from">soporte@andescopiers.com.pe</field>
-        <field name="email_to">campuero@corapsac.com.pe</field>
-        <field name="email_cc">lincoln@corapsac.com, asistentecontable@corapsac.com</field>
-        <field name="body_html"><![CDATA[
+<!-- ==========================================================================
+     1. GERENCIA — Nueva solicitud (aprobar / rechazar)
+     Trigger: CopierPartsRequest.create() → _enviar_notificaciones_gerencia()
+     ========================================================================== -->
+<record id="email_template_copier_parts_gerencia" model="mail.template">
+    <field name="name">SAT — Solicitud de Partes para Aprobación (Gerencia)</field>
+    <field name="subject">🔧 Nueva Solicitud de Partes #{{ object.name }}</field>
+    <field name="model_id" ref="model_copier_parts_request"/>
+    <field name="auto_delete" eval="True"/>
+    <field name="email_from">soporte@andescopiers.com.pe</field>
+    <field name="email_to">campuero@corapsac.com.pe</field>
+    <field name="email_cc">lincoln@corapsac.com, asistentecontable@corapsac.com, gerencia@corapsac.com</field>
+    <field name="body_html"><![CDATA[
 <!DOCTYPE html>
 <html>
-<head>
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-</head>
-<body bgcolor="#f5f5f5" style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif;">
-    <div style="max-width: 800px; margin: 0 auto; background-color: #ffffff;">
-        <!-- Encabezado -->
-        <div style="background-color: #4a5568; padding: 20px; text-align: center;">
-            <div style="color: #ffffff; font-size: 24px; font-weight: bold;">🔧 Nueva Solicitud de Partes</div>
-            <div style="color: #ffffff; margin-top: 10px;">#<t t-out="object.name"/></div>
-        </div>
-        
-        <!-- Contenido Principal -->
-        <div style="padding: 25px; background-color: #ffffff; border: 1px solid #e2e8f0;">
-            
-
-            <!-- Detalles de la Máquina -->
-            <div style="background-color: #edf2f7; padding: 20px; margin: 15px 0;">
-                <div style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">🖨️ Información del Equipo</div>
-                <div style="margin: 5px 0;">Proveedor: <strong><t t-out="object.proveedor"/></strong></div>
-                <div style="margin: 5px 0;">Importación: <strong><t t-out="object.importacion"/></strong></div>
-                <div style="margin: 5px 0;">Marca: <strong><t t-out="object.marca"/></strong></div>
-                <div style="margin: 5px 0;">Modelo: <strong><t t-out="object.modelo"/></strong></div>
-                <div style="margin: 5px 0;">Serie: <strong><t t-out="object.serie"/></strong></div>
-                <div style="margin: 5px 0;">Contómetro: <strong><t t-out="object.contometro"/></strong></div>
-            </div>
-            <!-- Solicitante -->
-            <div style="margin: 20px 0;">
-                <div style="font-weight: bold;">👤 Solicitante:</div>
-                <div><t t-out="object.solicitante_id.name"/></div>
-            </div>
-
-            <!-- Partes a Entregar -->
-            <div style="background-color: #f7fafc; padding: 20px; margin: 15px 0;">
-                <div style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">📦 Partes a Entregar</div>
-                <t t-if="object.disco_duro_requerido">
-                    <div style="margin: 5px 0; padding: 10px; background-color: #fff; border-left: 4px solid #48bb78;">
-                        <div style="font-weight: bold;">💽 Disco Duro</div>
-                        <div>Motivo: <strong><t t-out="object.get_motivo_disco_display()"/></strong></div>
-                    </div>
-                </t>
-                <t t-if="object.ruedas_requeridas">
-                    <div style="margin: 5px 0; padding: 10px; background-color: #fff; border-left: 4px solid #4299e1;">
-                        <div style="font-weight: bold;">⚙️ Ruedas</div>
-                        <div>Cantidad: <strong>4 unidades</strong></div>
-                    </div>
-                </t>
-                <t t-if="object.cable_poder_requerido">
-                    <div style="margin: 5px 0; padding: 10px; background-color: #fff; border-left: 4px solid #ed8936;">
-                        <div style="font-weight: bold;">🔌 Cable de Poder</div>
-                        <div>Motivo: <strong><t t-out="object.motivo_cable_display"/></strong></div>
-                    </div>
-                </t>
-            </div>
-
-            <!-- Botón de Aprobación -->
-            <div style="text-align: center; margin: 30px 0;">
-                <a t-attf-href="/parts/approve/{{ object.access_token }}" 
-                   style="background-color: #48bb78; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">
-                    APROBAR SOLICITUD
-                </a>
-            </div>
-        </div>
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"></head>
+<body bgcolor="#f5f5f5" style="margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;">
+<div style="max-width:800px;margin:0 auto;background-color:#ffffff;">
+ 
+    <!-- Encabezado -->
+    <div style="background-color:#4a5568;padding:20px;text-align:center;">
+        <div style="color:#ffffff;font-size:24px;font-weight:bold;">🔧 Nueva Solicitud de Partes</div>
+        <div style="color:#ffffff;margin-top:10px;">#<t t-out="object.name"/></div>
     </div>
+ 
+    <!-- Contenido -->
+    <div style="padding:25px;background-color:#ffffff;border:1px solid #e2e8f0;">
+ 
+        <!-- Intro -->
+        <p style="font-size:15px;margin:0 0 20px 0;">
+            Se requiere su <strong>aprobación</strong> para la siguiente solicitud de partes,
+            presentada por <strong><t t-out="object.solicitante_id.name"/></strong>.
+        </p>
+ 
+        <!-- Información del Equipo -->
+        <div style="background-color:#edf2f7;padding:20px;margin:15px 0;">
+            <div style="font-size:18px;font-weight:bold;margin-bottom:15px;">🖨️ Información del Equipo</div>
+            <div style="margin:5px 0;">Proveedor: <strong><t t-out="object.proveedor"/></strong></div>
+            <div style="margin:5px 0;">Importación: <strong><t t-out="object.importacion"/></strong></div>
+            <div style="margin:5px 0;">Marca: <strong><t t-out="object.marca"/></strong></div>
+            <div style="margin:5px 0;">Modelo: <strong><t t-out="object.modelo"/></strong></div>
+            <div style="margin:5px 0;">Serie: <strong><t t-out="object.serie"/></strong></div>
+            <div style="margin:5px 0;">Contómetro: <strong><t t-out="object.contometro"/></strong></div>
+        </div>
+ 
+        <!-- Solicitante -->
+        <div style="margin:20px 0;">
+            <div style="font-weight:bold;">👤 Solicitante:</div>
+            <div><t t-out="object.solicitante_id.name"/></div>
+            <div style="margin-top:6px;color:#718096;font-size:13px;">
+                Fecha: <t t-out="object.fecha"/>
+            </div>
+        </div>
+ 
+        <!-- Partes Solicitadas -->
+        <div style="background-color:#f7fafc;padding:20px;margin:15px 0;">
+            <div style="font-size:18px;font-weight:bold;margin-bottom:15px;">📦 Partes Solicitadas</div>
+            <t t-if="object.disco_duro_requerido">
+                <div style="margin:5px 0;padding:10px;background-color:#fff;border-left:4px solid #48bb78;">
+                    <div style="font-weight:bold;">💾 Disco Duro</div>
+                    <div>Motivo: <strong><t t-out="object.get_motivo_disco_display()"/></strong></div>
+                </div>
+            </t>
+            <t t-if="object.ruedas_requeridas">
+                <div style="margin:5px 0;padding:10px;background-color:#fff;border-left:4px solid #4299e1;">
+                    <div style="font-weight:bold;">⚙️ Ruedas</div>
+                    <div>Cantidad: <strong><t t-out="object.cantidad_ruedas"/> unidades</strong></div>
+                </div>
+            </t>
+            <t t-if="object.cable_poder_requerido">
+                <div style="margin:5px 0;padding:10px;background-color:#fff;border-left:4px solid #ed8936;">
+                    <div style="font-weight:bold;">🔌 Cable de Poder</div>
+                    <div>Motivo: <strong><t t-out="object.motivo_cable_display"/></strong></div>
+                </div>
+            </t>
+        </div>
+ 
+        <!-- Aviso tokens -->
+        <div style="background-color:#fffbeb;border:1px solid #fbd38d;border-radius:6px;
+                    padding:14px 18px;margin:20px 0;font-size:14px;">
+            ⚠️ Cada enlace es de <strong>uso único</strong>. Una vez utilizado no podrá volver a procesarse.
+        </div>
+ 
+        <!-- Botones -->
+        <div style="text-align:center;margin:30px 0;">
+            <a t-attf-href="{{ ctx.get('url_aprobar', '') }}"
+               style="display:inline-block;background-color:#48bb78;color:#ffffff;
+                      padding:12px 28px;text-decoration:none;border-radius:6px;
+                      font-weight:bold;font-size:15px;margin:0 8px;">
+                ✅ APROBAR
+            </a>
+            <a t-attf-href="{{ ctx.get('url_rechazar', '') }}"
+               style="display:inline-block;background-color:#e53e3e;color:#ffffff;
+                      padding:12px 28px;text-decoration:none;border-radius:6px;
+                      font-weight:bold;font-size:15px;margin:0 8px;">
+                ❌ RECHAZAR
+            </a>
+        </div>
+ 
+    </div>
+ 
+    <!-- Footer -->
+    <div style="text-align:center;padding:16px;font-size:12px;color:#a0aec0;">
+        📞 (51) 924 894 829 · soporte@andescopiers.com.pe<br/>
+        Andes Solution Copiers · Sistema de Gestión SAT
+    </div>
+</div>
 </body>
 </html>
-        ]]></field>
-    </record>
-
-
-    <record id="email_template_logistics_approval" model="mail.template">
-        <field name="name">Solicitud de Partes Aprobada - Para Entrega</field>
-        <field name="subject">✅ Solicitud de Partes Aprobada #{{object.name}} - Para Entrega</field>
-        <field name="model_id" ref="model_copier_parts_request"/>
-        <field name="auto_delete" eval="True"/>
-        <field name="email_from">soporte@andescopiers.com.pe</field>
-        <field name="email_to">logistica@corapsac.com</field>
-        <field name="body_html"><![CDATA[
+    ]]></field>
+</record>
+ 
+<!-- ==========================================================================
+     2. LOGÍSTICA — Solicitud aprobada, confirmar entrega
+     Trigger: CopierPartsRequest._aprobar() → _enviar_notificaciones_logistica()
+     ========================================================================== -->
+<record id="email_template_copier_parts_logistica" model="mail.template">
+    <field name="name">SAT — Solicitud de Partes Aprobada (Logística)</field>
+    <field name="subject">✅ Solicitud Aprobada #{{ object.name }} — Pendiente de Entrega</field>
+    <field name="model_id" ref="model_copier_parts_request"/>
+    <field name="auto_delete" eval="True"/>
+    <field name="email_from">soporte@andescopiers.com.pe</field>
+    <field name="email_to">logistica@corapsac.com</field>
+    <field name="body_html"><![CDATA[
 <!DOCTYPE html>
 <html>
-<head>
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-</head>
-<body bgcolor="#f5f5f5" style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif;">
-    <div style="max-width: 800px; margin: 0 auto; background-color: #ffffff;">
-        <div style="background-color: #4a5568; padding: 20px; text-align: center;">
-            <div style="color: #ffffff; font-size: 24px; font-weight: bold;">✅ Solicitud Aprobada - Por Entregar</div>
-            <div style="color: #ffffff; margin-top: 10px;">#<t t-out="object.name"/></div>
-        </div>
-        
-        <div style="padding: 25px; background-color: #ffffff; border: 1px solid #e2e8f0;">
-            <!-- Partes a Entregar -->
-            <div style="background-color: #f7fafc; padding: 20px; margin: 15px 0;">
-                <div style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">📦 Entregar las siguientes partes:</div>
-
-                <t t-if="object.disco_duro_requerido">
-                    <div style="margin: 5px 0; padding: 10px; background-color: #fff; border-left: 4px solid #48bb78;">
-                        <div style="font-weight: bold;">💽 Disco Duro</div>
-                        <div>Motivo: <strong><t t-out="object.get_motivo_disco_display()"/></strong></div>
-                    </div>
-                </t>
-
-                <t t-if="object.ruedas_requeridas">
-                    <div style="margin: 5px 0; padding: 10px; background-color: #fff; border-left: 4px solid #4299e1;">
-                        <div style="font-weight: bold;">⚙️ Ruedas</div>
-                        <div>Cantidad: <strong>4 unidades</strong></div>
-                    </div>
-                </t>
-
-                <t t-if="object.cable_poder_requerido">
-                    <div style="margin: 5px 0; padding: 10px; background-color: #fff; border-left: 4px solid #ed8936;">
-                        <div style="font-weight: bold;">🔌 Cable de Poder</div>
-                        <div>Motivo: <strong><t t-out="object.motivo_cable_display"/></strong></div>
-                    </div>
-                </t>
-
-            </div>
-
-             <!-- Detalles de la Máquina -->
-            <div style="background-color: #edf2f7; padding: 20px; margin: 15px 0;">
-                <div style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">🖨️ Información del Equipo</div>
-                <div style="margin: 5px 0;">Proveedor: <strong><t t-out="object.proveedor"/></strong></div>
-                <div style="margin: 5px 0;">Importación: <strong><t t-out="object.importacion"/></strong></div>
-                <div style="margin: 5px 0;">Marca: <strong><t t-out="object.marca"/></strong></div>
-                <div style="margin: 5px 0;">Modelo: <strong><t t-out="object.modelo"/></strong></div>
-                <div style="margin: 5px 0;">Serie: <strong><t t-out="object.serie"/></strong></div>
-                <div style="margin: 5px 0;">Contómetro: <strong><t t-out="object.contometro"/></strong></div>
-            </div>
-
-            <!-- Solicitante -->
-            <div style="margin: 20px 0;">
-                <div style="font-weight: bold;">👤 Solicitante:</div>
-                <div><t t-out="object.solicitante_id.name"/></div>
-            </div>
-           
-
-            <!-- Botón de Confirmación -->
-            <div style="text-align: center; margin: 30px 0;">
-                <a t-attf-href="/parts/deliver/{{ object.access_token }}" 
-                   style="background-color: #4299e1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">
-                    CONFIRMAR ENTREGA
-                </a>
-            </div>
-        </div>
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"></head>
+<body bgcolor="#f5f5f5" style="margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;">
+<div style="max-width:800px;margin:0 auto;background-color:#ffffff;">
+ 
+    <!-- Encabezado -->
+    <div style="background-color:#2b6cb0;padding:20px;text-align:center;">
+        <div style="color:#ffffff;font-size:24px;font-weight:bold;">✅ Solicitud Aprobada — Por Entregar</div>
+        <div style="color:#ffffff;margin-top:10px;">#<t t-out="object.name"/></div>
     </div>
+ 
+    <!-- Contenido -->
+    <div style="padding:25px;background-color:#ffffff;border:1px solid #e2e8f0;">
+ 
+        <p style="font-size:15px;margin:0 0 20px 0;">
+            La siguiente solicitud fue <strong>aprobada por Gerencia</strong>.
+            Por favor proceda con la entrega de las partes al solicitante.
+        </p>
+ 
+        <!-- Partes a Entregar -->
+        <div style="background-color:#f7fafc;padding:20px;margin:15px 0;">
+            <div style="font-size:18px;font-weight:bold;margin-bottom:15px;">📦 Partes a Entregar</div>
+            <t t-if="object.disco_duro_requerido">
+                <div style="margin:5px 0;padding:10px;background-color:#fff;border-left:4px solid #48bb78;">
+                    <div style="font-weight:bold;">💾 Disco Duro</div>
+                    <div>Motivo: <strong><t t-out="object.get_motivo_disco_display()"/></strong></div>
+                </div>
+            </t>
+            <t t-if="object.ruedas_requeridas">
+                <div style="margin:5px 0;padding:10px;background-color:#fff;border-left:4px solid #4299e1;">
+                    <div style="font-weight:bold;">⚙️ Ruedas</div>
+                    <div>Cantidad: <strong><t t-out="object.cantidad_ruedas"/> unidades</strong></div>
+                </div>
+            </t>
+            <t t-if="object.cable_poder_requerido">
+                <div style="margin:5px 0;padding:10px;background-color:#fff;border-left:4px solid #ed8936;">
+                    <div style="font-weight:bold;">🔌 Cable de Poder</div>
+                    <div>Motivo: <strong><t t-out="object.motivo_cable_display"/></strong></div>
+                </div>
+            </t>
+        </div>
+ 
+        <!-- Información del Equipo -->
+        <div style="background-color:#edf2f7;padding:20px;margin:15px 0;">
+            <div style="font-size:18px;font-weight:bold;margin-bottom:15px;">🖨️ Información del Equipo</div>
+            <div style="margin:5px 0;">Proveedor: <strong><t t-out="object.proveedor"/></strong></div>
+            <div style="margin:5px 0;">Importación: <strong><t t-out="object.importacion"/></strong></div>
+            <div style="margin:5px 0;">Marca: <strong><t t-out="object.marca"/></strong></div>
+            <div style="margin:5px 0;">Modelo: <strong><t t-out="object.modelo"/></strong></div>
+            <div style="margin:5px 0;">Serie: <strong><t t-out="object.serie"/></strong></div>
+            <div style="margin:5px 0;">Contómetro: <strong><t t-out="object.contometro"/></strong></div>
+        </div>
+ 
+        <!-- Solicitante -->
+        <div style="margin:20px 0;">
+            <div style="font-weight:bold;">👤 Solicitante:</div>
+            <div><t t-out="object.solicitante_id.name"/></div>
+        </div>
+ 
+        <!-- Aviso token -->
+        <div style="background-color:#fffbeb;border:1px solid #fbd38d;border-radius:6px;
+                    padding:14px 18px;margin:20px 0;font-size:14px;">
+            ⚠️ Este enlace es de <strong>uso único</strong>. Al confirmar la entrega,
+            el técnico solicitante recibirá una notificación automática.
+        </div>
+ 
+        <!-- Botón confirmar entrega -->
+        <div style="text-align:center;margin:30px 0;">
+            <a t-attf-href="{{ ctx.get('url_entrega', '') }}"
+               style="display:inline-block;background-color:#2b6cb0;color:#ffffff;
+                      padding:12px 28px;text-decoration:none;border-radius:6px;
+                      font-weight:bold;font-size:15px;">
+                📦 CONFIRMAR ENTREGA
+            </a>
+        </div>
+ 
+    </div>
+ 
+    <!-- Footer -->
+    <div style="text-align:center;padding:16px;font-size:12px;color:#a0aec0;">
+        📞 (51) 924 894 829 · soporte@andescopiers.com.pe<br/>
+        Andes Solution Copiers · Sistema de Gestión SAT
+    </div>
+</div>
 </body>
 </html>
-        ]]></field>
+    ]]></field>
+</record>
+ 
+<!-- ==========================================================================
+     3. TÉCNICO SOLICITANTE — Solicitud rechazada
+     Trigger: CopierPartsRequest._rechazar() → _enviar_notificaciones_rechazo()
+     ========================================================================== -->
+<record id="email_template_copier_parts_rechazo" model="mail.template">
+    <field name="name">SAT — Solicitud de Partes Rechazada (Técnico)</field>
+    <field name="subject">❌ Solicitud de Partes #{{ object.name }} Rechazada</field>
+    <field name="model_id" ref="model_copier_parts_request"/>
+    <field name="auto_delete" eval="True"/>
+    <field name="email_from">soporte@andescopiers.com.pe</field>
+    <field name="email_to">{{ object.solicitante_id.email }}</field>
+    <field name="body_html"><![CDATA[
+<!DOCTYPE html>
+<html>
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"></head>
+<body bgcolor="#f5f5f5" style="margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;">
+<div style="max-width:800px;margin:0 auto;background-color:#ffffff;">
+ 
+    <!-- Encabezado -->
+    <div style="background-color:#c53030;padding:20px;text-align:center;">
+        <div style="color:#ffffff;font-size:24px;font-weight:bold;">❌ Solicitud Rechazada</div>
+        <div style="color:#ffffff;margin-top:10px;">#<t t-out="object.name"/></div>
+    </div>
+ 
+    <!-- Contenido -->
+    <div style="padding:25px;background-color:#ffffff;border:1px solid #e2e8f0;">
+ 
+        <p style="font-size:15px;margin:0 0 20px 0;">
+            Estimado(a) <strong><t t-out="object.solicitante_id.name"/></strong>,<br/><br/>
+            Tu solicitud de partes fue <strong>rechazada por Gerencia</strong>.
+            Por favor comunícate con tu supervisor para más información.
+        </p>
+ 
+        <!-- Detalles solicitud -->
+        <div style="background-color:#fff5f5;border:1px solid #fed7d7;
+                    border-radius:6px;padding:16px 20px;margin:15px 0;">
+            <table style="width:100%;border-collapse:collapse;font-size:14px;">
+                <tr>
+                    <td style="color:#718096;padding:5px 0;width:35%;">Solicitud</td>
+                    <td style="font-weight:bold;color:#2d3748;"><t t-out="object.name"/></td>
+                </tr>
+                <tr>
+                    <td style="color:#718096;padding:5px 0;">Fecha</td>
+                    <td style="color:#2d3748;"><t t-out="object.fecha"/></td>
+                </tr>
+                <tr>
+                    <td style="color:#718096;padding:5px 0;">Máquina</td>
+                    <td style="color:#2d3748;">
+                        <t t-out="object.marca"/> <t t-out="object.modelo"/>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="color:#718096;padding:5px 0;">Serie</td>
+                    <td style="color:#2d3748;"><t t-out="object.serie"/></td>
+                </tr>
+            </table>
+        </div>
+ 
+        <!-- Partes solicitadas -->
+        <div style="background-color:#f7fafc;padding:20px;margin:15px 0;">
+            <div style="font-size:16px;font-weight:bold;margin-bottom:12px;">📦 Partes Solicitadas</div>
+            <t t-if="object.disco_duro_requerido">
+                <div style="margin:5px 0;padding:8px 12px;background-color:#fff;
+                            border-left:4px solid #fc8181;">
+                    <div style="font-weight:bold;">💾 Disco Duro</div>
+                    <div style="color:#718096;font-size:13px;">
+                        Motivo: <t t-out="object.get_motivo_disco_display()"/>
+                    </div>
+                </div>
+            </t>
+            <t t-if="object.ruedas_requeridas">
+                <div style="margin:5px 0;padding:8px 12px;background-color:#fff;
+                            border-left:4px solid #fc8181;">
+                    <div style="font-weight:bold;">⚙️ Ruedas</div>
+                    <div style="color:#718096;font-size:13px;">
+                        Cantidad: <t t-out="object.cantidad_ruedas"/> unidades
+                    </div>
+                </div>
+            </t>
+            <t t-if="object.cable_poder_requerido">
+                <div style="margin:5px 0;padding:8px 12px;background-color:#fff;
+                            border-left:4px solid #fc8181;">
+                    <div style="font-weight:bold;">🔌 Cable de Poder</div>
+                    <div style="color:#718096;font-size:13px;">
+                        Motivo: <t t-out="object.motivo_cable_display"/>
+                    </div>
+                </div>
+            </t>
+        </div>
+ 
+    </div>
+ 
+    <!-- Footer -->
+    <div style="text-align:center;padding:16px;font-size:12px;color:#a0aec0;">
+        📞 (51) 924 894 829 · soporte@andescopiers.com.pe<br/>
+        Andes Solution Copiers · Sistema de Gestión SAT
+    </div>
+</div>
+</body>
+</html>
+    ]]></field>
+</record>
+ 
+<!-- ==========================================================================
+     4. TÉCNICO SOLICITANTE — Partes listas para recoger
+     Trigger: CopierPartsRequest._confirmar_entrega() → _enviar_notificaciones_tecnico_entrega()
+     ========================================================================== -->
+<record id="email_template_copier_parts_tecnico_entrega" model="mail.template">
+    <field name="name">SAT — Partes Listas para Recoger (Técnico)</field>
+    <field name="subject">📦 Partes Listas para Recoger — Solicitud #{{ object.name }}</field>
+    <field name="model_id" ref="model_copier_parts_request"/>
+    <field name="auto_delete" eval="True"/>
+    <field name="email_from">soporte@andescopiers.com.pe</field>
+    <field name="email_to">{{ object.solicitante_id.email }}</field>
+    <field name="body_html"><![CDATA[
+<!DOCTYPE html>
+<html>
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"></head>
+<body bgcolor="#f5f5f5" style="margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;">
+<div style="max-width:800px;margin:0 auto;background-color:#ffffff;">
+ 
+    <!-- Encabezado -->
+    <div style="background-color:#276749;padding:20px;text-align:center;">
+        <div style="color:#ffffff;font-size:24px;font-weight:bold;">📦 Partes Listas para Recoger</div>
+        <div style="color:#ffffff;margin-top:10px;">#<t t-out="object.name"/></div>
+    </div>
+ 
+    <!-- Contenido -->
+    <div style="padding:25px;background-color:#ffffff;border:1px solid #e2e8f0;">
+ 
+        <p style="font-size:15px;margin:0 0 20px 0;">
+            Hola <strong><t t-out="object.solicitante_id.name"/></strong>,<br/><br/>
+            Las partes de tu solicitud ya fueron <strong>entregadas por Logística</strong>
+            y están listas para ser recogidas. 🏪
+        </p>
+ 
+        <!-- Resumen -->
+        <div style="background-color:#f0fff4;border:1px solid #c6f6d5;
+                    border-radius:6px;padding:16px 20px;margin:15px 0;">
+            <table style="width:100%;border-collapse:collapse;font-size:14px;">
+                <tr>
+                    <td style="color:#718096;padding:5px 0;width:35%;">Solicitud</td>
+                    <td style="font-weight:bold;color:#2d3748;"><t t-out="object.name"/></td>
+                </tr>
+                <tr>
+                    <td style="color:#718096;padding:5px 0;">Máquina</td>
+                    <td style="color:#2d3748;">
+                        <t t-out="object.marca"/> <t t-out="object.modelo"/>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="color:#718096;padding:5px 0;">Serie</td>
+                    <td style="color:#2d3748;"><t t-out="object.serie"/></td>
+                </tr>
+                <t t-if="object.entregado_fecha">
+                    <tr>
+                        <td style="color:#718096;padding:5px 0;">Entregado el</td>
+                        <td style="color:#2d3748;"><t t-out="object.entregado_fecha"/></td>
+                    </tr>
+                </t>
+            </table>
+        </div>
+ 
+        <!-- Partes entregadas -->
+        <div style="background-color:#f7fafc;padding:20px;margin:15px 0;">
+            <div style="font-size:16px;font-weight:bold;margin-bottom:12px;">
+                ✅ Partes Entregadas
+            </div>
+            <t t-if="object.disco_duro_requerido">
+                <div style="margin:5px 0;padding:8px 12px;background-color:#fff;
+                            border-left:4px solid #48bb78;">
+                    <div style="font-weight:bold;">💾 Disco Duro</div>
+                    <div style="color:#718096;font-size:13px;">
+                        Motivo: <t t-out="object.get_motivo_disco_display()"/>
+                    </div>
+                </div>
+            </t>
+            <t t-if="object.ruedas_requeridas">
+                <div style="margin:5px 0;padding:8px 12px;background-color:#fff;
+                            border-left:4px solid #48bb78;">
+                    <div style="font-weight:bold;">⚙️ Ruedas</div>
+                    <div style="color:#718096;font-size:13px;">
+                        Cantidad: <t t-out="object.cantidad_ruedas"/> unidades
+                    </div>
+                </div>
+            </t>
+            <t t-if="object.cable_poder_requerido">
+                <div style="margin:5px 0;padding:8px 12px;background-color:#fff;
+                            border-left:4px solid #48bb78;">
+                    <div style="font-weight:bold;">🔌 Cable de Poder</div>
+                    <div style="color:#718096;font-size:13px;">
+                        Motivo: <t t-out="object.motivo_cable_display"/>
+                    </div>
+                </div>
+            </t>
+        </div>
+ 
+    </div>
+ 
+    <!-- Footer -->
+    <div style="text-align:center;padding:16px;font-size:12px;color:#a0aec0;">
+        📞 (51) 924 894 829 · soporte@andescopiers.com.pe<br/>
+        Andes Solution Copiers · Sistema de Gestión SAT
+    </div>
+</div>
+</body>
+</html>
+    ]]></field>
 </record>
  <!-- ══════════════════════════════════════════════════════════════════
              PLANTILLA 1: Técnico crea solicitud → Jefe de Área

@@ -89,3 +89,4 @@ from . import tracking_diagnostico
 from . import solicitud_partes_tecnico
 from . import sat_entrega_wizard
 from . import sat_pruebas_maquina
+from . import copier_parts_request
