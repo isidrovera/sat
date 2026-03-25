@@ -228,6 +228,10 @@
                                             invisible="estado_alquiler_id == 'sin_revisar'"
                                             groups="base.group_system"
                                             confirm="¿Está seguro de resetear el estado del equipo?" />
+                                        <button name="action_estado_externo" string=" Marcar Externo"
+                                            type="object" class="btn btn-secondary btn-block w-100"
+                                            
+                                             />
                                     </div>
                                 </div>
                             </div>
