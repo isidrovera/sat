@@ -553,7 +553,30 @@ class CopierPartsRequest(models.Model):
             _logger.error("❌ Excepción WhatsApp a %s: %s", phone, str(e))
             return {'error': str(e), 'success': False}
 
+     # ─────────────────────────────────────────
+    # Acciones desde Odoo (botones)
+    # ─────────────────────────────────────────
 
+    def action_approve(self):
+        """Aprobar desde Odoo (botón) — sin token, solo usuario autorizado."""
+        self.ensure_one()
+        if self.state != 'draft':
+            raise UserError(_('Esta solicitud ya fue procesada.'))
+        self._aprobar()
+
+    def action_deliver(self):
+        """Confirmar entrega desde Odoo (botón) — sin token, solo usuario autorizado."""
+        self.ensure_one()
+        if self.state != 'approved':
+            raise UserError(_('La solicitud debe estar aprobada para confirmar entrega.'))
+        self._confirmar_entrega()
+
+    def action_reject(self):
+        """Rechazar desde Odoo (botón)."""
+        self.ensure_one()
+        if self.state != 'draft':
+            raise UserError(_('Esta solicitud ya fue procesada.'))
+        self._rechazar()
 # ─────────────────────────────────────────────────────────────────────────────
 # WIZARD
 # ─────────────────────────────────────────────────────────────────────────────
@@ -686,27 +709,4 @@ class PartsRequestWizard(models.TransientModel):
             'target':    'current',
         }
 
-    # ─────────────────────────────────────────
-    # Acciones desde Odoo (botones)
-    # ─────────────────────────────────────────
-
-    def action_approve(self):
-        """Aprobar desde Odoo (botón) — sin token, solo usuario autorizado."""
-        self.ensure_one()
-        if self.state != 'draft':
-            raise UserError(_('Esta solicitud ya fue procesada.'))
-        self._aprobar()
-
-    def action_deliver(self):
-        """Confirmar entrega desde Odoo (botón) — sin token, solo usuario autorizado."""
-        self.ensure_one()
-        if self.state != 'approved':
-            raise UserError(_('La solicitud debe estar aprobada para confirmar entrega.'))
-        self._confirmar_entrega()
-
-    def action_reject(self):
-        """Rechazar desde Odoo (botón)."""
-        self.ensure_one()
-        if self.state != 'draft':
-            raise UserError(_('Esta solicitud ya fue procesada.'))
-        self._rechazar()
+   
