@@ -392,15 +392,15 @@
      ========================================================================= -->
  
 <!-- =========================================================================
-     1. GERENCIA — Nueva solicitud (aprobar / rechazar)
-     Destinatario: Gerencia
+     1. GERENCIA — Nueva solicitud (aprobar / rechazar en 1 clic)
+     Destinatario: Gerencia (campuero@corapsac.com.pe)
      Trigger: SolicitudPartes.create()
      ========================================================================= -->
 <record id="email_template_solicitud_gerencia" model="mail.template">
     <field name="name">Solicitud de Partes para Gerencia</field>
     <field name="model_id" ref="model_solicitud_partes"/>
     <field name="subject">🔧 Nueva Solicitud de Partes #{{ object.name }} — Requiere Aprobación</field>
-    <field name="email_from">soporte@andescopiers.com.pe</field>    
+    <field name="email_from">soporte@andescopiers.com.pe</field>
     <field name="email_to">campuero@corapsac.com.pe</field>
     <field name="email_cc">gerencia@corapsac.com, lincoln@corapsac.com</field>
     <field name="auto_delete" eval="True"/>
@@ -421,21 +421,33 @@
  
         <!-- Intro -->
         <p style="font-size:15px;margin:0 0 20px 0;">
-            Se requiere su <strong>aprobación</strong> para el retiro de partes solicitado por
-            <strong><t t-out="object.solicitante_id.name"/></strong>.
+            Se requiere su <strong>aprobación</strong> para el retiro de partes.
+            Todos los responsables ya han sido asignados por el solicitante.
+            Solo debe hacer clic en <strong>Aprobar</strong> o <strong>Rechazar</strong>.
         </p>
  
-        <!-- Solicitante y fecha -->
-        <table style="width:100%;border-collapse:collapse;font-size:14px;margin-bottom:20px;">
-            <tr>
-                <td style="color:#718096;padding:6px 0;width:35%;">Solicitante</td>
-                <td style="color:#2d3748;font-weight:bold;"><t t-out="object.solicitante_id.name"/></td>
-            </tr>
-            <tr>
-                <td style="color:#718096;padding:6px 0;">Fecha</td>
-                <td style="color:#2d3748;"><t t-out="object.fecha_solicitud"/></td>
-            </tr>
-        </table>
+        <!-- Responsables -->
+        <div style="background:#ebf8ff;border-radius:8px;padding:16px 20px;margin-bottom:20px;">
+            <div style="font-weight:bold;color:#2b6cb0;margin-bottom:10px;">👥 Responsables</div>
+            <table style="width:100%;border-collapse:collapse;font-size:14px;">
+                <tr>
+                    <td style="color:#718096;padding:5px 0;width:40%;">Solicitante</td>
+                    <td style="font-weight:bold;color:#2d3748;"><t t-out="object.solicitante_id.name"/></td>
+                </tr>
+                <tr>
+                    <td style="color:#718096;padding:5px 0;">Técnico de Retiro</td>
+                    <td style="font-weight:bold;color:#2d3748;"><t t-out="object.tecnico_asignado_id.name"/></td>
+                </tr>
+                <tr>
+                    <td style="color:#718096;padding:5px 0;">Responsable Reposición</td>
+                    <td style="font-weight:bold;color:#2d3748;"><t t-out="object.responsable_reposicion_id.name"/></td>
+                </tr>
+                <tr>
+                    <td style="color:#718096;padding:5px 0;">Fecha Solicitud</td>
+                    <td style="color:#2d3748;"><t t-out="object.fecha_solicitud"/></td>
+                </tr>
+            </table>
+        </div>
  
         <!-- Máquina Origen -->
         <div style="background:#f7fafc;border-radius:8px;padding:16px 20px;margin-bottom:16px;">
@@ -456,7 +468,9 @@
                 <t t-if="object.maquina_origen_id.cliente_id">
                     <tr>
                         <td style="color:#718096;padding:4px 0;">Cliente</td>
-                        <td><t t-out="object.maquina_origen_id.cliente_id.name"/></td>
+                        <td style="font-weight:bold;color:#2d3748;">
+                            <t t-out="object.maquina_origen_id.cliente_id.name"/>
+                        </td>
                     </tr>
                 </t>
                 <t t-if="object.maquina_origen_id.direccion">
@@ -475,12 +489,28 @@
                 <table style="width:100%;border-collapse:collapse;font-size:14px;">
                     <tr>
                         <td style="color:#718096;padding:4px 0;width:35%;">Modelo</td>
-                        <td style="font-weight:bold;color:#2d3748;"><t t-out="object.maquina_destino_id.name.name"/></td>
+                        <td style="font-weight:bold;color:#2d3748;">
+                            <t t-out="object.maquina_destino_id.name.name"/>
+                        </td>
                     </tr>
                     <tr>
                         <td style="color:#718096;padding:4px 0;">Serie</td>
                         <td><t t-out="object.maquina_destino_id.serie"/></td>
                     </tr>
+                    <t t-if="object.maquina_destino_id.cliente_id">
+                        <tr>
+                            <td style="color:#718096;padding:4px 0;">Cliente</td>
+                            <td style="font-weight:bold;color:#276749;">
+                                <t t-out="object.maquina_destino_id.cliente_id.name"/>
+                            </td>
+                        </tr>
+                    </t>
+                    <t t-if="object.maquina_destino_id.direccion">
+                        <tr>
+                            <td style="color:#718096;padding:4px 0;">Ubicación</td>
+                            <td><t t-out="object.maquina_destino_id.direccion"/></td>
+                        </tr>
+                    </t>
                 </table>
             </div>
         </t>
@@ -492,31 +522,40 @@
                 <div style="background:#f7fafc;border-left:4px solid #4299e1;padding:10px 14px;margin-bottom:6px;border-radius:0 6px 6px 0;">
                     <div style="font-weight:bold;font-size:14px;"><t t-out="parte.parte"/></div>
                     <t t-if="parte.descripcion">
-                        <div style="color:#718096;font-size:13px;margin-top:2px;"><t t-out="parte.descripcion"/></div>
+                        <div style="color:#718096;font-size:13px;margin-top:2px;">
+                            <t t-out="parte.descripcion"/>
+                        </div>
                     </t>
                 </div>
             </t>
         </div>
  
         <!-- Aviso -->
-        <div style="background:#fffbeb;border:1px solid #fbd38d;border-radius:6px;padding:14px 18px;margin-bottom:24px;font-size:14px;">
-            ⚠️ Al aprobar, deberá <strong>seleccionar el técnico</strong> que realizará el retiro de las partes.
+        <div style="background:#fffbeb;border:1px solid #fbd38d;border-radius:6px;padding:14px 18px;margin-bottom:28px;font-size:14px;">
+            ⚠️ Al aprobar, el sistema notificará automáticamente al técnico de retiro
+            <strong><t t-out="object.tecnico_asignado_id.name"/></strong>
+            con el enlace para confirmar el retiro.
         </div>
  
-        <!-- Botones -->
-        <div style="text-align:center;margin:28px 0;">
+        <!-- Botones — 1 clic cada uno -->
+        <div style="text-align:center;margin:0 0 20px 0;">
             <a t-attf-href="{{ ctx.get('url_aprobar', '') }}"
-               style="display:inline-block;background:#38a169;color:#fff;padding:14px 36px;text-decoration:none;border-radius:8px;font-weight:bold;font-size:16px;margin:0 8px;">
+               style="display:inline-block;background:#38a169;color:#fff;padding:16px 44px;
+                      text-decoration:none;border-radius:8px;font-weight:bold;font-size:17px;
+                      margin:0 8px 12px 8px;">
                 ✅ Aprobar
             </a>
             <a t-attf-href="{{ ctx.get('url_rechazar', '') }}"
-               style="display:inline-block;background:#e53e3e;color:#fff;padding:14px 36px;text-decoration:none;border-radius:8px;font-weight:bold;font-size:16px;margin:0 8px;">
+               style="display:inline-block;background:#e53e3e;color:#fff;padding:16px 44px;
+                      text-decoration:none;border-radius:8px;font-weight:bold;font-size:17px;
+                      margin:0 8px 12px 8px;">
                 ❌ Rechazar
             </a>
         </div>
  
         <p style="font-size:12px;color:#a0aec0;text-align:center;margin:0;">
-            Cada enlace es de <strong>uso único</strong>. Una vez utilizado no podrá volver a procesarse.
+            Cada enlace es de <strong>uso único</strong>.
+            Al hacer clic se procesa la acción inmediatamente, sin pasos adicionales.
         </p>
  
     </div>
@@ -563,34 +602,96 @@
             Su solicitud de partes fue <strong>aprobada por Gerencia</strong> y ya está en proceso de retiro.
         </p>
  
+        <!-- Resumen -->
         <div style="background:#f0fff4;border-radius:8px;padding:16px 20px;margin-bottom:20px;">
             <table style="width:100%;border-collapse:collapse;font-size:14px;">
                 <tr>
-                    <td style="color:#718096;padding:4px 0;width:40%;">Solicitud</td>
+                    <td style="color:#718096;padding:5px 0;width:40%;">Solicitud</td>
                     <td style="font-weight:bold;"><t t-out="object.name"/></td>
                 </tr>
                 <tr>
-                    <td style="color:#718096;padding:4px 0;">Máquina</td>
-                    <td><t t-out="object.maquina_origen_id.name.name"/></td>
-                </tr>
-                <tr>
-                    <td style="color:#718096;padding:4px 0;">Técnico asignado</td>
-                    <td style="font-weight:bold;color:#276749;"><t t-out="object.tecnico_asignado_id.name"/></td>
-                </tr>
-                <tr>
-                    <td style="color:#718096;padding:4px 0;">Fecha aprobación</td>
+                    <td style="color:#718096;padding:5px 0;">Fecha aprobación</td>
                     <td><t t-out="object.fecha_autorizacion"/></td>
+                </tr>
+                <tr>
+                    <td style="color:#718096;padding:5px 0;">Técnico de retiro</td>
+                    <td style="font-weight:bold;color:#276749;">
+                        <t t-out="object.tecnico_asignado_id.name"/>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="color:#718096;padding:5px 0;">Responsable reposición</td>
+                    <td style="font-weight:bold;color:#276749;">
+                        <t t-out="object.responsable_reposicion_id.name"/>
+                    </td>
                 </tr>
             </table>
         </div>
  
+        <!-- Máquina Origen -->
+        <div style="background:#f7fafc;border-radius:8px;padding:16px 20px;margin-bottom:16px;">
+            <div style="font-weight:bold;color:#4a5568;margin-bottom:8px;">🖨️ Máquina Origen</div>
+            <table style="width:100%;border-collapse:collapse;font-size:14px;">
+                <tr>
+                    <td style="color:#718096;padding:4px 0;width:35%;">Modelo</td>
+                    <td style="font-weight:bold;"><t t-out="object.maquina_origen_id.name.name"/></td>
+                </tr>
+                <tr>
+                    <td style="color:#718096;padding:4px 0;">Serie</td>
+                    <td><t t-out="object.maquina_origen_id.serie"/></td>
+                </tr>
+                <t t-if="object.maquina_origen_id.cliente_id">
+                    <tr>
+                        <td style="color:#718096;padding:4px 0;">Cliente</td>
+                        <td><t t-out="object.maquina_origen_id.cliente_id.name"/></td>
+                    </tr>
+                </t>
+            </table>
+        </div>
+ 
+        <!-- Máquina Destino -->
+        <t t-if="object.maquina_destino_id">
+            <div style="background:#f0fff4;border-radius:8px;padding:16px 20px;margin-bottom:16px;">
+                <div style="font-weight:bold;color:#276749;margin-bottom:8px;">🖨️ Máquina Destino</div>
+                <table style="width:100%;border-collapse:collapse;font-size:14px;">
+                    <tr>
+                        <td style="color:#718096;padding:4px 0;width:35%;">Modelo</td>
+                        <td style="font-weight:bold;">
+                            <t t-out="object.maquina_destino_id.name.name"/>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="color:#718096;padding:4px 0;">Serie</td>
+                        <td><t t-out="object.maquina_destino_id.serie"/></td>
+                    </tr>
+                    <t t-if="object.maquina_destino_id.cliente_id">
+                        <tr>
+                            <td style="color:#718096;padding:4px 0;">Cliente</td>
+                            <td style="font-weight:bold;color:#276749;">
+                                <t t-out="object.maquina_destino_id.cliente_id.name"/>
+                            </td>
+                        </tr>
+                    </t>
+                    <t t-if="object.maquina_destino_id.direccion">
+                        <tr>
+                            <td style="color:#718096;padding:4px 0;">Ubicación</td>
+                            <td><t t-out="object.maquina_destino_id.direccion"/></td>
+                        </tr>
+                    </t>
+                </table>
+            </div>
+        </t>
+ 
+        <!-- Partes -->
         <div style="background:#f7fafc;border-radius:8px;padding:16px 20px;margin-bottom:20px;">
             <div style="font-weight:bold;color:#4a5568;margin-bottom:10px;">📦 Partes</div>
             <t t-foreach="object.parte_ids" t-as="parte">
                 <div style="border-left:4px solid #38a169;padding:8px 12px;margin-bottom:6px;">
                     <strong><t t-out="parte.parte"/></strong>
                     <t t-if="parte.descripcion">
-                        <span style="color:#718096;font-size:13px;"> — <t t-out="parte.descripcion"/></span>
+                        <span style="color:#718096;font-size:13px;">
+                            — <t t-out="parte.descripcion"/>
+                        </span>
                     </t>
                 </div>
             </t>
@@ -636,12 +737,13 @@
  
         <p style="font-size:15px;margin:0 0 20px 0;">
             Hola <strong><t t-out="object.tecnico_asignado_id.name"/></strong>,<br/><br/>
-            Has sido asignado para retirar las siguientes partes. Ingresa al enlace para confirmar el retiro.
+            Gerencia aprobó tu asignación. Debes retirar las siguientes partes
+            y confirmar el retiro usando el enlace al final de este correo.
         </p>
  
-        <!-- Máquina -->
-        <div style="background:#ebf8ff;border-radius:8px;padding:16px 20px;margin-bottom:20px;">
-            <div style="font-weight:bold;color:#2b6cb0;margin-bottom:10px;">🖨️ Máquina a Intervenir</div>
+        <!-- Máquina Origen -->
+        <div style="background:#ebf8ff;border-radius:8px;padding:16px 20px;margin-bottom:16px;">
+            <div style="font-weight:bold;color:#2b6cb0;margin-bottom:10px;">🖨️ Máquina a Intervenir (Origen)</div>
             <table style="width:100%;border-collapse:collapse;font-size:14px;">
                 <tr>
                     <td style="color:#718096;padding:4px 0;width:35%;">Modelo</td>
@@ -658,7 +760,9 @@
                 <t t-if="object.maquina_origen_id.cliente_id">
                     <tr>
                         <td style="color:#718096;padding:4px 0;">Cliente</td>
-                        <td><t t-out="object.maquina_origen_id.cliente_id.name"/></td>
+                        <td style="font-weight:bold;color:#2d3748;">
+                            <t t-out="object.maquina_origen_id.cliente_id.name"/>
+                        </td>
                     </tr>
                 </t>
                 <t t-if="object.maquina_origen_id.direccion">
@@ -670,6 +774,39 @@
             </table>
         </div>
  
+        <!-- Máquina Destino -->
+        <t t-if="object.maquina_destino_id">
+            <div style="background:#f0fff4;border-radius:8px;padding:16px 20px;margin-bottom:16px;">
+                <div style="font-weight:bold;color:#276749;margin-bottom:10px;">🖨️ Máquina Destino (recibirá las partes)</div>
+                <table style="width:100%;border-collapse:collapse;font-size:14px;">
+                    <tr>
+                        <td style="color:#718096;padding:4px 0;width:35%;">Modelo</td>
+                        <td style="font-weight:bold;">
+                            <t t-out="object.maquina_destino_id.name.name"/>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="color:#718096;padding:4px 0;">Serie</td>
+                        <td><t t-out="object.maquina_destino_id.serie"/></td>
+                    </tr>
+                    <t t-if="object.maquina_destino_id.cliente_id">
+                        <tr>
+                            <td style="color:#718096;padding:4px 0;">Cliente</td>
+                            <td style="font-weight:bold;color:#276749;">
+                                <t t-out="object.maquina_destino_id.cliente_id.name"/>
+                            </td>
+                        </tr>
+                    </t>
+                    <t t-if="object.maquina_destino_id.direccion">
+                        <tr>
+                            <td style="color:#718096;padding:4px 0;">Ubicación</td>
+                            <td><t t-out="object.maquina_destino_id.direccion"/></td>
+                        </tr>
+                    </t>
+                </table>
+            </div>
+        </t>
+ 
         <!-- Partes -->
         <div style="margin-bottom:24px;">
             <div style="font-weight:bold;color:#4a5568;margin-bottom:10px;">📋 Partes a Retirar</div>
@@ -677,30 +814,33 @@
                 <div style="background:#f7fafc;border-left:4px solid #4299e1;padding:10px 14px;margin-bottom:6px;border-radius:0 6px 6px 0;">
                     <strong><t t-out="parte.parte"/></strong>
                     <t t-if="parte.descripcion">
-                        <span style="color:#718096;font-size:13px;"> — <t t-out="parte.descripcion"/></span>
+                        <span style="color:#718096;font-size:13px;">
+                            — <t t-out="parte.descripcion"/>
+                        </span>
                     </t>
                 </div>
             </t>
         </div>
  
         <!-- Responsable reposición -->
-        <t t-if="object.responsable_reposicion_id">
-            <div style="background:#fffbeb;border:1px solid #fbd38d;border-radius:6px;padding:12px 16px;margin-bottom:24px;font-size:14px;">
-                <strong>📋 Responsable de reposición:</strong>
-                <t t-out="object.responsable_reposicion_id.name"/>
-            </div>
-        </t>
+        <div style="background:#fffbeb;border:1px solid #fbd38d;border-radius:6px;padding:12px 16px;margin-bottom:24px;font-size:14px;">
+            <strong>📋 Responsable de reposición:</strong>
+            <t t-out="object.responsable_reposicion_id.name"/>
+            — será notificado automáticamente cuando confirmes el retiro.
+        </div>
  
         <!-- Botón -->
         <div style="text-align:center;margin:28px 0;">
             <a t-attf-href="{{ ctx.get('url_retiro', '') }}"
-               style="display:inline-block;background:#2b6cb0;color:#fff;padding:14px 40px;text-decoration:none;border-radius:8px;font-weight:bold;font-size:16px;">
+               style="display:inline-block;background:#2b6cb0;color:#fff;padding:16px 44px;
+                      text-decoration:none;border-radius:8px;font-weight:bold;font-size:17px;">
                 ✅ Confirmar Retiro
             </a>
         </div>
  
         <p style="font-size:12px;color:#a0aec0;text-align:center;margin:0;">
-            Este enlace te llevará a la página de confirmación donde podrás marcar las partes retiradas.
+            Este enlace te llevará a la página de confirmación donde podrás
+            marcar las partes retiradas individualmente.
         </p>
  
     </div>
@@ -743,13 +883,13 @@
  
         <p style="font-size:15px;margin:0 0 20px 0;">
             Hola <strong><t t-out="object.responsable_reposicion_id.name"/></strong>,<br/><br/>
-            Las partes listadas a continuación ya fueron <strong>retiradas</strong> y necesitan ser repuestas.
-            Ingresa al enlace para registrar la reposición con foto.
+            Las partes listadas a continuación ya fueron <strong>retiradas</strong>
+            y necesitan ser repuestas. Usa el enlace para registrar la reposición con foto.
         </p>
  
-        <!-- Máquina -->
-        <div style="background:#f0fff4;border-radius:8px;padding:16px 20px;margin-bottom:20px;">
-            <div style="font-weight:bold;color:#276749;margin-bottom:10px;">🖨️ Máquina</div>
+        <!-- Máquina Origen -->
+        <div style="background:#f7fafc;border-radius:8px;padding:16px 20px;margin-bottom:16px;">
+            <div style="font-weight:bold;color:#4a5568;margin-bottom:10px;">🖨️ Máquina Origen (de donde se retiraron)</div>
             <table style="width:100%;border-collapse:collapse;font-size:14px;">
                 <tr>
                     <td style="color:#718096;padding:4px 0;width:35%;">Modelo</td>
@@ -774,6 +914,39 @@
             </table>
         </div>
  
+        <!-- Máquina Destino -->
+        <t t-if="object.maquina_destino_id">
+            <div style="background:#f0fff4;border-radius:8px;padding:16px 20px;margin-bottom:16px;">
+                <div style="font-weight:bold;color:#276749;margin-bottom:10px;">🖨️ Máquina Destino (donde deben instalarse)</div>
+                <table style="width:100%;border-collapse:collapse;font-size:14px;">
+                    <tr>
+                        <td style="color:#718096;padding:4px 0;width:35%;">Modelo</td>
+                        <td style="font-weight:bold;">
+                            <t t-out="object.maquina_destino_id.name.name"/>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="color:#718096;padding:4px 0;">Serie</td>
+                        <td><t t-out="object.maquina_destino_id.serie"/></td>
+                    </tr>
+                    <t t-if="object.maquina_destino_id.cliente_id">
+                        <tr>
+                            <td style="color:#718096;padding:4px 0;">Cliente</td>
+                            <td style="font-weight:bold;color:#276749;">
+                                <t t-out="object.maquina_destino_id.cliente_id.name"/>
+                            </td>
+                        </tr>
+                    </t>
+                    <t t-if="object.maquina_destino_id.direccion">
+                        <tr>
+                            <td style="color:#718096;padding:4px 0;">Ubicación</td>
+                            <td><t t-out="object.maquina_destino_id.direccion"/></td>
+                        </tr>
+                    </t>
+                </table>
+            </div>
+        </t>
+ 
         <!-- Partes retiradas -->
         <div style="margin-bottom:24px;">
             <div style="font-weight:bold;color:#4a5568;margin-bottom:10px;">📦 Partes a Reponer</div>
@@ -781,7 +954,9 @@
                 <div style="background:#f7fafc;border-left:4px solid #38a169;padding:10px 14px;margin-bottom:6px;border-radius:0 6px 6px 0;">
                     <strong><t t-out="parte.parte"/></strong>
                     <t t-if="parte.descripcion">
-                        <span style="color:#718096;font-size:13px;"> — <t t-out="parte.descripcion"/></span>
+                        <span style="color:#718096;font-size:13px;">
+                            — <t t-out="parte.descripcion"/>
+                        </span>
                     </t>
                 </div>
             </t>
@@ -789,13 +964,15 @@
  
         <!-- Aviso foto -->
         <div style="background:#fffbeb;border:1px solid #fbd38d;border-radius:6px;padding:14px 18px;margin-bottom:24px;font-size:14px;">
-            ⚠️ Para cada parte debe adjuntar <strong>foto como evidencia</strong> e indicar su condición.
+            ⚠️ Para cada parte debes adjuntar <strong>foto como evidencia</strong>
+            e indicar su condición al reponer.
         </div>
  
         <!-- Botón -->
         <div style="text-align:center;margin:28px 0;">
             <a t-attf-href="{{ ctx.get('url_reponer', '') }}"
-               style="display:inline-block;background:#276749;color:#fff;padding:14px 40px;text-decoration:none;border-radius:8px;font-weight:bold;font-size:16px;">
+               style="display:inline-block;background:#276749;color:#fff;padding:16px 44px;
+                      text-decoration:none;border-radius:8px;font-weight:bold;font-size:17px;">
                 ✅ Registrar Reposición
             </a>
         </div>
@@ -822,7 +999,7 @@
      Trigger: Cron action_check_reposiciones_pendientes()
      ========================================================================= -->
 <record id="email_template_recordatorio_reposicion" model="mail.template">
-    <field name="name"> Recordatorio Reposición Pendiente</field>
+    <field name="name">Recordatorio Reposición Pendiente</field>
     <field name="model_id" ref="model_solicitud_partes"/>
     <field name="subject">⚠️ Recordatorio: Reposición Pendiente — Solicitud #{{ object.name }}</field>
     <field name="email_from">soporte@andescopiers.com.pe</field>
@@ -844,25 +1021,45 @@
  
         <p style="font-size:15px;margin:0 0 20px 0;">
             Hola <strong><t t-out="object.responsable_reposicion_id.name"/></strong>,<br/><br/>
-            Tienes partes <strong>pendientes de reposición</strong> con más de 48 horas de espera.
-            Por favor, registra la reposición a la brevedad.
+            Tienes partes <strong>pendientes de reposición con más de 48 horas de espera</strong>.
+            Por favor, registra la reposición a la brevedad para no afectar las operaciones.
         </p>
  
-        <!-- Máquina -->
-        <div style="background:#fff5f0;border:1px solid #fbd38d;border-radius:8px;padding:16px 20px;margin-bottom:20px;">
+        <!-- Resumen -->
+        <div style="background:#fff5f0;border:1px solid #fbd38d;border-radius:8px;padding:16px 20px;margin-bottom:16px;">
             <table style="width:100%;border-collapse:collapse;font-size:14px;">
                 <tr>
                     <td style="color:#718096;padding:4px 0;width:35%;">Solicitud</td>
                     <td style="font-weight:bold;"><t t-out="object.name"/></td>
                 </tr>
                 <tr>
-                    <td style="color:#718096;padding:4px 0;">Máquina</td>
+                    <td style="color:#718096;padding:4px 0;">Máquina Origen</td>
                     <td><t t-out="object.maquina_origen_id.name.name"/></td>
                 </tr>
                 <tr>
                     <td style="color:#718096;padding:4px 0;">Serie</td>
                     <td><t t-out="object.maquina_origen_id.serie"/></td>
                 </tr>
+                <t t-if="object.maquina_origen_id.cliente_id">
+                    <tr>
+                        <td style="color:#718096;padding:4px 0;">Cliente Origen</td>
+                        <td><t t-out="object.maquina_origen_id.cliente_id.name"/></td>
+                    </tr>
+                </t>
+                <t t-if="object.maquina_destino_id">
+                    <tr>
+                        <td style="color:#718096;padding:4px 0;">Máquina Destino</td>
+                        <td><t t-out="object.maquina_destino_id.name.name"/></td>
+                    </tr>
+                    <t t-if="object.maquina_destino_id.cliente_id">
+                        <tr>
+                            <td style="color:#718096;padding:4px 0;">Cliente Destino</td>
+                            <td style="font-weight:bold;color:#c05621;">
+                                <t t-out="object.maquina_destino_id.cliente_id.name"/>
+                            </td>
+                        </tr>
+                    </t>
+                </t>
             </table>
         </div>
  
@@ -873,7 +1070,9 @@
                 <div style="background:#fff5f0;border-left:4px solid #e53e3e;padding:10px 14px;margin-bottom:6px;border-radius:0 6px 6px 0;">
                     <strong><t t-out="parte.parte"/></strong>
                     <t t-if="parte.descripcion">
-                        <span style="color:#718096;font-size:13px;"> — <t t-out="parte.descripcion"/></span>
+                        <span style="color:#718096;font-size:13px;">
+                            — <t t-out="parte.descripcion"/>
+                        </span>
                     </t>
                 </div>
             </t>
@@ -882,9 +1081,146 @@
         <!-- Botón -->
         <div style="text-align:center;margin:28px 0;">
             <a t-attf-href="{{ ctx.get('url_reponer', '') }}"
-               style="display:inline-block;background:#c05621;color:#fff;padding:14px 40px;text-decoration:none;border-radius:8px;font-weight:bold;font-size:16px;">
+               style="display:inline-block;background:#c05621;color:#fff;padding:16px 44px;
+                      text-decoration:none;border-radius:8px;font-weight:bold;font-size:17px;">
                 ✅ Registrar Reposición Ahora
             </a>
+        </div>
+ 
+    </div>
+ 
+    <div style="text-align:center;padding:16px;font-size:12px;color:#a0aec0;">
+        📞 (51) 924 894 829 · soporte@andescopiers.com.pe<br/>
+        Andes Solution Copiers · Sistema de Gestión SAT
+    </div>
+</div>
+</body>
+</html>
+    ]]></field>
+</record>
+ 
+<!-- =========================================================================
+     6. REPOSICIÓN FORZADA — Notificación al responsable
+     Destinatario: Responsable de reposición
+     Trigger: SolicitudPartes.action_forzar_reposicion()
+     ========================================================================= -->
+<record id="email_template_solicitud_reposicion_forzada" model="mail.template">
+    <field name="name">Reposición Forzada (Notificación)</field>
+    <field name="model_id" ref="model_solicitud_partes"/>
+    <field name="subject">⚡ Solicitud #{{ object.name }} Cerrada Forzadamente</field>
+    <field name="email_from">soporte@andescopiers.com.pe</field>
+    <field name="email_to">{{ object.responsable_reposicion_id.email }}</field>
+    <field name="email_cc">campuero@corapsac.com.pe</field>
+    <field name="auto_delete" eval="True"/>
+    <field name="body_html"><![CDATA[
+<!DOCTYPE html>
+<html>
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"></head>
+<body bgcolor="#f7f8fa" style="margin:0;padding:0;font-family:Arial,sans-serif;color:#2d3748;">
+<div style="max-width:680px;margin:0 auto;padding:24px 16px;">
+ 
+    <div style="background:#744210;color:#fff;border-radius:10px 10px 0 0;padding:24px 32px;text-align:center;">
+        <div style="font-size:26px;font-weight:bold;margin-bottom:6px;">⚡ Solicitud Cerrada Forzadamente</div>
+        <div style="font-size:16px;opacity:0.8;">#<t t-out="object.name"/></div>
+    </div>
+ 
+    <div style="background:#fff;border:1px solid #e2e8f0;border-top:none;padding:28px 32px;">
+ 
+        <p style="font-size:15px;margin:0 0 20px 0;">
+            Hola <strong><t t-out="object.responsable_reposicion_id.name"/></strong>,<br/><br/>
+            La solicitud <strong><t t-out="object.name"/></strong> fue
+            <strong>cerrada manualmente por un administrador</strong> del sistema.
+            Las partes pendientes fueron marcadas como reemplazadas forzadamente.
+        </p>
+ 
+        <!-- Resumen -->
+        <div style="background:#fffbeb;border:1px solid #fbd38d;border-radius:8px;padding:16px 20px;margin-bottom:16px;">
+            <table style="width:100%;border-collapse:collapse;font-size:14px;">
+                <tr>
+                    <td style="color:#718096;padding:5px 0;width:35%;">Solicitud</td>
+                    <td style="font-weight:bold;"><t t-out="object.name"/></td>
+                </tr>
+                <tr>
+                    <td style="color:#718096;padding:5px 0;">Fecha cierre</td>
+                    <td><t t-out="object.fecha_reemplazo"/></td>
+                </tr>
+                <tr>
+                    <td style="color:#718096;padding:5px 0;">Cerrado por</td>
+                    <td style="font-weight:bold;">
+                        <t t-out="object.reemplazado_por.name"/>
+                    </td>
+                </tr>
+            </table>
+        </div>
+ 
+        <!-- Máquina Origen -->
+        <div style="background:#f7fafc;border-radius:8px;padding:16px 20px;margin-bottom:16px;">
+            <div style="font-weight:bold;color:#4a5568;margin-bottom:8px;">🖨️ Máquina Origen</div>
+            <table style="width:100%;border-collapse:collapse;font-size:14px;">
+                <tr>
+                    <td style="color:#718096;padding:4px 0;width:35%;">Modelo</td>
+                    <td style="font-weight:bold;">
+                        <t t-out="object.maquina_origen_id.name.name"/>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="color:#718096;padding:4px 0;">Serie</td>
+                    <td><t t-out="object.maquina_origen_id.serie"/></td>
+                </tr>
+                <t t-if="object.maquina_origen_id.cliente_id">
+                    <tr>
+                        <td style="color:#718096;padding:4px 0;">Cliente</td>
+                        <td><t t-out="object.maquina_origen_id.cliente_id.name"/></td>
+                    </tr>
+                </t>
+            </table>
+        </div>
+ 
+        <!-- Máquina Destino -->
+        <t t-if="object.maquina_destino_id">
+            <div style="background:#f0fff4;border-radius:8px;padding:16px 20px;margin-bottom:16px;">
+                <div style="font-weight:bold;color:#276749;margin-bottom:8px;">🖨️ Máquina Destino</div>
+                <table style="width:100%;border-collapse:collapse;font-size:14px;">
+                    <tr>
+                        <td style="color:#718096;padding:4px 0;width:35%;">Modelo</td>
+                        <td style="font-weight:bold;">
+                            <t t-out="object.maquina_destino_id.name.name"/>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="color:#718096;padding:4px 0;">Serie</td>
+                        <td><t t-out="object.maquina_destino_id.serie"/></td>
+                    </tr>
+                    <t t-if="object.maquina_destino_id.cliente_id">
+                        <tr>
+                            <td style="color:#718096;padding:4px 0;">Cliente</td>
+                            <td style="font-weight:bold;color:#276749;">
+                                <t t-out="object.maquina_destino_id.cliente_id.name"/>
+                            </td>
+                        </tr>
+                    </t>
+                </table>
+            </div>
+        </t>
+ 
+        <!-- Partes involucradas -->
+        <div style="margin-bottom:24px;">
+            <div style="font-weight:bold;color:#4a5568;margin-bottom:10px;">📦 Partes Involucradas</div>
+            <t t-foreach="object.parte_ids" t-as="parte">
+                <div style="background:#fffbeb;border-left:4px solid #d69e2e;padding:10px 14px;margin-bottom:6px;border-radius:0 6px 6px 0;">
+                    <strong><t t-out="parte.parte"/></strong>
+                    <t t-if="parte.descripcion">
+                        <span style="color:#718096;font-size:13px;">
+                            — <t t-out="parte.descripcion"/>
+                        </span>
+                    </t>
+                </div>
+            </t>
+        </div>
+ 
+        <div style="background:#fed7d7;border:1px solid #fc8181;border-radius:6px;padding:14px 18px;font-size:14px;">
+            ⚠️ <strong>Importante:</strong> Verifica con tu supervisor el estado real
+            de las partes. Esta acción fue registrada en el sistema con auditoría completa.
         </div>
  
     </div>

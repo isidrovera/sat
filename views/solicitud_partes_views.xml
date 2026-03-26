@@ -11,16 +11,16 @@
             <form>
                 <header>
 
-                    <!-- Gerencia aprueba por token — no hay botón manual de aprobación -->
+                    <!-- Gerencia aprueba por token (WhatsApp/email) — no hay botón manual -->
 
                     <button name="action_complete"
-                            string="Marcar como Completado"
+                            string="Marcar Retiro Completo"
                             type="object"
                             class="oe_highlight"
                             invisible="state != 'approved' or not todas_retiradas"/>
 
                     <button name="action_replace"
-                            string="Finalizar (Todas Repuestas)"
+                            string="Finalizar Reposición"
                             type="object"
                             class="oe_highlight"
                             invisible="state != 'completed' or not todas_repuestas"/>
@@ -28,21 +28,23 @@
                     <button name="action_reject"
                             string="Rechazar"
                             type="object"
-                            invisible="state in ['rejected', 'replaced', 'completed']"/>
-                    <button name="action_forzar_reposicion"
-                        string="⚡ Forzar Reposición"
-                        type="object"
-                        class="btn-warning"
-                        
-                        confirm="¿Cerrar forzadamente esta solicitud? Las partes pendientes quedarán como reemplazadas."/>
+                            invisible="state in ('rejected', 'replaced', 'completed', 'approved')"/>
 
-                    <field name="state" widget="statusbar"
+                    <button name="action_forzar_reposicion"
+                            string="⚡ Forzar Reposición"
+                            type="object"
+                            class="btn-warning"
+                            invisible="state not in ('approved', 'completed')"
+                            confirm="¿Cerrar forzadamente esta solicitud? Las partes pendientes quedarán como reemplazadas."/>
+
+                    <field name="state"
+                           widget="statusbar"
                            statusbar_visible="submitted,approved,completed,replaced"/>
                 </header>
 
                 <sheet>
 
-                    <!-- Stat buttons -->
+                    <!-- ── Stat buttons ─────────────────────────────────── -->
                     <div class="oe_button_box" name="button_box">
 
                         <button class="oe_stat_button"
@@ -69,70 +71,87 @@
 
                     </div>
 
-                    <!-- Alert: aprobada -->
-                    <div class="alert alert-success"
+                    <!-- ── Alertas de estado ─────────────────────────────── -->
+                    <div class="alert alert-success mb-2"
                          role="alert"
-                         invisible="state not in ['approved', 'completed', 'replaced']">
+                         invisible="state not in ('approved', 'completed', 'replaced')">
                         <strong>✅ Aprobada por Gerencia</strong>
                         <span invisible="not fecha_autorizacion">
                             el <field name="fecha_autorizacion" readonly="1" widget="datetime" class="oe_inline"/>
                         </span>
-                        <span invisible="not tecnico_asignado_id">
-                            · <strong>Técnico asignado:</strong>
-                            <field name="tecnico_asignado_id" readonly="1" class="oe_inline"/>
-                        </span>
                     </div>
 
-                    <!-- Alert: responsable reposición -->
-                    <div class="alert alert-info"
-                         role="alert"
-                         invisible="not responsable_reposicion_id or state not in ['approved', 'completed']">
-                        <strong>📋 Responsable de Reposición:</strong>
-                        <field name="responsable_reposicion_id" readonly="1" class="oe_inline"/>
-                    </div>
-
-                    <!-- Alert: rechazada -->
-                    <div class="alert alert-danger"
+                    <div class="alert alert-danger mb-2"
                          role="alert"
                          invisible="state != 'rejected'">
                         <strong>❌ Solicitud Rechazada</strong>
                     </div>
 
-                    <!-- Título -->
+                    <!-- ── Título ────────────────────────────────────────── -->
                     <div class="oe_title">
                         <h1>
                             <field name="name" readonly="1"/>
                         </h1>
                     </div>
 
+                    <!-- ── Grupo principal: datos editables al crear ─────── -->
                     <group>
                         <group string="Máquinas">
-                            <field name="maquina_origen_id" options="{'no_create': True}"/>
-                            <field name="maquina_destino_id" options="{'no_create': True}"/>
+                            <field name="maquina_origen_id"
+                                   options="{'no_create': True}"
+                                   readonly="state != 'draft'"/>
+                            <field name="maquina_destino_id"
+                                   options="{'no_create': True}"
+                                   readonly="state != 'draft'"/>
                         </group>
 
                         <group string="Solicitud">
-                            <field name="fecha_solicitud"/>
-                            <field name="solicitante_id" options="{'no_open': True}"/>
-                            <field name="responsable_reposicion_id" options="{'no_create': True}"/>
+                            <field name="fecha_solicitud" readonly="1"/>
+                            <field name="solicitante_id"
+                                   options="{'no_open': True}"
+                                   readonly="state != 'draft'"/>
                         </group>
                     </group>
 
+                    <!-- ── Grupo responsables: editables al crear ────────── -->
                     <group>
-                        <group string="Aprobación">
+                        <group string="Técnico de Retiro">
+                            <field name="tecnico_asignado_id"
+                                   options="{'no_create': True}"
+                                   readonly="state not in ('draft', 'submitted')"
+                                   help="Técnico que retirará físicamente las partes. Gerencia solo aprueba o rechaza."/>
+                            <field name="tecnico_asignado_mobile_clean"
+                                   string="Teléfono"
+                                   readonly="1"
+                                   invisible="not tecnico_asignado_id"/>
+                        </group>
+
+                        <group string="Responsable de Reposición">
+                            <field name="responsable_reposicion_id"
+                                   options="{'no_create': True}"
+                                   readonly="state not in ('draft', 'submitted')"
+                                   help="Recibirá alertas automáticas si no repone en 48h."/>
+                            <field name="responsable_reposicion_mobile_clean"
+                                   string="Teléfono"
+                                   readonly="1"
+                                   invisible="not responsable_reposicion_id"/>
+                        </group>
+                    </group>
+
+                    <!-- ── Grupo auditoría: solo lectura, visible post-aprobación -->
+                    <group invisible="state == 'draft'">
+                        <group string="Aprobación"
+                               invisible="state == 'submitted'">
                             <field name="autorizado_por"
                                    readonly="1"
                                    invisible="not autorizado_por"/>
                             <field name="fecha_autorizacion"
                                    readonly="1"
                                    invisible="not fecha_autorizacion"/>
-                            <field name="tecnico_asignado_id"
-                                   readonly="1"
-                                   invisible="not tecnico_asignado_id"/>
                         </group>
 
                         <group string="Retiro / Reposición"
-                               invisible="state not in ['completed', 'replaced']">
+                               invisible="state not in ('completed', 'replaced')">
                             <field name="retirado_por"
                                    readonly="1"
                                    invisible="not retirado_por"/>
@@ -152,33 +171,30 @@
                     <group invisible="1">
                         <field name="todas_retiradas"/>
                         <field name="todas_repuestas"/>
-                        <field name="tecnico_asignado_mobile_clean"/>
-                        <field name="responsable_reposicion_mobile_clean"/>
                     </group>
 
+                    <!-- ── Notebook ──────────────────────────────────────── -->
                     <notebook>
                         <page string="Partes Solicitadas" name="partes">
-                            <field name="parte_ids">
+                            <field name="parte_ids"
+                                   readonly="state not in ('draft', 'submitted')">
                                 <list decoration-success="estado == 'reemplazado'"
                                       decoration-warning="estado == 'retirado'"
                                       decoration-muted="estado == 'pendiente'">
 
-                                    <field name="parte" string="Parte/Componente"/>
+                                    <field name="parte" string="Parte / Componente"/>
                                     <field name="descripcion"/>
-
                                     <field name="estado"
                                            widget="badge"
                                            decoration-success="estado == 'reemplazado'"
                                            decoration-warning="estado == 'retirado'"
                                            decoration-muted="estado == 'pendiente'"/>
-
                                     <field name="estado_reposicion"
                                            optional="show"
                                            widget="badge"
                                            decoration-warning="estado_reposicion == 'notificado'"
                                            decoration-muted="estado_reposicion == 'pendiente'"
                                            decoration-success="estado_reposicion == 'repuesta'"/>
-
                                     <field name="condicion" optional="hide"/>
                                     <field name="fecha_reemplazo" optional="hide"/>
                                     <field name="reemplazado_por" optional="hide"/>
@@ -189,7 +205,6 @@
                                 <form>
                                     <sheet>
 
-                                        <!-- Stat button foto — solo informativo -->
                                         <div class="oe_button_box" name="button_box">
                                             <button class="oe_stat_button"
                                                     icon="fa-camera"
@@ -241,7 +256,6 @@
                                                    readonly="1"/>
                                         </group>
 
-                                        <!-- Campos invisibles necesarios -->
                                         <group invisible="1">
                                             <field name="solicitud_id"/>
                                             <field name="maquina_origen_id"/>
@@ -269,9 +283,11 @@
         <field name="model">solicitud.partes</field>
         <field name="arch" type="xml">
             <list decoration-danger="state == 'rejected'"
-                  decoration-success="state in ['completed', 'replaced']"
+                  decoration-success="state in ('completed', 'replaced')"
                   decoration-warning="state == 'approved'"
+                  decoration-info="state == 'submitted'"
                   decoration-muted="state == 'draft'">
+
                 <field name="name"/>
                 <field name="maquina_origen_id"/>
                 <field name="maquina_destino_id" optional="show"/>
@@ -283,11 +299,12 @@
                 <field name="fecha_autorizacion" optional="hide"/>
                 <field name="state"
                        widget="badge"
-                       decoration-success="state in ['completed', 'replaced']"
+                       decoration-success="state in ('completed', 'replaced')"
                        decoration-warning="state == 'approved'"
                        decoration-danger="state == 'rejected'"
                        decoration-info="state == 'submitted'"
                        decoration-muted="state == 'draft'"/>
+
             </list>
         </field>
     </record>
@@ -305,13 +322,24 @@
                 <field name="maquina_destino_id"/>
                 <field name="solicitante_id"/>
                 <field name="tecnico_asignado_id"/>
+                <field name="responsable_reposicion_id"/>
 
                 <filter name="mis_solicitudes"
                         string="Mis Solicitudes"
                         domain="[('solicitante_id', '=', uid)]"/>
 
+                <filter name="mis_retiros"
+                        string="Mis Retiros"
+                        domain="[('tecnico_asignado_id', '=', uid)]"/>
+
+                <filter name="mis_reposiciones"
+                        string="Mis Reposiciones"
+                        domain="[('responsable_reposicion_id', '=', uid)]"/>
+
+                <separator/>
+
                 <filter name="pendientes"
-                        string="Pendientes"
+                        string="Pendientes aprobación"
                         domain="[('state', '=', 'submitted')]"/>
 
                 <filter name="aprobadas"
@@ -319,8 +347,8 @@
                         domain="[('state', '=', 'approved')]"/>
 
                 <filter name="completadas"
-                        string="Completadas"
-                        domain="[('state', 'in', ['completed', 'replaced'])]"/>
+                        string="Completadas / Repuestas"
+                        domain="[('state', 'in', ('completed', 'replaced'))]"/>
 
                 <filter name="rechazadas"
                         string="Rechazadas"
@@ -336,11 +364,21 @@
                         string="Por Solicitante"
                         context="{'group_by': 'solicitante_id'}"/>
 
+                <filter name="group_tecnico"
+                        string="Por Técnico Retiro"
+                        context="{'group_by': 'tecnico_asignado_id'}"/>
+
                 <filter name="group_maquina"
-                        string="Por Máquina"
+                        string="Por Máquina Origen"
                         context="{'group_by': 'maquina_origen_id'}"/>
+
+                <filter name="group_fecha"
+                        string="Por Fecha"
+                        context="{'group_by': 'fecha_solicitud:month'}"/>
+
             </search>
         </field>
     </record>
+
 
 </odoo>

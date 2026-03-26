@@ -15,34 +15,20 @@ class SolicitudPartesController(http.Controller):
     def _render_error(self, titulo, mensaje):
         """Página genérica de error/estado."""
         return request.render('sat.portal_solicitud_partes_error', {
-            'titulo': titulo,
+            'titulo':  titulo,
             'mensaje': mensaje,
         })
 
     def _render_ok(self, titulo, mensaje, detalle=None):
         """Página genérica de éxito."""
         return request.render('sat.portal_solicitud_partes_ok', {
-            'titulo': titulo,
+            'titulo':  titulo,
             'mensaje': mensaje,
             'detalle': detalle,
         })
 
-    def _get_tecnicos(self):
-        """Retorna lista de técnicos activos (grupo Técnico SAT o todos los usuarios internos)."""
-        try:
-            grupo = request.env.ref('sat.group_sat_tecnico', raise_if_not_found=False)
-            if grupo:
-                return grupo.users.filtered(lambda u: u.active).sudo()
-        except Exception:
-            pass
-        # Fallback: todos los usuarios internos activos
-        return request.env['res.users'].sudo().search([
-            ('active', '=', True),
-            ('share', '=', False),
-        ])
-
     # =========================================================================
-    # GERENCIA — APROBAR
+    # GERENCIA — APROBAR  (GET directo, sin formulario)
     # =========================================================================
 
     @http.route(
@@ -50,33 +36,29 @@ class SolicitudPartesController(http.Controller):
         type='http',
         auth='public',
         website=True,
-        methods=['GET', 'POST'],
+        methods=['GET'],
         csrf=False,
     )
     def gerencia_aprobar(self, token, **kwargs):
         """
-        GET  → muestra resumen de la solicitud + selector de técnico
-        POST → valida, aprueba, notifica
+        GET → aprueba la solicitud directamente con un solo clic.
+
+        El técnico de retiro y el responsable de reposición ya fueron definidos
+        al crear la solicitud por el técnico solicitante.
+        Gerencia solo aprueba o rechaza — no elige nada.
         """
         Solicitud = request.env['solicitud.partes'].sudo()
-
-        # Buscar por token de gerencia vigente
         solicitud = Solicitud.search([('token_gerencia', '=', token)], limit=1)
 
-        # Token ya usado o inválido
+        # Token inválido o ya usado
         if not solicitud:
-            # ¿Existe pero ya fue procesada?
-            procesada = Solicitud.search([
-                ('token_gerencia', '=', False),
-                ('access_token', '!=', False),
-            ], limit=0)  # No podemos identificarla sin token — mostrar mensaje genérico
             return self._render_error(
                 'Enlace no válido',
                 'Este enlace ya fue utilizado o no es válido. '
                 'La solicitud puede haber sido aprobada o rechazada anteriormente.'
             )
 
-        # Verificar que esté en estado correcto
+        # Verificar estado correcto
         if solicitud.state != 'submitted':
             estados = dict(solicitud._fields['state'].selection)
             return self._render_error(
@@ -86,64 +68,44 @@ class SolicitudPartesController(http.Controller):
                 f'y no puede ser procesada nuevamente.'
             )
 
-        tecnicos = self._get_tecnicos()
-
-        # ── POST: procesar aprobación ─────────────────────────────────────────
-        if request.httprequest.method == 'POST':
-            tecnico_id = kwargs.get('tecnico_id')
-
-            if not tecnico_id:
-                return request.render('sat.portal_gerencia_aprobar', {
-                    'solicitud': solicitud,
-                    'tecnicos': tecnicos,
-                    'error': 'Debe seleccionar un técnico para continuar.',
-                })
-
-            try:
-                tecnico_id = int(tecnico_id)
-            except (ValueError, TypeError):
-                return request.render('sat.portal_gerencia_aprobar', {
-                    'solicitud': solicitud,
-                    'tecnicos': tecnicos,
-                    'error': 'Técnico seleccionado no válido.',
-                })
-
-            tecnico = request.env['res.users'].sudo().browse(tecnico_id)
-            if not tecnico.exists():
-                return request.render('sat.portal_gerencia_aprobar', {
-                    'solicitud': solicitud,
-                    'tecnicos': tecnicos,
-                    'error': 'El técnico seleccionado no existe.',
-                })
-
-            try:
-                solicitud._aprobar(tecnico_id)
-                _logger.info(
-                    "Solicitud %s aprobada via token. Técnico: %s",
-                    solicitud.name, tecnico.name
-                )
-            except Exception as e:
-                _logger.exception("Error aprobando solicitud %s: %s", solicitud.name, e)
-                return self._render_error(
-                    'Error al procesar',
-                    f'Ocurrió un error al aprobar la solicitud: {str(e)}'
-                )
-
-            return self._render_ok(
-                '✅ Solicitud Aprobada',
-                f'La solicitud <strong>{solicitud.name}</strong> fue aprobada correctamente.',
-                detalle=f'Técnico asignado para retiro: <strong>{tecnico.name}</strong>'
+        # Validar que tenga técnico y responsable definidos
+        if not solicitud.tecnico_asignado_id:
+            return self._render_error(
+                'Datos incompletos',
+                f'La solicitud <strong>{solicitud.name}</strong> no tiene técnico de retiro '
+                f'asignado. Un administrador debe corregirlo desde Odoo antes de aprobar.'
             )
 
-        # ── GET: mostrar formulario ───────────────────────────────────────────
-        return request.render('sat.portal_gerencia_aprobar', {
-            'solicitud': solicitud,
-            'tecnicos': tecnicos,
-            'error': None,
-        })
+        if not solicitud.responsable_reposicion_id:
+            return self._render_error(
+                'Datos incompletos',
+                f'La solicitud <strong>{solicitud.name}</strong> no tiene responsable de '
+                f'reposición asignado. Un administrador debe corregirlo desde Odoo antes de aprobar.'
+            )
+
+        # Aprobar directamente
+        try:
+            solicitud._aprobar()
+            _logger.info("Solicitud %s aprobada via token (1 clic).", solicitud.name)
+        except Exception as e:
+            _logger.exception("Error aprobando solicitud %s: %s", solicitud.name, e)
+            return self._render_error(
+                'Error al procesar',
+                f'Ocurrió un error al aprobar la solicitud: {str(e)}'
+            )
+
+        return self._render_ok(
+            '✅ Solicitud Aprobada',
+            f'La solicitud <strong>{solicitud.name}</strong> fue aprobada correctamente.',
+            detalle=(
+                f'Técnico de retiro: <strong>{solicitud.tecnico_asignado_id.name}</strong><br/>'
+                f'Responsable de reposición: <strong>{solicitud.responsable_reposicion_id.name}</strong><br/>'
+                f'Ambos han sido notificados.'
+            )
+        )
 
     # =========================================================================
-    # GERENCIA — RECHAZAR
+    # GERENCIA — RECHAZAR  (GET directo, un solo clic)
     # =========================================================================
 
     @http.route(
@@ -156,7 +118,7 @@ class SolicitudPartesController(http.Controller):
     )
     def gerencia_rechazar(self, token, **kwargs):
         """
-        GET → rechaza la solicitud directamente (un solo clic).
+        GET → rechaza la solicitud directamente con un solo clic.
         """
         Solicitud = request.env['solicitud.partes'].sudo()
         solicitud = Solicitud.search([('token_gerencia', '=', token)], limit=1)
@@ -177,7 +139,7 @@ class SolicitudPartesController(http.Controller):
 
         try:
             solicitud._rechazar()
-            _logger.info("Solicitud %s rechazada via token.", solicitud.name)
+            _logger.info("Solicitud %s rechazada via token (1 clic).", solicitud.name)
         except Exception as e:
             _logger.exception("Error rechazando solicitud %s: %s", solicitud.name, e)
             return self._render_error(
@@ -205,8 +167,8 @@ class SolicitudPartesController(http.Controller):
     )
     def tecnico_retirar(self, token, **kwargs):
         """
-        GET  → muestra info de la máquina + lista de partes con checkboxes
-        POST → confirma retiro de todas las partes marcadas
+        GET  → muestra info de la máquina + lista de partes con checkboxes.
+        POST → confirma retiro de las partes marcadas.
         """
         Solicitud = request.env['solicitud.partes'].sudo()
         solicitud = Solicitud.search([('access_token', '=', token)], limit=1)
@@ -217,7 +179,7 @@ class SolicitudPartesController(http.Controller):
                 'Este enlace no es válido o la solicitud no existe.'
             )
 
-        # Validar estado — solo se puede retirar si está aprobada
+        # Solo se puede retirar si está aprobada
         if solicitud.state not in ('approved',):
             if solicitud.todas_retiradas or solicitud.state in ('completed', 'replaced'):
                 return self._render_error(
@@ -247,12 +209,11 @@ class SolicitudPartesController(http.Controller):
 
         # ── POST: procesar retiro ─────────────────────────────────────────────
         if request.httprequest.method == 'POST':
-            # Los checkboxes envían parte_ids[] con los IDs marcados
             ids_marcados = request.httprequest.form.getlist('parte_ids')
 
             if not ids_marcados:
                 return request.render('sat.portal_tecnico_retirar', {
-                    'solicitud': solicitud,
+                    'solicitud':         solicitud,
                     'partes_pendientes': partes_pendientes,
                     'error': 'Debe marcar al menos una parte para confirmar el retiro.',
                 })
@@ -279,35 +240,44 @@ class SolicitudPartesController(http.Controller):
                 )
 
             except Exception as e:
-                _logger.exception("Error confirmando retiro solicitud %s: %s", solicitud.name, e)
+                _logger.exception(
+                    "Error confirmando retiro solicitud %s: %s", solicitud.name, e
+                )
                 return self._render_error(
                     'Error al procesar',
                     f'Ocurrió un error al confirmar el retiro: {str(e)}'
                 )
 
-            # Partes que quedaron pendientes (no marcadas)
+            # Partes que quedaron pendientes (no marcadas en este envío)
             restantes = solicitud.parte_ids.filtered(lambda l: l.estado == 'pendiente')
 
             if restantes:
                 return self._render_ok(
                     '✅ Retiro Parcial Confirmado',
-                    f'Se confirmó el retiro de {len(ids_marcados)} parte(s) '
+                    f'Se confirmó el retiro de <strong>{len(ids_marcados)}</strong> parte(s) '
                     f'de la solicitud <strong>{solicitud.name}</strong>.',
-                    detalle=f'Quedan <strong>{len(restantes)}</strong> parte(s) pendientes de retiro.'
+                    detalle=(
+                        f'Quedan <strong>{len(restantes)}</strong> parte(s) pendientes de retiro. '
+                        f'Puedes usar el mismo enlace para confirmarlas cuando las retires.'
+                    )
                 )
 
             return self._render_ok(
                 '✅ Retiro Completo',
                 f'Todas las partes de la solicitud '
                 f'<strong>{solicitud.name}</strong> fueron retiradas correctamente.',
-                detalle='El responsable de reposición fue notificado.'
+                detalle=(
+                    f'El responsable de reposición '
+                    f'<strong>{solicitud.responsable_reposicion_id.name}</strong> '
+                    f'fue notificado para proceder con la reposición.'
+                )
             )
 
         # ── GET: mostrar formulario ───────────────────────────────────────────
         return request.render('sat.portal_tecnico_retirar', {
-            'solicitud': solicitud,
+            'solicitud':         solicitud,
             'partes_pendientes': partes_pendientes,
-            'error': None,
+            'error':             None,
         })
 
     # =========================================================================
@@ -324,8 +294,8 @@ class SolicitudPartesController(http.Controller):
     )
     def responsable_reponer(self, token, **kwargs):
         """
-        GET  → muestra partes retiradas con formulario de reposición + foto
-        POST → procesa reposición de cada parte con foto
+        GET  → muestra partes retiradas con formulario de reposición + foto.
+        POST → procesa reposición de cada parte con foto y condición.
         """
         Solicitud = request.env['solicitud.partes'].sudo()
         solicitud = Solicitud.search([('access_token', '=', token)], limit=1)
@@ -336,7 +306,7 @@ class SolicitudPartesController(http.Controller):
                 'Este enlace no es válido o la solicitud no existe.'
             )
 
-        # Solo se puede reponer si está en completed (retiro hecho)
+        # Solo se puede reponer si el retiro ya ocurrió
         if solicitud.state not in ('completed', 'approved'):
             if solicitud.state == 'replaced':
                 return self._render_error(
@@ -365,14 +335,14 @@ class SolicitudPartesController(http.Controller):
 
         # ── POST: procesar reposición ─────────────────────────────────────────
         if request.httprequest.method == 'POST':
-            form = request.httprequest.form
+            form  = request.httprequest.form
             files = request.httprequest.files
             errores = []
 
             for linea in partes_retiradas:
-                condicion = form.get(f'condicion_{linea.id}')
+                condicion    = form.get(f'condicion_{linea.id}')
                 observaciones = form.get(f'observaciones_{linea.id}', '')
-                foto_file = files.get(f'foto_{linea.id}')
+                foto_file    = files.get(f'foto_{linea.id}')
 
                 # Validaciones por línea
                 if not condicion:
@@ -416,15 +386,20 @@ class SolicitudPartesController(http.Controller):
                     errores.append(f'Parte "{linea.parte}": {str(e)}')
 
             if errores:
-                # Recargar partes retiradas (algunas pueden haberse procesado)
+                # Recargar partes retiradas (algunas pueden haberse procesado ya)
                 partes_retiradas_act = solicitud.parte_ids.filtered(
                     lambda l: l.estado == 'retirado'
                 )
                 return request.render('sat.portal_responsable_reponer', {
-                    'solicitud': solicitud,
+                    'solicitud':       solicitud,
                     'partes_retiradas': partes_retiradas_act,
-                    'errores': errores,
+                    'errores':         errores,
                 })
+
+            # Verificar si todas están repuestas → completar reposición
+            solicitud._compute_estado_partes()
+            if solicitud.todas_repuestas:
+                solicitud._completar_reposicion()
 
             _logger.info(
                 "Reposición completada para solicitud %s.", solicitud.name
@@ -439,7 +414,7 @@ class SolicitudPartesController(http.Controller):
 
         # ── GET: mostrar formulario ───────────────────────────────────────────
         return request.render('sat.portal_responsable_reponer', {
-            'solicitud': solicitud,
+            'solicitud':       solicitud,
             'partes_retiradas': partes_retiradas,
-            'errores': [],
+            'errores':         [],
         })

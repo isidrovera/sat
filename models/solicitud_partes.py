@@ -48,12 +48,15 @@ class SolicitudPartes(models.Model):
         tracking=True,
         readonly=True
     )
+
+    # El solicitante es editable — puede ser distinto al usuario que crea el registro.
+    # Ejemplo: un jefe llenando la solicitud en nombre de su técnico.
     solicitante_id = fields.Many2one(
         'res.users',
         string='Solicitante',
+        required=True,
         default=lambda self: self.env.user,
         tracking=True,
-        readonly=True
     )
 
     # -------------------------------------------------------------------------
@@ -88,10 +91,42 @@ class SolicitudPartes(models.Model):
     )
 
     # -------------------------------------------------------------------------
-    # Responsables
+    # Responsables — todos se definen al CREAR la solicitud
     # -------------------------------------------------------------------------
 
-    # Quien aprueba (gerencia)
+    # Técnico que retirará físicamente las partes de la máquina origen.
+    # Se define al crear. Gerencia solo aprueba o rechaza con un clic, NO elige técnico.
+    tecnico_asignado_id = fields.Many2one(
+        'res.users',
+        string='Técnico de Retiro',
+        required=True,
+        tracking=True,
+        help="Técnico que realizará el retiro físico de las partes. "
+             "Se define al crear la solicitud, no al aprobar."
+    )
+    tecnico_asignado_mobile_clean = fields.Char(
+        string='Teléfono Técnico (limpio)',
+        compute='_compute_tecnico_mobile_clean',
+        store=True
+    )
+
+    # Responsable de reposición: quien recibirá e instalará la parte nueva.
+    # A él se le envían los recordatorios automáticos si no repone en 48h.
+    responsable_reposicion_id = fields.Many2one(
+        'res.users',
+        string='Responsable de Reposición',
+        required=True,
+        tracking=True,
+        help="Usuario que recibirá e instalará la parte nueva. "
+             "Recibirá alertas automáticas si no repone en el plazo establecido."
+    )
+    responsable_reposicion_mobile_clean = fields.Char(
+        string='Teléfono Responsable Reposición (limpio)',
+        compute='_compute_responsable_mobile_clean',
+        store=True
+    )
+
+    # Quien autorizó (gerencia) — se llena automáticamente al aprobar vía token
     autorizado_por = fields.Many2one(
         'res.users',
         string='Autorizado por',
@@ -102,32 +137,6 @@ class SolicitudPartes(models.Model):
         string='Fecha de Autorización',
         tracking=True,
         readonly=True
-    )
-
-    # Técnico asignado para retirar (lo elige gerencia al aprobar)
-    tecnico_asignado_id = fields.Many2one(
-        'res.users',
-        string='Técnico Asignado para Retiro',
-        tracking=True,
-        help="Técnico que realizará el retiro físico de las partes."
-    )
-    tecnico_asignado_mobile_clean = fields.Char(
-        string='Teléfono Técnico (limpio)',
-        compute='_compute_tecnico_mobile_clean',
-        store=True
-    )
-
-    # Responsable de reposición (campo fijo en la solicitud)
-    responsable_reposicion_id = fields.Many2one(
-        'res.users',
-        string='Responsable de Reposición',
-        tracking=True,
-        help="Usuario que recibirá e instalará la parte nueva."
-    )
-    responsable_reposicion_mobile_clean = fields.Char(
-        string='Teléfono Responsable Reposición (limpio)',
-        compute='_compute_responsable_mobile_clean',
-        store=True
     )
 
     # Campos de retiro (cabecera)
@@ -251,7 +260,9 @@ class SolicitudPartes(models.Model):
             return
         try:
             template.with_context(**(ctx or {})).send_mail(self.id, force_send=True)
-            _logger.info("✅ Email enviado [%s] para solicitud %s", template_xmlid, self.name)
+            _logger.info(
+                "✅ Email enviado [%s] para solicitud %s", template_xmlid, self.name
+            )
         except Exception as e:
             _logger.error(
                 "❌ Error enviando email [%s] para solicitud %s: %s",
@@ -265,7 +276,9 @@ class SolicitudPartes(models.Model):
     @api.model
     def create(self, vals):
         if vals.get('name', 'Nuevo') == 'Nuevo':
-            vals['name'] = self.env['ir.sequence'].next_by_code('solicitud.partes') or 'Nuevo'
+            vals['name'] = (
+                self.env['ir.sequence'].next_by_code('solicitud.partes') or 'Nuevo'
+            )
         # Generar ambos tokens al crear
         vals['access_token']   = uuid.uuid4().hex
         vals['token_gerencia'] = uuid.uuid4().hex
@@ -274,16 +287,19 @@ class SolicitudPartes(models.Model):
         base_url = record._get_base_url()
         token    = record.token_gerencia
 
-        # 1) WhatsApp a Gerencia
-        record._enviar_whatsapp_gerencia()
+        # Construir URLs ANTES de cualquier escritura que pueda invalidar el token
+        url_aprobar  = f"{base_url}/partes/gerencia/{token}/aprobar"
+        url_rechazar = f"{base_url}/partes/gerencia/{token}/rechazar"
 
-        # 2) Email a Gerencia con botones aprobar/rechazar
-        #    El ctx con las URLs se pasa ANTES de que el token sea invalidado
+        # 1) WhatsApp a Gerencia — un clic aprueba directo
+        record._enviar_whatsapp_gerencia(url_aprobar, url_rechazar)
+
+        # 2) Email a Gerencia — botones de un clic en el cuerpo del correo
         record._enviar_email(
             'sat.email_template_solicitud_gerencia',
             ctx={
-                'url_aprobar':  f"{base_url}/partes/gerencia/{token}/aprobar",
-                'url_rechazar': f"{base_url}/partes/gerencia/{token}/rechazar",
+                'url_aprobar':  url_aprobar,
+                'url_rechazar': url_rechazar,
             }
         )
 
@@ -323,20 +339,17 @@ class SolicitudPartes(models.Model):
 
         - Marca todas las líneas pendientes como 'reemplazado' con timestamp actual.
         - Registra en el chatter quién forzó el cierre y en qué momento.
-        - Envía WhatsApp y correo al responsable de reposición notificando
-          el cierre forzado (si tiene datos de contacto).
-        - NO valida condición de partes para el estado de la máquina origen;
-          la deja en 'con_problemas' salvo que el usuario la corrija manualmente.
+        - Envía WhatsApp y correo al responsable de reposición notificando el cierre.
+        - NO valida condición de partes para el estado de la máquina origen.
         """
         self.ensure_one()
 
-        estados_validos = ['approved', 'completed']
-        if self.state not in estados_validos:
+        if self.state not in ('approved', 'completed'):
             raise UserError(
                 _('Solo se puede forzar la reposición en solicitudes Aprobadas o Completadas.')
             )
 
-        ahora = fields.Datetime.now()
+        ahora          = fields.Datetime.now()
         usuario_actual = self.env.user
 
         # Marcar todas las líneas que aún no estén reemplazadas
@@ -345,10 +358,9 @@ class SolicitudPartes(models.Model):
         )
         if lineas_pendientes:
             lineas_pendientes.write({
-                'estado':              'reemplazado',
+                'estado':               'reemplazado',
                 'fecha_reemplazo_real': ahora,
-                'reemplazado_por':     usuario_actual.id,
-                'forzado':             True,   # campo opcional — ver nota abajo
+                'reemplazado_por':      usuario_actual.id,
             })
 
         # Transición de estado
@@ -368,14 +380,13 @@ class SolicitudPartes(models.Model):
             )
         )
 
-        # Notificaciones al responsable de reposición (si existe)
+        # Notificaciones al responsable de reposición
         if self.responsable_reposicion_id:
             self._enviar_whatsapp_reposicion_forzada()
             self._enviar_email('sat.email_template_solicitud_reposicion_forzada')
 
         _logger.info(
-            "⚡ Reposición forzada en solicitud %s por %s. "
-            "Líneas cerradas: %s.",
+            "⚡ Reposición forzada en solicitud %s por %s. Líneas cerradas: %s.",
             self.name, usuario_actual.name, n_forzadas
         )
 
@@ -402,42 +413,51 @@ class SolicitudPartes(models.Model):
         self.ensure_one()
         self.write({
             'state':          'rejected',
-            'token_gerencia': False,  # invalidar token
+            'token_gerencia': False,
         })
         self.message_post(body="❌ Solicitud rechazada.")
         _logger.info("Solicitud %s rechazada.", self.name)
 
-    def _aprobar(self, tecnico_asignado_id):
+    def _aprobar(self):
         """
-        Aprueba la solicitud asignando el técnico que retirará.
-        Llamado desde el controller HTTP (token de gerencia).
+        Aprueba la solicitud.
+        El técnico de retiro y el responsable de reposición ya fueron definidos
+        al crear — Gerencia solo aprueba o rechaza con un clic, sin elegir técnico.
+        Llamado desde el controller HTTP (token de gerencia GET directo).
         """
         self.ensure_one()
 
         if self.state != 'submitted':
             raise UserError(_('Esta solicitud ya fue procesada.'))
 
+        if not self.tecnico_asignado_id:
+            raise UserError(
+                _('La solicitud no tiene técnico de retiro asignado. '
+                  'Contacte al solicitante para corregirlo desde Odoo.')
+            )
+
+        if not self.responsable_reposicion_id:
+            raise UserError(
+                _('La solicitud no tiene responsable de reposición asignado. '
+                  'Contacte al solicitante para corregirlo desde Odoo.')
+            )
+
         self.write({
-            'state':               'approved',
-            'autorizado_por':      self.env.ref('base.user_admin').id,
-            'fecha_autorizacion':  fields.Datetime.now(),
-            'tecnico_asignado_id': tecnico_asignado_id,
-            'token_gerencia':      False,  # invalidar token — uso único
+            'state':              'approved',
+            'autorizado_por':     self.env.ref('base.user_admin').id,
+            'fecha_autorizacion': fields.Datetime.now(),
+            'token_gerencia':     False,   # invalidar — uso único
         })
 
         base_url   = self._get_base_url()
         url_retiro = f"{base_url}/partes/retirar/{self.access_token}"
 
-        # 1) WhatsApp al solicitante
+        # Notificar al solicitante — su solicitud fue aprobada
         self._enviar_whatsapp_solicitante_aprobado()
-
-        # 2) Email al solicitante
         self._enviar_email('sat.email_template_solicitud_aprobada_solicitante')
 
-        # 3) WhatsApp al técnico asignado con link de retiro
-        self._enviar_whatsapp_tecnico_retiro()
-
-        # 4) Email al técnico asignado con link de retiro
+        # Notificar al técnico de retiro con link de confirmación
+        self._enviar_whatsapp_tecnico_retiro(url_retiro)
         self._enviar_email(
             'sat.email_template_solicitud_retiro_tecnico',
             ctx={'url_retiro': url_retiro}
@@ -445,12 +465,16 @@ class SolicitudPartes(models.Model):
 
         self.message_post(
             body=(
-                f"✅ Solicitud aprobada. "
-                f"Técnico asignado para retiro: {self.tecnico_asignado_id.name}"
+                f"✅ Solicitud aprobada por Gerencia.<br/>"
+                f"Técnico de retiro: <strong>{self.tecnico_asignado_id.name}</strong><br/>"
+                f"Responsable de reposición: <strong>{self.responsable_reposicion_id.name}</strong>"
             )
         )
         _logger.info(
-            "Solicitud %s aprobada. Técnico: %s", self.name, self.tecnico_asignado_id.name
+            "Solicitud %s aprobada. Técnico retiro: %s | Responsable reposición: %s",
+            self.name,
+            self.tecnico_asignado_id.name,
+            self.responsable_reposicion_id.name,
         )
 
     def _completar_retiro(self):
@@ -467,10 +491,8 @@ class SolicitudPartes(models.Model):
             base_url    = self._get_base_url()
             url_reponer = f"{base_url}/partes/reponer/{self.access_token}"
 
-            # 1) WhatsApp al responsable de reposición
-            self._enviar_whatsapp_responsable_reposicion()
-
-            # 2) Email al responsable de reposición con link
+            # Notificar al responsable de reposición
+            self._enviar_whatsapp_responsable_reposicion(url_reponer)
             self._enviar_email(
                 'sat.email_template_solicitud_reposicion',
                 ctx={'url_reponer': url_reponer}
@@ -497,13 +519,16 @@ class SolicitudPartes(models.Model):
     # Notificaciones WhatsApp
     # -------------------------------------------------------------------------
 
-    def _enviar_whatsapp_gerencia(self):
-        """Notifica a Gerencia al crear la solicitud con links aprobar/rechazar."""
-        self.ensure_one()
+    def _enviar_whatsapp_gerencia(self, url_aprobar, url_rechazar):
+        """
+        Notifica a Gerencia al crear la solicitud.
+        Recibe las URLs ya construidas para garantizar que el token
+        no haya sido invalidado por ninguna escritura intermedia.
 
-        base_url = self._get_base_url()
-        url_aprobar  = f"{base_url}/partes/gerencia/{self.token_gerencia}/aprobar"
-        url_rechazar = f"{base_url}/partes/gerencia/{self.token_gerencia}/rechazar"
+        El link APROBAR aprueba directo sin ningún formulario adicional.
+        Gerencia solo ve un resumen completo y hace un clic.
+        """
+        self.ensure_one()
 
         partes_lista = "\n".join([
             f"  • {l.parte}" + (f" — {l.descripcion}" if l.descripcion else "")
@@ -513,7 +538,9 @@ class SolicitudPartes(models.Model):
         msg = (
             f"🔧 *Nueva Solicitud de Partes*\n\n"
             f"*Solicitud:* {self.name}\n"
-            f"*Solicitante:* {self.solicitante_id.name}\n\n"
+            f"*Solicitante:* {self.solicitante_id.name}\n"
+            f"*Técnico de retiro:* {self.tecnico_asignado_id.name}\n"
+            f"*Responsable reposición:* {self.responsable_reposicion_id.name}\n\n"
             f"*Máquina Origen:* {self.maquina_origen_id.name.name} "
             f"(Serie: {self.maquina_origen_id.serie})\n"
         )
@@ -523,8 +550,8 @@ class SolicitudPartes(models.Model):
         msg += (
             f"\n*Partes solicitadas:*\n{partes_lista}\n\n"
             f"━━━━━━━━━━━━━━━━━━\n"
-            f"✅ *APROBAR:*\n{url_aprobar}\n\n"
-            f"❌ *RECHAZAR:*\n{url_rechazar}\n"
+            f"✅ *APROBAR (1 clic):*\n{url_aprobar}\n\n"
+            f"❌ *RECHAZAR (1 clic):*\n{url_rechazar}\n"
             f"━━━━━━━━━━━━━━━━━━\n"
             f"⚠️ Cada link es de uso único."
         )
@@ -540,29 +567,32 @@ class SolicitudPartes(models.Model):
             self.solicitante_id.mobile_phone if self.solicitante_id else False
         )
         if not phone:
-            _logger.warning("Solicitante %s sin teléfono.", self.solicitante_id.name)
+            _logger.warning(
+                "Solicitante %s sin teléfono móvil.", self.solicitante_id.name
+            )
             return
 
         msg = (
             f"✅ *Solicitud Aprobada*\n\n"
             f"Tu solicitud *{self.name}* fue aprobada por Gerencia.\n\n"
-            f"*Técnico asignado para retiro:* {self.tecnico_asignado_id.name}\n\n"
+            f"*Técnico de retiro:* {self.tecnico_asignado_id.name}\n"
+            f"*Responsable de reposición:* {self.responsable_reposicion_id.name}\n\n"
             f"Se procederá con el retiro de las partes."
         )
         self.send_whatsapp_message(phone, msg)
 
-    def _enviar_whatsapp_tecnico_retiro(self):
-        """Notifica al técnico asignado con link único de retiro."""
+    def _enviar_whatsapp_tecnico_retiro(self, url_retiro):
+        """
+        Notifica al técnico de retiro con link único de confirmación.
+        Recibe la URL ya construida.
+        """
         self.ensure_one()
 
         if not self.tecnico_asignado_mobile_clean:
             _logger.warning(
-                "Técnico asignado %s sin teléfono.", self.tecnico_asignado_id.name
+                "Técnico de retiro %s sin teléfono móvil.", self.tecnico_asignado_id.name
             )
             return
-
-        base_url = self._get_base_url()
-        url_retiro = f"{base_url}/partes/retirar/{self.access_token}"
 
         partes_lista = "\n".join([f"  • {l.parte}" for l in self.parte_ids])
 
@@ -585,19 +615,19 @@ class SolicitudPartes(models.Model):
             self.tecnico_asignado_id.name, self.name
         )
 
-    def _enviar_whatsapp_responsable_reposicion(self):
-        """Notifica al responsable de reposición con link único."""
+    def _enviar_whatsapp_responsable_reposicion(self, url_reponer):
+        """
+        Notifica al responsable de reposición con link único.
+        Recibe la URL ya construida.
+        """
         self.ensure_one()
 
         if not self.responsable_reposicion_mobile_clean:
             _logger.warning(
-                "Responsable reposición %s sin teléfono.",
+                "Responsable reposición %s sin teléfono móvil.",
                 self.responsable_reposicion_id.name
             )
             return
-
-        base_url = self._get_base_url()
-        url_reponer = f"{base_url}/partes/reponer/{self.access_token}"
 
         partes_lista = "\n".join([f"  • {l.parte}" for l in self.parte_ids])
 
@@ -662,10 +692,10 @@ class SolicitudPartes(models.Model):
 
         Line = self.env['solicitud.partes.linea'].sudo()
         pendientes = Line.search([
-            ('estado',              '=',  'retirado'),
-            ('fecha_retiro_real',   '!=', False),
-            ('fecha_retiro_real',   '<',  limite),
-            ('estado_reposicion',   'in', ['pendiente', 'notificado']),
+            ('estado',            '=',  'retirado'),
+            ('fecha_retiro_real', '!=', False),
+            ('fecha_retiro_real', '<',  limite),
+            ('estado_reposicion', 'in', ['pendiente', 'notificado']),
         ])
 
         _logger.info(
