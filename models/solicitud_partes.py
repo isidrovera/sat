@@ -238,6 +238,26 @@ class SolicitudPartes(models.Model):
         action_id = self.env.ref('sat.action_solicitud_partes').id
         return f"{base_url}/web#id={self.id}&view_type=form&model=solicitud.partes&action={action_id}"
 
+    def _enviar_email(self, template_xmlid, ctx=None):
+        """
+        Envía un mail.template con contexto adicional (URLs tokenizadas, etc.).
+        Usa force_send=True para salida inmediata — crítico en flujos con tokens
+        de un solo uso que deben llegar antes de que el token sea invalidado.
+        """
+        self.ensure_one()
+        template = self.env.ref(template_xmlid, raise_if_not_found=False)
+        if not template:
+            _logger.warning("⚠️ Template de correo no encontrado: %s", template_xmlid)
+            return
+        try:
+            template.with_context(**(ctx or {})).send_mail(self.id, force_send=True)
+            _logger.info("✅ Email enviado [%s] para solicitud %s", template_xmlid, self.name)
+        except Exception as e:
+            _logger.error(
+                "❌ Error enviando email [%s] para solicitud %s: %s",
+                template_xmlid, self.name, str(e)
+            )
+
     # -------------------------------------------------------------------------
     # CRUD
     # -------------------------------------------------------------------------
@@ -250,8 +270,23 @@ class SolicitudPartes(models.Model):
         vals['access_token']   = uuid.uuid4().hex
         vals['token_gerencia'] = uuid.uuid4().hex
         record = super().create(vals)
-        # Notificar a gerencia inmediatamente
+
+        base_url = record._get_base_url()
+        token    = record.token_gerencia
+
+        # 1) WhatsApp a Gerencia
         record._enviar_whatsapp_gerencia()
+
+        # 2) Email a Gerencia con botones aprobar/rechazar
+        #    El ctx con las URLs se pasa ANTES de que el token sea invalidado
+        record._enviar_email(
+            'sat.email_template_solicitud_gerencia',
+            ctx={
+                'url_aprobar':  f"{base_url}/partes/gerencia/{token}/aprobar",
+                'url_rechazar': f"{base_url}/partes/gerencia/{token}/rechazar",
+            }
+        )
+
         record.write({'state': 'submitted'})
         return record
 
@@ -272,11 +307,91 @@ class SolicitudPartes(models.Model):
         self._completar_retiro()
 
     def action_replace(self):
-        """Marcar como Reemplazado manualmente desde Odoo."""
+        """Marcar como Reemplazado manualmente desde Odoo si todas las partes están repuestas."""
         self.ensure_one()
         if not self.todas_repuestas:
             raise UserError(_('Todas las partes deben estar reemplazadas.'))
         self._completar_reposicion()
+
+    def action_forzar_reposicion(self):
+        """
+        Reposición forzada / manual desde Odoo (botón de administrador).
+
+        Permite cerrar la solicitud como 'replaced' aunque no todas las líneas
+        estén en estado 'reemplazado'. Útil cuando la reposición se gestionó
+        fuera del sistema o se necesita forzar el cierre por excepción.
+
+        - Marca todas las líneas pendientes como 'reemplazado' con timestamp actual.
+        - Registra en el chatter quién forzó el cierre y en qué momento.
+        - Envía WhatsApp y correo al responsable de reposición notificando
+          el cierre forzado (si tiene datos de contacto).
+        - NO valida condición de partes para el estado de la máquina origen;
+          la deja en 'con_problemas' salvo que el usuario la corrija manualmente.
+        """
+        self.ensure_one()
+
+        estados_validos = ['approved', 'completed']
+        if self.state not in estados_validos:
+            raise UserError(
+                _('Solo se puede forzar la reposición en solicitudes Aprobadas o Completadas.')
+            )
+
+        ahora = fields.Datetime.now()
+        usuario_actual = self.env.user
+
+        # Marcar todas las líneas que aún no estén reemplazadas
+        lineas_pendientes = self.parte_ids.filtered(
+            lambda l: l.estado != 'reemplazado'
+        )
+        if lineas_pendientes:
+            lineas_pendientes.write({
+                'estado':              'reemplazado',
+                'fecha_reemplazo_real': ahora,
+                'reemplazado_por':     usuario_actual.id,
+                'forzado':             True,   # campo opcional — ver nota abajo
+            })
+
+        # Transición de estado
+        self.write({
+            'state':           'replaced',
+            'reemplazado_por': usuario_actual.id,
+            'fecha_reemplazo': ahora,
+        })
+
+        # Chatter — registro de auditoría
+        n_forzadas = len(lineas_pendientes)
+        self.message_post(
+            body=(
+                f"⚡ <strong>Reposición forzada</strong> por {usuario_actual.name}.<br/>"
+                f"Partes cerradas forzadamente: <strong>{n_forzadas}</strong>.<br/>"
+                f"Fecha: {ahora.strftime('%d/%m/%Y %H:%M')}"
+            )
+        )
+
+        # Notificaciones al responsable de reposición (si existe)
+        if self.responsable_reposicion_id:
+            self._enviar_whatsapp_reposicion_forzada()
+            self._enviar_email('sat.email_template_solicitud_reposicion_forzada')
+
+        _logger.info(
+            "⚡ Reposición forzada en solicitud %s por %s. "
+            "Líneas cerradas: %s.",
+            self.name, usuario_actual.name, n_forzadas
+        )
+
+        return {
+            'type': 'ir.actions.client',
+            'tag':  'display_notification',
+            'params': {
+                'title':   _('Reposición Forzada'),
+                'message': _(
+                    'La solicitud %s fue cerrada forzadamente. '
+                    '%s línea(s) marcada(s) como reemplazadas.'
+                ) % (self.name, n_forzadas),
+                'type':    'warning',
+                'sticky':  False,
+            },
+        }
 
     # -------------------------------------------------------------------------
     # Lógica interna de transiciones
@@ -310,11 +425,23 @@ class SolicitudPartes(models.Model):
             'token_gerencia':      False,  # invalidar token — uso único
         })
 
-        # Notificar al solicitante
+        base_url   = self._get_base_url()
+        url_retiro = f"{base_url}/partes/retirar/{self.access_token}"
+
+        # 1) WhatsApp al solicitante
         self._enviar_whatsapp_solicitante_aprobado()
 
-        # Notificar al técnico asignado con link de retiro
+        # 2) Email al solicitante
+        self._enviar_email('sat.email_template_solicitud_aprobada_solicitante')
+
+        # 3) WhatsApp al técnico asignado con link de retiro
         self._enviar_whatsapp_tecnico_retiro()
+
+        # 4) Email al técnico asignado con link de retiro
+        self._enviar_email(
+            'sat.email_template_solicitud_retiro_tecnico',
+            ctx={'url_retiro': url_retiro}
+        )
 
         self.message_post(
             body=(
@@ -322,7 +449,9 @@ class SolicitudPartes(models.Model):
                 f"Técnico asignado para retiro: {self.tecnico_asignado_id.name}"
             )
         )
-        _logger.info("Solicitud %s aprobada. Técnico: %s", self.name, self.tecnico_asignado_id.name)
+        _logger.info(
+            "Solicitud %s aprobada. Técnico: %s", self.name, self.tecnico_asignado_id.name
+        )
 
     def _completar_retiro(self):
         """Marca la solicitud como completada (todas las partes retiradas)."""
@@ -334,9 +463,18 @@ class SolicitudPartes(models.Model):
         })
         self.maquina_origen_id.write({'estado_alquiler_id': 'con_problemas'})
 
-        # Notificar al responsable de reposición
         if self.responsable_reposicion_id:
+            base_url    = self._get_base_url()
+            url_reponer = f"{base_url}/partes/reponer/{self.access_token}"
+
+            # 1) WhatsApp al responsable de reposición
             self._enviar_whatsapp_responsable_reposicion()
+
+            # 2) Email al responsable de reposición con link
+            self._enviar_email(
+                'sat.email_template_solicitud_reposicion',
+                ctx={'url_reponer': url_reponer}
+            )
 
         self.message_post(body="📦 Todas las partes retiradas. Reposición pendiente.")
         _logger.info("Solicitud %s completada — retiro total.", self.name)
@@ -482,6 +620,37 @@ class SolicitudPartes(models.Model):
             self.responsable_reposicion_id.name, self.name
         )
 
+    def _enviar_whatsapp_reposicion_forzada(self):
+        """
+        Notifica al responsable de reposición que la solicitud fue cerrada
+        forzadamente por un administrador desde Odoo.
+        """
+        self.ensure_one()
+
+        if not self.responsable_reposicion_mobile_clean:
+            _logger.warning(
+                "Responsable reposición %s sin teléfono (notif. forzada).",
+                self.responsable_reposicion_id.name
+            )
+            return
+
+        partes_lista = "\n".join([f"  • {l.parte}" for l in self.parte_ids])
+
+        msg = (
+            f"⚡ *Solicitud Cerrada Forzadamente*\n\n"
+            f"Hola *{self.responsable_reposicion_id.name}*,\n\n"
+            f"La solicitud *{self.name}* fue cerrada manualmente por un administrador.\n\n"
+            f"*Máquina:* {self.maquina_origen_id.name.name}\n"
+            f"*Serie:* {self.maquina_origen_id.serie}\n\n"
+            f"*Partes involucradas:*\n{partes_lista}\n\n"
+            f"⚠️ Verifica con tu supervisor el estado real de las partes."
+        )
+        self.send_whatsapp_message(self.responsable_reposicion_mobile_clean, msg)
+        _logger.info(
+            "WhatsApp de reposición forzada enviado a %s para solicitud %s.",
+            self.responsable_reposicion_id.name, self.name
+        )
+
     # -------------------------------------------------------------------------
     # Cron: recordatorio de reposiciones pendientes
     # -------------------------------------------------------------------------
@@ -507,6 +676,17 @@ class SolicitudPartes(models.Model):
         for linea in pendientes:
             try:
                 linea._enviar_recordatorio_reposicion()
+
+                # Email recordatorio desde la solicitud padre
+                solicitud = linea.solicitud_id
+                if solicitud and solicitud.responsable_reposicion_id:
+                    base_url    = solicitud._get_base_url()
+                    url_reponer = f"{base_url}/partes/reponer/{solicitud.access_token}"
+                    solicitud._enviar_email(
+                        'sat.email_template_recordatorio_reposicion',
+                        ctx={'url_reponer': url_reponer}
+                    )
+
             except Exception as e:
                 _logger.exception(
                     "CRON reposiciones: error notificando línea %s: %s", linea.id, e

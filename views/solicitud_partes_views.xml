@@ -29,6 +29,12 @@
                             string="Rechazar"
                             type="object"
                             invisible="state in ['rejected', 'replaced', 'completed']"/>
+                    <button name="action_forzar_reposicion"
+                        string="⚡ Forzar Reposición"
+                        type="object"
+                        class="btn-warning"
+                        
+                        confirm="¿Cerrar forzadamente esta solicitud? Las partes pendientes quedarán como reemplazadas."/>
 
                     <field name="state" widget="statusbar"
                            statusbar_visible="submitted,approved,completed,replaced"/>
