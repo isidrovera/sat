@@ -94,7 +94,7 @@
                         </h1>
                     </div>
 
-                    <!-- ── Grupo principal: datos editables al crear ─────── -->
+                    <!-- ── Grupo principal: todos los campos visibles al crear ── -->
                     <group>
                         <group string="Máquinas">
                             <field name="maquina_origen_id"
@@ -113,8 +113,8 @@
                         </group>
                     </group>
 
-                    <!-- ── Grupo responsables: editables al crear ────────── -->
                     <group>
+                        <!-- Técnico de retiro: se define al crear, no al aprobar -->
                         <group string="Técnico de Retiro">
                             <field name="tecnico_asignado_id"
                                    options="{'no_create': True}"
@@ -126,6 +126,7 @@
                                    invisible="not tecnico_asignado_id"/>
                         </group>
 
+                        <!-- Responsable de reposición: se define al crear -->
                         <group string="Responsable de Reposición">
                             <field name="responsable_reposicion_id"
                                    options="{'no_create': True}"
@@ -138,26 +139,29 @@
                         </group>
                     </group>
 
-                    <!-- ── Grupo auditoría: solo lectura, visible post-aprobación -->
-                    <group invisible="state == 'draft'">
-                        <group string="Aprobación"
-                               invisible="state == 'submitted'">
-                            <field name="autorizado_por"
-                                   readonly="1"
-                                   invisible="not autorizado_por"/>
-                            <field name="fecha_autorizacion"
-                                   readonly="1"
-                                   invisible="not fecha_autorizacion"/>
-                        </group>
+                    <!-- ── Auditoría aprobación: visible solo post-submit ── -->
+                    <group string="Aprobación"
+                           invisible="state in ('draft', 'submitted')">
+                        <field name="autorizado_por"
+                               readonly="1"
+                               invisible="not autorizado_por"/>
+                        <field name="fecha_autorizacion"
+                               readonly="1"
+                               invisible="not fecha_autorizacion"/>
+                    </group>
 
-                        <group string="Retiro / Reposición"
-                               invisible="state not in ('completed', 'replaced')">
+                    <!-- ── Auditoría retiro/reposición: visible solo post-retiro ── -->
+                    <group string="Retiro / Reposición"
+                           invisible="state not in ('completed', 'replaced')">
+                        <group>
                             <field name="retirado_por"
                                    readonly="1"
                                    invisible="not retirado_por"/>
                             <field name="fecha_retiro"
                                    readonly="1"
                                    invisible="not fecha_retiro"/>
+                        </group>
+                        <group>
                             <field name="reemplazado_por"
                                    readonly="1"
                                    invisible="not reemplazado_por"/>
