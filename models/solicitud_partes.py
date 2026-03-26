@@ -358,8 +358,7 @@ class SolicitudPartes(models.Model):
         )
         if lineas_pendientes:
             lineas_pendientes.write({
-                'estado':               'reemplazado',
-                'fecha_reemplazo_real': ahora,
+                'estado':               'reemplazado',               
                 'reemplazado_por':      usuario_actual.id,
             })
 
