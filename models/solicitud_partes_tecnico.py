@@ -57,7 +57,6 @@ class SolicitudParteTecnico(models.Model):
     access_token = fields.Char(
         string='Token', copy=False, readonly=True, index=True)
 
-    # ── NUEVO: token exclusivo para el flujo de Logística ─────────────────
     access_token_logistica = fields.Char(
         string='Token Logística', copy=False, readonly=True, index=True)
 
@@ -86,9 +85,9 @@ class SolicitudParteTecnico(models.Model):
     state = fields.Selection([
         ('enviada',                    'Enviada'),
         ('en_gestion',                 'En Gestión'),
-        ('consulta_logistica',         'Consulta a Logística'),   # NUEVO
+        ('consulta_logistica',         'Consulta a Logística'),
         ('pendiente_aprobacion',       'Pendiente Aprobación'),
-        ('pendiente_aprobacion_compra','Pendiente Aprobación Compra'),  # NUEVO
+        ('pendiente_aprobacion_compra','Pendiente Aprobación Compra'),
         ('por_conseguir',              'Por Conseguir'),
         ('aprobada',                   'Aprobada'),
         ('completada',                 'Completada'),
@@ -121,7 +120,6 @@ class SolicitudParteTecnico(models.Model):
                 'solicitud.parte.tecnico') or 'Nuevo'
         if not vals.get('access_token'):
             vals['access_token'] = str(uuid.uuid4())
-        # NUEVO: generar token logística al crear
         if not vals.get('access_token_logistica'):
             vals['access_token_logistica'] = str(uuid.uuid4())
         return super().create(vals)
@@ -145,14 +143,12 @@ class SolicitudParteTecnico(models.Model):
             return (f"{self._get_base_url()}/web#id={self.id}"
                     f"&view_type=form&model=solicitud.parte.tecnico")
 
-    # NUEVO: URLs para el flujo de Logística
     def _url_logistica_tiene(self):
         return f"{self._get_base_url()}/solicitud-parte/logistica/{self.access_token_logistica}/tiene"
 
     def _url_logistica_no_tiene(self):
         return f"{self._get_base_url()}/solicitud-parte/logistica/{self.access_token_logistica}/no-tiene"
 
-    # NUEVO: URL aprobación de compra externa (usa mismo access_token pero ruta distinta)
     def _url_aprobar_compra(self):
         return f"{self._get_base_url()}/solicitud-parte/aprobar-compra/{self.access_token}"
 
@@ -194,6 +190,7 @@ class SolicitudParteTecnico(models.Model):
 
     # ══════════════════════════════════════════════════════════════════════
     # PASO 2A: Jefe gestiona → hay partes → pide aprobación a Gerencia
+    # FIX: eliminado _send_whatsapp(LOGISTICA_PHONE) — Logística no interviene aquí
     # ══════════════════════════════════════════════════════════════════════
     def _notificar_gerencia_aprobacion(self):
         self.ensure_one()
@@ -210,18 +207,14 @@ class SolicitudParteTecnico(models.Model):
             f"*Partes listas para retirar:*\n{partes_wa}\n\n"
             f"👉 *APROBAR RETIRO:*\n{self._url_aprobar_gerencia()}"
         )
+        # FIX: solo Gerencia recibe esta notificación
         _send_whatsapp(GERENCIA_PHONE, msg_wa)
-        _send_whatsapp(LOGISTICA_PHONE, msg_wa)
         self._enviar_template('sat.email_template_solicitud_parte_aprobacion')
 
     # ══════════════════════════════════════════════════════════════════════
     # PASO 2B: Jefe gestiona → NO hay partes → consulta a Logística
     # ══════════════════════════════════════════════════════════════════════
     def _notificar_logistica_consulta(self):
-        """
-        NUEVO — Cuando todas las líneas quedan 'por_conseguir',
-        se consulta a Logística si tiene en stock antes de ir a Gerencia.
-        """
         self.ensure_one()
         por_conseguir = self.linea_ids.filtered(lambda l: l.state == 'por_conseguir')
         partes_wa = "\n".join([f"  • {l.parte}" + (f": {l.descripcion}" if l.descripcion else "") for l in por_conseguir])
@@ -241,13 +234,9 @@ class SolicitudParteTecnico(models.Model):
         self._enviar_template('sat.email_template_solicitud_parte_consulta_logistica')
 
     # ══════════════════════════════════════════════════════════════════════
-    # PASO 3A-NUEVO: Logística confirma que SÍ tiene → notifica Gerencia
+    # PASO 3A: Logística confirma que SÍ tiene → notifica Gerencia
     # ══════════════════════════════════════════════════════════════════════
     def action_logistica_tiene(self):
-        """
-        NUEVO — Llamado desde el link token cuando Logística confirma stock.
-        Marca líneas por_conseguir como en_stock_logistica y notifica Gerencia.
-        """
         self.ensure_one()
         if self.state != 'consulta_logistica':
             raise UserError(_('Esta solicitud no está en espera de respuesta de Logística.'))
@@ -262,7 +251,6 @@ class SolicitudParteTecnico(models.Model):
         self._notificar_gerencia_aprobacion_stock_logistica()
 
     def _notificar_gerencia_aprobacion_stock_logistica(self):
-        """NUEVO — Gerencia aprueba la salida del stock de Logística."""
         self.ensure_one()
         en_stock = self.linea_ids.filtered(lambda l: l.state == 'en_stock_logistica')
         partes_wa = "\n".join([f"  • {l.parte}" for l in en_stock])
@@ -281,13 +269,9 @@ class SolicitudParteTecnico(models.Model):
         self._enviar_template('sat.email_template_solicitud_parte_aprobacion_stock')
 
     # ══════════════════════════════════════════════════════════════════════
-    # PASO 3B-NUEVO: Logística confirma que NO tiene → notifica Gerencia compra
+    # PASO 3B: Logística confirma que NO tiene → notifica Gerencia compra
     # ══════════════════════════════════════════════════════════════════════
     def action_logistica_no_tiene(self):
-        """
-        NUEVO — Llamado desde el link token cuando Logística no tiene stock.
-        Marca líneas como compra_externa y notifica Gerencia para autorizar compra.
-        """
         self.ensure_one()
         if self.state != 'consulta_logistica':
             raise UserError(_('Esta solicitud no está en espera de respuesta de Logística.'))
@@ -302,7 +286,6 @@ class SolicitudParteTecnico(models.Model):
         self._notificar_gerencia_aprobacion_compra()
 
     def _notificar_gerencia_aprobacion_compra(self):
-        """NUEVO — Gerencia autoriza la compra externa."""
         self.ensure_one()
         compra = self.linea_ids.filtered(lambda l: l.state == 'compra_externa')
         partes_wa = "\n".join([f"  • {l.parte}" for l in compra])
@@ -320,10 +303,9 @@ class SolicitudParteTecnico(models.Model):
         self._enviar_template('sat.email_template_solicitud_parte_aprobacion_compra')
 
     # ══════════════════════════════════════════════════════════════════════
-    # PASO 4A-NUEVO: Gerencia aprueba salida de stock Logística
+    # PASO 4A: Gerencia aprueba salida de stock Logística o máquinas internas
     # ══════════════════════════════════════════════════════════════════════
     def action_aprobar(self):
-        """Aprobación de Gerencia — salida de máquinas internas O salida de stock Logística."""
         self.ensure_one()
         if self.state != 'pendiente_aprobacion':
             raise UserError(
@@ -333,7 +315,6 @@ class SolicitudParteTecnico(models.Model):
             body=f"✅ <b>Aprobada por Gerencia.</b><br/>Usuario: {self.env.user.name}"
         )
 
-        # Determinar si hay partes de stock Logística para notificarles
         en_stock_logistica = self.linea_ids.filtered(lambda l: l.state == 'en_stock_logistica')
         if en_stock_logistica:
             self._notificar_logistica_entregar()
@@ -341,10 +322,6 @@ class SolicitudParteTecnico(models.Model):
         self._notificar_tecnico_retiro()
 
     def _notificar_logistica_entregar(self):
-        """
-        NUEVO — Notifica a Logística que Gerencia aprobó y debe entregar el repuesto.
-        Sirve como registro de la salida autorizada.
-        """
         self.ensure_one()
         en_stock = self.linea_ids.filtered(lambda l: l.state == 'en_stock_logistica')
         partes_wa = "\n".join([f"  • {l.parte}" for l in en_stock])
@@ -362,13 +339,9 @@ class SolicitudParteTecnico(models.Model):
         self._enviar_template('sat.email_template_solicitud_parte_logistica_entregar')
 
     # ══════════════════════════════════════════════════════════════════════
-    # PASO 4B-NUEVO: Gerencia aprueba compra externa
+    # PASO 4B: Gerencia aprueba compra externa
     # ══════════════════════════════════════════════════════════════════════
     def action_aprobar_compra(self):
-        """
-        NUEVO — Gerencia autoriza la compra externa.
-        Llamado desde link token /aprobar-compra/<token>.
-        """
         self.ensure_one()
         if self.state != 'pendiente_aprobacion_compra':
             raise UserError(
@@ -382,7 +355,6 @@ class SolicitudParteTecnico(models.Model):
         self._notificar_tecnico_en_espera()
 
     def _notificar_logistica_gestionar_compra(self):
-        """NUEVO — Logística recibe la orden de gestionar la compra externa."""
         self.ensure_one()
         compra = self.linea_ids.filtered(lambda l: l.state == 'compra_externa')
         partes_wa = "\n".join([
@@ -403,7 +375,6 @@ class SolicitudParteTecnico(models.Model):
         self._enviar_template('sat.email_template_solicitud_parte_logistica_compra')
 
     def _notificar_tecnico_en_espera(self):
-        """NUEVO — Técnico es informado que su repuesto está siendo conseguido."""
         self.ensure_one()
         compra = self.linea_ids.filtered(lambda l: l.state == 'compra_externa')
         partes_wa = "\n".join([f"  • {l.parte}" for l in compra])
@@ -419,11 +390,12 @@ class SolicitudParteTecnico(models.Model):
             _send_whatsapp(_clean_phone(self.tecnico_id.mobile_phone), msg_wa)
 
     # ══════════════════════════════════════════════════════════════════════
-    # PASO 3: Gerencia aprueba (desde link token o botón Odoo) — SIN CAMBIOS
+    # PASO 5: Gerencia aprueba → notifica solo al Técnico
+    # FIX: eliminado _send_whatsapp(JEFE_AREA_PHONE) — el Jefe no necesita
+    #      este aviso intermedio; ya fue notificado al crear y al completar.
     # ══════════════════════════════════════════════════════════════════════
     def _notificar_tecnico_retiro(self):
         self.ensure_one()
-        # Incluir tanto partes encontradas en máquinas como en stock Logística
         retirables = self.linea_ids.filtered(
             lambda l: l.state in ('encontrada', 'en_stock_logistica'))
         partes_wa = "\n".join([
@@ -437,9 +409,9 @@ class SolicitudParteTecnico(models.Model):
             f"Una vez retiradas confirma aquí:\n"
             f"👉 {self._url_confirmar_retiro()}"
         )
+        # FIX: solo el técnico recibe este aviso
         if self.tecnico_id.mobile_phone:
             _send_whatsapp(_clean_phone(self.tecnico_id.mobile_phone), msg_wa)
-        _send_whatsapp(JEFE_AREA_PHONE, msg_wa)
 
         email_tecnico = self.tecnico_id.email
         if email_tecnico:
@@ -448,7 +420,7 @@ class SolicitudParteTecnico(models.Model):
                 email_to_override=email_tecnico)
 
     # ══════════════════════════════════════════════════════════════════════
-    # PASO 4: Técnico confirma retiro — SIN CAMBIOS
+    # PASO 6: Técnico confirma retiro
     # ══════════════════════════════════════════════════════════════════════
     def action_confirmar_retiro(self):
         self.ensure_one()
@@ -484,11 +456,6 @@ class SolicitudParteTecnico(models.Model):
     # Lógica de avance de estado tras gestión del jefe
     # ══════════════════════════════════════════════════════════════════════
     def _check_avanzar_estado(self):
-        """
-        Se llama después de que el jefe gestiona cada línea.
-        Solo avanza cuando NO quedan líneas en estado 'buscando'.
-        MODIFICADO: cuando hay por_conseguir ahora va a consulta_logistica primero.
-        """
         self.ensure_one()
         if self.linea_ids.filtered(lambda l: l.state == 'buscando'):
             return
@@ -512,7 +479,6 @@ class SolicitudParteTecnico(models.Model):
 
         else:
             # Mezcla: algunas encontradas + otras por conseguir
-            # Las encontradas van a aprobación; las por_conseguir van a Logística
             self.write({'state': 'consulta_logistica'})
             self.message_post(
                 body=(
@@ -550,15 +516,15 @@ class SolicitudParteTecnicoLinea(models.Model):
         ('buscando',           'Buscando'),
         ('encontrada',         'Encontrada'),
         ('por_conseguir',      'Por Conseguir'),
-        ('en_stock_logistica', 'En Stock Logística'),   # NUEVO
-        ('compra_externa',     'Compra Externa'),        # NUEVO
+        ('en_stock_logistica', 'En Stock Logística'),
+        ('compra_externa',     'Compra Externa'),
         ('entregada',          'Entregada'),
     ], string='Estado', default='buscando', tracking=True)
 
     tipo_origen = fields.Selection([
         ('alquiler',  'Máquina de Alquiler'),
         ('sat',       'Máquina SAT'),
-        ('logistica', 'Stock Logística'),   # NUEVO
+        ('logistica', 'Stock Logística'),
         ('compra',    'Compra/Conseguir'),
     ], string='Origen')
 
@@ -581,7 +547,7 @@ class SolicitudParteTecnicoLinea(models.Model):
             m = self.maquina_origen_sat_id
             return f"SAT: {m.marca} {m.name.name} (Serie: {m.serie_id})"
         elif self.tipo_origen == 'logistica':
-            return "Stock Logística"   # NUEVO
+            return "Stock Logística"
         elif self.tipo_origen == 'compra':
             return "Por comprar/conseguir"
         return "Sin definir"
@@ -611,12 +577,10 @@ class SolicitudParteTecnicoLinea(models.Model):
             self.maquina_origen_alquiler_id.message_post(body=msg)
         elif self.tipo_origen == 'sat' and self.maquina_origen_sat_id:
             self.maquina_origen_sat_id.message_post(body=msg)
-        # Para logistica: el registro en su sistema externo lo hace ellos
-        # El chatter de la solicitud ya queda como trazabilidad
 
 
 # ══════════════════════════════════════════════════════════════════════════
-# WIZARD JEFE — Gestionar disponibilidad de una línea — SIN CAMBIOS
+# WIZARD JEFE — Gestionar disponibilidad de una línea
 # ══════════════════════════════════════════════════════════════════════════
 
 class SolicitudParteGestionarWizard(models.TransientModel):
@@ -703,7 +667,7 @@ class SolicitudParteGestionarWizard(models.TransientModel):
 
 
 # ══════════════════════════════════════════════════════════════════════════
-# WIZARD TÉCNICO — Solicitar parte desde reparación — SIN CAMBIOS
+# WIZARD TÉCNICO — Solicitar parte desde reparación
 # ══════════════════════════════════════════════════════════════════════════
 
 class SolicitudParteTecnicoWizard(models.TransientModel):
