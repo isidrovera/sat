@@ -26,6 +26,13 @@
           <field name="contador_actual_bn" string="BN" optional="hide"/>
           <field name="contador_actual_color" string="Color" optional="hide"/>
 
+          <!-- Deltas clave visibles en lista -->
+          <field name="delta_total" string="Δ Total" optional="show"/>
+          <field name="delta_impresiones" string="Δ Imp." optional="show"/>
+          <field name="delta_copias" string="Δ Cop." optional="show"/>
+          <field name="delta_scanner" string="Δ Scan" optional="hide"/>
+          <field name="delta_duplex" string="Δ Dpl." optional="hide"/>
+
           <!-- Pruebas OK (booleanos visuales) -->
           <field name="prueba_impresion_ok" string="✔ Imp." widget="boolean_toggle" readonly="1"/>
           <field name="prueba_copia_ok"     string="✔ Cop." widget="boolean_toggle" readonly="1"/>
@@ -47,7 +54,7 @@
                  decoration-warning="estado_prueba == 'incompleto'"
                  decoration-muted="estado_prueba == 'pendiente'"/>
 
-          <!-- Campo oculto necesario para el decoration de la vista -->
+          <!-- Campos ocultos para decorations -->
           <field name="reparacion_id" column_invisible="1"/>
         </list>
       </field>
@@ -100,10 +107,9 @@
                 <field name="tecnico_id"/>
                 <field name="fecha_inicio"/>
                 <field name="fecha_ultima_actualizacion"/>
-                <field name="es_snapshot" widget="boolean_toggle"/>
               </group>
               <group>
-                <!-- Vacío intencionalmente para balancear columnas -->
+                <field name="es_snapshot" widget="boolean_toggle"/>
               </group>
             </group>
 
@@ -139,27 +145,33 @@
                     <field name="contador_duplex"/>
                   </group>
                 </group>
-
-                <group string="Deltas (Auditoría)">
-                  <group>
-                    <field name="delta_total"/>
-                    <field name="delta_impresiones"/>
-                    <field name="delta_copias"/>
-                  </group>
-                </group>
               </page>
 
-              <!-- PESTAÑA 2: VALIDACIONES -->
-              <page string="Validaciones" name="validaciones">
-                <group string="Resultados de Prueba">
+              <!-- PESTAÑA 2: AUDITORÍA DE DELTAS -->
+              <page string="Auditoría" name="auditoria">
+                <group string="Páginas producidas durante la prueba (Actual − Inicial)">
                   <group>
-                    <field name="prueba_impresion_ok" widget="boolean_toggle"/>
-                    <field name="prueba_copia_ok"     widget="boolean_toggle"/>
-                    <field name="prueba_scanner_ok"   widget="boolean_toggle"/>
+                    <field name="delta_total" readonly="1"/>
+                    <field name="delta_bn" readonly="1"/>
+                    <field name="delta_color" readonly="1"/>
                   </group>
                   <group>
-                    <field name="prueba_color_ok"  widget="boolean_toggle"/>
-                    <field name="prueba_duplex_ok" widget="boolean_toggle"/>
+                    <field name="delta_impresiones" readonly="1"/>
+                    <field name="delta_copias" readonly="1"/>
+                    <field name="delta_scanner" readonly="1"/>
+                    <field name="delta_duplex" readonly="1"/>
+                  </group>
+                </group>
+
+                <group string="Validaciones automáticas">
+                  <group>
+                    <field name="prueba_impresion_ok" widget="boolean_toggle" readonly="1"/>
+                    <field name="prueba_copia_ok"     widget="boolean_toggle" readonly="1"/>
+                    <field name="prueba_scanner_ok"   widget="boolean_toggle" readonly="1"/>
+                  </group>
+                  <group>
+                    <field name="prueba_color_ok"  widget="boolean_toggle" readonly="1"/>
+                    <field name="prueba_duplex_ok" widget="boolean_toggle" readonly="1"/>
                   </group>
                 </group>
               </page>
@@ -168,20 +180,12 @@
               <page string="Tóner" name="toner">
                 <group string="Niveles de Tóner">
                   <group>
-                    <field name="toner_negro"
-                           widget="percentpie"
-                           string="Negro (%)"/>
-                    <field name="toner_cyan"
-                           widget="percentpie"
-                           string="Cyan (%)"/>
+                    <field name="toner_negro"   widget="percentpie" string="Negro (%)"/>
+                    <field name="toner_cyan"    widget="percentpie" string="Cyan (%)"/>
                   </group>
                   <group>
-                    <field name="toner_magenta"
-                           widget="percentpie"
-                           string="Magenta (%)"/>
-                    <field name="toner_amarillo"
-                           widget="percentpie"
-                           string="Amarillo (%)"/>
+                    <field name="toner_magenta" widget="percentpie" string="Magenta (%)"/>
+                    <field name="toner_amarillo" widget="percentpie" string="Amarillo (%)"/>
                   </group>
                 </group>
 
@@ -205,7 +209,7 @@
             </notebook>
           </sheet>
 
-          <!-- CHATTER -->
+          <!-- CHATTER: registra tracking de todos los campos -->
           <chatter/>
 
         </form>
@@ -214,8 +218,7 @@
 
 
     <!-- ============================================================ -->
-    <!-- ACCIÓN (opcional - útil si algún día quieres abrir directo)  -->
-    <!-- Puedes omitirla si solo accedes desde many2one en reparación -->
+    <!-- ACCIÓN (descomenta si necesitas acceso directo desde menú)   -->
     <!-- ============================================================ -->
     <!--
     <record id="action_prueba_maquina" model="ir.actions.act_window">

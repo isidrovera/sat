@@ -52,75 +52,85 @@ class SatPruebaMaquina(models.Model):
     # =========================
     es_snapshot = fields.Boolean(
         string='Es snapshot inicial',
-        default=False
+        default=False,
+        tracking=True
     )
 
     origen = fields.Selection([
         ('inicio', 'Inicio'),
         ('snmp', 'SNMP'),
         ('manual', 'Manual'),
-    ], string='Origen', default='snmp')
+    ], string='Origen', default='snmp', tracking=True)
 
     # =========================
     # CONTADORES INICIALES (SNAPSHOT)
     # =========================
-    contador_inicial_total = fields.Integer(string='Inicial Total')
-    contador_inicial_bn = fields.Integer(string='Inicial BN')
-    contador_inicial_color = fields.Integer(string='Inicial Color')
-    contador_inicial_impresiones = fields.Integer(string='Inicial Impresiones')
-    contador_inicial_copias = fields.Integer(string='Inicial Copias')
-    contador_inicial_scanner = fields.Integer(string='Inicial Scanner')
-    contador_inicial_duplex = fields.Integer(string='Inicial Duplex')
+    contador_inicial_total = fields.Integer(string='Inicial Total', tracking=True)
+    contador_inicial_bn = fields.Integer(string='Inicial BN', tracking=True)
+    contador_inicial_color = fields.Integer(string='Inicial Color', tracking=True)
+    contador_inicial_impresiones = fields.Integer(string='Inicial Impresiones', tracking=True)
+    contador_inicial_copias = fields.Integer(string='Inicial Copias', tracking=True)
+    contador_inicial_scanner = fields.Integer(string='Inicial Scanner', tracking=True)
+    contador_inicial_duplex = fields.Integer(string='Inicial Duplex', tracking=True)
 
     # =========================
     # CONTADORES ACTUALES (SNMP)
     # =========================
     contador_actual_total = fields.Integer(string='Actual Total', tracking=True)
-    contador_actual_bn = fields.Integer(string='Actual BN')
-    contador_actual_color = fields.Integer(string='Actual Color')
+    contador_actual_bn = fields.Integer(string='Actual BN', tracking=True)
+    contador_actual_color = fields.Integer(string='Actual Color', tracking=True)
 
-    contador_impresiones = fields.Integer(string='Impresiones')
-    contador_copias = fields.Integer(string='Copias')
-    contador_scanner = fields.Integer(string='Scanner')
-    contador_duplex = fields.Integer(string='Duplex')
+    contador_impresiones = fields.Integer(string='Impresiones', tracking=True)
+    contador_copias = fields.Integer(string='Copias', tracking=True)
+    contador_scanner = fields.Integer(string='Scanner', tracking=True)
+    contador_duplex = fields.Integer(string='Duplex', tracking=True)
 
     # =========================
-    # DELTAS (AUDITORÍA) — ahora computed
+    # DELTAS (AUDITORÍA) — computed + tracking
+    # tracking=True en campos compute+store sí funciona en Odoo 18:
+    # registra en chatter cada vez que el delta cambia
     # =========================
     delta_total = fields.Integer(
         string='Δ Total',
         compute='_compute_deltas',
-        store=True
+        store=True,
+        tracking=True
     )
     delta_bn = fields.Integer(
         string='Δ BN',
         compute='_compute_deltas',
-        store=True
+        store=True,
+        tracking=True
     )
     delta_color = fields.Integer(
         string='Δ Color',
         compute='_compute_deltas',
-        store=True
+        store=True,
+        tracking=True
     )
     delta_impresiones = fields.Integer(
         string='Δ Impresiones',
         compute='_compute_deltas',
-        store=True
+        store=True,
+        tracking=True
     )
     delta_copias = fields.Integer(
         string='Δ Copias',
         compute='_compute_deltas',
-        store=True
+        store=True,
+        tracking=True
     )
     delta_scanner = fields.Integer(
         string='Δ Scanner',
         compute='_compute_deltas',
-        store=True
+        store=True,
+        tracking=True
     )
     delta_duplex = fields.Integer(
         string='Δ Duplex',
         compute='_compute_deltas',
-        store=True
+        store=True,
+        tracking=True
     )
 
     # =========================
@@ -129,31 +139,36 @@ class SatPruebaMaquina(models.Model):
     prueba_impresion_ok = fields.Boolean(
         string='✔ Impresión',
         compute='_compute_pruebas',
-        store=True
+        store=True,
+        tracking=True
     )
 
     prueba_copia_ok = fields.Boolean(
         string='✔ Copia',
         compute='_compute_pruebas',
-        store=True
+        store=True,
+        tracking=True
     )
 
     prueba_scanner_ok = fields.Boolean(
         string='✔ Scanner',
         compute='_compute_pruebas',
-        store=True
+        store=True,
+        tracking=True
     )
 
     prueba_color_ok = fields.Boolean(
         string='✔ Color',
         compute='_compute_pruebas',
-        store=True
+        store=True,
+        tracking=True
     )
 
     prueba_duplex_ok = fields.Boolean(
         string='✔ Duplex',
         compute='_compute_pruebas',
-        store=True
+        store=True,
+        tracking=True
     )
 
     # Separado de _compute_pruebas para evitar dependencia circular
@@ -171,31 +186,36 @@ class SatPruebaMaquina(models.Model):
         ('basico', 'Básico (Impresión + Copia)'),
         ('intermedio', 'Intermedio (+ Duplex)'),
         ('avanzado', 'Avanzado (+ Scanner/Color)'),
-    ], string='Nivel de prueba', compute='_compute_nivel_prueba', store=True)
+    ], string='Nivel de prueba',
+       compute='_compute_nivel_prueba',
+       store=True,
+       tracking=True)
 
     # =========================
     # TONER
     # =========================
-    toner_negro = fields.Float(string='Tóner Negro (%)')
-    toner_cyan = fields.Float(string='Tóner Cyan (%)')
-    toner_magenta = fields.Float(string='Tóner Magenta (%)')
-    toner_amarillo = fields.Float(string='Tóner Amarillo (%)')
+    toner_negro = fields.Float(string='Tóner Negro (%)', tracking=True)
+    toner_cyan = fields.Float(string='Tóner Cyan (%)', tracking=True)
+    toner_magenta = fields.Float(string='Tóner Magenta (%)', tracking=True)
+    toner_amarillo = fields.Float(string='Tóner Amarillo (%)', tracking=True)
 
     estado_toner = fields.Selection([
         ('ok', 'OK'),
         ('bajo', 'Bajo'),
         ('critico', 'Crítico')
-    ], compute="_compute_estado_toner", store=True)
+    ], compute='_compute_estado_toner',
+       store=True,
+       tracking=True)
 
     # =========================
     # EVIDENCIA
     # =========================
     foto_prueba = fields.Binary(string='Foto de prueba')
-    observaciones = fields.Text(string='Observaciones')
+    observaciones = fields.Text(string='Observaciones', tracking=True)
 
     # =========================
     # COMPUTE: DELTAS
-    # actual - inicial  (puede ser negativo si el snapshot se tomó mal)
+    # actual - inicial (puede ser negativo si el snapshot se tomó mal)
     # =========================
     @api.depends(
         'contador_actual_total', 'contador_inicial_total',
