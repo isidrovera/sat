@@ -85,11 +85,43 @@ class SatPruebaMaquina(models.Model):
     contador_duplex = fields.Integer(string='Duplex')
 
     # =========================
-    # DELTAS (AUDITORÍA)
+    # DELTAS (AUDITORÍA) — ahora computed
     # =========================
-    delta_total = fields.Integer(string='Δ Total')
-    delta_impresiones = fields.Integer(string='Δ Impresiones')
-    delta_copias = fields.Integer(string='Δ Copias')
+    delta_total = fields.Integer(
+        string='Δ Total',
+        compute='_compute_deltas',
+        store=True
+    )
+    delta_bn = fields.Integer(
+        string='Δ BN',
+        compute='_compute_deltas',
+        store=True
+    )
+    delta_color = fields.Integer(
+        string='Δ Color',
+        compute='_compute_deltas',
+        store=True
+    )
+    delta_impresiones = fields.Integer(
+        string='Δ Impresiones',
+        compute='_compute_deltas',
+        store=True
+    )
+    delta_copias = fields.Integer(
+        string='Δ Copias',
+        compute='_compute_deltas',
+        store=True
+    )
+    delta_scanner = fields.Integer(
+        string='Δ Scanner',
+        compute='_compute_deltas',
+        store=True
+    )
+    delta_duplex = fields.Integer(
+        string='Δ Duplex',
+        compute='_compute_deltas',
+        store=True
+    )
 
     # =========================
     # VALIDACIÓN AUTOMÁTICA
@@ -124,6 +156,23 @@ class SatPruebaMaquina(models.Model):
         store=True
     )
 
+    # Separado de _compute_pruebas para evitar dependencia circular
+    estado_prueba = fields.Selection([
+        ('pendiente', 'Pendiente'),
+        ('en_proceso', 'En proceso'),
+        ('completado', 'Completado'),
+        ('incompleto', 'Incompleto'),
+    ], string='Estado de prueba', default='pendiente',
+       compute='_compute_estado_prueba',
+       store=True,
+       tracking=True)
+
+    nivel_prueba = fields.Selection([
+        ('basico', 'Básico (Impresión + Copia)'),
+        ('intermedio', 'Intermedio (+ Duplex)'),
+        ('avanzado', 'Avanzado (+ Scanner/Color)'),
+    ], string='Nivel de prueba', compute='_compute_nivel_prueba', store=True)
+
     # =========================
     # TONER
     # =========================
@@ -139,59 +188,71 @@ class SatPruebaMaquina(models.Model):
     ], compute="_compute_estado_toner", store=True)
 
     # =========================
-    # ESTADO GENERAL
-    # =========================
-    estado_prueba = fields.Selection([
-        ('pendiente', 'Pendiente'),
-        ('en_proceso', 'En proceso'),
-        ('completado', 'Completado'),
-        ('incompleto', 'Incompleto'),
-    ], string='Estado de prueba', default='pendiente', tracking=True)
-
-    nivel_prueba = fields.Selection([
-        ('basico', 'Básico (Impresión + Copia)'),
-        ('intermedio', 'Intermedio (+ Duplex)'),
-        ('avanzado', 'Avanzado (+ Scanner/Color)'),
-    ], string='Nivel de prueba', compute='_compute_nivel_prueba', store=True)
-
-    # =========================
     # EVIDENCIA
     # =========================
     foto_prueba = fields.Binary(string='Foto de prueba')
     observaciones = fields.Text(string='Observaciones')
 
     # =========================
-    # COMPUTE: VALIDACIONES
+    # COMPUTE: DELTAS
+    # actual - inicial  (puede ser negativo si el snapshot se tomó mal)
     # =========================
     @api.depends(
-        'contador_impresiones',
-        'contador_copias',
-        'contador_scanner',
-        'contador_duplex',
-        'contador_actual_color',
-        'contador_inicial_impresiones',
-        'contador_inicial_copias',
-        'contador_inicial_scanner',
-        'contador_inicial_duplex',
-        'contador_inicial_color'
+        'contador_actual_total', 'contador_inicial_total',
+        'contador_actual_bn', 'contador_inicial_bn',
+        'contador_actual_color', 'contador_inicial_color',
+        'contador_impresiones', 'contador_inicial_impresiones',
+        'contador_copias', 'contador_inicial_copias',
+        'contador_scanner', 'contador_inicial_scanner',
+        'contador_duplex', 'contador_inicial_duplex',
+    )
+    def _compute_deltas(self):
+        for rec in self:
+            rec.delta_total = rec.contador_actual_total - rec.contador_inicial_total
+            rec.delta_bn = rec.contador_actual_bn - rec.contador_inicial_bn
+            rec.delta_color = rec.contador_actual_color - rec.contador_inicial_color
+            rec.delta_impresiones = rec.contador_impresiones - rec.contador_inicial_impresiones
+            rec.delta_copias = rec.contador_copias - rec.contador_inicial_copias
+            rec.delta_scanner = rec.contador_scanner - rec.contador_inicial_scanner
+            rec.delta_duplex = rec.contador_duplex - rec.contador_inicial_duplex
+
+    # =========================
+    # COMPUTE: VALIDACIONES (solo booleanos)
+    # Usa los deltas para saber si hubo actividad real
+    # =========================
+    @api.depends(
+        'delta_impresiones',
+        'delta_copias',
+        'delta_scanner',
+        'delta_color',
+        'delta_duplex',
     )
     def _compute_pruebas(self):
         for rec in self:
+            rec.prueba_impresion_ok = rec.delta_impresiones > 0
+            rec.prueba_copia_ok = rec.delta_copias > 0
+            rec.prueba_scanner_ok = rec.delta_scanner > 0
+            rec.prueba_color_ok = rec.delta_color > 0
+            rec.prueba_duplex_ok = rec.delta_duplex > 0
 
-            rec.prueba_impresion_ok = rec.contador_impresiones > rec.contador_inicial_impresiones
-            rec.prueba_copia_ok = rec.contador_copias > rec.contador_inicial_copias
-
-            rec.prueba_scanner_ok = rec.contador_scanner > rec.contador_inicial_scanner
-            rec.prueba_color_ok = rec.contador_actual_color > rec.contador_inicial_color
-            rec.prueba_duplex_ok = rec.contador_duplex > rec.contador_inicial_duplex
-
+    # =========================
+    # COMPUTE: ESTADO PRUEBA (separado para evitar ciclo)
+    # =========================
+    @api.depends(
+        'contador_actual_total',
+        'prueba_impresion_ok',
+        'prueba_copia_ok',
+    )
+    def _compute_estado_prueba(self):
+        for rec in self:
             if not rec.contador_actual_total:
                 rec.estado_prueba = 'pendiente'
+            elif rec.prueba_impresion_ok and rec.prueba_copia_ok:
+                rec.estado_prueba = 'completado'
+            elif rec.prueba_impresion_ok or rec.prueba_copia_ok:
+                rec.estado_prueba = 'en_proceso'
             else:
-                if rec.prueba_impresion_ok and rec.prueba_copia_ok:
-                    rec.estado_prueba = 'completado'
-                else:
-                    rec.estado_prueba = 'incompleto'
+                rec.estado_prueba = 'incompleto'
 
     # =========================
     # COMPUTE: NIVEL
@@ -205,7 +266,6 @@ class SatPruebaMaquina(models.Model):
     )
     def _compute_nivel_prueba(self):
         for rec in self:
-
             if rec.prueba_impresion_ok and rec.prueba_copia_ok:
                 if rec.prueba_duplex_ok:
                     if rec.prueba_scanner_ok or rec.prueba_color_ok:
@@ -229,7 +289,8 @@ class SatPruebaMaquina(models.Model):
                 rec.toner_magenta,
                 rec.toner_amarillo
             ]
-            niveles = [n for n in niveles if n is not None]
+            # Ignorar ceros (máquina BN no tiene tóner color)
+            niveles = [n for n in niveles if n and n > 0]
 
             if not niveles:
                 rec.estado_toner = 'ok'
