@@ -12,7 +12,7 @@ _logger = logging.getLogger(__name__)
 # ─────────────────────────────────────────────
 GERENCIA_PHONE    = '51922541085'
 GERENCIA_EMAIL    = 'campuero@corapsac.com'
-LOGISTICA_PHONE   = '51922541085'
+LOGISTICA_PHONE   = '51999332773'
 LOGISTICA_EMAIL   = 'logistica@corapsac.com'
 
 
@@ -170,6 +170,20 @@ class CopierPartsRequest(models.Model):
         if not phone.startswith('51'):
             phone = '51' + phone
         return phone
+
+    def _get_phone_solicitante(self):
+        """
+        Obtiene el móvil del solicitante desde res.partner.
+        El campo correcto en res.partner es 'mobile' (no mobile_phone,
+        que pertenece a hr.employee).
+        Fallback a 'phone' si 'mobile' está vacío.
+        """
+        self.ensure_one()
+        if not self.solicitante_id:
+            return ''
+        partner = self.solicitante_id.partner_id
+        raw = partner.mobile or partner.phone or False
+        return self._limpiar_telefono(raw) if raw else ''
 
     def _get_base_url(self):
         return self.env['ir.config_parameter'].sudo().get_param('web.base.url')
@@ -399,14 +413,14 @@ class CopierPartsRequest(models.Model):
         self.send_whatsapp_message(LOGISTICA_PHONE, msg)
 
     def _enviar_whatsapp_tecnico_entrega(self):
-        """WhatsApp al técnico solicitante cuando las partes están listas."""
+        """WhatsApp al técnico solicitante cuando las partes están listas para recoger."""
         self.ensure_one()
-        phone = self._limpiar_telefono(
-            self.solicitante_id.mobile_phone if self.solicitante_id else False
-        )
+        # CORRECCIÓN: res.users → partner_id.mobile (no mobile_phone, que es de hr.employee)
+        phone = self._get_phone_solicitante()
         if not phone:
             _logger.warning(
-                "Solicitante %s sin teléfono móvil.", self.solicitante_id.name
+                "Solicitante %s sin teléfono móvil registrado en su contacto.",
+                self.solicitante_id.name
             )
             return
 
@@ -425,12 +439,12 @@ class CopierPartsRequest(models.Model):
     def _enviar_whatsapp_tecnico_rechazo(self):
         """WhatsApp al técnico solicitante cuando la solicitud es rechazada."""
         self.ensure_one()
-        phone = self._limpiar_telefono(
-            self.solicitante_id.mobile_phone if self.solicitante_id else False
-        )
+        # CORRECCIÓN: res.users → partner_id.mobile (no mobile_phone, que es de hr.employee)
+        phone = self._get_phone_solicitante()
         if not phone:
             _logger.warning(
-                "Solicitante %s sin teléfono móvil.", self.solicitante_id.name
+                "Solicitante %s sin teléfono móvil registrado en su contacto.",
+                self.solicitante_id.name
             )
             return
 
@@ -553,7 +567,7 @@ class CopierPartsRequest(models.Model):
             _logger.error("❌ Excepción WhatsApp a %s: %s", phone, str(e))
             return {'error': str(e), 'success': False}
 
-     # ─────────────────────────────────────────
+    # ─────────────────────────────────────────
     # Acciones desde Odoo (botones)
     # ─────────────────────────────────────────
 
@@ -577,6 +591,8 @@ class CopierPartsRequest(models.Model):
         if self.state != 'draft':
             raise UserError(_('Esta solicitud ya fue procesada.'))
         self._rechazar()
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # WIZARD
 # ─────────────────────────────────────────────────────────────────────────────
@@ -708,5 +724,3 @@ class PartsRequestWizard(models.TransientModel):
             'view_mode': 'form',
             'target':    'current',
         }
-
-   
