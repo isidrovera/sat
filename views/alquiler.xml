@@ -1068,6 +1068,7 @@
                     <field name="contador_scan" />
                     <field name="fecha_ultima_actualizacion" widget="remaining_days" />
                     <field name="direccion" optional="hide"/>
+                    <field name="ubicacion_manual" readonly="1" widget="boolean_toggle" />
                     <field name="contacto_id" optional="hide" />
                     <field name="celular" widget="phone" optional="hide" />
                     <!-- Fecha con widget mejorado -->
@@ -1098,7 +1099,7 @@
                         decoration-warning="estado_bloqueo in ('pendiente_bloqueo', 'pendiente_desbloqueo')"
                         decoration-muted="estado_bloqueo == 'no_accesible'"
                         decoration-success="estado_bloqueo == 'activo'" />
-                    <field name="latitud" widget="geo_map_widget" />
+                    
                 </list>
             </field>
         </record>
