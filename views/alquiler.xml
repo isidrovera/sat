@@ -1098,6 +1098,7 @@
                         decoration-warning="estado_bloqueo in ('pendiente_bloqueo', 'pendiente_desbloqueo')"
                         decoration-muted="estado_bloqueo == 'no_accesible'"
                         decoration-success="estado_bloqueo == 'activo'" />
+                    <field name="latitud" widget="geo_map_widget" />
                 </list>
             </field>
         </record>
