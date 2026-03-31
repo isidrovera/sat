@@ -163,10 +163,15 @@ class CopierPartsRequest(models.Model):
 
     @staticmethod
     def _limpiar_telefono(phone):
-        """Normaliza teléfono peruano a formato internacional sin '+'."""
+        """
+        Normaliza teléfono peruano a formato internacional sin '+'.
+        Elimina cualquier carácter no numérico (guiones, paréntesis, espacios, etc.)
+        antes de validar el prefijo de país.
+        """
         if not phone:
             return ''
-        phone = phone.replace('+', '').replace(' ', '').strip()
+        import re
+        phone = re.sub(r'\D', '', phone)   # solo dígitos
         if not phone.startswith('51'):
             phone = '51' + phone
         return phone
@@ -180,9 +185,17 @@ class CopierPartsRequest(models.Model):
         """
         self.ensure_one()
         if not self.solicitante_id:
+            _logger.warning("Solicitud %s sin solicitante asignado.", self.name)
             return ''
         partner = self.solicitante_id.partner_id
         raw = partner.mobile or partner.phone or False
+        _logger.debug(
+            "Teléfono solicitante %s — mobile: %s | phone: %s | raw usado: %s",
+            self.solicitante_id.name,
+            partner.mobile,
+            partner.phone,
+            raw,
+        )
         return self._limpiar_telefono(raw) if raw else ''
 
     def _get_base_url(self):
@@ -234,6 +247,13 @@ class CopierPartsRequest(models.Model):
         records = super().create(vals_list)
 
         for record in records:
+            _logger.info(
+                "Solicitud de partes creada: %s | solicitante: %s | máquina: %s",
+                record.name,
+                record.solicitante_id.name,
+                record.maquina_id.name,
+            )
+
             # Actualizar falla en reparación si aplica
             if record.disco_duro_requerido or record.cable_poder_requerido:
                 record._actualizar_falla_proveedor()
@@ -250,7 +270,11 @@ class CopierPartsRequest(models.Model):
     def _aprobar(self):
         """
         Aprueba la solicitud.
-        Llamado desde el controller HTTP con token de gerencia.
+        Llamado desde el controller HTTP con token de gerencia o desde botón en Odoo.
+
+        Flujo al aprobar:
+          1. Notifica a Logística para que aliste y entregue las partes.
+          2. Notifica al técnico solicitante para que pase a recogerlas.
         """
         self.ensure_one()
 
@@ -263,18 +287,30 @@ class CopierPartsRequest(models.Model):
             'token_gerencia':  False,   # invalidar — uso único
         })
 
-        # Notificar a Logística (WhatsApp + Email)
+        _logger.info(
+            "Solicitud %s aprobada. Notificando a Logística y al técnico solicitante.",
+            self.name,
+        )
+
+        # 1. Notificar a Logística (WhatsApp + Email)
         self._enviar_notificaciones_logistica()
 
+        # 2. Notificar al técnico solicitante que puede pasar a recoger
+        self._enviar_notificaciones_tecnico_aprobacion()
+
         self.message_post(
-            body="✅ Solicitud aprobada por Gerencia. Logística notificada para entrega."
+            body=(
+                "✅ Solicitud aprobada por Gerencia. "
+                "Logística notificada para alistar las partes. "
+                "Técnico notificado para pasar a recogerlas."
+            )
         )
-        _logger.info("Solicitud %s aprobada.", self.name)
+        _logger.info("Solicitud %s — notificaciones de aprobación enviadas.", self.name)
 
     def _rechazar(self):
         """
         Rechaza la solicitud.
-        Llamado desde el controller HTTP con token de gerencia.
+        Llamado desde el controller HTTP con token de gerencia o desde botón en Odoo.
         """
         self.ensure_one()
 
@@ -282,21 +318,29 @@ class CopierPartsRequest(models.Model):
             raise UserError(_('Esta solicitud ya fue procesada.'))
 
         self.write({
-            'state':          'rejected',
+            'state':           'rejected',
             'rechazado_fecha': fields.Datetime.now(),
-            'token_gerencia': False,   # invalidar — uso único
+            'token_gerencia':  False,   # invalidar — uso único
         })
+
+        _logger.info(
+            "Solicitud %s rechazada. Notificando al técnico solicitante.",
+            self.name,
+        )
 
         # Notificar al técnico solicitante (WhatsApp + Email)
         self._enviar_notificaciones_rechazo()
 
         self.message_post(body="❌ Solicitud rechazada por Gerencia.")
-        _logger.info("Solicitud %s rechazada.", self.name)
+        _logger.info("Solicitud %s — notificación de rechazo enviada.", self.name)
 
     def _confirmar_entrega(self):
         """
-        Confirma la entrega de las partes.
-        Llamado desde el controller HTTP con token de logística.
+        Confirma la entrega física de las partes por parte de Logística.
+        Llamado desde el controller HTTP con token de logística o desde botón en Odoo.
+
+        En este paso NO se notifica al técnico porque ya fue avisado al momento
+        de la aprobación. Solo se registra la confirmación en el chatter.
         """
         self.ensure_one()
 
@@ -304,18 +348,18 @@ class CopierPartsRequest(models.Model):
             raise UserError(_('La solicitud debe estar aprobada para confirmar entrega.'))
 
         self.write({
-            'state':            'delivered',
-            'entregado_fecha':  fields.Datetime.now(),
-            'token_logistica':  False,   # invalidar — uso único
+            'state':           'delivered',
+            'entregado_fecha': fields.Datetime.now(),
+            'token_logistica': False,   # invalidar — uso único
         })
 
-        # Notificar al técnico solicitante (WhatsApp + Email)
-        self._enviar_notificaciones_tecnico_entrega()
-
         self.message_post(
-            body="📦 Partes entregadas por Logística. Técnico notificado para recoger."
+            body="📦 Logística confirmó la entrega física de las partes."
         )
-        _logger.info("Solicitud %s entregada.", self.name)
+        _logger.info(
+            "Solicitud %s — entrega física confirmada por Logística.",
+            self.name,
+        )
 
     # ─────────────────────────────────────────
     # Falla proveedor
@@ -363,7 +407,14 @@ class CopierPartsRequest(models.Model):
             fallas_html = ''.join(f'<p>{falla}</p>' for falla in fallas)
             reparacion.write({'falla_proveedor': fallas_html})
             _logger.info(
-                "falla_proveedor actualizado en reparación %s.", reparacion.name
+                "falla_proveedor actualizado en reparación %s: %s",
+                reparacion.name,
+                fallas,
+            )
+        else:
+            _logger.warning(
+                "Solicitud %s: no se encontró reparación activa para actualizar falla_proveedor.",
+                self.name,
             )
 
     # ─────────────────────────────────────────
@@ -390,6 +441,10 @@ class CopierPartsRequest(models.Model):
             f"━━━━━━━━━━━━━━━━━━\n"
             f"⚠️ Cada link es de uso único."
         )
+        _logger.info(
+            "Enviando WhatsApp a Gerencia (%s) para solicitud %s.",
+            GERENCIA_PHONE, self.name,
+        )
         self.send_whatsapp_message(GERENCIA_PHONE, msg)
 
     def _enviar_whatsapp_logistica(self):
@@ -404,47 +459,73 @@ class CopierPartsRequest(models.Model):
             f"*Solicitante:* {self.solicitante_id.name}\n\n"
             f"*Máquina:* {self.marca} {self.modelo}\n"
             f"*Serie:* {self.serie}\n\n"
-            f"*Partes a entregar:*\n{self._get_partes_texto()}\n\n"
+            f"*Partes a alistar y entregar:*\n{self._get_partes_texto()}\n\n"
             f"━━━━━━━━━━━━━━━━━━\n"
             f"📬 *CONFIRMAR ENTREGA:*\n{url_entrega}\n"
             f"━━━━━━━━━━━━━━━━━━\n"
             f"⚠️ Este link es de uso único."
         )
+        _logger.info(
+            "Enviando WhatsApp a Logística (%s) para solicitud %s.",
+            LOGISTICA_PHONE, self.name,
+        )
         self.send_whatsapp_message(LOGISTICA_PHONE, msg)
 
-    def _enviar_whatsapp_tecnico_entrega(self):
-        """WhatsApp al técnico solicitante cuando las partes están listas para recoger."""
+    def _enviar_whatsapp_tecnico_aprobacion(self):
+        """
+        WhatsApp al técnico solicitante cuando Gerencia aprueba la solicitud.
+        Le indica que puede pasar a recoger las partes al área de Logística.
+        """
         self.ensure_one()
-        # CORRECCIÓN: res.users → partner_id.mobile (no mobile_phone, que es de hr.employee)
         phone = self._get_phone_solicitante()
         if not phone:
             _logger.warning(
-                "Solicitante %s sin teléfono móvil registrado en su contacto.",
-                self.solicitante_id.name
+                "Solicitud %s: solicitante %s sin teléfono móvil. "
+                "No se pudo enviar WhatsApp de aprobación al técnico.",
+                self.name,
+                self.solicitante_id.name,
+            )
+            self.message_post(
+                body=(
+                    f"⚠️ No se pudo notificar por WhatsApp a "
+                    f"<b>{self.solicitante_id.name}</b>: "
+                    f"no tiene teléfono móvil registrado en su contacto."
+                )
             )
             return
 
         msg = (
-            f"✅ *Partes Listas para Recoger*\n\n"
+            f"✅ *Solicitud de Partes Aprobada*\n\n"
             f"Hola *{self.solicitante_id.name}*,\n\n"
-            f"Las siguientes partes de tu solicitud "
-            f"*{self.name}* ya fueron entregadas por Logística:\n\n"
-            f"{self._get_partes_texto()}\n\n"
+            f"Tu solicitud *{self.name}* fue *aprobada* por Gerencia.\n\n"
+            f"*Partes aprobadas:*\n{self._get_partes_texto()}\n\n"
             f"*Máquina:* {self.marca} {self.modelo}\n"
             f"*Serie:* {self.serie}\n\n"
-            f"Puedes pasar a recogerlas. 🏪"
+            f"Puedes pasar a recogerlas al área de *Logística*. 🏪"
+        )
+        _logger.info(
+            "Enviando WhatsApp de aprobación al técnico %s (%s) para solicitud %s.",
+            self.solicitante_id.name, phone, self.name,
         )
         self.send_whatsapp_message(phone, msg)
 
     def _enviar_whatsapp_tecnico_rechazo(self):
         """WhatsApp al técnico solicitante cuando la solicitud es rechazada."""
         self.ensure_one()
-        # CORRECCIÓN: res.users → partner_id.mobile (no mobile_phone, que es de hr.employee)
         phone = self._get_phone_solicitante()
         if not phone:
             _logger.warning(
-                "Solicitante %s sin teléfono móvil registrado en su contacto.",
-                self.solicitante_id.name
+                "Solicitud %s: solicitante %s sin teléfono móvil. "
+                "No se pudo enviar WhatsApp de rechazo al técnico.",
+                self.name,
+                self.solicitante_id.name,
+            )
+            self.message_post(
+                body=(
+                    f"⚠️ No se pudo notificar por WhatsApp a "
+                    f"<b>{self.solicitante_id.name}</b>: "
+                    f"no tiene teléfono móvil registrado en su contacto."
+                )
             )
             return
 
@@ -455,6 +536,10 @@ class CopierPartsRequest(models.Model):
             f"*Máquina:* {self.marca} {self.modelo}\n"
             f"*Serie:* {self.serie}\n\n"
             f"Comunícate con tu supervisor para más información."
+        )
+        _logger.info(
+            "Enviando WhatsApp de rechazo al técnico %s (%s) para solicitud %s.",
+            self.solicitante_id.name, phone, self.name,
         )
         self.send_whatsapp_message(phone, msg)
 
@@ -468,7 +553,10 @@ class CopierPartsRequest(models.Model):
         try:
             template = self.env.ref(template_xml_id, raise_if_not_found=False)
             if not template:
-                _logger.warning("Template %s no encontrado.", template_xml_id)
+                _logger.warning(
+                    "Template de email %s no encontrado. Email no enviado.",
+                    template_xml_id,
+                )
                 return
             template.with_context(**(ctx or {})).send_mail(
                 self.id,
@@ -476,12 +564,13 @@ class CopierPartsRequest(models.Model):
                 raise_exception=False,
             )
             _logger.info(
-                "Email [%s] enviado para solicitud %s.", template_xml_id, self.name
+                "Email [%s] enviado para solicitud %s.",
+                template_xml_id, self.name,
             )
         except Exception as e:
             _logger.error(
-                "Error enviando email [%s] solicitud %s: %s",
-                template_xml_id, self.name, e
+                "Error enviando email [%s] para solicitud %s: %s",
+                template_xml_id, self.name, e,
             )
 
     # ─────────────────────────────────────────
@@ -491,6 +580,7 @@ class CopierPartsRequest(models.Model):
     def _enviar_notificaciones_gerencia(self):
         """Notifica a Gerencia al crear la solicitud."""
         self.ensure_one()
+        _logger.info("Notificando a Gerencia — solicitud %s.", self.name)
         base_url = self._get_base_url()
         self._enviar_whatsapp_gerencia()
         self._enviar_email(
@@ -504,6 +594,7 @@ class CopierPartsRequest(models.Model):
     def _enviar_notificaciones_logistica(self):
         """Notifica a Logística cuando Gerencia aprueba."""
         self.ensure_one()
+        _logger.info("Notificando a Logística — solicitud %s.", self.name)
         base_url = self._get_base_url()
         self._enviar_whatsapp_logistica()
         self._enviar_email(
@@ -513,15 +604,26 @@ class CopierPartsRequest(models.Model):
             }
         )
 
-    def _enviar_notificaciones_tecnico_entrega(self):
-        """Notifica al técnico cuando Logística confirma entrega."""
+    def _enviar_notificaciones_tecnico_aprobacion(self):
+        """
+        Notifica al técnico cuando Gerencia aprueba su solicitud.
+        Le avisa que puede pasar a recoger las partes a Logística.
+        """
         self.ensure_one()
-        self._enviar_whatsapp_tecnico_entrega()
-        self._enviar_email('sat.email_template_copier_parts_tecnico_entrega')
+        _logger.info(
+            "Notificando al técnico %s — solicitud %s aprobada.",
+            self.solicitante_id.name, self.name,
+        )
+        self._enviar_whatsapp_tecnico_aprobacion()
+        self._enviar_email('sat.email_template_copier_parts_tecnico_aprobacion')
 
     def _enviar_notificaciones_rechazo(self):
-        """Notifica al técnico cuando Gerencia rechaza."""
+        """Notifica al técnico cuando Gerencia rechaza su solicitud."""
         self.ensure_one()
+        _logger.info(
+            "Notificando al técnico %s — solicitud %s rechazada.",
+            self.solicitante_id.name, self.name,
+        )
         self._enviar_whatsapp_tecnico_rechazo()
         self._enviar_email('sat.email_template_copier_parts_rechazo')
 
@@ -538,33 +640,41 @@ class CopierPartsRequest(models.Model):
         }
         data = {'to': phone, 'message': message}
 
+        _logger.info("WhatsApp → enviando a %s...", phone)
+
         try:
             response = requests.post(url, headers=headers, json=data, timeout=30)
-            _logger.info("WhatsApp status: %s", response.status_code)
+            _logger.info(
+                "WhatsApp ← status %s para %s.", response.status_code, phone,
+            )
 
             try:
                 response_json = response.json()
                 if response.status_code == 200 and response_json.get('success'):
-                    _logger.info("✅ WhatsApp enviado a %s", phone)
+                    _logger.info("✅ WhatsApp enviado correctamente a %s.", phone)
                     return response_json
                 error_msg = response_json.get('error', 'Error desconocido')
-                _logger.error("❌ Error API WhatsApp [%s]: %s", phone, error_msg)
+                _logger.error(
+                    "❌ API WhatsApp respondió con error para %s: %s", phone, error_msg,
+                )
                 return {'error': error_msg, 'success': False}
 
             except json.JSONDecodeError as e:
-                _logger.error("WhatsApp respuesta no-JSON: %s", response.text)
+                _logger.error(
+                    "❌ WhatsApp respuesta no-JSON para %s: %s", phone, response.text,
+                )
                 return {'error': str(e), 'success': False}
 
         except requests.exceptions.Timeout:
-            _logger.error("❌ Timeout WhatsApp a %s", phone)
+            _logger.error("❌ Timeout al enviar WhatsApp a %s.", phone)
             return {'error': 'Timeout', 'success': False}
 
         except requests.exceptions.RequestException as e:
-            _logger.error("❌ Error de red WhatsApp a %s: %s", phone, str(e))
+            _logger.error("❌ Error de red al enviar WhatsApp a %s: %s", phone, str(e))
             return {'error': str(e), 'success': False}
 
         except Exception as e:
-            _logger.error("❌ Excepción WhatsApp a %s: %s", phone, str(e))
+            _logger.error("❌ Excepción inesperada al enviar WhatsApp a %s: %s", phone, str(e))
             return {'error': str(e), 'success': False}
 
     # ─────────────────────────────────────────
@@ -716,6 +826,10 @@ class PartsRequestWizard(models.TransientModel):
             if self.notas:
                 msg += f"<b>Notas:</b><br/>{self.notas}"
             self.reparacion_id.message_post(body=msg)
+            _logger.info(
+                "Mensaje de solicitud de partes posteado en reparación %s.",
+                self.reparacion_id.name,
+            )
 
         return {
             'type':      'ir.actions.act_window',
