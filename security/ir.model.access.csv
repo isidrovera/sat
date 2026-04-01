@@ -235,3 +235,5 @@ access_reporte_gestion_partes_tecnico_user,reporte.gestion.partes.tecnico,model_
 access_sat_entrega_wizard_user,sat.entrega.wizard.user,model_sat_entrega_wizard,base.group_user,1,1,1,0
 access_sat_prueba_maquina_user,sat.prueba.maquina user,model_sat_prueba_maquina,base.group_user,1,1,1,0
 access_sat_prueba_maquina_admin,sat.prueba.maquina admin,model_sat_prueba_maquina,base.group_system,1,1,1,1
+access_ticket_retiro_token_user,ticket.retiro.token user,model_ticket_retiro_token,base.group_user,1,1,1,0
+access_ticket_retiro_token_admin,ticket.retiro.token admin,model_ticket_retiro_token,base.group_system,1,1,1,1

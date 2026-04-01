@@ -1,17 +1,17 @@
 # -*- coding: utf-8 -*-
 """
-Tracking GPS de técnicos en campo — v6
+Tracking GPS de técnicos en campo — v7
 ========================================
 Archivo: models/ticket_tracking.py
 
-Cambios v6:
-  • Fix: una sola notificación por técnico/cliente (no una por ticket)
-  • action_en_ruta / action_en_sitio / action_registrar_salida_sitio
-    aceptan parámetro notificar=True para suprimir notif. individual
-    cuando el llamador (GPS/cron) ya envía la notificación grupal.
-  • Ubicación actual del técnico (lat/lon) se propaga desde el webhook
-    hasta los métodos de notificación via ubicacion_actual dict.
-  • _gps_procesar_* pasan ubicacion_actual a notificar_*
+Cambios v7:
+  • Nueva lógica de salida de geocerca — antes de registrar salida
+    se evalúan dos condiciones:
+      1. Tiempo en sitio >= 60 min Y distancia >= 2 km → finalizado automático
+      2. Cualquier otro caso → crear token, enviar link WhatsApp al técnico
+         preguntando el motivo del retiro
+  • Si técnico regresa a geocerca con token pendiente → cancelar token
+  • Todo lo demás de v6 permanece intacto
 """
 import math
 import logging
@@ -22,6 +22,10 @@ from odoo import models, fields, api, _
 from odoo.exceptions import UserError
 
 _logger = logging.getLogger(__name__)
+
+# Umbrales para asumir finalización automática sin preguntar
+UMBRAL_MINUTOS_SITIO = 60   # minutos mínimos en sitio
+UMBRAL_METROS_SALIDA = 2000  # 2 km de distancia para asumir cierre
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -486,11 +490,140 @@ class TicketAlquilerTracking(models.Model):
         return misma_visita if misma_visita else self
 
     # ═══════════════════════════════════════════════════════════════
+    #  LÓGICA DE RETIRO PENDIENTE (NUEVO v7)
+    #
+    #  Punto de entrada único: _evaluar_salida_geocerca()
+    #  Llamado SOLO desde _gps_procesar_salida y cron_gps_detectar_salida
+    #  en reemplazo de action_registrar_salida_sitio directo.
+    #
+    #  Reglas:
+    #   1. Ya tiene token pendiente → no hacer nada, ya se preguntó
+    #   2. Tiempo >= 60 min Y distancia >= 2 km → finalizar directo
+    #   3. Cualquier otro caso → crear token y enviar link al técnico
+    # ═══════════════════════════════════════════════════════════════
+
+    def _evaluar_salida_geocerca(self, lat_actual=None, lon_actual=None):
+        """
+        Evalúa qué hacer cuando se detecta que el técnico salió de la geocerca.
+
+        Retorna:
+          'ya_preguntado'  → ya hay un token pendiente, no hacer nada
+          'finalizado'     → se finalizó automáticamente (60min + 2km)
+          'token_enviado'  → se creó token y se envió link al técnico
+          'sin_datos'      → no había fecha de llegada, se registra salida directo
+        """
+        self.ensure_one()
+
+        # ── Verificar si ya hay token pendiente para este ticket ──
+        token_existente = self.env['ticket.retiro.token'].sudo().search([
+            ('ticket_id', '=', self.id),
+            ('estado',    '=', 'pendiente'),
+        ], limit=1)
+        if token_existente:
+            _logger.info(
+                "[RETIRO] Ticket %s ya tiene token pendiente, ignorando nueva salida",
+                self.name,
+            )
+            return 'ya_preguntado'
+
+        ahora = fields.Datetime.now()
+
+        # ── Calcular tiempo real en sitio hasta este momento ──
+        if not self.fecha_llegada:
+            # Sin fecha de llegada registrada → salida directa sin preguntar
+            self.sudo().action_registrar_salida_sitio(notificar=True)
+            return 'sin_datos'
+
+        delta_sitio = ahora - self.fecha_llegada
+        minutos_en_sitio = delta_sitio.total_seconds() / 60
+
+        # ── Calcular distancia al equipo ──
+        distancia_metros = None
+        if (lat_actual and lon_actual
+                and self.equipo_latitud and self.equipo_longitud):
+            distancia_metros = self._haversine_metros(
+                lat_actual, lon_actual,
+                self.equipo_latitud, self.equipo_longitud,
+            )
+
+        _logger.info(
+            "[RETIRO] Ticket %s | tiempo_sitio=%.1fmin | distancia=%s m",
+            self.name,
+            minutos_en_sitio,
+            f"{distancia_metros:.0f}" if distancia_metros is not None else "N/A",
+        )
+
+        # ── Regla: >= 60 min en sitio Y >= 2 km → finalizar directo ──
+        if (minutos_en_sitio >= UMBRAL_MINUTOS_SITIO
+                and distancia_metros is not None
+                and distancia_metros >= UMBRAL_METROS_SALIDA):
+            _logger.info(
+                "[RETIRO] Ticket %s → finalizado automático "
+                "(%.1fmin en sitio, %.0fm de distancia)",
+                self.name, minutos_en_sitio, distancia_metros,
+            )
+            self._registrar_evento(
+                f"Salida detectada: {minutos_en_sitio:.0f}min en sitio, "
+                f"{distancia_metros:.0f}m → asumido finalizado"
+            )
+            self.sudo()._registrar_finalizacion_tracking()
+            return 'finalizado'
+
+        # ── Todos los demás casos → crear token y preguntar ──
+        token_rec = self.env['ticket.retiro.token'].sudo().crear_token_retiro(
+            ticket=self,
+            lat=lat_actual,
+            lon=lon_actual,
+            tiempo_en_sitio=minutos_en_sitio,
+        )
+
+        # Construir URL del link
+        base_url = self.env['ir.config_parameter'].sudo().get_param(
+            'web.base.url', 'http://localhost:8069'
+        )
+        link = f"{base_url}/sat/retiro/{token_rec.token}"
+
+        self._registrar_evento(
+            f"Salida detectada: {minutos_en_sitio:.0f}min en sitio "
+            f"{'(' + str(round(distancia_metros)) + 'm)' if distancia_metros else ''}"
+            f" → esperando confirmación de motivo"
+        )
+
+        # Enviar WhatsApp al técnico
+        try:
+            self.notificar_retiro_pendiente(
+                link=link,
+                tiempo_en_sitio=minutos_en_sitio,
+            )
+        except Exception as e:
+            _logger.error("[RETIRO] Error enviando link al técnico %s: %s",
+                          self.responsable.name if self.responsable else 'N/A', e)
+
+        return 'token_enviado'
+
+    def _cancelar_tokens_retiro_pendientes(self):
+        """
+        Cancela tokens pendientes del ticket cuando el técnico regresa a la geocerca.
+        """
+        self.ensure_one()
+        tokens = self.env['ticket.retiro.token'].sudo().search([
+            ('ticket_id', '=', self.id),
+            ('estado',    '=', 'pendiente'),
+        ])
+        if tokens:
+            for t in tokens:
+                t.cancelar()
+            self._registrar_evento(
+                "Técnico regresó a la geocerca — confirmación de retiro cancelada"
+            )
+            try:
+                self.notificar_retiro_cancelado()
+            except Exception as e:
+                _logger.error("[RETIRO] Error notificando cancelación: %s", e)
+
+    # ═══════════════════════════════════════════════════════════════
     #  TRANSICIONES DE ESTADO
-    #  CAMBIO v6: parámetro notificar=True en action_en_ruta,
-    #             action_en_sitio y action_registrar_salida_sitio.
-    #  Cuando notificar=False el llamador (GPS/cron) es responsable
-    #  de enviar UNA notificación grupal después del loop.
+    #  Sin cambios respecto a v6
     # ═══════════════════════════════════════════════════════════════
 
     def action_en_ruta(self, notificar=True):
@@ -531,6 +664,8 @@ class TicketAlquilerTracking(models.Model):
             ticket._registrar_evento(
                 f"Tecnico {ticket.responsable.name or 'N/A'} llego al sitio"
             )
+            # Si regresa al sitio con token pendiente → cancelarlo
+            ticket._cancelar_tokens_retiro_pendientes()
             if notificar:
                 try:
                     ticket.notificar_en_sitio()
@@ -643,7 +778,6 @@ class TicketAlquilerTracking(models.Model):
 
         mapa_tecnico_device = {v.user_id.id: v.traccar_device_id for v in vinculos}
 
-        # Agrupar tickets por tecnico para enviar UNA notificación por tecnico
         tickets_por_tecnico = {}
         for ticket in tickets:
             tid = ticket.responsable.id
@@ -669,7 +803,6 @@ class TicketAlquilerTracking(models.Model):
                 if not (speed > 1 or motion):
                     continue
 
-                # Ubicación actual del técnico para incluir en notificación
                 ubicacion_actual = {
                     'latitude':  pos.get('latitude'),
                     'longitude': pos.get('longitude'),
@@ -691,7 +824,6 @@ class TicketAlquilerTracking(models.Model):
                         "(speed=%.1f motion=%s) -> en_ruta ticket %s",
                         ticket.responsable.name, speed, motion, ticket.name
                     )
-                    # notificar=False → evitamos notif individual
                     ticket.sudo().action_en_ruta(notificar=False)
                     ticket._registrar_evento(
                         f"En ruta detectado por cron GPS "
@@ -700,7 +832,6 @@ class TicketAlquilerTracking(models.Model):
                     marcados |= ticket
                     procesados += 1
 
-                # UNA notificación grupal por técnico
                 if marcados:
                     try:
                         marcados[0].notificar_en_ruta(
@@ -789,7 +920,6 @@ class TicketAlquilerTracking(models.Model):
                         marcados = self.env['ticket.alquiler']
                         for t in tickets_visita:
                             if t.estado in ('en_ruta', 'proceso'):
-                                # notificar=False → evitamos notif individual
                                 t.sudo().action_en_sitio(notificar=False)
                                 t._registrar_evento(
                                     f"Llegada detectada por cron GPS "
@@ -798,7 +928,6 @@ class TicketAlquilerTracking(models.Model):
                                 marcados |= t
                                 procesados += 1
 
-                        # UNA notificación grupal por visita/cliente
                         if marcados:
                             try:
                                 marcados[0].notificar_en_sitio(
@@ -820,8 +949,14 @@ class TicketAlquilerTracking(models.Model):
     def cron_gps_detectar_salida(self):
         """
         Red de seguridad para geofenceExit.
-        en_sitio/en_revision → salida si tecnico ya NO esta en geocerca.
+        en_sitio/en_revision → evaluar salida con lógica de retiro pendiente.
         Frecuencia: cada 5 minutos.
+
+        CAMBIO v7: ya no llama action_registrar_salida_sitio directamente.
+        Llama _evaluar_salida_geocerca() que decide si:
+          - Ignorar (ya hay token pendiente)
+          - Finalizar directo (60min + 2km)
+          - Preguntar al técnico (crear token + enviar link)
         """
         _logger.info("[CRON-SALIDA] Iniciando verificacion de salida GPS")
 
@@ -862,7 +997,6 @@ class TicketAlquilerTracking(models.Model):
             tickets_por_tecnico.setdefault(tid, self.env['ticket.alquiler'])
             tickets_por_tecnico[tid] |= ticket
 
-        procesados = 0
         for tecnico_id, tickets_tecnico in tickets_por_tecnico.items():
             try:
                 device_id = mapa_tecnico_device.get(tecnico_id)
@@ -874,79 +1008,74 @@ class TicketAlquilerTracking(models.Model):
                     continue
 
                 geofence_ids_activos = pos.get('geofenceIds') or []
-                ubicacion_actual = {
-                    'latitude':  pos.get('latitude'),
-                    'longitude': pos.get('longitude'),
-                }
+                lat_actual = pos.get('latitude')
+                lon_actual = pos.get('longitude')
 
                 for ticket in tickets_tecnico:
                     if ticket.traccar_geofence_id not in geofence_ids_activos:
                         _logger.info(
-                            "[CRON-SALIDA] Tecnico %s fuera geocerca %s -> salida %s",
+                            "[CRON-SALIDA] Tecnico %s fuera geocerca %s -> evaluando retiro %s",
                             ticket.responsable.name,
                             ticket.traccar_geofence_id,
                             ticket.name,
                         )
+
                         tickets_visita = ticket._get_tickets_misma_visita(tickets_tecnico)
-                        tickets_salida = tickets_visita.filtered(
-                            lambda t: not t.fecha_salida_sitio
+
+                        for t in tickets_visita:
+                            if not t.fecha_salida_sitio:
+                                resultado = t.sudo()._evaluar_salida_geocerca(
+                                    lat_actual=lat_actual,
+                                    lon_actual=lon_actual,
+                                )
+                                _logger.info(
+                                    "[CRON-SALIDA] Ticket %s → resultado: %s",
+                                    t.name, resultado,
+                                )
+
+                        # Siguiente ticket en_ruta automático SOLO si alguno finalizó
+                        # (no si está esperando confirmación de motivo)
+                        tickets_finalizados = tickets_visita.filtered(
+                            lambda t: t.fecha_salida_sitio
                         )
-                        marcados = self.env['ticket.alquiler']
-                        for t in tickets_salida:
-                            # notificar=False → evitamos notif individual
-                            t.sudo().action_registrar_salida_sitio(notificar=False)
-                            t._registrar_evento(
-                                f"Salida detectada por cron GPS "
-                                f"(geocerca ID:{ticket.traccar_geofence_id})"
-                            )
-                            marcados |= t
-                            procesados += 1
-
-                        # UNA notificación grupal por visita/cliente
-                        if marcados:
-                            try:
-                                marcados[0].notificar_salida_sitio(
-                                    tickets_grupo=marcados,
-                                    ubicacion_actual=ubicacion_actual,
-                                )
-                            except Exception as e:
-                                _logger.error("[CRON-SALIDA] Error notificando salida: %s", e)
-
-                        # Siguiente ticket en_ruta automatico
-                        todos_hoy = self.sudo().search([
-                            ('responsable', '=', tecnico_id),
-                            ('estado', 'in', ['proceso', 'en_ruta', 'en_sitio', 'en_revision']),
-                            ('agenda', '>=', hoy_inicio),
-                            ('agenda', '<=', hoy_fin),
-                        ], order='agenda asc')
-                        siguiente = todos_hoy.filtered(lambda t: t.estado == 'proceso')
-                        if siguiente:
-                            sig = siguiente[0]
-                            try:
-                                sig.sudo().action_en_ruta(notificar=False)
-                                sig._registrar_evento(
-                                    "En ruta automatico por cron — salida del servicio anterior"
-                                )
-                                # Notificación del siguiente con ubicación actual
+                        if tickets_finalizados:
+                            todos_hoy = self.sudo().search([
+                                ('responsable',  '=', tecnico_id),
+                                ('estado',       'in', ['proceso', 'en_ruta', 'en_sitio', 'en_revision']),
+                                ('agenda',       '>=', hoy_inicio),
+                                ('agenda',       '<=', hoy_fin),
+                            ], order='agenda asc')
+                            siguiente = todos_hoy.filtered(lambda t: t.estado == 'proceso')
+                            if siguiente:
+                                sig = siguiente[0]
                                 try:
-                                    sig.notificar_en_ruta(
-                                        tickets_grupo=sig,
-                                        ubicacion_actual=ubicacion_actual,
+                                    sig.sudo().action_en_ruta(notificar=False)
+                                    sig._registrar_evento(
+                                        "En ruta automatico por cron — salida del servicio anterior"
                                     )
+                                    ubicacion_actual = {
+                                        'latitude':  lat_actual,
+                                        'longitude': lon_actual,
+                                    }
+                                    try:
+                                        sig.notificar_en_ruta(
+                                            tickets_grupo=sig,
+                                            ubicacion_actual=ubicacion_actual,
+                                        )
+                                    except Exception as e:
+                                        _logger.error(
+                                            "[CRON-SALIDA] Error notificando siguiente: %s", e
+                                        )
                                 except Exception as e:
                                     _logger.error(
-                                        "[CRON-SALIDA] Error notificando siguiente: %s", e
+                                        "[CRON-SALIDA] Error marcando siguiente en_ruta: %s", e
                                     )
-                            except Exception as e:
-                                _logger.error(
-                                    "[CRON-SALIDA] Error marcando siguiente en_ruta: %s", e
-                                )
                         break
 
             except Exception as e:
                 _logger.error("[CRON-SALIDA] Error tecnico ID %s: %s", tecnico_id, e)
 
-        _logger.info("[CRON-SALIDA] Completado — %d tickets con salida registrada", procesados)
+        _logger.info("[CRON-SALIDA] Completado")
 
     @api.model
     def cron_actualizar_en_revision(self):
@@ -1056,7 +1185,6 @@ class TicketAlquilerTracking(models.Model):
         lon_tec      = datos.get('longitude')
         actualizados = self.env['ticket.alquiler']
 
-        # Ubicación actual del técnico (viene del webhook)
         ubicacion_actual = {
             'latitude':  lat_tec,
             'longitude': lon_tec,
@@ -1104,13 +1232,11 @@ class TicketAlquilerTracking(models.Model):
 
         tickets_visita = ticket_match._get_tickets_misma_visita(candidatos)
 
-        # Marcar todos sin notificar individualmente
         for ticket in tickets_visita:
             ticket.sudo().action_en_sitio(notificar=False)
             ticket._registrar_evento(f"Llegada registrada — metodo: {metodo_match}")
             actualizados |= ticket
 
-        # UNA sola notificación grupal con ubicación actual
         if actualizados:
             try:
                 actualizados[0].notificar_en_sitio(
@@ -1123,12 +1249,16 @@ class TicketAlquilerTracking(models.Model):
         return actualizados
 
     def _gps_procesar_salida(self, tickets_hoy, datos):
-        actualizados = self.env['ticket.alquiler']
+        """
+        CAMBIO v7: en lugar de registrar salida directo,
+        llama _evaluar_salida_geocerca() por cada ticket.
+        Retorna los tickets que tuvieron alguna acción (incluye los que
+        quedaron esperando confirmación de motivo).
+        """
+        procesados = self.env['ticket.alquiler']
 
-        ubicacion_actual = {
-            'latitude':  datos.get('latitude'),
-            'longitude': datos.get('longitude'),
-        }
+        lat_actual = datos.get('latitude')
+        lon_actual = datos.get('longitude')
 
         en_sitio_o_revision = tickets_hoy.filtered(
             lambda t: t.estado in ('en_sitio', 'en_revision')
@@ -1136,53 +1266,51 @@ class TicketAlquilerTracking(models.Model):
         if not en_sitio_o_revision:
             for t in tickets_hoy:
                 t._registrar_evento("geofenceExit ignorado — ningun ticket en sitio/revision")
-            return actualizados
+            return procesados
 
         clientes_procesados = set()
-        tickets_salida = self.env['ticket.alquiler']
+        tickets_a_evaluar = self.env['ticket.alquiler']
         for ticket in en_sitio_o_revision:
             clave = (ticket.partner_id.id, ticket.agenda.date() if ticket.agenda else None)
             if clave not in clientes_procesados:
                 clientes_procesados.add(clave)
-                tickets_salida |= ticket._get_tickets_misma_visita(en_sitio_o_revision)
+                tickets_a_evaluar |= ticket._get_tickets_misma_visita(en_sitio_o_revision)
 
-        # Marcar salida sin notificar individualmente
-        for ticket in tickets_salida:
-            ticket.sudo().action_registrar_salida_sitio(notificar=False)
-            actualizados |= ticket
+        for ticket in tickets_a_evaluar:
+            resultado = ticket.sudo()._evaluar_salida_geocerca(
+                lat_actual=lat_actual,
+                lon_actual=lon_actual,
+            )
+            _logger.info("[GPS-SALIDA] Ticket %s → %s", ticket.name, resultado)
+            procesados |= ticket
 
-        # UNA sola notificación grupal con ubicación actual
-        if actualizados:
-            try:
-                actualizados[0].notificar_salida_sitio(
-                    tickets_grupo=actualizados,
-                    ubicacion_actual=ubicacion_actual,
-                )
-            except Exception as e:
-                _logger.error("[GPS] Error notificando salida grupal: %s", e)
-
-        siguiente = tickets_hoy.filtered(lambda t: t.estado == 'proceso')
-        if siguiente:
-            sig = siguiente[0]
-            try:
-                sig.sudo().action_en_ruta(notificar=False)
-                sig._registrar_evento("En ruta automatico — salida del servicio anterior")
+        # Siguiente en_ruta automático SOLO si algún ticket finalizó efectivamente
+        tickets_finalizados = tickets_a_evaluar.filtered(lambda t: t.fecha_salida_sitio)
+        if tickets_finalizados:
+            siguiente = tickets_hoy.filtered(lambda t: t.estado == 'proceso')
+            if siguiente:
+                sig = siguiente[0]
                 try:
-                    # Notificación siguiente también con ubicación actual
-                    actualizados[0].notificar_siguiente_en_ruta(
-                        sig,
-                        ubicacion_actual=ubicacion_actual,
-                    )
+                    sig.sudo().action_en_ruta(notificar=False)
+                    sig._registrar_evento("En ruta automatico — salida del servicio anterior")
+                    ubicacion_actual = {'latitude': lat_actual, 'longitude': lon_actual}
+                    try:
+                        procesados[0].notificar_siguiente_en_ruta(
+                            sig,
+                            ubicacion_actual=ubicacion_actual,
+                        )
+                    except Exception as e:
+                        _logger.error("[GPS] Error notificando siguiente: %s", e)
                 except Exception as e:
-                    _logger.error("[GPS] Error notificando siguiente: %s", e)
-            except Exception as e:
-                _logger.error("[GPS-SECUENCIAL] Error marcando siguiente en_ruta: %s", e)
-                sig._registrar_evento(f"Error al marcar en_ruta automatico: {str(e)}")
+                    _logger.error("[GPS-SECUENCIAL] Error marcando siguiente en_ruta: %s", e)
+                    sig._registrar_evento(f"Error al marcar en_ruta automatico: {str(e)}")
         else:
-            if actualizados:
-                actualizados[0]._registrar_evento("Ultimo servicio del dia completado")
+            if procesados:
+                _logger.info(
+                    "[GPS-SALIDA] Ningún ticket finalizó aún — esperando confirmación de motivo"
+                )
 
-        return actualizados
+        return procesados
 
     def _gps_procesar_movimiento(self, tickets_hoy, datos):
         actualizados = self.env['ticket.alquiler']
@@ -1206,7 +1334,6 @@ class TicketAlquilerTracking(models.Model):
             ya_paso    = diff.total_seconds() < 0
             esta_cerca = 0 <= diff.total_seconds() <= ventana.total_seconds()
             if ya_paso or esta_cerca:
-                # notificar=False → evitamos notif individual
                 ticket.sudo().action_en_ruta(notificar=False)
                 ticket._registrar_evento("En ruta detectado por movimiento GPS")
                 actualizados |= ticket
@@ -1218,7 +1345,6 @@ class TicketAlquilerTracking(models.Model):
                     f"deviceMoving ignorado — agenda en {h}h {m}min (ventana: 2h)"
                 )
 
-        # UNA sola notificación grupal con ubicación actual
         if actualizados:
             try:
                 actualizados[0].notificar_en_ruta(

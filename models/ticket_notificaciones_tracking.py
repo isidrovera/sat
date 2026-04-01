@@ -4,11 +4,13 @@ Notificaciones WhatsApp — Tracking de técnicos
 ================================================
 Archivo: models/ticket_notificaciones_tracking.py
 
-Cambios v6:
-  • Todos los notificar_* aceptan ubicacion_actual={'latitude': x, 'longitude': y}
-  • Si se recibe ubicacion_actual se agrega link Google Maps al mensaje
-  • Una sola notificación por técnico/cliente — la lógica de agrupación
-    está en ticket_tracking.py; aquí solo se construye el mensaje.
+Cambios v7:
+  • Nuevos métodos para el flujo de retiro pendiente:
+      - notificar_retiro_pendiente()     → WhatsApp al técnico con link
+      - notificar_motivo_retiro()        → WhatsApp al grupo con el motivo confirmado
+      - notificar_retiro_sin_respuesta() → WhatsApp al grupo si el técnico no respondió
+      - notificar_retiro_cancelado()     → WhatsApp al grupo si el técnico regresó
+  • Todo lo de v6 intacto
 """
 import logging
 from pytz import timezone as pytz_tz, UTC
@@ -68,7 +70,7 @@ class TicketNotificacionesTracking(models.Model):
         return f"\n📡 Ubicación actual: {maps_url}"
 
     # ═══════════════════════════════════════════════════════════════
-    #  NOTIFICACIONES POR ESTADO
+    #  NOTIFICACIONES POR ESTADO (v6 — sin cambios)
     # ═══════════════════════════════════════════════════════════════
 
     def notificar_en_ruta(self, tickets_grupo=None, ubicacion_actual=None):
@@ -100,7 +102,6 @@ class TicketNotificacionesTracking(models.Model):
         if cantidad > 1:
             mensaje += f"\n📦 {cantidad} servicios agendados"
 
-        # Ubicación actual del técnico (desde GPS)
         mensaje += self._fmt_ubicacion(ubicacion_actual)
 
         self._enviar_notificacion_tracking(destino, mensaje)
@@ -135,7 +136,6 @@ class TicketNotificacionesTracking(models.Model):
         if cantidad > 1:
             mensaje += f"\n📦 {cantidad} equipos a revisar"
 
-        # Ubicación actual del técnico (desde GPS) — confirma que está en el sitio
         mensaje += self._fmt_ubicacion(ubicacion_actual)
 
         self._enviar_notificacion_tracking(destino, mensaje)
@@ -199,7 +199,6 @@ class TicketNotificacionesTracking(models.Model):
         if cantidad > 1:
             mensaje += f"\n📦 {cantidad} equipos atendidos"
 
-        # Ubicación actual del técnico al salir (útil para saber hacia dónde se dirige)
         mensaje += self._fmt_ubicacion(ubicacion_actual)
 
         self._enviar_notificacion_tracking(destino, mensaje)
@@ -231,7 +230,6 @@ class TicketNotificacionesTracking(models.Model):
         if cantidad > 1:
             mensaje += f"\n📦 {cantidad} equipos atendidos"
 
-        # Puntualidad
         if self.fecha_llegada and self.agenda:
             if self.es_puntual:
                 mensaje += "\n✅ Puntual"
@@ -261,8 +259,179 @@ class TicketNotificacionesTracking(models.Model):
             f"⏰ Agenda: {agenda}"
         )
 
-        # Ubicación actual del técnico al salir del servicio anterior
         mensaje += self._fmt_ubicacion(ubicacion_actual)
+
+        self._enviar_notificacion_tracking(destino, mensaje)
+
+    # ═══════════════════════════════════════════════════════════════
+    #  NOTIFICACIONES DE RETIRO PENDIENTE (NUEVO v7)
+    # ═══════════════════════════════════════════════════════════════
+
+    def notificar_retiro_pendiente(self, link, tiempo_en_sitio=0):
+        """
+        Envía WhatsApp DIRECTAMENTE AL TÉCNICO (no al grupo)
+        con el link para confirmar el motivo del retiro.
+
+        El número del técnico se obtiene de partner_id.mobile del usuario.
+        """
+        self.ensure_one()
+        tecnico = self.responsable
+        cliente = self.partner_id
+
+        if not tecnico:
+            _logger.warning("[RETIRO-NOTIF] Sin técnico en ticket %s", self.name)
+            return
+
+        # Obtener número del técnico
+        numero_tecnico = None
+        if tecnico.partner_id and tecnico.partner_id.mobile:
+            numero_tecnico = tecnico.partner_id.mobile.strip()
+        elif tecnico.partner_id and tecnico.partner_id.phone:
+            numero_tecnico = tecnico.partner_id.phone.strip()
+
+        if not numero_tecnico:
+            _logger.warning(
+                "[RETIRO-NOTIF] Técnico %s sin número móvil", tecnico.name
+            )
+            # Si no hay número, notificar al grupo para que alguien lo contacte
+            self._notificar_retiro_sin_numero(tiempo_en_sitio)
+            return
+
+        tiempo_str = self._fmt_min(tiempo_en_sitio) if tiempo_en_sitio else '--'
+
+        mensaje = (
+            f"⚠️ *Confirmación requerida*\n"
+            f"Hola {tecnico.name.split()[0]}, el sistema detectó que saliste "
+            f"de la ubicación del servicio.\n\n"
+            f"📋 *{self.name}* | {cliente.name if cliente else 'N/A'}\n"
+            f"⏱ Tiempo en sitio: {tiempo_str}\n\n"
+            f"Por favor confirma el motivo:\n"
+            f"👉 {link}\n\n"
+            f"_Tienes 15 minutos para responder._"
+        )
+
+        self._enviar_notificacion_tracking(numero_tecnico, mensaje)
+
+        # También notificar al grupo que se está esperando confirmación
+        destino_grupo = self._get_destino_tracking()
+        msg_grupo = (
+            f"⏳ *ESPERANDO CONFIRMACIÓN*\n"
+            f"👨‍🔧 {tecnico.name}\n"
+            f"📋 {self.name} | Cliente: {cliente.name if cliente else 'N/A'}\n"
+            f"⏱ Tiempo en sitio: {tiempo_str}\n"
+            f"_Se preguntó al técnico el motivo del retiro. Esperando respuesta (15 min)._"
+        )
+        self._enviar_notificacion_tracking(destino_grupo, msg_grupo)
+
+    def notificar_motivo_retiro(self, motivo, ubicacion_actual=None, tiempo_en_sitio=0):
+        """
+        Notifica al grupo el motivo de retiro confirmado por el técnico.
+        """
+        self.ensure_one()
+        destino = self._get_destino_tracking()
+        tecnico = self.responsable
+        cliente = self.partner_id
+
+        tiempo_str = self._fmt_min(tiempo_en_sitio) if tiempo_en_sitio else '--'
+
+        iconos_motivo = {
+            'cliente_tarde':     '⏳',
+            'sin_autorizacion':  '🚫',
+            'ausencia_temporal': '🔄',
+        }
+        textos_motivo = {
+            'cliente_tarde':     'Cliente aún no llega, técnico esperando',
+            'sin_autorizacion':  'No autorizaron el ingreso — requiere gestión',
+            'ausencia_temporal': 'Salida temporal, regresa a terminar',
+        }
+
+        icono = iconos_motivo.get(motivo, '❓')
+        texto = textos_motivo.get(motivo, motivo)
+
+        mensaje = (
+            f"{icono} *MOTIVO DE RETIRO CONFIRMADO*\n"
+            f"👨‍🔧 {tecnico.name if tecnico else 'N/A'}\n"
+            f"📋 {self.name} | Cliente: {cliente.name if cliente else 'N/A'}\n"
+            f"⏱ Tiempo en sitio: {tiempo_str}\n"
+            f"📝 {texto}"
+        )
+
+        # Para sin_autorizacion agregar alerta especial
+        if motivo == 'sin_autorizacion':
+            mensaje += "\n\n⚠️ _Requiere gestión con el cliente para reagendar o autorizar acceso._"
+
+        mensaje += self._fmt_ubicacion(ubicacion_actual)
+
+        self._enviar_notificacion_tracking(destino, mensaje)
+
+    def notificar_retiro_sin_respuesta(self, ubicacion_actual=None, tiempo_en_sitio=0):
+        """
+        Notifica al grupo que el técnico no respondió la confirmación de retiro.
+        """
+        self.ensure_one()
+        destino = self._get_destino_tracking()
+        tecnico = self.responsable
+        cliente = self.partner_id
+
+        tiempo_str = self._fmt_min(tiempo_en_sitio) if tiempo_en_sitio else '--'
+
+        mensaje = (
+            f"⚠️ *SIN RESPUESTA — RETIRO SIN CONFIRMAR*\n"
+            f"👨‍🔧 {tecnico.name if tecnico else 'N/A'}\n"
+            f"📋 {self.name} | Cliente: {cliente.name if cliente else 'N/A'}\n"
+            f"⏱ Tiempo en sitio: {tiempo_str}\n"
+            f"_El técnico no confirmó el motivo de retiro en 15 minutos._\n\n"
+        )
+
+        if tiempo_en_sitio >= 60:
+            mensaje += "✅ Se asumió finalizado por tiempo en sitio (≥ 60 min)."
+        else:
+            mensaje += (
+                "🔴 Tiempo insuficiente en sitio — verificar con el técnico.\n"
+                "_Se recomienda contactarlo directamente._"
+            )
+
+        mensaje += self._fmt_ubicacion(ubicacion_actual)
+
+        self._enviar_notificacion_tracking(destino, mensaje)
+
+    def notificar_retiro_cancelado(self):
+        """
+        Notifica al grupo que el técnico regresó al sitio
+        (se canceló la confirmación de retiro pendiente).
+        """
+        self.ensure_one()
+        destino = self._get_destino_tracking()
+        tecnico = self.responsable
+        cliente = self.partner_id
+
+        mensaje = (
+            f"↩️ *TÉCNICO REGRESÓ AL SITIO*\n"
+            f"👨‍🔧 {tecnico.name if tecnico else 'N/A'}\n"
+            f"📋 {self.name} | Cliente: {cliente.name if cliente else 'N/A'}\n"
+            f"_El técnico regresó a la ubicación del servicio. Continúa la revisión._"
+        )
+
+        self._enviar_notificacion_tracking(destino, mensaje)
+
+    def _notificar_retiro_sin_numero(self, tiempo_en_sitio=0):
+        """
+        Fallback cuando el técnico no tiene número móvil registrado.
+        Notifica al grupo para acción manual.
+        """
+        destino = self._get_destino_tracking()
+        tecnico = self.responsable
+        cliente = self.partner_id
+        tiempo_str = self._fmt_min(tiempo_en_sitio) if tiempo_en_sitio else '--'
+
+        mensaje = (
+            f"⚠️ *RETIRO DETECTADO — SIN NÚMERO TÉCNICO*\n"
+            f"👨‍🔧 {tecnico.name if tecnico else 'N/A'}\n"
+            f"📋 {self.name} | Cliente: {cliente.name if cliente else 'N/A'}\n"
+            f"⏱ Tiempo en sitio: {tiempo_str}\n"
+            f"🔴 El técnico no tiene número móvil registrado en el sistema.\n"
+            f"_Contactarlo directamente para confirmar el motivo del retiro._"
+        )
 
         self._enviar_notificacion_tracking(destino, mensaje)
 
