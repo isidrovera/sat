@@ -289,6 +289,22 @@ class TicketNotificacionesTracking(models.Model):
         elif tecnico.partner_id and tecnico.partner_id.phone:
             numero_tecnico = tecnico.partner_id.phone.strip()
 
+        # Normalizar: quitar espacios, guiones, paréntesis
+        if numero_tecnico:
+            import re
+            numero_tecnico = re.sub(r'[\s\-\(\)\+]', '', numero_tecnico)
+            # Si no tiene código de país (Perú = 51), agregarlo
+            # Números peruanos sin código: 9 dígitos empezando en 9
+            if len(numero_tecnico) == 9 and numero_tecnico.startswith('9'):
+                numero_tecnico = f"51{numero_tecnico}"
+            # Si empieza con 0 (formato local con 0), quitar el 0 y agregar 51
+            elif len(numero_tecnico) == 10 and numero_tecnico.startswith('0'):
+                numero_tecnico = f"51{numero_tecnico[1:]}"
+
+            _logger.info(
+                "[RETIRO-NOTIF] Número técnico normalizado: %s", numero_tecnico
+            )
+
         if not numero_tecnico:
             _logger.warning(
                 "[RETIRO-NOTIF] Técnico %s sin número móvil", tecnico.name
