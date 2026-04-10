@@ -65,7 +65,7 @@ from . import accesorio_estado
 from . import color_tipo
 from . import componente_color
 from . import reparacion_componente_evaluacion
-from . import reparaciones_migration
+#from . import reparaciones_migration
 from . import soporte_mensajes
 from . import contadores_ticket
 from . import reparaciones_mensajes
