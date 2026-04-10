@@ -91,3 +91,9 @@ from . import sat_entrega_wizard
 from . import sat_pruebas_maquina
 from . import copier_parts_request
 from . import ticket_retiro_token
+from . import ticket_componente_intervencion
+from . import ticket_componente_evaluacion
+from . import ticket_accesorio_evaluacion
+from . import ticket_repuesto_historial
+from . import ticket_repuesto_pedido
+from . import ticket_subpartes_wizard

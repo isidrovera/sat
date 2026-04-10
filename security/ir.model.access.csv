@@ -237,3 +237,29 @@ access_sat_prueba_maquina_user,sat.prueba.maquina user,model_sat_prueba_maquina,
 access_sat_prueba_maquina_admin,sat.prueba.maquina admin,model_sat_prueba_maquina,base.group_system,1,1,1,1
 access_ticket_retiro_token_user,ticket.retiro.token user,model_ticket_retiro_token,base.group_user,1,1,1,0
 access_ticket_retiro_token_admin,ticket.retiro.token admin,model_ticket_retiro_token,base.group_system,1,1,1,1
+access_ticket_componente_evaluacion_user,ticket.componente.evaluacion user,model_ticket_componente_evaluacion,base.group_user,1,1,1,0
+access_ticket_componente_evaluacion_admin,ticket.componente.evaluacion admin,model_ticket_componente_evaluacion,base.group_system,1,1,1,1
+ 
+access_ticket_accesorio_evaluacion_user,ticket.accesorio.evaluacion user,model_ticket_accesorio_evaluacion,base.group_user,1,1,1,0
+access_ticket_accesorio_evaluacion_admin,ticket.accesorio.evaluacion admin,model_ticket_accesorio_evaluacion,base.group_system,1,1,1,1
+ 
+access_ticket_componente_intervencion_user,ticket.componente.intervencion user,model_ticket_componente_intervencion,base.group_user,1,1,1,0
+access_ticket_componente_intervencion_admin,ticket.componente.intervencion admin,model_ticket_componente_intervencion,base.group_system,1,1,1,1
+ 
+access_ticket_componente_intervencion_detalle_user,ticket.componente.intervencion.detalle user,model_ticket_componente_intervencion_detalle,base.group_user,1,1,1,0
+access_ticket_componente_intervencion_detalle_admin,ticket.componente.intervencion.detalle admin,model_ticket_componente_intervencion_detalle,base.group_system,1,1,1,1
+ 
+access_ticket_subpartes_wizard_user,ticket.subpartes.wizard user,model_ticket_subpartes_wizard,base.group_user,1,1,1,0
+access_ticket_subpartes_wizard_admin,ticket.subpartes.wizard admin,model_ticket_subpartes_wizard,base.group_system,1,1,1,1
+ 
+access_ticket_subpartes_wizard_linea_user,ticket.subpartes.wizard.linea user,model_ticket_subpartes_wizard_linea,base.group_user,1,1,1,0
+access_ticket_subpartes_wizard_linea_admin,ticket.subpartes.wizard.linea admin,model_ticket_subpartes_wizard_linea,base.group_system,1,1,1,1
+ 
+access_ticket_repuesto_pedido_user,ticket.repuesto.pedido user,model_ticket_repuesto_pedido,base.group_user,1,1,1,0
+access_ticket_repuesto_pedido_admin,ticket.repuesto.pedido admin,model_ticket_repuesto_pedido,base.group_system,1,1,1,1
+ 
+access_ticket_repuesto_pedido_linea_user,ticket.repuesto.pedido.linea user,model_ticket_repuesto_pedido_linea,base.group_user,1,1,1,0
+access_ticket_repuesto_pedido_linea_admin,ticket.repuesto.pedido.linea admin,model_ticket_repuesto_pedido_linea,base.group_system,1,1,1,1
+ 
+access_ticket_repuesto_historial_user,ticket.repuesto.historial user,model_ticket_repuesto_historial,base.group_user,1,1,1,0
+access_ticket_repuesto_historial_admin,ticket.repuesto.historial admin,model_ticket_repuesto_historial,base.group_system,1,1,1,1

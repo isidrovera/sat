@@ -1032,5 +1032,131 @@ action = env["sat.import.line"].browse(env.context.get("active_ids", [])).action
     parent="sat_menu_root"
     action="action_solicitud_parte_tecnico"
     sequence="47"/>
+
+
+ <!-- ================================================= -->
+        <!-- ACCIONES — MODELOS NUEVOS DE TICKETS               -->
+        <!-- ================================================= -->
+ 
+        <record id="action_ticket_componente_evaluacion" model="ir.actions.act_window">
+            <field name="name">Evaluaciones de Componentes (Tickets)</field>
+            <field name="res_model">ticket.componente.evaluacion</field>
+            <field name="view_mode">list,form</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Sin evaluaciones de componentes registradas
+                </p>
+                <p>
+                    Las evaluaciones se generan automáticamente al crear un ticket.
+                </p>
+            </field>
+        </record>
+ 
+        <record id="action_ticket_accesorio_evaluacion" model="ir.actions.act_window">
+            <field name="name">Evaluaciones de Accesorios (Tickets)</field>
+            <field name="res_model">ticket.accesorio.evaluacion</field>
+            <field name="view_mode">list,form</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Sin evaluaciones de accesorios registradas
+                </p>
+                <p>
+                    Las evaluaciones se generan automáticamente al crear un ticket.
+                </p>
+            </field>
+        </record>
+ 
+        <record id="action_ticket_componente_intervencion" model="ir.actions.act_window">
+            <field name="name">Intervenciones de Tickets</field>
+            <field name="res_model">ticket.componente.intervencion</field>
+            <field name="view_mode">list,form</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Sin intervenciones registradas
+                </p>
+                <p>
+                    Las intervenciones se registran cuando el técnico
+                    especifica subpartes al cerrar el ticket.
+                </p>
+            </field>
+        </record>
+ 
+        <record id="action_ticket_repuesto_pedido" model="ir.actions.act_window">
+            <field name="name">Pedidos de Repuestos</field>
+            <field name="res_model">ticket.repuesto.pedido</field>
+            <field name="view_mode">list,form</field>
+            <field name="context">{'search_default_pendientes': 1}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Sin pedidos de repuestos
+                </p>
+                <p>
+                    Los pedidos se generan automáticamente al cerrar un ticket
+                    cuando hay componentes que requieren cambio.
+                </p>
+            </field>
+        </record>
+ 
+        <record id="action_ticket_repuesto_historial" model="ir.actions.act_window">
+            <field name="name">Historial de Repuestos</field>
+            <field name="res_model">ticket.repuesto.historial</field>
+            <field name="view_mode">list</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Sin historial de cambios registrado
+                </p>
+                <p>
+                    El historial se registra automáticamente al aprobar
+                    un pedido de repuestos.
+                </p>
+            </field>
+        </record>
+ 
+        <!-- ================================================= -->
+        <!-- MENÚS BAJO sat_menu_root                          -->
+        <!-- sequence 57 y 58 libres                           -->
+        <!-- ================================================= -->
+ 
+        <menuitem id="menu_ticket_repuesto_pedido"
+                  name="Pedidos de Repuestos"
+                  parent="sat_menu_root"
+                  action="action_ticket_repuesto_pedido"
+                  sequence="57"
+                  groups="base.group_system"/>
+ 
+        <menuitem id="menu_ticket_repuesto_historial"
+                  name="Historial de Repuestos"
+                  parent="sat_menu_root"
+                  action="action_ticket_repuesto_historial"
+                  sequence="58"
+                  groups="base.group_system"/>
+ 
+        <!-- ================================================= -->
+        <!-- MENÚS BAJO menu_accesorios_root (ya existe)        -->
+        <!-- Junto a evaluaciones de reparaciones               -->
+        <!-- sequences 90, 91, 92 libres                       -->
+        <!-- ================================================= -->
+ 
+        <menuitem id="menu_ticket_componente_evaluacion"
+                  name="Evaluaciones Componentes Tickets"
+                  parent="menu_accesorios_root"
+                  action="action_ticket_componente_evaluacion"
+                  sequence="90"
+                  groups="base.group_system"/>
+ 
+        <menuitem id="menu_ticket_accesorio_evaluacion"
+                  name="Evaluaciones Accesorios Tickets"
+                  parent="menu_accesorios_root"
+                  action="action_ticket_accesorio_evaluacion"
+                  sequence="91"
+                  groups="base.group_system"/>
+ 
+        <menuitem id="menu_ticket_componente_intervencion"
+                  name="Intervenciones Tickets"
+                  parent="menu_accesorios_root"
+                  action="action_ticket_componente_intervencion"
+                  sequence="92"
+                  groups="base.group_system"/>
+ 
   </data>
 </odoo>

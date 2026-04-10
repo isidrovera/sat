@@ -2,6 +2,10 @@
 <odoo>
     <data>
 
+        <!-- ================================================= -->
+        <!-- TICKET ALQUILER — FORM                             -->
+        <!-- ================================================= -->
+
         <record id="soporte_form_viw" model="ir.ui.view">
             <field name="name">soporte_ticket.form</field>
             <field name="model">ticket.alquiler</field>
@@ -11,6 +15,7 @@
                         <field name="estado" widget="statusbar" options="{'clickable': '1'}"/>
                         <button name="action_regenerar_informe" type="object" string="Regenerar informe" class="btn-primary"/>
                         <button name="action_limpiar_informe" type="object" string="Limpiar informe" class="btn-primary"/>
+
                         <button name="action_en_ruta"
                                 string="🚗 En Ruta"
                                 type="object"
@@ -30,35 +35,61 @@
                                 type="object"
                                 class="btn-warning"
                                 invisible="estado != 'en_sitio'"/>
-                        <button string="Cerrar" name="action_finalizar" type="object" class="btn btn-info" icon="fa-wrench" 
-    invisible="estado not in ['asignado', 'en_ruta', 'en_sitio', 'en_revision']" />
+
+                        <button string="Cerrar"
+                                name="action_finalizar"
+                                type="object"
+                                class="btn btn-info"
+                                icon="fa-wrench"
+                                invisible="estado not in ['proceso', 'en_ruta', 'en_sitio', 'en_revision']"/>
+
                         <button name="action_cargar_contadores"
-        type="object"
-        string="🔄 Cargar Contadores"
-        class="btn-primary"
-        icon="fa-download"
-        
-        options="{'no_required_fields_validation': true}"
-        confirm="¿Está seguro de que desea cargar los contadores desde el equipo? Esto sobrescribirá los valores actuales en los campos de contómetros."
-        help="Carga automáticamente los contadores desde el equipo cuando las fechas de agenda y última actualización coinciden"/>
-                        <button class="oe_highlight" name="action_asignar_ticket" type="object" icon="fa-paper-plane" string="Asignar Ticket" invisible="estado != 'nuevo'" />
-                        <button name="action_crear_evaluacion" string="Generar Evaluación" type="object"                          
-                            icon="fa-check-circle"  groups="base.group_system"/>
-                        <button string="Proceso" name="action_proceso" type="object" class="oe_highlight" groups="base.group_system" />
-                        <button string="Nuevo" name="action_nuevo" type="object" class="oe_highlight" groups="base.group_system" options="{'no_required_fields_validation': true}" />
-                        <button string="Crear pedido" name="create_sale_order" type="object" class="oe_highlight"  groups="base.group_system"/>
+                                type="object"
+                                string="🔄 Cargar Contadores"
+                                class="btn-primary"
+                                icon="fa-download"
+                                options="{'no_required_fields_validation': true}"
+                                confirm="¿Está seguro de que desea cargar los contadores desde el equipo? Esto sobrescribirá los valores actuales en los campos de contómetros."
+                                help="Carga automáticamente los contadores desde el equipo cuando las fechas de agenda y última actualización coinciden"/>
+
+                        <button class="oe_highlight"
+                                name="action_asignar_ticket"
+                                type="object"
+                                icon="fa-paper-plane"
+                                string="Asignar Ticket"
+                                invisible="estado != 'nuevo'"/>
+
+                        <button name="action_crear_evaluacion"
+                                string="Generar Evaluación"
+                                type="object"
+                                icon="fa-check-circle"
+                                groups="base.group_system"/>
+
+                        <button string="Proceso" name="action_proceso" type="object" class="oe_highlight" groups="base.group_system"/>
+                        <button string="Nuevo" name="action_nuevo" type="object" class="oe_highlight" groups="base.group_system" options="{'no_required_fields_validation': true}"/>
                     </header>
+
                     <sheet>
                         <div name="button_box">
                             <button class="oe_stat_button" type="object" name="get_pedidos" icon="fa-cart-plus">
-                                <field string="Pedido" name="pedidos_count" widget="statinfo" />
+                                <field string="Pedidos" name="pedidos_count" widget="statinfo"/>
                             </button>
                             <button class="oe_stat_button" type="object" name="get_repuestos_ticket" icon="fa-cogs" style="background-color: #FF0000;">
-                                <field string="Repuestos" name="repuestos_count_ticket" widget="statinfo" />
+                                <field string="Repuestos" name="repuestos_count_ticket" widget="statinfo"/>
+                            </button>
+                            <button class="oe_stat_button" type="object" name="action_ver_componentes_ticket" icon="fa-wrench">
+                                <field string="Componentes" name="ticket_componente_eval_count" widget="statinfo"/>
+                            </button>
+                            <button class="oe_stat_button" type="object" name="action_ver_accesorios_ticket" icon="fa-puzzle-piece">
+                                <field string="Accesorios" name="ticket_accesorio_eval_count" widget="statinfo"/>
+                            </button>
+                            <button class="oe_stat_button" type="object" name="action_ver_pedidos_ticket" icon="fa-shopping-cart">
+                                <field string="Pedidos Rep." name="ticket_pedido_count" widget="statinfo"/>
                             </button>
                         </div>
-                        <div class="alert alert-info" 
-                            invisible="estado != 'proceso' or mostrar_boton_contadores == True">
+
+                        <div class="alert alert-info"
+                             invisible="estado != 'proceso' or mostrar_boton_contadores == True">
                             <strong>ℹ️ Información:</strong> Los contadores se pueden cargar automáticamente cuando:
                             <ul>
                                 <li>El ticket esté en proceso</li>
@@ -68,49 +99,49 @@
                             </ul>
                         </div>
 
-                        <!-- Alerta de éxito (cuando SÍ puede cargar) -->
-                        <div class="alert alert-success" 
-                            invisible="mostrar_boton_contadores == False">
+                        <div class="alert alert-success"
+                             invisible="mostrar_boton_contadores == False">
                             <strong>✅ Disponible:</strong> Se encontraron contadores para cargar automáticamente.
                             <br/>
                             <small>El sistema buscará en PrintTracker, correos y registros del equipo.</small>
                         </div>
+
                         <div class="oe_title">
-                            <label for="name" />
+                            <label for="name"/>
                             <h1>
-                                <field name="name" />
+                                <field name="name"/>
                             </h1>
                         </div>
 
                         <group>
                             <group>
-                                <field name="marca_id_r" />
-                                <field name="product_alquiler" readonly="1" />
-                                <field name="serie_id_r" />
-                                <!--<field name="modelo_id_r" />-->
-                                <field name="contometrok_id" />
-                                <field name="contometroc_id" invisible="tipo_id != 'color'" readonly="estado == 'finalizado'" />
-                                <field name="contometros_id"  />
-                                <field name="total_copias_id" invisible="1" />
-                                <field name="tipo_id" invisible="1" />
-                                <field name="url" invisible="1" />
+                                <field name="marca_id_r"/>
+                                <field name="product_alquiler" readonly="1"/>
+                                <field name="serie_id_r"/>
+                                <field name="contometrok_id"/>
+                                <field name="contometroc_id" invisible="tipo_id != 'color'" readonly="estado == 'finalizado'"/>
+                                <field name="contometros_id"/>
+                                <field name="total_copias_id" invisible="1"/>
+                                <field name="tipo_id" invisible="1"/>
+                                <field name="url" invisible="1"/>
                                 <field name="mostrar_boton_contadores" invisible="1"/>
                                 <field name="equipo_tiene_coordenadas" invisible="1"/>
-
                             </group>
                             <group>
-                                <field name="partner_id" widget="many2one_avatar" readonly="1" />
+                                <field name="partner_id" widget="many2one_avatar" readonly="1"/>
                                 <field name="direccion_id_r" readonly="estado == 'proceso' or estado == 'finalizado'"/>
                                 <field name="contacto_id_r" readonly="estado == 'proceso' or estado == 'finalizado'"/>
-                                <field name="tipo_servicio_id" readonly="estado == 'proceso' or estado == 'finalizado'" />
-                                <field name="retorno_id" />
+                                <field name="tipo_servicio_id" readonly="estado == 'proceso' or estado == 'finalizado'"/>
+                                <field name="retorno_id"/>
                                 <field name="asistencia_id" readonly="estado == 'proceso' or estado == 'finalizado'"/>
-                                <field name="agenda" required="estado =='nuevo'" readonly="estado == 'proceso' or estado == 'finalizado'" />
-                                <field name="agenda_local" readonly="1" />
-                                <field name="responsable" widget="many2one_avatar" required="estado == 'nuevo'" readonly="estado == 'proceso' or estado == 'finalizado'" />
+                                <field name="agenda" required="estado == 'nuevo'" readonly="estado == 'proceso' or estado == 'finalizado'"/>
+                                <field name="agenda_local" readonly="1"/>
+                                <field name="responsable" widget="many2one_avatar" required="estado == 'nuevo'" readonly="estado == 'proceso' or estado == 'finalizado'"/>
                             </group>
                         </group>
+
                         <notebook>
+
                             <page string="Problema Reportado">
                                 <group>
                                     <group>
@@ -123,71 +154,56 @@
                                     </group>
                                 </group>
                             </page>
+
                             <page string="Informe Técnico">
                                 <field name="informe_id" widget="html"/>
-                                <footer>
-                                    
-                                </footer>
-                                </page>
-
-                            <page string="Accesorios">
-                                <group>
-                                    <group>
-                                        <field name="tray_id" placeholder="Detalla la cantidad de caseteras." readonly="estado == 'finalizado'"/>
-                                        <field name="adf_simple_id" readonly="estado == 'finalizado'"/>
-                                        <field name="adf_dual_id" readonly="estado == 'finalizado'" />
-                                        <field name="finalizador_interno_id" readonly="estado == 'finalizado'"/>
-                                        <field name="finalizador_externo_id" readonly="estado == 'finalizado'"/>
-                                        <field name="transformador_id" readonly="estado == 'finalizado'" />
-                                        <field name="estabilizador" readonly="estado == 'finalizado'"/>
-                                    </group>
-                                    <group>
-                                        <field name="mueble_id" readonly="estado == 'finalizado'"/>
-                                        <field name="panel_normal_id" readonly="estado == 'finalizado'"/>
-                                        <field name="panel_smart_id" readonly="estado == 'finalizado'"/>
-                                        <field name="wi_fi_id" readonly="estado == 'finalizado'"/>
-                                        <field name="bluetooth_id" readonly="estado == 'finalizado'"/>
-                                        <field name="cable_usb_id" readonly="estado == 'finalizado'"/>
-                                        <field name="cable_red_id" readonly="estado == 'finalizado'"/>
-
-                                    </group>
-                                </group>
                             </page>
-                            <page string="Check List">
-                                <group>
-                                    <group>
-                                        <field name="calidad_id"  readonly="estado == 'finalizado'"/>
-                                        <field name="copia_id"  readonly="estado == 'finalizado'" />
-                                        <field name="impresion_id" readonly="estado == 'finalizado'" />
-                                        <field name="impresion_usb_id"  readonly="estado == 'finalizado'"/>
-                                        <field name="scaner_smb_id"  readonly="estado == 'finalizado'"/>
-                                        <field name="scaner_usb_id"  readonly="estado == 'finalizado'"/>
-                                        <field name="scaner_ftp_id"  readonly="estado == 'finalizado'"/>
-                                        <field name="scaner_mail_id" readonly="estado == 'finalizado'"/>
-                                        <field name="toner_black_id"  readonly="estado == 'finalizado'"/>
-                                        <field name="toner_magenta_id"  invisible="tipo_id != 'color'" readonly="estado == 'finalizado'"/>
-                                        <field name="toner_cyan_id"  invisible="tipo_id != 'color'" readonly="estado == 'finalizado'"/>
-                                        <field name="toner_yellow_id"  invisible="tipo_id != 'color'" readonly="estado == 'finalizado'"/>
-                                        <field name="bypass_id"  readonly="estado == 'finalizado'"/>
-                                        <field name="tray1_id"  readonly="estado == 'finalizado'"/>
-                                    </group>
-                                    <group>
-                                        <field name="tray2_id"  readonly="estado == 'finalizado'"/>
-                                        <field name="tray3_id"  readonly="estado == 'finalizado'"/>
-                                        <field name="tray4_id" readonly="estado == 'finalizado'"/>
-                                        <field name="adf_id"  readonly="estado == 'finalizado'"/>
-                                        <field name="finalizador_id" readonly="estado == 'finalizado'"/>
-                                        <field name="tacho_id"  readonly="estado == 'finalizado'"/>
-                                        <field name="fusora_id"  readonly="estado == 'finalizado'"/>
-                                        <field name="transfer_id"  readonly="estado == 'finalizado'"/>
-                                        <field name="optico_id" readonly="estado == 'finalizado'"/>
-                                        <field name="black_id"  readonly="estado == 'finalizado'"/>
-                                        <field name="magenta_id"  invisible="tipo_id != 'color'" readonly="estado == 'finalizado'"/>
-                                        <field name="cyan_id"  invisible="tipo_id != 'color'" readonly="estado == 'finalizado'"/>
-                                        <field name="yellow_id"  invisible="tipo_id != 'color'" readonly="estado == 'finalizado'"/>
-                                    </group>
-                                </group>
+
+                            <page string="🔧 Componentes" name="componentes_dinamicos">
+                                <field name="ticket_componente_eval_ids"
+                                       readonly="estado == 'finalizado'"
+                                       context="{'default_ticket_id': id}">
+                                    <list editable="bottom"
+                                          decoration-danger="not estado_id"
+                                          decoration-warning="estado_id and estado_id.code == 'requiere_cambio'">
+                                        <field name="componente_tipo_id" required="1"/>
+                                        <field name="color_id" optional="show"/>
+                                        <field name="estado_id" required="1"/>
+                                        <field name="observaciones" optional="show"/>
+                                    </list>
+                                </field>
                             </page>
+
+                            <page string="🔩 Accesorios" name="accesorios_dinamicos">
+                                <field name="ticket_accesorio_eval_ids"
+                                       readonly="estado == 'finalizado'"
+                                       context="{'default_ticket_id': id}">
+                                    <list editable="bottom"
+                                          decoration-danger="not estado_id"
+                                          decoration-warning="estado_id and estado_id.code == 'requiere_cambio'">
+                                        <field name="tipo_id" required="1"/>
+                                        <field name="estado_id" required="1"/>
+                                        <field name="observaciones" optional="show"/>
+                                    </list>
+                                </field>
+                            </page>
+
+                            <page string="📦 Pedidos de Repuestos" name="pedidos_repuestos"
+                                  invisible="ticket_pedido_count == 0">
+                                <field name="ticket_pedido_ids" readonly="1">
+                                    <list decoration-success="estado == 'aprobado'"
+                                          decoration-warning="estado == 'pendiente'"
+                                          decoration-danger="estado == 'cancelado'">
+                                        <field name="name"/>
+                                        <field name="fecha"/>
+                                        <field name="total_lineas"/>
+                                        <field name="estado" widget="badge"/>
+                                        <field name="aprobado_por" optional="show"/>
+                                        <field name="fecha_aprobacion" optional="show"/>
+                                    </list>
+                                </field>
+                            </page>
+
                             <page string="Productos">
                                 <field name="line_ids" context="{'default_ticket_id': id}">
                                     <list editable="bottom">
@@ -198,15 +214,13 @@
                                     </list>
                                 </field>
                             </page>
+
                             <page string="📍 Ubicación" name="ubicacion_ticket_page">
-                                <!-- Dirección desglosada -->
                                 <group invisible="not equipo_tiene_coordenadas">
                                     <group string="Dirección del equipo">
-                                        <field name="equipo_nombre_establecimiento"
-                                               invisible="not equipo_nombre_establecimiento"/>
+                                        <field name="equipo_nombre_establecimiento" invisible="not equipo_nombre_establecimiento"/>
                                         <field name="equipo_direccion_completa"/>
-                                        <field name="equipo_direccion_referencia"
-                                               invisible="not equipo_direccion_referencia"/>
+                                        <field name="equipo_direccion_referencia" invisible="not equipo_direccion_referencia"/>
                                         <field name="equipo_distrito"/>
                                         <field name="equipo_provincia"/>
                                         <field name="equipo_departamento"/>
@@ -214,162 +228,146 @@
                                     <group string="Coordenadas">
                                         <field name="equipo_latitud"/>
                                         <field name="equipo_longitud"/>
-                                        <field name="google_maps_url" widget="url"
-                                               string="Ver en mapa"/>
-                                        <field name="google_maps_nav_url" widget="url"
-                                               string="Navegar"/>
+                                        <field name="google_maps_url" widget="url" string="Ver en mapa"/>
+                                        <field name="google_maps_nav_url" widget="url" string="Navegar"/>
                                     </group>
                                 </group>
-
-                                <!-- Botones de navegación para el técnico -->
-                                <div class="d-flex gap-2 mb-3"
-                                     invisible="not equipo_tiene_coordenadas">
-                                    <button name="action_abrir_mapa_equipo"
-                                            string="🗺️ Ver en Google Maps"
-                                            type="object"
-                                            class="btn-info"/>
-                                    <button name="action_navegar_a_equipo"
-                                            string="🧭 Navegar al equipo"
-                                            type="object"
-                                            class="btn-success"/>
+                                <div class="d-flex gap-2 mb-3" invisible="not equipo_tiene_coordenadas">
+                                    <button name="action_abrir_mapa_equipo" string="🗺️ Ver en Google Maps" type="object" class="btn-info"/>
+                                    <button name="action_navegar_a_equipo" string="🧭 Navegar al equipo" type="object" class="btn-success"/>
                                 </div>
-
-                                <!-- Mensaje cuando no hay coordenadas -->
-                                <div class="alert alert-warning"
-                                     invisible="equipo_tiene_coordenadas">
+                                <div class="alert alert-warning" invisible="equipo_tiene_coordenadas">
                                     <i class="fa fa-map-marker me-2"/>
                                     <strong>Sin ubicación:</strong>
                                     El equipo no tiene coordenadas registradas.
-                                    Configure la ubicación desde la ficha del equipo
-                                    en la pestaña "📍 Ubicación".
+                                    Configure la ubicación desde la ficha del equipo en la pestaña "📍 Ubicación".
                                 </div>
                             </page>
+
                             <page string="📡 Tracking GPS" name="tracking_gps_page">
-    <group>
-        <group string="Tiempos registrados">
-            <button
-                        name="action_crear_geocerca_manual"
-                        string="📡 Crear / Recrear Geocerca"
-                        type="object"
-                        class="btn-primary"
-                        
-                    />
-            <field name="fecha_asignacion"/>
-            <field name="fecha_en_ruta"/>
-            <field name="fecha_llegada"/>
-            <field name="fecha_inicio_revision"/>
-            <field name="fecha_salida_sitio"/>
-            <field name="fecha_finalizacion"/>
-        </group>
-        <group string="Métricas de atención">
-            <field name="tiempo_traslado_minutos" widget="float_time" string="Tiempo traslado"/>
-            <field name="tiempo_en_sitio_minutos" widget="float_time" string="Tiempo en sitio"/>
-            <field name="tiempo_total_atencion_minutos" widget="float_time" string="Tiempo total"/>
-            <field name="diferencia_puntualidad_minutos" string="Puntualidad (min)"/>
-            <field name="es_puntual" widget="boolean_toggle"/>
-        </group>
-    </group>
-    <div class="alert alert-success" invisible="not es_puntual or not fecha_llegada">
-        <i class="fa fa-check-circle me-2"/>
-        <strong>✅ El técnico llegó a tiempo</strong>
-    </div>
-    <div class="alert alert-warning" invisible="es_puntual or not fecha_llegada or diferencia_puntualidad_minutos &lt;= 0">
-        <i class="fa fa-clock-o me-2"/>
-        <strong>⚠️ El técnico llegó tarde</strong>
-    </div>
-    <group string="Log de eventos GPS">
-        <field name="tracking_log" nolabel="1" readonly="1" placeholder="Los eventos GPS se registran automáticamente aquí..."/>
-    </group>
-    <group invisible="not traccar_geofence_id">
-        <field name="traccar_geofence_id" readonly="1"/>
-    </group>
-</page>
+                                <group>
+                                    <group string="Tiempos registrados">
+                                        <button name="action_crear_geocerca_manual"
+                                                string="📡 Crear / Recrear Geocerca"
+                                                type="object"
+                                                class="btn-primary"/>
+                                        <field name="fecha_asignacion"/>
+                                        <field name="fecha_en_ruta"/>
+                                        <field name="fecha_llegada"/>
+                                        <field name="fecha_inicio_revision"/>
+                                        <field name="fecha_salida_sitio"/>
+                                        <field name="fecha_finalizacion"/>
+                                    </group>
+                                    <group string="Métricas de atención">
+                                        <field name="tiempo_traslado_minutos" widget="float_time" string="Tiempo traslado"/>
+                                        <field name="tiempo_en_sitio_minutos" widget="float_time" string="Tiempo en sitio"/>
+                                        <field name="tiempo_total_atencion_minutos" widget="float_time" string="Tiempo total"/>
+                                        <field name="diferencia_puntualidad_minutos" string="Puntualidad (min)"/>
+                                        <field name="es_puntual" widget="boolean_toggle"/>
+                                    </group>
+                                </group>
+                                <div class="alert alert-success" invisible="not es_puntual or not fecha_llegada">
+                                    <i class="fa fa-check-circle me-2"/>
+                                    <strong>✅ El técnico llegó a tiempo</strong>
+                                </div>
+                                <div class="alert alert-warning" invisible="es_puntual or not fecha_llegada or diferencia_puntualidad_minutos &lt;= 0">
+                                    <i class="fa fa-clock-o me-2"/>
+                                    <strong>⚠️ El técnico llegó tarde</strong>
+                                </div>
+                                <group string="Log de eventos GPS">
+                                    <field name="tracking_log" nolabel="1" readonly="1" placeholder="Los eventos GPS se registran automáticamente aquí..."/>
+                                </group>
+                                <group invisible="not traccar_geofence_id">
+                                    <field name="traccar_geofence_id" readonly="1"/>
+                                </group>
+                            </page>
+
                         </notebook>
                     </sheet>
-                    <chatter />
+                    <chatter/>
                 </form>
             </field>
         </record>
+
+        <!-- ================================================= -->
+        <!-- TICKET ALQUILER — LIST                             -->
+        <!-- ================================================= -->
 
         <record id="ticket_tree_view" model="ir.ui.view">
             <field name="name">ticket_alquiler.tree</field>
             <field name="model">ticket.alquiler</field>
             <field name="arch" type="xml">
                 <list default_order="id desc">
-                    <field name="name" />
-                    <field name="partner_id" />
-                    <field name="direccion_id_r" optional="hide" />
-                    <field name="product_alquiler" string="Equipo" />
-                    <field name="serie_id_r" />
-                    <field name="tipo_servicio_id" widget="badge" />
-                    <field name="agenda" widget="remaining_days" />
-                    <field name="asistencia_id" widget="badge" optional="hide" />
-                    <field name="responsable" widget="many2one_avatar" />
-                    <button string=" " name="action_nuevo" type="object" class="oe_highlight" icon="fa-exchange" />
-                    <field name="estado" widget="badge" decoration-success="estado == 'finalizado' " decoration-warning="estado == 'proceso' " />
-
+                    <field name="name"/>
+                    <field name="partner_id"/>
+                    <field name="direccion_id_r" optional="hide"/>
+                    <field name="product_alquiler" string="Equipo"/>
+                    <field name="serie_id_r"/>
+                    <field name="tipo_servicio_id" widget="badge"/>
+                    <field name="agenda" widget="remaining_days"/>
+                    <field name="asistencia_id" widget="badge" optional="hide"/>
+                    <field name="responsable" widget="many2one_avatar"/>
+                    <button string=" " name="action_nuevo" type="object" class="oe_highlight" icon="fa-exchange"/>
+                    <field name="estado" widget="badge"
+                           decoration-success="estado == 'finalizado'"
+                           decoration-warning="estado == 'proceso'"/>
                 </list>
             </field>
         </record>
+
+        <!-- ================================================= -->
+        <!-- TICKET ALQUILER — KANBAN                           -->
+        <!-- ================================================= -->
+
         <record id="model_name_view_kanban" model="ir.ui.view">
             <field name="name">ticket.view.kanban</field>
             <field name="model">ticket.alquiler</field>
             <field name="arch" type="xml">
                 <kanban class="o_kanban_dashboard" default_group_by="estado" sample="1">
-                    <field name="name" />
-                    <field name="partner_id" />
-                    <field name="product_alquiler" />
-                    <field name="agenda" />
-                    <field name="tipo_servicio_id" />
-                    <field name="estado" />
-                    <field name="description" />
-                    <field name="informe_id" />
-                    <field name="responsable" />
-
-                    <progressbar field="estado" colors='{"finalizado": "success", "nuevo": "danger", "proceso": "info"}' />
-
+                    <field name="name"/>
+                    <field name="partner_id"/>
+                    <field name="product_alquiler"/>
+                    <field name="agenda"/>
+                    <field name="tipo_servicio_id"/>
+                    <field name="estado"/>
+                    <field name="description"/>
+                    <field name="informe_id"/>
+                    <field name="responsable"/>
+                    <progressbar field="estado" colors='{"finalizado": "success", "nuevo": "danger", "proceso": "info"}'/>
                     <templates>
                         <t t-name="card">
                             <div class="oe_kanban_global_click position-relative shadow-sm rounded">
-                                <!-- Header con número de ticket y badge de estado -->
                                 <div class="d-flex justify-content-between align-items-center p-2">
                                     <div class="d-flex align-items-center">
                                         <i class="fa fa-hashtag text-muted me-1"/>
                                         <field name="name" class="h6 mb-0"/>
                                     </div>
-                                    <field name="estado" widget="badge" decoration-danger="estado == 'nuevo'" decoration-warning="estado == 'proceso'" decoration-success="estado == 'finalizado'"/>
+                                    <field name="estado" widget="badge"
+                                           decoration-danger="estado == 'nuevo'"
+                                           decoration-warning="estado == 'proceso'"
+                                           decoration-success="estado == 'finalizado'"/>
                                 </div>
-
-                                <!-- Contenido principal -->
                                 <div class="p-3">
-                                    <!-- Cliente -->
                                     <div class="d-flex align-items-center mb-2">
                                         <i class="fa fa-building text-info me-2" style="width: 20px;"/>
                                         <span class="text-muted me-2">Cliente:</span>
                                         <field name="partner_id" class="fw-bold"/>
                                     </div>
-
-                                    <!-- Equipo -->
                                     <div class="d-flex align-items-center mb-2">
                                         <i class="fa fa-print text-success me-2" style="width: 20px;"/>
                                         <span class="text-muted me-2">Equipo:</span>
                                         <field name="product_alquiler"/>
                                     </div>
-                                     <!-- Serie -->
                                     <div class="d-flex align-items-center mb-2">
                                         <i class="fa fa-qrcode text-secondary me-2" style="width: 20px;"/>
                                         <span class="text-muted me-1">Serie:</span>
                                         <field name="serie_id_r"/>
                                     </div>
-
-                                    <!-- Servicio -->
                                     <div class="d-flex align-items-center mb-2">
                                         <i class="fa fa-tools text-primary me-2" style="width: 20px;"/>
                                         <span class="text-muted me-2">Servicio:</span>
                                         <field name="tipo_servicio_id" widget="badge"/>
                                     </div>
-
-                                    <!-- Descripción -->
                                     <div class="d-flex align-items-start mb-2" t-if="record.description.raw_value">
                                         <i class="fa fa-comment text-danger me-2" style="width: 20px;"/>
                                         <div>
@@ -379,8 +377,6 @@
                                             </div>
                                         </div>
                                     </div>
-
-                                    <!-- Informe -->
                                     <div class="d-flex align-items-start mb-2" t-if="record.informe_id.raw_value">
                                         <i class="fa fa-file-alt text-success me-2" style="width: 20px;"/>
                                         <div>
@@ -390,99 +386,514 @@
                                             </div>
                                         </div>
                                     </div>
-
-                                    <!-- Fecha -->
                                     <div class="d-flex align-items-center mb-2">
                                         <i class="fa fa-calendar text-warning me-2" style="width: 20px;"/>
                                         <span class="text-muted me-2">Fecha:</span>
                                         <field name="agenda"/>
                                     </div>
-
-                                    <!-- Separador -->
-                                    <div class="border-top my-2"></div>
-
-                                    <!-- Responsable y Estrellas -->
+                                    <div class="border-top my-2"/>
                                     <div class="d-flex align-items-center justify-content-between">
                                         <div class="d-flex align-items-center">
                                             <i class="fa fa-user text-secondary me-2" style="width: 20px;"/>
-                                            <span class="text-muted me-2"></span>
                                             <field name="responsable" widget="many2one_avatar"/>
                                         </div>
-                                        <div>
-                                            <field name="priority" widget="priority"/>
-                                        </div>
+                                        <field name="priority" widget="priority"/>
                                     </div>
                                 </div>
-
-                                <!-- Indicador lateral de estado -->
-                                <div t-attf-class="position-absolute top-0 start-0 h-100 w-1 
-                            #{record.estado.raw_value == 'finalizado' ? 'bg-success' : 
-                            record.estado.raw_value == 'proceso' ? 'bg-warning' : 'bg-danger'}"/>
+                                <div t-attf-class="position-absolute top-0 start-0 h-100 w-1
+                                    #{record.estado.raw_value == 'finalizado' ? 'bg-success' :
+                                    record.estado.raw_value == 'proceso' ? 'bg-warning' : 'bg-danger'}"/>
                             </div>
                         </t>
                     </templates>
                 </kanban>
             </field>
         </record>
+
+        <!-- ================================================= -->
+        <!-- TICKET ALQUILER — GRAPH / SEARCH / CALENDAR / PIVOT -->
+        <!-- ================================================= -->
+
         <record id="ticket_graph" model="ir.ui.view">
             <field name="name">ticket.graph</field>
             <field name="model">ticket.alquiler</field>
             <field name="arch" type="xml">
                 <graph string="Distribución de Tickets por Servicio" type="bar" stacked="True">
-                    <field name="responsable" />
-                    <field name="tipo_servicio_id" type="row" />
+                    <field name="responsable"/>
+                    <field name="tipo_servicio_id" type="row"/>
                 </graph>
             </field>
         </record>
+
         <record id="ticket_search" model="ir.ui.view">
             <field name="name">ticket.search</field>
             <field name="model">ticket.alquiler</field>
             <field name="arch" type="xml">
                 <search string="">
-                    <field name="product_alquiler" />
-                    <field name="partner_id" />
-                    <field name="agenda" />
-                    <field name="tipo_servicio_id" />
-                    <field name="estado" />
-                    <field name="responsable" />
-
+                    <field name="product_alquiler"/>
+                    <field name="partner_id"/>
+                    <field name="agenda"/>
+                    <field name="tipo_servicio_id"/>
+                    <field name="estado"/>
+                    <field name="responsable"/>
                 </search>
             </field>
         </record>
+
         <record id="ticket_calendar" model="ir.ui.view">
             <field name="name">ticket.calendar</field>
             <field name="model">ticket.alquiler</field>
             <field name="arch" type="xml">
                 <calendar date_start="" color="partner_id" event_limit="5">
-                    <field name="partner_id" filters="1" />
-                    <field name="partner_id" />
-                    <!--<field name="maintenance_type"/>-->
+                    <field name="partner_id" filters="1"/>
+                    <field name="partner_id"/>
                 </calendar>
             </field>
         </record>
+
         <record id="ticket_pivot" model="ir.ui.view">
             <field name="name">ticket.pivot</field>
             <field name="model">ticket.alquiler</field>
             <field name="arch" type="xml">
                 <pivot string="">
-                    <field name="agenda" type="row" />
-                    <field name="partner_id" type="row" />
-                    <field name="product_alquiler" type="row" />
-                    <field name="tipo_servicio_id" type="col" />
+                    <field name="agenda" type="row"/>
+                    <field name="partner_id" type="row"/>
+                    <field name="product_alquiler" type="row"/>
+                    <field name="tipo_servicio_id" type="col"/>
                 </pivot>
             </field>
         </record>
-        <record model="ir.actions.act_window" id="sat.action_soporte_window">
-            <field name="name">Tickets</field>
-            <field name="res_model">ticket.alquiler</field>
-            <field name="view_mode">list,form,kanban,search,graph,calendar,pivot</field>
-            <field name="view_id" ref="sat.model_name_view_kanban" />
-        </record>
-        
 
-  
-        <menuitem name="Tickets" id="sat.tickets" parent="sat_menu_root" action="sat.action_soporte_window" sequence="50" />
+        <!-- ================================================= -->
+        <!-- WIZARD: ticket.subpartes.wizard                    -->
+        <!-- ================================================= -->
+
+        <record id="view_ticket_subpartes_wizard_form" model="ir.ui.view">
+            <field name="name">ticket.subpartes.wizard.form</field>
+            <field name="model">ticket.subpartes.wizard</field>
+            <field name="arch" type="xml">
+                <form string="Seleccionar Subpartes">
+                    <sheet>
+                        <div class="alert alert-warning" role="alert">
+                            <i class="fa fa-exclamation-triangle me-2"/>
+                            <strong>Atención:</strong>
+                            Los siguientes componentes requieren cambio pero no tienen subpartes especificadas.
+                            Selecciona las subpartes necesarias antes de cerrar el ticket.
+                        </div>
+                        <field name="componentes_info" readonly="1" nolabel="1"/>
+                        <field name="line_ids" nolabel="1">
+                            <list editable="bottom"
+                                  decoration-success="selected == True">
+                                <field name="componente_display" readonly="1" string="Componente"/>
+                                <field name="subparte_id" readonly="1" string="Subparte"/>
+                                <field name="selected" string="Seleccionar"/>
+                                <field name="cantidad"
+                                       invisible="selected == False"
+                                       string="Cantidad"/>
+                                <field name="observacion"
+                                       invisible="selected == False"
+                                       optional="hide"
+                                       string="Observación"/>
+                                <field name="componente_code" column_invisible="1"/>
+                                <field name="intervencion_id" column_invisible="1"/>
+                            </list>
+                        </field>
+                    </sheet>
+                    <footer>
+                        <button string="✅ Confirmar Subpartes"
+                                name="action_confirmar"
+                                type="object"
+                                class="btn-primary"
+                                confirm="¿Confirmar las subpartes seleccionadas? El ticket se cerrará y se generará el pedido de repuestos."/>
+                        <button string="Cancelar"
+                                class="btn-secondary"
+                                special="cancel"/>
+                    </footer>
+                </form>
+            </field>
+        </record>
+
+        <!-- ================================================= -->
+        <!-- ticket.componente.evaluacion                       -->
+        <!-- ================================================= -->
+
+        <record id="view_ticket_componente_evaluacion_form" model="ir.ui.view">
+            <field name="name">ticket.componente.evaluacion.form</field>
+            <field name="model">ticket.componente.evaluacion</field>
+            <field name="arch" type="xml">
+                <form string="Evaluación de Componente">
+                    <sheet>
+                        <group>
+                            <group>
+                                <field name="ticket_id" readonly="1"/>
+                                <field name="componente_tipo_id"/>
+                                <field name="color_id"/>
+                            </group>
+                            <group>
+                                <field name="estado_id"/>
+                                <field name="observaciones"/>
+                            </group>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="view_ticket_componente_evaluacion_list" model="ir.ui.view">
+            <field name="name">ticket.componente.evaluacion.list</field>
+            <field name="model">ticket.componente.evaluacion</field>
+            <field name="arch" type="xml">
+                <list default_order="ticket_id desc"
+                      decoration-danger="not estado_id"
+                      decoration-warning="estado_id and estado_id.code == 'requiere_cambio'">
+                    <field name="ticket_id"/>
+                    <field name="componente_tipo_id"/>
+                    <field name="color_id" optional="show"/>
+                    <field name="estado_id"/>
+                    <field name="observaciones" optional="show"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="view_ticket_componente_evaluacion_search" model="ir.ui.view">
+            <field name="name">ticket.componente.evaluacion.search</field>
+            <field name="model">ticket.componente.evaluacion</field>
+            <field name="arch" type="xml">
+                <search>
+                    <field name="ticket_id"/>
+                    <field name="componente_tipo_id"/>
+                    <field name="estado_id"/>
+                    <filter string="Sin Estado" name="sin_estado" domain="[('estado_id', '=', False)]"/>
+                    <filter string="Requiere Cambio" name="requiere_cambio" domain="[('estado_id.code', '=', 'requiere_cambio')]"/>
+                    <group expand="0" string="Agrupar por">
+                        <filter string="Ticket" name="group_ticket" context="{'group_by': 'ticket_id'}"/>
+                        <filter string="Componente" name="group_componente" context="{'group_by': 'componente_tipo_id'}"/>
+                        <filter string="Estado" name="group_estado" context="{'group_by': 'estado_id'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <!-- ================================================= -->
+        <!-- ticket.accesorio.evaluacion                        -->
+        <!-- ================================================= -->
+
+        <record id="view_ticket_accesorio_evaluacion_form" model="ir.ui.view">
+            <field name="name">ticket.accesorio.evaluacion.form</field>
+            <field name="model">ticket.accesorio.evaluacion</field>
+            <field name="arch" type="xml">
+                <form string="Evaluación de Accesorio">
+                    <sheet>
+                        <group>
+                            <group>
+                                <field name="ticket_id" readonly="1"/>
+                                <field name="tipo_id"/>
+                            </group>
+                            <group>
+                                <field name="estado_id"/>
+                                <field name="observaciones"/>
+                            </group>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="view_ticket_accesorio_evaluacion_list" model="ir.ui.view">
+            <field name="name">ticket.accesorio.evaluacion.list</field>
+            <field name="model">ticket.accesorio.evaluacion</field>
+            <field name="arch" type="xml">
+                <list default_order="ticket_id desc"
+                      decoration-danger="not estado_id"
+                      decoration-warning="estado_id and estado_id.code == 'requiere_cambio'">
+                    <field name="ticket_id"/>
+                    <field name="tipo_id"/>
+                    <field name="estado_id"/>
+                    <field name="observaciones" optional="show"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="view_ticket_accesorio_evaluacion_search" model="ir.ui.view">
+            <field name="name">ticket.accesorio.evaluacion.search</field>
+            <field name="model">ticket.accesorio.evaluacion</field>
+            <field name="arch" type="xml">
+                <search>
+                    <field name="ticket_id"/>
+                    <field name="tipo_id"/>
+                    <field name="estado_id"/>
+                    <filter string="Sin Estado" name="sin_estado" domain="[('estado_id', '=', False)]"/>
+                    <filter string="Requiere Cambio" name="requiere_cambio" domain="[('estado_id.code', '=', 'requiere_cambio')]"/>
+                    <group expand="0" string="Agrupar por">
+                        <filter string="Ticket" name="group_ticket" context="{'group_by': 'ticket_id'}"/>
+                        <filter string="Tipo" name="group_tipo" context="{'group_by': 'tipo_id'}"/>
+                        <filter string="Estado" name="group_estado" context="{'group_by': 'estado_id'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <!-- ================================================= -->
+        <!-- ticket.componente.intervencion                     -->
+        <!-- ================================================= -->
+
+        <record id="view_ticket_componente_intervencion_form" model="ir.ui.view">
+            <field name="name">ticket.componente.intervencion.form</field>
+            <field name="model">ticket.componente.intervencion</field>
+            <field name="arch" type="xml">
+                <form string="Intervención">
+                    <sheet>
+                        <group>
+                            <group>
+                                <field name="ticket_id" readonly="1"/>
+                                <field name="componente_code" readonly="1"/>
+                                <field name="componente_display" readonly="1"/>
+                            </group>
+                        </group>
+                        <field name="detalle_ids" nolabel="1">
+                            <list editable="bottom">
+                                <field name="subparte_id"/>
+                                <field name="cantidad"/>
+                                <field name="observacion" optional="show"/>
+                            </list>
+                        </field>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="view_ticket_componente_intervencion_list" model="ir.ui.view">
+            <field name="name">ticket.componente.intervencion.list</field>
+            <field name="model">ticket.componente.intervencion</field>
+            <field name="arch" type="xml">
+                <list default_order="ticket_id desc">
+                    <field name="ticket_id"/>
+                    <field name="componente_display" string="Componente"/>
+                    <field name="componente_code" optional="hide"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="view_ticket_componente_intervencion_search" model="ir.ui.view">
+            <field name="name">ticket.componente.intervencion.search</field>
+            <field name="model">ticket.componente.intervencion</field>
+            <field name="arch" type="xml">
+                <search>
+                    <field name="ticket_id"/>
+                    <field name="componente_code"/>
+                    <group expand="0" string="Agrupar por">
+                        <filter string="Ticket" name="group_ticket" context="{'group_by': 'ticket_id'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <!-- ================================================= -->
+        <!-- ticket.repuesto.pedido                             -->
+        <!-- ================================================= -->
+
+        <record id="view_ticket_repuesto_pedido_form" model="ir.ui.view">
+            <field name="name">ticket.repuesto.pedido.form</field>
+            <field name="model">ticket.repuesto.pedido</field>
+            <field name="arch" type="xml">
+                <form string="Pedido de Repuestos">
+                    <header>
+                        <field name="estado" widget="statusbar"
+                               statusbar_visible="pendiente,aprobado,cancelado"/>
+                        <button string="✅ Aprobar"
+                                name="action_aprobar"
+                                type="object"
+                                class="btn-success"
+                                invisible="estado != 'pendiente'"
+                                confirm="¿Confirmar aprobación? Se registrará en el historial de repuestos."/>
+                        <button string="❌ Cancelar"
+                                name="action_cancelar"
+                                type="object"
+                                class="btn-danger"
+                                invisible="estado == 'aprobado'"
+                                confirm="¿Cancelar este pedido?"/>
+                        <button string="🔄 Reactivar"
+                                name="action_volver_pendiente"
+                                type="object"
+                                class="btn-warning"
+                                invisible="estado != 'cancelado'"/>
+                    </header>
+                    <sheet>
+                        <div class="oe_title">
+                            <label for="name"/>
+                            <h1>
+                                <field name="name" readonly="1"/>
+                            </h1>
+                        </div>
+                        <group>
+                            <group string="Origen">
+                                <field name="ticket_id" readonly="1"/>
+                                <field name="cliente_id" readonly="1"/>
+                                <field name="tecnico_id" readonly="1"/>
+                                <field name="fecha" readonly="1"/>
+                            </group>
+                            <group string="Equipo">
+                                <field name="modelo_nombre" readonly="1"/>
+                                <field name="serie" readonly="1"/>
+                                <field name="contometro_actual" readonly="1"/>
+                            </group>
+                        </group>
+                        <group string="Aprobación" invisible="estado == 'pendiente'">
+                            <field name="aprobado_por" readonly="1"/>
+                            <field name="fecha_aprobacion" readonly="1"/>
+                        </group>
+                        <notebook>
+                            <page string="Repuestos solicitados">
+                                <field name="linea_ids" readonly="estado == 'aprobado'">
+                                    <list editable="bottom">
+                                        <field name="componente_display" readonly="1" string="Componente"/>
+                                        <field name="color_id" readonly="1" optional="show"/>
+                                        <field name="subparte_id" readonly="1" string="Subparte / Repuesto"/>
+                                        <field name="cantidad"/>
+                                        <field name="observacion" optional="show"/>
+                                        <field name="ultimo_cambio_fecha" readonly="1" optional="show" string="Último Cambio"/>
+                                        <field name="ultimo_cambio_contometro" readonly="1" optional="show" string="Contómetro Anterior"/>
+                                        <field name="meses_desde_ultimo_cambio" readonly="1" optional="show" string="Meses Desde Cambio"/>
+                                    </list>
+                                </field>
+                            </page>
+                        </notebook>
+                        <group>
+                            <field name="observaciones"/>
+                        </group>
+                    </sheet>
+                    <chatter/>
+                </form>
+            </field>
+        </record>
+
+        <record id="view_ticket_repuesto_pedido_list" model="ir.ui.view">
+            <field name="name">ticket.repuesto.pedido.list</field>
+            <field name="model">ticket.repuesto.pedido</field>
+            <field name="arch" type="xml">
+                <list default_order="fecha desc"
+                      decoration-success="estado == 'aprobado'"
+                      decoration-warning="estado == 'pendiente'"
+                      decoration-danger="estado == 'cancelado'">
+                    <field name="name"/>
+                    <field name="ticket_id"/>
+                    <field name="cliente_id"/>
+                    <field name="modelo_nombre"/>
+                    <field name="serie"/>
+                    <field name="tecnico_id"/>
+                    <field name="fecha"/>
+                    <field name="total_lineas"/>
+                    <field name="estado" widget="badge"/>
+                    <field name="aprobado_por" optional="hide"/>
+                    <field name="fecha_aprobacion" optional="hide"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="view_ticket_repuesto_pedido_search" model="ir.ui.view">
+            <field name="name">ticket.repuesto.pedido.search</field>
+            <field name="model">ticket.repuesto.pedido</field>
+            <field name="arch" type="xml">
+                <search>
+                    <field name="name"/>
+                    <field name="ticket_id"/>
+                    <field name="cliente_id"/>
+                    <field name="tecnico_id"/>
+                    <field name="serie"/>
+                    <filter string="Pendientes" name="pendientes" domain="[('estado', '=', 'pendiente')]"/>
+                    <filter string="Aprobados" name="aprobados" domain="[('estado', '=', 'aprobado')]"/>
+                    <filter string="Cancelados" name="cancelados" domain="[('estado', '=', 'cancelado')]"/>
+                    <group expand="0" string="Agrupar por">
+                        <filter string="Estado" name="group_estado" context="{'group_by': 'estado'}"/>
+                        <filter string="Técnico" name="group_tecnico" context="{'group_by': 'tecnico_id'}"/>
+                        <filter string="Cliente" name="group_cliente" context="{'group_by': 'cliente_id'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <!-- ================================================= -->
+        <!-- ticket.repuesto.historial                          -->
+        <!-- ================================================= -->
+
+        <record id="view_ticket_repuesto_historial_list" model="ir.ui.view">
+            <field name="name">ticket.repuesto.historial.list</field>
+            <field name="model">ticket.repuesto.historial</field>
+            <field name="arch" type="xml">
+                <list default_order="fecha_cambio desc">
+                    <field name="equipo_id"/>
+                    <field name="serie"/>
+                    <field name="cliente_id"/>
+                    <field name="subparte_id"/>
+                    <field name="color_id" optional="show"/>
+                    <field name="cantidad"/>
+                    <field name="fecha_cambio"/>
+                    <field name="contometro_cambio"/>
+                    <field name="meses_duracion" string="Duración (meses)"/>
+                    <field name="copias_duracion" string="Copias de duración"/>
+                    <field name="tecnico_id"/>
+                    <field name="ticket_id" optional="hide"/>
+                    <field name="pedido_id" optional="hide"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="view_ticket_repuesto_historial_form" model="ir.ui.view">
+            <field name="name">ticket.repuesto.historial.form</field>
+            <field name="model">ticket.repuesto.historial</field>
+            <field name="arch" type="xml">
+                <form string="Historial de Repuesto">
+                    <sheet>
+                        <group>
+                            <group string="Equipo">
+                                <field name="equipo_id" readonly="1"/>
+                                <field name="modelo_nombre" readonly="1"/>
+                                <field name="serie" readonly="1"/>
+                                <field name="cliente_id" readonly="1"/>
+                            </group>
+                            <group string="Repuesto">
+                                <field name="subparte_id" readonly="1"/>
+                                <field name="color_id" readonly="1"/>
+                                <field name="cantidad" readonly="1"/>
+                            </group>
+                        </group>
+                        <group>
+                            <group string="Cambio">
+                                <field name="fecha_cambio" readonly="1"/>
+                                <field name="contometro_cambio" readonly="1"/>
+                                <field name="tecnico_id" readonly="1"/>
+                                <field name="ticket_id" readonly="1"/>
+                                <field name="pedido_id" readonly="1"/>
+                            </group>
+                            <group string="Durabilidad">
+                                <field name="fecha_cambio_anterior" readonly="1"/>
+                                <field name="contometro_cambio_anterior" readonly="1"/>
+                                <field name="meses_duracion" readonly="1"/>
+                                <field name="copias_duracion" readonly="1"/>
+                            </group>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="view_ticket_repuesto_historial_search" model="ir.ui.view">
+            <field name="name">ticket.repuesto.historial.search</field>
+            <field name="model">ticket.repuesto.historial</field>
+            <field name="arch" type="xml">
+                <search>
+                    <field name="equipo_id"/>
+                    <field name="subparte_id"/>
+                    <field name="tecnico_id"/>
+                    <field name="serie"/>
+                    <group expand="0" string="Agrupar por">
+                        <filter string="Equipo" name="group_equipo" context="{'group_by': 'equipo_id'}"/>
+                        <filter string="Subparte" name="group_subparte" context="{'group_by': 'subparte_id'}"/>
+                        <filter string="Técnico" name="group_tecnico" context="{'group_by': 'tecnico_id'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
 
     </data>
-
 </odoo>
