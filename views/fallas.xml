@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <data>
-
         <record id="fallas_form_view" model="ir.ui.view">
             <field name="name">Fallas_de_maquinas.form</field>
             <field name="model">fallas</field>
@@ -21,21 +20,20 @@
                                 <field name="proveedor_id" />
                                 <field name="marca" />
                                 <field name="modelo_id" />
-                                <field name="serie" />                                                                
+                                <field name="serie" />
                             </group>
                             <group>
                                 <field name="foto" widget="image" 
                                 class="oe_avatar"
                                 />
-                                <field name="descripcion" />                                
-                                <field name="usuario_id" />                                 
+                                <field name="descripcion" />
+                                <field name="usuario_id" />
                             </group>
                         </group>
                     </sheet>
                 </form>
             </field>
         </record>
-
         <record id="fallas_maquina_tree_view" model="ir.ui.view">
             <field name="name">Fallas_de_maquina.tree</field>
             <field name="model">fallas</field>
@@ -44,16 +42,15 @@
                     <field name="name"/>
                     <field name="importacion" />
                     <field name="proveedor_id" />
-                     <field name="marca" />
+                    <field name="marca" />
                     <field name="modelo_id" />
-                    <field name="serie" />                     
+                    <field name="serie" />
                     <field name="descripcion_procesada" />
-                    <field name="foto" widget="image" class="oe_avatar"/>                                
-                    <field name="usuario_id" />                  
+                    <field name="foto" widget="image" class="oe_avatar"/>
+                    <field name="usuario_id" />
                 </list>
             </field>
         </record>
-
         <record id="fallas_maquina_search_view" model="ir.ui.view">
             <field name="name">Fallas_de_maquina.search</field>
             <field name="model">fallas</field>

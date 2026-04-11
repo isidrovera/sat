@@ -8,11 +8,9 @@
       <field name="arch" type="xml">
         <search string="Buscar Subpartes">
           <field name="name"/>
-          
         </search>
       </field>
     </record>
-
     <!-- LIST -->
     <record id="view_componente_subparte_list" model="ir.ui.view">
       <field name="name">componente.subparte.list</field>
@@ -20,11 +18,9 @@
       <field name="arch" type="xml">
         <list string="Subpartes" create="1" edit="1" delete="0">
           <field name="name"/>
-          
         </list>
       </field>
     </record>
-
     <!-- FORM -->
     <record id="view_componente_subparte_form" model="ir.ui.view">
       <field name="name">componente.subparte.form</field>
@@ -33,11 +29,9 @@
         <form string="Subparte">
           <group>
             <field name="name"/>
-           
           </group>
         </form>
       </field>
     </record>
-
-    </data>
+  </data>
 </odoo>

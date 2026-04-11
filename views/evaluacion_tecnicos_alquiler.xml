@@ -30,13 +30,11 @@
                                 <field string="Tickets" name="ticket_ids" widget="statinfo"/>
                             </button>
                         </div>
-                        
                         <!-- Alerta de Atención Requerida -->
                         <div class="alert alert-danger mb-3" role="alert" invisible="not requiere_atencion">
                             <i class="fa fa-exclamation-triangle me-2"/>
                             <strong>¡Atención Requerida!</strong> Esta evaluación requiere seguimiento inmediato.
                         </div>
-                        
                         <div class="oe_title">
                             <h1>
                                 <field name="name" readonly="1" force_save="1"/>
@@ -56,7 +54,6 @@
                                 </span>
                             </div>
                         </div>
-                        
                         <group>
                             <group string="Información General">
                                 <field name="partner_id" readonly="context.get('from_portal', False) or state == 'completed'"/>
@@ -74,7 +71,6 @@
                                 <field name="requiere_atencion" invisible="1"/>
                             </group>
                         </group>
-                        
                         <notebook>
                             <!-- Pestaña de Control de Envío -->
                             <page string="📧 Control de Envío" name="email_control">
@@ -98,7 +94,6 @@
                                     </group>
                                 </group>
                             </page>
-                            
                             <!-- Pestaña de Respuesta del Cliente -->
                             <page string="👤 Respuesta del Cliente" name="client_response">
                                 <group>
@@ -136,7 +131,6 @@
                                     </group>
                                 </group>
                             </page>
-                            
                             <!-- Pestaña de Evaluación -->
                             <page string="⭐ Evaluación" name="evaluation">
                                 <group>
@@ -171,21 +165,18 @@
                                         readonly="state == 'completed'"/>
                                 </group>
                             </page>
-                            
                             <!-- Pestaña de Análisis -->
                             <page string="📊 Análisis" name="analysis">
                                 <group>
                                     <field name="analisis_detallado" readonly="1" nolabel="1" widget="text"/>
                                 </group>
                             </page>
-                            
                             <!-- Pestaña de Recomendaciones -->
                             <page string="💡 Recomendaciones" name="recommendations">
                                 <group>
                                     <field name="recomendaciones_mejora" readonly="1" nolabel="1" widget="text"/>
                                 </group>
                             </page>
-                            
                             <!-- Pestaña de Tickets -->
                             <page string="🎫 Tickets Atendidos" name="tickets">
                                 <field name="ticket_ids" readonly="context.get('from_portal', False) or state == 'completed'">
@@ -200,19 +191,16 @@
                                 </field>
                             </page>
                         </notebook>
-                        
                         <!-- Campos ocultos -->
                         <field name="token" invisible="1"/>
                         <field name="color" invisible="1"/>
                         <field name="ticket_id" invisible="1"/>
                     </sheet>
-                    
                     <!-- Chatter -->
                     <chatter/>
                 </form>
             </field>
         </record>
-
         <!-- Vista de Lista -->
         <record id="view_client_service_evaluation_tree" model="ir.ui.view">
             <field name="name">client.service.evaluation.tree</field>
@@ -248,7 +236,6 @@
                 </list>
             </field>
         </record>
-
         <!-- Vista Kanban Mejorada -->
         <record id="view_client_service_evaluation_kanban" model="ir.ui.view">
             <field name="name">client.service.evaluation.kanban</field>
@@ -276,7 +263,6 @@
                                                              record.nivel_atencion.raw_value == 'bueno' ? '#d1ecf1' :
                                                              record.nivel_atencion.raw_value == 'regular' ? '#fff3cd' :
                                                              record.nivel_atencion.raw_value == 'deficiente' ? '#f8d7da' : '#ffffff'} 0%, #ffffff 100%)">
-                                
                                 <!-- Badge Superior con Estado -->
                                 <div class="position-absolute top-0 end-0 m-2">
                                     <span t-if="record.state.raw_value == 'completed'" class="badge bg-success">
@@ -292,14 +278,12 @@
                                         <i class="fa fa-hourglass-half me-1"/> Borrador
                                     </span>
                                 </div>
-                                
                                 <!-- Indicador de Atención Requerida -->
                                 <div t-if="record.requiere_atencion.raw_value" class="position-absolute top-0 start-0 m-2">
                                     <span class="badge bg-danger">
                                         <i class="fa fa-exclamation-triangle"/> ¡Atención!
                                     </span>
                                 </div>
-                                
                                 <div class="oe_kanban_content p-3 pt-5">
                                     <!-- Encabezado con Nombre y Puntaje -->
                                     <div class="d-flex justify-content-between align-items-center mb-3">
@@ -315,7 +299,6 @@
                                             </div>
                                         </div>
                                     </div>
-
                                     <!-- Información del Cliente y Técnico -->
                                     <div class="mb-3">
                                         <div class="d-flex align-items-center mb-2">
@@ -329,7 +312,6 @@
                                             <field name="technician_id"/>
                                         </div>
                                     </div>
-
                                     <!-- Estadísticas de Interacción -->
                                     <div class="mb-3 p-2 bg-light rounded">
                                         <div class="row g-2 small">
@@ -351,7 +333,6 @@
                                             </div>
                                         </div>
                                     </div>
-
                                     <!-- Tickets Relacionados -->
                                     <div class="mb-3">
                                         <small class="text-muted d-block mb-1">
@@ -360,7 +341,6 @@
                                         </small>
                                         <field name="ticket_ids" widget="many2many_tags" options="{'color_field': 'color'}"/>
                                     </div>
-
                                     <!-- Footer con Fecha -->
                                     <div class="mt-3 pt-2 border-top d-flex justify-content-between align-items-center">
                                         <small class="text-muted">
@@ -380,7 +360,6 @@
                 </kanban>
             </field>
         </record>
-
         <!-- Vista de Búsqueda Mejorada -->
         <record id="view_client_service_evaluation_search" model="ir.ui.view">
             <field name="name">client.service.evaluation.search</field>
@@ -391,9 +370,7 @@
                     <field name="ticket_ids"/>
                     <field name="partner_id"/>
                     <field name="technician_id"/>
-                    
                     <separator/>
-                    
                     <!-- Filtros de Calidad -->
                     <filter string="⚠️ Requiere Atención" name="requiere_atencion"
                         domain="[('requiere_atencion', '=', True)]"/>
@@ -405,9 +382,7 @@
                         domain="[('nivel_atencion', '=', 'regular')]"/>
                     <filter string="❌ Deficiente" name="nivel_deficiente"
                         domain="[('nivel_atencion', '=', 'deficiente')]"/>
-                    
                     <separator/>
-                    
                     <!-- Filtros de Estado -->
                     <filter string="📝 Borrador" name="draft"
                         domain="[('state', '=', 'draft')]"/>
@@ -417,9 +392,7 @@
                         domain="[('state', '=', 'completed')]"/>
                     <filter string="⏰ Expirada" name="expired"
                         domain="[('state', '=', 'expired')]"/>
-                    
                     <separator/>
-                    
                     <!-- Filtros de Envío -->
                     <filter string="📧 Correo Enviado" name="email_sent"
                         domain="[('email_sent', '=', True)]"/>
@@ -429,9 +402,7 @@
                         domain="[('email_delivery_status', 'in', ['failed', 'bounced'])]"/>
                     <filter string="🔔 Con Recordatorios" name="has_reminders"
                         domain="[('reminder_count', '>', 0)]"/>
-                    
                     <separator/>
-                    
                     <!-- Filtros de Respuesta -->
                     <filter string="👁️ Con Acceso al Portal" name="portal_accessed"
                         domain="[('portal_access_count', '>', 0)]"/>
@@ -439,9 +410,7 @@
                         domain="[('is_on_time', '=', True)]"/>
                     <filter string="⏱️ Respuesta Tardía" name="late"
                         domain="[('is_on_time', '=', False), ('state', '=', 'completed')]"/>
-                    
                     <separator/>
-                    
                     <!-- Filtros Personales y de Fecha -->
                     <filter string="👤 Mis Evaluaciones" name="my_evaluations"
                         domain="[('technician_id', '=', uid)]"/>
@@ -451,9 +420,7 @@
                         domain="[('evaluation_date', '&gt;=', (context_today() - datetime.timedelta(days=context_today().weekday())).strftime('%Y-%m-%d'))]"/>
                     <filter string="📅 Este Mes" name="this_month"
                         domain="[('evaluation_date', '&gt;=', context_today().strftime('%Y-%m-01'))]"/>
-                    
                     <separator/>
-                    
                     <group expand="0" string="Agrupar Por">
                         <filter string="👤 Técnico" name="technician"
                             context="{'group_by': 'technician_id'}"/>
@@ -473,7 +440,6 @@
                 </search>
             </field>
         </record>
-
         <!-- Vista de Gráfico (Pivot) -->
         <record id="view_client_service_evaluation_pivot" model="ir.ui.view">
             <field name="name">client.service.evaluation.pivot</field>
@@ -486,7 +452,6 @@
                 </pivot>
             </field>
         </record>
-
         <!-- Vista de Gráfico -->
         <record id="view_client_service_evaluation_graph" model="ir.ui.view">
             <field name="name">client.service.evaluation.graph</field>
@@ -498,7 +463,6 @@
                 </graph>
             </field>
         </record>
-
         <!-- Vista de Calendario -->
         <record id="view_client_service_evaluation_calendar" model="ir.ui.view">
             <field name="name">client.service.evaluation.calendar</field>
@@ -515,7 +479,6 @@
                 </calendar>
             </field>
         </record>
-
         <!-- Vista de Actividad -->
         <record id="view_client_service_evaluation_activity" model="ir.ui.view">
             <field name="name">client.service.evaluation.activity</field>
@@ -533,6 +496,5 @@
                 </activity>
             </field>
         </record>
-
     </data>
 </odoo>

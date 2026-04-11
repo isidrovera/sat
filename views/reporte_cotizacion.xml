@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <odoo>
-    <data>
+    
         <template id="report_saleorder_document_inherit" inherit_id="sale.report_saleorder_document">
             <xpath expr="//div[@class='row mb-4' and @id='informations']" position="after">
                 <div class="border rounded" style="background-color: #f8f9fa; margin-bottom: 1rem;">
@@ -25,5 +25,5 @@
                 <span t-field="line.total_copias_id"/>
             </xpath>
         </template>
-    </data>
+    
 </odoo>

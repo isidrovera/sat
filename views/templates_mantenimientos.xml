@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <data>
+    
         <!-- Template base para las páginas de mantenimiento -->
         <template id="maintenance_layout" name="Maintenance Layout">
             <t t-call="web.layout">
@@ -140,5 +140,5 @@
                 </div>
             </t>
         </template>
-    </data>
+
 </odoo>

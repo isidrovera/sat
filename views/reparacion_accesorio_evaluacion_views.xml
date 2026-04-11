@@ -1,63 +1,62 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <data>
-    <!-- ============================================ -->
-    <!-- TREE VIEW: Reparacion Accesorio Evaluacion  -->
-    <!-- ============================================ -->
-    <record id="view_reparacion_accesorio_evaluacion_tree" model="ir.ui.view">
-        <field name="name">reparacion.accesorio.evaluacion.tree</field>
-        <field name="model">reparacion.accesorio.evaluacion</field>
-        <field name="arch" type="xml">
-            <list editable="bottom" create="true" delete="true">
-                <field name="tipo_id" options="{'no_create': True}"/>
-                <field name="estado_id" 
+        <!-- ============================================ -->
+        <!-- TREE VIEW: Reparacion Accesorio Evaluacion  -->
+        <!-- ============================================ -->
+        <record id="view_reparacion_accesorio_evaluacion_tree" model="ir.ui.view">
+            <field name="name">reparacion.accesorio.evaluacion.tree</field>
+            <field name="model">reparacion.accesorio.evaluacion</field>
+            <field name="arch" type="xml">
+                <list editable="bottom" create="true" delete="true">
+                    <field name="tipo_id" options="{'no_create': True}"/>
+                    <field name="estado_id" 
                        widget="badge"
                        decoration-danger="estado_id.code == 'instalado_con_falla'"
                        decoration-success="estado_id.code == 'instalado_operativo'"
                        decoration-warning="estado_id.code == 'no_instalado'"
                        decoration-muted="estado_id.code == 'no_aplica'"
                        options="{'no_create': True}"/>
-                <field name="subparte_ids"
+                    <field name="subparte_ids"
                        widget="many2many_tags"
                        domain="[('tipo_id', '=', tipo_id)]"/>
-                <field name="observaciones" optional="hide"/>
-            </list>
-        </field>
-    </record>
-
-    <!-- ============================================ -->
-    <!-- FORM VIEW: Reparacion Accesorio Evaluacion  -->
-    <!-- ============================================ -->
-    <record id="view_reparacion_accesorio_evaluacion_form" model="ir.ui.view">
-        <field name="name">reparacion.accesorio.evaluacion.form</field>
-        <field name="model">reparacion.accesorio.evaluacion</field>
-        <field name="arch" type="xml">
-            <form>
-                <sheet>
-                    <group>
+                    <field name="observaciones" optional="hide"/>
+                </list>
+            </field>
+        </record>
+        <!-- ============================================ -->
+        <!-- FORM VIEW: Reparacion Accesorio Evaluacion  -->
+        <!-- ============================================ -->
+        <record id="view_reparacion_accesorio_evaluacion_form" model="ir.ui.view">
+            <field name="name">reparacion.accesorio.evaluacion.form</field>
+            <field name="model">reparacion.accesorio.evaluacion</field>
+            <field name="arch" type="xml">
+                <form>
+                    <sheet>
                         <group>
-                            <field name="reparacion_id" readonly="1"/>
-                            <field name="tipo_id" options="{'no_create': True}"/>
-                        </group>
-                        <group>
-                            <field name="estado_id" 
+                            <group>
+                                <field name="reparacion_id" readonly="1"/>
+                                <field name="tipo_id" options="{'no_create': True}"/>
+                            </group>
+                            <group>
+                                <field name="estado_id" 
                                    widget="badge" 
                                    options="{'no_create': True}"/>
+                            </group>
                         </group>
-                    </group>
-                    <group string="Subpartes Específicas" invisible="not subparte_ids">
-                        <field name="subparte_ids" 
+                        <group string="Subpartes Específicas" invisible="not subparte_ids">
+                            <field name="subparte_ids" 
                                widget="many2many_tags"
                                domain="[('tipo_id', '=', tipo_id)]"
                                placeholder="Seleccione subpartes intervenidas..."/>
-                    </group>
-                    <group>
-                        <field name="observaciones" 
+                        </group>
+                        <group>
+                            <field name="observaciones" 
                                placeholder="Observaciones adicionales..."/>
-                    </group>
-                </sheet>
-            </form>
-        </field>
-    </record>
-</data>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+    </data>
 </odoo>

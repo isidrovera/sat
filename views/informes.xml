@@ -10,7 +10,6 @@
                         <!-- Botón para enviar email (solo visible en estado borrador) -->
                         <button name="send_email" string="Enviar por correo" type="object" 
                             class="oe_highlight" invisible="state == 'sent'" />
-                        
                         <!-- Campo de estado visible como widget statusbar -->
                         <field name="state" widget="statusbar" statusbar_visible="draft,sent" />
                     </header>
@@ -19,10 +18,10 @@
                         <div class="alert alert-info" role="alert" style="margin-bottom:0px;" 
                              invisible="not sent_date">
                             <div>
-                                <strong>Enviado el:</strong> <field name="sent_date" class="oe_inline"/>
+                                <strong>Enviado el:</strong>
+                                <field name="sent_date" class="oe_inline"/>
                             </div>
                         </div>
-                        
                         <div class="oe_title">
                             <label for="name"/>
                             <h1>
@@ -65,7 +64,6 @@
                 </form>
             </field>
         </record>
-
         <record id="informes_list_view" model="ir.ui.view">
             <field name="name">Informes.list</field>
             <field name="model">informes</field>
@@ -83,7 +81,6 @@
                 </list>
             </field>
         </record>
-
         <record id="informes_search_view" model="ir.ui.view">
             <field name="name">Informe.search</field>
             <field name="model">informes</field>
@@ -105,7 +102,6 @@
                 </search>
             </field>
         </record>
-
         <!-- Kanban View -->
         <record id="informes_kanban_view" model="ir.ui.view">
             <field name="name">informes.kanban</field>
@@ -127,14 +123,20 @@
                                         <field name="name"/>
                                     </strong>
                                     <div class="o_kanban_record_subtitle">
-                                        <span><field name="proveedor_id"/></span>
+                                        <span>
+                                            <field name="proveedor_id"/>
+                                        </span>
                                     </div>
                                     <div>
                                         <t t-if="record.state.raw_value == 'draft'">
-                                            <span class="text-muted">Creado: <field name="create_date"/></span>
+                                            <span class="text-muted">Creado:
+                                                <field name="create_date"/>
+                                            </span>
                                         </t>
                                         <t t-if="record.state.raw_value == 'sent'">
-                                            <span class="text-success">Enviado: <field name="sent_date"/></span>
+                                            <span class="text-success">Enviado:
+                                                <field name="sent_date"/>
+                                            </span>
                                         </t>
                                     </div>
                                     <div class="o_kanban_tags_section">
@@ -152,7 +154,5 @@
                 </kanban>
             </field>
         </record>
-
-        
     </data>
 </odoo>

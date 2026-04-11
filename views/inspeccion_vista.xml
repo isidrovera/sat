@@ -1,147 +1,145 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <data>
-    <!-- Vista List -->
-    <record id="inspeccion_resultado_view_list" model="ir.ui.view">
-        <field name="name">inspeccion.resultado.list</field>
-        <field name="model">inspeccion.resultado</field>
-        <field name="arch" type="xml">
-            <list string="Inspecciones">
-                <field name="fecha" decoration-bf="True"/>
-                <field name="alquiler_id"/>
-                <field name="area_sistemas"/>
-                <field name="control_impresion"/>
-                <field name="cantidad_usuarios" sum="Total Usuarios"/>
-                <field name="espacio"/>
-                <field name="estado" widget="badge"/>
-                <field name="observaciones" optional="hide"/>
-            </list>
-        </field>
-    </record>
-
-    <!-- Vista Form -->
-    <record id="inspeccion_resultado_view_form" model="ir.ui.view">
-        <field name="name">inspeccion.resultado.form</field>
-        <field name="model">inspeccion.resultado</field>
-        <field name="arch" type="xml">
-            <form>
-                <header>
-                    <field name="estado" widget="statusbar"/>
-                </header>
-                <sheet>
-                    <div class="oe_button_box" name="button_box">
-                        <button name="action_view_alquiler" type="object" 
+        <!-- Vista List -->
+        <record id="inspeccion_resultado_view_list" model="ir.ui.view">
+            <field name="name">inspeccion.resultado.list</field>
+            <field name="model">inspeccion.resultado</field>
+            <field name="arch" type="xml">
+                <list string="Inspecciones">
+                    <field name="fecha" decoration-bf="True"/>
+                    <field name="alquiler_id"/>
+                    <field name="area_sistemas"/>
+                    <field name="control_impresion"/>
+                    <field name="cantidad_usuarios" sum="Total Usuarios"/>
+                    <field name="espacio"/>
+                    <field name="estado" widget="badge"/>
+                    <field name="observaciones" optional="hide"/>
+                </list>
+            </field>
+        </record>
+        <!-- Vista Form -->
+        <record id="inspeccion_resultado_view_form" model="ir.ui.view">
+            <field name="name">inspeccion.resultado.form</field>
+            <field name="model">inspeccion.resultado</field>
+            <field name="arch" type="xml">
+                <form>
+                    <header>
+                        <field name="estado" widget="statusbar"/>
+                    </header>
+                    <sheet>
+                        <div class="oe_button_box" name="button_box">
+                            <button name="action_view_alquiler" type="object" 
                                 class="oe_stat_button" icon="fa-file-text-o">
-                            <field name="alquiler_id" string="Alquiler" widget="statinfo"/>
-                        </button>
-                    </div>
-                    <div class="oe_title">
-                        <h1><field name="alquiler_id" readonly="1"/></h1>
-                    </div>
-                    <group>
+                                <field name="alquiler_id" string="Alquiler" widget="statinfo"/>
+                            </button>
+                        </div>
+                        <div class="oe_title">
+                            <h1>
+                                <field name="alquiler_id" readonly="1"/>
+                            </h1>
+                        </div>
                         <group>
-                            <field name="fecha"/>
-                            <field name="punto_corriente"/>
-                            <field name="voltaje"/>
-                            <field name="punto_red"/>
-                            <field name="wifi"/>
-                        </group>
-                        <group>
-                            <field name="area_sistemas"/>
-                            <field name="contacto_sistemas" invisible="area_sistemas == False"/>
-                        </group>
-                    </group>
-                    <notebook>
-                        <page name="control_impresion" string="Control de Impresión">
                             <group>
-                                <group>
-                                    <field name="control_impresion"/>
-                                    <field name="tipo_control" invisible="control_impresion == False"/>
-                                    <field name="cantidad_usuarios" invisible="control_impresion == False"/>
-                                </group>
-                                <group>
-                                    <field name="requiere_reportes" invisible="control_impresion == False"/>
-                                    <field name="frecuencia_reportes" invisible="requiere_reportes == False"/>
-                                </group>
+                                <field name="fecha"/>
+                                <field name="punto_corriente"/>
+                                <field name="voltaje"/>
+                                <field name="punto_red"/>
+                                <field name="wifi"/>
                             </group>
-                        </page>
-                        <page name="entorno_pcs" string="Entorno PCs">
                             <group>
+                                <field name="area_sistemas"/>
+                                <field name="contacto_sistemas" invisible="area_sistemas == False"/>
+                            </group>
+                        </group>
+                        <notebook>
+                            <page name="control_impresion" string="Control de Impresión">
                                 <group>
-                                    <field name="cantidad_windows"/>
-                                    <field name="cantidad_mac"/>
-                                    <field name="cantidad_linux"/>
+                                    <group>
+                                        <field name="control_impresion"/>
+                                        <field name="tipo_control" invisible="control_impresion == False"/>
+                                        <field name="cantidad_usuarios" invisible="control_impresion == False"/>
+                                    </group>
+                                    <group>
+                                        <field name="requiere_reportes" invisible="control_impresion == False"/>
+                                        <field name="frecuencia_reportes" invisible="requiere_reportes == False"/>
+                                    </group>
                                 </group>
+                            </page>
+                            <page name="entorno_pcs" string="Entorno PCs">
                                 <group>
-                                    <field name="usar_smb"/>
-                                    <field name="usar_ftp"/>
-                                    <field name="usar_email"/>
-                                    <field name="tipo_servidor_email" invisible="usar_email == False"/>
-                                    <field name="servidor_email_propio" 
+                                    <group>
+                                        <field name="cantidad_windows"/>
+                                        <field name="cantidad_mac"/>
+                                        <field name="cantidad_linux"/>
+                                    </group>
+                                    <group>
+                                        <field name="usar_smb"/>
+                                        <field name="usar_ftp"/>
+                                        <field name="usar_email"/>
+                                        <field name="tipo_servidor_email" invisible="usar_email == False"/>
+                                        <field name="servidor_email_propio" 
                                            invisible="tipo_servidor_email != 'propio'"/>
+                                    </group>
                                 </group>
-                            </group>
-                        </page>
-                        <page name="espacio_fisico" string="Espacio Físico">
-                            <group>
+                            </page>
+                            <page name="espacio_fisico" string="Espacio Físico">
                                 <group>
-                                    <field name="espacio"/>
-                                    <field name="ancho_pasillo"/>
-                                    <field name="piso"/>
-                                </group>
-                                <group>
-                                    <field name="ascensor"/>
-                                    <field name="tiene_estacionamiento"/>
-                                    <field name="observaciones_estacionamiento" 
+                                    <group>
+                                        <field name="espacio"/>
+                                        <field name="ancho_pasillo"/>
+                                        <field name="piso"/>
+                                    </group>
+                                    <group>
+                                        <field name="ascensor"/>
+                                        <field name="tiene_estacionamiento"/>
+                                        <field name="observaciones_estacionamiento" 
                                            invisible="tiene_estacionamiento == False"/>
+                                    </group>
                                 </group>
-                            </group>
-                        </page>
-                        <page name="observaciones" string="Observaciones">
-                            <field name="observaciones" nolabel="1"/>
-                        </page>
-                    </notebook>
-                </sheet>
-                <chatter/>
-            </form>
-        </field>
-    </record>
-
-    <!-- Vista Kanban -->
-    <record id="inspeccion_resultado_view_kanban" model="ir.ui.view">
-        <field name="name">inspeccion.resultado.kanban</field>
-        <field name="model">inspeccion.resultado</field>
-        <field name="arch" type="xml">
-            <kanban default_group_by="estado" records_draggable="1">
-                <field name="estado"/>
-                <field name="alquiler_id"/>
-                <field name="fecha"/>
-                <field name="control_impresion"/>
-                <templates>
-                    <t t-name="kanban-box">
-                        <div class="oe_kanban_card oe_kanban_global_click">
-                            <div class="oe_kanban_details">
-                                <strong>
-                                    <field name="alquiler_id"/>
-                                </strong>
-                                <div>
-                                    <field name="fecha"/>
-                                </div>
-                                <div t-if="record.control_impresion.raw_value" 
+                            </page>
+                            <page name="observaciones" string="Observaciones">
+                                <field name="observaciones" nolabel="1"/>
+                            </page>
+                        </notebook>
+                    </sheet>
+                    <chatter/>
+                </form>
+            </field>
+        </record>
+        <!-- Vista Kanban -->
+        <record id="inspeccion_resultado_view_kanban" model="ir.ui.view">
+            <field name="name">inspeccion.resultado.kanban</field>
+            <field name="model">inspeccion.resultado</field>
+            <field name="arch" type="xml">
+                <kanban default_group_by="estado" records_draggable="1">
+                    <field name="estado"/>
+                    <field name="alquiler_id"/>
+                    <field name="fecha"/>
+                    <field name="control_impresion"/>
+                    <templates>
+                        <t t-name="kanban-box">
+                            <div class="oe_kanban_card oe_kanban_global_click">
+                                <div class="oe_kanban_details">
+                                    <strong>
+                                        <field name="alquiler_id"/>
+                                    </strong>
+                                    <div>
+                                        <field name="fecha"/>
+                                    </div>
+                                    <div t-if="record.control_impresion.raw_value" 
                                      class="badge text-bg-info">
                                     Control de Impresión
                                 </div>
-                                <div class="text-end mt-2">
-                                    <field name="estado" widget="badge"/>
+                                    <div class="text-end mt-2">
+                                        <field name="estado" widget="badge"/>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    </t>
-                </templates>
-            </kanban>
-        </field>
-    </record>
-
-    
-</data>
+                        </t>
+                    </templates>
+                </kanban>
+            </field>
+        </record>
+    </data>
 </odoo>

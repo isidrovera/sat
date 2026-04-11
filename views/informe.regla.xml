@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
   <data>
-
     <!-- =========================== -->
     <!-- SEARCH (Búsqueda avanzada)  -->
     <!-- =========================== -->
@@ -16,16 +15,13 @@
           <field name="calidad"/>
           <field name="estado_operativo"/>
           <field name="severidad"/>
-
           <!-- Filtros rápidos -->
           <filter name="fil_sev_alta"  string="Severidad Alta"  domain="[('severidad','=','alta')]"/>
           <filter name="fil_sev_media" string="Severidad Media" domain="[('severidad','=','media')]"/>
           <filter name="fil_sev_baja"  string="Severidad Baja"  domain="[('severidad','=','baja')]"/>
-
           <filter name="fil_op_ok"     string="Operativo"          domain="[('estado_operativo','=','operativo')]"/>
           <filter name="fil_op_par"    string="Operativo parcial"  domain="[('estado_operativo','=','parcial')]"/>
           <filter name="fil_op_no"     string="No operativo"       domain="[('estado_operativo','=','no_op')]"/>
-
           <!-- Agrupar por -->
           <group expand="0" string="Agrupar por">
             <filter name="grp_tipo"   string="Tipo de componente" context="{'group_by':'tipo_id'}"/>
@@ -38,7 +34,6 @@
         </search>
       </field>
     </record>
-
     <!-- ============ -->
     <!-- LIST (lista) -->
     <!-- ============ -->
@@ -61,7 +56,6 @@
         </list>
       </field>
     </record>
-
     <!-- ============ -->
     <!-- FORM (form)  -->
     <!-- ============ -->
@@ -76,7 +70,6 @@
                 <field name="frase_hallazgo" placeholder="Hallazgo (8–15 palabras)"/>
               </h1>
             </div>
-
             <group>
               <group>
                 <field name="tipo_id"/>
@@ -90,7 +83,6 @@
                 <field name="severidad"/>
               </group>
             </group>
-
             <group string="Recomendación">
               <field name="frase_recomendacion" placeholder="Recomendación breve y accionable"/>
             </group>

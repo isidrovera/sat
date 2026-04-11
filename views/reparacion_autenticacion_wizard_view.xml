@@ -1,48 +1,49 @@
 <?xml version='1.0' encoding='utf-8'?>
 <odoo>
     <data>
-    <record id="view_reparacion_autenticacion_wizard_form" model="ir.ui.view">
-        <field name="name">Autenticación de Serie y Modelo</field>
-        <field name="model">reparacion.autenticacion.wizard</field>
-        <field name="arch" type="xml">
-            <form>
-                <div class="alert alert-warning d-flex align-items-center gap-2 p-3 rounded-2 mb-4">
-                    <i class="fa fa-shield text-warning fa-lg me-2"/>
-                    <div>
-                        <strong class="d-block mb-1">Verificación de Seguridad</strong>
-                        <span>Por favor verifique físicamente la <strong>Serie</strong> y el <strong>Modelo</strong> en la máquina antes de continuar. En caso de discrepancia, contacte al administrador.</span>
+        <record id="view_reparacion_autenticacion_wizard_form" model="ir.ui.view">
+            <field name="name">Autenticación de Serie y Modelo</field>
+            <field name="model">reparacion.autenticacion.wizard</field>
+            <field name="arch" type="xml">
+                <form>
+                    <div class="alert alert-warning d-flex align-items-center gap-2 p-3 rounded-2 mb-4">
+                        <i class="fa fa-shield text-warning fa-lg me-2"/>
+                        <div>
+                            <strong class="d-block mb-1">Verificación de Seguridad</strong>
+                            <span>Por favor verifique físicamente la
+                                <strong>Serie</strong> y el
+                                <strong>Modelo</strong> en la máquina antes de continuar. En caso de discrepancia, contacte al administrador.
+                            </span>
+                        </div>
                     </div>
-                </div>
-                
-                <group class="o_group">
-                    <field name="serie" placeholder="Ingrese la serie del equipo" 
+                    <group class="o_group">
+                        <field name="serie" placeholder="Ingrese la serie del equipo" 
                            class="form-control-lg" 
                            widget="char" 
                            decoration-info="True"/>
-                    <field name="modelo_id" 
+                        <field name="modelo_id" 
                            placeholder="Seleccione el modelo del equipo" 
                            class="form-control-lg"
                            options="{'no_create': True}"
                            />
-                </group>
-                
-                <footer class="modal-footer justify-content-between">
-                    <button special="cancel" 
+                    </group>
+                    <footer class="modal-footer justify-content-between">
+                        <button special="cancel" 
                             class="btn btn-light" 
                             icon="fa-times">
                         Cancelar
                     </button>
-                    <button name="validar_acceso" 
+                        <button name="validar_acceso" 
                             type="object" 
                             string="Verificar y Continuar" 
                             class="btn btn-primary" 
                             icon="fa-check-circle">
-                        <i class="fa fa-check-circle me-2"/>
+                            <i class="fa fa-check-circle me-2"/>
                         Verificar y Continuar
-                    </button>
-                </footer>
-            </form>
-        </field>
-    </record>
+                        </button>
+                    </footer>
+                </form>
+            </field>
+        </record>
     </data>
 </odoo>

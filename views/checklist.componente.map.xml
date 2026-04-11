@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
   <data>
-
     <!-- =========================== -->
     <!-- SEARCH (Búsqueda avanzada)  -->
     <!-- =========================== -->
@@ -13,11 +12,9 @@
           <field name="field_name"/>
           <field name="tipo_id"/>
           <field name="color"/>
-
           <!-- Filtros rápidos -->
           <filter name="fil_blocking" string="Puede dejar no operativo"
                   domain="[('is_blocking','=',True)]"/>
-
           <!-- Agrupar por -->
           <group expand="0" string="Agrupar por">
             <filter name="grp_tipo"  string="Tipo"   context="{'group_by':'tipo_id'}"/>
@@ -28,7 +25,6 @@
         </search>
       </field>
     </record>
-
     <!-- ============ -->
     <!-- LIST (lista) -->
     <!-- ============ -->
@@ -47,7 +43,6 @@
         </list>
       </field>
     </record>
-
     <!-- ============ -->
     <!-- FORM (form)  -->
     <!-- ============ -->
@@ -72,7 +67,5 @@
         </form>
       </field>
     </record>
-
-    
   </data>
 </odoo>

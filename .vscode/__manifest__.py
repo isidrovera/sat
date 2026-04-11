@@ -12,7 +12,7 @@
     'data': [
         
         'views/ventas.xml',
-        'views/templates.xml',
+        #'views/templates.xml',
         'data/ir_secuense.xml',
         'data/ir_secuense_ticket.xml',
         'views/modelos.xml',

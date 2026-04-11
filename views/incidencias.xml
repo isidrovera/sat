@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <data>
-
         <record id="view_incidencia_form" model="ir.ui.view">
             <field name="name">taller.incidencia.form</field>
             <field name="model">taller.incidencia</field>
@@ -31,7 +30,6 @@
                 </form>
             </field>
         </record>
-
         <record id="view_incidencia_tree" model="ir.ui.view">
             <field name="name">taller.incidencia.tree</field>
             <field name="model">taller.incidencia</field>
@@ -53,7 +51,5 @@
                 </list>
             </field>
         </record>
-
-        
     </data>
 </odoo>

@@ -8,7 +8,6 @@
         <form string="Gestión de Reparaciones">
           <!-- CRÍTICO: Cargar estado_id ANTES para evaluaciones de invisible -->
           <field name="estado_id" invisible="1"/>
-          
           <!-- HEADER: Con botones mejorados e iconos modernos -->
           <header>
             <button name="action_generar_informe"
@@ -49,7 +48,6 @@
               type="object"
               string="Imprimir"
               class="btn-primary"/>
-          
             <field name="estado_id" widget="statusbar" statusbar_visible="true" />
             <button
               name="action_request_parts"
@@ -66,40 +64,36 @@
               class="btn-warning"
               icon="fa-wrench"
               invisible="estado_id != 'en_revision'"/>
-            
           </header>
-
           <sheet>
             <div class="oe_button_box" name="button_box">
-            <button name="action_view_component_evaluations"
+              <button name="action_view_component_evaluations"
                 type="object"
                 class="oe_stat_button"
                 icon="fa-cogs">
-            <field name="componente_eval_count"
+                <field name="componente_eval_count"
                    string="Componentes"
                    widget="statinfo"/>
-        </button>
-
-        <!-- 🧩 Accesorios -->
-        <button name="action_view_accessory_evaluations"
+              </button>
+              <!-- 🧩 Accesorios -->
+              <button name="action_view_accessory_evaluations"
                 type="object"
                 class="oe_stat_button"
                 icon="fa-puzzle-piece">
-            <field name="accesorio_eval_count"
+                <field name="accesorio_eval_count"
                    string="Accesorios"
                    widget="statinfo"/>
-        </button>
-
-        <!-- 🚚 Solicitudes de partes -->
-        <button name="action_view_parts_requests"
+              </button>
+              <!-- 🚚 Solicitudes de partes -->
+              <button name="action_view_parts_requests"
                 type="object"
                 class="oe_stat_button"
                 icon="fa-truck">
-            <field name="parts_request_count"
+                <field name="parts_request_count"
                    string="Partes"
                    widget="statinfo"/>
-        </button>
-        </div>
+              </button>
+            </div>
             <!-- TÍTULO DE LA REPARACIÓN -->
             <div class="oe_title">
               <label for="name" style="font-size: 16px; color: #212529;">Referencia de Reparación</label>
@@ -107,7 +101,6 @@
                 <field name="name" placeholder="Número/ID de Reparación" style="font-size: 20px;" />
               </h1>
             </div>
-            
             <!-- CLIENTE -->
             <div class="oe_title">
               <label for="cliente_id" style="font-size: 16px; color: #212529;">Cliente</label>
@@ -116,13 +109,11 @@
                   widget="many2one_avatar" style="font-size: 20px;" />
               </h1>
             </div>
-            
             <!-- DATOS PRINCIPALES EN GRUPOS -->
             <group>
               <!-- GRUPO: DATOS PARA REVISIÓN -->
               <group string="Datos para la revisión"
                 style="background-color: #f0f9ff; border-radius: 8px; padding: 15px; border-left: 4px solid #0d6efd;">
-
                 <field name="prioridad" widget="badge"
                   help="Define la urgencia de atención: Alta (24h), Media (48h), Baja (72h). Asignaciones de prioridad alta requieren aprobación de supervisor." />
                 <field name="tipo_revision" widget="badge"
@@ -135,11 +126,9 @@
                 <field name="responsable_mobile_clean"
                   help="Número de contacto directo del técnico para coordinaciones urgentes." />
               </group>
-              
               <!-- GRUPO: DATOS DEL EQUIPO -->
               <group string="Datos del equipo"
                 style="background-color: #f8f9fa; border-radius: 8px; padding: 15px; border-left: 4px solid #495057;">
-
                 <field name="importacion"
                   help="Referencia del lote de importación al que pertenece este equipo." />
                 <field name="nombre_proveedor"
@@ -165,10 +154,8 @@
                 <field name="autorizacion_cambio_digitos" invisible="1" />
                 <field name="autenticacion_correcta" invisible="1" />
                 <field name="pcloud_folder_id" readonly="1"/>
-                
               </group>
             </group>
-            
             <notebook>
               <!-- PESTAÑA: INFORME TÉCNICO -->
               <page string="Informe Técnico">
@@ -193,7 +180,6 @@
                       invisible="calidad_justificacion == False" />
                   </group>
                 </group>
-                
                 <!-- Configuración de generación -->
                 <group string="⚙️ Configuración">
                   <group>
@@ -210,9 +196,7 @@
                       help="Genera el informe técnico basado en las evaluaciones marcadas" />
                   </group>
                 </group>
-
                 <separator />
-
                 <!-- Observaciones del técnico -->
                 <group string="📝 Observaciones del Técnico">
                   <field name="observaciones_tecnico"
@@ -221,20 +205,15 @@
                     options="{'style-inline': true}"
                     nolabel="1" />
                 </group>
-
                 <separator />
-
                 <!-- Información de auditoría -->
                 <group invisible="informe_generado_por_ia == False">
                   <div class="alert alert-info" role="alert" style="margin-bottom: 0px;">
-                    <i class="fa fa-info-circle" /> 
+                    <i class="fa fa-info-circle" />
                     <strong>Este informe fue generado con Inteligencia Artificial</strong> basándose en las evaluaciones técnicas del checklist. Puedes editarlo manualmente si es necesario.
                   </div>
                 </group>
               </page>
-              
-             
-              
               <!-- PESTAÑA: CHECK LIST NUEVO -->
               <page string="Check List" name="evaluaciones">
                 <div style="margin: 10px 0; padding: 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 10px; color: white; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
@@ -242,49 +221,44 @@
                     <i class="fa fa-cogs"></i> Sistema de Evaluación por Componentes
                   </h4>
                   <p style="margin-bottom: 0; font-size: 14px; opacity: 0.95;">
-                    ✅ <b>Importante:</b> Debe completar el ESTADO de TODOS los componentes antes de finalizar
+                    ✅
+                    <b>Importante:</b> Debe completar el ESTADO de TODOS los componentes antes de finalizar
                   </p>
                 </div>
-
                 <separator string="📋 Componentes Evaluados"/>
-                
                 <field name="evaluacion_ids" nolabel="1">
                   <list editable="bottom" 
                         create="true" 
                         delete="true"
                         decoration-success="estado_id"
                         decoration-warning="not estado_id">
-                    
                     <field name="componente_tipo_id" 
                            readonly="1"
                            string="🔧 Componente"
                            options="{'no_create': True, 'no_open': True}"/>
-                    
                     <field name="color_id" 
                            readonly="1" 
                            optional="show"
                            string="🎨 Color"
                            options="{'no_create': True, 'no_open': True}"/>
-                    
                     <field name="estado_id" 
                            string="⭐ ESTADO (Obligatorio)"
                            placeholder="⚠️ SELECCIONAR ESTADO"
                            options="{'no_create': True, 'no_open': True}"/>
-                    
                     <field name="observaciones" 
                            optional="show"
                            string="📝 Observaciones"
                            placeholder="Detalles técnicos..."/>
                   </list>
                 </field>
-                
                 <div class="alert alert-info" role="alert" style="margin-top: 15px; border-left: 4px solid #667eea;">
                   <i class="fa fa-info-circle"></i>
-                  <b>Guía Visual:</b> Filas <span style="background-color: #fff3cd; padding: 2px 8px; border-radius: 3px;">amarillas</span> necesitan estado. 
-                  Filas <span style="background-color: #d4edda; padding: 2px 8px; border-radius: 3px;">verdes</span> están completas.
+                  <b>Guía Visual:</b> Filas
+                  <span style="background-color: #fff3cd; padding: 2px 8px; border-radius: 3px;">amarillas</span> necesitan estado. 
+                  Filas
+                  <span style="background-color: #d4edda; padding: 2px 8px; border-radius: 3px;">verdes</span> están completas.
                 </div>
               </page>
-
               <!-- PESTAÑA: ACCESORIOS -->
               <page string="Accesorios" name="accesorios_eval">
                 <div style="margin: 10px 0; padding: 15px; background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); border-radius: 10px; color: white; box-shadow: 0 4px 15px rgba(17, 153, 142, 0.3);">
@@ -295,44 +269,36 @@
                     ✅ Evalúe los accesorios opcionales instalados
                   </p>
                 </div>
-
                 <separator string="🔌 Accesorios Evaluados"/>
-                
                 <field name="accesorio_eval_ids" nolabel="1">
                   <list editable="bottom" 
                         create="false"
                         delete="true"
                         decoration-success="estado_id"
                         decoration-warning="not estado_id">
-                    
                     <field name="tipo_id" 
                            readonly="1"
                            string="🔌 Accesorio"/>
-                    
                     <field name="estado_id"
                            string="⭐ ESTADO (Obligatorio)"
                            placeholder="⚠️ SELECCIONAR ESTADO"
                            options="{'no_create': True, 'no_open': True}"/>
-                    
                     <field name="subparte_ids" 
                            widget="many2many_tags"
                            string="🔩 Subpartes"
                            options="{'no_create': True}"
                            optional="show"/>
-                    
                     <field name="observaciones" 
                            optional="show"
                            string="📝 Notas"
                            placeholder="Detalles..."/>
                   </list>
                 </field>
-
                 <div class="alert alert-success" role="alert" style="margin-top: 15px; border-left: 4px solid #38ef7d;">
                   <i class="fa fa-lightbulb-o"></i>
                   <b>Tip:</b> Si un accesorio no aplica al modelo, márquelo como "No Aplica"
                 </div>
               </page>
-              
               <!-- PESTAÑA: DETALLE DE FALLA PROVEEDOR -->
               <page string="Detalle de falla proveedor">
                 <group>
@@ -346,7 +312,6 @@
                   </group>
                 </group>
               </page>
-              
               <!-- PESTAÑA: DETALLE FALLA VENTAS -->
               <page string="Detalle falla ventas">
                 <group>
@@ -359,33 +324,30 @@
                   </group>
                 </group>
               </page>
-              
               <!-- PESTAÑA: GALERÍA DE FOTOS -->
               <page string="Galería de Fotos" name="fotos">
                 <!-- Galería de imágenes -->
                 <div class="w-100" style="margin:15px 0;">
-                    <field name="fotos_ids" widget="gallery_widget" class="w-100"/>
+                  <field name="fotos_ids" widget="gallery_widget" class="w-100"/>
                 </div>
               </page>
             </notebook>
           </sheet>
-
           <chatter />
         </form>
       </field>
     </record>
-    
     <!-- VISTA LISTA (TREE) -->
     <record id="reparaciones_tree_view" model="ir.ui.view">
       <field name="name">reparaciones.reparaciones.list</field>
       <field name="model">reparaciones.reparaciones</field>
       <field name="arch" type="xml">
         <list string="Reparaciones" default_order="id desc">
-          <field name="create_date" string="Agendado" widget="remaining_days" width="80%" />         
+          <field name="create_date" string="Agendado" widget="remaining_days" width="80%" />
           <field name="cliente_id" widget="many2one_avatar" />
           <field name="marca" />
           <field name="maquina_id" />
-          <field name="serie_id" />          
+          <field name="serie_id" />
           <field name="ubicacion_id" widget="badge" />
           <field name="responsable_id" widget="many2one_avatar" />
           <field name="estado_id" widget="badge" 
@@ -397,7 +359,6 @@
         </list>
       </field>
     </record>
-    
     <!-- VISTA BÚSQUEDA -->
     <record id="reparaciones_search_view" model="ir.ui.view">
       <field name="name">reparaciones.reparaciones.search</field>
@@ -413,7 +374,6 @@
           <field name="responsable_id" string="Técnico"/>
           <field name="importacion" string="Importación"/>
           <field name="nombre_maquina" string="Modelo"/>
-
           <!-- FILTROS POR ESTADO -->
           <separator/>
           <filter string="Sin Revisar" name="filter_sin_revisar" 
@@ -430,9 +390,7 @@
                   domain="[('estado_id', '=', 'de_partes')]"/>
           <filter string="Entregadas" name="filter_entregada" 
                   domain="[('estado_id', '=', 'entregada')]"/>
-          
           <separator/>
-          
           <!-- FILTROS POR PRIORIDAD -->
           <filter string="Prioridad Alta" name="filter_prioridad_alta" 
                   domain="[('prioridad', '=', 'alta')]"/>
@@ -440,9 +398,7 @@
                   domain="[('prioridad', '=', 'media')]"/>
           <filter string="Prioridad Baja" name="filter_prioridad_baja" 
                   domain="[('prioridad', '=', 'baja')]"/>
-          
           <separator/>
-          
           <!-- FILTROS POR UBICACIÓN -->
           <filter string="Primer Piso" name="filter_primer_piso" 
                   domain="[('ubicacion_id', '=', 'primer_piso')]"/>
@@ -456,17 +412,13 @@
                   domain="[('ubicacion_id', '=', 'bodega')]"/>
           <filter string="Cliente" name="filter_cliente_ubicacion" 
                   domain="[('ubicacion_id', '=', 'cliente')]"/>
-          
           <separator/>
-          
           <!-- FILTROS POR TIPO DE MÁQUINA -->
           <filter string="Color" name="filter_color" 
                   domain="[('tipo_id', '=', 'color')]"/>
           <filter string="Monocromática" name="filter_monocromatica" 
                   domain="[('tipo_id', '=', 'monocromatica')]"/>
-          
           <separator/>
-          
           <!-- FILTROS TEMPORALES -->
           <filter string="Creadas Hoy" name="filter_hoy" 
                   domain="[('create_date', '&gt;=', datetime.datetime.combine(context_today(), datetime.time(0,0,0))),
@@ -476,9 +428,7 @@
                            ('create_date', '&lt;=', (context_today() + datetime.timedelta(days=6-context_today().weekday())).strftime('%Y-%m-%d'))]"/>
           <filter string="Este Mes" name="filter_mes" 
                   domain="[('create_date', '&gt;=', datetime.datetime.now().strftime('%Y-%m-01'))]"/>
-          
           <separator/>
-          
           <!-- AGRUPAR POR -->
           <group expand="0" string="Agrupar Por">
             <filter string="Estado" name="group_estado" 
@@ -516,7 +466,6 @@
         </search>
       </field>
     </record>
-    
     <!-- VISTA KANBAN -->
     <record id="reparaciones_kanban_view" model="ir.ui.view">
       <field name="name">reparaciones.kanban</field>
@@ -551,7 +500,6 @@
                     <field name="name" class="fw-bold" />
                   </div>
                 </div>
-                
                 <!-- Contenido principal -->
                 <div class="p-3">
                   <!-- Cliente y Asesora -->
@@ -565,49 +513,42 @@
                     <span class="text-muted me-1">Asesora:</span>
                     <field name="asesora_id" />
                   </div>
-                  
                   <!-- Marca -->
                   <div class="d-flex align-items-center mb-2">
                     <i class="fa fa-copyright text-success me-2" title="Marca" />
                     <span class="text-muted me-1">Marca:</span>
                     <field name="marca" />
                   </div>
-                  
                   <!-- Modelo -->
                   <div class="d-flex align-items-center mb-2">
                     <i class="fa fa-print text-primary me-2" title="Modelo" />
                     <span class="text-muted me-1">Modelo:</span>
                     <field name="maquina_id" />
                   </div>
-                  
                   <!-- Serie -->
                   <div class="d-flex align-items-center mb-2">
                     <i class="fa fa-qrcode text-secondary me-2" title="Serie" />
                     <span class="text-muted me-1">Serie:</span>
                     <field name="serie_id" />
                   </div>
-                  
                   <!-- Contómetro -->
                   <div class="d-flex align-items-center mb-2">
                     <i class="fa fa-calculator text-purple me-2" title="Contómetro" />
                     <span class="text-muted me-1">Contómetro:</span>
                     <field name="contometrok_id" />
                   </div>
-                  
                   <!-- Observaciones -->
                   <div class="d-flex align-items-center mb-2">
                     <i class="fa fa-question-circle text-danger me-2" title="Observaciones" />
                     <span class="text-muted me-1">Obs:</span>
                     <field name="falla_ventas" class="text-truncate" />
                   </div>
-                  
                   <!-- Importación -->
                   <div class="d-flex align-items-center mb-2">
                     <i class="fa fa-plane text-success me-2" title="Importación" />
                     <span class="text-muted me-1">Import.:</span>
                     <field name="importacion" />
                   </div>
-                  
                   <!-- Estado y Tipo de revisión -->
                   <div class="d-flex justify-content-between align-items-center mb-2 border-top pt-2">
                     <div class="d-flex align-items-center">
@@ -622,7 +563,6 @@
                       <field name="tipo_revision" widget="badge" />
                     </div>
                   </div>
-                  
                   <!-- Ubicación y Prioridad -->
                   <div class="d-flex justify-content-between align-items-center mb-2">
                     <div class="d-flex align-items-center">
@@ -634,7 +574,6 @@
                       <field name="prioridad" widget="priority" />
                     </div>
                   </div>
-                  
                   <!-- Footer con técnico -->
                   <div class="pt-2 border-top">
                     <div class="d-flex align-items-center">
@@ -644,7 +583,6 @@
                     </div>
                   </div>
                 </div>
-                
                 <!-- Indicador lateral de estado -->
                 <div
                   t-attf-class="position-absolute top-0 start-0 h-100 w-1 

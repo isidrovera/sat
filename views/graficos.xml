@@ -1,4 +1,6 @@
+<?xml version='1.0' encoding='utf-8'?>
 <odoo>
+   
     <template id="template_graficos_dinamicos" name="Gráficos Dinámicos">
         <div>
             <style>
@@ -142,4 +144,6 @@
             });
         </script>
     </template>
+
+
 </odoo>

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <data>
+    
         <template id="location_change_success" name="Location Change Success">
             <t t-call="website.layout">
                 <div class="container">
@@ -15,5 +15,5 @@
                 </script>
             </t>
         </template>
-    </data>
+   
 </odoo>

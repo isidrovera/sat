@@ -1,371 +1,340 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-<data>
-
-<!-- =========================================================================
+    
+        <!-- =========================================================================
      PÁGINA: ERROR / ESTADO
      ========================================================================= -->
-<template id="portal_solicitud_partes_error" name="SAT - Error Solicitud Partes">
-    <t t-call="web.layout">
-        <t t-set="head_title">Solicitud de Partes</t>
-        <div style="min-height:100vh;background:#f7f8fa;display:flex;align-items:center;justify-content:center;font-family:Arial,sans-serif;">
-            <div style="background:#fff;border-radius:10px;box-shadow:0 2px 16px rgba(0,0,0,0.10);padding:40px 48px;max-width:520px;width:100%;text-align:center;">
-                <div style="font-size:48px;margin-bottom:16px;">⚠️</div>
-                <h2 style="color:#c0392b;margin:0 0 12px 0;" t-esc="titulo"/>
-                <p style="color:#555;font-size:15px;margin:0;" t-raw="mensaje"/>
-                <div style="margin-top:32px;padding-top:20px;border-top:1px solid #eee;font-size:13px;color:#aaa;">
+        <template id="portal_solicitud_partes_error" name="SAT - Error Solicitud Partes">
+            <t t-call="web.layout">
+                <t t-set="head_title">Solicitud de Partes</t>
+                <div style="min-height:100vh;background:#f7f8fa;display:flex;align-items:center;justify-content:center;font-family:Arial,sans-serif;">
+                    <div style="background:#fff;border-radius:10px;box-shadow:0 2px 16px rgba(0,0,0,0.10);padding:40px 48px;max-width:520px;width:100%;text-align:center;">
+                        <div style="font-size:48px;margin-bottom:16px;">⚠️</div>
+                        <h2 style="color:#c0392b;margin:0 0 12px 0;" t-esc="titulo"/>
+                        <p style="color:#555;font-size:15px;margin:0;" t-raw="mensaje"/>
+                        <div style="margin-top:32px;padding-top:20px;border-top:1px solid #eee;font-size:13px;color:#aaa;">
                     Andes Solution Copiers · Sistema de Gestión SAT
                 </div>
-            </div>
-        </div>
-    </t>
-</template>
-
-<!-- =========================================================================
+                    </div>
+                </div>
+            </t>
+        </template>
+        <!-- =========================================================================
      PÁGINA: ÉXITO / CONFIRMACIÓN
      ========================================================================= -->
-<template id="portal_solicitud_partes_ok" name="SAT - OK Solicitud Partes">
-    <t t-call="web.layout">
-        <t t-set="head_title">Solicitud de Partes</t>
-        <div style="min-height:100vh;background:#f7f8fa;display:flex;align-items:center;justify-content:center;font-family:Arial,sans-serif;">
-            <div style="background:#fff;border-radius:10px;box-shadow:0 2px 16px rgba(0,0,0,0.10);padding:40px 48px;max-width:520px;width:100%;text-align:center;">
-                <div style="font-size:48px;margin-bottom:16px;">✅</div>
-                <h2 style="color:#27ae60;margin:0 0 12px 0;" t-esc="titulo"/>
-                <p style="color:#555;font-size:15px;margin:0 0 8px 0;" t-raw="mensaje"/>
-                <t t-if="detalle">
-                    <p style="color:#777;font-size:14px;margin:8px 0 0 0;" t-raw="detalle"/>
-                </t>
-                <div style="margin-top:32px;padding-top:20px;border-top:1px solid #eee;font-size:13px;color:#aaa;">
+        <template id="portal_solicitud_partes_ok" name="SAT - OK Solicitud Partes">
+            <t t-call="web.layout">
+                <t t-set="head_title">Solicitud de Partes</t>
+                <div style="min-height:100vh;background:#f7f8fa;display:flex;align-items:center;justify-content:center;font-family:Arial,sans-serif;">
+                    <div style="background:#fff;border-radius:10px;box-shadow:0 2px 16px rgba(0,0,0,0.10);padding:40px 48px;max-width:520px;width:100%;text-align:center;">
+                        <div style="font-size:48px;margin-bottom:16px;">✅</div>
+                        <h2 style="color:#27ae60;margin:0 0 12px 0;" t-esc="titulo"/>
+                        <p style="color:#555;font-size:15px;margin:0 0 8px 0;" t-raw="mensaje"/>
+                        <t t-if="detalle">
+                            <p style="color:#777;font-size:14px;margin:8px 0 0 0;" t-raw="detalle"/>
+                        </t>
+                        <div style="margin-top:32px;padding-top:20px;border-top:1px solid #eee;font-size:13px;color:#aaa;">
                     Andes Solution Copiers · Sistema de Gestión SAT
                 </div>
-            </div>
-        </div>
-    </t>
-</template>
-
-<!-- =========================================================================
+                    </div>
+                </div>
+            </t>
+        </template>
+        <!-- =========================================================================
      PÁGINA: TÉCNICO — CONFIRMAR RETIRO
      ========================================================================= -->
-<template id="portal_tecnico_retirar" name="SAT - Técnico Retirar">
-    <t t-call="web.layout">
-        <t t-set="head_title">Confirmar Retiro de Partes</t>
-        <div style="min-height:100vh;background:#f7f8fa;font-family:Arial,sans-serif;padding:32px 16px;">
-            <div style="max-width:680px;margin:0 auto;">
-
-                <!-- Header -->
-                <div style="background:#2b6cb0;color:#fff;border-radius:10px 10px 0 0;padding:24px 32px;text-align:center;">
-                    <div style="font-size:28px;margin-bottom:6px;">📦 Retiro de Partes</div>
-                    <div style="font-size:18px;opacity:0.85;" t-esc="solicitud.name"/>
+        <template id="portal_tecnico_retirar" name="SAT - Técnico Retirar">
+            <t t-call="web.layout">
+                <t t-set="head_title">Confirmar Retiro de Partes</t>
+                <div style="min-height:100vh;background:#f7f8fa;font-family:Arial,sans-serif;padding:32px 16px;">
+                    <div style="max-width:680px;margin:0 auto;">
+                        <!-- Header -->
+                        <div style="background:#2b6cb0;color:#fff;border-radius:10px 10px 0 0;padding:24px 32px;text-align:center;">
+                            <div style="font-size:28px;margin-bottom:6px;">📦 Retiro de Partes</div>
+                            <div style="font-size:18px;opacity:0.85;" t-esc="solicitud.name"/>
                 </div>
-
-                <!-- Error -->
-                <t t-if="error">
-                    <div style="background:#fff5f5;border:1px solid #feb2b2;color:#c53030;padding:14px 20px;font-size:14px;">
-                        ⚠️ <t t-esc="error"/>
-                    </div>
-                </t>
-
-                <div style="background:#fff;border:1px solid #e2e8f0;border-top:none;padding:28px 32px;">
-
-                    <!-- Técnico asignado -->
-                    <div style="background:#ebf8ff;border:1px solid #bee3f8;border-radius:6px;padding:12px 16px;margin-bottom:20px;font-size:14px;">
-                        👷 <strong>Técnico asignado:</strong>
-                        <span t-esc="solicitud.tecnico_asignado_id.name"/>
-                    </div>
-
-                    <!-- Máquina Origen -->
-                    <div style="background:#f7fafc;border-radius:8px;padding:16px 20px;margin-bottom:16px;">
-                        <div style="font-weight:bold;color:#4a5568;margin-bottom:10px;">🖨️ Máquina a Intervenir (Origen)</div>
-                        <table style="width:100%;font-size:14px;border-collapse:collapse;">
-                            <tr>
-                                <td style="color:#718096;padding:4px 0;width:35%;">Modelo</td>
-                                <td style="font-weight:bold;color:#2d3748;" t-esc="solicitud.maquina_origen_id.name.name"/>
-                            </tr>
-                            <tr>
-                                <td style="color:#718096;padding:4px 0;">Serie</td>
-                                <td style="color:#2d3748;" t-esc="solicitud.maquina_origen_id.serie"/>
-                            </tr>
-                            <tr>
-                                <td style="color:#718096;padding:4px 0;">Marca</td>
-                                <td style="color:#2d3748;" t-esc="solicitud.maquina_origen_id.marca"/>
-                            </tr>
-                            <t t-if="solicitud.maquina_origen_id.cliente_id">
-                                <tr>
-                                    <td style="color:#718096;padding:4px 0;">Cliente</td>
-                                    <td style="font-weight:bold;color:#2d3748;" t-esc="solicitud.maquina_origen_id.cliente_id.name"/>
-                                </tr>
-                            </t>
-                            <t t-if="solicitud.maquina_origen_id.direccion">
-                                <tr>
-                                    <td style="color:#718096;padding:4px 0;">Ubicación</td>
-                                    <td style="color:#2d3748;" t-esc="solicitud.maquina_origen_id.direccion"/>
-                                </tr>
-                            </t>
-                        </table>
-                    </div>
-
-                    <!-- Máquina Destino -->
-                    <t t-if="solicitud.maquina_destino_id">
-                        <div style="background:#f0fff4;border-radius:8px;padding:16px 20px;margin-bottom:16px;">
-                            <div style="font-weight:bold;color:#276749;margin-bottom:10px;">🖨️ Destino de las Partes</div>
-                            <table style="width:100%;font-size:14px;border-collapse:collapse;">
-                                <tr>
-                                    <td style="color:#718096;padding:4px 0;width:35%;">Modelo</td>
-                                    <td style="font-weight:bold;color:#2d3748;" t-esc="solicitud.maquina_destino_id.name.name"/>
-                                </tr>
-                                <tr>
-                                    <td style="color:#718096;padding:4px 0;">Serie</td>
-                                    <td style="color:#2d3748;" t-esc="solicitud.maquina_destino_id.serie"/>
-                                </tr>
-                                <t t-if="solicitud.maquina_destino_id.cliente_id">
-                                    <tr>
-                                        <td style="color:#718096;padding:4px 0;">Cliente</td>
-                                        <td style="font-weight:bold;color:#276749;" t-esc="solicitud.maquina_destino_id.cliente_id.name"/>
-                                    </tr>
-                                </t>
-                                <t t-if="solicitud.maquina_destino_id.direccion">
-                                    <tr>
-                                        <td style="color:#718096;padding:4px 0;">Ubicación</td>
-                                        <td style="color:#2d3748;" t-esc="solicitud.maquina_destino_id.direccion"/>
-                                    </tr>
-                                </t>
-                            </table>
-                        </div>
-                    </t>
-
-                    <!-- Formulario retiro -->
-                    <form method="POST" id="form_retiro">
-                        <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
-
-                        <div style="margin-bottom:16px;">
-                            <div style="font-weight:bold;color:#4a5568;margin-bottom:12px;">
-                                📋 Partes a Retirar
-                                <span style="font-weight:normal;font-size:13px;color:#a0aec0;">(marque las que retiró)</span>
+                        <!-- Error -->
+                        <t t-if="error">
+                            <div style="background:#fff5f5;border:1px solid #feb2b2;color:#c53030;padding:14px 20px;font-size:14px;">
+                        ⚠️
+                                <t t-esc="error"/>
                             </div>
-
-                            <!-- Seleccionar todas -->
-                            <div style="margin-bottom:10px;">
-                                <label style="font-size:13px;color:#4299e1;cursor:pointer;">
-                                    <input type="checkbox" id="check_all"
+                        </t>
+                        <div style="background:#fff;border:1px solid #e2e8f0;border-top:none;padding:28px 32px;">
+                            <!-- Técnico asignado -->
+                            <div style="background:#ebf8ff;border:1px solid #bee3f8;border-radius:6px;padding:12px 16px;margin-bottom:20px;font-size:14px;">
+                        👷
+                                <strong>Técnico asignado:</strong>
+                                <span t-esc="solicitud.tecnico_asignado_id.name"/>
+                            </div>
+                            <!-- Máquina Origen -->
+                            <div style="background:#f7fafc;border-radius:8px;padding:16px 20px;margin-bottom:16px;">
+                                <div style="font-weight:bold;color:#4a5568;margin-bottom:10px;">🖨️ Máquina a Intervenir (Origen)</div>
+                                <table style="width:100%;font-size:14px;border-collapse:collapse;">
+                                    <tr>
+                                        <td style="color:#718096;padding:4px 0;width:35%;">Modelo</td>
+                                        <td style="font-weight:bold;color:#2d3748;" t-esc="solicitud.maquina_origen_id.name.name"/>
+                                    </tr>
+                                    <tr>
+                                        <td style="color:#718096;padding:4px 0;">Serie</td>
+                                        <td style="color:#2d3748;" t-esc="solicitud.maquina_origen_id.serie"/>
+                                    </tr>
+                                    <tr>
+                                        <td style="color:#718096;padding:4px 0;">Marca</td>
+                                        <td style="color:#2d3748;" t-esc="solicitud.maquina_origen_id.marca"/>
+                                    </tr>
+                                    <t t-if="solicitud.maquina_origen_id.cliente_id">
+                                        <tr>
+                                            <td style="color:#718096;padding:4px 0;">Cliente</td>
+                                            <td style="font-weight:bold;color:#2d3748;" t-esc="solicitud.maquina_origen_id.cliente_id.name"/>
+                                        </tr>
+                                    </t>
+                                    <t t-if="solicitud.maquina_origen_id.direccion">
+                                        <tr>
+                                            <td style="color:#718096;padding:4px 0;">Ubicación</td>
+                                            <td style="color:#2d3748;" t-esc="solicitud.maquina_origen_id.direccion"/>
+                                        </tr>
+                                    </t>
+                                </table>
+                            </div>
+                            <!-- Máquina Destino -->
+                            <t t-if="solicitud.maquina_destino_id">
+                                <div style="background:#f0fff4;border-radius:8px;padding:16px 20px;margin-bottom:16px;">
+                                    <div style="font-weight:bold;color:#276749;margin-bottom:10px;">🖨️ Destino de las Partes</div>
+                                    <table style="width:100%;font-size:14px;border-collapse:collapse;">
+                                        <tr>
+                                            <td style="color:#718096;padding:4px 0;width:35%;">Modelo</td>
+                                            <td style="font-weight:bold;color:#2d3748;" t-esc="solicitud.maquina_destino_id.name.name"/>
+                                        </tr>
+                                        <tr>
+                                            <td style="color:#718096;padding:4px 0;">Serie</td>
+                                            <td style="color:#2d3748;" t-esc="solicitud.maquina_destino_id.serie"/>
+                                        </tr>
+                                        <t t-if="solicitud.maquina_destino_id.cliente_id">
+                                            <tr>
+                                                <td style="color:#718096;padding:4px 0;">Cliente</td>
+                                                <td style="font-weight:bold;color:#276749;" t-esc="solicitud.maquina_destino_id.cliente_id.name"/>
+                                            </tr>
+                                        </t>
+                                        <t t-if="solicitud.maquina_destino_id.direccion">
+                                            <tr>
+                                                <td style="color:#718096;padding:4px 0;">Ubicación</td>
+                                                <td style="color:#2d3748;" t-esc="solicitud.maquina_destino_id.direccion"/>
+                                            </tr>
+                                        </t>
+                                    </table>
+                                </div>
+                            </t>
+                            <!-- Formulario retiro -->
+                            <form method="POST" id="form_retiro">
+                                <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                <div style="margin-bottom:16px;">
+                                    <div style="font-weight:bold;color:#4a5568;margin-bottom:12px;">
+                                📋 Partes a Retirar
+                                        <span style="font-weight:normal;font-size:13px;color:#a0aec0;">(marque las que retiró)</span>
+                                    </div>
+                                    <!-- Seleccionar todas -->
+                                    <div style="margin-bottom:10px;">
+                                        <label style="font-size:13px;color:#4299e1;cursor:pointer;">
+                                            <input type="checkbox" id="check_all"
                                         onchange="document.querySelectorAll('.parte-check').forEach(c => c.checked = this.checked)"
                                         style="margin-right:6px;"/>
                                     Marcar todas
-                                </label>
-                            </div>
-
-                            <t t-foreach="partes_pendientes" t-as="parte">
-                                <label style="display:flex;align-items:flex-start;gap:12px;background:#f7fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px 16px;margin-bottom:8px;cursor:pointer;">
-                                    <input type="checkbox"
+                                        </label>
+                                    </div>
+                                    <t t-foreach="partes_pendientes" t-as="parte">
+                                        <label style="display:flex;align-items:flex-start;gap:12px;background:#f7fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px 16px;margin-bottom:8px;cursor:pointer;">
+                                            <input type="checkbox"
                                         name="parte_ids"
                                         t-att-value="parte.id"
                                         class="parte-check"
                                         style="margin-top:2px;width:18px;height:18px;cursor:pointer;"/>
-                                    <div>
-                                        <div style="font-weight:bold;color:#2d3748;font-size:15px;" t-esc="parte.parte"/>
-                                        <t t-if="parte.descripcion">
-                                            <div style="color:#718096;font-size:13px;margin-top:2px;" t-esc="parte.descripcion"/>
-                                        </t>
-                                    </div>
-                                </label>
-                            </t>
-                        </div>
-
-                        <!-- Responsable de reposición — informativo -->
-                        <t t-if="solicitud.responsable_reposicion_id">
-                            <div style="background:#fffbeb;border:1px solid #fbd38d;border-radius:6px;padding:12px 16px;margin-bottom:20px;font-size:14px;">
-                                <strong>📋 Responsable de reposición:</strong>
-                                <span t-esc="solicitud.responsable_reposicion_id.name"/>
-                                <div style="font-size:12px;color:#975a16;margin-top:4px;">
+                                            <div>
+                                                <div style="font-weight:bold;color:#2d3748;font-size:15px;" t-esc="parte.parte"/>
+                                                <t t-if="parte.descripcion">
+                                                    <div style="color:#718096;font-size:13px;margin-top:2px;" t-esc="parte.descripcion"/>
+                                                </t>
+                                            </div>
+                                        </label>
+                                    </t>
+                                </div>
+                                <!-- Responsable de reposición — informativo -->
+                                <t t-if="solicitud.responsable_reposicion_id">
+                                    <div style="background:#fffbeb;border:1px solid #fbd38d;border-radius:6px;padding:12px 16px;margin-bottom:20px;font-size:14px;">
+                                        <strong>📋 Responsable de reposición:</strong>
+                                        <span t-esc="solicitud.responsable_reposicion_id.name"/>
+                                        <div style="font-size:12px;color:#975a16;margin-top:4px;">
                                     Será notificado automáticamente al confirmar el retiro.
                                 </div>
-                            </div>
-                        </t>
-
-                        <button type="submit"
+                                    </div>
+                                </t>
+                                <button type="submit"
                             style="width:100%;background:#2b6cb0;color:#fff;border:none;border-radius:8px;padding:14px;font-size:16px;font-weight:bold;cursor:pointer;margin-top:8px;">
                             ✅ Confirmar Retiro
                         </button>
-                    </form>
-
-                </div>
-
-                <div style="text-align:center;padding:16px;font-size:12px;color:#a0aec0;">
+                            </form>
+                        </div>
+                        <div style="text-align:center;padding:16px;font-size:12px;color:#a0aec0;">
                     Andes Solution Copiers · Sistema de Gestión SAT
                 </div>
-            </div>
-        </div>
-    </t>
-</template>
-
-<!-- =========================================================================
+                    </div>
+                </div>
+            </t>
+        </template>
+        <!-- =========================================================================
      PÁGINA: RESPONSABLE — REPOSICIÓN CON FOTO
      ========================================================================= -->
-<template id="portal_responsable_reponer" name="SAT - Responsable Reponer">
-    <t t-call="web.layout">
-        <t t-set="head_title">Reposición de Partes</t>
-        <div style="min-height:100vh;background:#f7f8fa;font-family:Arial,sans-serif;padding:32px 16px;">
-            <div style="max-width:720px;margin:0 auto;">
-
-                <!-- Header -->
-                <div style="background:#276749;color:#fff;border-radius:10px 10px 0 0;padding:24px 32px;text-align:center;">
-                    <div style="font-size:28px;margin-bottom:6px;">🔄 Reposición de Partes</div>
-                    <div style="font-size:18px;opacity:0.85;" t-esc="solicitud.name"/>
+        <template id="portal_responsable_reponer" name="SAT - Responsable Reponer">
+            <t t-call="web.layout">
+                <t t-set="head_title">Reposición de Partes</t>
+                <div style="min-height:100vh;background:#f7f8fa;font-family:Arial,sans-serif;padding:32px 16px;">
+                    <div style="max-width:720px;margin:0 auto;">
+                        <!-- Header -->
+                        <div style="background:#276749;color:#fff;border-radius:10px 10px 0 0;padding:24px 32px;text-align:center;">
+                            <div style="font-size:28px;margin-bottom:6px;">🔄 Reposición de Partes</div>
+                            <div style="font-size:18px;opacity:0.85;" t-esc="solicitud.name"/>
                 </div>
-
-                <!-- Errores -->
-                <t t-if="errores">
-                    <div style="background:#fff5f5;border:1px solid #feb2b2;padding:14px 20px;">
-                        <div style="font-weight:bold;color:#c53030;margin-bottom:8px;">⚠️ Corrija los siguientes errores:</div>
-                        <ul style="margin:0;padding-left:20px;color:#c53030;font-size:14px;">
-                            <t t-foreach="errores" t-as="err">
-                                <li t-esc="err"/>
-                            </t>
-                        </ul>
-                    </div>
-                </t>
-
-                <div style="background:#fff;border:1px solid #e2e8f0;border-top:none;padding:28px 32px;">
-
-                    <!-- Máquina Origen -->
-                    <div style="background:#f7fafc;border-radius:8px;padding:16px 20px;margin-bottom:16px;">
-                        <div style="font-weight:bold;color:#4a5568;margin-bottom:10px;">🖨️ Máquina Origen (de donde se retiraron)</div>
-                        <table style="width:100%;font-size:14px;border-collapse:collapse;">
-                            <tr>
-                                <td style="color:#718096;padding:4px 0;width:35%;">Modelo</td>
-                                <td style="font-weight:bold;color:#2d3748;" t-esc="solicitud.maquina_origen_id.name.name"/>
-                            </tr>
-                            <tr>
-                                <td style="color:#718096;padding:4px 0;">Serie</td>
-                                <td style="color:#2d3748;" t-esc="solicitud.maquina_origen_id.serie"/>
-                            </tr>
-                            <t t-if="solicitud.maquina_origen_id.cliente_id">
-                                <tr>
-                                    <td style="color:#718096;padding:4px 0;">Cliente</td>
-                                    <td style="font-weight:bold;color:#2d3748;" t-esc="solicitud.maquina_origen_id.cliente_id.name"/>
-                                </tr>
-                            </t>
-                            <t t-if="solicitud.maquina_origen_id.direccion">
-                                <tr>
-                                    <td style="color:#718096;padding:4px 0;">Ubicación</td>
-                                    <td style="color:#2d3748;" t-esc="solicitud.maquina_origen_id.direccion"/>
-                                </tr>
-                            </t>
-                        </table>
-                    </div>
-
-                    <!-- Máquina Destino -->
-                    <t t-if="solicitud.maquina_destino_id">
-                        <div style="background:#f0fff4;border-radius:8px;padding:16px 20px;margin-bottom:16px;">
-                            <div style="font-weight:bold;color:#276749;margin-bottom:10px;">🖨️ Máquina Destino (donde instalar)</div>
-                            <table style="width:100%;font-size:14px;border-collapse:collapse;">
-                                <tr>
-                                    <td style="color:#718096;padding:4px 0;width:35%;">Modelo</td>
-                                    <td style="font-weight:bold;color:#2d3748;" t-esc="solicitud.maquina_destino_id.name.name"/>
-                                </tr>
-                                <tr>
-                                    <td style="color:#718096;padding:4px 0;">Serie</td>
-                                    <td style="color:#2d3748;" t-esc="solicitud.maquina_destino_id.serie"/>
-                                </tr>
-                                <t t-if="solicitud.maquina_destino_id.cliente_id">
-                                    <tr>
-                                        <td style="color:#718096;padding:4px 0;">Cliente</td>
-                                        <td style="font-weight:bold;color:#276749;" t-esc="solicitud.maquina_destino_id.cliente_id.name"/>
-                                    </tr>
-                                </t>
-                                <t t-if="solicitud.maquina_destino_id.direccion">
-                                    <tr>
-                                        <td style="color:#718096;padding:4px 0;">Ubicación</td>
-                                        <td style="color:#2d3748;" t-esc="solicitud.maquina_destino_id.direccion"/>
-                                    </tr>
-                                </t>
-                            </table>
-                        </div>
-                    </t>
-
-                    <!-- Formulario por cada parte -->
-                    <form method="POST" enctype="multipart/form-data" id="form_reposicion">
-                        <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
-
-                        <t t-foreach="partes_retiradas" t-as="parte">
-                            <div style="border:1px solid #e2e8f0;border-radius:10px;padding:20px;margin-bottom:20px;">
-
-                                <!-- Nombre parte -->
-                                <div style="font-size:16px;font-weight:bold;color:#2d3748;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid #eee;">
-                                    📦 <t t-esc="parte.parte"/>
-                                    <t t-if="parte.descripcion">
-                                        <div style="font-size:13px;font-weight:normal;color:#718096;margin-top:4px;" t-esc="parte.descripcion"/>
+                        <!-- Errores -->
+                        <t t-if="errores">
+                            <div style="background:#fff5f5;border:1px solid #feb2b2;padding:14px 20px;">
+                                <div style="font-weight:bold;color:#c53030;margin-bottom:8px;">⚠️ Corrija los siguientes errores:</div>
+                                <ul style="margin:0;padding-left:20px;color:#c53030;font-size:14px;">
+                                    <t t-foreach="errores" t-as="err">
+                                        <li t-esc="err"/>
                                     </t>
+                                </ul>
+                            </div>
+                        </t>
+                        <div style="background:#fff;border:1px solid #e2e8f0;border-top:none;padding:28px 32px;">
+                            <!-- Máquina Origen -->
+                            <div style="background:#f7fafc;border-radius:8px;padding:16px 20px;margin-bottom:16px;">
+                                <div style="font-weight:bold;color:#4a5568;margin-bottom:10px;">🖨️ Máquina Origen (de donde se retiraron)</div>
+                                <table style="width:100%;font-size:14px;border-collapse:collapse;">
+                                    <tr>
+                                        <td style="color:#718096;padding:4px 0;width:35%;">Modelo</td>
+                                        <td style="font-weight:bold;color:#2d3748;" t-esc="solicitud.maquina_origen_id.name.name"/>
+                                    </tr>
+                                    <tr>
+                                        <td style="color:#718096;padding:4px 0;">Serie</td>
+                                        <td style="color:#2d3748;" t-esc="solicitud.maquina_origen_id.serie"/>
+                                    </tr>
+                                    <t t-if="solicitud.maquina_origen_id.cliente_id">
+                                        <tr>
+                                            <td style="color:#718096;padding:4px 0;">Cliente</td>
+                                            <td style="font-weight:bold;color:#2d3748;" t-esc="solicitud.maquina_origen_id.cliente_id.name"/>
+                                        </tr>
+                                    </t>
+                                    <t t-if="solicitud.maquina_origen_id.direccion">
+                                        <tr>
+                                            <td style="color:#718096;padding:4px 0;">Ubicación</td>
+                                            <td style="color:#2d3748;" t-esc="solicitud.maquina_origen_id.direccion"/>
+                                        </tr>
+                                    </t>
+                                </table>
+                            </div>
+                            <!-- Máquina Destino -->
+                            <t t-if="solicitud.maquina_destino_id">
+                                <div style="background:#f0fff4;border-radius:8px;padding:16px 20px;margin-bottom:16px;">
+                                    <div style="font-weight:bold;color:#276749;margin-bottom:10px;">🖨️ Máquina Destino (donde instalar)</div>
+                                    <table style="width:100%;font-size:14px;border-collapse:collapse;">
+                                        <tr>
+                                            <td style="color:#718096;padding:4px 0;width:35%;">Modelo</td>
+                                            <td style="font-weight:bold;color:#2d3748;" t-esc="solicitud.maquina_destino_id.name.name"/>
+                                        </tr>
+                                        <tr>
+                                            <td style="color:#718096;padding:4px 0;">Serie</td>
+                                            <td style="color:#2d3748;" t-esc="solicitud.maquina_destino_id.serie"/>
+                                        </tr>
+                                        <t t-if="solicitud.maquina_destino_id.cliente_id">
+                                            <tr>
+                                                <td style="color:#718096;padding:4px 0;">Cliente</td>
+                                                <td style="font-weight:bold;color:#276749;" t-esc="solicitud.maquina_destino_id.cliente_id.name"/>
+                                            </tr>
+                                        </t>
+                                        <t t-if="solicitud.maquina_destino_id.direccion">
+                                            <tr>
+                                                <td style="color:#718096;padding:4px 0;">Ubicación</td>
+                                                <td style="color:#2d3748;" t-esc="solicitud.maquina_destino_id.direccion"/>
+                                            </tr>
+                                        </t>
+                                    </table>
                                 </div>
-
-                                <!-- Condición -->
-                                <div style="margin-bottom:14px;">
-                                    <label style="font-weight:bold;color:#4a5568;font-size:14px;display:block;margin-bottom:8px;">
+                            </t>
+                            <!-- Formulario por cada parte -->
+                            <form method="POST" enctype="multipart/form-data" id="form_reposicion">
+                                <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                <t t-foreach="partes_retiradas" t-as="parte">
+                                    <div style="border:1px solid #e2e8f0;border-radius:10px;padding:20px;margin-bottom:20px;">
+                                        <!-- Nombre parte -->
+                                        <div style="font-size:16px;font-weight:bold;color:#2d3748;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid #eee;">
+                                    📦
+                                            <t t-esc="parte.parte"/>
+                                            <t t-if="parte.descripcion">
+                                                <div style="font-size:13px;font-weight:normal;color:#718096;margin-top:4px;" t-esc="parte.descripcion"/>
+                                            </t>
+                                        </div>
+                                        <!-- Condición -->
+                                        <div style="margin-bottom:14px;">
+                                            <label style="font-weight:bold;color:#4a5568;font-size:14px;display:block;margin-bottom:8px;">
                                         Estado de la parte repuesta *
                                     </label>
-                                    <div style="display:flex;gap:12px;flex-wrap:wrap;">
-                                        <label style="display:flex;align-items:center;gap:8px;background:#f0fff4;border:1px solid #c6f6d5;border-radius:6px;padding:10px 16px;cursor:pointer;flex:1;min-width:140px;">
-                                            <input type="radio"
+                                            <div style="display:flex;gap:12px;flex-wrap:wrap;">
+                                                <label style="display:flex;align-items:center;gap:8px;background:#f0fff4;border:1px solid #c6f6d5;border-radius:6px;padding:10px 16px;cursor:pointer;flex:1;min-width:140px;">
+                                                    <input type="radio"
                                                 t-att-name="'condicion_' + str(parte.id)"
                                                 value="bueno"
                                                 required="required"
                                                 style="width:16px;height:16px;"/>
-                                            <span style="font-size:14px;color:#276749;">✅ Buen Estado</span>
-                                        </label>
-                                        <label style="display:flex;align-items:center;gap:8px;background:#fff5f5;border:1px solid #fed7d7;border-radius:6px;padding:10px 16px;cursor:pointer;flex:1;min-width:140px;">
-                                            <input type="radio"
+                                                    <span style="font-size:14px;color:#276749;">✅ Buen Estado</span>
+                                                </label>
+                                                <label style="display:flex;align-items:center;gap:8px;background:#fff5f5;border:1px solid #fed7d7;border-radius:6px;padding:10px 16px;cursor:pointer;flex:1;min-width:140px;">
+                                                    <input type="radio"
                                                 t-att-name="'condicion_' + str(parte.id)"
                                                 value="defectuoso"
                                                 style="width:16px;height:16px;"/>
-                                            <span style="font-size:14px;color:#c53030;">⚠️ Defectuoso</span>
-                                        </label>
-                                    </div>
-                                </div>
-
-                                <!-- Foto -->
-                                <div style="margin-bottom:14px;">
-                                    <label style="font-weight:bold;color:#4a5568;font-size:14px;display:block;margin-bottom:8px;">
+                                                    <span style="font-size:14px;color:#c53030;">⚠️ Defectuoso</span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <!-- Foto -->
+                                        <div style="margin-bottom:14px;">
+                                            <label style="font-weight:bold;color:#4a5568;font-size:14px;display:block;margin-bottom:8px;">
                                         📷 Foto de la Reposición *
-                                        <span style="font-weight:normal;color:#a0aec0;font-size:12px;">(JPG, PNG — máx 5MB)</span>
-                                    </label>
-                                    <input type="file"
+                                                <span style="font-weight:normal;color:#a0aec0;font-size:12px;">(JPG, PNG — máx 5MB)</span>
+                                            </label>
+                                            <input type="file"
                                         t-att-name="'foto_' + str(parte.id)"
                                         accept="image/*"
                                         capture="environment"
                                         required="required"
                                         style="width:100%;padding:8px;border:1px solid #cbd5e0;border-radius:6px;font-size:14px;box-sizing:border-box;"/>
-                                </div>
-
-                                <!-- Observaciones -->
-                                <div>
-                                    <label style="font-weight:bold;color:#4a5568;font-size:14px;display:block;margin-bottom:8px;">
+                                        </div>
+                                        <!-- Observaciones -->
+                                        <div>
+                                            <label style="font-weight:bold;color:#4a5568;font-size:14px;display:block;margin-bottom:8px;">
                                         Observaciones
-                                        <span style="font-weight:normal;color:#a0aec0;font-size:12px;">(opcional)</span>
-                                    </label>
-                                    <textarea
+                                                <span style="font-weight:normal;color:#a0aec0;font-size:12px;">(opcional)</span>
+                                            </label>
+                                            <textarea
                                         t-att-name="'observaciones_' + str(parte.id)"
                                         rows="2"
                                         placeholder="Ej: parte instalada sin novedad, requiere seguimiento..."
                                         style="width:100%;padding:8px 12px;border:1px solid #cbd5e0;border-radius:6px;font-size:14px;resize:vertical;box-sizing:border-box;"/>
-                                </div>
-
-                            </div>
-                        </t>
-
-                        <button type="submit"
+                                        </div>
+                                    </div>
+                                </t>
+                                <button type="submit"
                             style="width:100%;background:#276749;color:#fff;border:none;border-radius:8px;padding:14px;font-size:16px;font-weight:bold;cursor:pointer;margin-top:8px;">
                             ✅ Confirmar Reposición
                         </button>
-
-                    </form>
-                </div>
-
-                <div style="text-align:center;padding:16px;font-size:12px;color:#a0aec0;">
+                            </form>
+                        </div>
+                        <div style="text-align:center;padding:16px;font-size:12px;color:#a0aec0;">
                     Andes Solution Copiers · Sistema de Gestión SAT
                 </div>
-            </div>
-        </div>
-    </t>
-</template>
-
-</data>
+                    </div>
+                </div>
+            </t>
+        </template>
+    
 </odoo>

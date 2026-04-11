@@ -1,8 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-
-       <data>
-    
+    <data>
         <!-- List View for Reparaciones Foto -->
         <record id="view_reparacion_foto_tree" model="ir.ui.view">
             <field name="name">reparacion.foto.tree</field>
@@ -17,12 +15,10 @@
                     <field name="public_link"/>
                     <field name="sequence"/>
                     <field name="state"/>
-                    
                     <field name="reparacion_id"/>
                 </list>
             </field>
         </record>
-    
         <!-- Form View for Reparaciones Foto -->
         <record id="view_reparacion_foto_form" model="ir.ui.view">
             <field name="name">reparacion.foto.form</field>
@@ -39,5 +35,5 @@
                 </form>
             </field>
         </record>
-</data>
+    </data>
 </odoo>

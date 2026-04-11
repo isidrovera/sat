@@ -1,56 +1,71 @@
 <?xml version='1.0' encoding='utf-8'?>
 <odoo>
   <data>
-      <!-- Accesorio Tipo -->
-  <record id="view_accesorio_tipo_tree" model="ir.ui.view">
-    <field name="name">accesorio.tipo.tree</field>
-    <field name="model">accesorio.tipo</field>
-    <field name="arch" type="xml">
-      <list>
-        <field name="name"/><field name="code"/><field name="sequence"/><field name="active"/><field name="descripcion"/>
-      </list>
-    </field>
-  </record>
-  <record id="view_accesorio_tipo_form" model="ir.ui.view">
-    <field name="name">accesorio.tipo.form</field>
-    <field name="model">accesorio.tipo</field>
-    <field name="arch" type="xml">
-      <form>
-        <sheet>
-          <group>
-            <field name="name"/><field name="code"/><field name="sequence"/><field name="active"/>
-          </group>
-          <group><field name="descripcion"/></group>
-        </sheet>
-      </form>
-    </field>
-  </record>
- 
-
-  <!-- Accesorio Estado -->
-  <record id="view_accesorio_estado_tree" model="ir.ui.view">
-    <field name="name">accesorio.estado.tree</field>
-    <field name="model">accesorio.estado</field>
-    <field name="arch" type="xml">
-      <list>
-        <field name="name"/><field name="code"/><field name="sequence"/><field name="active"/><field name="descripcion"/>
-      </list>
-    </field>
-  </record>
-  <record id="view_accesorio_estado_form" model="ir.ui.view">
-    <field name="name">accesorio.estado.form</field>
-    <field name="model">accesorio.estado</field>
-    <field name="arch" type="xml">
-      <form>
-        <sheet>
-          <group>
-            <field name="name"/><field name="code"/><field name="sequence"/><field name="active"/>
-          </group>
-          <group><field name="descripcion"/></group>
-        </sheet>
-      </form>
-    </field>
-  </record>
-   
+    <!-- Accesorio Tipo -->
+    <record id="view_accesorio_tipo_tree" model="ir.ui.view">
+      <field name="name">accesorio.tipo.tree</field>
+      <field name="model">accesorio.tipo</field>
+      <field name="arch" type="xml">
+        <list>
+          <field name="name"/>
+          <field name="code"/>
+          <field name="sequence"/>
+          <field name="active"/>
+          <field name="descripcion"/>
+        </list>
+      </field>
+    </record>
+    <record id="view_accesorio_tipo_form" model="ir.ui.view">
+      <field name="name">accesorio.tipo.form</field>
+      <field name="model">accesorio.tipo</field>
+      <field name="arch" type="xml">
+        <form>
+          <sheet>
+            <group>
+              <field name="name"/>
+              <field name="code"/>
+              <field name="sequence"/>
+              <field name="active"/>
+            </group>
+            <group>
+              <field name="descripcion"/>
+            </group>
+          </sheet>
+        </form>
+      </field>
+    </record>
+    <!-- Accesorio Estado -->
+    <record id="view_accesorio_estado_tree" model="ir.ui.view">
+      <field name="name">accesorio.estado.tree</field>
+      <field name="model">accesorio.estado</field>
+      <field name="arch" type="xml">
+        <list>
+          <field name="name"/>
+          <field name="code"/>
+          <field name="sequence"/>
+          <field name="active"/>
+          <field name="descripcion"/>
+        </list>
+      </field>
+    </record>
+    <record id="view_accesorio_estado_form" model="ir.ui.view">
+      <field name="name">accesorio.estado.form</field>
+      <field name="model">accesorio.estado</field>
+      <field name="arch" type="xml">
+        <form>
+          <sheet>
+            <group>
+              <field name="name"/>
+              <field name="code"/>
+              <field name="sequence"/>
+              <field name="active"/>
+            </group>
+            <group>
+              <field name="descripcion"/>
+            </group>
+          </sheet>
+        </form>
+      </field>
+    </record>
   </data>
 </odoo>

@@ -2,24 +2,21 @@
 <odoo>
     <data>
         <record id="view_excel_import_model_form" model="ir.ui.view">
-        <field name="name">excel.import.model.form</field>
-        <field name="model">excel.import.model</field>
-        <field name="arch" type="xml">
-            <form string="Importar desde Excel">
-                <button name="import_excel" string="Importar" type="object" class="btn-primary"/>
-                <button string="Cancelar" class="btn-secondary" special="cancel"/>
-                <group>
-                    <field name="name"/>
-                    <field name="model_id"/>
-                    <field name="identifier_field_id"/>
-                    <field name="excel_file" filename="file_name"/>
-                    <field name="file_name" invisible="1"/>
-                </group>             
-                
-            </form>
-        </field>
-    </record>
-
-     
+            <field name="name">excel.import.model.form</field>
+            <field name="model">excel.import.model</field>
+            <field name="arch" type="xml">
+                <form string="Importar desde Excel">
+                    <button name="import_excel" string="Importar" type="object" class="btn-primary"/>
+                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                    <group>
+                        <field name="name"/>
+                        <field name="model_id"/>
+                        <field name="identifier_field_id"/>
+                        <field name="excel_file" filename="file_name"/>
+                        <field name="file_name" invisible="1"/>
+                    </group>
+                </form>
+            </field>
+        </record>
     </data>
 </odoo>

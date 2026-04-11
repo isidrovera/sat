@@ -1,66 +1,68 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <data>
-    <!-- Vista de formulario -->
-    <record id="view_gemini_configuracion_form" model="ir.ui.view">
-        <field name="name">gemini.configuracion.form</field>
-        <field name="model">gemini.configuracion</field>
-        <field name="arch" type="xml">
-            <form string="Configuración Gemini API">
-                <sheet>
-                    <div class="oe_button_box" name="button_box">
-                        <button name="action_test_connection" type="object" 
+        <!-- Vista de formulario -->
+        <record id="view_gemini_configuracion_form" model="ir.ui.view">
+            <field name="name">gemini.configuracion.form</field>
+            <field name="model">gemini.configuracion</field>
+            <field name="arch" type="xml">
+                <form string="Configuración Gemini API">
+                    <sheet>
+                        <div class="oe_button_box" name="button_box">
+                            <button name="action_test_connection" type="object" 
                                 class="oe_stat_button" icon="fa-plug"
                                 string="Probar Conexión"/>
-                    </div>
-                    <group>
-                        <group>
-                            <field name="name"/>
-                            <field name="activo"/>
-                            <field name="modelo"/>
-                        </group>
-                        <group>
-                            <field name="api_key" password="True"/>
-                            <field name="temperature"/>
-                            <field name="max_output_tokens"/>
-                        </group>
-                    </group>
-                    <group string="Estadísticas">
-                        <field name="total_llamadas"/>
-                        <field name="ultima_llamada"/>
-                    </group>
-                    <group>
-                        <div class="alert alert-info" role="alert">
-                            <h4>📝 Cómo obtener tu API Key:</h4>
-                            <ol>
-                                <li>Ve a: <a href="https://makersuite.google.com/app/apikey" target="_blank">
-                                    https://makersuite.google.com/app/apikey</a></li>
-                                <li>Inicia sesión con tu cuenta de Google</li>
-                                <li>Haz clic en "Create API Key"</li>
-                                <li>Copia la clave y pégala arriba</li>
-                            </ol>
-                            <p><strong>Nota:</strong> La API de Gemini tiene un tier gratuito generoso (15 RPM, 1M tokens/min)</p>
                         </div>
-                    </group>
-                </sheet>
-            </form>
-        </field>
-    </record>
-
-    <!-- Vista de lista -->
-    <record id="view_gemini_configuracion_tree" model="ir.ui.view">
-        <field name="name">gemini.configuracion.tree</field>
-        <field name="model">gemini.configuracion</field>
-        <field name="arch" type="xml">
-            <list string="Configuración Gemini">
-                <field name="name"/>
-                <field name="modelo"/>
-                <field name="activo"/>
-                <field name="total_llamadas"/>
-                <field name="ultima_llamada"/>
-            </list>
-        </field>
-    </record>
-
-   </data>
+                        <group>
+                            <group>
+                                <field name="name"/>
+                                <field name="activo"/>
+                                <field name="modelo"/>
+                            </group>
+                            <group>
+                                <field name="api_key" password="True"/>
+                                <field name="temperature"/>
+                                <field name="max_output_tokens"/>
+                            </group>
+                        </group>
+                        <group string="Estadísticas">
+                            <field name="total_llamadas"/>
+                            <field name="ultima_llamada"/>
+                        </group>
+                        <group>
+                            <div class="alert alert-info" role="alert">
+                                <h4>📝 Cómo obtener tu API Key:</h4>
+                                <ol>
+                                    <li>Ve a:
+                                        <a href="https://makersuite.google.com/app/apikey" target="_blank">
+                                    https://makersuite.google.com/app/apikey</a>
+                                    </li>
+                                    <li>Inicia sesión con tu cuenta de Google</li>
+                                    <li>Haz clic en "Create API Key"</li>
+                                    <li>Copia la clave y pégala arriba</li>
+                                </ol>
+                                <p>
+                                    <strong>Nota:</strong> La API de Gemini tiene un tier gratuito generoso (15 RPM, 1M tokens/min)
+                                </p>
+                            </div>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+        <!-- Vista de lista -->
+        <record id="view_gemini_configuracion_tree" model="ir.ui.view">
+            <field name="name">gemini.configuracion.tree</field>
+            <field name="model">gemini.configuracion</field>
+            <field name="arch" type="xml">
+                <list string="Configuración Gemini">
+                    <field name="name"/>
+                    <field name="modelo"/>
+                    <field name="activo"/>
+                    <field name="total_llamadas"/>
+                    <field name="ultima_llamada"/>
+                </list>
+            </field>
+        </record>
+    </data>
 </odoo>

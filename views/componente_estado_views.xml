@@ -1,36 +1,35 @@
 <?xml version='1.0' encoding='utf-8'?>
 <odoo>
   <data>
-     <record id="view_componente_estado_tree" model="ir.ui.view">
-    <field name="name">componente.estado.tree</field>
-    <field name="model">componente.estado</field>
-    <field name="arch" type="xml">
-      <list>
-        <field name="name"/>
-        <field name="code"/>
-        <field name="prioridad"/>
-        <field name="color"/>
-        <field name="descripcion"/>
-      </list>
-    </field>
-  </record>
-
-  <record id="view_componente_estado_form" model="ir.ui.view">
-    <field name="name">componente.estado.form</field>
-    <field name="model">componente.estado</field>
-    <field name="arch" type="xml">
-      <form string="Estado de componente">
-        <sheet>
-          <group>
-            <field name="name"/>
-            <field name="code"/>
-            <field name="prioridad"/>
-            <field name="color"/>
-            <field name="descripcion"/>
-          </group>
-        </sheet>
-      </form>
-    </field>
-  </record>
+    <record id="view_componente_estado_tree" model="ir.ui.view">
+      <field name="name">componente.estado.tree</field>
+      <field name="model">componente.estado</field>
+      <field name="arch" type="xml">
+        <list>
+          <field name="name"/>
+          <field name="code"/>
+          <field name="prioridad"/>
+          <field name="color"/>
+          <field name="descripcion"/>
+        </list>
+      </field>
+    </record>
+    <record id="view_componente_estado_form" model="ir.ui.view">
+      <field name="name">componente.estado.form</field>
+      <field name="model">componente.estado</field>
+      <field name="arch" type="xml">
+        <form string="Estado de componente">
+          <sheet>
+            <group>
+              <field name="name"/>
+              <field name="code"/>
+              <field name="prioridad"/>
+              <field name="color"/>
+              <field name="descripcion"/>
+            </group>
+          </sheet>
+        </form>
+      </field>
+    </record>
   </data>
 </odoo>

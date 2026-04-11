@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <data>
+    
 
         <template id="portal_sat_home_extend" inherit_id="portal.portal_my_home" priority="20">
 
@@ -2988,5 +2988,5 @@
             </xpath>
         </template>
 
-    </data>
+    
 </odoo>

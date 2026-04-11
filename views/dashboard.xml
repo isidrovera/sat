@@ -1,6 +1,6 @@
+<?xml version='1.0' encoding='utf-8'?>
 <odoo>
-  <data>
-    <template id="dashboard_ticket_alquiler" inherit_id="web.dashboard">
+  <template id="dashboard_ticket_alquiler" inherit_id="web.dashboard">
       <xpath expr="//div[@class='o_dashboard']" position="inside">
         <div class="o_row">
           <div class="o_col">
@@ -14,6 +14,4 @@
         </div>
       </xpath>
     </template>
-  </data>
 </odoo>
-

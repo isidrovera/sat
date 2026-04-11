@@ -3,339 +3,336 @@
     <data>
         <!-- Vista Formulario Completa del Modelo Máquina -->
         <record id="modelos_maquina_form_view" model="ir.ui.view">
-    <field name="name">Modelo.modelos_maquina.form</field>
-    <field name="model">modelo.maquina</field>
-    <field name="arch" type="xml">
-        <form string="Modelo de Máquina">
-            <sheet>
-                <!-- Button Box -->
-                <div class="oe_button_box" name="button_box">
-                    <button class="oe_stat_button" 
+            <field name="name">Modelo.modelos_maquina.form</field>
+            <field name="model">modelo.maquina</field>
+            <field name="arch" type="xml">
+                <form string="Modelo de Máquina">
+                    <sheet>
+                        <!-- Button Box -->
+                        <div class="oe_button_box" name="button_box">
+                            <button class="oe_stat_button" 
                             type="object" 
                             name="action_view_equipos_modelo"
                             icon="fa-print">
-                        <field string="Equipos Activos" name="equipos_activos_count" widget="statinfo" />
-                    </button>
-                    <button class="oe_stat_button" 
+                                <field string="Equipos Activos" name="equipos_activos_count" widget="statinfo" />
+                            </button>
+                            <button class="oe_stat_button" 
                             type="object" 
                             name="action_configurar_valores_predeterminados"
                             icon="fa-magic">
-                        <div class="o_field_widget o_stat_info">
-                            <span class="o_stat_text">Configurar</span>
-                            <span class="o_stat_text">Valores</span>
-                        </div>
-                    </button>
-                    <!-- 🎯 NUEVO: Botones de componentes y accesorios -->
-                    <button class="oe_stat_button" 
+                                <div class="o_field_widget o_stat_info">
+                                    <span class="o_stat_text">Configurar</span>
+                                    <span class="o_stat_text">Valores</span>
+                                </div>
+                            </button>
+                            <!-- 🎯 NUEVO: Botones de componentes y accesorios -->
+                            <button class="oe_stat_button" 
                             type="object" 
                             name="action_ver_componentes"
                             icon="fa-cog">
-                        <field string="Componentes" name="total_componentes" widget="statinfo" />
-                    </button>
-                    <button class="oe_stat_button" 
+                                <field string="Componentes" name="total_componentes" widget="statinfo" />
+                            </button>
+                            <button class="oe_stat_button" 
                             type="object" 
                             name="action_ver_accesorios"
                             icon="fa-puzzle-piece">
-                        <field string="Accesorios" name="total_accesorios" widget="statinfo" />
-                    </button>
-                </div>
-                
-                <!-- Título -->
-                <div class="oe_title">
-                    <label for="name"/>
-                    <h1>
-                        <field name="name" placeholder="Modelo de máquina"/>
-                    </h1>
-                </div>
-                
-                <!-- Información Básica -->
-                <group>
-                    <group string="📋 Información Básica">
-                        <field name="tipo_id"/>
-                        <field name="tipo_maquina_id"/>
-                        <field name="marca_id"/>
-                        <!-- 🎯 NUEVO: Campo modelo referencia (solo visible en creación) -->
-                        <field name="modelo_referencia_id" 
+                                <field string="Accesorios" name="total_accesorios" widget="statinfo" />
+                            </button>
+                        </div>
+                        <!-- Título -->
+                        <div class="oe_title">
+                            <label for="name"/>
+                            <h1>
+                                <field name="name" placeholder="Modelo de máquina"/>
+                            </h1>
+                        </div>
+                        <!-- Información Básica -->
+                        <group>
+                            <group string="📋 Información Básica">
+                                <field name="tipo_id"/>
+                                <field name="tipo_maquina_id"/>
+                                <field name="marca_id"/>
+                                <!-- 🎯 NUEVO: Campo modelo referencia (solo visible en creación) -->
+                                <field name="modelo_referencia_id" 
                                invisible="id"
                                options="{'no_create': True, 'no_open': True}"
                                placeholder="Selecciona para copiar configuración..."/>
-                        <field name="mostrar_toner_color" column_invisible="1"/>
-                        <field name="gestionar_toner_automatico"/>
-                    </group>
-                    <group string="💰 Información Comercial">
-                        <field name="currency_id" string="Tipo de moneda"/>
-                        <field name="precio_venta" widget="monetary" options="{'currency_field': 'currency_id'}"/>
-                        <field name="equipos_activos_count" readonly="1"/>
-                    </group>
-                </group>
-                
-                <!-- Notebook con páginas -->
-                <notebook>
-                    <!-- 🎯 NUEVA PÁGINA: Configuración de Componentes -->
-                    <page string="⚙️ Configuración" name="configuracion">
-                        <group>
-                            <group string="Copiar desde otro modelo" invisible="not id">
-                                <field name="modelo_referencia_id" 
+                                <field name="mostrar_toner_color" column_invisible="1"/>
+                                <field name="gestionar_toner_automatico"/>
+                            </group>
+                            <group string="💰 Información Comercial">
+                                <field name="currency_id" string="Tipo de moneda"/>
+                                <field name="precio_venta" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+                                <field name="equipos_activos_count" readonly="1"/>
+                            </group>
+                        </group>
+                        <!-- Notebook con páginas -->
+                        <notebook>
+                            <!-- 🎯 NUEVA PÁGINA: Configuración de Componentes -->
+                            <page string="⚙️ Configuración" name="configuracion">
+                                <group>
+                                    <group string="Copiar desde otro modelo" invisible="not id">
+                                        <field name="modelo_referencia_id" 
                                        nolabel="1"
                                        options="{'no_create': True, 'no_open': True}"
                                        placeholder="Selecciona un modelo para copiar su configuración..."/>
-                                <button name="action_copiar_desde_modelo"
+                                        <button name="action_copiar_desde_modelo"
                                         string="Copiar Configuración Ahora"
                                         type="object"
                                         icon="fa-copy"
                                         class="btn-primary"
                                         invisible="not modelo_referencia_id or not id"/>
-                            </group>
-                            
-                            <group string="Estado Actual" invisible="not id">
-                                <div class="o_row">
-                                    <button name="action_ver_componentes"
+                                    </group>
+                                    <group string="Estado Actual" invisible="not id">
+                                        <div class="o_row">
+                                            <button name="action_ver_componentes"
                                             type="object"
                                             class="btn-link"
                                             icon="fa-cog">
-                                        <field name="total_componentes" readonly="1"/> Componentes configurados
-                                    </button>
-                                </div>
-                                <div class="o_row">
-                                    <button name="action_ver_accesorios"
+                                                <field name="total_componentes" readonly="1"/> Componentes configurados
+                                            </button>
+                                        </div>
+                                        <div class="o_row">
+                                            <button name="action_ver_accesorios"
                                             type="object"
                                             class="btn-link"
                                             icon="fa-puzzle-piece">
-                                        <field name="total_accesorios" readonly="1"/> Accesorios configurados
-                                    </button>
-                                </div>
-                            </group>
-                        </group>
-                        
-                        <group>
-                            <div class="alert alert-info">
-                                <h4>ℹ️ Cómo usar la copia de configuración:</h4>
-                                <ul>
-                                    <li><strong>Al crear nuevo modelo:</strong> Selecciona un "Modelo de Referencia" en la parte superior y automáticamente se copiarán sus componentes y accesorios al guardar el registro.</li>
-                                    <li><strong>En modelo existente:</strong> Selecciona un modelo de referencia arriba y presiona "Copiar Configuración Ahora".</li>
-                                    <li><strong>Máquinas monocromáticas:</strong> Solo se copiarán componentes negros (K), omitiendo colores CMY automáticamente.</li>
-                                    <li><strong>Sin duplicados:</strong> Si ya existe un componente o accesorio, no se duplicará.</li>
-                                </ul>
-                            </div>
-                        </group>
-                    </page>
-                    
-                    <!-- Página de Configuración de Tóner -->
-                    <page string="🎨 Configuración de Tóner" name="toner_config">
-                        <div class="row">
-                            <!-- Columna Izquierda: Durabilidad -->
-                            <div class="col-12 col-lg-6">
-                                <div class="card border-primary">
-                                    <div class="card-header bg-primary text-white">
-                                        <h6 class="mb-0">
-                                            <i class="fa fa-chart-bar me-2"></i> Durabilidad de Tóners (páginas)
-                                        </h6>
-                                    </div>
-                                    <div class="card-body">
-                                        <div class="row g-3">
-                                            <div class="col-12">
-                                                <div class="o_form_label">
-                                                    <i class="fa fa-circle text-dark me-1"></i>
-                                                    Tóner Negro
-                                                </div>
-                                                <field name="durabilidad_toner_black"/>
-                                            </div>
-                                            <div class="col-12" invisible="tipo_id != 'color'">
-                                                <div class="o_form_label">
-                                                    <i class="fa fa-circle text-primary me-1"></i>
-                                                    Tóner Cian
-                                                </div>
-                                                <field name="durabilidad_toner_cyan"/>
-                                            </div>
-                                            <div class="col-12" invisible="tipo_id != 'color'">
-                                                <div class="o_form_label">
-                                                    <i class="fa fa-circle text-danger me-1"></i>
-                                                    Tóner Magenta
-                                                </div>
-                                                <field name="durabilidad_toner_magenta"/>
-                                            </div>
-                                            <div class="col-12" invisible="tipo_id != 'color'">
-                                                <div class="o_form_label">
-                                                    <i class="fa fa-circle text-warning me-1"></i>
-                                                    Tóner Amarillo
-                                                </div>
-                                                <field name="durabilidad_toner_yellow"/>
-                                            </div>
+                                                <field name="total_accesorios" readonly="1"/> Accesorios configurados
+                                            </button>
                                         </div>
-                                        <div class="mt-3">
-                                            <button name="action_configurar_valores_predeterminados" 
+                                    </group>
+                                </group>
+                                <group>
+                                    <div class="alert alert-info">
+                                        <h4>ℹ️ Cómo usar la copia de configuración:</h4>
+                                        <ul>
+                                            <li>
+                                                <strong>Al crear nuevo modelo:</strong> Selecciona un "Modelo de Referencia" en la parte superior y automáticamente se copiarán sus componentes y accesorios al guardar el registro.
+                                            </li>
+                                            <li>
+                                                <strong>En modelo existente:</strong> Selecciona un modelo de referencia arriba y presiona "Copiar Configuración Ahora".
+                                            </li>
+                                            <li>
+                                                <strong>Máquinas monocromáticas:</strong> Solo se copiarán componentes negros (K), omitiendo colores CMY automáticamente.
+                                            </li>
+                                            <li>
+                                                <strong>Sin duplicados:</strong> Si ya existe un componente o accesorio, no se duplicará.
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </group>
+                            </page>
+                            <!-- Página de Configuración de Tóner -->
+                            <page string="🎨 Configuración de Tóner" name="toner_config">
+                                <div class="row">
+                                    <!-- Columna Izquierda: Durabilidad -->
+                                    <div class="col-12 col-lg-6">
+                                        <div class="card border-primary">
+                                            <div class="card-header bg-primary text-white">
+                                                <h6 class="mb-0">
+                                                    <i class="fa fa-chart-bar me-2"></i> Durabilidad de Tóners (páginas)
+                                                </h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="row g-3">
+                                                    <div class="col-12">
+                                                        <div class="o_form_label">
+                                                            <i class="fa fa-circle text-dark me-1"></i>
+                                                    Tóner Negro
+                                                        </div>
+                                                        <field name="durabilidad_toner_black"/>
+                                                    </div>
+                                                    <div class="col-12" invisible="tipo_id != 'color'">
+                                                        <div class="o_form_label">
+                                                            <i class="fa fa-circle text-primary me-1"></i>
+                                                    Tóner Cian
+                                                        </div>
+                                                        <field name="durabilidad_toner_cyan"/>
+                                                    </div>
+                                                    <div class="col-12" invisible="tipo_id != 'color'">
+                                                        <div class="o_form_label">
+                                                            <i class="fa fa-circle text-danger me-1"></i>
+                                                    Tóner Magenta
+                                                        </div>
+                                                        <field name="durabilidad_toner_magenta"/>
+                                                    </div>
+                                                    <div class="col-12" invisible="tipo_id != 'color'">
+                                                        <div class="o_form_label">
+                                                            <i class="fa fa-circle text-warning me-1"></i>
+                                                    Tóner Amarillo
+                                                        </div>
+                                                        <field name="durabilidad_toner_yellow"/>
+                                                    </div>
+                                                </div>
+                                                <div class="mt-3">
+                                                    <button name="action_configurar_valores_predeterminados" 
                                                     type="object" 
                                                     string="Configurar Valores Típicos" 
                                                     class="btn btn-outline-primary w-100"
                                                     icon="fa-magic"/>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Columna Derecha: Stock y Tiempos -->
-                            <div class="col-12 col-lg-6">
-                                <div class="card border-success">
-                                    <div class="card-header bg-success text-white">
-                                        <h6 class="mb-0">
-                                            <i class="fa fa-warehouse me-2"></i> Stock Mínimo Recomendado
-                                        </h6>
-                                    </div>
-                                    <div class="card-body">
-                                        <div class="row g-3">
-                                            <div class="col-6">
-                                                <div class="o_form_label">Tóner Negro</div>
-                                                <field name="stock_minimo_black"/>
-                                            </div>
-                                            <div class="col-6" invisible="tipo_id != 'color'">
-                                                <div class="o_form_label">Tóner Cian</div>
-                                                <field name="stock_minimo_cyan"/>
-                                            </div>
-                                            <div class="col-6" invisible="tipo_id != 'color'">
-                                                <div class="o_form_label">Tóner Magenta</div>
-                                                <field name="stock_minimo_magenta"/>
-                                            </div>
-                                            <div class="col-6" invisible="tipo_id != 'color'">
-                                                <div class="o_form_label">Tóner Amarillo</div>
-                                                <field name="stock_minimo_yellow"/>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div class="card border-info mt-3">
-                                    <div class="card-header bg-info text-white">
-                                        <h6 class="mb-0">
-                                            <i class="fa fa-clock me-2"></i> Configuración de Tiempos
-                                        </h6>
-                                    </div>
-                                    <div class="card-body">
-                                        <div class="row g-3">
-                                            <div class="col-6">
-                                                <div class="o_form_label">Tiempo de Entrega</div>
-                                                <div class="input-group">
-                                                    <field name="tiempo_entrega_dias" class="form-control"/>
-                                                    <span class="input-group-text">días</span>
-                                                </div>
-                                            </div>
-                                            <div class="col-6">
-                                                <div class="o_form_label">Margen de Seguridad</div>
-                                                <div class="input-group">
-                                                    <field name="margen_seguridad_dias" class="form-control"/>
-                                                    <span class="input-group-text">días</span>
                                                 </div>
                                             </div>
                                         </div>
-                                        <div class="mt-3">
-                                            <div class="alert alert-info mb-0">
-                                                <small>
-                                                    <i class="fa fa-info-circle me-1"></i>
-                                                    <strong>Total tiempo de prevención:</strong>
-                                                    <field name="tiempo_total_prevencion" readonly="1"/> días
-                                                </small>
+                                    </div>
+                                    <!-- Columna Derecha: Stock y Tiempos -->
+                                    <div class="col-12 col-lg-6">
+                                        <div class="card border-success">
+                                            <div class="card-header bg-success text-white">
+                                                <h6 class="mb-0">
+                                                    <i class="fa fa-warehouse me-2"></i> Stock Mínimo Recomendado
+                                                </h6>
                                             </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Panel de Alertas -->
-                        <div class="row mt-4">
-                            <div class="col-12">
-                                <div class="card border-warning">
-                                    <div class="card-header bg-warning text-dark">
-                                        <h6 class="mb-0">
-                                            <i class="fa fa-bell me-2"></i> Configuración de Alertas
-                                        </h6>
-                                    </div>
-                                    <div class="card-body">
-                                        <div class="row g-3">
-                                            <div class="col-6">
-                                                <div class="d-flex align-items-center">
-                                                    <field name="alerta_stock_critico" widget="boolean_toggle"/>
-                                                    <span class="ms-2">Alertas de Stock Crítico</span>
+                                            <div class="card-body">
+                                                <div class="row g-3">
+                                                    <div class="col-6">
+                                                        <div class="o_form_label">Tóner Negro</div>
+                                                        <field name="stock_minimo_black"/>
+                                                    </div>
+                                                    <div class="col-6" invisible="tipo_id != 'color'">
+                                                        <div class="o_form_label">Tóner Cian</div>
+                                                        <field name="stock_minimo_cyan"/>
+                                                    </div>
+                                                    <div class="col-6" invisible="tipo_id != 'color'">
+                                                        <div class="o_form_label">Tóner Magenta</div>
+                                                        <field name="stock_minimo_magenta"/>
+                                                    </div>
+                                                    <div class="col-6" invisible="tipo_id != 'color'">
+                                                        <div class="o_form_label">Tóner Amarillo</div>
+                                                        <field name="stock_minimo_yellow"/>
+                                                    </div>
                                                 </div>
                                             </div>
-                                            <div class="col-6">
-                                                <div class="d-flex align-items-center">
-                                                    <field name="alerta_consumo_alto" widget="boolean_toggle"/>
-                                                    <span class="ms-2">Alertas de Consumo Alto</span>
+                                        </div>
+                                        <div class="card border-info mt-3">
+                                            <div class="card-header bg-info text-white">
+                                                <h6 class="mb-0">
+                                                    <i class="fa fa-clock me-2"></i> Configuración de Tiempos
+                                                </h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="row g-3">
+                                                    <div class="col-6">
+                                                        <div class="o_form_label">Tiempo de Entrega</div>
+                                                        <div class="input-group">
+                                                            <field name="tiempo_entrega_dias" class="form-control"/>
+                                                            <span class="input-group-text">días</span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-6">
+                                                        <div class="o_form_label">Margen de Seguridad</div>
+                                                        <div class="input-group">
+                                                            <field name="margen_seguridad_dias" class="form-control"/>
+                                                            <span class="input-group-text">días</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="mt-3">
+                                                    <div class="alert alert-info mb-0">
+                                                        <small>
+                                                            <i class="fa fa-info-circle me-1"></i>
+                                                            <strong>Total tiempo de prevención:</strong>
+                                                            <field name="tiempo_total_prevencion" readonly="1"/> días
+                                                        </small>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Panel de Resumen -->
-                        <div class="row mt-4">
-                            <div class="col-12">
-                                <div class="card border-secondary">
-                                    <div class="card-header bg-secondary text-white">
-                                        <h6 class="mb-0">
-                                            <i class="fa fa-file-text me-2"></i> Resumen de Configuración
-                                        </h6>
-                                    </div>
-                                    <div class="card-body">
-                                        <field name="resumen_configuracion_toner" readonly="1"/>
+                                <!-- Panel de Alertas -->
+                                <div class="row mt-4">
+                                    <div class="col-12">
+                                        <div class="card border-warning">
+                                            <div class="card-header bg-warning text-dark">
+                                                <h6 class="mb-0">
+                                                    <i class="fa fa-bell me-2"></i> Configuración de Alertas
+                                                </h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="row g-3">
+                                                    <div class="col-6">
+                                                        <div class="d-flex align-items-center">
+                                                            <field name="alerta_stock_critico" widget="boolean_toggle"/>
+                                                            <span class="ms-2">Alertas de Stock Crítico</span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-6">
+                                                        <div class="d-flex align-items-center">
+                                                            <field name="alerta_consumo_alto" widget="boolean_toggle"/>
+                                                            <span class="ms-2">Alertas de Consumo Alto</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        </div>
-                    </page>
-                    
-                    <!-- Página de Equipos Asociados -->
-                    <page string="🖨️ Equipos Asociados" name="equipos">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6>Equipos que usan este modelo</h6>
-                            <div>
-                                <button name="action_view_equipos_modelo" 
+                                <!-- Panel de Resumen -->
+                                <div class="row mt-4">
+                                    <div class="col-12">
+                                        <div class="card border-secondary">
+                                            <div class="card-header bg-secondary text-white">
+                                                <h6 class="mb-0">
+                                                    <i class="fa fa-file-text me-2"></i> Resumen de Configuración
+                                                </h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <field name="resumen_configuracion_toner" readonly="1"/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </page>
+                            <!-- Página de Equipos Asociados -->
+                            <page string="🖨️ Equipos Asociados" name="equipos">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h6>Equipos que usan este modelo</h6>
+                                    <div>
+                                        <button name="action_view_equipos_modelo" 
                                         type="object" 
                                         string="Ver Todos los Equipos" 
                                         class="btn btn-primary"
                                         icon="fa-external-link"/>
-                                <button name="action_aplicar_configuracion_equipos" 
+                                        <button name="action_aplicar_configuracion_equipos" 
                                         type="object" 
                                         string="Aplicar Configuración" 
                                         class="btn btn-secondary"
                                         icon="fa-sync"
                                         invisible="equipos_activos_count == 0"/>
-                            </div>
-                        </div>
-                        <div class="alert alert-info" invisible="equipos_activos_count > 0">
-                            <div class="text-center">
-                                <i class="fa fa-info-circle fa-2x mb-2"></i>
-                                <p class="mb-0">No hay equipos alquilados usando este modelo actualmente.</p>
-                            </div>
-                        </div>
-                        <div invisible="equipos_activos_count == 0">
-                            <p class="text-muted">
-                                <i class="fa fa-info-circle me-1"></i>
+                                    </div>
+                                </div>
+                                <div class="alert alert-info" invisible="equipos_activos_count > 0">
+                                    <div class="text-center">
+                                        <i class="fa fa-info-circle fa-2x mb-2"></i>
+                                        <p class="mb-0">No hay equipos alquilados usando este modelo actualmente.</p>
+                                    </div>
+                                </div>
+                                <div invisible="equipos_activos_count == 0">
+                                    <p class="text-muted">
+                                        <i class="fa fa-info-circle me-1"></i>
                                 Hay
-                                <strong>
-                                    <field name="equipos_activos_count" readonly="1"/>
-                                </strong> 
+                                        <strong>
+                                            <field name="equipos_activos_count" readonly="1"/>
+                                        </strong> 
                                 equipo(s) alquilado(s) usando este modelo.
-                            </p>
-                            <div class="alert alert-warning">
-                                <h6>
-                                    <i class="fa fa-exclamation-triangle me-2"></i>Importante
-                                </h6>
-                                <ul class="mb-0">
-                                    <li>Los cambios en la configuración de tóner afectarán los cálculos futuros</li>
-                                    <li>Use "Aplicar Configuración" para sincronizar cambios con equipos existentes</li>
-                                    <li>Los equipos ya configurados mantendrán su historial actual</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </page>
-                </notebook>
-            </sheet>
-        </form>
-    </field>
-</record>
+                                    </p>
+                                    <div class="alert alert-warning">
+                                        <h6>
+                                            <i class="fa fa-exclamation-triangle me-2"></i>Importante
+                                        </h6>
+                                        <ul class="mb-0">
+                                            <li>Los cambios en la configuración de tóner afectarán los cálculos futuros</li>
+                                            <li>Use "Aplicar Configuración" para sincronizar cambios con equipos existentes</li>
+                                            <li>Los equipos ya configurados mantendrán su historial actual</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </page>
+                        </notebook>
+                    </sheet>
+                </form>
+            </field>
+        </record>
         <!-- Vista Lista del Modelo Máquina -->
         <record id="modelos_maquina_tree_view" model="ir.ui.view">
             <field name="name">Modelos_maquina.list</field>

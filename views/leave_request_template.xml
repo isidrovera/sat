@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <data>
+   
         <template id="leave_request_template" name="Solicitar Permiso">
             <t t-call="website.layout">
                 <t t-set="title">Solicitar Permiso</t>
@@ -879,5 +879,5 @@
                 </script>
             </t>
         </template>
-    </data>
+    
 </odoo>

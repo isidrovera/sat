@@ -1,79 +1,75 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <data>
-    <!-- Vista del formulario del asistente -->
-    <record id="view_evaluacion_personal_envio_masivo_form" model="ir.ui.view">
-        <field name="name">evaluacion.personal.envio.masivo.form</field>
-        <field name="model">evaluacion.personal.envio.masivo</field>
-        <field name="arch" type="xml">
-            <form>
-                <sheet>
-                    <!-- Encabezado informativo -->
-                    <div class="alert alert-info" role="alert" style="margin-bottom: 20px;">
-                        <i class="fa fa-info-circle"/> <strong>Envío Masivo de Reportes:</strong> 
+        <!-- Vista del formulario del asistente -->
+        <record id="view_evaluacion_personal_envio_masivo_form" model="ir.ui.view">
+            <field name="name">evaluacion.personal.envio.masivo.form</field>
+            <field name="model">evaluacion.personal.envio.masivo</field>
+            <field name="arch" type="xml">
+                <form>
+                    <sheet>
+                        <!-- Encabezado informativo -->
+                        <div class="alert alert-info" role="alert" style="margin-bottom: 20px;">
+                            <i class="fa fa-info-circle"/>
+                            <strong>Envío Masivo de Reportes:</strong> 
                         Se generarán y enviarán reportes PDF de las evaluaciones seleccionadas a los destinatarios especificados.
-                    </div>
-                    
-                    <!-- Información del destinatario -->
-                    <group string="📧 Destinatarios">
-                        <field name="user_ids" 
+                        </div>
+                        <!-- Información del destinatario -->
+                        <group string="📧 Destinatarios">
+                            <field name="user_ids" 
                                widget="many2many_tags" 
                                options="{'no_create': True}"
                                placeholder="Seleccione los destinatarios principales..."/>
-                        <field name="user_cc_ids" 
+                            <field name="user_cc_ids" 
                                widget="many2many_tags" 
                                options="{'no_create': True}"
                                placeholder="Seleccione los destinatarios con copia (opcional)..."/>
-                        <field name="subject" 
+                            <field name="subject" 
                                placeholder="Asunto del correo electrónico..."/>
-                    </group>
-                    
-                    <!-- Evaluaciones a enviar -->
-                    <group string="📋 Evaluaciones Seleccionadas">
-                        <field name="evaluacion_ids" 
+                        </group>
+                        <!-- Evaluaciones a enviar -->
+                        <group string="📋 Evaluaciones Seleccionadas">
+                            <field name="evaluacion_ids" 
                                widget="many2many_tags" 
                                options="{'no_create': true}"
                                readonly="1"/>
-                    </group>
-                    
-                    <!-- Cuerpo del mensaje -->
-                    <group string="✉️ Contenido del Correo">
-                        <field name="body" 
+                        </group>
+                        <!-- Cuerpo del mensaje -->
+                        <group string="✉️ Contenido del Correo">
+                            <field name="body" 
                                nolabel="1" 
                                widget="html" 
                                options="{'style-inline': true, 'height': 400}"/>
-                    </group>
-                    
-                    <!-- Nota informativa -->
-                    <div class="alert alert-warning" role="alert" style="margin-top: 20px;">
-                        <i class="fa fa-exclamation-triangle"/> <strong>Nota:</strong> 
+                        </group>
+                        <!-- Nota informativa -->
+                        <div class="alert alert-warning" role="alert" style="margin-top: 20px;">
+                            <i class="fa fa-exclamation-triangle"/>
+                            <strong>Nota:</strong> 
                         Una vez enviados los reportes, el estado de las evaluaciones cambiará automáticamente a "Enviado".
-                    </div>
-                </sheet>
-                
-                <footer>
-                    <button name="action_enviar_reportes" 
+                        </div>
+                    </sheet>
+                    <footer>
+                        <button name="action_enviar_reportes" 
                             string="📤 Enviar Reportes" 
                             type="object" 
                             class="btn-primary"
                             confirm="¿Está seguro de enviar estos reportes por correo electrónico?"/>
-                    <button string="Cancelar" 
+                        <button string="Cancelar" 
                             special="cancel" 
                             class="btn-secondary"/>
-                </footer>
-            </form>
-        </field>
-    </record>
-    
-    <!-- Configuración de seguridad para el nuevo modelo -->
-    <record id="access_evaluacion_personal_envio_masivo" model="ir.model.access">
-        <field name="name">evaluacion.personal.envio.masivo.access</field>
-        <field name="model_id" ref="model_evaluacion_personal_envio_masivo"/>
-        <field name="group_id" ref="base.group_user"/>
-        <field name="perm_read" eval="1"/>
-        <field name="perm_write" eval="1"/>
-        <field name="perm_create" eval="1"/>
-        <field name="perm_unlink" eval="0"/>
-    </record>
+                    </footer>
+                </form>
+            </field>
+        </record>
+        <!-- Configuración de seguridad para el nuevo modelo -->
+        <record id="access_evaluacion_personal_envio_masivo" model="ir.model.access">
+            <field name="name">evaluacion.personal.envio.masivo.access</field>
+            <field name="model_id" ref="model_evaluacion_personal_envio_masivo"/>
+            <field name="group_id" ref="base.group_user"/>
+            <field name="perm_read" eval="1"/>
+            <field name="perm_write" eval="1"/>
+            <field name="perm_create" eval="1"/>
+            <field name="perm_unlink" eval="0"/>
+        </record>
     </data>
 </odoo>
