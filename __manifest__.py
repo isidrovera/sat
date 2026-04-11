@@ -73,7 +73,7 @@
         # ================================================================
         'data/plantillas_correo.xml',
         'data/correos_reparaciones.xml',
-        'data/correos_tickets.xml',
+        #'data/correos_tickets.xml',
         'data/correos_informes.xml',
         'data/correos_maquinas.xml',
         'data/correos_alquiler.xml',
