@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<templates id="template" xml:space="preserve">
+<odoo>
+    <templates id="template" xml:space="preserve">
 
     <!-- Template principal del widget de galería -->
     <t t-name="reparaciones.GalleryWidget">
@@ -217,3 +218,4 @@
     </t>
 
 </templates>
+</odoo>

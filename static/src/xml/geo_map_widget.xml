@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<templates xml:space="preserve">
+<odoo>
+    <templates xml:space="preserve">
 
     <t t-name="alquiler_geo.GeoMapWidget">
         <div class="o_geo_map_widget">
@@ -86,3 +87,4 @@
     </t>
 
 </templates>
+</odoo>

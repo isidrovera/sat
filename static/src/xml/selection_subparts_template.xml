@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<templates xml:space="preserve">
+<odoo>
+  <templates xml:space="preserve">
   <t t-name="sat.SelectionSubpartsWrapper">
     <!-- Si tenemos record+name, renderizamos el nativo -->
     <t t-if="props.record and props.name and component.CoreSelection">
@@ -34,3 +35,5 @@
     </t>
   </t>
 </templates>
+
+</odoo>

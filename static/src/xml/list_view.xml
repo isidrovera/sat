@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<templates xml:space="preserve">
+<odoo>
+    <templates xml:space="preserve">
     <t t-name="sat.ListView.Buttons" owl="1">
         <div class="o_list_buttons">
             <t t-call="web.ListView.Buttons"/>
@@ -31,3 +32,4 @@
         </div>
     </t>
 </templates>
+</odoo>

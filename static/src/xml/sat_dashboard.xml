@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<templates>
+<odoo>
+    <templates>
     <!-- Dashboard Component -->
     <t t-name="sat.SatSatDashboard">
         <div class="o_sat_dashboard container-fluid py-2">
@@ -171,3 +172,4 @@
         </xpath>
     </t>
 </templates>
+</odoo>
