@@ -96,6 +96,14 @@
         </field>
         <field name="binding_type">report</field>
     </record>
+    <record id="report_alquiler_qr" model="ir.actions.report">
+            <field name="name">QR Codes alquiler</field>
+            <field name="model">alquiler</field>
+            <field name="report_type">qweb-pdf</field>
+            <field name="report_name">sat.report_qr_alquiler_template</field>
+            <field name="report_file">sat.report_qr_alquiler_template</field>
+            <field name="print_report_name">object.name</field>
+        </record>
 
     </data>
 </odoo>
