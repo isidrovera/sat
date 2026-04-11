@@ -51,8 +51,7 @@
         # ================================================================
         # 3. DATA: configuración base y catálogos iniciales
         # ================================================================
-        'data/print.xml',
-        'data/ticket_enlace.xml',
+        'data/print.xml',        
         'data/componente_color_data.xml',
         'data/color_tipo_data.xml',
         'data/accesorio_tipo_data.xml',
