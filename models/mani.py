@@ -1,8 +1,7 @@
 'data/ir_secuense.xml',
         
         
-        'report/report_qr_codes_reparaciones.xml',
-        'report/reporte_estado_maquinas_report.xml',       
+               
         'report/qr_alquiler.xml',                
         'report/evaluacion_servicio.xml',
 
