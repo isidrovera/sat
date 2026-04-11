@@ -2,7 +2,7 @@
         
         
                
-        'report/qr_alquiler.xml',                
+                       
         'report/evaluacion_servicio.xml',
 
 

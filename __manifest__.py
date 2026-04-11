@@ -54,6 +54,7 @@
         'report/evaluacion_enlace.xml',
         'report/report_qr_codes_reparaciones.xml',
         'report/reporte_estado_maquinas_report.xml',
+        'report/qr_alquiler.xml', 
         #'views/acciones_menus.xml',
     ],
     
