@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <odoo>
-    <data noupdate="1">
+    <data >
         <!-- Panel de onboarding -->
         <record id="model_alquiler_onboarding" model="onboarding.onboarding">
             <field name="name">Registro de Máquinas en Alquiler</field>

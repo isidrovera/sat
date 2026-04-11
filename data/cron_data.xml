@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <odoo>
-    <data noupdate="1">
+    <data>
         <!-- noupdate="1" significa que los datos no se actualizarán cuando actualices tu módulo -->
         <record id="cron_your_task" model="ir.cron">
             <field name="name">Activador de maquinas con porblemas</field>
