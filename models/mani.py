@@ -1,9 +1,9 @@
-'data/ir_secuense.xml',
+
         
         
                
                        
-        'report/evaluacion_servicio.xml',
+        
 
 
 
@@ -13,16 +13,7 @@
 
 
 
-        'data/plantillas_correo.xml',
-        'data/correos_reparaciones.xml',
-        'data/correos_tickets.xml',
-        'data/correos_informes.xml',
-        'data/correos_maquinas.xml',
-        'data/correos_alquiler.xml',
-        'data/mail_permisos.xml',
-        'data/correos_evaluaciones_tecnicos.xml',
-        'data/email_templates_consolidated.xml',
-        'data/componente_color_data.xml', 
+        
         'data/color_tipo_data.xml',
         'data/accesorio_tipo_data.xml',
         'data/componente_tipo_data.xml',

@@ -35,6 +35,7 @@
     
     'data': [
         'security/acceso.xml',
+        'data/ir_secuense.xml',
         'security/ir.model.access.csv',
         'views/00_root_menu.xml',        
         'views/sat_prueba_maquina.xml',
@@ -55,6 +56,17 @@
         'report/report_qr_codes_reparaciones.xml',
         'report/reporte_estado_maquinas_report.xml',
         'report/qr_alquiler.xml', 
+        'report/evaluacion_servicio.xml',
+        'data/plantillas_correo.xml',
+        'data/correos_reparaciones.xml',
+        'data/correos_tickets.xml',
+        'data/correos_informes.xml',
+        'data/correos_maquinas.xml',
+        'data/correos_alquiler.xml',
+        'data/mail_permisos.xml',
+        'data/correos_evaluaciones_tecnicos.xml',
+        'data/email_templates_consolidated.xml',
+        'data/componente_color_data.xml', 
         #'views/acciones_menus.xml',
     ],
     
