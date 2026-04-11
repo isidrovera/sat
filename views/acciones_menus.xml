@@ -17,7 +17,10 @@
     <!-- ================================================================== -->
     <!-- MENÚ RAÍZ — debe existir antes que cualquier hijo                   -->
     <!-- ================================================================== -->
-  
+    <menuitem id="sat_menu_root"
+              name="Sistema de taller"
+              web_icon="sat,static/description/icon.png"
+              sequence="1"/>
 
     <!-- ================================================================== -->
     <!-- SUB-RAÍCES DE SECCIÓN (hijos directos de sat_menu_root)            -->
