@@ -1,32 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-
-    <record id="paperformat_landscape_reporte_maquinas" model="report.paperformat">
-        <field name="name">A4 Horizontal — Reporte Máquinas</field>
-        <field name="default">False</field>
-        <field name="format">A4</field>
-        <field name="orientation">Landscape</field>
-        <field name="margin_top">10</field>
-        <field name="margin_bottom">10</field>
-        <field name="margin_left">8</field>
-        <field name="margin_right">8</field>
-        <field name="header_line" eval="False"/>
-        <field name="header_spacing">3</field>
-        <field name="dpi">96</field>
-    </record>
-
-    <record id="action_reporte_estado_maquinas_pdf" model="ir.actions.report">
-        <field name="name">Reporte de Estado de Máquinas</field>
-        <field name="model">reporte.estado.maquina</field>
-        <field name="report_type">qweb-pdf</field>
-        <field name="report_name">sat.reporte_estado_maquinas_pdf</field>
-        <field name="report_file">sat.reporte_estado_maquinas_pdf</field>
-        <field name="paperformat_id" ref="paperformat_landscape_reporte_maquinas"/>
-        <field name="print_report_name">
-            'Reporte_Estado_Maquinas_%s' % (object.semana_reporte or object.fecha_generacion or '')
-        </field>
-        <field name="binding_type">report</field>
-    </record>
+    
 
     <template id="reporte_estado_maquinas_pdf" name="Reporte Estado de Máquinas">
         <t t-call="web.html_container">

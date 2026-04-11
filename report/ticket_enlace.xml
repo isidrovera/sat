@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+    <data>
     <record id="action_ticket_alquiler" model="ir.actions.report">
         <field name="name">Ticket de Soporte</field>
         <field name="model">ticket.alquiler</field>
@@ -10,5 +11,5 @@
         <field name="binding_model_id" ref="sat.model_ticket_alquiler"/>
         <field name="binding_type">report</field>
     </record>
+    </data>
 </odoo>
-
