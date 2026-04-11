@@ -49,7 +49,9 @@
         'report/report_reparaciones_ventas.xml',
         'report/ticket_enlace.xml',
         'report/ticket_reporte.xml',
-        
+        'report/informes.xml',
+        'report/evaluacion.xml',
+        'report/evaluacion_enlace.xml',
         #'views/acciones_menus.xml',
     ],
     
