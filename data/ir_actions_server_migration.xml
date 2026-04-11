@@ -1,5 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
 <odoo>
-  <record id="action_migrar_checklist_a_evaluaciones" model="ir.actions.server">
+  <data>
+      <record id="action_migrar_checklist_a_evaluaciones" model="ir.actions.server">
     <field name="name">Migrar checklist a evaluaciones</field>
     <field name="model_id" ref="model_reparaciones_reparaciones"/>
     <field name="state">code</field>
@@ -7,4 +9,6 @@
     <field name="binding_model_id" ref="model_reparaciones_reparaciones"/>
     <field name="binding_type">action</field>
   </record>
+   
+  </data>
 </odoo>

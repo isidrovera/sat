@@ -1,15 +1,25 @@
-<!-- data/componente_color_data.xml -->
+<?xml version='1.0' encoding='utf-8'?>
 <odoo>
-  <record id="color_k" model="componente.color">
-    <field name="name">Negro</field><field name="key">k</field><field name="sequence">1</field>
-  </record>
-  <record id="color_c" model="componente.color">
-    <field name="name">Cian</field><field name="key">c</field><field name="sequence">2</field>
-  </record>
-  <record id="color_m" model="componente.color">
-    <field name="name">Magenta</field><field name="key">m</field><field name="sequence">3</field>
-  </record>
-  <record id="color_y" model="componente.color">
-    <field name="name">Amarillo</field><field name="key">y</field><field name="sequence">4</field>
-  </record>
+  <data>
+    <record id="color_k" model="componente.color">
+      <field name="name">Negro</field>
+      <field name="key">k</field>
+      <field name="sequence">1</field>
+    </record>
+    <record id="color_c" model="componente.color">
+      <field name="name">Cian</field>
+      <field name="key">c</field>
+      <field name="sequence">2</field>
+    </record>
+    <record id="color_m" model="componente.color">
+      <field name="name">Magenta</field>
+      <field name="key">m</field>
+      <field name="sequence">3</field>
+    </record>
+    <record id="color_y" model="componente.color">
+      <field name="name">Amarillo</field>
+      <field name="key">y</field>
+      <field name="sequence">4</field>
+    </record>
+  </data>
 </odoo>

@@ -1,7 +1,7 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <odoo>
-
-  <!-- ====================================== -->
+  <data>
+       <!-- ====================================== -->
   <!-- TIPOS DE COMPONENTE (UNIDADES)        -->
   <!-- ====================================== -->
 
@@ -368,5 +368,6 @@
     <field name="code">FUNCION_SCAN_MAIL</field>
     <field name="is_color_sensitive">0</field>
   </record>
-
+   
+  </data>
 </odoo>

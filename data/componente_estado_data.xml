@@ -1,172 +1,195 @@
+<?xml version='1.0' encoding='utf-8'?>
 <odoo>
-  <!-- Críticos -->
-  <record id="estado_requiere_cambio" model="componente.estado">
-    <field name="name">Requiere cambio</field>
-    <field name="code">requiere_cambio</field>
-    <field name="color">1</field><field name="prioridad">1</field>
-    <field name="descripcion">Reemplazo urgente antes de entrega.</field>
-  </record>
-  
-
-  <!-- Medios / desgaste -->
-  <record id="estado_regular" model="componente.estado">
-    <field name="name">Regular</field>
-    <field name="code">regular</field>
-    <field name="color">3</field><field name="prioridad">2</field>
-  </record>
-  <record id="estado_gastada" model="componente.estado">
-    <field name="name">Gastada pero puede trabajar</field>
-    <field name="code">gastada_pero_puede_trabajar</field>
-    <field name="color">4</field><field name="prioridad">2</field>
-  </record>
-  <record id="estado_mantenimiento" model="componente.estado">
-    <field name="name">Mantenimiento</field>
-    <field name="code">mantenimiento</field>
-    <field name="color">4</field><field name="prioridad">2</field>
-  </record>
-
-  <!-- Bajos / info -->
-  <record id="estado_sin_revisar" model="componente.estado">
-    <field name="name">Sin revisar</field>
-    <field name="code">sin_revisar</field>
-    <field name="color">0</field><field name="prioridad">3</field>
-  </record>
-  <record id="estado_revisado" model="componente.estado">
-    <field name="name">Revisado</field>
-    <field name="code">revisado</field>
-    <field name="color">10</field><field name="prioridad">3</field>
-  </record>
-  <record id="estado_nuevo" model="componente.estado">
-    <field name="name">Nuevo</field>
-    <field name="code">nuevo</field>
-    <field name="color">10</field><field name="prioridad">3</field>
-  </record>
-  <record id="estado_no_aplica" model="componente.estado">
-    <field name="name">No aplica</field>
-    <field name="code">no_aplica</field>
-    <field name="color">0</field><field name="prioridad">3</field>
-  </record>
-  <!-- Estos son los únicos que faltan -->
-<record id="estado_correcto" model="componente.estado">
-  <field name="name">Correcto</field>
-  <field name="code">correcto</field>
-  <field name="color">10</field><field name="prioridad">3</field>
-</record>
-<record id="estado_sin_probar" model="componente.estado">
-  <field name="name">Sin probar</field>
-  <field name="code">sin_probar</field>
-  <field name="color">0</field><field name="prioridad">3</field>
-</record>
-<record id="estado_falla" model="componente.estado">
-  <field name="name">Falla</field>
-  <field name="code">falla</field>
-  <field name="color">1</field><field name="prioridad">1</field>
-</record>
-<!-- ====================================== -->
-        <!-- ESTADOS ESPECÍFICOS PARA CARCASA -->
-        <!-- ====================================== -->
-        
-        <record id="estado_carcasa_blanca" model="componente.estado">
-            <field name="name">Carcasa blanca original</field>
-            <field name="code">carcasa_blanca</field>
-            <field name="color">10</field>  <!-- Verde - Bueno -->
-            <field name="prioridad">3</field>  <!-- Baja -->
-            <field name="descripcion">Carcasa en color blanco original, todo el contorno en buen estado</field>
-        </record>
-
-        <record id="estado_carcasa_amarilla" model="componente.estado">
-            <field name="name">Carcasa amarillenta</field>
-            <field name="code">carcasa_amarilla</field>
-            <field name="color">4</field>  <!-- Amarillo - Desgaste -->
-            <field name="prioridad">2</field>  <!-- Media -->
-            <field name="descripcion">Carcasa con decoloración amarillenta por desgaste y uso</field>
-        </record>
-
-        <record id="estado_carcasa_rota" model="componente.estado">
-            <field name="name">Carcasa con roturas</field>
-            <field name="code">carcasa_rota</field>
-            <field name="color">1</field>  <!-- Rojo - Crítico -->
-            <field name="prioridad">1</field>  <!-- Alta -->
-            <field name="descripcion">Carcasa con daños físicos o roturas en alguna sección del contorno</field>
-        </record>
-
-        <record id="estado_carcasa_faltante" model="componente.estado">
-            <field name="name">Carcasa con piezas faltantes</field>
-            <field name="code">carcasa_faltante</field>
-            <field name="color">1</field>  <!-- Rojo - Crítico -->
-            <field name="prioridad">1</field>  <!-- Alta -->
-            <field name="descripcion">Carcasa con piezas faltantes en el contorno</field>
-        </record>
-
-        <!-- ====================================== -->
-        <!-- ESTADOS ESPECÍFICOS PARA PANEL -->
-        <!-- ====================================== -->
-        
-        <record id="estado_panel_blanco" model="componente.estado">
-            <field name="name">Panel blanco original</field>
-            <field name="code">panel_blanco</field>
-            <field name="color">10</field>  <!-- Verde - Bueno -->
-            <field name="prioridad">3</field>  <!-- Baja -->
-            <field name="descripcion">Panel de control en color blanco original sin desgaste</field>
-        </record>
-
-        <record id="estado_panel_amarillo" model="componente.estado">
-            <field name="name">Panel amarillento</field>
-            <field name="code">panel_amarillo</field>
-            <field name="color">4</field>  <!-- Amarillo - Desgaste -->
-            <field name="prioridad">2</field>  <!-- Media -->
-            <field name="descripcion">Panel de control amarillento por uso y exposición</field>
-        </record>
-        <!-- ====================================== -->
-<!-- ESTADOS ESPECÍFICOS PARA TÓNER (TODOS LOS COLORES) -->
-<!-- ====================================== -->
-
-<record id="estado_toner_100" model="componente.estado">
-    <field name="name">Tóner 100%</field>
-    <field name="code">toner_100</field>
-    <field name="color">10</field>  <!-- Verde - Óptimo -->
-    <field name="prioridad">3</field>  <!-- Baja -->
-    <field name="descripcion">Tóner nuevo con capacidad al 100%</field>
-</record>
-
-<record id="estado_toner_50" model="componente.estado">
-    <field name="name">Tóner 50%</field>
-    <field name="code">toner_50</field>
-    <field name="color">4</field>  <!-- Amarillo - En uso -->
-    <field name="prioridad">3</field>  <!-- Baja -->
-    <field name="descripcion">Tóner en uso, aproximadamente 50% de capacidad restante</field>
-</record>
-
-<record id="estado_toner_25" model="componente.estado">
-    <field name="name">Tóner 25%</field>
-    <field name="code">toner_25</field>
-    <field name="color">3</field>  <!-- Naranja - Atención -->
-    <field name="prioridad">2</field>  <!-- Media -->
-    <field name="descripcion">Tóner bajo, aproximadamente 25% - preparar reemplazo</field>
-</record>
-
-<record id="estado_toner_vacio" model="componente.estado">
-    <field name="name">Tóner vacío</field>
-    <field name="code">toner_vacio</field>
-    <field name="color">1</field>  <!-- Rojo - Crítico -->
-    <field name="prioridad">1</field>  <!-- Alta -->
-    <field name="descripcion">Tóner agotado - requiere cambio inmediato</field>
-</record>
-
-<record id="estado_toner_sin_contenedor" model="componente.estado">
-    <field name="name">Sin contenedor de tóner</field>
-    <field name="code">toner_sin_contenedor</field>
-    <field name="color">1</field>  <!-- Rojo - Crítico -->
-    <field name="prioridad">1</field>  <!-- Alta -->
-    <field name="descripcion">Contenedor de tóner no instalado</field>
-</record>
-<record id="estado_no_instalado" model="componente.estado">
-    <field name="name">No instalado</field>
-    <field name="code">no_instalado</field>
-    <field name="color">0</field>  <!-- Gris -->
-    <field name="prioridad">3</field>  <!-- Baja -->
-    <field name="descripcion">
+  <data>
+    <!-- Críticos -->
+    <record id="estado_requiere_cambio" model="componente.estado">
+      <field name="name">Requiere cambio</field>
+      <field name="code">requiere_cambio</field>
+      <field name="color">1</field>
+      <field name="prioridad">1</field>
+      <field name="descripcion">Reemplazo urgente antes de entrega.</field>
+    </record>
+    <!-- Medios / desgaste -->
+    <record id="estado_regular" model="componente.estado">
+      <field name="name">Regular</field>
+      <field name="code">regular</field>
+      <field name="color">3</field>
+      <field name="prioridad">2</field>
+    </record>
+    <record id="estado_gastada" model="componente.estado">
+      <field name="name">Gastada pero puede trabajar</field>
+      <field name="code">gastada_pero_puede_trabajar</field>
+      <field name="color">4</field>
+      <field name="prioridad">2</field>
+    </record>
+    <record id="estado_mantenimiento" model="componente.estado">
+      <field name="name">Mantenimiento</field>
+      <field name="code">mantenimiento</field>
+      <field name="color">4</field>
+      <field name="prioridad">2</field>
+    </record>
+    <!-- Bajos / info -->
+    <record id="estado_sin_revisar" model="componente.estado">
+      <field name="name">Sin revisar</field>
+      <field name="code">sin_revisar</field>
+      <field name="color">0</field>
+      <field name="prioridad">3</field>
+    </record>
+    <record id="estado_revisado" model="componente.estado">
+      <field name="name">Revisado</field>
+      <field name="code">revisado</field>
+      <field name="color">10</field>
+      <field name="prioridad">3</field>
+    </record>
+    <record id="estado_nuevo" model="componente.estado">
+      <field name="name">Nuevo</field>
+      <field name="code">nuevo</field>
+      <field name="color">10</field>
+      <field name="prioridad">3</field>
+    </record>
+    <record id="estado_no_aplica" model="componente.estado">
+      <field name="name">No aplica</field>
+      <field name="code">no_aplica</field>
+      <field name="color">0</field>
+      <field name="prioridad">3</field>
+    </record>
+    <!-- Estos son los únicos que faltan -->
+    <record id="estado_correcto" model="componente.estado">
+      <field name="name">Correcto</field>
+      <field name="code">correcto</field>
+      <field name="color">10</field>
+      <field name="prioridad">3</field>
+    </record>
+    <record id="estado_sin_probar" model="componente.estado">
+      <field name="name">Sin probar</field>
+      <field name="code">sin_probar</field>
+      <field name="color">0</field>
+      <field name="prioridad">3</field>
+    </record>
+    <record id="estado_falla" model="componente.estado">
+      <field name="name">Falla</field>
+      <field name="code">falla</field>
+      <field name="color">1</field>
+      <field name="prioridad">1</field>
+    </record>
+    <!-- ====================================== -->
+    <!-- ESTADOS ESPECÍFICOS PARA CARCASA -->
+    <!-- ====================================== -->
+    <record id="estado_carcasa_blanca" model="componente.estado">
+      <field name="name">Carcasa blanca original</field>
+      <field name="code">carcasa_blanca</field>
+      <field name="color">10</field>
+      <!-- Verde - Bueno -->
+      <field name="prioridad">3</field>
+      <!-- Baja -->
+      <field name="descripcion">Carcasa en color blanco original, todo el contorno en buen estado</field>
+    </record>
+    <record id="estado_carcasa_amarilla" model="componente.estado">
+      <field name="name">Carcasa amarillenta</field>
+      <field name="code">carcasa_amarilla</field>
+      <field name="color">4</field>
+      <!-- Amarillo - Desgaste -->
+      <field name="prioridad">2</field>
+      <!-- Media -->
+      <field name="descripcion">Carcasa con decoloración amarillenta por desgaste y uso</field>
+    </record>
+    <record id="estado_carcasa_rota" model="componente.estado">
+      <field name="name">Carcasa con roturas</field>
+      <field name="code">carcasa_rota</field>
+      <field name="color">1</field>
+      <!-- Rojo - Crítico -->
+      <field name="prioridad">1</field>
+      <!-- Alta -->
+      <field name="descripcion">Carcasa con daños físicos o roturas en alguna sección del contorno</field>
+    </record>
+    <record id="estado_carcasa_faltante" model="componente.estado">
+      <field name="name">Carcasa con piezas faltantes</field>
+      <field name="code">carcasa_faltante</field>
+      <field name="color">1</field>
+      <!-- Rojo - Crítico -->
+      <field name="prioridad">1</field>
+      <!-- Alta -->
+      <field name="descripcion">Carcasa con piezas faltantes en el contorno</field>
+    </record>
+    <!-- ====================================== -->
+    <!-- ESTADOS ESPECÍFICOS PARA PANEL -->
+    <!-- ====================================== -->
+    <record id="estado_panel_blanco" model="componente.estado">
+      <field name="name">Panel blanco original</field>
+      <field name="code">panel_blanco</field>
+      <field name="color">10</field>
+      <!-- Verde - Bueno -->
+      <field name="prioridad">3</field>
+      <!-- Baja -->
+      <field name="descripcion">Panel de control en color blanco original sin desgaste</field>
+    </record>
+    <record id="estado_panel_amarillo" model="componente.estado">
+      <field name="name">Panel amarillento</field>
+      <field name="code">panel_amarillo</field>
+      <field name="color">4</field>
+      <!-- Amarillo - Desgaste -->
+      <field name="prioridad">2</field>
+      <!-- Media -->
+      <field name="descripcion">Panel de control amarillento por uso y exposición</field>
+    </record>
+    <!-- ====================================== -->
+    <!-- ESTADOS ESPECÍFICOS PARA TÓNER (TODOS LOS COLORES) -->
+    <!-- ====================================== -->
+    <record id="estado_toner_100" model="componente.estado">
+      <field name="name">Tóner 100%</field>
+      <field name="code">toner_100</field>
+      <field name="color">10</field>
+      <!-- Verde - Óptimo -->
+      <field name="prioridad">3</field>
+      <!-- Baja -->
+      <field name="descripcion">Tóner nuevo con capacidad al 100%</field>
+    </record>
+    <record id="estado_toner_50" model="componente.estado">
+      <field name="name">Tóner 50%</field>
+      <field name="code">toner_50</field>
+      <field name="color">4</field>
+      <!-- Amarillo - En uso -->
+      <field name="prioridad">3</field>
+      <!-- Baja -->
+      <field name="descripcion">Tóner en uso, aproximadamente 50% de capacidad restante</field>
+    </record>
+    <record id="estado_toner_25" model="componente.estado">
+      <field name="name">Tóner 25%</field>
+      <field name="code">toner_25</field>
+      <field name="color">3</field>
+      <!-- Naranja - Atención -->
+      <field name="prioridad">2</field>
+      <!-- Media -->
+      <field name="descripcion">Tóner bajo, aproximadamente 25% - preparar reemplazo</field>
+    </record>
+    <record id="estado_toner_vacio" model="componente.estado">
+      <field name="name">Tóner vacío</field>
+      <field name="code">toner_vacio</field>
+      <field name="color">1</field>
+      <!-- Rojo - Crítico -->
+      <field name="prioridad">1</field>
+      <!-- Alta -->
+      <field name="descripcion">Tóner agotado - requiere cambio inmediato</field>
+    </record>
+    <record id="estado_toner_sin_contenedor" model="componente.estado">
+      <field name="name">Sin contenedor de tóner</field>
+      <field name="code">toner_sin_contenedor</field>
+      <field name="color">1</field>
+      <!-- Rojo - Crítico -->
+      <field name="prioridad">1</field>
+      <!-- Alta -->
+      <field name="descripcion">Contenedor de tóner no instalado</field>
+    </record>
+    <record id="estado_no_instalado" model="componente.estado">
+      <field name="name">No instalado</field>
+      <field name="code">no_instalado</field>
+      <field name="color">0</field>
+      <!-- Gris -->
+      <field name="prioridad">3</field>
+      <!-- Baja -->
+      <field name="descripcion">
         El componente existe para este modelo, pero actualmente no está instalado
     </field>
-</record>
+    </record>
+  </data>
 </odoo>

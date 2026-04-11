@@ -1,7 +1,7 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <odoo>
-
-  <!-- ====== UI / DRUM (color y mono) ====== -->
+  <data>
+      <!-- ====== UI / DRUM (color y mono) ====== -->
   <record id="sub_ui_opc" model="componente.subparte">
     <field name="name">Tambor OPC</field>
     <field name="code">UI_OPC</field>
@@ -1092,5 +1092,6 @@
     <field name="code">DUP_DELIVERY_ROLLERS</field>
     <field name="tipo_id" ref="comp_tipo_dup_delivery"/>
   </record>
-
+   
+  </data>
 </odoo>
