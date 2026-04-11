@@ -49,6 +49,13 @@
         'report/report_reparaciones_ventas.xml',
         'report/ticket_enlace.xml',
         'report/ticket_reporte.xml',
+        'report/informes.xml',
+        'report/evaluacion.xml',
+        'report/evaluacion_enlace.xml',
+        'report/report_qr_codes_reparaciones.xml',
+        'report/reporte_estado_maquinas_report.xml',       
+        'report/qr_alquiler.xml',                
+        'report/evaluacion_servicio.xml',
         #'views/acciones_menus.xml',
     ],
     
