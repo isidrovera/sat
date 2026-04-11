@@ -46,14 +46,6 @@
         </field>
     </record>
 
-    <!-- Acción para abrir el wizard -->
-    <record id="action_tracking_diagnostico" model="ir.actions.act_window">
-        <field name="name">Diagnóstico GPS</field>
-        <field name="res_model">tracking.diagnostico</field>
-        <field name="view_mode">form</field>
-        <field name="target">new</field>
-    </record>
-
     <!-- Botón en el header del formulario del ticket -->
     <record id="view_ticket_form_diagnostico" model="ir.ui.view">
         <field name="name">ticket.alquiler.form.diagnostico</field>
@@ -72,12 +64,6 @@
         </field>
     </record>
 
-    <!-- Menú: SAT → Diagnóstico GPS -->
-    <menuitem
-        id="menu_tracking_diagnostico"
-        name="🔍 Diagnóstico GPS"
-        parent="sat.sat_menu_root"
-        action="action_tracking_diagnostico"
-        sequence="96"/>
+ 
 </data>
 </odoo>

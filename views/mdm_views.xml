@@ -338,64 +338,6 @@
                 </search>
             </field>
         </record>
-        <!-- ═══════════════════════════════════════════════════════════ -->
-        <!-- ACCIONES                                                     -->
-        <!-- ═══════════════════════════════════════════════════════════ -->
-        <record id="action_mdm_config" model="ir.actions.act_window">
-            <field name="name">Configuración MDM</field>
-            <field name="res_model">mdm.config</field>
-            <field name="view_mode">list,form</field>
-            <field name="help" type="html">
-                <p class="o_view_nocontent_smiling_face">
-          Configura la conexión con Headwind MDM
-        </p>
-                <p>Agrega la URL, usuario y contraseña de tu servidor MDM.</p>
-            </field>
-        </record>
-        <record id="action_mdm_device" model="ir.actions.act_window">
-            <field name="name">Dispositivos MDM</field>
-            <field name="res_model">mdm.device</field>
-            <field name="view_mode">list,kanban,form</field>
-            <field name="search_view_id" ref="view_mdm_device_search"/>
-            <field name="context">{'search_default_online': 1}</field>
-            <field name="help" type="html">
-                <p class="o_view_nocontent_smiling_face">
-          No hay dispositivos sincronizados
-        </p>
-                <p>Ve a Configuración MDM y ejecuta "Sincronizar dispositivos".</p>
-            </field>
-        </record>
-        <record id="action_mdm_command_log" model="ir.actions.act_window">
-            <field name="name">Historial de Comandos MDM</field>
-            <field name="res_model">mdm.command.log</field>
-            <field name="view_mode">list</field>
-            <field name="search_view_id" ref="view_mdm_command_log_search"/>
-            <field name="context">{'search_default_today': 1}</field>
-        </record>
-        <!-- ═══════════════════════════════════════════════════════════ -->
-        <!-- MENÚS                                                        -->
-        <!-- ═══════════════════════════════════════════════════════════ -->
-        <!-- Sub-raíz MDM dentro del menú principal sat -->
-        <menuitem id="menu_mdm_root"
-              name="Control MDM"
-              parent="sat_menu_root"
-              sequence="95"
-              />
-        <menuitem id="menu_mdm_devices"
-              name="📱 Dispositivos"
-              parent="menu_mdm_root"
-              action="action_mdm_device"
-              sequence="10"/>
-        <menuitem id="menu_mdm_command_log"
-              name="📋 Historial de Comandos"
-              parent="menu_mdm_root"
-              action="action_mdm_command_log"
-              sequence="20"/>
-        <!-- Configuración MDM dentro de sat.ajustes -->
-        <menuitem id="menu_mdm_config"
-              name="Headwind MDM"
-              parent="sat.ajustes"
-              action="action_mdm_config"
-              sequence="170"/>
+        
     </data>
 </odoo>

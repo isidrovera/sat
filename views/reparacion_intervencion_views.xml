@@ -132,14 +132,7 @@
         </form>
       </field>
     </record>
-    <!-- ACCIÓN DEL WIZARD -->
-    <record id="action_reparacion_add_subparts_wizard" model="ir.actions.act_window">
-      <field name="name">Añadir/Editar Subpartes</field>
-      <field name="res_model">reparacion.add.subparts.wizard</field>
-      <field name="view_mode">form</field>
-      <field name="view_id" ref="view_reparacion_add_subparts_wizard_form"/>
-      <field name="target">new</field>
-    </record>
+   
     <!-- ===================================================== -->
     <!-- 3) INTERVENCIONES                                     -->
     <!-- ===================================================== -->
@@ -236,15 +229,6 @@
         </form>
       </field>
     </record>
-    <!-- ACCIÓN VENTANA - Intervenciones -->
-    <record id="action_reparacion_intervencion" model="ir.actions.act_window">
-      <field name="name">Intervenciones de Reparación</field>
-      <field name="res_model">reparacion.intervencion</field>
-      <field name="view_mode">list,form</field>
-      <field name="help" type="html">
-        <p class="o_view_nocontent_smiling_face">¡Crea tu primera intervención de reparación!</p>
-        <p>Registra las intervenciones realizadas en cada componente y sus subpartes asociadas.</p>
-      </field>
-    </record>
+    
   </data>
 </odoo>

@@ -68,42 +68,7 @@
       </field>
     </record>
 
-    <!-- ═══════════════════════════════════════════════════════ -->
-    <!--  ACCIÓN                                                -->
-    <!-- ═══════════════════════════════════════════════════════ -->
-
-    <record id="action_tecnico_dispositivo_gps" model="ir.actions.act_window">
-      <field name="name">Dispositivos GPS Técnicos</field>
-      <field name="res_model">tecnico.dispositivo.gps</field>
-      <field name="view_mode">list,form</field>
-      <field name="search_view_id" ref="view_tecnico_dispositivo_gps_search"/>
-      <field name="context">{'search_default_filter_activos': 1}</field>
-      <field name="help" type="html">
-        <p class="o_view_nocontent_smiling_face">
-          Vincular técnicos con dispositivos GPS
-        </p>
-        <p>
-          Configure la relación entre cada técnico y su dispositivo
-          de rastreo en Traccar (celular con OsmAnd o rastreador físico).
-        </p>
-      </field>
-    </record>
-
-    <!-- ═══════════════════════════════════════════════════════ -->
-    <!--  MENÚ (bajo sat.ajustes / Configuración)               -->
-    <!-- ═══════════════════════════════════════════════════════ -->
-
-    <menuitem id="menu_gps_tracking_separator"
-              name="━━━━━━━━━━━ GPS Tracking ━━━━━━━━━━━"
-              parent="sat.ajustes"
-              sequence="170"/>
-
-    <menuitem id="menu_dispositivos_gps"
-              name="Dispositivos GPS Técnicos"
-              parent="sat.ajustes"
-              action="action_tecnico_dispositivo_gps"
-              sequence="171"
-              groups="base.group_system"/>
+   
 
   </data>
 </odoo>
