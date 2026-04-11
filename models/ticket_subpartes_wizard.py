@@ -21,7 +21,7 @@ class TicketSubpartesWizard(models.TransientModel):
         'ticket.subpartes.wizard.linea',
         'wizard_id',
         string='Subpartes'
-        )
+    )
 
     componentes_info = fields.Html(
         string='Componentes pendientes',
@@ -49,42 +49,39 @@ class TicketSubpartesWizard(models.TransientModel):
         if not seleccionadas:
             raise UserError(_("Debe seleccionar al menos una subparte antes de confirmar."))
 
-        # Guardar las subpartes seleccionadas en la evaluación correspondiente
-        # agrupando por componente_code para evitar duplicados
-        subpartes_por_componente = {}
+        # Agrupar por intervención — limpiar detalles solo una vez por intervención
+        intervenciones_procesadas = set()
+
         for linea in seleccionadas:
-            code = linea.componente_code
-            if code not in subpartes_por_componente:
-                subpartes_por_componente[code] = []
-            subpartes_por_componente[code].append(linea)
-
-        for code, lineas in subpartes_por_componente.items():
-            # Buscar o crear la intervención en el ticket
-            intervencion = self.env['ticket.componente.intervencion'].search([
-                ('ticket_id', '=', self.ticket_id.id),
-                ('componente_code', '=', code),
-            ], limit=1)
-
+            # Usar intervencion_id si está disponible, si no buscar/crear
+            intervencion = linea.intervencion_id
             if not intervencion:
-                intervencion = self.env['ticket.componente.intervencion'].create({
-                    'ticket_id': self.ticket_id.id,
-                    'componente_code': code,
-                })
+                intervencion = self.env['ticket.componente.intervencion'].search([
+                    ('ticket_id', '=', self.ticket_id.id),
+                    ('componente_code', '=', linea.componente_code),
+                ], limit=1)
+                if not intervencion:
+                    intervencion = self.env['ticket.componente.intervencion'].create({
+                        'ticket_id': self.ticket_id.id,
+                        'componente_code': linea.componente_code,
+                    })
 
-            # Limpiar detalles existentes y crear los nuevos
-            intervencion.detalle_ids.unlink()
-            for linea in lineas:
-                self.env['ticket.componente.intervencion.detalle'].create({
-                    'intervencion_id': intervencion.id,
-                    'subparte_id': linea.subparte_id.id,
-                    'cantidad': linea.cantidad,
-                    'observacion': linea.observacion or '',
-                })
+            # Limpiar detalles solo la primera vez que procesamos esta intervención
+            if intervencion.id not in intervenciones_procesadas:
+                intervencion.detalle_ids.unlink()
+                intervenciones_procesadas.add(intervencion.id)
+
+            self.env['ticket.componente.intervencion.detalle'].create({
+                'intervencion_id': intervencion.id,
+                'subparte_id': linea.subparte_id.id,
+                'cantidad': linea.cantidad,
+                'observacion': linea.observacion or '',
+            })
 
         _logger.info(
-            "[ticket.subpartes.wizard] Subpartes confirmadas para ticket_id=%s — %s componentes procesados",
+            "[ticket.subpartes.wizard] Subpartes confirmadas para ticket_id=%s — %s intervenciones procesadas",
             self.ticket_id.id,
-            len(subpartes_por_componente)
+            len(intervenciones_procesadas)
         )
 
         return {'type': 'ir.actions.act_window_close'}
@@ -112,6 +109,13 @@ class TicketSubpartesWizardLinea(models.TransientModel):
         string='Componente',
         compute='_compute_componente_display',
         store=True
+    )
+
+    # Referencia a la intervención — se usa en action_confirmar para saber dónde guardar
+    intervencion_id = fields.Many2one(
+        'ticket.componente.intervencion',
+        string='Intervención',
+        ondelete='cascade'
     )
 
     subparte_id = fields.Many2one(
