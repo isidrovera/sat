@@ -86,7 +86,7 @@
   <field name="name">Dispositivos MDM</field>
   <field name="res_model">mdm.device</field>
   <field name="view_mode">list,kanban,form</field>
-  <field name="context">{'search_default_online': 1}</field>
+  
   <field name="help" type="html">
     <p class="o_view_nocontent_smiling_face">No hay dispositivos sincronizados</p>
     <p>Ve a Configuración MDM y ejecuta "Sincronizar dispositivos".</p>
@@ -112,7 +112,7 @@
       <field name="res_model">tecnico.dispositivo.gps</field>
       <field name="view_mode">list,form</field>
       <field name="search_view_id" ref="view_tecnico_dispositivo_gps_search"/>
-      <field name="context">{'search_default_filter_activos': 1}</field>
+     
       <field name="help" type="html">
         <p class="o_view_nocontent_smiling_face">Vincular técnicos con dispositivos GPS</p>
         <p>Configure la relación entre cada técnico y su dispositivo de rastreo en Traccar.</p>
@@ -125,7 +125,7 @@
       <field name="res_model">sat.import.line</field>
       <field name="view_mode">list,form</field>
       <field name="search_view_id" ref="view_sat_import_line_search"/>
-      <field name="context">{'search_default_flt_pending': 1}</field>
+      
     </record>
 
     <record id="action_sat_import_assign_header_wizard" model="ir.actions.act_window">
@@ -154,7 +154,7 @@
       <field name="name">Máquinas</field>
       <field name="res_model">sat.sat</field>
       <field name="view_mode">list,kanban,form,pivot</field>
-      <field name="context">{'search_default_filter_stock': 1}</field>
+      
       <field name="help" type="html">
         <p class="button_in_list">Registra un equipo</p>
       </field>
@@ -193,10 +193,7 @@
       <field name="res_model">copier.parts.request</field>
       <field name="view_mode">list,kanban,form</field>
       <field name="search_view_id" ref="view_copier_parts_request_search"/>
-      <field name="context">{
-        'search_default_my_requests': 1,
-        'search_default_draft': 1
-      }</field>
+      
       <field name="help" type="html">
         <p class="o_view_nocontent_smiling_face">Crear una nueva solicitud de partes</p>
       </field>
@@ -206,7 +203,7 @@
       <field name="name">Solicitudes de Partes Técnico</field>
       <field name="res_model">solicitud.parte.tecnico</field>
       <field name="view_mode">list,form</field>
-      <field name="context">{'search_default_enviadas': 1}</field>
+      
     </record>
 
     <!-- ── Evaluaciones ───────────────────────────────────────────────── -->
@@ -224,7 +221,7 @@
       <field name="name">Evaluaciones de Servicio</field>
       <field name="res_model">client.service.evaluation</field>
       <field name="view_mode">kanban,list,form</field>
-      <field name="context">{'search_default_today': 1}</field>
+      
     </record>
 
     <!-- ── Tóner ──────────────────────────────────────────────────────── -->
@@ -233,7 +230,7 @@
       <field name="res_model">toner.counter.submission</field>
       <field name="view_mode">kanban,list,form</field>
       <field name="search_view_id" ref="view_toner_counter_submission_search"/>
-      <field name="context">{'search_default_pending': 1}</field>
+      
     </record>
 
     <record id="action_toner_delivery_schedule" model="ir.actions.act_window">
@@ -252,8 +249,7 @@
       <field name="name">Confirmaciones de Entrega</field>
       <field name="res_model">toner.delivery.confirmation</field>
       <field name="view_mode">kanban,list,form,graph,pivot</field>
-      <field name="search_view_id" ref="view_toner_delivery_confirmation_search"/>
-      <field name="context">{'search_default_draft': 1, 'search_default_confirmed': 1}</field>
+      
     </record>
 
     <record id="action_toner_delivery_validation_pending" model="ir.actions.act_window">
@@ -269,7 +265,7 @@
       <field name="name">Contadores Automáticos</field>
       <field name="res_model">contador.automatico</field>
       <field name="view_mode">list,form</field>
-      <field name="context">{'search_default_hoy': 1}</field>
+    
     </record>
 
     <record id="action_patron_contador" model="ir.actions.act_window">
@@ -278,7 +274,7 @@
       <field name="view_mode">list,form</field>
       <field name="view_id" ref="view_patron_contador_list"/>
       <field name="search_view_id" ref="view_patron_contador_search"/>
-      <field name="context">{'search_default_activos': 1}</field>
+      
     </record>
 
     <!-- ── PrintTracker Pro ───────────────────────────────────────────── -->
@@ -359,10 +355,7 @@
       <field name="view_mode">list,form</field>
       <field name="view_id" ref="view_reporte_estado_maquina_list"/>
       <field name="search_view_id" ref="view_reporte_estado_maquina_search"/>
-      <field name="context">{
-        'search_default_group_by_estado': 1,
-        'search_default_filter_esta_semana': 1
-      }</field>
+      
     </record>
 
     <record id="action_reporte_estado_maquinas_wizard" model="ir.actions.act_window">
@@ -379,7 +372,7 @@
       <field name="view_mode">list,form</field>
       <field name="view_id" ref="view_reporte_estado_maquina_list"/>
       <field name="domain">[('fecha_generacion','&gt;=', (context_today() - relativedelta(days=7)).strftime('%Y-%m-%d'))]</field>
-      <field name="context">{'search_default_group_by_estado': 1}</field>
+      
     </record>
 
     <record id="action_reporte_estado_maquinas_sin_revisar" model="ir.actions.act_window">
@@ -483,7 +476,7 @@
       <field name="res_model">universal.excel.import</field>
       <field name="view_mode">list,form</field>
       <field name="search_view_id" ref="view_universal_excel_import_search"/>
-      <field name="context">{'search_default_my_imports': 1}</field>
+      
     </record>
 
     <record id="action_incidencias" model="ir.actions.act_window">
@@ -666,7 +659,7 @@
       <field name="name">Pedidos de Repuestos</field>
       <field name="res_model">ticket.repuesto.pedido</field>
       <field name="view_mode">list,form</field>
-      <field name="context">{'search_default_pendientes': 1}</field>
+   
       <field name="help" type="html">
         <p class="o_view_nocontent_smiling_face">Sin pedidos de repuestos</p>
       </field>
