@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+    <data>
     <record id="Opciones_pedidos_form_view" model="ir.ui.view">
         <field name="name">Opciones_pedidos.form</field>
         <field name="model">sale.order</field>
@@ -52,5 +53,6 @@
                 <field name="serie_id" string="Serie" />
             </xpath>
         </field>
-    </record>    
+    </record>  
+    </data>  
 </odoo>

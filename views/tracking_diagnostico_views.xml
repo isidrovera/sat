@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+    <data>
 
     <!-- ═══════════════════════════════════════════════════════════ -->
     <!--  WIZARD: Diagnóstico GPS Tracking                          -->
@@ -78,5 +79,5 @@
         parent="sat.sat_menu_root"
         action="action_tracking_diagnostico"
         sequence="96"/>
-
+</data>
 </odoo>

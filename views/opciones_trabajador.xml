@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo> 
+    <data>
     <record id="Opciones_trabajador_form_view" model="ir.ui.view">
         <field name="name">Opciones_Trabajador.form</field>
         <field name="model">res.users</field>
@@ -9,5 +10,6 @@
                 <field name="tipo_trabajador"></field>         
             </xpath>
         </field>
-    </record>    
+    </record>  
+    </data>  
 </odoo>

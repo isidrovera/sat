@@ -1,6 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
 <odoo>
-
-  <!-- LISTA (sin attrs/state) -->
+  <data>
+      <!-- LISTA (sin attrs/state) -->
   <record id="view_reparacion_comp_eval_tree_v18" model="ir.ui.view">
     <field name="name">reparacion.componente.evaluacion.tree.v18</field>
     <field name="model">reparacion.componente.evaluacion</field>
@@ -82,7 +83,8 @@
       </search>
     </field>
   </record>
-
+  </data>
   
+     
 
 </odoo>

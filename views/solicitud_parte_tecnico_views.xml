@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+    <data>
 
     <!-- SECUENCIA -->
     <record id="seq_solicitud_parte_tecnico" model="ir.sequence">
@@ -364,5 +365,5 @@
 
         </field>
     </record>
-
+</data>
 </odoo>

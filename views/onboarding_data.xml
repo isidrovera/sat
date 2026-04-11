@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <odoo>
+    <data>
     <!-- Onboarding Step -->
     <record id="alquiler_onboarding_sample_step" model="onboarding.onboarding.step">
         <field name="title">Nueva Máquina de Alquiler</field>
@@ -15,4 +16,5 @@
         <field name="route_name">alquiler</field>
         <field name="panel_close_action_name">action_close_panel_alquiler</field>
     </record>
+    </data>
 </odoo>

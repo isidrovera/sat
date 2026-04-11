@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+    <data>
     <!-- Vista Lista de Programación de Entregas -->
     <record id="view_toner_delivery_schedule_list" model="ir.ui.view">
         <field name="name">toner.delivery.schedule.list</field>
@@ -319,7 +320,7 @@
     <!-- Vista Calendario de Entregas -->
     
 
-   
+   </data>
 
    
 </odoo>

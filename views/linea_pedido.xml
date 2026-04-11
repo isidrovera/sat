@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+    <data>
     <record id="Opciones_pedido_form_view_inherit" model="ir.ui.view">
         <field name="name">Opciones Pedido Form View Inherited</field>
         <field name="model">sale.order</field>
@@ -14,4 +15,5 @@
             </xpath>
         </field>
     </record>
+    </data>
 </odoo>

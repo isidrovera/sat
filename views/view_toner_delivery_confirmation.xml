@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+    <data>
     <!-- Vista Lista de Confirmaciones de Entrega -->
     <record id="view_toner_delivery_confirmation_list" model="ir.ui.view">
         <field name="name">toner.delivery.confirmation.list</field>
@@ -441,5 +442,5 @@
         </field>
     </record>
 
-   
+   </data>
 </odoo>

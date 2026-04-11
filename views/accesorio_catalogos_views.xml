@@ -1,5 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
 <odoo>
-  <!-- Accesorio Tipo -->
+  <data>
+      <!-- Accesorio Tipo -->
   <record id="view_accesorio_tipo_tree" model="ir.ui.view">
     <field name="name">accesorio.tipo.tree</field>
     <field name="model">accesorio.tipo</field>
@@ -50,4 +52,5 @@
     </field>
   </record>
    
+  </data>
 </odoo>

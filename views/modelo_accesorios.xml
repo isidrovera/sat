@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+    <data>
     <!-- Vista Form -->
     <record id="view_modelo_maquina_accesorio_form" model="ir.ui.view">
         <field name="name">modelo.maquina.accesorio.form</field>
@@ -72,5 +73,5 @@
     </record>
 
    
-
+</data>
 </odoo>

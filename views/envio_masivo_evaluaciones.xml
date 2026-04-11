@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+    <data>
     <!-- Vista del formulario del asistente -->
     <record id="view_evaluacion_personal_envio_masivo_form" model="ir.ui.view">
         <field name="name">evaluacion.personal.envio.masivo.form</field>
@@ -74,4 +75,5 @@
         <field name="perm_create" eval="1"/>
         <field name="perm_unlink" eval="0"/>
     </record>
+    </data>
 </odoo>

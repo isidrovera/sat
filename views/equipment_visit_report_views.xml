@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <odoo>
 
-
+<data>
 
   <!-- ================================
        Vista Listado (list) para informes de visitas
@@ -270,7 +270,7 @@
       </form>
     </field>
   </record>
-
+</data>
  
 
 </odoo>

@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+    <data>
     <!-- Vista de formulario -->
     <record id="view_gemini_configuracion_form" model="ir.ui.view">
         <field name="name">gemini.configuracion.form</field>
@@ -61,5 +62,5 @@
         </field>
     </record>
 
-   
+   </data>
 </odoo>

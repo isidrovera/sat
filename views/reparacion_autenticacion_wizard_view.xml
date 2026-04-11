@@ -1,5 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <odoo>
+    <data>
     <record id="view_reparacion_autenticacion_wizard_form" model="ir.ui.view">
         <field name="name">Autenticación de Serie y Modelo</field>
         <field name="model">reparacion.autenticacion.wizard</field>
@@ -43,4 +44,5 @@
             </form>
         </field>
     </record>
+    </data>
 </odoo>

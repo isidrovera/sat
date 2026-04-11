@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+    <data>
     <!-- Vista Form -->
     <record id="view_copier_parts_request_form" model="ir.ui.view">
         <field name="name">copier.parts.request.form</field>
@@ -168,5 +169,5 @@
             </search>
         </field>
     </record>
-  
+  </data>
 </odoo>

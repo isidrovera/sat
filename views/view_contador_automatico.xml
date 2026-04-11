@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    
+    <data>
     <!-- VISTA LISTA -->
  <!-- VISTA LISTA MODERNA PARA CONTADORES DE IMPRESORAS -->
 <record id="view_contador_automatico_list" model="ir.ui.view">
@@ -233,6 +233,6 @@
             </search>
         </field>
     </record>
-
+</data>
     
 </odoo>

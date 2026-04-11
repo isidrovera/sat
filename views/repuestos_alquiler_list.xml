@@ -1,3 +1,4 @@
+<?xml version='1.0' encoding='utf-8'?>
 <odoo>
     <template id="repuestos_alquiler_list" name="Lista de Repuestos">
         <t t-call="website.layout">

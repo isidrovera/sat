@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+    <data>
     <!-- Vista del Wizard para Notificación WhatsApp -->
     <record id="view_whatsapp_notification_wizard_form" model="ir.ui.view">
         <field name="name">whatsapp.notification.wizard.form</field>
@@ -164,5 +165,5 @@
         <field name="perm_create" eval="1"/>
         <field name="perm_unlink" eval="1"/>
     </record>
-
+</data>
 </odoo>

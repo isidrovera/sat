@@ -1,5 +1,6 @@
+<?xml version='1.0' encoding='utf-8'?>
 <odoo>
-
+<data>
     <record id="view_sat_entrega_wizard_form" model="ir.ui.view">
         <field name="name">sat.entrega.wizard.form</field>
         <field name="model">sat.entrega.wizard</field>
@@ -31,5 +32,5 @@
 
         </field>
     </record>
-
+</data>
 </odoo>

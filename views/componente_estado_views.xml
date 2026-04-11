@@ -1,5 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
 <odoo>
-  <record id="view_componente_estado_tree" model="ir.ui.view">
+  <data>
+     <record id="view_componente_estado_tree" model="ir.ui.view">
     <field name="name">componente.estado.tree</field>
     <field name="model">componente.estado</field>
     <field name="arch" type="xml">
@@ -30,6 +32,5 @@
       </form>
     </field>
   </record>
-
-  
+  </data>
 </odoo>

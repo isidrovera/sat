@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
-       
+       <data>
     
         <!-- List View for Reparaciones Foto -->
         <record id="view_reparacion_foto_tree" model="ir.ui.view">
@@ -39,5 +39,5 @@
                 </form>
             </field>
         </record>
-
+</data>
 </odoo>

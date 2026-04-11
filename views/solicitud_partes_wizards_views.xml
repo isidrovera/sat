@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    
+    <data>
     <!-- ========================================== -->
     <!-- WIZARD 1: Aprobar y Seleccionar Autorizado -->
     <!-- ========================================== -->
@@ -223,5 +223,5 @@
         </form>
     </field>
 </record>
-
+</data>
 </odoo>

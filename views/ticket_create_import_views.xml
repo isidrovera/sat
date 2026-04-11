@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+    <data>
     <!-- Form View -->
     <record id="view_universal_excel_import_form" model="ir.ui.view">
         <field name="name">universal.excel.import.form</field>
@@ -138,5 +139,5 @@
         </field>
     </record>
 
-   
+  </data> 
 </odoo>

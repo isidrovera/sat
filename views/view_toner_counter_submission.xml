@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+    <data>
     <!-- Vista Lista de Reportes de Contadores y Tóner -->
     <record id="view_toner_counter_submission_list" model="ir.ui.view">
         <field name="name">toner.counter.submission.list</field>
@@ -348,6 +349,6 @@
             </search>
         </field>
     </record>
-
+</data>
     
 </odoo>

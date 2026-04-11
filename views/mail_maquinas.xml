@@ -1,5 +1,6 @@
- <odoo>
-  <data>
+<?xml version='1.0' encoding='utf-8'?>
+<odoo>
+   <data>
     <record id="email_template_maquinas_id" model="mail.template">
       <field name="name">Nombre de la plantilla</field>
       <field name="email_from">${object.company_id.email}</field>
@@ -38,4 +39,5 @@
       </t>
     </template>
   </data>
+  
 </odoo>
