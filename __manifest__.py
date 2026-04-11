@@ -35,6 +35,7 @@
     
     'data': [
         'security/acceso.xml',
+        'views/acciones_menus.xml',
         'data/ir_secuense.xml',
         'data/ir_secuense_ticket.xml',
         'data/ir.secuense_info.xml',
@@ -152,7 +153,7 @@
         'wizards/sat_entrega_wizard_view.xml',
         'views/solicitud_parte_tecnico_views.xml',
         'views/solicitud_partes_portal.xml',
-        'views/acciones_menus.xml',
+        
     ],
     
     'assets': {
