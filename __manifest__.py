@@ -162,7 +162,7 @@
         #'views/solicitud_parte_tecnico_views.xml',
         #'views/solicitud_partes_portal.xml',
         #'views/sat_prueba_maquina.xml',
-        'views/acciones_menus.xml',
+        #'views/acciones_menus.xml',
     ],
     
     'assets': {
