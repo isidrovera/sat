@@ -199,19 +199,33 @@ class TicketRepuestoPedido(models.Model):
     def _info_pedido_html(self):
         return (f"<p><b>Pedido N°:</b> {self.name}<br/><b>Modelo:</b> {self.modelo_nombre or '—'} | <b>Serie:</b> {self.serie or '—'}<br/><b>Cliente:</b> {self.cliente_id.name or '—'}<br/><b>Técnico:</b> {self.tecnico_id.name or '—'}<br/><b>Total repuestos:</b> {self.total_lineas}</p>")
 
+    def _get_smtp_server(self):
+        """Obtiene el servidor SMTP por nombre 'SMTP' o el primero disponible."""
+        IrMailServer = self.env['ir.mail_server'].sudo()
+        server = IrMailServer.search([('name', '=', 'SMTP')], limit=1)
+        if not server:
+            server = IrMailServer.search([], order='id asc', limit=1)
+        return server
+
     def _enviar_correo_simple(self, email_to, asunto, cuerpo_html):
         self.ensure_one()
         try:
-            mail = self.env['mail.mail'].sudo().create({
-                'subject': asunto, 'email_to': email_to,
-                'email_from': self.env['ir.config_parameter'].sudo().get_param('mail.default.from', 'noreply@andescopiers.com.pe'),
-                'body_html': cuerpo_html, 'auto_delete': True,
-            })
+            smtp_server = self._get_smtp_server()
+            mail_vals = {
+                'subject':    asunto,
+                'email_to':   email_to,
+                'email_from': 'soporte@andescopiers.com.pe',
+                'body_html':  cuerpo_html,
+                'auto_delete': True,
+            }
+            if smtp_server:
+                mail_vals['mail_server_id'] = smtp_server.id
+            mail = self.env['mail.mail'].sudo().create(mail_vals)
             mail.send()
-            _logger.info("[correo] pedido=%s | to=%s | asunto=%s", self.name, email_to, asunto)
+            _logger.info("[correo] pedido=%s | to=%s | server=%s | asunto=%s",
+                        self.name, email_to, smtp_server.name if smtp_server else 'default', asunto)
         except Exception as e:
             _logger.error("[correo] ERROR pedido=%s | to=%s | error=%s", self.name, email_to, str(e))
-
     def _wrap_correo(self, header_html, contenido_html):
         return (f"<div style='font-family:Arial,sans-serif;max-width:700px;margin:0 auto;'>{header_html}<div style='background:#f9fafb;border:1px solid #e5e7eb;padding:16px 20px;'>{contenido_html}{self._footer_correo()}</div></div>")
 
