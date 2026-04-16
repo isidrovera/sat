@@ -355,6 +355,33 @@
     <field name="code">FUSER_OIL_PAD</field>
     <field name="tipo_id" ref="comp_tipo_fusora"/>
 </record>
+<!-- Rodillo de esponja (limpieza del rodillo de calor) -->
+<record id="sub_fuser_sponge_roller" model="componente.subparte">
+    <field name="name">Rodillo de esponja</field>
+    <field name="code">FUSER_SPONGE_ROLLER</field>
+    <field name="tipo_id" ref="comp_tipo_fusora"/>
+</record>
+
+<!-- Bujes del rodillo de esponja -->
+<record id="sub_fuser_sponge_bushings" model="componente.subparte">
+    <field name="name">Bujes del rodillo de esponja</field>
+    <field name="code">FUSER_SPONGE_BUSHINGS</field>
+    <field name="tipo_id" ref="comp_tipo_fusora"/>
+</record>
+
+<!-- Bujes del rodillo de calor -->
+<record id="sub_fuser_heat_bushings" model="componente.subparte">
+    <field name="name">Bujes del rodillo de calor</field>
+    <field name="code">FUSER_HEAT_BUSHINGS</field>
+    <field name="tipo_id" ref="comp_tipo_fusora"/>
+</record>
+
+<!-- Bujes de presión -->
+<record id="sub_fuser_pressure_bushings" model="componente.subparte">
+    <field name="name">Bujes de presión</field>
+    <field name="code">FUSER_PRESSURE_BUSHINGS</field>
+    <field name="tipo_id" ref="comp_tipo_fusora"/>
+</record>
   <!-- ====== ADF ====== -->
   <record id="sub_adf_pickup" model="componente.subparte">
     <field name="name">Pickup roller</field>

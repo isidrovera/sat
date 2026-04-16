@@ -805,19 +805,24 @@ class SatSat(models.Model):
         # 6) Post-procesos (tu lógica actual)
         # ---------------------------
         for record in self:
-             # ---------------------------
+            # ---------------------------
             # 🚚 NOTIFICACIÓN TRANSPORTISTAS (AQUÍ VA)
             # ---------------------------
             try:
-                nueva_disp = vals.get('disponibilidad_id', record.disponibilidad_id)
-                nueva_ubic = vals.get('ubicacion_id', record.ubicacion_id)
-
-                if nueva_disp == 'separada' and nueva_ubic in ['segundo_local', 'covida']:
-                    record.enviar_mensaje_transportistas()
-                    _logger.info(f"[TRANSPORTE] Notificación enviada para ID {record.id}")
+                campos_relevantes = {'ubicacion_id', 'cliente_id', 'estado_ventas_id'}
+                if campos_relevantes.intersection(vals.keys()):
+                    if record.disponibilidad_id == 'separada' and record.ubicacion_id in ['segundo_local', 'covida']:
+                        record.enviar_mensaje_transportistas()
+                        _logger.info(f"[TRANSPORTE] Notificación enviada para ID {record.id}")
+                    else:
+                        _logger.info(
+                            f"[TRANSPORTE] Sin notificación para ID {record.id} "
+                            f"(disp={record.disponibilidad_id}, ubic={record.ubicacion_id})"
+                        )
+                else:
+                    _logger.info(f"[TRANSPORTE] Sin campos relevantes en vals, omitiendo notificación para ID {record.id}")
             except Exception as e:
                 _logger.error(f"[TRANSPORTE] Error enviando mensaje: {e}")
-
             
             if need_problem_notification:
                 try:
