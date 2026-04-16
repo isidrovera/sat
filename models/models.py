@@ -1730,8 +1730,12 @@ class SatSat(models.Model):
     
     @api.onchange('disponibilidad_id', 'ubicacion_id')
     def _onchange_disponibilidad_ubicacion(self):
+        """
+        Onchange solo para UI (NO lógica de negocio).
+        Evita enviar mensajes o usar message_post aquí porque el registro
+        aún puede ser NewId (no guardado).
+        """
         if self.disponibilidad_id == 'separada' and self.ubicacion_id in ['segundo_local', 'covida']:
-            
             return self._notify_vendedora()
 
     
