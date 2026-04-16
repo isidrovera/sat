@@ -805,7 +805,20 @@ class SatSat(models.Model):
         # 6) Post-procesos (tu lógica actual)
         # ---------------------------
         for record in self:
-            # Notificaciones de estado
+             # ---------------------------
+            # 🚚 NOTIFICACIÓN TRANSPORTISTAS (AQUÍ VA)
+            # ---------------------------
+            try:
+                nueva_disp = vals.get('disponibilidad_id', record.disponibilidad_id)
+                nueva_ubic = vals.get('ubicacion_id', record.ubicacion_id)
+
+                if nueva_disp == 'separada' and nueva_ubic in ['segundo_local', 'covida']:
+                    record.enviar_mensaje_transportistas()
+                    _logger.info(f"[TRANSPORTE] Notificación enviada para ID {record.id}")
+            except Exception as e:
+                _logger.error(f"[TRANSPORTE] Error enviando mensaje: {e}")
+
+            
             if need_problem_notification:
                 try:
                     record.enviar_mensaje_problema_asesora()
@@ -1718,8 +1731,7 @@ class SatSat(models.Model):
     @api.onchange('disponibilidad_id', 'ubicacion_id')
     def _onchange_disponibilidad_ubicacion(self):
         if self.disponibilidad_id == 'separada' and self.ubicacion_id in ['segundo_local', 'covida']:
-            # Solo enviamos el mensaje, no cambiamos la ubicación
-            self.enviar_mensaje_transportistas()
+            
             return self._notify_vendedora()
 
     
