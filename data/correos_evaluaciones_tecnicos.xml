@@ -76,6 +76,7 @@
             <field name="email_from">soporte@andescopiers.com.pe</field>
             <field name="email_to">{{object.ticket_id.product_alquiler.correo_}}</field>
             <field name="email_cc"></field>
+            
             <field name="body_html"><![CDATA[
         <!DOCTYPE html>
         <html>

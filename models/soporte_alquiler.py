@@ -9,6 +9,7 @@ import requests
 import json
 import logging
 import base64
+import re
 
 _logger = logging.getLogger(__name__)
 
@@ -174,7 +175,13 @@ class TicketAlquiler(models.Model):
     contometrok_id = fields.Char(string="Contometro K", tracking=True)
     contometroc_id = fields.Char(string="Contometro Color", tracking=True)
     total_copias_id = fields.Char(string="Contometro Total P+C", compute="sumar_field")
-
+    pedido_origen_id = fields.Many2one(
+        'ticket.repuesto.pedido',
+        string='Pedido de repuestos origen',
+        readonly=True,
+        index=True,
+        help="Pedido que originó este ticket de instalación."
+    )
     tipo_servicio_id = fields.Selection([
         ("instalacion", "Instalación"),
         ("retiro", "Retiro de maquina"),
@@ -245,7 +252,100 @@ class TicketAlquiler(models.Model):
     # ============================================================
     # AUTO-CARGA DE EVALUACIONES
     # ============================================================
+    pedido_especial = fields.Boolean(
+        string='📦 Pedido Especial',
+        default=False,
+        tracking=True,
+        help="Si está activo, el pedido se crea en borrador y NO se envía "
+            "automáticamente a Gerencia. El técnico o aprobador agrega "
+            "líneas libres y luego envía manualmente."
+    )
+    def _crear_pedido_repuestos(self):
+        self.ensure_one()
 
+        _logger.info(
+            "[_crear_pedido_repuestos] INICIO ticket=%s | pedido_especial=%s",
+            self.id, self.pedido_especial
+        )
+
+        # 1. Detectar pendientes SIN subpartes
+        pendientes = self._get_componentes_requieren_cambio_sin_subpartes()
+
+        if pendientes and not self.pedido_especial:
+            _logger.warning(
+                "[_crear_pedido_repuestos] ticket=%s requiere subpartes → abriendo wizard",
+                self.id
+            )
+            return self._abrir_wizard_subpartes(pendientes)
+
+        # 2. Intervenciones con subpartes
+        intervenciones_con_subpartes = self.ticket_intervencion_ids.filtered(
+            lambda x: x.detalle_ids
+        )
+
+        # 3. Validación final
+        if not intervenciones_con_subpartes and not self.pedido_especial:
+            raise UserError(_(
+                "Debe seleccionar subpartes o activar 'Pedido Especial'."
+            ))
+
+        # 4. Crear pedido
+        pedido = self.env['ticket.repuesto.pedido'].create({
+            'ticket_id': self.id,
+        })
+
+        total_lineas = 0
+
+        # 5. Crear líneas
+        for intervencion in intervenciones_con_subpartes:
+            color_id = False
+
+            m = re.match(r'^t\d+_([kcmy])$', intervencion.componente_code or '')
+            if m:
+                color_rec = self.env['color.tipo'].search(
+                    [('code', '=', m.group(1))], limit=1
+                )
+                color_id = color_rec.id if color_rec else False
+
+            for detalle in intervencion.detalle_ids:
+                self.env['ticket.repuesto.pedido.linea'].create({
+                    'pedido_id': pedido.id,
+                    'componente_code': intervencion.componente_code,
+                    'color_id': color_id,
+                    'subparte_id': detalle.subparte_id.id,
+                    'cantidad': detalle.cantidad,
+                    'observacion': detalle.observacion or '',
+                })
+                total_lineas += 1
+
+        # 6. Flujo
+        if self.pedido_especial:
+            _logger.info("Pedido especial creado: %s", pedido.name)
+
+            self.message_post(body=_(
+                "📦 <b>Pedido especial creado:</b> %s<br/>"
+                "Puede agregar líneas manualmente."
+            ) % pedido.name)
+
+        else:
+            try:
+                pedido.action_enviar_a_gerencia()
+                estado = "Enviado a Gerencia"
+            except Exception as e:
+                _logger.error("Error enviando pedido: %s", e)
+                estado = "Error al enviar"
+
+            self.message_post(body=_(
+                "📦 <b>Pedido generado:</b> %s<br/>"
+                "Líneas: %s<br/>"
+                "Estado: %s"
+            ) % (pedido.name, total_lineas, estado))
+
+        _logger.info(
+            "[_crear_pedido_repuestos] FIN pedido=%s | líneas=%s",
+            pedido.name, total_lineas
+        )
+    
     def _seed_evaluaciones_ticket(self):
         """Carga automáticamente componentes y accesorios desde el catálogo del modelo."""
         self.ensure_one()
@@ -412,13 +512,31 @@ class TicketAlquiler(models.Model):
     def _abrir_wizard_subpartes(self, pendientes):
         """Crea y abre el wizard de subpartes para los componentes pendientes."""
         self.ensure_one()
+        _logger.info(
+            "[_abrir_wizard_subpartes] ticket=%s | pendientes=%s",
+            self.id, [c.get('componente_code') for c in pendientes]
+        )
 
         wizard = self.env['ticket.subpartes.wizard'].create({'ticket_id': self.id})
         modelo = self.product_alquiler
+        _logger.info(
+            "[_abrir_wizard_subpartes] ticket=%s | modelo=%s (id=%s)",
+            self.id, modelo.name if modelo else 'None', modelo.id if modelo else 'None'
+        )
+
+        mmc_fields = self.env['modelo.maquina.componente']._fields
+        _logger.info(
+            "[_abrir_wizard_subpartes] campos disponibles en modelo.maquina.componente: %s",
+            list(mmc_fields.keys())
+        )
 
         for comp_info in pendientes:
             componente_code = comp_info['componente_code']
             es_accesorio = comp_info['es_accesorio']
+            _logger.info(
+                "[_abrir_wizard_subpartes] Procesando comp_info=%s | es_accesorio=%s",
+                comp_info, es_accesorio
+            )
 
             # Crear o reutilizar intervención
             intervencion = self.env['ticket.componente.intervencion'].search([
@@ -430,33 +548,94 @@ class TicketAlquiler(models.Model):
                     'ticket_id': self.id,
                     'componente_code': componente_code,
                 })
+            _logger.info(
+                "[_abrir_wizard_subpartes] intervencion id=%s para code=%s",
+                intervencion.id, componente_code
+            )
 
             ya_existentes = set(intervencion.detalle_ids.mapped('subparte_id').ids)
             agregadas = set()
             total_lineas = 0
 
             if not es_accesorio:
-                # Buscar subpartes del catálogo del modelo para este componente
                 color_code = comp_info.get('color_code')
                 tipo_id = comp_info['tipo_id']
+                _logger.info(
+                    "[_abrir_wizard_subpartes] componente | tipo_id=%s | color_code=%s",
+                    tipo_id, color_code
+                )
 
                 mmc = self.env['modelo.maquina.componente']
                 domain = [('modelo_id', '=', modelo.id), ('tipo_id', '=', tipo_id)]
-                if color_code:
-                    color_rec = self.env['color.tipo'].search([('code', '=', color_code)], limit=1)
-                    if color_rec:
-                        domain.append(('color_id', '=', color_rec.id))
 
+                if color_code:
+                    if 'color_id' in mmc_fields:
+                        color_rec = self.env['color.tipo'].search(
+                            [('code', '=', color_code)], limit=1
+                        )
+                        if color_rec:
+                            domain.append(('color_id', '=', color_rec.id))
+                            _logger.info(
+                                "[_abrir_wizard_subpartes] filtro color_id=%s (%s) agregado al domain",
+                                color_rec.id, color_rec.name
+                            )
+                        else:
+                            _logger.warning(
+                                "[_abrir_wizard_subpartes] color_code=%s no encontrado en color.tipo, ignorando filtro",
+                                color_code
+                            )
+                    else:
+                        _logger.warning(
+                            "[_abrir_wizard_subpartes] modelo.maquina.componente no tiene campo color_id, "
+                            "ignorando filtro de color para code=%s",
+                            componente_code
+                        )
+
+                _logger.info(
+                    "[_abrir_wizard_subpartes] domain final para mmc.search: %s",
+                    domain
+                )
                 componentes_modelo = mmc.search(domain)
+                _logger.info(
+                    "[_abrir_wizard_subpartes] resultado domain completo: %s registros",
+                    len(componentes_modelo)
+                )
+
                 if not componentes_modelo:
-                    componentes_modelo = mmc.search([('modelo_id', '=', modelo.id), ('tipo_id', '=', tipo_id)])
+                    domain_sin_color = [('modelo_id', '=', modelo.id), ('tipo_id', '=', tipo_id)]
+                    componentes_modelo = mmc.search(domain_sin_color)
+                    _logger.info(
+                        "[_abrir_wizard_subpartes] fallback sin color: %s registros",
+                        len(componentes_modelo)
+                    )
+
                 if not componentes_modelo:
-                    componentes_modelo = mmc.search([('tipo_id', '=', tipo_id)])
+                    domain_solo_tipo = [('tipo_id', '=', tipo_id)]
+                    componentes_modelo = mmc.search(domain_solo_tipo)
+                    _logger.info(
+                        "[_abrir_wizard_subpartes] fallback solo tipo_id: %s registros",
+                        len(componentes_modelo)
+                    )
 
                 for comp_mod in componentes_modelo:
-                    for detalle in getattr(comp_mod, 'detalle_ids', []):
+                    detalles = getattr(comp_mod, 'detalle_ids', [])
+                    _logger.info(
+                        "[_abrir_wizard_subpartes] comp_mod id=%s | detalles=%s",
+                        comp_mod.id, len(detalles)
+                    )
+                    for detalle in detalles:
                         sid = detalle.subparte_id.id
-                        if not sid or sid in ya_existentes or sid in agregadas:
+                        if not sid:
+                            _logger.warning(
+                                "[_abrir_wizard_subpartes] detalle id=%s sin subparte_id, ignorando",
+                                detalle.id
+                            )
+                            continue
+                        if sid in ya_existentes or sid in agregadas:
+                            _logger.info(
+                                "[_abrir_wizard_subpartes] subparte_id=%s ya existe, ignorando",
+                                sid
+                            )
                             continue
                         self.env['ticket.subpartes.wizard.linea'].create({
                             'wizard_id': wizard.id,
@@ -468,11 +647,33 @@ class TicketAlquiler(models.Model):
                         })
                         agregadas.add(sid)
                         total_lineas += 1
+                        _logger.info(
+                            "[_abrir_wizard_subpartes] linea creada: subparte_id=%s",
+                            sid
+                        )
+
             else:
                 # Accesorios: buscar subpartes por tipo en componente.subparte
+                tipo_id = comp_info['tipo_id']
+                _logger.info(
+                    "[_abrir_wizard_subpartes] accesorio | tipo_id=%s",
+                    tipo_id
+                )
                 Subparte = self.env.get('componente.subparte')
-                if Subparte and 'tipo_id' in Subparte._fields:
-                    subpartes = Subparte.search([('tipo_id', '=', comp_info['tipo_id'])])
+                if Subparte is None:
+                    _logger.warning(
+                        "[_abrir_wizard_subpartes] modelo componente.subparte no existe"
+                    )
+                elif 'tipo_id' not in Subparte._fields:
+                    _logger.warning(
+                        "[_abrir_wizard_subpartes] componente.subparte no tiene campo tipo_id"
+                    )
+                else:
+                    subpartes = Subparte.search([('tipo_id', '=', tipo_id)])
+                    _logger.info(
+                        "[_abrir_wizard_subpartes] subpartes encontradas para accesorio tipo_id=%s: %s",
+                        tipo_id, len(subpartes)
+                    )
                     for sp in subpartes:
                         if sp.id in ya_existentes or sp.id in agregadas:
                             continue
@@ -486,6 +687,15 @@ class TicketAlquiler(models.Model):
                         })
                         agregadas.add(sp.id)
                         total_lineas += 1
+                        _logger.info(
+                            "[_abrir_wizard_subpartes] linea accesorio creada: subparte_id=%s",
+                            sp.id
+                        )
+
+            _logger.info(
+                "[_abrir_wizard_subpartes] code=%s | total_lineas agregadas=%s",
+                componente_code, total_lineas
+            )
 
             if total_lineas == 0:
                 _logger.warning(
@@ -510,6 +720,10 @@ class TicketAlquiler(models.Model):
             nombres.append(nombre)
 
         titulo = f"Subpartes requeridas: {', '.join(nombres)}"
+        _logger.info(
+            "[_abrir_wizard_subpartes] abriendo wizard id=%s | titulo=%s",
+            wizard.id, titulo
+        )
 
         return {
             'type': 'ir.actions.act_window',
@@ -556,49 +770,7 @@ class TicketAlquiler(models.Model):
     # CREAR PEDIDO AL CERRAR
     # ============================================================
 
-    def _crear_pedido_repuestos(self):
-        """Crea el pedido de repuestos desde las intervenciones con subpartes."""
-        self.ensure_one()
-
-        intervenciones_con_subpartes = self.ticket_intervencion_ids.filtered(lambda x: x.detalle_ids)
-        if not intervenciones_con_subpartes:
-            _logger.info("[_crear_pedido_repuestos] ticket=%s sin intervenciones con subpartes", self.id)
-            return
-
-        pedido = self.env['ticket.repuesto.pedido'].create({
-            'ticket_id': self.id,
-        })
-
-        for intervencion in intervenciones_con_subpartes:
-            # Determinar color_id desde el componente_code
-            import re
-            color_id = False
-            m = re.match(r'^t\d+_([kcmy])$', intervencion.componente_code or '')
-            if m:
-                color_rec = self.env['color.tipo'].search([('code', '=', m.group(1))], limit=1)
-                color_id = color_rec.id if color_rec else False
-
-            for detalle in intervencion.detalle_ids:
-                self.env['ticket.repuesto.pedido.linea'].create({
-                    'pedido_id': pedido.id,
-                    'componente_code': intervencion.componente_code,
-                    'color_id': color_id,
-                    'subparte_id': detalle.subparte_id.id,
-                    'cantidad': detalle.cantidad,
-                    'observacion': detalle.observacion or '',
-                })
-
-        _logger.info(
-            "[_crear_pedido_repuestos] Pedido %s creado para ticket %s con %s líneas",
-            pedido.name, self.id, pedido.total_lineas
-        )
-
-        self.message_post(body=_(
-            "📦 <b>Pedido de repuestos generado:</b> %s<br/>"
-            "Líneas: %s<br/>"
-            "Estado: Pendiente de aprobación"
-        ) % (pedido.name, pedido.total_lineas))
-
+    
     # ============================================================
     # ACTION FINALIZAR — REEMPLAZA AL ANTERIOR
     # ============================================================
@@ -606,10 +778,18 @@ class TicketAlquiler(models.Model):
     def action_finalizar(self):
         _logger.info("=== Iniciando action_finalizar para tickets %s ===", self.ids)
         tickets = self.sudo()
-
+    
         for ticket in tickets:
-            _logger.info("Procesando ticket ID %s (estado=%s)", ticket.id, ticket.estado)
-
+            _logger.info(
+                "[action_finalizar] Procesando ticket=%s estado=%s "
+                "tipo_servicio=%s pedido_origen=%s pedido_especial=%s",
+                ticket.id,
+                ticket.estado,
+                ticket.tipo_servicio_id,
+                ticket.pedido_origen_id.name if ticket.pedido_origen_id else 'N/A',
+                ticket.pedido_especial,
+            )
+    
             # ---- VALIDAR ESTADO ----
             ESTADOS_FINALIZAR = ('proceso', 'en_revision', 'en_sitio', 'en_ruta')
             if ticket.estado not in ESTADOS_FINALIZAR:
@@ -617,7 +797,7 @@ class TicketAlquiler(models.Model):
                     "El ticket debe estar en uno de estos estados para finalizar: %s.\n"
                     "Estado actual: '%s'"
                 ) % (', '.join(ESTADOS_FINALIZAR), ticket.estado))
-
+    
             # ---- VALIDAR CAMPOS BÁSICOS ----
             errors = []
             if not ticket.contometrok_id:
@@ -628,64 +808,239 @@ class TicketAlquiler(models.Model):
                 errors.append("• Contador Color es requerido para equipos a color")
             if not ticket.informe_id:
                 errors.append("• Informe Técnico es requerido")
-            if not ticket.calidad_id:
-                errors.append("• Calidad es requerida")
-
+    
             if errors:
                 raise UserError(
                     "No se puede finalizar el ticket:\n\n" + "\n".join(errors) +
                     "\n\nComplete todos los campos requeridos."
                 )
-
+    
             # ---- VALIDAR CONTÓMETROS ----
             try:
                 ticket._check_contometro_values()
             except Exception:
                 raise
-
+    
+            # ---- LOG DIAGNÓSTICO: COMPONENTES ----
+            _logger.info(
+                "[action_finalizar] ticket=%s | componentes eval=%s",
+                ticket.id, len(ticket.ticket_componente_eval_ids)
+            )
+            for e in ticket.ticket_componente_eval_ids:
+                nombre = e.componente_tipo_id.name if e.componente_tipo_id else "SIN_TIPO"
+                if e.color_id:
+                    nombre += f" ({e.color_id.name})"
+                _logger.info(
+                    "[action_finalizar] Componente: %s | estado_id: %r | "
+                    "code: %s | requiere_cambio: %s",
+                    nombre,
+                    e.estado_id,
+                    e.estado_id.code if e.estado_id else 'N/A',
+                    e.estado_id.code == 'requiere_cambio' if e.estado_id else False,
+                )
+    
+            # ---- LOG DIAGNÓSTICO: ACCESORIOS ----
+            _logger.info(
+                "[action_finalizar] ticket=%s | accesorios eval=%s",
+                ticket.id, len(ticket.ticket_accesorio_eval_ids)
+            )
+            for e in ticket.ticket_accesorio_eval_ids:
+                nombre = e.tipo_id.name if e.tipo_id else "SIN_TIPO"
+                _logger.info(
+                    "[action_finalizar] Accesorio: %s | estado_id: %r | "
+                    "code: %s | requiere_cambio: %s",
+                    nombre,
+                    e.estado_id,
+                    e.estado_id.code if e.estado_id else 'N/A',
+                    e.estado_id.code == 'requiere_cambio' if e.estado_id else False,
+                )
+    
             # ---- VALIDAR EVALUACIONES DINÁMICAS ----
             ticket._validar_evaluaciones_ticket()
-
-            # ---- VERIFICAR SUBPARTES PENDIENTES ----
-            if not self.env.context.get('skip_subpartes_validation'):
-                pendientes = ticket._get_componentes_requieren_cambio_sin_subpartes()
-                if pendientes:
+    
+            # ================================================================
+            # BIFURCACIÓN: ticket de instalación de repuestos vs ticket normal
+            # ================================================================
+    
+            es_instalacion_repuestos = (
+                ticket.tipo_servicio_id == 'cambio_repuestos'
+                and bool(ticket.pedido_origen_id)
+            )
+    
+            _logger.info(
+                "[action_finalizar] ticket=%s | es_instalacion_repuestos=%s",
+                ticket.id, es_instalacion_repuestos
+            )
+    
+            if es_instalacion_repuestos:
+                # ============================================================
+                # FLUJO A — TICKET DE INSTALACIÓN DE REPUESTOS
+                # No pasa por el wizard ni crea pedido nuevo.
+                # Solo registra historial con contómetros reales.
+                # ============================================================
+                _logger.info(
+                    "[action_finalizar] FLUJO A — instalación de repuestos | "
+                    "ticket=%s pedido_origen=%s",
+                    ticket.id, ticket.pedido_origen_id.name
+                )
+    
+                ticket._registrar_historial_instalacion()
+    
+                try:
+                    ticket.pedido_origen_id.action_marcar_instalado()
                     _logger.info(
-                        "[action_finalizar] ticket=%s -> %s componentes pendientes, abriendo wizard",
+                        "[action_finalizar] pedido_origen=%s marcado como instalado",
+                        ticket.pedido_origen_id.name
+                    )
+                except Exception as e:
+                    _logger.error(
+                        "[action_finalizar] Error marcando pedido como instalado "
+                        "ticket=%s pedido=%s error=%s",
+                        ticket.id, ticket.pedido_origen_id.name, str(e)
+                    )
+    
+            else:
+                # ============================================================
+                # FLUJO B — TICKET NORMAL
+                #
+                # Escenarios:
+                # B1) sin requiere_cambio + sin pedido_especial
+                #     → no hay wizard, no hay pedido, cierra normal
+                #
+                # B2) sin requiere_cambio + con pedido_especial
+                #     → no hay wizard, crea pedido vacío en borrador
+                #
+                # B3) con requiere_cambio + sin pedido_especial
+                #     → abre wizard → al confirmar regresa aquí con
+                #       skip_subpartes_validation=True
+                #     → crea pedido con subpartes y envía a gerencia
+                #
+                # B4) con requiere_cambio + con pedido_especial
+                #     → abre wizard → al confirmar regresa aquí con
+                #       skip_subpartes_validation=True
+                #     → crea pedido con subpartes en borrador (no envía)
+                #
+                # B5) con requiere_cambio ya con subpartes (wizard ya procesado)
+                #     → skip_subpartes_validation=True en contexto
+                #     → crea pedido con subpartes (envía o no según pedido_especial)
+                # ============================================================
+    
+                _logger.info(
+                    "[action_finalizar] FLUJO B — ticket normal | "
+                    "ticket=%s pedido_especial=%s skip_wizard=%s",
+                    ticket.id,
+                    ticket.pedido_especial,
+                    self.env.context.get('skip_subpartes_validation', False),
+                )
+    
+                # Verificar subpartes pendientes
+                if not self.env.context.get('skip_subpartes_validation'):
+                    pendientes = ticket._get_componentes_requieren_cambio_sin_subpartes()
+                    _logger.info(
+                        "[action_finalizar] ticket=%s | componentes pendientes "
+                        "de subpartes=%s",
                         ticket.id, len(pendientes)
                     )
-                    return ticket._abrir_wizard_subpartes(pendientes)
-
-            # ---- CREAR PEDIDO DE REPUESTOS ----
-            ticket._crear_pedido_repuestos()
-
-            # ---- ENVIAR CORREO DE FINALIZACIÓN ----
+    
+                    if pendientes:
+                        _logger.info(
+                            "[action_finalizar] ticket=%s → abriendo wizard "
+                            "para %s componentes | pedido_especial=%s",
+                            ticket.id, len(pendientes), ticket.pedido_especial
+                        )
+                        return ticket._abrir_wizard_subpartes(pendientes)
+                else:
+                    _logger.info(
+                        "[action_finalizar] ticket=%s skip_subpartes_validation=True "
+                        "— omitiendo verificación de wizard",
+                        ticket.id
+                    )
+    
+                # Determinar si crear pedido
+                tiene_intervenciones = bool(
+                    ticket.ticket_intervencion_ids.filtered(lambda x: x.detalle_ids)
+                )
+    
+                _logger.info(
+                    "[action_finalizar] ticket=%s | tiene_intervenciones=%s | "
+                    "pedido_especial=%s",
+                    ticket.id, tiene_intervenciones, ticket.pedido_especial
+                )
+    
+                if tiene_intervenciones or ticket.pedido_especial:
+                    _logger.info(
+                        "[action_finalizar] ticket=%s → creando pedido de repuestos "
+                        "(intervenciones=%s, especial=%s)",
+                        ticket.id, tiene_intervenciones, ticket.pedido_especial
+                    )
+                    ticket._crear_pedido_repuestos()
+                else:
+                    _logger.info(
+                        "[action_finalizar] ticket=%s → sin intervenciones y sin "
+                        "pedido_especial — no se crea pedido",
+                        ticket.id
+                    )
+    
+            # ---- ENVIAR CORREO DE FINALIZACIÓN (todos los tickets) ----
             try:
                 tmpl_fin = ticket.env.ref('sat.email_template_ticket_cliente_finalizacion')
                 tmpl_fin.send_mail(ticket.id, force_send=True)
+                _logger.info(
+                    "[action_finalizar] correo finalización enviado ticket=%s",
+                    ticket.id
+                )
             except Exception as e:
-                _logger.error("[action_finalizar] Error enviando correo para ticket %s: %s", ticket.id, e)
-
+                _logger.error(
+                    "[action_finalizar] Error enviando correo finalización "
+                    "ticket=%s: %s",
+                    ticket.id, e
+                )
+    
             if ticket.retorno_id == 'no':
                 try:
-                    ticket.env.ref('sat.mail_template_retorno').send_mail(ticket.id, force_send=True)
+                    ticket.env.ref('sat.mail_template_retorno').send_mail(
+                        ticket.id, force_send=True
+                    )
                 except Exception as e:
-                    _logger.error("[action_finalizar] Error enviando correo retorno ticket %s: %s", ticket.id, e)
-
+                    _logger.error(
+                        "[action_finalizar] Error enviando correo retorno "
+                        "ticket=%s: %s",
+                        ticket.id, e
+                    )
+    
             # ---- ACTUALIZAR ESTADO DE LA UNIDAD ----
             unidad = ticket.product_alquiler
             if unidad:
-                if ticket.tipo_servicio_id == 'alquiler' and unidad.estado_alquiler_id == 'sin_revisar':
+                _logger.info(
+                    "[action_finalizar] ticket=%s | tipo_servicio=%s | "
+                    "estado_alquiler=%s | es_instalacion_repuestos=%s",
+                    ticket.id,
+                    ticket.tipo_servicio_id,
+                    unidad.estado_alquiler_id,
+                    es_instalacion_repuestos,
+                )
+    
+                if ticket.tipo_servicio_id == 'alquiler' \
+                        and unidad.estado_alquiler_id == 'sin_revisar':
                     unidad.write({'estado_alquiler_id': 'revisada'})
-
-                elif ticket.tipo_servicio_id == 'cambio_repuestos' and unidad.estado_alquiler_id == 'revisada':
+                    _logger.info(
+                        "[action_finalizar] unidad=%s → revisada",
+                        unidad.serie
+                    )
+    
+                elif ticket.tipo_servicio_id == 'cambio_repuestos' \
+                        and unidad.estado_alquiler_id == 'revisada':
                     prev = ticket.search([
                         ('product_alquiler', '=', unidad.id),
                         ('tipo_servicio_id', '=', 'alquiler')
                     ], order="create_date desc", limit=1)
                     if prev:
                         unidad.write({'estado_alquiler_id': 'lista'})
-
+                        _logger.info(
+                            "[action_finalizar] unidad=%s → lista",
+                            unidad.serie
+                        )
+    
                 elif ticket.tipo_servicio_id == 'instalacion':
                     if unidad.estado_alquiler_id != 'por_instalar':
                         raise UserError(_(
@@ -700,40 +1055,188 @@ class TicketAlquiler(models.Model):
                         ))
                     unidad.write({'estado_alquiler_id': 'alquilada'})
                     unidad.message_post(
-                        body=_("🏗️ Equipo instalado exitosamente.\nTicket: %s\nTécnico: %s") % (
-                            ticket.name, ticket.responsable.name or 'N/A'
-                        ),
+                        body=_(
+                            "🏗️ Equipo instalado exitosamente.\n"
+                            "Ticket: %s\nTécnico: %s"
+                        ) % (ticket.name, ticket.responsable.name or 'N/A'),
                         message_type='notification',
                     )
-
+                    _logger.info(
+                        "[action_finalizar] unidad=%s → alquilada",
+                        unidad.serie
+                    )
+    
                 elif ticket.tipo_servicio_id == 'retiro':
                     unidad.write({
                         'estado_alquiler_id': 'sin_revisar',
-                        'direccion': 'AV Angelica Gamarra 2156',
-                        'contacto_id': 'Isidro',
-                        'celular': '975399303',
-                        'correo_': 'soporte@andescopiers.com.pe',
-                        'cliente_id': 1,
-                        'fecha_inicio': False,
+                        'direccion':          'AV Angelica Gamarra 2156',
+                        'contacto_id':        'Isidro',
+                        'celular':            '975399303',
+                        'correo_':            'soporte@andescopiers.com.pe',
+                        'cliente_id':         1,
+                        'fecha_inicio':       False,
                     })
-
+                    _logger.info(
+                        "[action_finalizar] unidad=%s → sin_revisar (retiro)",
+                        unidad.serie
+                    )
+    
             # ---- MARCAR COMO FINALIZADO ----
             ticket.write({
-                'estado': 'finalizado',
+                'estado':                    'finalizado',
                 'last_pending_notification': False,
             })
-            _logger.info("[action_finalizar] Ticket %s finalizado correctamente", ticket.id)
-
+    
+            _logger.info(
+                "[action_finalizar] ✅ Ticket %s finalizado correctamente | "
+                "flujo=%s | pedido_especial=%s | es_instalacion=%s",
+                ticket.id,
+                'instalacion_repuestos' if es_instalacion_repuestos else 'normal',
+                ticket.pedido_especial,
+                es_instalacion_repuestos,
+            )
+    
         _logger.info("=== action_finalizar completado para tickets %s ===", self.ids)
+    
         return {
-            'type': 'ir.actions.act_window',
-            'name': 'Tickets',
+            'type':      'ir.actions.act_window',
+            'name':      'Tickets',
             'view_mode': 'list,form',
             'res_model': 'ticket.alquiler',
-            'view_id': False,
-            'target': 'main',
+            'view_id':   False,
+            'target':    'main',
         }
-
+    
+    
+    def _registrar_historial_instalacion(self):
+        """
+        Registra el historial de durabilidad usando los contómetros REALES
+        del momento en que el técnico finaliza el ticket de instalación.
+    
+        Solo se llama desde action_finalizar cuando:
+        - tipo_servicio == 'cambio_repuestos'
+        - pedido_origen_id está definido
+    
+        Diferencia clave con el flujo anterior:
+        - Antes: historial se creaba al aprobar el pedido (contómetros del ticket original)
+        - Ahora: historial se crea al finalizar la instalación (contómetros reales)
+    
+        Lógica de tipo de contómetro:
+        - color_id presente                  → tipo 'color'  (contómetro C)
+        - color_id ausente + máquina color   → tipo 'total'  (K + C)
+        - color_id ausente + máquina B/N     → tipo 'bn'     (contómetro K)
+        """
+        self.ensure_one()
+    
+        def _to_int(val):
+            if not val:
+                return 0
+            digits = re.sub(r'[^\d]', '', str(val))
+            return int(digits) if digits else 0
+    
+        pedido    = self.pedido_origen_id
+        Historial = self.env['ticket.repuesto.historial']
+    
+        # Contómetros REALES del ticket de instalación
+        contometro_k_real     = self.contometrok_id
+        contometro_color_real = self.contometroc_id
+        es_maquina_color      = (self.tipo_id == 'color')
+    
+        _logger.info(
+            "[_registrar_historial_instalacion] ticket=%s | pedido=%s | "
+            "contometro_k=%s | contometro_color=%s | es_color=%s | lineas=%s",
+            self.name,
+            pedido.name,
+            contometro_k_real,
+            contometro_color_real,
+            es_maquina_color,
+            len(pedido.linea_ids),
+        )
+    
+        for linea in pedido.linea_ids:
+    
+            # ---- Determinar tipo y valor de contómetro ----
+    
+            if linea.color_id and contometro_color_real:
+                # Componente de color (IU, drum, etc.) → contómetro Color
+                contometro      = contometro_color_real
+                tipo_contometro = 'color'
+    
+            elif not linea.color_id and es_maquina_color:
+                # Sin color en máquina a color (fusor, ITB, faja) → K + C
+                k     = _to_int(contometro_k_real)
+                c     = _to_int(contometro_color_real)
+                total = k + c
+                if total > 0:
+                    contometro = str(total)
+                else:
+                    contometro = contometro_k_real or '0'
+                    _logger.warning(
+                        "[_registrar_historial_instalacion] ticket=%s linea=%s "
+                        "suma K+C=0, usando K como fallback",
+                        self.name, linea.subparte_id.name
+                    )
+                tipo_contometro = 'total'
+    
+            else:
+                # Máquina monocromática → solo K
+                contometro      = contometro_k_real or '0'
+                tipo_contometro = 'bn'
+    
+            _logger.info(
+                "[_registrar_historial_instalacion] linea=%s | color=%s | "
+                "tipo=%s | contometro=%s",
+                linea.subparte_id.name,
+                linea.color_id.name if linea.color_id else 'B/N',
+                tipo_contometro,
+                contometro,
+            )
+    
+            historial = Historial.create({
+                'pedido_id':         pedido.id,
+                'ticket_id':         self.id,           # ticket de instalación (no el original)
+                'equipo_id':         self.product_alquiler.id if self.product_alquiler else False,
+                'subparte_id':       linea.subparte_id.id,
+                'color_id':          linea.color_id.id if linea.color_id else False,
+                'cantidad':          linea.cantidad,
+                'contometro_cambio': contometro,
+                'tipo_contometro':   tipo_contometro,
+                'tecnico_id':        self.responsable.id if self.responsable else False,
+                'fecha_cambio':      fields.Datetime.now(),
+            })
+    
+            _logger.info(
+                "[_registrar_historial_instalacion] historial creado — "
+                "id=%s | subparte=%s | color=%s | tipo=%s | contometro=%s | "
+                "copias=%s | meses=%s",
+                historial.id,
+                historial.subparte_id.name,
+                historial.color_id.name if historial.color_id else 'B/N',
+                historial.tipo_contometro,
+                historial.contometro_cambio,
+                historial.copias_duracion,
+                historial.meses_duracion,
+            )
+    
+        _logger.info(
+            "[_registrar_historial_instalacion] completado — "
+            "ticket=%s | pedido=%s | total_historiales=%s",
+            self.name,
+            pedido.name,
+            len(pedido.linea_ids),
+        )
+    
+    def action_ver_pedido_origen(self):
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Pedido de Repuestos',
+            'res_model': 'ticket.repuesto.pedido',
+            'res_id': self.pedido_origen_id.id,
+            'view_mode': 'form',
+            'target': 'current',
+        }
+    
     # ============================================================
     # SMART BUTTONS — VISTAS EVALUACIONES Y PEDIDOS
     # ============================================================
@@ -1159,18 +1662,89 @@ class TicketAlquiler(models.Model):
 
 class ReportTicketAlquiler(models.AbstractModel):
     _name = 'report.sat.ticket_alquiler'
-
+ 
     @api.model
     def _get_report_values(self, docids, data=None):
         docs = self.env['ticket.alquiler'].browse(docids)
+ 
         selection_labels = {}
+        # subpartes_por_eval: { eval_id: [{'nombre': str, 'cantidad': float}] }
+        subpartes_por_eval = {}
+ 
         for doc in docs:
             selection_labels[doc.id] = doc.get_selection_labels() if doc else {}
+ 
+            # Construir índice de intervenciones por componente_code para este ticket
+            intervencion_por_code = {}
+            for intervencion in doc.ticket_intervencion_ids:
+                if intervencion.detalle_ids:
+                    intervencion_por_code[intervencion.componente_code] = intervencion
+ 
+            # Para cada evaluación de componente con estado requiere_cambio
+            for eval_comp in doc.ticket_componente_eval_ids:
+                if not eval_comp.estado_id or eval_comp.estado_id.code != 'requiere_cambio':
+                    subpartes_por_eval[eval_comp.id] = []
+                    continue
+ 
+                tipo = eval_comp.componente_tipo_id
+                if not tipo:
+                    subpartes_por_eval[eval_comp.id] = []
+                    continue
+ 
+                # Construir el mismo código dinámico que usa el wizard
+                base_code = f"t{tipo.id}"
+                color_code = False
+                if getattr(tipo, 'is_color_sensitive', False):
+                    if eval_comp.color_id and eval_comp.color_id.code:
+                        color_code = eval_comp.color_id.code.lower()
+                componente_code = f"{base_code}_{color_code}" if color_code else base_code
+ 
+                intervencion = intervencion_por_code.get(componente_code)
+                if intervencion:
+                    subpartes_por_eval[eval_comp.id] = [
+                        {
+                            'nombre': d.subparte_id.name,
+                            'cantidad': d.cantidad,
+                            'observacion': d.observacion or '',
+                        }
+                        for d in intervencion.detalle_ids
+                        if d.subparte_id
+                    ]
+                else:
+                    subpartes_por_eval[eval_comp.id] = []
+ 
+            # Accesorios con requiere_cambio
+            for eval_acc in doc.ticket_accesorio_eval_ids:
+                if not eval_acc.estado_id or eval_acc.estado_id.code != 'requiere_cambio':
+                    subpartes_por_eval[eval_acc.id] = []
+                    continue
+ 
+                tipo = eval_acc.tipo_id
+                if not tipo:
+                    subpartes_por_eval[eval_acc.id] = []
+                    continue
+ 
+                componente_code = f"a{tipo.id}"
+                intervencion = intervencion_por_code.get(componente_code)
+                if intervencion:
+                    subpartes_por_eval[eval_acc.id] = [
+                        {
+                            'nombre': d.subparte_id.name,
+                            'cantidad': d.cantidad,
+                            'observacion': d.observacion or '',
+                        }
+                        for d in intervencion.detalle_ids
+                        if d.subparte_id
+                    ]
+                else:
+                    subpartes_por_eval[eval_acc.id] = []
+ 
         return {
             'doc_ids': docids,
             'doc_model': 'ticket.alquiler',
             'docs': docs,
             'selection_labels': selection_labels,
+            'subpartes_por_eval': subpartes_por_eval,
         }
 
 

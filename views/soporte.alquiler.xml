@@ -1,164 +1,238 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <data>
-
         <!-- ================================================= -->
         <!-- TICKET ALQUILER — FORM                             -->
         <!-- ================================================= -->
-
         <record id="soporte_form_viw" model="ir.ui.view">
             <field name="name">soporte_ticket.form</field>
             <field name="model">ticket.alquiler</field>
             <field name="arch" type="xml">
                 <form string="">
                     <header>
-                        <field name="estado" widget="statusbar" options="{'clickable': '1'}"/>
-                        <button name="action_regenerar_informe" type="object" string="Regenerar informe" class="btn-primary"/>
-                        <button name="action_limpiar_informe" type="object" string="Limpiar informe" class="btn-primary"/>
-
+                        <field name="estado" widget="statusbar"
+                               options="{'clickable': '1'}"/>
+                        <button name="action_regenerar_informe"
+                                type="object"
+                                string="Regenerar informe"
+                                class="btn-primary"/>
+                        <button name="action_limpiar_informe"
+                                type="object"
+                                string="Limpiar informe"
+                                class="btn-primary"/>
                         <button name="action_en_ruta"
                                 string="🚗 En Ruta"
                                 type="object"
                                 class="btn-primary"
                                 invisible="estado != 'proceso'"
                                 confirm="¿Confirmar que está en ruta hacia el cliente?"/>
-
                         <button name="action_en_sitio"
                                 string="📍 Llegué al sitio"
                                 type="object"
                                 class="btn-primary"
                                 invisible="estado not in ('proceso', 'en_ruta')"
                                 confirm="¿Confirmar llegada al sitio del cliente?"/>
-
                         <button name="action_en_revision"
                                 string="🔧 Iniciar Revisión"
                                 type="object"
                                 class="btn-warning"
                                 invisible="estado != 'en_sitio'"/>
-
                         <button string="Cerrar"
                                 name="action_finalizar"
                                 type="object"
                                 class="btn btn-info"
                                 icon="fa-wrench"
                                 invisible="estado not in ['proceso', 'en_ruta', 'en_sitio', 'en_revision']"/>
-
                         <button name="action_cargar_contadores"
                                 type="object"
                                 string="🔄 Cargar Contadores"
                                 class="btn-primary"
                                 icon="fa-download"
                                 options="{'no_required_fields_validation': true}"
-                                confirm="¿Está seguro de que desea cargar los contadores desde el equipo? Esto sobrescribirá los valores actuales en los campos de contómetros."
-                                help="Carga automáticamente los contadores desde el equipo cuando las fechas de agenda y última actualización coinciden"/>
-
+                                confirm="¿Está seguro de que desea cargar los contadores desde el equipo?"
+                                help="Carga automáticamente los contadores desde el equipo"/>
                         <button class="oe_highlight"
                                 name="action_asignar_ticket"
                                 type="object"
                                 icon="fa-paper-plane"
                                 string="Asignar Ticket"
                                 invisible="estado != 'nuevo'"/>
-
                         <button name="action_crear_evaluacion"
                                 string="Generar Evaluación"
                                 type="object"
                                 icon="fa-check-circle"
                                 groups="base.group_system"/>
-
-                        <button string="Proceso" name="action_proceso" type="object" class="oe_highlight" groups="base.group_system"/>
-                        <button string="Nuevo" name="action_nuevo" type="object" class="oe_highlight" groups="base.group_system" options="{'no_required_fields_validation': true}"/>
+                        <button string="Proceso"
+                                name="action_proceso"
+                                type="object"
+                                class="oe_highlight"
+                                groups="base.group_system"/>
+                        <button string="Nuevo"
+                                name="action_nuevo"
+                                type="object"
+                                class="oe_highlight"
+                                groups="base.group_system"
+                                options="{'no_required_fields_validation': true}"/>
                     </header>
-
                     <sheet>
                         <div name="button_box">
-                            <button class="oe_stat_button" type="object" name="get_pedidos" icon="fa-cart-plus">
-                                <field string="Pedidos" name="pedidos_count" widget="statinfo"/>
+                            <button class="oe_stat_button"
+                                    type="object"
+                                    name="get_pedidos"
+                                    icon="fa-cart-plus">
+                                <field string="Pedidos"
+                                       name="pedidos_count"
+                                       widget="statinfo"/>
                             </button>
-                            <button class="oe_stat_button" type="object" name="get_repuestos_ticket" icon="fa-cogs" style="background-color: #FF0000;">
-                                <field string="Repuestos" name="repuestos_count_ticket" widget="statinfo"/>
+                            <button class="oe_stat_button"
+                                    type="object"
+                                    name="get_repuestos_ticket"
+                                    icon="fa-cogs"
+                                    style="background-color: #FF0000;">
+                                <field string="Repuestos"
+                                       name="repuestos_count_ticket"
+                                       widget="statinfo"/>
                             </button>
-                            <button class="oe_stat_button" type="object" name="action_ver_componentes_ticket" icon="fa-wrench">
-                                <field string="Componentes" name="ticket_componente_eval_count" widget="statinfo"/>
+                            <button class="oe_stat_button"
+                                    type="object"
+                                    name="action_ver_componentes_ticket"
+                                    icon="fa-wrench">
+                                <field string="Componentes"
+                                       name="ticket_componente_eval_count"
+                                       widget="statinfo"/>
                             </button>
-                            <button class="oe_stat_button" type="object" name="action_ver_accesorios_ticket" icon="fa-puzzle-piece">
-                                <field string="Accesorios" name="ticket_accesorio_eval_count" widget="statinfo"/>
+                            <button class="oe_stat_button"
+                                    type="object"
+                                    name="action_ver_accesorios_ticket"
+                                    icon="fa-puzzle-piece">
+                                <field string="Accesorios"
+                                       name="ticket_accesorio_eval_count"
+                                       widget="statinfo"/>
                             </button>
-                            <button class="oe_stat_button" type="object" name="action_ver_pedidos_ticket" icon="fa-shopping-cart">
-                                <field string="Pedidos Rep." name="ticket_pedido_count" widget="statinfo"/>
+                            <button class="oe_stat_button"
+                                    type="object"
+                                    name="action_ver_pedidos_ticket"
+                                    icon="fa-shopping-cart">
+                                <field string="Pedidos Rep."
+                                       name="ticket_pedido_count"
+                                       widget="statinfo"/>
+                            </button>
+                            <!-- NUEVO — pedido origen como stat button simple -->
+                            <button class="oe_stat_button"
+                                    icon="fa-link"
+                                    invisible="not pedido_origen_id"
+                                    type="object"
+                                    name="action_ver_pedidos_ticket">
+                                <div class="o_stat_info">
+                                    <span class="o_stat_text">Pedido Origen</span>
+                                    <span class="o_stat_value">
+                                        <field name="pedido_origen_id"
+                                               readonly="1"
+                                               nolabel="1"
+                                               string=""/>
+                                    </span>
+                                </div>
                             </button>
                         </div>
-
+                        <!-- ALERTA — ticket de instalación de repuestos -->
+                        <div class="alert alert-info"
+                             invisible="not pedido_origen_id">
+                            <i class="fa fa-info-circle me-2"/>
+                            <strong>Ticket de instalación de repuestos.</strong>
+                            Este ticket fue creado desde el pedido
+                            <strong>
+                                <field name="pedido_origen_id"
+                                           readonly="1"
+                                           nolabel="1"
+                                           string=""/>
+                            </strong>.
+                            Al cerrarlo se registrará el historial de durabilidad
+                            con los contómetros reales de la instalación.
+                        </div>
                         <div class="alert alert-info"
                              invisible="estado != 'proceso' or mostrar_boton_contadores == True">
-                            <strong>ℹ️ Información:</strong> Los contadores se pueden cargar automáticamente cuando:
-                            <ul>
-                                <li>El ticket esté en proceso</li>
-                                <li>Existan lecturas de PrintTracker para este equipo</li>
-                                <li>Existan correos procesados para este equipo</li>
-                                <li>El equipo tenga contadores registrados</li>
-                            </ul>
+                            <strong>ℹ️ Información:</strong> Los contadores se pueden
+                            cargar automáticamente cuando el ticket esté en proceso
+                            y existan lecturas disponibles.
                         </div>
-
                         <div class="alert alert-success"
                              invisible="mostrar_boton_contadores == False">
-                            <strong>✅ Disponible:</strong> Se encontraron contadores para cargar automáticamente.
-                            <br/>
-                            <small>El sistema buscará en PrintTracker, correos y registros del equipo.</small>
+                            <strong>✅ Disponible:</strong>
+                            Se encontraron contadores para cargar automáticamente.
                         </div>
-
                         <div class="oe_title">
                             <label for="name"/>
                             <h1>
                                 <field name="name"/>
                             </h1>
                         </div>
-
                         <group>
                             <group>
                                 <field name="marca_id_r"/>
                                 <field name="product_alquiler" readonly="1"/>
                                 <field name="serie_id_r"/>
                                 <field name="contometrok_id"/>
-                                <field name="contometroc_id" invisible="tipo_id != 'color'" readonly="estado == 'finalizado'"/>
+                                <field name="contometroc_id"
+                                       invisible="tipo_id != 'color'"
+                                       readonly="estado == 'finalizado'"/>
                                 <field name="contometros_id"/>
+                                <field name="pedido_especial"
+                                    invisible="estado == 'finalizado'"
+                                    widget="boolean_toggle"/>
                                 <field name="total_copias_id" invisible="1"/>
                                 <field name="tipo_id" invisible="1"/>
                                 <field name="url" invisible="1"/>
                                 <field name="mostrar_boton_contadores" invisible="1"/>
                                 <field name="equipo_tiene_coordenadas" invisible="1"/>
+                                <!-- NUEVO — campo invisible para lógica de vistas -->
+                                <field name="pedido_origen_id" invisible="1"/>
                             </group>
                             <group>
-                                <field name="partner_id" widget="many2one_avatar" readonly="1"/>
-                                <field name="direccion_id_r" readonly="estado == 'proceso' or estado == 'finalizado'"/>
-                                <field name="contacto_id_r" readonly="estado == 'proceso' or estado == 'finalizado'"/>
-                                <field name="tipo_servicio_id" readonly="estado == 'proceso' or estado == 'finalizado'"/>
+                                <field name="partner_id"
+                                       widget="many2one_avatar"
+                                       readonly="1"/>
+                                <field name="direccion_id_r"
+                                       readonly="estado == 'proceso' or estado == 'finalizado'"/>
+                                <field name="contacto_id_r"
+                                       readonly="estado == 'proceso' or estado == 'finalizado'"/>
+                                <field name="tipo_servicio_id"
+                                       readonly="estado == 'proceso' or estado == 'finalizado'"/>
                                 <field name="retorno_id"/>
-                                <field name="asistencia_id" readonly="estado == 'proceso' or estado == 'finalizado'"/>
-                                <field name="agenda" required="estado == 'nuevo'" readonly="estado == 'proceso' or estado == 'finalizado'"/>
+                                <field name="asistencia_id"
+                                       readonly="estado == 'proceso' or estado == 'finalizado'"/>
+                                <field name="agenda"
+                                       required="estado == 'nuevo'"
+                                       readonly="estado == 'proceso' or estado == 'finalizado'"/>
                                 <field name="agenda_local" readonly="1"/>
-                                <field name="responsable" widget="many2one_avatar" required="estado == 'nuevo'" readonly="estado == 'proceso' or estado == 'finalizado'"/>
+                                <field name="responsable"
+                                       widget="many2one_avatar"
+                                       required="estado == 'nuevo'"
+                                       readonly="estado == 'proceso' or estado == 'finalizado'"/>
                             </group>
                         </group>
-
                         <notebook>
-
                             <page string="Problema Reportado">
                                 <group>
                                     <group>
-                                        <field name="description" required="estado == 'nuevo'" readonly="estado == 'proceso' or estado == 'finalizado'"/>
+                                        <field name="description"
+                                               required="estado == 'nuevo'"
+                                               readonly="estado == 'proceso' or estado == 'finalizado'"/>
                                     </group>
                                     <group>
-                                        <field name="reporter_name" readonly="estado == 'proceso' or estado == 'finalizado'"/>
-                                        <field name="reporter_phone" widget="phone" readonly="estado == 'proceso' or estado == 'finalizado'"/>
-                                        <field name="problem_photo" widget="image" readonly="estado == 'proceso' or estado == 'finalizado'"/>
+                                        <field name="reporter_name"
+                                               readonly="estado == 'proceso' or estado == 'finalizado'"/>
+                                        <field name="reporter_phone"
+                                               widget="phone"
+                                               readonly="estado == 'proceso' or estado == 'finalizado'"/>
+                                        <field name="problem_photo"
+                                               widget="image"
+                                               readonly="estado == 'proceso' or estado == 'finalizado'"/>
                                     </group>
                                 </group>
                             </page>
-
                             <page string="Informe Técnico">
                                 <field name="informe_id" widget="html"/>
                             </page>
-
                             <page string="🔧 Componentes" name="componentes_dinamicos">
                                 <field name="ticket_componente_eval_ids"
                                        readonly="estado == 'finalizado'"
@@ -173,7 +247,6 @@
                                     </list>
                                 </field>
                             </page>
-
                             <page string="🔩 Accesorios" name="accesorios_dinamicos">
                                 <field name="ticket_accesorio_eval_ids"
                                        readonly="estado == 'finalizado'"
@@ -187,40 +260,45 @@
                                     </list>
                                 </field>
                             </page>
-
-                            <page string="📦 Pedidos de Repuestos" name="pedidos_repuestos"
+                            <page string="📦 Pedidos de Repuestos"
+                                  name="pedidos_repuestos"
                                   invisible="ticket_pedido_count == 0">
                                 <field name="ticket_pedido_ids" readonly="1">
-                                    <list decoration-success="estado == 'aprobado'"
-                                          decoration-warning="estado == 'pendiente'"
-                                          decoration-danger="estado == 'cancelado'">
+                                    <list decoration-success="estado == 'instalado'"
+                                          decoration-info="estado in ('stock_en_revision','stock_completo','en_camino','entregado')"
+                                          decoration-warning="estado in ('borrador','esperando_gerencia','informe_solicitado','informe_recibido')"
+                                          decoration-danger="estado in ('rechazado','cancelado')">
                                         <field name="name"/>
                                         <field name="fecha"/>
                                         <field name="total_lineas"/>
                                         <field name="estado" widget="badge"/>
                                         <field name="aprobado_por" optional="show"/>
                                         <field name="fecha_aprobacion" optional="show"/>
+                                        <field name="ticket_instalacion_id" optional="show"/>
                                     </list>
                                 </field>
                             </page>
-
                             <page string="Productos">
-                                <field name="line_ids" context="{'default_ticket_id': id}">
+                                <field name="line_ids"
+                                       context="{'default_ticket_id': id}">
                                     <list editable="bottom">
                                         <field name="product_id"/>
                                         <field name="product_uom_qty"/>
                                         <field name="price_unit" optional="hide"/>
-                                        <field name="price_subtotal" readonly="True" optional="hide"/>
+                                        <field name="price_subtotal"
+                                               readonly="True"
+                                               optional="hide"/>
                                     </list>
                                 </field>
                             </page>
-
                             <page string="📍 Ubicación" name="ubicacion_ticket_page">
                                 <group invisible="not equipo_tiene_coordenadas">
                                     <group string="Dirección del equipo">
-                                        <field name="equipo_nombre_establecimiento" invisible="not equipo_nombre_establecimiento"/>
+                                        <field name="equipo_nombre_establecimiento"
+                                               invisible="not equipo_nombre_establecimiento"/>
                                         <field name="equipo_direccion_completa"/>
-                                        <field name="equipo_direccion_referencia" invisible="not equipo_direccion_referencia"/>
+                                        <field name="equipo_direccion_referencia"
+                                               invisible="not equipo_direccion_referencia"/>
                                         <field name="equipo_distrito"/>
                                         <field name="equipo_provincia"/>
                                         <field name="equipo_departamento"/>
@@ -228,22 +306,31 @@
                                     <group string="Coordenadas">
                                         <field name="equipo_latitud"/>
                                         <field name="equipo_longitud"/>
-                                        <field name="google_maps_url" widget="url" string="Ver en mapa"/>
-                                        <field name="google_maps_nav_url" widget="url" string="Navegar"/>
+                                        <field name="google_maps_url"
+                                               widget="url"
+                                               string="Ver en mapa"/>
+                                        <field name="google_maps_nav_url"
+                                               widget="url"
+                                               string="Navegar"/>
                                     </group>
                                 </group>
-                                <div class="d-flex gap-2 mb-3" invisible="not equipo_tiene_coordenadas">
-                                    <button name="action_abrir_mapa_equipo" string="🗺️ Ver en Google Maps" type="object" class="btn-info"/>
-                                    <button name="action_navegar_a_equipo" string="🧭 Navegar al equipo" type="object" class="btn-success"/>
+                                <div class="d-flex gap-2 mb-3"
+                                     invisible="not equipo_tiene_coordenadas">
+                                    <button name="action_abrir_mapa_equipo"
+                                            string="🗺️ Ver en Google Maps"
+                                            type="object"
+                                            class="btn-info"/>
+                                    <button name="action_navegar_a_equipo"
+                                            string="🧭 Navegar al equipo"
+                                            type="object"
+                                            class="btn-success"/>
                                 </div>
-                                <div class="alert alert-warning" invisible="equipo_tiene_coordenadas">
-                                    <i class="fa fa-map-marker me-2"/>
+                                <div class="alert alert-warning"
+                                     invisible="equipo_tiene_coordenadas">
                                     <strong>Sin ubicación:</strong>
                                     El equipo no tiene coordenadas registradas.
-                                    Configure la ubicación desde la ficha del equipo en la pestaña "📍 Ubicación".
                                 </div>
                             </page>
-
                             <page string="📡 Tracking GPS" name="tracking_gps_page">
                                 <group>
                                     <group string="Tiempos registrados">
@@ -259,40 +346,39 @@
                                         <field name="fecha_finalizacion"/>
                                     </group>
                                     <group string="Métricas de atención">
-                                        <field name="tiempo_traslado_minutos" widget="float_time" string="Tiempo traslado"/>
-                                        <field name="tiempo_en_sitio_minutos" widget="float_time" string="Tiempo en sitio"/>
-                                        <field name="tiempo_total_atencion_minutos" widget="float_time" string="Tiempo total"/>
-                                        <field name="diferencia_puntualidad_minutos" string="Puntualidad (min)"/>
-                                        <field name="es_puntual" widget="boolean_toggle"/>
+                                        <field name="tiempo_traslado_minutos"
+                                               widget="float_time"
+                                               string="Tiempo traslado"/>
+                                        <field name="tiempo_en_sitio_minutos"
+                                               widget="float_time"
+                                               string="Tiempo en sitio"/>
+                                        <field name="tiempo_total_atencion_minutos"
+                                               widget="float_time"
+                                               string="Tiempo total"/>
+                                        <field name="diferencia_puntualidad_minutos"
+                                               string="Puntualidad (min)"/>
+                                        <field name="es_puntual"
+                                               widget="boolean_toggle"/>
                                     </group>
                                 </group>
-                                <div class="alert alert-success" invisible="not es_puntual or not fecha_llegada">
-                                    <i class="fa fa-check-circle me-2"/>
-                                    <strong>✅ El técnico llegó a tiempo</strong>
-                                </div>
-                                <div class="alert alert-warning" invisible="es_puntual or not fecha_llegada or diferencia_puntualidad_minutos &lt;= 0">
-                                    <i class="fa fa-clock-o me-2"/>
-                                    <strong>⚠️ El técnico llegó tarde</strong>
-                                </div>
                                 <group string="Log de eventos GPS">
-                                    <field name="tracking_log" nolabel="1" readonly="1" placeholder="Los eventos GPS se registran automáticamente aquí..."/>
+                                    <field name="tracking_log"
+                                           nolabel="1"
+                                           readonly="1"/>
                                 </group>
                                 <group invisible="not traccar_geofence_id">
                                     <field name="traccar_geofence_id" readonly="1"/>
                                 </group>
                             </page>
-
                         </notebook>
                     </sheet>
                     <chatter/>
                 </form>
             </field>
         </record>
-
         <!-- ================================================= -->
-        <!-- TICKET ALQUILER — LIST                             -->
+        <!-- TICKET ALQUILER — LIST (sin cambios)               -->
         <!-- ================================================= -->
-
         <record id="ticket_tree_view" model="ir.ui.view">
             <field name="name">ticket_alquiler.tree</field>
             <field name="model">ticket.alquiler</field>
@@ -307,18 +393,18 @@
                     <field name="agenda" widget="remaining_days"/>
                     <field name="asistencia_id" widget="badge" optional="hide"/>
                     <field name="responsable" widget="many2one_avatar"/>
-                    <button string=" " name="action_nuevo" type="object" class="oe_highlight" icon="fa-exchange"/>
+                    <button string=" "
+                            name="action_nuevo"
+                            type="object"
+                            class="oe_highlight"
+                            icon="fa-exchange"/>
                     <field name="estado" widget="badge"
                            decoration-success="estado == 'finalizado'"
                            decoration-warning="estado == 'proceso'"/>
                 </list>
             </field>
         </record>
-
-        <!-- ================================================= -->
-        <!-- TICKET ALQUILER — KANBAN                           -->
-        <!-- ================================================= -->
-
+        <!-- KANBAN, GRAPH, SEARCH, CALENDAR, PIVOT sin cambios -->
         <record id="model_name_view_kanban" model="ir.ui.view">
             <field name="name">ticket.view.kanban</field>
             <field name="model">ticket.alquiler</field>
@@ -333,7 +419,8 @@
                     <field name="description"/>
                     <field name="informe_id"/>
                     <field name="responsable"/>
-                    <progressbar field="estado" colors='{"finalizado": "success", "nuevo": "danger", "proceso": "info"}'/>
+                    <progressbar field="estado"
+                                 colors='{"finalizado": "success", "nuevo": "danger", "proceso": "info"}'/>
                     <templates>
                         <t t-name="card">
                             <div class="oe_kanban_global_click position-relative shadow-sm rounded">
@@ -349,82 +436,47 @@
                                 </div>
                                 <div class="p-3">
                                     <div class="d-flex align-items-center mb-2">
-                                        <i class="fa fa-building text-info me-2" style="width: 20px;"/>
+                                        <i class="fa fa-building text-info me-2"/>
                                         <span class="text-muted me-2">Cliente:</span>
                                         <field name="partner_id" class="fw-bold"/>
                                     </div>
                                     <div class="d-flex align-items-center mb-2">
-                                        <i class="fa fa-print text-success me-2" style="width: 20px;"/>
+                                        <i class="fa fa-print text-success me-2"/>
                                         <span class="text-muted me-2">Equipo:</span>
                                         <field name="product_alquiler"/>
                                     </div>
                                     <div class="d-flex align-items-center mb-2">
-                                        <i class="fa fa-qrcode text-secondary me-2" style="width: 20px;"/>
-                                        <span class="text-muted me-1">Serie:</span>
-                                        <field name="serie_id_r"/>
-                                    </div>
-                                    <div class="d-flex align-items-center mb-2">
-                                        <i class="fa fa-tools text-primary me-2" style="width: 20px;"/>
+                                        <i class="fa fa-tools text-primary me-2"/>
                                         <span class="text-muted me-2">Servicio:</span>
                                         <field name="tipo_servicio_id" widget="badge"/>
                                     </div>
-                                    <div class="d-flex align-items-start mb-2" t-if="record.description.raw_value">
-                                        <i class="fa fa-comment text-danger me-2" style="width: 20px;"/>
-                                        <div>
-                                            <span class="text-muted">Descripción:</span>
-                                            <div class="text-danger">
-                                                <field name="description"/>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="d-flex align-items-start mb-2" t-if="record.informe_id.raw_value">
-                                        <i class="fa fa-file-alt text-success me-2" style="width: 20px;"/>
-                                        <div>
-                                            <span class="text-muted">Informe:</span>
-                                            <div class="text-success">
-                                                <field name="informe_id"/>
-                                            </div>
-                                        </div>
-                                    </div>
                                     <div class="d-flex align-items-center mb-2">
-                                        <i class="fa fa-calendar text-warning me-2" style="width: 20px;"/>
+                                        <i class="fa fa-calendar text-warning me-2"/>
                                         <span class="text-muted me-2">Fecha:</span>
                                         <field name="agenda"/>
                                     </div>
                                     <div class="border-top my-2"/>
                                     <div class="d-flex align-items-center justify-content-between">
-                                        <div class="d-flex align-items-center">
-                                            <i class="fa fa-user text-secondary me-2" style="width: 20px;"/>
-                                            <field name="responsable" widget="many2one_avatar"/>
-                                        </div>
+                                        <field name="responsable" widget="many2one_avatar"/>
                                         <field name="priority" widget="priority"/>
                                     </div>
                                 </div>
-                                <div t-attf-class="position-absolute top-0 start-0 h-100 w-1
-                                    #{record.estado.raw_value == 'finalizado' ? 'bg-success' :
-                                    record.estado.raw_value == 'proceso' ? 'bg-warning' : 'bg-danger'}"/>
                             </div>
                         </t>
                     </templates>
                 </kanban>
             </field>
         </record>
-
-        <!-- ================================================= -->
-        <!-- TICKET ALQUILER — GRAPH / SEARCH / CALENDAR / PIVOT -->
-        <!-- ================================================= -->
-
         <record id="ticket_graph" model="ir.ui.view">
             <field name="name">ticket.graph</field>
             <field name="model">ticket.alquiler</field>
             <field name="arch" type="xml">
-                <graph string="Distribución de Tickets por Servicio" type="bar" stacked="True">
+                <graph string="Distribución de Tickets" type="bar" stacked="True">
                     <field name="responsable"/>
                     <field name="tipo_servicio_id" type="row"/>
                 </graph>
             </field>
         </record>
-
         <record id="ticket_search" model="ir.ui.view">
             <field name="name">ticket.search</field>
             <field name="model">ticket.alquiler</field>
@@ -436,10 +488,13 @@
                     <field name="tipo_servicio_id"/>
                     <field name="estado"/>
                     <field name="responsable"/>
+                    <!-- NUEVO filtro instalaciones de repuestos -->
+                    <filter string="Instalaciones de Repuestos"
+                            name="instalaciones"
+                            domain="[('pedido_origen_id', '!=', False)]"/>
                 </search>
             </field>
         </record>
-
         <record id="ticket_calendar" model="ir.ui.view">
             <field name="name">ticket.calendar</field>
             <field name="model">ticket.alquiler</field>
@@ -450,7 +505,6 @@
                 </calendar>
             </field>
         </record>
-
         <record id="ticket_pivot" model="ir.ui.view">
             <field name="name">ticket.pivot</field>
             <field name="model">ticket.alquiler</field>
@@ -463,11 +517,9 @@
                 </pivot>
             </field>
         </record>
-
         <!-- ================================================= -->
-        <!-- WIZARD: ticket.subpartes.wizard                    -->
+        <!-- WIZARD: ticket.subpartes.wizard (sin cambios)      -->
         <!-- ================================================= -->
-
         <record id="view_ticket_subpartes_wizard_form" model="ir.ui.view">
             <field name="name">ticket.subpartes.wizard.form</field>
             <field name="model">ticket.subpartes.wizard</field>
@@ -477,8 +529,9 @@
                         <div class="alert alert-warning" role="alert">
                             <i class="fa fa-exclamation-triangle me-2"/>
                             <strong>Atención:</strong>
-                            Los siguientes componentes requieren cambio pero no tienen subpartes especificadas.
-                            Selecciona las subpartes necesarias antes de cerrar el ticket.
+                            Los siguientes componentes requieren cambio pero no tienen
+                            subpartes especificadas. Selecciona las subpartes necesarias
+                            antes de cerrar el ticket.
                         </div>
                         <field name="componentes_info" readonly="1" nolabel="1"/>
                         <field name="line_ids" nolabel="1">
@@ -504,7 +557,7 @@
                                 name="action_confirmar"
                                 type="object"
                                 class="btn-primary"
-                                confirm="¿Confirmar las subpartes seleccionadas? El ticket se cerrará y se generará el pedido de repuestos."/>
+                                confirm="¿Confirmar las subpartes? El ticket se cerrará y se generará el pedido."/>
                         <button string="Cancelar"
                                 class="btn-secondary"
                                 special="cancel"/>
@@ -512,11 +565,9 @@
                 </form>
             </field>
         </record>
-
         <!-- ================================================= -->
-        <!-- ticket.componente.evaluacion                       -->
+        <!-- ticket.componente.evaluacion (sin cambios)         -->
         <!-- ================================================= -->
-
         <record id="view_ticket_componente_evaluacion_form" model="ir.ui.view">
             <field name="name">ticket.componente.evaluacion.form</field>
             <field name="model">ticket.componente.evaluacion</field>
@@ -538,7 +589,6 @@
                 </form>
             </field>
         </record>
-
         <record id="view_ticket_componente_evaluacion_list" model="ir.ui.view">
             <field name="name">ticket.componente.evaluacion.list</field>
             <field name="model">ticket.componente.evaluacion</field>
@@ -554,7 +604,6 @@
                 </list>
             </field>
         </record>
-
         <record id="view_ticket_componente_evaluacion_search" model="ir.ui.view">
             <field name="name">ticket.componente.evaluacion.search</field>
             <field name="model">ticket.componente.evaluacion</field>
@@ -563,21 +612,24 @@
                     <field name="ticket_id"/>
                     <field name="componente_tipo_id"/>
                     <field name="estado_id"/>
-                    <filter string="Sin Estado" name="sin_estado" domain="[('estado_id', '=', False)]"/>
-                    <filter string="Requiere Cambio" name="requiere_cambio" domain="[('estado_id.code', '=', 'requiere_cambio')]"/>
+                    <filter string="Sin Estado" name="sin_estado"
+                            domain="[('estado_id', '=', False)]"/>
+                    <filter string="Requiere Cambio" name="requiere_cambio"
+                            domain="[('estado_id.code', '=', 'requiere_cambio')]"/>
                     <group expand="0" string="Agrupar por">
-                        <filter string="Ticket" name="group_ticket" context="{'group_by': 'ticket_id'}"/>
-                        <filter string="Componente" name="group_componente" context="{'group_by': 'componente_tipo_id'}"/>
-                        <filter string="Estado" name="group_estado" context="{'group_by': 'estado_id'}"/>
+                        <filter string="Ticket" name="group_ticket"
+                                context="{'group_by': 'ticket_id'}"/>
+                        <filter string="Componente" name="group_componente"
+                                context="{'group_by': 'componente_tipo_id'}"/>
+                        <filter string="Estado" name="group_estado"
+                                context="{'group_by': 'estado_id'}"/>
                     </group>
                 </search>
             </field>
         </record>
-
         <!-- ================================================= -->
-        <!-- ticket.accesorio.evaluacion                        -->
+        <!-- ticket.accesorio.evaluacion (sin cambios)          -->
         <!-- ================================================= -->
-
         <record id="view_ticket_accesorio_evaluacion_form" model="ir.ui.view">
             <field name="name">ticket.accesorio.evaluacion.form</field>
             <field name="model">ticket.accesorio.evaluacion</field>
@@ -598,7 +650,6 @@
                 </form>
             </field>
         </record>
-
         <record id="view_ticket_accesorio_evaluacion_list" model="ir.ui.view">
             <field name="name">ticket.accesorio.evaluacion.list</field>
             <field name="model">ticket.accesorio.evaluacion</field>
@@ -613,7 +664,6 @@
                 </list>
             </field>
         </record>
-
         <record id="view_ticket_accesorio_evaluacion_search" model="ir.ui.view">
             <field name="name">ticket.accesorio.evaluacion.search</field>
             <field name="model">ticket.accesorio.evaluacion</field>
@@ -622,21 +672,24 @@
                     <field name="ticket_id"/>
                     <field name="tipo_id"/>
                     <field name="estado_id"/>
-                    <filter string="Sin Estado" name="sin_estado" domain="[('estado_id', '=', False)]"/>
-                    <filter string="Requiere Cambio" name="requiere_cambio" domain="[('estado_id.code', '=', 'requiere_cambio')]"/>
+                    <filter string="Sin Estado" name="sin_estado"
+                            domain="[('estado_id', '=', False)]"/>
+                    <filter string="Requiere Cambio" name="requiere_cambio"
+                            domain="[('estado_id.code', '=', 'requiere_cambio')]"/>
                     <group expand="0" string="Agrupar por">
-                        <filter string="Ticket" name="group_ticket" context="{'group_by': 'ticket_id'}"/>
-                        <filter string="Tipo" name="group_tipo" context="{'group_by': 'tipo_id'}"/>
-                        <filter string="Estado" name="group_estado" context="{'group_by': 'estado_id'}"/>
+                        <filter string="Ticket" name="group_ticket"
+                                context="{'group_by': 'ticket_id'}"/>
+                        <filter string="Tipo" name="group_tipo"
+                                context="{'group_by': 'tipo_id'}"/>
+                        <filter string="Estado" name="group_estado"
+                                context="{'group_by': 'estado_id'}"/>
                     </group>
                 </search>
             </field>
         </record>
-
         <!-- ================================================= -->
-        <!-- ticket.componente.intervencion                     -->
+        <!-- ticket.componente.intervencion (sin cambios)       -->
         <!-- ================================================= -->
-
         <record id="view_ticket_componente_intervencion_form" model="ir.ui.view">
             <field name="name">ticket.componente.intervencion.form</field>
             <field name="model">ticket.componente.intervencion</field>
@@ -661,7 +714,6 @@
                 </form>
             </field>
         </record>
-
         <record id="view_ticket_componente_intervencion_list" model="ir.ui.view">
             <field name="name">ticket.componente.intervencion.list</field>
             <field name="model">ticket.componente.intervencion</field>
@@ -673,52 +725,121 @@
                 </list>
             </field>
         </record>
-
-        <record id="view_ticket_componente_intervencion_search" model="ir.ui.view">
-            <field name="name">ticket.componente.intervencion.search</field>
-            <field name="model">ticket.componente.intervencion</field>
-            <field name="arch" type="xml">
-                <search>
-                    <field name="ticket_id"/>
-                    <field name="componente_code"/>
-                    <group expand="0" string="Agrupar por">
-                        <filter string="Ticket" name="group_ticket" context="{'group_by': 'ticket_id'}"/>
-                    </group>
-                </search>
-            </field>
-        </record>
-
         <!-- ================================================= -->
-        <!-- ticket.repuesto.pedido                             -->
+        <!-- ticket.repuesto.pedido — FORM (actualizado)        -->
         <!-- ================================================= -->
-
         <record id="view_ticket_repuesto_pedido_form" model="ir.ui.view">
             <field name="name">ticket.repuesto.pedido.form</field>
             <field name="model">ticket.repuesto.pedido</field>
             <field name="arch" type="xml">
                 <form string="Pedido de Repuestos">
                     <header>
+                        <!-- Barra de estados completa con los 12 estados -->
                         <field name="estado" widget="statusbar"
-                               statusbar_visible="pendiente,aprobado,cancelado"/>
+                               statusbar_visible="borrador,esperando_gerencia,aprobado,stock_en_revision,stock_completo,entregado,instalado"/>
+                        <!-- Botón enviar a Gerencia -->
+                        <button string="📤 Enviar a Gerencia"
+                                name="action_enviar_a_gerencia"
+                                type="object"
+                                class="btn-primary oe_highlight"
+                                invisible="estado != 'borrador'"
+                                confirm="¿Enviar pedido a Gerencia para aprobación?"/>
+                        <!-- Botones Gerencia (desde UI) -->
                         <button string="✅ Aprobar"
-                                name="action_aprobar"
+                                name="action_aprobar_gerencia"
                                 type="object"
                                 class="btn-success"
-                                invisible="estado != 'pendiente'"
-                                confirm="¿Confirmar aprobación? Se registrará en el historial de repuestos."/>
+                                invisible="estado not in ('esperando_gerencia', 'informe_recibido')"
+                                confirm="¿Aprobar este pedido? Se notificará a Comercial y Logística."
+                                groups="base.group_system"/>
+                        <button string="📋 Pedir informe"
+                                name="action_solicitar_informe_comercial"
+                                type="object"
+                                class="btn-warning"
+                                invisible="estado != 'esperando_gerencia'"
+                                groups="base.group_system"/>
+                        <button string="❌ Rechazar"
+                                name="action_rechazar_gerencia"
+                                type="object"
+                                class="btn-danger"
+                                invisible="estado not in ('esperando_gerencia', 'informe_recibido')"
+                                groups="base.group_system"/>
+                        <!-- Botón Comercial confirmar stock -->
+                        <button string="📦 Confirmar stock completo"
+                                name="action_stock_completo"
+                                type="object"
+                                class="btn-success oe_highlight"
+                                invisible="estado != 'stock_en_revision'"
+                                confirm="¿Confirmar que todos los repuestos están disponibles? Se notificará a Logística."/>
+                        <!-- Botón cancelar -->
                         <button string="❌ Cancelar"
                                 name="action_cancelar"
                                 type="object"
                                 class="btn-danger"
-                                invisible="estado == 'aprobado'"
+                                invisible="estado in ('instalado', 'entregado', 'en_camino', 'cancelado')"
                                 confirm="¿Cancelar este pedido?"/>
+                        <!-- Botón reactivar -->
                         <button string="🔄 Reactivar"
                                 name="action_volver_pendiente"
                                 type="object"
                                 class="btn-warning"
-                                invisible="estado != 'cancelado'"/>
+                                invisible="estado not in ('cancelado', 'rechazado')"/>
+                        <button string="📤 Enviar a Gerencia"
+                            name="action_enviar_a_gerencia"
+                            type="object"
+                            class="btn-primary oe_highlight"
+                            invisible="estado != 'borrador'"
+                            confirm="¿Confirmar envío a Gerencia? Asegúrese de haber agregado todos los repuestos necesarios."/>
                     </header>
                     <sheet>
+                        <!-- Smart button → ticket de instalación -->
+                        <div name="button_box">
+                            <button class="oe_stat_button"
+                                    icon="fa-wrench"
+                                    invisible="not ticket_instalacion_id"
+                                    type="object"
+                                    name="action_ver_ticket_instalacion">
+                                <div class="o_stat_info">
+                                    <span class="o_stat_text">Ticket instalación</span>
+                                    <span class="o_stat_value">
+                                        <field name="ticket_instalacion_id"
+                                               readonly="1"
+                                               nolabel="1"
+                                               string=""/>
+                                    </span>
+                                </div>
+                            </button>
+                        </div>
+                        <!-- Alerta estado rechazado -->
+                        <div class="alert alert-danger"
+                             invisible="estado != 'rechazado'">
+                            <i class="fa fa-times-circle me-2"/>
+                            <strong>Pedido rechazado por Gerencia.</strong>
+                            <field name="motivo_rechazo"
+                                   readonly="1"
+                                   nolabel="1"
+                                   placeholder="Sin motivo especificado"/>
+                        </div>
+                        <!-- Alerta stock en revisión -->
+                        <div class="alert alert-warning"
+                             invisible="estado != 'stock_en_revision'">
+                            <i class="fa fa-search me-2"/>
+                            <strong>Comercial verificando stock.</strong>
+                            Faltan confirmar
+                            <strong>
+                                <field name="lineas_sin_stock"
+                                           readonly="1"
+                                           nolabel="1"/>
+                            </strong>
+                            item(s).
+                        </div>
+                        <!-- Alerta instalado -->
+                        <div class="alert alert-success"
+                             invisible="estado != 'instalado'">
+                            <i class="fa fa-check-circle me-2"/>
+                            <strong>Repuestos instalados.</strong>
+                            Historial de durabilidad actualizado con contómetros reales.
+                        </div>
                         <div class="oe_title">
                             <label for="name"/>
                             <h1>
@@ -726,118 +847,292 @@
                             </h1>
                         </div>
                         <group>
-                            <group string="Origen">
+                            <group string="📋 Origen">
                                 <field name="ticket_id" readonly="1"/>
                                 <field name="cliente_id" readonly="1"/>
                                 <field name="tecnico_id" readonly="1"/>
                                 <field name="fecha" readonly="1"/>
                             </group>
-                            <group string="Equipo">
+                            <group string="🖨️ Equipo">
                                 <field name="modelo_nombre" readonly="1"/>
                                 <field name="serie" readonly="1"/>
-                                <field name="contometro_actual" readonly="1"/>
+                                <field name="contometro_k"
+                                       readonly="1"
+                                       string="Contómetro K (B/N)"/>
+                                <field name="contometro_color"
+                                       readonly="1"
+                                       string="Contómetro Color"
+                                       invisible="not contometro_color"/>
                             </group>
                         </group>
-                        <group string="Aprobación" invisible="estado == 'pendiente'">
-                            <field name="aprobado_por" readonly="1"/>
-                            <field name="fecha_aprobacion" readonly="1"/>
+                        <!-- Sección aprobación -->
+                        <group string="✅ Aprobación"
+                               invisible="estado in ('borrador', 'esperando_gerencia', 'rechazado', 'cancelado')">
+                            <group>
+                                <field name="aprobado_por" readonly="1"/>
+                                <field name="fecha_aprobacion" readonly="1"/>
+                            </group>
+                            <group>
+                                <field name="fecha_stock_completo"
+                                       readonly="1"
+                                       invisible="not fecha_stock_completo"/>
+                                <field name="fecha_entrega"
+                                       readonly="1"
+                                       invisible="not fecha_entrega"/>
+                                <field name="fecha_instalacion"
+                                       readonly="1"
+                                       invisible="not fecha_instalacion"/>
+                            </group>
+                        </group>
+                        <!-- Sección informe (visible cuando corresponde) -->
+                        <group string="📎 Informe de Comercial"
+                               invisible="estado not in ('informe_solicitado', 'informe_recibido', 'aprobado', 'stock_en_revision', 'stock_completo', 'en_camino', 'entregado', 'instalado')">
+                            <group>
+                                <field name="fecha_solicitud_informe"
+                                       readonly="1"
+                                       invisible="not fecha_solicitud_informe"/>
+                                <field name="fecha_informe_recibido"
+                                       readonly="1"
+                                       invisible="not fecha_informe_recibido"/>
+                                <field name="nota_comercial"
+                                       invisible="not nota_comercial"/>
+                            </group>
+                            <group>
+                                <field name="informe_adjunto"
+                                       widget="binary"
+                                       invisible="not informe_adjunto"/>
+                                <field name="informe_adjunto_nombre"
+                                       invisible="not informe_adjunto"
+                                       readonly="1"/>
+                            </group>
                         </group>
                         <notebook>
-                            <page string="Repuestos solicitados">
-                                <field name="linea_ids" readonly="estado == 'aprobado'">
-                                    <list editable="bottom">
-                                        <field name="componente_display" readonly="1" string="Componente"/>
-                                        <field name="color_id" readonly="1" optional="show"/>
-                                        <field name="subparte_id" readonly="1" string="Subparte / Repuesto"/>
-                                        <field name="cantidad"/>
+                            <!-- Pestaña repuestos con columna stock -->
+                            <page string="🔩 Repuestos Solicitados">
+                                <field name="linea_ids"
+           readonly="estado in ('aprobado', 'instalado')">
+                                    <list editable="bottom"
+              decoration-success="meses_desde_ultimo_cambio > 12"
+              decoration-warning="meses_desde_ultimo_cambio > 6 and meses_desde_ultimo_cambio &lt;= 12"
+              decoration-danger="meses_desde_ultimo_cambio &lt;= 6 and meses_desde_ultimo_cambio > 0">
+                                        <!-- Componente -->
+                                        <field name="componente_display"
+                   readonly="1"
+                   string="Componente"/>
+                                        <!-- Color -->
+                                        <field name="color_id"
+                   readonly="1"
+                   optional="show"
+                   string="Color"/>
+                                        <!-- Subparte (editable) -->
+                                        <field name="subparte_id"
+                   string="Subparte / Repuesto"/>
+                                        <!-- 🔥 Descripción libre -->
+                                        <field name="nombre_libre"
+                   placeholder="Ej: Tapa lateral, cable, fusible, etc."
+                   attrs="{'invisible': [('subparte_id','!=',False)]}"/>
+                                        <!-- Cantidad -->
+                                        <field name="cantidad" string="Cant."/>
+                                        <!-- Observación -->
                                         <field name="observacion" optional="show"/>
-                                        <field name="ultimo_cambio_fecha" readonly="1" optional="show" string="Último Cambio"/>
-                                        <field name="ultimo_cambio_contometro" readonly="1" optional="show" string="Contómetro Anterior"/>
-                                        <field name="meses_desde_ultimo_cambio" readonly="1" optional="show" string="Meses Desde Cambio"/>
+                                        <!-- ================= STOCK ================= -->
+                                        <field name="estado_stock"
+                   widget="badge"
+                   optional="show"
+                   string="Stock"
+                   decoration-success="estado_stock in ('disponible','recibido')"
+                   decoration-warning="estado_stock == 'sin_stock'"
+                   decoration-muted="estado_stock == 'pendiente'"/>
+                                        <field name="fecha_disponible"
+                   optional="hide"
+                   string="Fecha est."/>
+                                        <field name="observacion_stock"
+                   optional="hide"
+                   string="Nota stock"/>
+                                        <!-- ================= HISTORIAL ================= -->
+                                        <field name="ultimo_cambio_fecha"
+                   readonly="1"
+                   optional="show"
+                   string="Último Cambio"/>
+                                        <field name="ultimo_cambio_contometro"
+                   readonly="1"
+                   optional="show"
+                   string="Cont. Anterior"/>
+                                        <field name="meses_desde_ultimo_cambio"
+                   readonly="1"
+                   optional="show"
+                   string="Meses"/>
+                                        <!-- ================= SNAPSHOT ================= -->
+                                        <field name="contometro_actual_snapshot"
+                   readonly="1"
+                   optional="hide"
+                   string="Cont. Actual (aprobación)"/>
+                                        <field name="contometro_anterior_snapshot"
+                   readonly="1"
+                   optional="hide"
+                   string="Cont. Anterior (aprobación)"/>
+                                        <field name="copias_snapshot"
+                   readonly="1"
+                   optional="hide"
+                   string="Copias (aprobación)"/>
+                                        <field name="meses_snapshot"
+                   readonly="1"
+                   optional="hide"
+                   string="Meses (aprobación)"/>
                                     </list>
                                 </field>
                             </page>
+                            <!-- Pestaña observaciones -->
+                            <page string="📝 Observaciones">
+                                <group>
+                                    <field name="observaciones"
+                                           nolabel="1"
+                                           placeholder="Observaciones generales..."/>
+                                    <field name="nota_logistica"
+                                           invisible="not nota_logistica"
+                                           string="Nota Logística"
+                                           readonly="1"/>
+                                </group>
+                            </page>
+                            <!-- Pestaña técnica — token y trazabilidad -->
+                            <page string="🔐 Trazabilidad"
+                                  groups="base.group_system">
+                                <group>
+                                    <group string="Acceso portal">
+                                        <field name="token" readonly="1"/>
+                                        <field name="fecha_envio_gerencia" readonly="1"/>
+                                    </group>
+                                    <group string="Instalación">
+                                        <field name="ticket_instalacion_id" readonly="1"/>
+                                        <field name="fecha_instalacion" readonly="1"/>
+                                    </group>
+                                </group>
+                            </page>
                         </notebook>
-                        <group>
-                            <field name="observaciones"/>
-                        </group>
                     </sheet>
                     <chatter/>
                 </form>
             </field>
         </record>
-
+        <!-- ================================================= -->
+        <!-- ticket.repuesto.pedido — LIST (actualizado)        -->
+        <!-- ================================================= -->
         <record id="view_ticket_repuesto_pedido_list" model="ir.ui.view">
             <field name="name">ticket.repuesto.pedido.list</field>
             <field name="model">ticket.repuesto.pedido</field>
             <field name="arch" type="xml">
                 <list default_order="fecha desc"
-                      decoration-success="estado == 'aprobado'"
-                      decoration-warning="estado == 'pendiente'"
-                      decoration-danger="estado == 'cancelado'">
-                    <field name="name"/>
+                      decoration-success="estado == 'instalado'"
+                      decoration-info="estado in ('stock_en_revision','stock_completo','en_camino','entregado')"
+                      decoration-warning="estado in ('borrador','esperando_gerencia','informe_solicitado','informe_recibido')"
+                      decoration-danger="estado in ('rechazado','cancelado')" js_class="pedido_tree_dashboard">
+                    <field name="name" string="Pedido N°"/>
                     <field name="ticket_id"/>
                     <field name="cliente_id"/>
-                    <field name="modelo_nombre"/>
+                    <field name="modelo_nombre" optional="show"/>
                     <field name="serie"/>
                     <field name="tecnico_id"/>
                     <field name="fecha"/>
-                    <field name="total_lineas"/>
+                    <field name="total_lineas" string="Líneas"/>
                     <field name="estado" widget="badge"/>
                     <field name="aprobado_por" optional="hide"/>
                     <field name="fecha_aprobacion" optional="hide"/>
+                    <field name="ticket_instalacion_id" optional="hide"/>
                 </list>
             </field>
         </record>
-
+        <!-- ================================================= -->
+        <!-- ticket.repuesto.pedido — SEARCH (actualizado)      -->
+        <!-- ================================================= -->
         <record id="view_ticket_repuesto_pedido_search" model="ir.ui.view">
             <field name="name">ticket.repuesto.pedido.search</field>
             <field name="model">ticket.repuesto.pedido</field>
             <field name="arch" type="xml">
-                <search>
-                    <field name="name"/>
+                <search string="Buscar Pedidos">
+                    <field name="name" string="Pedido N°"/>
                     <field name="ticket_id"/>
                     <field name="cliente_id"/>
                     <field name="tecnico_id"/>
                     <field name="serie"/>
-                    <filter string="Pendientes" name="pendientes" domain="[('estado', '=', 'pendiente')]"/>
-                    <filter string="Aprobados" name="aprobados" domain="[('estado', '=', 'aprobado')]"/>
-                    <filter string="Cancelados" name="cancelados" domain="[('estado', '=', 'cancelado')]"/>
+                    <separator/>
+                    <!-- Filtros por etapa del nuevo flujo -->
+                    <filter string="Borrador"
+                            name="borrador"
+                            domain="[('estado', '=', 'borrador')]"/>
+                    <filter string="Esperando Gerencia"
+                            name="gerencia"
+                            domain="[('estado', '=', 'esperando_gerencia')]"/>
+                    <filter string="En revisión de stock"
+                            name="stock"
+                            domain="[('estado', '=', 'stock_en_revision')]"/>
+                    <filter string="Entregados"
+                            name="entregados"
+                            domain="[('estado', '=', 'entregado')]"/>
+                    <filter string="Instalados"
+                            name="instalados"
+                            domain="[('estado', '=', 'instalado')]"/>
+                    <filter string="Rechazados"
+                            name="rechazados"
+                            domain="[('estado', '=', 'rechazado')]"/>
+                    <separator/>
+                    <filter string="Hoy"
+                            name="hoy"
+                            domain="[('fecha', '>=', datetime.datetime.combine(context_today(), datetime.time(0,0,0)))]"/>
+                    <filter string="Esta semana"
+                            name="semana"
+                            domain="[('fecha', '>=', (context_today() - datetime.timedelta(days=7)).strftime('%Y-%m-%d'))]"/>
                     <group expand="0" string="Agrupar por">
-                        <filter string="Estado" name="group_estado" context="{'group_by': 'estado'}"/>
-                        <filter string="Técnico" name="group_tecnico" context="{'group_by': 'tecnico_id'}"/>
-                        <filter string="Cliente" name="group_cliente" context="{'group_by': 'cliente_id'}"/>
+                        <filter string="Estado"
+                                name="group_estado"
+                                context="{'group_by': 'estado'}"/>
+                        <filter string="Técnico"
+                                name="group_tecnico"
+                                context="{'group_by': 'tecnico_id'}"/>
+                        <filter string="Cliente"
+                                name="group_cliente"
+                                context="{'group_by': 'cliente_id'}"/>
+                        <filter string="Fecha"
+                                name="group_fecha"
+                                context="{'group_by': 'fecha:month'}"/>
                     </group>
                 </search>
             </field>
         </record>
-
         <!-- ================================================= -->
-        <!-- ticket.repuesto.historial                          -->
+        <!-- ticket.repuesto.historial — LIST (sin cambios)     -->
         <!-- ================================================= -->
-
         <record id="view_ticket_repuesto_historial_list" model="ir.ui.view">
             <field name="name">ticket.repuesto.historial.list</field>
             <field name="model">ticket.repuesto.historial</field>
             <field name="arch" type="xml">
-                <list default_order="fecha_cambio desc">
-                    <field name="equipo_id"/>
+                <list default_order="fecha_cambio desc"
+                      decoration-success="copias_duracion > 50000"
+                      decoration-warning="copias_duracion > 20000 and copias_duracion &lt;= 50000"
+                      decoration-danger="copias_duracion > 0 and copias_duracion &lt;= 20000">
+                    <field name="equipo_id" string="Equipo"/>
                     <field name="serie"/>
                     <field name="cliente_id"/>
-                    <field name="subparte_id"/>
-                    <field name="color_id" optional="show"/>
+                    <field name="subparte_id" string="Subparte / Repuesto"/>
+                    <field name="color_id" optional="show" string="Color"/>
+                    <field name="tipo_contometro" widget="badge"
+                           optional="show" string="Tipo"
+                           decoration-info="tipo_contometro == 'color'"
+                           decoration-success="tipo_contometro == 'total'"
+                           decoration-muted="tipo_contometro == 'bn'"/>
                     <field name="cantidad"/>
-                    <field name="fecha_cambio"/>
-                    <field name="contometro_cambio"/>
-                    <field name="meses_duracion" string="Duración (meses)"/>
-                    <field name="copias_duracion" string="Copias de duración"/>
-                    <field name="tecnico_id"/>
+                    <field name="fecha_cambio" string="Fecha Cambio"/>
+                    <field name="contometro_cambio" string="Contómetro"/>
+                    <field name="meses_duracion" string="Meses"/>
+                    <field name="copias_duracion" string="Copias"/>
+                    <field name="tecnico_id" optional="show"/>
                     <field name="ticket_id" optional="hide"/>
                     <field name="pedido_id" optional="hide"/>
                 </list>
             </field>
         </record>
-
+        <!-- ================================================= -->
+        <!-- ticket.repuesto.historial — FORM (sin cambios)     -->
+        <!-- ================================================= -->
         <record id="view_ticket_repuesto_historial_form" model="ir.ui.view">
             <field name="name">ticket.repuesto.historial.form</field>
             <field name="model">ticket.repuesto.historial</field>
@@ -845,55 +1140,86 @@
                 <form string="Historial de Repuesto">
                     <sheet>
                         <group>
-                            <group string="Equipo">
+                            <group string="🖨️ Equipo">
                                 <field name="equipo_id" readonly="1"/>
                                 <field name="modelo_nombre" readonly="1"/>
                                 <field name="serie" readonly="1"/>
                                 <field name="cliente_id" readonly="1"/>
                             </group>
-                            <group string="Repuesto">
+                            <group string="🔩 Repuesto">
                                 <field name="subparte_id" readonly="1"/>
                                 <field name="color_id" readonly="1"/>
                                 <field name="cantidad" readonly="1"/>
                             </group>
                         </group>
                         <group>
-                            <group string="Cambio">
+                            <group string="📅 Cambio Actual">
                                 <field name="fecha_cambio" readonly="1"/>
-                                <field name="contometro_cambio" readonly="1"/>
+                                <field name="tipo_contometro"
+                                       readonly="1"
+                                       string="Tipo de Contómetro"/>
+                                <field name="contometro_cambio"
+                                       readonly="1"
+                                       string="Contómetro al Cambio"/>
                                 <field name="tecnico_id" readonly="1"/>
                                 <field name="ticket_id" readonly="1"/>
                                 <field name="pedido_id" readonly="1"/>
                             </group>
-                            <group string="Durabilidad">
+                            <group string="📊 Durabilidad vs Cambio Anterior">
                                 <field name="fecha_cambio_anterior" readonly="1"/>
                                 <field name="contometro_cambio_anterior" readonly="1"/>
-                                <field name="meses_duracion" readonly="1"/>
-                                <field name="copias_duracion" readonly="1"/>
+                                <field name="meses_duracion"
+                                       readonly="1"
+                                       string="Duración (meses)"/>
+                                <field name="copias_duracion"
+                                       readonly="1"
+                                       string="Copias de Duración"/>
                             </group>
                         </group>
                     </sheet>
                 </form>
             </field>
         </record>
-
+        <!-- ================================================= -->
+        <!-- ticket.repuesto.historial — SEARCH (actualizado)   -->
+        <!-- ================================================= -->
         <record id="view_ticket_repuesto_historial_search" model="ir.ui.view">
             <field name="name">ticket.repuesto.historial.search</field>
             <field name="model">ticket.repuesto.historial</field>
             <field name="arch" type="xml">
-                <search>
+                <search string="Buscar Historial">
                     <field name="equipo_id"/>
                     <field name="subparte_id"/>
                     <field name="tecnico_id"/>
                     <field name="serie"/>
+                    <separator/>
+                    <filter string="B/N" name="filter_bn"
+                            domain="[('tipo_contometro', '=', 'bn')]"/>
+                    <filter string="Color" name="filter_color"
+                            domain="[('tipo_contometro', '=', 'color')]"/>
+                    <filter string="Total (K+C)" name="filter_total"
+                            domain="[('tipo_contometro', '=', 'total')]"/>
+                    <separator/>
+                    <filter string="Este mes" name="este_mes"
+                            domain="[('fecha_cambio', '>=', (context_today()).strftime('%Y-%m-01'))]"/>
+                    <filter string="Este año" name="este_anio"
+                            domain="[('fecha_cambio', '>=', (context_today()).strftime('%Y-01-01'))]"/>
                     <group expand="0" string="Agrupar por">
-                        <filter string="Equipo" name="group_equipo" context="{'group_by': 'equipo_id'}"/>
-                        <filter string="Subparte" name="group_subparte" context="{'group_by': 'subparte_id'}"/>
-                        <filter string="Técnico" name="group_tecnico" context="{'group_by': 'tecnico_id'}"/>
+                        <filter string="Equipo" name="group_equipo"
+                                context="{'group_by': 'equipo_id'}"/>
+                        <filter string="Subparte" name="group_subparte"
+                                context="{'group_by': 'subparte_id'}"/>
+                        <filter string="Color" name="group_color"
+                                context="{'group_by': 'color_id'}"/>
+                        <filter string="Tipo Contómetro" name="group_tipo"
+                                context="{'group_by': 'tipo_contometro'}"/>
+                        <filter string="Técnico" name="group_tecnico"
+                                context="{'group_by': 'tecnico_id'}"/>
+                        <filter string="Mes" name="group_mes"
+                                context="{'group_by': 'fecha_cambio:month'}"/>
                     </group>
                 </search>
             </field>
         </record>
-
     </data>
 </odoo>

@@ -1,171 +1,126 @@
 .o_sat_dashboard {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-radius: 6px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    margin: 0 8px 8px 8px;
-    padding: 8px !important;
-}
+    background: transparent;
+    border-radius: 0;
+    box-shadow: none;
+    margin: 0 0 8px 0;
+    padding: 6px 0 !important;
 
-.o_sat_card_kpi {
-    background: white;
-    border-radius: 4px;
-    padding: 0.4rem;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    height: 100%;
-    border-left: 2px solid #667eea;
-    cursor: pointer;
-    
-    &:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
-        border-left-width: 3px;
-    }
+    .o_sat_card_kpi {
+        background: #ffffff;
+        border-radius: 10px;
+        padding: 8px 10px;
+        border: 1px solid #e8eaf0;
+        border-left: 3px solid #e8eaf0;
+        box-shadow: none;
+        transition: border-color 0.15s ease, transform 0.15s ease;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        height: 100%;
+        cursor: pointer;
 
-    &:active {
-        transform: translateY(0);
-    }
-}
+        &:hover {
+            transform: translateY(-2px);
+            border-color: #c5cae9;
+            border-left-color: #4361ee;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+        }
 
-.o_sat_card_icon {
-    width: 28px;
-    height: 28px;
-    border-radius: 6px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    
-    i {
-        color: white;
-        font-size: 14px;
-    }
-    
-    &.o_sat_icon_primary {
-        background: linear-gradient(135deg, #667eea, #764ba2);
-    }
-    
-    &.o_sat_icon_success {
-        background: linear-gradient(135deg, #28a745, #20c997);
-    }
-    
-    &.o_sat_icon_warning {
-        background: linear-gradient(135deg, #ffc107, #fd7e14);
-    }
-    
-    &.o_sat_icon_danger {
-        background: linear-gradient(135deg, #dc3545, #c82333);
-    }
-    
-    &.o_sat_icon_info {
-        background: linear-gradient(135deg, #17a2b8, #138496);
-    }
-    
-    &.o_sat_icon_secondary {
-        background: linear-gradient(135deg, #6c757d, #5a6268);
-    }
-
-    &.o_sat_icon_dark {
-        background: linear-gradient(135deg, #343a40, #23272b);
-    }
-}
-
-// Animaciones
-@keyframes pulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.08); }
-}
-
-@keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-}
-
-@keyframes bounce {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-3px); }
-}
-
-@keyframes shake {
-    0%, 100% { transform: translateX(0); }
-    25% { transform: translateX(-2px); }
-    75% { transform: translateX(2px); }
-}
-
-@keyframes blink {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
-}
-
-.o_sat_icon_pulse {
-    animation: pulse 2s ease-in-out infinite;
-}
-
-.o_sat_icon_spin {
-    animation: spin 3s linear infinite;
-}
-
-.o_sat_icon_bounce {
-    animation: bounce 1.5s ease-in-out infinite;
-}
-
-.o_sat_icon_shake {
-    animation: shake 2s ease-in-out infinite;
-}
-
-.o_sat_icon_blink {
-    animation: blink 1.5s ease-in-out infinite;
-}
-
-.o_sat_card_content {
-    flex: 1;
-    min-width: 0;
-}
-
-.o_sat_card_title {
-    font-size: 0.6rem;
-    color: #6c757d;
-    margin-bottom: 0.15rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.2px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.o_sat_card_value {
-    font-size: 1.2rem;
-    font-weight: 700;
-    color: #212529;
-    line-height: 1;
-}
-
-// Responsive
-@media (max-width: 1199px) {
-    .o_sat_card_value {
-        font-size: 1.1rem;
+        &:active {
+            transform: translateY(0);
+        }
     }
 
     .o_sat_card_icon {
-        width: 24px;
-        height: 24px;
-        
-        i {
-            font-size: 12px;
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+
+        i { font-size: 14px; }
+
+        &.o_sat_icon_primary {
+            background: #E6F1FB;
+            i { color: #185FA5; }
+        }
+
+        &.o_sat_icon_success {
+            background: #EAF3DE;
+            i { color: #3B6D11; }
+        }
+
+        &.o_sat_icon_warning {
+            background: #FAEEDA;
+            i { color: #854F0B; }
+        }
+
+        &.o_sat_icon_danger {
+            background: #FCEBEB;
+            i { color: #A32D2D; }
+        }
+
+        &.o_sat_icon_info {
+            background: #E1F5EE;
+            i { color: #0F6E56; }
+        }
+
+        &.o_sat_icon_secondary {
+            background: #F1EFE8;
+            i { color: #5F5E5A; }
+        }
+
+        &.o_sat_icon_dark {
+            background: #F1EFE8;
+            i { color: #444441; }
         }
     }
-}
 
-@media (max-width: 991px) {
+    .o_sat_icon_pulse,
+    .o_sat_icon_spin,
+    .o_sat_icon_bounce,
+    .o_sat_icon_shake,
+    .o_sat_icon_blink {
+        animation: none;
+    }
+
+    .o_sat_card_content {
+        flex: 1;
+        min-width: 0;
+    }
+
     .o_sat_card_title {
-        font-size: 0.55rem;
+        font-size: 0.62rem;
+        color: #8b8fa8;
+        margin-bottom: 2px;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     .o_sat_card_value {
-        font-size: 1rem;
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: #1a1a2e;
+        line-height: 1;
+    }
+
+    @media (max-width: 1199px) {
+        .o_sat_card_value { font-size: 1.1rem; }
+        .o_sat_card_icon {
+            width: 28px;
+            height: 28px;
+            i { font-size: 12px; }
+        }
+    }
+
+    @media (max-width: 991px) {
+        .o_sat_card_title { font-size: 0.55rem; }
+        .o_sat_card_value { font-size: 1rem; }
     }
 }

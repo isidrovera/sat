@@ -104,6 +104,35 @@
             <field name="report_file">sat.report_qr_alquiler_template</field>
             <field name="print_report_name">object.name</field>
         </record>
-
+     <!-- ============================================ -->
+    <!-- FORMATO DE PAPEL LANDSCAPE                   -->
+    <!-- ============================================ -->
+    <record id="paperformat_repuesto_landscape" model="report.paperformat">
+        <field name="name">Pedido Repuestos Landscape</field>
+        <field name="format">A4</field>
+        <field name="orientation">Landscape</field>
+        <field name="margin_top">10</field>
+        <field name="margin_bottom">15</field>
+        <field name="margin_left">8</field>
+        <field name="margin_right">8</field>
+        <field name="header_line" eval="False"/>
+        <field name="header_spacing">10</field>
+        <field name="dpi">90</field>
+    </record>
+ 
+    <!-- ============================================ -->
+    <!-- ACCIÓN DEL REPORTE                           -->
+    <!-- ============================================ -->
+    <record id="action_report_ticket_repuesto_pedido" model="ir.actions.report">
+        <field name="name">Pedido de Repuestos</field>
+        <field name="model">ticket.repuesto.pedido</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">sat.report_ticket_repuesto_pedido</field>
+        <field name="report_file">sat.report_ticket_repuesto_pedido</field>
+        <field name="paperformat_id" ref="sat.paperformat_repuesto_landscape"/>
+        <field name="print_report_name">'Pedido Repuestos - %s' % (object.name)</field>
+        <field name="binding_model_id" ref="sat.model_ticket_repuesto_pedido"/>
+        <field name="binding_type">report</field>
+    </record>
     </data>
 </odoo>

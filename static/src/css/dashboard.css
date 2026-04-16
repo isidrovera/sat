@@ -1,17 +1,21 @@
-/* Archivo: static/src/css/dashboard.css */
-/* CSS ESPECÍFICO SOLO PARA EL DASHBOARD SAT */
+/* dashboard.css — SAT Dashboard rediseño moderno */
 
 /* ========================================
-   CONFIGURACIÓN GENERAL DEL DASHBOARD
+   RESET Y BASE
 ======================================== */
+.dashboard-container * {
+    box-sizing: border-box;
+}
+
 .dashboard-container {
+    padding: 12px;
+    background: #f5f6fa;
     height: 100vh;
     display: flex;
     flex-direction: column;
-    padding: 12px;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    color: #1a1a2e;
     width: 100%;
-    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-    min-height: 100vh;
 }
 
 .dashboard-container .content-scroll {
@@ -22,563 +26,481 @@
 }
 
 /* ========================================
-   HEADER DEL DASHBOARD
+   HEADER
 ======================================== */
 .dashboard-container .dashboard-header {
-    background: white;
-    border-radius: 16px;
-    padding: 24px;
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
-    margin-bottom: 24px;
-    border: 1px solid rgba(255, 255, 255, 0.8);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 28px;
+    padding: 20px 24px;
+    background: #ffffff;
+    border-radius: 14px;
+    border: 1px solid #e8eaf0;
 }
 
 .dashboard-container .dashboard-title {
-    font-size: 32px;
-    font-weight: 800;
-    color: #2c3e50;
+    font-size: 20px;
+    font-weight: 600;
+    color: #1a1a2e;
     margin: 0;
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 10px;
 }
 
 .dashboard-container .dashboard-title i {
-    color: #3498db;
-    font-size: 36px;
-    filter: drop-shadow(0 2px 4px rgba(52, 152, 219, 0.3));
+    font-size: 22px;
+    color: #4361ee;
+}
+
+.dashboard-container .dashboard-header .text-muted {
+    font-size: 13px;
+    color: #8b8fa8;
+    margin-top: 3px;
 }
 
 .dashboard-container .dashboard-actions {
     display: flex;
-    gap: 12px;
+    gap: 10px;
     align-items: center;
 }
 
 /* ========================================
-   SECCIONES DEL DASHBOARD
+   SECCIÓN LABELS
 ======================================== */
-.dashboard-container .dashboard-section {
-    margin-bottom: 32px;
-}
-
 .dashboard-container .section-title {
-    font-size: 22px;
-    font-weight: 700;
-    color: #2c3e50;
-    margin-bottom: 18px;
-    padding: 12px 0;
-    border-bottom: 3px solid #e74c3c;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.7px;
+    color: #8b8fa8;
+    margin-bottom: 12px;
+    padding: 0 4px;
     display: flex;
     align-items: center;
-    gap: 12px;
-    background: rgba(255, 255, 255, 0.7);
-    padding-left: 16px;
-    border-radius: 8px;
-    backdrop-filter: blur(10px);
+    gap: 8px;
+    border-bottom: none;
+    background: none;
+    backdrop-filter: none;
+    border-radius: 0;
 }
 
 .dashboard-container .section-title i {
-    color: #e74c3c;
-    font-size: 26px;
-    filter: drop-shadow(0 2px 4px rgba(231, 76, 60, 0.3));
+    font-size: 14px;
+    color: #8b8fa8;
+    filter: none;
+}
+
+.dashboard-container .dashboard-section {
+    margin-bottom: 28px;
 }
 
 /* ========================================
-   TILES DEL DASHBOARD
+   TILES CONTAINER
 ======================================== */
 .dashboard-container .dashboard-tiles {
     display: flex;
     flex-wrap: wrap;
-    gap: 16px;
-    justify-content: flex-start;
-    width: 100%;
-    margin-bottom: 24px;
-    padding: 16px;
-    background: rgba(255, 255, 255, 0.4);
-    border-radius: 16px;
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.6);
+    gap: 12px;
+    margin-bottom: 0;
+    padding: 0;
+    background: none;
+    border-radius: 0;
+    backdrop-filter: none;
+    border: none;
 }
 
 .dashboard-container .tot_tasks {
     flex: 0 0 auto;
-    width: 200px;
-    min-width: 200px;
+    width: 180px;
+    min-width: 180px;
     padding: 0;
     margin: 0;
 }
 
 /* ========================================
-   CARDS MODERNAS
+   KPI CARDS
 ======================================== */
 .dashboard-container .oh-card {
-    padding: 0;
-    border-radius: 20px;
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 140px;
-    min-height: 140px;
+    background: #ffffff;
+    border: 1px solid #e8eaf0;
+    border-radius: 12px;
+    padding: 12px 14px;
+    height: auto;
+    min-height: unset;
     width: 100%;
-    border: none;
+    cursor: pointer;
+    transition: border-color 0.15s ease, transform 0.15s ease;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
     position: relative;
     overflow: hidden;
-    cursor: pointer;
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-    border: 2px solid rgba(255, 255, 255, 0.2);
+    box-shadow: none;
 }
 
 .dashboard-container .oh-card:hover {
-    transform: translateY(-8px) scale(1.03);
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+    border-color: #c5cae9;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+}
+
+/* Quitar gradientes específicos por tile — todos usan el mismo estilo blanco */
+.dashboard-container [id^="tile_"] {
+    background: #ffffff !important;
+    box-shadow: none !important;
+}
+
+/* Hover por sección — tinte sutil en el borde */
+.dashboard-container .maquinas-tiles .oh-card:hover {
+    border-color: #85B7EB;
+}
+.dashboard-container .reparaciones-tiles .oh-card:hover {
+    border-color: #9FE1CB;
+}
+.dashboard-container .tickets-tiles .oh-card:hover {
+    border-color: #AFA9EC;
+}
+.dashboard-container .alquiler-tiles .oh-card:hover {
+    border-color: #FAC775;
+}
+.dashboard-container .bloqueo-tiles .oh-card:hover {
+    border-color: #85B7EB;
 }
 
 /* ========================================
-   COLORES ESPECÍFICOS POR CARD
-======================================== */
-
-/* Sección Máquinas */
-.dashboard-container #tile_total_maquinas {
-    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%) !important;
-    box-shadow: 0 8px 25px rgba(52, 152, 219, 0.2);
-}
-
-.dashboard-container #tile_maquinas_disponibles {
-    background: linear-gradient(135deg, #27ae60 0%, #229954 100%) !important;
-    box-shadow: 0 8px 25px rgba(39, 174, 96, 0.2);
-}
-
-.dashboard-container #tile_maquinas_separadas {
-    background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%) !important;
-    box-shadow: 0 8px 25px rgba(243, 156, 18, 0.2);
-}
-
-.dashboard-container #tile_maquinas_con_problemas {
-    background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%) !important;
-    box-shadow: 0 8px 25px rgba(231, 76, 60, 0.2);
-}
-
-.dashboard-container #tile_maquinas_de_partes {
-    background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%) !important;
-    box-shadow: 0 8px 25px rgba(149, 165, 166, 0.2);
-}
-
-/* Sección Reparaciones */
-.dashboard-container #tile_total_reparaciones {
-    background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%) !important;
-    box-shadow: 0 8px 25px rgba(231, 76, 60, 0.2);
-}
-
-.dashboard-container #tile_maquinas_sin_revisar {
-    background: linear-gradient(135deg, #c0392b 0%, #922b21 100%) !important;
-    box-shadow: 0 8px 25px rgba(192, 57, 43, 0.2);
-}
-
-.dashboard-container #tile_maquinas_para_revision {
-    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%) !important;
-    box-shadow: 0 8px 25px rgba(52, 152, 219, 0.2);
-}
-
-.dashboard-container #tile_reparaciones_en_revision {
-    background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%) !important;
-    box-shadow: 0 8px 25px rgba(243, 156, 18, 0.2);
-}
-
-.dashboard-container #tile_reparaciones_finalizado {
-    background: linear-gradient(135deg, #27ae60 0%, #229954 100%) !important;
-    box-shadow: 0 8px 25px rgba(39, 174, 96, 0.2);
-}
-
-/* Sección Tickets */
-.dashboard-container #tile_total_tickets {
-    background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%) !important;
-    box-shadow: 0 8px 25px rgba(155, 89, 182, 0.2);
-}
-
-.dashboard-container #tile_tickets_nuevos {
-    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%) !important;
-    box-shadow: 0 8px 25px rgba(52, 152, 219, 0.2);
-}
-
-.dashboard-container #tile_tickets_proceso {
-    background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%) !important;
-    box-shadow: 0 8px 25px rgba(243, 156, 18, 0.2);
-}
-.dashboard-container #tile_tickets_en_ruta {
-    background: linear-gradient(135deg, #e67e22 0%, #d35400 100%) !important;
-    box-shadow: 0 8px 25px rgba(230, 126, 34, 0.2);
-}
-
-.dashboard-container #tile_tickets_en_sitio {
-    background: linear-gradient(135deg, #1abc9c 0%, #16a085 100%) !important;
-    box-shadow: 0 8px 25px rgba(26, 188, 156, 0.2);
-}
-
-.dashboard-container #tile_tickets_en_revision {
-    background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%) !important;
-    box-shadow: 0 8px 25px rgba(231, 76, 60, 0.2);
-}
-.dashboard-container #tile_tickets_finalizado {
-    background: linear-gradient(135deg, #27ae60 0%, #229954 100%) !important;
-    box-shadow: 0 8px 25px rgba(39, 174, 96, 0.2);
-}
-
-/* Sección Alquiler */
-.dashboard-container #tile_total_maquinas_alquiler {
-    background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%) !important;
-    box-shadow: 0 8px 25px rgba(52, 73, 94, 0.2);
-}
-
-.dashboard-container #tile_alquiler_sin_revisar {
-    background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%) !important;
-    box-shadow: 0 8px 25px rgba(231, 76, 60, 0.2);
-}
-
-.dashboard-container #tile_alquiler_revisada {
-    background: linear-gradient(135deg, #27ae60 0%, #229954 100%) !important;
-    box-shadow: 0 8px 25px rgba(39, 174, 96, 0.2);
-}
-
-.dashboard-container #tile_alquiler_lista {
-    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%) !important;
-    box-shadow: 0 8px 25px rgba(52, 152, 219, 0.2);
-}
-
-.dashboard-container #tile_alquiler_con_problemas {
-    background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%) !important;
-    box-shadow: 0 8px 25px rgba(243, 156, 18, 0.2);
-}
-
-/* Sistema de Bloqueo - Colores específicos como en la imagen */
-.dashboard-container #tile_equipos_activos {
-    background: linear-gradient(135deg, #27ae60 0%, #229954 100%) !important;
-    box-shadow: 0 8px 25px rgba(39, 174, 96, 0.2);
-}
-
-.dashboard-container #tile_equipos_suspendidos {
-    background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%) !important;
-    box-shadow: 0 8px 25px rgba(243, 156, 18, 0.2);
-}
-
-.dashboard-container #tile_equipos_bloqueados {
-    background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%) !important;
-    box-shadow: 0 8px 25px rgba(231, 76, 60, 0.2);
-}
-
-.dashboard-container #tile_equipos_no_accesibles {
-    background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%) !important;
-    box-shadow: 0 8px 25px rgba(149, 165, 166, 0.2);
-}
-
-.dashboard-container #tile_equipos_pendiente_bloqueo {
-    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%) !important;
-    box-shadow: 0 8px 25px rgba(52, 152, 219, 0.2);
-}
-
-.dashboard-container #tile_equipos_pendiente_desbloqueo {
-    background: linear-gradient(135deg, #5dade2 0%, #3498db 100%) !important;
-    box-shadow: 0 8px 25px rgba(93, 173, 226, 0.2);
-}
-
-/* Hover effects específicos por color */
-.dashboard-container #tile_total_maquinas:hover,
-.dashboard-container #tile_maquinas_para_revision:hover,
-.dashboard-container #tile_tickets_nuevos:hover,
-.dashboard-container #tile_alquiler_lista:hover,
-.dashboard-container #tile_equipos_pendiente_bloqueo:hover {
-    box-shadow: 0 20px 40px rgba(52, 152, 219, 0.3);
-}
-
-.dashboard-container #tile_maquinas_disponibles:hover,
-.dashboard-container #tile_reparaciones_finalizado:hover,
-.dashboard-container #tile_tickets_finalizado:hover,
-.dashboard-container #tile_alquiler_revisada:hover,
-.dashboard-container #tile_equipos_activos:hover {
-    box-shadow: 0 20px 40px rgba(39, 174, 96, 0.3);
-}
-
-.dashboard-container #tile_maquinas_separadas:hover,
-.dashboard-container #tile_reparaciones_en_revision:hover,
-.dashboard-container #tile_tickets_proceso:hover,
-.dashboard-container #tile_alquiler_con_problemas:hover,
-.dashboard-container #tile_equipos_suspendidos:hover {
-    box-shadow: 0 20px 40px rgba(243, 156, 18, 0.3);
-}
-
-.dashboard-container #tile_maquinas_con_problemas:hover,
-.dashboard-container #tile_maquinas_sin_revisar:hover,
-.dashboard-container #tile_alquiler_sin_revisar:hover,
-.dashboard-container #tile_equipos_bloqueados:hover {
-    box-shadow: 0 20px 40px rgba(231, 76, 60, 0.3);
-}
-
-.dashboard-container #tile_maquinas_de_partes:hover,
-.dashboard-container #tile_equipos_no_accesibles:hover {
-    box-shadow: 0 20px 40px rgba(149, 165, 166, 0.3);
-}
-
-.dashboard-container #tile_total_tickets:hover {
-    box-shadow: 0 20px 40px rgba(155, 89, 182, 0.3);
-}
-
-.dashboard-container #tile_total_maquinas_alquiler:hover {
-    box-shadow: 0 20px 40px rgba(52, 73, 94, 0.3);
-}
-
-.dashboard-container #tile_equipos_pendiente_desbloqueo:hover {
-    box-shadow: 0 20px 40px rgba(93, 173, 226, 0.3);
-}
-
-/* ========================================
-   CONTENIDO DE LAS CARDS
+   CARD BODY — REESTRUCTURADO
 ======================================== */
 .dashboard-container .oh-card-body {
-    padding: 16px;
-    text-align: center;
+    padding: 0;
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    text-align: left;
+    position: relative;
+}
+
+.dashboard-container .oh-card-body .kpi-info {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
-    height: 100%;
-    position: relative;
-    box-sizing: border-box;
+    gap: 2px;
 }
 
-/* Iconos principales - Controlados y animados */
+/* Icono — cuadrito tintado pequeño */
 .dashboard-container .oh-card-body i {
-    font-size: 28px !important;
-    color: white !important;
-    margin-bottom: 4px;
-    text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.6);
-    transition: all 0.3s ease;
-    background: rgba(255, 255, 255, 0.2);
-    padding: 6px;
-    border-radius: 50%;
-    width: 40px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    font-size: 18px !important;
+    width: 38px !important;
+    height: 38px !important;
+    border-radius: 10px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    text-shadow: none !important;
+    animation: none !important;
     flex-shrink: 0;
-    animation: iconFloat 3s ease-in-out infinite;
 }
 
-/* Animación de flotación para iconos */
-@keyframes iconFloat {
-    0%, 100% { transform: translateY(0px); }
-    50% { transform: translateY(-3px); }
+/* Colores de iconos por sección */
+.dashboard-container .maquinas-tiles .oh-card-body i {
+    background: #E6F1FB;
+    color: #185FA5 !important;
+}
+.dashboard-container #tile_maquinas_disponibles .oh-card-body i {
+    background: #EAF3DE;
+    color: #3B6D11 !important;
+}
+.dashboard-container #tile_maquinas_separadas .oh-card-body i {
+    background: #FAEEDA;
+    color: #854F0B !important;
+}
+.dashboard-container #tile_maquinas_con_problemas .oh-card-body i,
+.dashboard-container #tile_maquinas_sin_revisar .oh-card-body i {
+    background: #FCEBEB;
+    color: #A32D2D !important;
+}
+.dashboard-container #tile_maquinas_de_partes .oh-card-body i {
+    background: #F1EFE8;
+    color: #5F5E5A !important;
 }
 
-/* Animación de rotación para iconos específicos */
-.dashboard-container .oh-card-body .ri-loader-4-fill {
-    animation: iconRotate 2s linear infinite;
+.dashboard-container .reparaciones-tiles .oh-card-body i {
+    background: #E1F5EE;
+    color: #0F6E56 !important;
+}
+.dashboard-container #tile_total_reparaciones .oh-card-body i {
+    background: #FCEBEB;
+    color: #A32D2D !important;
+}
+.dashboard-container #tile_reparaciones_finalizado .oh-card-body i {
+    background: #EAF3DE;
+    color: #3B6D11 !important;
+}
+.dashboard-container #tile_maquinas_para_revision .oh-card-body i {
+    background: #E6F1FB;
+    color: #185FA5 !important;
+}
+.dashboard-container #tile_reparaciones_en_revision .oh-card-body i {
+    background: #FAEEDA;
+    color: #854F0B !important;
 }
 
-.dashboard-container .oh-card-body .ri-settings-5-fill {
-    animation: iconRotate 4s linear infinite;
+.dashboard-container .tickets-tiles .oh-card-body i {
+    background: #EEEDFE;
+    color: #534AB7 !important;
+}
+.dashboard-container #tile_tickets_nuevos .oh-card-body i {
+    background: #E6F1FB;
+    color: #185FA5 !important;
+}
+.dashboard-container #tile_tickets_proceso .oh-card-body i {
+    background: #FAEEDA;
+    color: #854F0B !important;
+}
+.dashboard-container #tile_tickets_en_ruta .oh-card-body i {
+    background: #E1F5EE;
+    color: #0F6E56 !important;
+}
+.dashboard-container #tile_tickets_en_sitio .oh-card-body i {
+    background: #EAF3DE;
+    color: #3B6D11 !important;
+}
+.dashboard-container #tile_tickets_en_revision .oh-card-body i {
+    background: #FCEBEB;
+    color: #A32D2D !important;
+}
+.dashboard-container #tile_tickets_finalizado .oh-card-body i {
+    background: #EAF3DE;
+    color: #3B6D11 !important;
 }
 
-@keyframes iconRotate {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+.dashboard-container .alquiler-tiles .oh-card-body i {
+    background: #FAEEDA;
+    color: #854F0B !important;
+}
+.dashboard-container #tile_total_maquinas_alquiler .oh-card-body i {
+    background: #F1EFE8;
+    color: #444441 !important;
+}
+.dashboard-container #tile_alquiler_revisada .oh-card-body i,
+.dashboard-container #tile_alquiler_lista .oh-card-body i {
+    background: #EAF3DE;
+    color: #3B6D11 !important;
+}
+.dashboard-container #tile_alquiler_sin_revisar .oh-card-body i,
+.dashboard-container #tile_alquiler_con_problemas .oh-card-body i {
+    background: #FCEBEB;
+    color: #A32D2D !important;
 }
 
-/* Animación de pulso para iconos de alerta */
-.dashboard-container .oh-card-body .ri-alert-fill,
-.dashboard-container .oh-card-body .ri-error-warning-fill,
-.dashboard-container .oh-card-body .ri-error-warning-line {
-    animation: iconPulse 2s ease-in-out infinite;
+.dashboard-container .bloqueo-tiles .oh-card-body i {
+    background: #EAF3DE;
+    color: #3B6D11 !important;
+}
+.dashboard-container #tile_equipos_suspendidos .oh-card-body i {
+    background: #FAEEDA;
+    color: #854F0B !important;
+}
+.dashboard-container #tile_equipos_bloqueados .oh-card-body i {
+    background: #FCEBEB;
+    color: #A32D2D !important;
+}
+.dashboard-container #tile_equipos_no_accesibles .oh-card-body i {
+    background: #F1EFE8;
+    color: #5F5E5A !important;
+}
+.dashboard-container #tile_equipos_pendiente_bloqueo .oh-card-body i,
+.dashboard-container #tile_equipos_pendiente_desbloqueo .oh-card-body i {
+    background: #E6F1FB;
+    color: #185FA5 !important;
 }
 
-@keyframes iconPulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.1); }
-}
-
-/* Animación de rebote para iconos de éxito */
-.dashboard-container .oh-card-body .ri-checkbox-circle-fill,
-.dashboard-container .oh-card-body .ri-check-double-fill,
-.dashboard-container .oh-card-body .ri-check-double-line {
-    animation: iconBounce 3s ease-in-out infinite;
-}
-
-@keyframes iconBounce {
-    0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
-    40% { transform: translateY(-4px); }
-    60% { transform: translateY(-2px); }
-}
-
-.dashboard-container .oh-card:hover .oh-card-body i {
-    transform: scale(1.1);
-    filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.6));
-}
-
-/* Títulos de las cards - Mejor distribución */
+/* Texto h3 — etiqueta pequeña */
 .dashboard-container .oh-card-body h3 {
-    font-size: 13px !important;
-    margin: 4px 0 !important;
+    font-size: 12px !important;
+    font-weight: 400 !important;
+    color: #8b8fa8 !important;
+    margin: 0 !important;
     white-space: normal !important;
     overflow: visible !important;
     text-overflow: clip !important;
+    text-shadow: none !important;
+    background: none !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    backdrop-filter: none !important;
+    line-height: 1.2 !important;
+    text-align: left !important;
     width: 100%;
-    font-weight: 900 !important;
-    color: white !important;
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8) !important;
-    letter-spacing: 0.3px;
-    text-transform: none;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    line-height: 1.1 !important;
-    text-align: center !important;
-    background: rgba(0, 0, 0, 0.4);
-    padding: 2px 6px;
-    border-radius: 4px;
-    backdrop-filter: blur(5px);
-    flex-shrink: 0;
 }
 
-/* Valores numéricos - Ajustados */
+/* Valor numérico */
 .dashboard-container .metric-value {
-    font-size: 24px !important;
-    font-weight: 900 !important;
-    color: white !important;
-    text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.8) !important;
-    letter-spacing: 1px;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    transition: all 0.3s ease;
-    background: rgba(0, 0, 0, 0.3);
-    padding: 2px 8px;
-    border-radius: 6px;
-    backdrop-filter: blur(3px);
-    flex-shrink: 0;
-    animation: numberGlow 4s ease-in-out infinite;
-}
-
-/* Animación de brillo para números */
-@keyframes numberGlow {
-    0%, 100% { 
-        box-shadow: 0 0 5px rgba(255, 255, 255, 0.3);
-    }
-    50% { 
-        box-shadow: 0 0 15px rgba(255, 255, 255, 0.6);
-    }
+    font-size: 22px !important;
+    font-weight: 600 !important;
+    color: #1a1a2e !important;
+    text-shadow: none !important;
+    letter-spacing: -0.3px;
+    background: none !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    backdrop-filter: none !important;
+    animation: none !important;
+    line-height: 1;
+    display: block;
 }
 
 .dashboard-container .oh-card:hover .metric-value {
-    transform: scale(1.1);
-    text-shadow: 0 6px 12px rgba(0, 0, 0, 0.5);
+    transform: none;
+    text-shadow: none;
+}
+
+.dashboard-container .oh-card:hover .oh-card-body i {
+    transform: none;
+    filter: none;
 }
 
 /* ========================================
    PANEL DE ALERTAS
 ======================================== */
 .dashboard-container .alert-panel {
-    background: white;
-    border-radius: 16px;
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+    background: #ffffff;
+    border-radius: 14px;
+    border: 1px solid #e8eaf0;
     overflow: hidden;
-    border: 1px solid rgba(255, 255, 255, 0.8);
 }
 
 .dashboard-container .alert-header {
-    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
-    color: white;
-    padding: 18px 24px;
+    background: #ffffff;
+    padding: 16px 20px;
+    border-bottom: 1px solid #e8eaf0;
 }
 
 .dashboard-container .alert-header h4 {
     margin: 0;
-    font-size: 20px;
-    font-weight: 700;
+    font-size: 14px;
+    font-weight: 600;
+    color: #1a1a2e;
     display: flex;
     align-items: center;
-    gap: 12px;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    gap: 8px;
+    text-shadow: none;
 }
 
 .dashboard-container .alert-header i {
-    font-size: 24px;
-    filter: drop-shadow(0 2px 4px rgba(255, 255, 255, 0.3));
+    font-size: 16px;
+    color: #e24b4a;
+    filter: none;
 }
 
 .dashboard-container .alert-body {
-    padding: 24px;
-    max-height: 350px;
+    padding: 16px 20px;
+    max-height: 300px;
     overflow-y: auto;
 }
 
 .dashboard-container .alert-body .alert {
-    border-radius: 12px;
-    border: none;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    margin-bottom: 12px;
+    border-radius: 10px;
+    border: 1px solid #e8eaf0;
+    background: #f9fafb;
+    box-shadow: none;
+    padding: 10px 14px;
+    margin-bottom: 8px;
+    font-size: 13px;
+}
+
+/* Badges dentro del panel de alertas */
+.dashboard-container .alert-body .badge {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-weight: 500;
+}
+.dashboard-container .alert-body .badge-info {
+    background: #FAEEDA;
+    color: #854F0B;
+}
+.dashboard-container .alert-body .badge-primary {
+    background: #E6F1FB;
+    color: #185FA5;
+}
+.dashboard-container .alert-body .badge-secondary {
+    background: #F1EFE8;
+    color: #5F5E5A;
+}
+.dashboard-container .alert-body .badge-warning {
+    background: #FCEBEB;
+    color: #A32D2D;
 }
 
 /* ========================================
-   SECCIÓN DE GRÁFICOS
+   GRÁFICOS
 ======================================== */
 .dashboard-container .dashboard-charts {
-    padding: 0 12px;
+    padding: 0;
     width: 100%;
     display: flex;
     flex-wrap: wrap;
-    gap: 24px;
+    gap: 16px;
 }
 
 .dashboard-container .dashboard-charts > div {
-    flex: 1 1 calc(50% - 24px);
-    min-width: 350px;
+    flex: 1 1 calc(50% - 16px);
+    min-width: 320px;
 }
 
 .dashboard-container .chart-wrapper {
-    background: white;
-    border-radius: 20px;
-    padding: 24px;
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08);
+    background: #ffffff;
+    border-radius: 14px;
+    border: 1px solid #e8eaf0;
+    padding: 20px;
     height: 100%;
     display: flex;
     flex-direction: column;
-    transition: all 0.4s ease;
-    border: 1px solid rgba(255, 255, 255, 0.8);
+    transition: border-color 0.15s ease, transform 0.15s ease;
+    box-shadow: none;
 }
 
 .dashboard-container .modern-chart:hover {
-    transform: translateY(-6px);
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
+    transform: translateY(-2px);
+    border-color: #c5cae9;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
 }
 
 .dashboard-container .chart-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
-    padding: 0 8px 16px 8px;
-    border-bottom: 2px solid #ecf0f1;
+    margin-bottom: 16px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid #f0f1f5;
 }
 
 .dashboard-container .chart-header h4 {
     margin: 0;
-    font-size: 18px;
-    font-weight: 700;
-    color: #2c3e50;
+    font-size: 14px;
+    font-weight: 600;
+    color: #1a1a2e;
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
 }
 
 .dashboard-container .chart-header h4 i {
-    color: #3498db;
-    font-size: 20px;
-    filter: drop-shadow(0 2px 4px rgba(52, 152, 219, 0.3));
+    font-size: 16px;
+    color: #4361ee;
+    filter: none;
 }
 
 .dashboard-container .chart-container {
     flex: 1;
-    min-height: 350px;
+    min-height: 320px;
     position: relative;
     width: 100%;
 }
@@ -587,396 +509,218 @@
    FILTROS
 ======================================== */
 .dashboard-container .filter-section {
-    margin: 12px 0;
-    padding: 18px;
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-    border-radius: 12px;
+    margin: 0 0 14px 0;
+    padding: 12px 14px;
+    background: #f9fafb;
+    border-radius: 10px;
+    border: 1px solid #e8eaf0;
     display: flex;
     flex-wrap: wrap;
-    gap: 12px;
+    gap: 10px;
     align-items: center;
-    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.8);
+    box-shadow: none;
 }
 
 .dashboard-container .filter-section label {
-    font-size: 14px;
-    font-weight: 600;
-    color: #495057;
-    margin-right: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #8b8fa8;
     white-space: nowrap;
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 5px;
 }
 
 .dashboard-container .filter-section label i {
-    color: #3498db;
-    font-size: 16px;
+    font-size: 14px;
+    color: #8b8fa8;
 }
 
 .dashboard-container .filter-section input[type="date"] {
-    padding: 10px 14px;
-    border: 2px solid #e9ecef;
-    border-radius: 10px;
-    font-size: 14px;
-    max-width: 160px;
-    transition: all 0.3s ease;
-    background: white;
-    font-weight: 500;
+    padding: 7px 11px;
+    border: 1px solid #e8eaf0;
+    border-radius: 8px;
+    font-size: 13px;
+    max-width: 155px;
+    background: #ffffff;
+    color: #1a1a2e;
+    transition: border-color 0.15s;
+    font-weight: 400;
 }
 
 .dashboard-container .filter-section input[type="date"]:focus {
-    border-color: #3498db;
-    box-shadow: 0 0 0 4px rgba(52, 152, 219, 0.1);
+    border-color: #4361ee;
     outline: none;
-    transform: translateY(-1px);
+    box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+    transform: none;
 }
 
 .dashboard-container .filter-section button {
-    padding: 10px 20px;
-    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
-    color: white;
+    padding: 7px 16px;
+    background: #4361ee;
+    color: #ffffff;
     border: none;
-    border-radius: 10px;
+    border-radius: 8px;
     cursor: pointer;
-    font-size: 14px;
-    font-weight: 700;
-    transition: all 0.3s ease;
+    font-size: 12px;
+    font-weight: 600;
+    transition: background 0.15s, transform 0.1s;
     display: flex;
     align-items: center;
-    gap: 8px;
-    box-shadow: 0 6px 15px rgba(52, 152, 219, 0.2);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    gap: 6px;
+    box-shadow: none;
+    text-transform: none;
+    letter-spacing: 0;
 }
 
 .dashboard-container .filter-section button:hover {
-    background: linear-gradient(135deg, #2980b9 0%, #1f618d 100%);
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(52, 152, 219, 0.3);
-}
-
-.dashboard-container .filter-section button i {
-    font-size: 16px;
+    background: #3451d1;
+    transform: translateY(-1px);
+    box-shadow: none;
 }
 
 /* ========================================
    BOTONES
 ======================================== */
 .dashboard-container .btn {
-    padding: 12px 24px;
-    border-radius: 12px;
-    font-weight: 700;
-    text-decoration: none;
+    padding: 9px 18px;
+    border-radius: 9px;
+    font-weight: 600;
+    font-size: 13px;
     display: inline-flex;
     align-items: center;
-    gap: 10px;
-    transition: all 0.3s ease;
+    gap: 8px;
+    transition: all 0.15s;
     border: none;
     cursor: pointer;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    font-size: 14px;
+    text-transform: none;
+    letter-spacing: 0;
 }
 
 .dashboard-container .btn-primary {
-    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
-    color: white;
-    box-shadow: 0 6px 15px rgba(52, 152, 219, 0.2);
+    background: #4361ee;
+    color: #ffffff;
+    box-shadow: none;
 }
 
 .dashboard-container .btn-primary:hover {
-    background: linear-gradient(135deg, #2980b9 0%, #1f618d 100%);
-    transform: translateY(-3px);
-    box-shadow: 0 10px 25px rgba(52, 152, 219, 0.3);
+    background: #3451d1;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(67, 97, 238, 0.25);
 }
 
 .dashboard-container .expand-button {
-    background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
-    border: none;
-    color: white;
+    background: #f5f6fa;
+    border: 1px solid #e8eaf0;
+    color: #8b8fa8;
     cursor: pointer;
-    padding: 10px;
-    border-radius: 8px;
-    transition: all 0.3s ease;
+    padding: 6px 8px;
+    border-radius: 7px;
+    transition: all 0.15s;
     display: flex;
     align-items: center;
     justify-content: center;
+    font-size: 14px;
 }
 
 .dashboard-container .expand-button:hover {
-    background: linear-gradient(135deg, #7f8c8d 0%, #2c3e50 100%);
-    transform: scale(1.1);
-}
-
-/* ========================================
-   SCROLLBARS PERSONALIZADAS
-======================================== */
-.dashboard-container .dashboard-tiles::-webkit-scrollbar,
-.dashboard-container .alert-body::-webkit-scrollbar {
-    height: 8px;
-    width: 8px;
-}
-
-.dashboard-container .dashboard-tiles::-webkit-scrollbar-track,
-.dashboard-container .alert-body::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.3);
-    border-radius: 4px;
-}
-
-.dashboard-container .dashboard-tiles::-webkit-scrollbar-thumb,
-.dashboard-container .alert-body::-webkit-scrollbar-thumb {
-    background: rgba(108, 117, 125, 0.5);
-    border-radius: 4px;
-}
-
-.dashboard-container .dashboard-tiles::-webkit-scrollbar-thumb:hover,
-.dashboard-container .alert-body::-webkit-scrollbar-thumb:hover {
-    background: rgba(108, 117, 125, 0.7);
+    background: #e8eaf0;
+    color: #1a1a2e;
+    transform: none;
 }
 
 /* ========================================
    FOOTER
 ======================================== */
 .dashboard-container .footer-section {
-    background: rgba(255, 255, 255, 0.9);
-    border-radius: 12px;
-    padding: 20px;
-    margin-top: 24px;
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.8);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    background: #ffffff;
+    border-radius: 10px;
+    border: 1px solid #e8eaf0;
+    padding: 14px 20px;
+    margin-top: 20px;
+    box-shadow: none;
+    backdrop-filter: none;
 }
 
 .dashboard-container .footer-section p {
     margin: 0;
-    font-size: 14px;
-    font-weight: 500;
+    font-size: 12px;
+    font-weight: 400;
+    color: #8b8fa8;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    gap: 6px;
 }
 
 .dashboard-container .footer-section i {
-    color: #3498db;
+    color: #8b8fa8;
 }
 
 /* ========================================
-   RESPONSIVE DESIGN
+   SCROLLBARS
 ======================================== */
-
-/* Tablets grandes */
-@media (min-width: 1200px) and (max-width: 1399px) {
-    .dashboard-container .tot_tasks {
-        width: 180px;
-        min-width: 180px;
-    }
-    
-    .dashboard-container .oh-card {
-        height: 130px;
-        min-height: 130px;
-    }
+.dashboard-container .alert-body::-webkit-scrollbar {
+    width: 5px;
+}
+.dashboard-container .alert-body::-webkit-scrollbar-track {
+    background: #f5f6fa;
+    border-radius: 3px;
+}
+.dashboard-container .alert-body::-webkit-scrollbar-thumb {
+    background: #d0d3e0;
+    border-radius: 3px;
 }
 
-/* Tablets */
-@media (min-width: 992px) and (max-width: 1199px) {
-    .dashboard-container .tot_tasks {
-        width: 170px;
-        min-width: 170px;
-    }
-    
-    .dashboard-container .oh-card {
-        height: 120px;
-        min-height: 120px;
-    }
-    
-    .dashboard-container .oh-card-body i {
-        font-size: 36px !important;
-    }
-    
-    .dashboard-container .oh-card-body h3 {
-        font-size: 16px !important;
-    }
-    
-    .dashboard-container .metric-value {
-        font-size: 28px !important;
-    }
-    
-    .dashboard-container .chart-container {
-        min-height: 300px;
-    }
-    
+/* ========================================
+   RESPONSIVE
+======================================== */
+@media (max-width: 1199px) {
     .dashboard-container .dashboard-charts > div {
         flex: 1 1 100%;
     }
-}
-
-/* Móviles grandes */
-@media (min-width: 768px) and (max-width: 991px) {
-    .dashboard-container {
-        padding: 8px;
-    }
-    
     .dashboard-container .tot_tasks {
         width: 160px;
         min-width: 160px;
     }
-    
+}
+
+@media (max-width: 767px) {
+    .dashboard-container {
+        padding: 12px;
+    }
+    .dashboard-container .tot_tasks {
+        width: 145px;
+        min-width: 145px;
+    }
     .dashboard-container .oh-card {
-        height: 110px;
-        min-height: 110px;
+        height: 108px;
+        min-height: 108px;
     }
-    
-    .dashboard-container .oh-card-body {
-        padding: 16px;
-    }
-    
-    .dashboard-container .oh-card-body i {
-        font-size: 32px !important;
-    }
-    
-    .dashboard-container .oh-card-body h3 {
-        font-size: 14px !important;
-    }
-    
     .dashboard-container .metric-value {
         font-size: 24px !important;
     }
-    
-    .dashboard-container .dashboard-title {
-        font-size: 26px;
-        flex-direction: column;
-        text-align: center;
-        gap: 12px;
-    }
-    
-    .dashboard-container .section-title {
-        font-size: 20px;
-    }
-    
-    .dashboard-container .chart-container {
-        min-height: 280px;
-    }
-    
-    .dashboard-container .dashboard-charts > div {
-        flex: 1 1 100%;
-    }
-    
-    .dashboard-container .filter-section {
-        flex-direction: column;
-        align-items: stretch;
-    }
-    
-    .dashboard-container .filter-section input[type="date"] {
-        width: 100%;
-        max-width: none;
-    }
-}
-
-/* Responsive para móviles - Mejor ajuste */
-@media (max-width: 767px) {
-    .dashboard-container {
-        padding: 6px;
-    }
-    
-    .dashboard-container .tot_tasks {
-        width: 140px;
-        min-width: 140px;
-    }
-    
-    .dashboard-container .oh-card {
-        height: 110px;
-        min-height: 110px;
-        border-radius: 16px;
-    }
-    
-    .dashboard-container .oh-card-body {
-        padding: 8px;
-    }
-    
-    .dashboard-container .oh-card-body i {
-        font-size: 20px !important;
-        margin-bottom: 3px;
-        width: 32px;
-        height: 32px;
-        padding: 4px;
-    }
-    
-    .dashboard-container .oh-card-body h3 {
-        font-size: 10px !important;
-        margin: 3px 0 !important;
-        padding: 1px 4px;
-        line-height: 1.0 !important;
-    }
-    
-    .dashboard-container .metric-value {
-        font-size: 16px !important;
-        padding: 1px 4px;
-        letter-spacing: 0.5px;
-    }
-    
     .dashboard-container .dashboard-header {
-        padding: 16px;
-    }
-    
-    .dashboard-container .dashboard-title {
-        font-size: 22px;
         flex-direction: column;
-        text-align: center;
-        gap: 10px;
-    }
-    
-    .dashboard-container .dashboard-title i {
-        font-size: 28px;
-    }
-    
-    .dashboard-container .section-title {
-        font-size: 18px;
-        padding-left: 12px;
-    }
-    
-    .dashboard-container .chart-container {
-        min-height: 250px;
-    }
-    
-    .dashboard-container .dashboard-tiles {
-        padding: 12px;
+        align-items: flex-start;
         gap: 12px;
-    }
-    
-    .dashboard-container .chart-wrapper {
         padding: 16px;
     }
-    
-    .dashboard-container .chart-header h4 {
-        font-size: 16px;
+    .dashboard-container .dashboard-title {
+        font-size: 17px;
     }
-    
     .dashboard-container .filter-section {
-        padding: 12px;
         flex-direction: column;
         align-items: stretch;
     }
-    
     .dashboard-container .filter-section input[type="date"] {
-        width: 100%;
         max-width: none;
-        margin-bottom: 8px;
-    }
-    
-    .dashboard-container .filter-section button {
         width: 100%;
+    }
+    .dashboard-container .filter-section button {
         justify-content: center;
     }
-    
-    /* Animaciones más suaves en móvil */
-    .dashboard-container .oh-card-body i {
-        animation-duration: 4s;
-    }
-    
-    .dashboard-container .metric-value {
-        animation-duration: 6s;
+    .dashboard-container .chart-container {
+        min-height: 260px;
     }
 }

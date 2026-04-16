@@ -1,395 +1,444 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <template id="ticket_alquiler">
-        <t t-call="web.html_container">
-            <t t-foreach="docs" t-as="ticket">
-                <t t-call="web.external_layout">
-                    <div class="page">
-                        <style>
-                            .ticket-header {
-                                background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
-                                color: white;
-                                padding: 25px;
-                                border-radius: 15px;
-                                margin-bottom: 30px;
-                                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-                            }
-                            .header-title {
-                                font-size: 28px;
-                                font-weight: bold;
-                                display: flex;
-                                align-items: center;
-                                margin-bottom: 15px;
-                                color: #2c3e50;
-                            }
-                            .header-title i {
-                                margin-right: 10px;
-                            }
-                            .header-subtitle {
-                                font-size: 16px;
-                                opacity: 0.9;
-                                color: #2c3e50;
-                            }
-                            .section-title {
-                                background: #2c3e50;
-                                color: white;
-                                padding: 12px 20px;
-                                border-radius: 8px;
-                                margin: 25px 0 15px;
-                                font-size: 18px;
-                                font-weight: bold;
-                                display: flex;
-                                align-items: center;
-                            }
-                            .section-title i {
-                                margin-right: 10px;
-                            }
-                            .info-card {
-                                background: white;
-                                border-radius: 10px;
-                                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-                                margin-bottom: 20px;
-                                overflow: hidden;
-                            }
-                            .info-table {
-                                width: 100%;
-                                border-collapse: separate;
-                                border-spacing: 0;
-                            }
-                            .info-table th {
-                                background: #f8f9fa;
-                                color: #2c3e50;
-                                padding: 12px 15px;
-                                font-weight: bold;
-                                border: 1px solid #e9ecef;
-                            }
-                            .info-table td {
-                                padding: 12px 15px;
-                                border: 1px solid #e9ecef;
-                            }
-                            .color-cyan {
-                                background: linear-gradient(45deg, rgba(0,255,255,0.15) 0%, rgba(0,255,255,0.3) 100%);
-                                border-left: 4px solid cyan;
-                            }
-                            .color-magenta {
-                                background: linear-gradient(45deg, rgba(255,0,255,0.15) 0%, rgba(255,0,255,0.3) 100%);
-                                border-left: 4px solid magenta;
-                            }
-                            .color-yellow {
-                                background: linear-gradient(45deg, rgba(255,255,0,0.15) 0%, rgba(255,255,0,0.3) 100%);
-                                border-left: 4px solid yellow;
-                            }
-                            .color-black {
-                                background: linear-gradient(45deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.15) 100%);
-                                border-left: 4px solid black;
-                            }
-                            .contometer-value {
-                                font-size: 20px;
-                                font-weight: bold;
-                                color: #2c3e50;
-                            }
-                            .informe-tecnico {
-                                padding: 20px;
-                                background: #f8f9fa;
-                                border-radius: 8px;
-                                border-left: 4px solid #3498db;
-                                margin: 15px;
-                            }
-                            .avoid-page-break {
-                                page-break-inside: avoid;
-                            }
-                        </style>
+    <data>
 
-                        <!-- Encabezado -->
-                        <div class="ticket-header">
-                            <div class="header-title">
-                                <i class="fa fa-ticket-alt"/>
-                                Ticket de Servicio: <span t-field="ticket.name"/>
+        <template id="ticket_alquiler">
+            <t t-call="web.html_container">
+                <t t-foreach="docs" t-as="ticket">
+                    <t t-call="web.external_layout">
+                        <div class="page">
+                            <style>
+                                .ticket-header {
+                                    background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+                                    color: white;
+                                    padding: 25px;
+                                    border-radius: 15px;
+                                    margin-bottom: 30px;
+                                    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                                }
+                                .header-title {
+                                    font-size: 28px;
+                                    font-weight: bold;
+                                    display: flex;
+                                    align-items: center;
+                                    margin-bottom: 15px;
+                                    color: #2c3e50;
+                                }
+                                .header-subtitle {
+                                    font-size: 16px;
+                                    opacity: 0.9;
+                                    color: #2c3e50;
+                                }
+                                .section-title {
+                                    background: #2c3e50;
+                                    color: white;
+                                    padding: 12px 20px;
+                                    border-radius: 8px;
+                                    margin: 25px 0 15px;
+                                    font-size: 18px;
+                                    font-weight: bold;
+                                    display: flex;
+                                    align-items: center;
+                                }
+                                .info-card {
+                                    background: white;
+                                    border-radius: 10px;
+                                    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                                    margin-bottom: 20px;
+                                    overflow: hidden;
+                                }
+                                .info-table {
+                                    width: 100%;
+                                    border-collapse: separate;
+                                    border-spacing: 0;
+                                }
+                                .info-table th {
+                                    background: #f8f9fa;
+                                    color: #2c3e50;
+                                    padding: 12px 15px;
+                                    font-weight: bold;
+                                    border: 1px solid #e9ecef;
+                                }
+                                .info-table td {
+                                    padding: 12px 15px;
+                                    border: 1px solid #e9ecef;
+                                }
+                                .contometer-value {
+                                    font-size: 20px;
+                                    font-weight: bold;
+                                    color: #2c3e50;
+                                }
+                                .informe-tecnico {
+                                    padding: 20px;
+                                    background: #f8f9fa;
+                                    border-radius: 8px;
+                                    border-left: 4px solid #3498db;
+                                    margin: 15px;
+                                }
+                                .avoid-page-break { page-break-inside: avoid; }
+
+                                /* Tabla evaluaciones */
+                                .eval-table {
+                                    width: 100%;
+                                    border-collapse: collapse;
+                                    font-size: 9pt;
+                                }
+                                .eval-table thead tr {
+                                    background: #2c3e50;
+                                    color: white;
+                                }
+                                .eval-table thead th {
+                                    padding: 8px 12px;
+                                    text-align: left;
+                                    border: 1px solid #1a252f;
+                                }
+                                .eval-table tbody tr:nth-child(even) { background: #f4f6f9; }
+                                .eval-table tbody tr:nth-child(odd)  { background: #ffffff; }
+                                .eval-table tbody td {
+                                    padding: 8px 12px;
+                                    border: 0.5px solid #e5e7eb;
+                                    vertical-align: top;
+                                }
+
+                                /* Badges estado */
+                                .badge-estado {
+                                    display: inline-block;
+                                    padding: 3px 8px;
+                                    border-radius: 10px;
+                                    font-size: 8pt;
+                                    font-weight: bold;
+                                }
+                                .badge-requiere { background: #fee2e2; color: #991b1b; }
+                                .badge-nuevo    { background: #d1fae5; color: #065f46; }
+                                .badge-regular  { background: #fef3c7; color: #92400e; }
+                                .badge-gastada  { background: #ede9fe; color: #5b21b6; }
+                                .badge-revisado { background: #dbeafe; color: #1e3a8a; }
+                                .badge-correcto { background: #d1fae5; color: #065f46; }
+                                .badge-falla    { background: #fee2e2; color: #991b1b; }
+                                .badge-default  { background: #f3f4f6; color: #374151; }
+
+                                /* Subpartes inline */
+                                .subpartes-inline {
+                                    margin-top: 6px;
+                                    padding: 6px 10px;
+                                    background: #fffbeb;
+                                    border: 1px solid #fbbf24;
+                                    border-left: 3px solid #f59e0b;
+                                    border-radius: 4px;
+                                    font-size: 8pt;
+                                }
+                                .subpartes-inline .sp-title {
+                                    font-weight: bold;
+                                    color: #92400e;
+                                    margin-bottom: 3px;
+                                    font-size: 7.5pt;
+                                    text-transform: uppercase;
+                                    letter-spacing: 0.03em;
+                                }
+                                .subpartes-inline ul {
+                                    margin: 0;
+                                    padding-left: 14px;
+                                }
+                                .subpartes-inline ul li {
+                                    padding: 1px 0;
+                                    color: #374151;
+                                }
+                            </style>
+
+                            <!-- ENCABEZADO -->
+                            <div class="ticket-header">
+                                <div class="header-title">
+                                    <i class="fa fa-ticket-alt"/>
+                                    Ticket de Servicio: <span t-field="ticket.name"/>
+                                </div>
+                                <div class="header-subtitle">
+                                    <i class="fa fa-calendar"/> Fecha de visita: <span t-field="ticket.agenda_local"/>
+                                </div>
                             </div>
-                            <div class="header-subtitle">
-                                <i class="fa fa-calendar"/> Fecha de visita: <span t-field="ticket.agenda_local"/>
+
+                            <!-- INFORMACIÓN DEL EQUIPO -->
+                            <div class="info-card avoid-page-break">
+                                <table class="info-table">
+                                    <tr>
+                                        <th><i class="fa fa-building"/> Marca</th>
+                                        <td><span t-field="ticket.marca_id_r"/></td>
+                                        <th><i class="fa fa-print"/> Máquina</th>
+                                        <td><span t-field="ticket.product_alquiler.name.name"/></td>
+                                        <th><i class="fa fa-barcode"/> Serie</th>
+                                        <td><span t-field="ticket.product_alquiler.serie"/></td>
+                                    </tr>
+                                    <tr>
+                                        <th><i class="fa fa-user"/> Cliente</th>
+                                        <td><span t-field="ticket.partner_id.name"/></td>
+                                        <th><i class="fa fa-user-tie"/> Técnico</th>
+                                        <td><span t-field="ticket.responsable.name"/></td>
+                                        <th><i class="fa fa-wrench"/> Tipo Servicio</th>
+                                        <td><t t-esc="selection_labels.get(ticket.id, {}).get('tipo_servicio_id', 'NA')"/></td>
+                                    </tr>
+                                </table>
                             </div>
-                        </div>
 
-                        <!-- Información del Equipo -->
-                        <div class="info-card avoid-page-break">
-                            <table class="info-table">
-                                <tr>
-                                    <th><i class="fa fa-building"/> Marca</th>
-                                    <td><span t-field="ticket.marca_id_r"/></td>
-                                    <th><i class="fa fa-print"/> Máquina</th>
-                                    <td><span t-field="ticket.product_alquiler.name.name"/></td>
-                                    <th><i class="fa fa-barcode"/> Serie</th>
-                                    <td><span t-field="ticket.product_alquiler.serie"/></td>
-                                </tr>
-                            </table>
-                        </div>
-
-                        <!-- Contadores -->
-                        <div class="section-title">
-                            <i class="fa fa-tachometer-alt"/>
-                            CONTADORES
-                        </div>
-                        <div class="info-card avoid-page-break">
-                            <table class="info-table">
-                                <tr>
-                                    <th><i class="fa fa-print"/> Black</th>
-                                    <td><span class="contometer-value" t-field="ticket.contometrok_id"/></td>
-                                    <th><i class="fa fa-paint-brush"/> Color</th>
-                                    <td><span class="contometer-value" t-field="ticket.contometroc_id"/></td>
-                                    <th><i class="fa fa-scanner"/> Scanner</th>
-                                    <td><span class="contometer-value" t-field="ticket.contometros_id"/></td>
-                                </tr>
-                                <tr>
-                                    <th><i class="fa fa-check-circle"/> Calidad</th>
-                                    <td colspan="5"><t t-esc="selection_labels.get(ticket.id, {}).get('calidad_id', 'NA')"/></td>
-                                </tr>
-                            </table>
-                        </div>
-                        <!-- Informe Técnico -->
-                        <div class="section-title">
-                            <i class="fa fa-clipboard-list"/>
-                            PROBLEMA REPORTADO
-                        </div>
-                        <div class="info-card">
-                            <div class="informe-tecnico">
-                                <p t-field="ticket.description"/>
+                            <!-- CONTADORES -->
+                            <div class="section-title">
+                                <i class="fa fa-tachometer-alt"/>
+                                CONTADORES
                             </div>
-                        </div>    
-                        <!-- Informe Técnico -->
-                        <div class="section-title">
-                            <i class="fa fa-clipboard-list"/>
-                            INFORME TÉCNICO
-                        </div>
-                        <div class="info-card">
-                            <div class="informe-tecnico">
-                                <p t-field="ticket.informe_id"/>
+                            <div class="info-card avoid-page-break">
+                                <table class="info-table">
+                                    <tr>
+                                        <th><i class="fa fa-print"/> Black (K)</th>
+                                        <td><span class="contometer-value" t-field="ticket.contometrok_id"/></td>
+                                        <th><i class="fa fa-paint-brush"/> Color</th>
+                                        <td><span class="contometer-value" t-field="ticket.contometroc_id"/></td>
+                                        <th><i class="fa fa-scanner"/> Scanner</th>
+                                        <td><span class="contometer-value" t-field="ticket.contometros_id"/></td>
+                                    </tr>
+                                    <tr>
+                                        <th><i class="fa fa-check-circle"/> Calidad</th>
+                                        <td colspan="5">
+                                            <t t-esc="selection_labels.get(ticket.id, {}).get('calidad_id', 'NA')"/>
+                                        </td>
+                                    </tr>
+                                </table>
                             </div>
-                        </div>
-                        
-                        <!-- ACCESORIOS -->
-                        <div class="section-title avoid-page-break">
-                            <i class="fa fa-puzzle-piece"/>
-                            ACCESORIOS
-                        </div>
-                        <div class="info-card avoid-page-break">
-                            <table class="info-table">
-                                <thead>
-                                    <tr>
-                                        <th colspan="6" class="text-center" style="background: #34495e; color: white;">
-                                            <i class="fa fa-cogs"/> COMPONENTES PRINCIPALES
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tr>
-                                    <th><i class="fa fa-boxes"/>Caseteras N°</th>
-                                    <td><t t-esc="ticket.tray_id"/></td>
-                                    <th><i class="fa fa-scanner"/>ADF simple</th>
-                                    <td><t t-esc="selection_labels.get(ticket.id, {}).get('adf_simple_id', 'NA')"/></td>
-                                    <th><i class="fa fa-scanner"/>ADF dual scan</th>
-                                    <td><t t-esc="selection_labels.get(ticket.id, {}).get('adf_dual_id', 'NA')"/></td>
-                                </tr>
-                                <tr>
-                                    <th><i class="fa fa-sort"/>Finalizador interno</th>
-                                    <td><t t-esc="selection_labels.get(ticket.id, {}).get('finalizador_interno_id', 'NA')"/></td>
-                                    <th><i class="fa fa-sort"/>Finalizador externo</th>
-                                    <td><t t-esc="selection_labels.get(ticket.id, {}).get('finalizador_externo_id', 'NA')"/></td>
-                                    <th><i class="fa fa-cube"/>Mueble</th>
-                                    <td><t t-esc="selection_labels.get(ticket.id, {}).get('mueble_id', 'NA')"/></td>
-                                </tr>
-                                
-                                <thead>
-                                    <tr>
-                                        <th colspan="6" class="text-center" style="background: #34495e; color: white;">
-                                            <i class="fa fa-plug"/> CONEXIONES
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tr>
-                                    <th><i class="fa fa-bolt"/>Transformador</th>
-                                    <td><t t-esc="selection_labels.get(ticket.id, {}).get('transformador_id', 'NA')"/></td>
-                                    <th><i class="fa fa-wifi"/>Wi-Fi</th>
-                                    <td><t t-esc="selection_labels.get(ticket.id, {}).get('wi_fi_id', 'NA')"/></td>
-                                    <th><i class="fa fa-shield-alt"/>Estabilizador</th>
-                                    <td><t t-esc="selection_labels.get(ticket.id, {}).get('estabilizador', 'NA')"/></td>
-                                </tr>
-                                <tr>
-                                    <th><i class="fa fa-usb"/>Cable de impresión USB</th>
-                                    <td><t t-esc="selection_labels.get(ticket.id, {}).get('cable_usb_id', 'NA')"/></td>
-                                    <th><i class="fa fa-ethernet"/>Cable de red</th>
-                                    <td><t t-esc="selection_labels.get(ticket.id, {}).get('cable_red_id', 'NA')"/></td>
-                                    <th><i class="fa fa-bluetooth"/>Bluetooth</th>
-                                    <td><t t-esc="selection_labels.get(ticket.id, {}).get('bluetooth_id', 'NA')"/></td>
-                                </tr>
 
-                                <thead>
-                                    <tr>
-                                        <th colspan="6" class="text-center" style="background: #34495e; color: white;">
-                                            <i class="fa fa-desktop"/> PANEL DE CONTROL
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tr>
-                                    <th><i class="fa fa-tablet-alt"/>Panel normal</th>
-                                    <td><t t-esc="selection_labels.get(ticket.id, {}).get('panel_normal_id', 'NA')"/></td>
-                                    <th><i class="fa fa-tablet-alt"/>Panel smart</th>
-                                    <td><t t-esc="selection_labels.get(ticket.id, {}).get('panel_smart_id', 'NA')"/></td>
-                                    <td colspan="2"></td>
-                                </tr>
-                            </table>
-                        </div>
+                            <!-- PROBLEMA REPORTADO -->
+                            <div class="section-title">
+                                <i class="fa fa-exclamation-circle"/>
+                                PROBLEMA REPORTADO
+                            </div>
+                            <div class="info-card">
+                                <div class="informe-tecnico">
+                                    <p t-field="ticket.description"/>
+                                </div>
+                            </div>
 
-                        <!-- CHECK LIST -->
-                        <div class="section-title avoid-page-break">
-                            <i class="fa fa-tasks"/>
-                            CHECK LIST
-                        </div>
-                        <div class="info-card avoid-page-break">
-                            <table class="info-table">
-                                <!-- Funciones Básicas -->
-                                <thead>
-                                    <tr>
-                                        <th colspan="6" class="text-center" style="background: #34495e; color: white;">
-                                            <i class="fa fa-print"/> FUNCIONES BÁSICAS
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tr>
-                                    <th><i class="fa fa-copy"/>Copia</th>
-                                    <td><t t-esc="selection_labels.get(ticket.id, {}).get('copia_id', 'NA')"/></td>
-                                    <th><i class="fa fa-print"/>Impresión</th>
-                                    <td><t t-esc="selection_labels.get(ticket.id, {}).get('impresion_id', 'NA')"/></td>
-                                    <th><i class="fa fa-usb"/>Impresión USB</th>
-                                    <td><t t-esc="selection_labels.get(ticket.id, {}).get('impresion_usb_id', 'NA')"/></td>
-                                </tr>
+                            <!-- INFORME TÉCNICO -->
+                            <div class="section-title">
+                                <i class="fa fa-clipboard-list"/>
+                                INFORME TÉCNICO
+                            </div>
+                            <div class="info-card">
+                                <div class="informe-tecnico">
+                                    <p t-field="ticket.informe_id"/>
+                                </div>
+                            </div>
 
-                                <!-- Funciones de Escaneo -->
-                                <thead>
-                                    <tr>
-                                        <th colspan="6" class="text-center" style="background: #34495e; color: white;">
-                                            <i class="fa fa-scanner"/> FUNCIONES DE ESCANEO
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tr>
-                                    <th><i class="fa fa-folder-open"/>Scaner SMB</th>
-                                    <td><t t-esc="selection_labels.get(ticket.id, {}).get('scaner_smb_id', 'NA')"/></td>
-                                    <th><i class="fa fa-usb"/>Scaner USB</th>
-                                    <td><t t-esc="selection_labels.get(ticket.id, {}).get('scaner_usb_id', 'NA')"/></td>
-                                    <th><i class="fa fa-server"/>Scaner FTP</th>
-                                    <td><t t-esc="selection_labels.get(ticket.id, {}).get('scaner_ftp_id', 'NA')"/></td>
-                                </tr>
-                                <tr>
-                                    <th><i class="fa fa-envelope"/>Scaner Mail</th>
-                                    <td><t t-esc="selection_labels.get(ticket.id, {}).get('scaner_mail_id', 'NA')"/></td>
-                                    <th><i class="fa fa-random"/>Bypass</th>
-                                    <td><t t-esc="selection_labels.get(ticket.id, {}).get('bypass_id', 'NA')"/></td>
-                                    <th><i class="fa fa-layer-group"/>Tray 1</th>
-                                    <td><t t-esc="selection_labels.get(ticket.id, {}).get('tray1_id', 'NA')"/></td>
-                                </tr>
+                            <!-- EVALUACIÓN DE COMPONENTES -->
+                            <div class="section-title avoid-page-break">
+                                <i class="fa fa-wrench"/>
+                                EVALUACIÓN DE COMPONENTES
+                            </div>
+                            <div class="info-card avoid-page-break">
+                                <t t-if="ticket.ticket_componente_eval_ids">
+                                    <table class="eval-table">
+                                        <thead>
+                                            <tr>
+                                                <th style="width:30%;">Componente</th>
+                                                <th style="width:12%;">Color</th>
+                                                <th style="width:20%;">Estado</th>
+                                                <th style="width:38%;">Observaciones / Subpartes requeridas</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <t t-foreach="ticket.ticket_componente_eval_ids" t-as="eval_comp">
+                                                <tr>
+                                                    <td><strong><t t-esc="eval_comp.componente_tipo_id.name"/></strong></td>
+                                                    <td>
+                                                        <t t-if="eval_comp.color_id">
+                                                            <t t-esc="eval_comp.color_id.name"/>
+                                                        </t>
+                                                        <t t-else="">—</t>
+                                                    </td>
+                                                    <td>
+                                                        <t t-if="eval_comp.estado_id">
+                                                            <t t-set="ec" t-value="eval_comp.estado_id.code or ''"/>
+                                                            <span t-attf-class="badge-estado #{
+                                                                'badge-requiere' if ec == 'requiere_cambio' else
+                                                                'badge-nuevo'    if ec == 'nuevo' else
+                                                                'badge-regular'  if ec == 'regular' else
+                                                                'badge-gastada'  if ec == 'gastada_pero_puede_trabajar' else
+                                                                'badge-revisado' if ec == 'revisado' else
+                                                                'badge-correcto' if ec == 'correcto' else
+                                                                'badge-falla'    if ec == 'falla' else
+                                                                'badge-default'
+                                                            }">
+                                                                <t t-esc="eval_comp.estado_id.name"/>
+                                                            </span>
+                                                        </t>
+                                                        <t t-else="">
+                                                            <span style="color:#9ca3af;">Sin evaluar</span>
+                                                        </t>
+                                                    </td>
+                                                    <td>
+                                                        <!-- Observaciones normales -->
+                                                        <t t-if="eval_comp.observaciones">
+                                                            <span><t t-esc="eval_comp.observaciones"/></span>
+                                                        </t>
 
-                                <!-- Bandejas y Componentes -->
-                                <thead>
-                                    <tr>
-                                        <th colspan="6" class="text-center" style="background: #34495e; color: white;">
-                                            <i class="fa fa-cogs"/> COMPONENTES Y CONSUMIBLES
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tr>
-                                    <th><i class="fa fa-layer-group"/>Bandeja 2</th>
-                                    <td><t t-esc="selection_labels.get(ticket.id, {}).get('tray2_id', 'NA')"/></td>
-                                    <th><i class="fa fa-layer-group"/>Bandeja 3</th>
-                                    <td><t t-esc="selection_labels.get(ticket.id, {}).get('tray3_id', 'NA')"/></td>
-                                    <th><i class="fa fa-layer-group"/>Bandeja 4</th>
-                                    <td><t t-esc="selection_labels.get(ticket.id, {}).get('tray4_id', 'NA')"/></td>
-                                </tr>
+                                                        <!-- Subpartes inline si requiere_cambio -->
+                                                        <t t-if="eval_comp.estado_id and eval_comp.estado_id.code == 'requiere_cambio'">
+                                                            <t t-set="sps" t-value="subpartes_por_eval.get(eval_comp.id, [])"/>
+                                                            <t t-if="sps">
+                                                                <div class="subpartes-inline">
+                                                                    <div class="sp-title">🔩 Subpartes a cambiar</div>
+                                                                    <ul>
+                                                                        <t t-foreach="sps" t-as="sp">
+                                                                            <li>
+                                                                                <strong><t t-esc="sp['nombre']"/></strong>
+                                                                                — Cant: <t t-esc="'%.0f' % sp['cantidad']"/>
+                                                                                <t t-if="sp['observacion']">
+                                                                                    — <t t-esc="sp['observacion']"/>
+                                                                                </t>
+                                                                            </li>
+                                                                        </t>
+                                                                    </ul>
+                                                                </div>
+                                                            </t>
+                                                            <t t-else="">
+                                                                <div class="subpartes-inline">
+                                                                    <span style="color:#9ca3af; font-style:italic;">
+                                                                        Subpartes pendientes de especificar
+                                                                    </span>
+                                                                </div>
+                                                            </t>
+                                                        </t>
+                                                    </td>
+                                                </tr>
+                                            </t>
+                                        </tbody>
+                                    </table>
+                                </t>
+                                <t t-else="">
+                                    <p style="padding:15px; color:#9ca3af; font-style:italic;">
+                                        No hay evaluaciones de componentes registradas.
+                                    </p>
+                                </t>
+                            </div>
 
-                                <!-- Partes Mecánicas -->
-                                <tr>
-                                    <th><i class="fa fa-cog"/>ADF</th>
-                                    <td><t t-esc="selection_labels.get(ticket.id, {}).get('adf_id', 'NA')"/></td>
-                                    <th><i class="fa fa-sort"/>Finalizador</th>
-                                    <td><t t-esc="selection_labels.get(ticket.id, {}).get('finalizador_id', 'NA')"/></td>
-                                    <th><i class="fa fa-trash"/>Tacho residual</th>
-                                    <td><t t-esc="selection_labels.get(ticket.id, {}).get('tacho_id', 'NA')"/></td>
-                                </tr>
+                            <!-- EVALUACIÓN DE ACCESORIOS -->
+                            <div class="section-title avoid-page-break">
+                                <i class="fa fa-puzzle-piece"/>
+                                EVALUACIÓN DE ACCESORIOS
+                            </div>
+                            <div class="info-card avoid-page-break">
+                                <t t-if="ticket.ticket_accesorio_eval_ids">
+                                    <table class="eval-table">
+                                        <thead>
+                                            <tr>
+                                                <th style="width:40%;">Accesorio</th>
+                                                <th style="width:22%;">Estado</th>
+                                                <th style="width:38%;">Observaciones / Subpartes requeridas</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <t t-foreach="ticket.ticket_accesorio_eval_ids" t-as="eval_acc">
+                                                <tr>
+                                                    <td><strong><t t-esc="eval_acc.tipo_id.name"/></strong></td>
+                                                    <td>
+                                                        <t t-if="eval_acc.estado_id">
+                                                            <t t-set="ea" t-value="eval_acc.estado_id.code or ''"/>
+                                                            <span t-attf-class="badge-estado #{
+                                                                'badge-requiere' if ea == 'requiere_cambio' else
+                                                                'badge-revisado' if ea in ('instalado_operativo', 'revisado') else
+                                                                'badge-falla'    if ea == 'no_instalado' else
+                                                                'badge-default'
+                                                            }">
+                                                                <t t-esc="eval_acc.estado_id.name"/>
+                                                            </span>
+                                                        </t>
+                                                        <t t-else="">
+                                                            <span style="color:#9ca3af;">Sin evaluar</span>
+                                                        </t>
+                                                    </td>
+                                                    <td>
+                                                        <t t-if="eval_acc.observaciones">
+                                                            <span><t t-esc="eval_acc.observaciones"/></span>
+                                                        </t>
 
-                                <!-- Consumibles -->
-                                <thead>
-                                    <tr>
-                                        <th colspan="6" class="text-center" style="background: #34495e; color: white;">
-                                            <i class="fa fa-tint"/> UNIDADES DE IMAGEN Y TONERS
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tr>
-                                    <th><i class="fa fa-circle"/>Unidad Imagen cyan</th>
-                                    <td class="color-cyan"><t t-esc="selection_labels.get(ticket.id, {}).get('cyan_id', 'NA')"/></td>
-                                    <th><i class="fa fa-circle"/>Unidad Imagen black</th>
-                                    <td class="color-black"><t t-esc="selection_labels.get(ticket.id, {}).get('black_id', 'NA')"/></td>
-                                    <th><i class="fa fa-circle"/>Unidad Imagen magenta</th>
-                                    <td class="color-magenta"><t t-esc="selection_labels.get(ticket.id, {}).get('magenta_id', 'NA')"/></td>
-                                </tr>
-                                <tr>
-                                    <th><i class="fa fa-circle"/>Unidad Imagen yellow</th>
-                                    <td class="color-yellow"><t t-esc="selection_labels.get(ticket.id, {}).get('yellow_id', 'NA')"/></td>
-                                    <th><i class="fa fa-tint"/>Toner yellow</th>
-                                    <td class="color-yellow"><t t-esc="selection_labels.get(ticket.id, {}).get('toner_yellow_id', 'NA')"/></td>
-                                    <th><i class="fa fa-tint"/>Toner black</th>
-                                    <td class="color-black"><t t-esc="selection_labels.get(ticket.id, {}).get('toner_black_id', 'NA')"/></td>
-                                </tr>
-                                <tr>
-                                    <th><i class="fa fa-tint"/>Toner cyan</th>
-                                    <td class="color-cyan"><t t-esc="selection_labels.get(ticket.id, {}).get('toner_cyan_id', 'NA')"/></td>
-                                    <th><i class="fa fa-tint"/>Toner magenta</th>
-                                    <td class="color-magenta"><t t-esc="selection_labels.get(ticket.id, {}).get('toner_magenta_id', 'NA')"/></td>
-                                    <td colspan="2"></td>
-                                </tr>
-                            </table>
-                        </div>
+                                                        <!-- Subpartes inline si requiere_cambio -->
+                                                        <t t-if="eval_acc.estado_id and eval_acc.estado_id.code == 'requiere_cambio'">
+                                                            <t t-set="sps_acc" t-value="subpartes_por_eval.get(eval_acc.id, [])"/>
+                                                            <t t-if="sps_acc">
+                                                                <div class="subpartes-inline">
+                                                                    <div class="sp-title">🔩 Subpartes a cambiar</div>
+                                                                    <ul>
+                                                                        <t t-foreach="sps_acc" t-as="sp_acc">
+                                                                            <li>
+                                                                                <strong><t t-esc="sp_acc['nombre']"/></strong>
+                                                                                — Cant: <t t-esc="'%.0f' % sp_acc['cantidad']"/>
+                                                                                <t t-if="sp_acc['observacion']">
+                                                                                    — <t t-esc="sp_acc['observacion']"/>
+                                                                                </t>
+                                                                            </li>
+                                                                        </t>
+                                                                    </ul>
+                                                                </div>
+                                                            </t>
+                                                            <t t-else="">
+                                                                <div class="subpartes-inline">
+                                                                    <span style="color:#9ca3af; font-style:italic;">
+                                                                        Subpartes pendientes de especificar
+                                                                    </span>
+                                                                </div>
+                                                            </t>
+                                                        </t>
+                                                    </td>
+                                                </tr>
+                                            </t>
+                                        </tbody>
+                                    </table>
+                                </t>
+                                <t t-else="">
+                                    <p style="padding:15px; color:#9ca3af; font-style:italic;">
+                                        No hay evaluaciones de accesorios registradas.
+                                    </p>
+                                </t>
+                            </div>
 
-                        <!-- Información del Técnico -->
-                        <div class="row mt-5">
-                            <div class="col-6">
-                                <div class="info-card">
-                                    <div class="p-3">
-                                        <h4 class="mb-3">
-                                            <i class="fa fa-user-tie"/> Información del Técnico
-                                        </h4>
-                                        <div class="row">
-                                            <div class="col-6">
-                                                <strong>Nombre:</strong>
-                                                <span t-esc="ticket.responsable.name"/>
-                                            </div>
-                                            <div class="col-6">
-                                                <strong>DNI:</strong>
-                                                <span t-esc="ticket.responsable.vat"/>
+                            <!-- TÉCNICO Y FIRMAS -->
+                            <div class="row mt-5">
+                                <div class="col-6">
+                                    <div class="info-card">
+                                        <div class="p-3">
+                                            <h4 class="mb-3">
+                                                <i class="fa fa-user-tie"/> Información del Técnico
+                                            </h4>
+                                            <div class="row">
+                                                <div class="col-6">
+                                                    <strong>Nombre:</strong>
+                                                    <span t-esc="ticket.responsable.name"/>
+                                                </div>
+                                                <div class="col-6">
+                                                    <strong>DNI:</strong>
+                                                    <span t-esc="ticket.responsable.vat"/>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
 
-                        <!-- Firmas -->
-                        <div class="row mt-5">
-                            <div class="col-6">
-                                <div style="border-top: 2px solid #2c3e50; padding-top: 15px; text-align: center;">
-                                    <i class="fa fa-user-tie fa-2x mb-2" style="color: #2c3e50;"/><br/>
-                                    Firma del Técnico
+                            <div class="row mt-5">
+                                <div class="col-6">
+                                    <div style="border-top: 2px solid #2c3e50; padding-top: 15px; text-align: center;">
+                                        <i class="fa fa-user-tie fa-2x mb-2" style="color: #2c3e50;"/><br/>
+                                        Firma del Técnico
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div style="border-top: 2px solid #2c3e50; padding-top: 15px; text-align: center;">
+                                        <i class="fa fa-user fa-2x mb-2" style="color: #2c3e50;"/><br/>
+                                        Firma del Cliente
+                                    </div>
                                 </div>
                             </div>
-                            <div class="col-6">
-                                <div style="border-top: 2px solid #2c3e50; padding-top: 15px; text-align: center;">
-                                    <i class="fa fa-user fa-2x mb-2" style="color: #2c3e50;"/><br/>
-                                    Firma del Cliente
-                                </div>
-                            </div>
+
                         </div>
-                    </div>
+                    </t>
                 </t>
             </t>
-        </t>
-    </template>
+        </template>
+
+    </data>
 </odoo>

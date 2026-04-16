@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from odoo import models, fields, api, _
+import re
 from odoo.exceptions import UserError
 import logging
 
@@ -120,10 +121,15 @@ class TicketSubpartesWizardLinea(models.TransientModel):
 
     subparte_id = fields.Many2one(
         'componente.subparte',
-        string='Subparte',
-        required=True
+        string='Subparte / Repuesto',
+        required=False,          # <-- era True, ahora False para líneas libres
+        ondelete='restrict'
     )
-
+    nombre_libre = fields.Char(
+        string='Descripción libre',
+        help="Usar cuando el repuesto no existe en el catálogo de subpartes. "
+            "Ejemplo: Tapa lateral derecha, Cable de poder, etc."
+    )
     selected = fields.Boolean(
         string='Seleccionar',
         default=False
@@ -138,15 +144,18 @@ class TicketSubpartesWizardLinea(models.TransientModel):
         string='Observación'
     )
 
-    @api.depends('componente_code')
+    @api.depends('componente_code', 'nombre_libre', 'subparte_id')
     def _compute_componente_display(self):
-        import re
         color_map = {'k': 'Black', 'c': 'Cyan', 'm': 'Magenta', 'y': 'Yellow'}
-
+    
         for record in self:
-            code = record.componente_code or ''
-
-            # Componente: t<ID> o t<ID>_<color>
+            # Línea libre sin componente_code
+            if not record.componente_code:
+                record.componente_display = '— Línea libre —'
+                continue
+    
+            code = record.componente_code
+    
             m = re.match(r'^t(\d+)(?:_([kcmy]))?$', code)
             if m:
                 tipo = self.env['componente.tipo'].browse(int(m.group(1)))
@@ -155,12 +164,13 @@ class TicketSubpartesWizardLinea(models.TransientModel):
                     nombre = f"{nombre} ({color_map.get(m.group(2), m.group(2).upper())})"
                 record.componente_display = nombre
                 continue
-
-            # Accesorio: a<ID>
+    
             m2 = re.match(r'^a(\d+)$', code)
             if m2:
                 tipo = self.env['accesorio.tipo'].browse(int(m2.group(1)))
-                record.componente_display = tipo.name if tipo.exists() else f"Accesorio {m2.group(1)}"
+                record.componente_display = (
+                    tipo.name if tipo.exists() else f"Accesorio {m2.group(1)}"
+                )
                 continue
-
+    
             record.componente_display = code

@@ -1092,6 +1092,131 @@
     <field name="code">DUP_DELIVERY_ROLLERS</field>
     <field name="tipo_id" ref="comp_tipo_dup_delivery"/>
   </record>
-   
+   <!-- ====================================== -->
+<!-- REPUESTOS GENÉRICOS / NO CLASIFICADOS -->
+<!-- ====================================== -->
+
+<record id="sub_gen_tray_rails" model="componente.subparte">
+    <field name="name">Rieles de casetera</field>
+    <field name="code">GEN_TRAY_RAILS</field>
+    <field name="tipo_id" ref="comp_tipo_generico"/>
+</record>
+
+<record id="sub_gen_tray_unit" model="componente.subparte">
+    <field name="name">Casetera completa</field>
+    <field name="code">GEN_TRAY_UNIT</field>
+    <field name="tipo_id" ref="comp_tipo_generico"/>
+</record>
+
+<record id="sub_gen_tray_heater" model="componente.subparte">
+    <field name="name">Calentador de papel (casetera)</field>
+    <field name="code">GEN_TRAY_HEATER</field>
+    <field name="tipo_id" ref="comp_tipo_generico"/>
+</record>
+
+<record id="sub_gen_transformer" model="componente.subparte">
+    <field name="name">Transformador</field>
+    <field name="code">GEN_TRANSFORMER</field>
+    <field name="tipo_id" ref="comp_tipo_generico"/>
+</record>
+
+<record id="sub_gen_stabilizer" model="componente.subparte">
+    <field name="name">Estabilizador</field>
+    <field name="code">GEN_STABILIZER</field>
+    <field name="tipo_id" ref="comp_tipo_generico"/>
+</record>
+
+<record id="sub_gen_adf_unit" model="componente.subparte">
+    <field name="name">ADF completo</field>
+    <field name="code">GEN_ADF_UNIT</field>
+    <field name="tipo_id" ref="comp_tipo_generico"/>
+</record>
+
+<record id="sub_gen_output_cover_1" model="componente.subparte">
+    <field name="name">Tapa de salida 1</field>
+    <field name="code">GEN_OUTPUT_COVER_1</field>
+    <field name="tipo_id" ref="comp_tipo_generico"/>
+</record>
+
+<record id="sub_gen_output_cover_2" model="componente.subparte">
+    <field name="name">Tapa de salida 2</field>
+    <field name="code">GEN_OUTPUT_COVER_2</field>
+    <field name="tipo_id" ref="comp_tipo_generico"/>
+</record>
+
+<record id="sub_gen_cover_simple" model="componente.subparte">
+    <field name="name">Tapa simple</field>
+    <field name="code">GEN_COVER_SIMPLE</field>
+    <field name="tipo_id" ref="comp_tipo_generico"/>
+</record>
+
+<record id="sub_gen_output_tray" model="componente.subparte">
+    <field name="name">Bandeja de salida</field>
+    <field name="code">GEN_OUTPUT_TRAY</field>
+    <field name="tipo_id" ref="comp_tipo_generico"/>
+</record>
+<!-- ====================================== -->
+<!-- UNIVERSALES CORRECTOS -->
+<!-- ====================================== -->
+
+<record id="sub_gen_cover_lateral" model="componente.subparte">
+    <field name="name">Tapa lateral</field>
+    <field name="code">GEN_COVER_LATERAL</field>
+    <field name="tipo_id" ref="comp_tipo_generico"/>
+</record>
+
+<record id="sub_gen_cover_front" model="componente.subparte">
+    <field name="name">Tapa frontal</field>
+    <field name="code">GEN_COVER_FRONT</field>
+    <field name="tipo_id" ref="comp_tipo_generico"/>
+</record>
+
+<record id="sub_gen_cover_rear" model="componente.subparte">
+    <field name="name">Tapa posterior</field>
+    <field name="code">GEN_COVER_REAR</field>
+    <field name="tipo_id" ref="comp_tipo_generico"/>
+</record>
+
+<record id="sub_gen_handle" model="componente.subparte">
+    <field name="name">Manija / Asa</field>
+    <field name="code">GEN_HANDLE</field>
+    <field name="tipo_id" ref="comp_tipo_generico"/>
+</record>
+
+<record id="sub_gen_hinge" model="componente.subparte">
+    <field name="name">Bisagra</field>
+    <field name="code">GEN_HINGE</field>
+    <field name="tipo_id" ref="comp_tipo_generico"/>
+</record>
+
+<record id="sub_gen_plastic_guide" model="componente.subparte">
+    <field name="name">Guía de papel (plástico)</field>
+    <field name="code">GEN_PAPER_GUIDE</field>
+    <field name="tipo_id" ref="comp_tipo_generico"/>
+</record>
+
+<record id="sub_gen_clip" model="componente.subparte">
+    <field name="name">Clip / Sujetador</field>
+    <field name="code">GEN_CLIP</field>
+    <field name="tipo_id" ref="comp_tipo_generico"/>
+</record>
+
+<record id="sub_gen_spring" model="componente.subparte">
+    <field name="name">Resorte</field>
+    <field name="code">GEN_SPRING</field>
+    <field name="tipo_id" ref="comp_tipo_generico"/>
+</record>
+
+<record id="sub_gen_sensor_flag" model="componente.subparte">
+    <field name="name">Bandera de sensor</field>
+    <field name="code">GEN_SENSOR_FLAG</field>
+    <field name="tipo_id" ref="comp_tipo_generico"/>
+</record>
+
+<record id="sub_gen_bracket" model="componente.subparte">
+    <field name="name">Soporte metálico / bracket</field>
+    <field name="code">GEN_BRACKET</field>
+    <field name="tipo_id" ref="comp_tipo_generico"/>
+</record>
   </data>
 </odoo>

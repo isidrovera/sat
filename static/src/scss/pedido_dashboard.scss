@@ -1,0 +1,118 @@
+.o_pedido_dashboard {
+    background: transparent;
+    border-radius: 0;
+    box-shadow: none;
+    margin: 0 0 8px 0;
+    padding: 6px 0 !important;
+
+    .o_pedido_card_kpi {
+        background: #ffffff;
+        border-radius: 10px;
+        padding: 8px 10px;
+        border: 1px solid #e8eaf0;
+        border-left: 3px solid #e8eaf0;
+        box-shadow: none;
+        transition: border-color 0.15s ease, transform 0.15s ease;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        height: 100%;
+        cursor: pointer;
+
+        &:hover {
+            transform: translateY(-2px);
+            border-color: #c5cae9;
+            border-left-color: #4361ee;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+        }
+
+        &:active {
+            transform: translateY(0);
+        }
+    }
+
+    .o_pedido_card_icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+
+        i { font-size: 14px; }
+
+        &.o_pedido_icon_primary {
+            background: #E6F1FB;
+            i { color: #185FA5; }
+        }
+
+        &.o_pedido_icon_secondary {
+            background: #F1EFE8;
+            i { color: #5F5E5A; }
+        }
+
+        &.o_pedido_icon_warning {
+            background: #FAEEDA;
+            i { color: #854F0B; }
+        }
+
+        &.o_pedido_icon_success {
+            background: #EAF3DE;
+            i { color: #3B6D11; }
+        }
+
+        &.o_pedido_icon_danger {
+            background: #FCEBEB;
+            i { color: #A32D2D; }
+        }
+
+        &.o_pedido_icon_info {
+            background: #E1F5EE;
+            i { color: #0F6E56; }
+        }
+
+        &.o_pedido_icon_dark {
+            background: #EEEDFE;
+            i { color: #534AB7; }
+        }
+    }
+
+    .o_pedido_card_content {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .o_pedido_card_title {
+        font-size: 0.62rem;
+        color: #8b8fa8;
+        margin-bottom: 2px;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .o_pedido_card_value {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: #1a1a2e;
+        line-height: 1;
+    }
+
+    @media (max-width: 1199px) {
+        .o_pedido_card_value { font-size: 1.1rem; }
+        .o_pedido_card_icon {
+            width: 28px;
+            height: 28px;
+            i { font-size: 12px; }
+        }
+    }
+
+    @media (max-width: 991px) {
+        .o_pedido_card_title { font-size: 0.55rem; }
+        .o_pedido_card_value { font-size: 1rem; }
+    }
+}

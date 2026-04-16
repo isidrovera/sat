@@ -24,6 +24,15 @@
             <field name="number_next">1</field>
             <field name="number_increment">1</field>
         </record>
+        <record id="seq_ticket_repuesto_pedido" model="ir.sequence">
+      <field name="name">Pedido de Repuestos</field>
+      <field name="code">ticket.repuesto.pedido</field>
+      <field name="prefix">REP/%(year)s/%(month)s/</field>
+      <field name="padding">4</field>
+      <field name="number_next">1</field>
+      <field name="number_increment">1</field>
+      <field name="company_id" eval="False"/>
+    </record>
         <record id="seq_reporte_estado_excel" model="ir.sequence">
             <field name="name">Reporte Estado Máquinas</field>
             <field name="code">sat.reporte_estado_excel</field>

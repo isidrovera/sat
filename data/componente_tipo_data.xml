@@ -368,6 +368,11 @@
     <field name="code">FUNCION_SCAN_MAIL</field>
     <field name="is_color_sensitive">0</field>
   </record>
+  <record id="comp_tipo_generico" model="componente.tipo">
+    <field name="name">Repuestos varios / no clasificados</field>
+    <field name="code">GENERIC</field>
+    <field name="is_color_sensitive">0</field>
+</record>
    
   </data>
 </odoo>

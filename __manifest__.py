@@ -35,7 +35,7 @@
     
     'data': [
         'security/acceso.xml',
-        'views/acciones_menus.xml',
+        'security/ir.model.access.csv',        
         'data/ir_secuense.xml',
         'data/ir_secuense_ticket.xml',
         'data/ir.secuense_info.xml',
@@ -153,6 +153,7 @@
         'wizards/sat_entrega_wizard_view.xml',
         'views/solicitud_parte_tecnico_views.xml',
         'views/solicitud_partes_portal.xml',
+        'views/acciones_menus.xml',
         
     ],
     
@@ -202,6 +203,7 @@
             'sat/static/src/scss/sat_dashboard.scss',
             'sat/static/src/scss/alquiler_dashboard.scss',
             'sat/static/src/scss/gallery_widget.scss',
+            'sat/static/src/scss/pedido_dashboard.scss',
       
             
             
@@ -213,6 +215,7 @@
             'sat/static/src/xml/sat_dashboard.xml',
             'sat/static/src/xml/alquiler_dashboard.xml',
             'sat/static/src/xml/geo_map_widget.xml',
+            'sat/static/src/xml/pedido_dashboard.xml',
             
             # JS Files existentes
             'sat/static/src/js/selection_subparts.js',

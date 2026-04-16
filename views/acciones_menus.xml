@@ -24,32 +24,57 @@
 
     <!-- ================================================================== -->
     <!-- SUB-RAÍCES DE SECCIÓN (hijos directos de sat_menu_root)            -->
-    <!-- Secuencias: dejar huecos de 10 para futuras inserciones             -->
+    <!-- Espaciado de 10 entre secciones para futuras inserciones            -->
     <!-- ================================================================== -->
 
-    <!-- seq 10-49: Operaciones principales -->
-    <!-- (sin sub-raíz propia; los ítems cuelgan directo del root)          -->
-
-    <!-- seq 50-99: Tóner -->
-    <!-- (sin sub-raíz propia; los ítems cuelgan directo del root)          -->
-
-    <!-- seq 100-139: PrintTracker Pro -->
-    <menuitem id="menu_printtracker_root"
-              name="PrintTracker Pro"
+    <!-- seq 10: Corapsac -->
+    <menuitem id="menu_corapsac_root"
+              name="Corapsac"
               parent="sat_menu_root"
-              sequence="100"/>
+              sequence="10"/>
+    
 
-    <!-- seq 140-159: Reportes Estado de Máquinas -->
-    <menuitem id="menu_reporte_estado_maquinas_main"
-              name="Reportes Estado Máquinas"
+    <!-- seq 20: Andes -->
+    <menuitem id="menu_andes_root"
+              name="Andes"
               parent="sat_menu_root"
-              sequence="140"/>
+              sequence="20"/>
 
-    <!-- seq 90-99: Control MDM + Diagnóstico GPS (sub-raíz propia) -->
+    <!-- seq 30: Evaluaciones -->
+    <menuitem id="menu_evaluaciones_root"
+              name="Evaluaciones"
+              parent="sat_menu_root"
+              sequence="30"/>
+
+    <!-- seq 40: Tóner -->
+    <menuitem id="menu_toner_root"
+              name="Tóner"
+              parent="sat_menu_root"
+              sequence="40"/>
+
+    <!-- seq 50: Contadores -->
+    <menuitem id="menu_contadores_root"
+              name="Contadores"
+              parent="sat_menu_root"
+              sequence="50"/>
+
+    <!-- seq 60: Control MDM -->
     <menuitem id="menu_mdm_root"
               name="Control MDM"
               parent="sat_menu_root"
-              sequence="90"/>
+              sequence="60"/>
+
+    <!-- seq 70: PrintTracker Pro -->
+    <menuitem id="menu_printtracker_root"
+              name="PrintTracker Pro"
+              parent="sat_menu_root"
+              sequence="70"/>
+
+    <!-- seq 80: Reportes Estado de Máquinas -->
+    <menuitem id="menu_reporte_estado_maquinas_main"
+              name="Reportes Estado Máquinas"
+              parent="sat_menu_root"
+              sequence="80"/>
 
     <!-- seq 200: Configuración / Ajustes -->
     <menuitem id="sat.ajustes"
@@ -60,16 +85,7 @@
 
     <!-- ================================================================== -->
     <!-- ACCIONES                                                            -->
-    <!-- Agrupadas por dominio para facilitar mantenimiento                  -->
     <!-- ================================================================== -->
-
-    <!-- ── Evaluación personal: detalle diario ──────────────────────── -->
-    <record id="action_evaluacion_personal_detalle_diario" model="ir.actions.act_window">
-      <field name="name">Análisis Diario</field>
-      <field name="res_model">evaluacion.personal.detalle.diario</field>
-      <field name="view_mode">list,form</field>
-      <field name="context">{'create': False, 'delete': False}</field>
-    </record>
 
     <!-- ── MDM ────────────────────────────────────────────────────────── -->
     <record id="action_mdm_config" model="ir.actions.act_window">
@@ -82,21 +98,24 @@
       </field>
     </record>
 
-   <record id="action_mdm_device" model="ir.actions.act_window">
-  <field name="name">Dispositivos MDM</field>
-  <field name="res_model">mdm.device</field>
-  <field name="view_mode">list,kanban,form</field>
-  
-  <field name="help" type="html">
-    <p class="o_view_nocontent_smiling_face">No hay dispositivos sincronizados</p>
-    <p>Ve a Configuración MDM y ejecuta "Sincronizar dispositivos".</p>
-  </field>
-</record>
+    <record id="action_mdm_device" model="ir.actions.act_window">
+      <field name="name">Dispositivos MDM</field>
+      <field name="res_model">mdm.device</field>
+      <field name="view_mode">list,kanban,form</field>
+      <field name="search_view_id" ref="view_mdm_device_search"/>
+      <field name="context">{'search_default_online': 1}</field>
+      <field name="help" type="html">
+        <p class="o_view_nocontent_smiling_face">No hay dispositivos sincronizados</p>
+        <p>Ve a Configuración MDM y ejecuta "Sincronizar dispositivos".</p>
+      </field>
+    </record>
+
     <record id="action_mdm_command_log" model="ir.actions.act_window">
       <field name="name">Historial de Comandos MDM</field>
       <field name="res_model">mdm.command.log</field>
       <field name="view_mode">list</field>
-      
+      <field name="search_view_id" ref="view_mdm_command_log_search"/>
+      <field name="context">{'search_default_today': 1}</field>
     </record>
 
     <!-- ── GPS Tracking ───────────────────────────────────────────────── -->
@@ -111,8 +130,8 @@
       <field name="name">Dispositivos GPS Técnicos</field>
       <field name="res_model">tecnico.dispositivo.gps</field>
       <field name="view_mode">list,form</field>
-      
-     
+      <field name="search_view_id" ref="view_tecnico_dispositivo_gps_search"/>
+      <field name="context">{'search_default_filter_activos': 1}</field>
       <field name="help" type="html">
         <p class="o_view_nocontent_smiling_face">Vincular técnicos con dispositivos GPS</p>
         <p>Configure la relación entre cada técnico y su dispositivo de rastreo en Traccar.</p>
@@ -124,8 +143,8 @@
       <field name="name">Carga rápida</field>
       <field name="res_model">sat.import.line</field>
       <field name="view_mode">list,form</field>
-      
-      
+      <field name="search_view_id" ref="view_sat_import_line_search"/>
+      <field name="context">{'search_default_flt_pending': 1}</field>
     </record>
 
     <record id="action_sat_import_assign_header_wizard" model="ir.actions.act_window">
@@ -143,18 +162,18 @@
       <field name="target">new</field>
     </record>
 
-
+    <!-- ── Dashboard ─────────────────────────────────────────────────── -->
     <record id="sat_dashboard_action" model="ir.actions.client">
       <field name="name">Dashboard</field>
       <field name="tag">sat_dashboard_tag</field>
     </record>
 
-    <!-- ── Máquinas ──────────────────────────────────────────────────── -->
+    <!-- ── Máquinas (Corapsac) ───────────────────────────────────────── -->
     <record id="sat.action_window" model="ir.actions.act_window">
       <field name="name">Máquinas</field>
       <field name="res_model">sat.sat</field>
       <field name="view_mode">list,kanban,form,pivot</field>
-      
+      <field name="context">{'search_default_filter_stock': 1}</field>
       <field name="help" type="html">
         <p class="button_in_list">Registra un equipo</p>
       </field>
@@ -168,22 +187,29 @@
       <field name="search_view_id" ref="reparaciones_search_view"/>
     </record>
 
-    <!-- ── Alquiler ───────────────────────────────────────────────────── -->
+    <!-- ── Máquinas / Equipos (Andes) ────────────────────────────────── -->
     <record id="sat.action_alquiler_window" model="ir.actions.act_window">
-      <field name="name">Alquiler</field>
+      <field name="name">Máquinas</field>
       <field name="res_model">alquiler</field>
       <field name="view_mode">list,form,calendar,graph,kanban</field>
     </record>
+    <!-- Acción para Tickets -->
+<record id="action_ticket_alquiler_soporte" model="ir.actions.act_window">
+  <field name="name">Tickets</field>
+  <field name="res_model">ticket.alquiler</field>
+  <field name="view_mode">list,kanban,form,graph,pivot</field>
+  
+</record>
 
     <record id="sat.action_repuestos_window" model="ir.actions.act_window">
-      <field name="name">Repuestos alquiler</field>
+      <field name="name">Repuestos</field>
       <field name="res_model">repuestos.alquiler</field>
       <field name="view_mode">list,form,kanban</field>
     </record>
 
     <!-- ── Solicitudes de partes ──────────────────────────────────────── -->
     <record id="action_solicitud_partes" model="ir.actions.act_window">
-      <field name="name">Solicitudes de Partes Alquiler</field>
+      <field name="name">Solicitudes de Partes</field>
       <field name="res_model">solicitud.partes</field>
       <field name="view_mode">list,form</field>
     </record>
@@ -193,7 +219,10 @@
       <field name="res_model">copier.parts.request</field>
       <field name="view_mode">list,kanban,form</field>
       <field name="search_view_id" ref="view_copier_parts_request_search"/>
-      
+      <field name="context">{
+        'search_default_my_requests': 1,
+        'search_default_draft': 1
+      }</field>
       <field name="help" type="html">
         <p class="o_view_nocontent_smiling_face">Crear una nueva solicitud de partes</p>
       </field>
@@ -203,7 +232,7 @@
       <field name="name">Solicitudes de Partes Técnico</field>
       <field name="res_model">solicitud.parte.tecnico</field>
       <field name="view_mode">list,form</field>
-      
+      <field name="context">{'search_default_enviadas': 1}</field>
     </record>
 
     <!-- ── Evaluaciones ───────────────────────────────────────────────── -->
@@ -221,7 +250,7 @@
       <field name="name">Evaluaciones de Servicio</field>
       <field name="res_model">client.service.evaluation</field>
       <field name="view_mode">kanban,list,form</field>
-      
+      <field name="context">{'search_default_today': 1}</field>
     </record>
 
     <!-- ── Tóner ──────────────────────────────────────────────────────── -->
@@ -230,7 +259,7 @@
       <field name="res_model">toner.counter.submission</field>
       <field name="view_mode">kanban,list,form</field>
       <field name="search_view_id" ref="view_toner_counter_submission_search"/>
-      
+      <field name="context">{'search_default_pending': 1}</field>
     </record>
 
     <record id="action_toner_delivery_schedule" model="ir.actions.act_window">
@@ -249,7 +278,8 @@
       <field name="name">Confirmaciones de Entrega</field>
       <field name="res_model">toner.delivery.confirmation</field>
       <field name="view_mode">kanban,list,form,graph,pivot</field>
-      
+      <field name="search_view_id" ref="view_toner_delivery_confirmation_search"/>
+      <field name="context">{'search_default_draft': 1, 'search_default_confirmed': 1}</field>
     </record>
 
     <record id="action_toner_delivery_validation_pending" model="ir.actions.act_window">
@@ -265,7 +295,7 @@
       <field name="name">Contadores Automáticos</field>
       <field name="res_model">contador.automatico</field>
       <field name="view_mode">list,form</field>
-    
+      <field name="context">{'search_default_hoy': 1}</field>
     </record>
 
     <record id="action_patron_contador" model="ir.actions.act_window">
@@ -274,7 +304,7 @@
       <field name="view_mode">list,form</field>
       <field name="view_id" ref="view_patron_contador_list"/>
       <field name="search_view_id" ref="view_patron_contador_search"/>
-      
+      <field name="context">{'search_default_activos': 1}</field>
     </record>
 
     <!-- ── PrintTracker Pro ───────────────────────────────────────────── -->
@@ -355,7 +385,10 @@
       <field name="view_mode">list,form</field>
       <field name="view_id" ref="view_reporte_estado_maquina_list"/>
       <field name="search_view_id" ref="view_reporte_estado_maquina_search"/>
-      
+      <field name="context">{
+        'search_default_group_by_estado': 1,
+        'search_default_filter_esta_semana': 1
+      }</field>
     </record>
 
     <record id="action_reporte_estado_maquinas_wizard" model="ir.actions.act_window">
@@ -372,7 +405,7 @@
       <field name="view_mode">list,form</field>
       <field name="view_id" ref="view_reporte_estado_maquina_list"/>
       <field name="domain">[('fecha_generacion','&gt;=', (context_today() - relativedelta(days=7)).strftime('%Y-%m-%d'))]</field>
-      
+      <field name="context">{'search_default_group_by_estado': 1}</field>
     </record>
 
     <record id="action_reporte_estado_maquinas_sin_revisar" model="ir.actions.act_window">
@@ -476,7 +509,7 @@
       <field name="res_model">universal.excel.import</field>
       <field name="view_mode">list,form</field>
       <field name="search_view_id" ref="view_universal_excel_import_search"/>
-      
+      <field name="context">{'search_default_my_imports': 1}</field>
     </record>
 
     <record id="action_incidencias" model="ir.actions.act_window">
@@ -659,7 +692,7 @@
       <field name="name">Pedidos de Repuestos</field>
       <field name="res_model">ticket.repuesto.pedido</field>
       <field name="view_mode">list,form</field>
-   
+      <field name="context">{'search_default_pendientes': 1}</field>
       <field name="help" type="html">
         <p class="o_view_nocontent_smiling_face">Sin pedidos de repuestos</p>
       </field>
@@ -697,7 +730,7 @@ action = env["sat.import.line"].browse(env.context.get("active_ids", [])).action
 
 
     <!-- ================================================================== -->
-    <!-- MENÚS PRINCIPALES (hijos directos de sat_menu_root)                -->
+    <!-- MENÚS PRINCIPALES                                                   -->
     <!-- ================================================================== -->
 
     <!-- ── seq 1: Dashboard ──────────────────────────────────────────── -->
@@ -707,121 +740,148 @@ action = env["sat.import.line"].browse(env.context.get("active_ids", [])).action
               action="sat_dashboard_action"
               sequence="1"/>
 
-    <!-- ── seq 10-49: Operaciones ────────────────────────────────────── -->
+    <!-- ================================================================== -->
+    <!-- CORAPSAC — seq interno de 10 en 10 (hasta 200 libres)              -->
+    <!-- ================================================================== -->
     <menuitem id="sat.stock_maquinas"
               name="Máquinas"
-              parent="sat_menu_root"
+              parent="menu_corapsac_root"
               action="sat.action_window"
               sequence="10"/>
 
     <menuitem id="sat.reparaciones"
               name="Reparaciones"
-              parent="sat_menu_root"
+              parent="menu_corapsac_root"
               action="sat.action_reparaciones_window"
               sequence="20"/>
 
-    <menuitem id="sat.alquiler"
-              name="Alquiler"
-              parent="sat_menu_root"
-              action="sat.action_alquiler_window"
-              sequence="30"/>
-
-    <menuitem id="sat.repuestos"
-              name="Repuestos"
-              parent="sat_menu_root"
-              action="sat.action_repuestos_window"
-              sequence="40"/>
-
-    <menuitem id="menu_solicitud_partes"
-              name="Solicitudes de Partes"
-              parent="sat_menu_root"
-              action="action_solicitud_partes"
-              sequence="41"/>
-
     <menuitem id="menu_copier_parts"
               name="Solicitudes de Partes Reparaciones"
-              parent="sat_menu_root"
+              parent="menu_corapsac_root"
               action="action_copier_parts_request"
-              sequence="42"/>
+              sequence="30"/>
 
     <menuitem id="menu_solicitud_parte_tecnico"
               name="Solicitudes de Partes Técnico"
-              parent="sat_menu_root"
+              parent="menu_corapsac_root"
               action="action_solicitud_parte_tecnico"
-              sequence="43"/>
+              sequence="40"/>
+
+    <!-- seq 50-200: libres para futuras adiciones en Corapsac -->
+
+    <!-- ================================================================== -->
+    <!-- ANDES — seq interno de 10 en 10 (hasta 200 libres)                 -->
+    <!-- ================================================================== -->
+    <menuitem id="sat.alquiler"
+              name="Máquinas"
+              parent="menu_andes_root"
+              action="sat.action_alquiler_window"
+              sequence="10"/>
+
+    <menuitem id="menu_ticket_alquiler"
+          name="Tickets"
+          parent="menu_andes_root"
+          action="action_ticket_alquiler_soporte"
+          sequence="20"/>
+
+    <menuitem id="sat.repuestos"
+              name="Repuestos"
+              parent="menu_andes_root"
+              action="sat.action_repuestos_window"
+              sequence="25"/>
+
+    <menuitem id="menu_solicitud_partes"
+              name="Solicitudes de Partes"
+              parent="menu_andes_root"
+              action="action_solicitud_partes"
+              sequence="30"/>
 
     <menuitem id="menu_ticket_repuesto_pedido"
               name="Pedidos de Repuestos"
-              parent="sat_menu_root"
+              parent="menu_andes_root"
               action="action_ticket_repuesto_pedido"
-              sequence="44"
-              groups="base.group_system"/>
+              sequence="40"/>
 
     <menuitem id="menu_ticket_repuesto_historial"
               name="Historial de Repuestos"
-              parent="sat_menu_root"
+              parent="menu_andes_root"
               action="action_ticket_repuesto_historial"
-              sequence="45"
-              groups="base.group_system"/>
+              sequence="50"/>
 
-    <!-- ── seq 50-59: Evaluaciones ────────────────────────────────────── -->
+    <!-- seq 60-200: libres para futuras adiciones en Andes -->
+
+    <!-- ================================================================== -->
+    <!-- EVALUACIONES — seq interno de 10 en 10                             -->
+    <!-- ================================================================== -->
     <menuitem id="menu_evaluacion_personal"
               name="Evaluación de Personal"
-              parent="sat_menu_root"
+              parent="menu_evaluaciones_root"
               action="action_evaluacion_personal"
-              sequence="50"/>
+              sequence="10"/>
 
     <menuitem id="menu_service_evaluation"
               name="Evaluaciones de Servicio"
-              parent="sat_menu_root"
+              parent="menu_evaluaciones_root"
               action="action_client_service_evaluation"
-              sequence="51"/>
+              sequence="20"/>
 
-    <!-- ── seq 60-79: Tóner ───────────────────────────────────────────── -->
+    <!-- seq 30-200: libres para futuras adiciones en Evaluaciones -->
+
+    <!-- ================================================================== -->
+    <!-- TÓNER — seq interno de 10 en 10                                    -->
+    <!-- ================================================================== -->
     <menuitem id="menu_toner_counter_submission"
               name="Reportes de Tóner"
-              parent="sat_menu_root"
+              parent="menu_toner_root"
               action="action_toner_counter_submission"
-              sequence="60"/>
+              sequence="10"/>
 
     <menuitem id="menu_toner_delivery_schedule"
               name="Entregas de Tóner"
-              parent="sat_menu_root"
+              parent="menu_toner_root"
               action="action_toner_delivery_schedule"
-              sequence="61"/>
+              sequence="20"/>
 
     <menuitem id="menu_toner_delivery_dashboard"
               name="Dashboard de Entregas"
-              parent="sat_menu_root"
+              parent="menu_toner_root"
               action="action_toner_delivery_dashboard"
-              sequence="62"/>
+              sequence="30"/>
 
     <menuitem id="menu_toner_delivery_confirmation"
               name="Confirmaciones de Entrega"
-              parent="sat_menu_root"
+              parent="menu_toner_root"
               action="action_toner_delivery_confirmation"
-              sequence="63"/>
+              sequence="40"/>
 
     <menuitem id="menu_toner_delivery_validation"
               name="Validaciones Pendientes"
-              parent="sat_menu_root"
+              parent="menu_toner_root"
               action="action_toner_delivery_validation_pending"
-              sequence="64"/>
+              sequence="50"/>
 
-    <!-- ── seq 80-99: Contadores automáticos ─────────────────────────── -->
+    <!-- seq 60-200: libres para futuras adiciones en Tóner -->
+
+    <!-- ================================================================== -->
+    <!-- CONTADORES — seq interno de 10 en 10                               -->
+    <!-- ================================================================== -->
     <menuitem id="menu_contador_automatico_root"
               name="Contadores Automáticos"
-              parent="sat_menu_root"
+              parent="menu_contadores_root"
               action="action_contador_automatico"
-              sequence="80"/>
+              sequence="10"/>
 
     <menuitem id="menu_patron_contador"
               name="Patrones de Detección"
-              parent="sat_menu_root"
+              parent="menu_contadores_root"
               action="action_patron_contador"
-              sequence="81"/>
+              sequence="20"/>
 
-    <!-- ── seq 90-99: MDM + Diagnóstico GPS ──────────────────────────── -->
+    <!-- seq 30-200: libres para futuras adiciones en Contadores -->
+
+    <!-- ================================================================== -->
+    <!-- CONTROL MDM — seq interno de 10 en 10                              -->
+    <!-- ================================================================== -->
     <menuitem id="menu_mdm_devices"
               name="Dispositivos MDM"
               parent="menu_mdm_root"
@@ -829,18 +889,22 @@ action = env["sat.import.line"].browse(env.context.get("active_ids", [])).action
               sequence="10"/>
 
     <menuitem id="menu_mdm_command_log"
-              name="Historial de Comandos MDM"
+              name="Historial de Comandos"
               parent="menu_mdm_root"
               action="action_mdm_command_log"
               sequence="20"/>
 
     <menuitem id="menu_tracking_diagnostico"
               name="Diagnóstico GPS"
-              parent="sat_menu_root"
+              parent="menu_mdm_root"
               action="action_tracking_diagnostico"
-              sequence="96"/>
+              sequence="30"/>
 
-    <!-- ── seq 100-139: PrintTracker Pro (sub-raíz ya declarada arriba) ── -->
+    <!-- seq 40-200: libres para futuras adiciones en MDM -->
+
+    <!-- ================================================================== -->
+    <!-- PRINTTRACKER PRO — seq interno de 10 en 10                         -->
+    <!-- ================================================================== -->
     <menuitem id="menu_printtracker_config"
               name="Configuración API"
               parent="menu_printtracker_root"
@@ -899,7 +963,11 @@ action = env["sat.import.line"].browse(env.context.get("active_ids", [])).action
               action="action_printtracker_alert_manager"
               sequence="100"/>
 
-    <!-- ── seq 140-159: Reportes Estado Máquinas (sub-raíz ya declarada) ── -->
+    <!-- seq 110-200: libres para futuras adiciones en PrintTracker -->
+
+    <!-- ================================================================== -->
+    <!-- REPORTES ESTADO MÁQUINAS — seq interno de 10 en 10                 -->
+    <!-- ================================================================== -->
     <menuitem id="menu_reporte_estado_maquinas_ver"
               name="Ver Reportes"
               parent="menu_reporte_estado_maquinas_main"
@@ -941,13 +1009,13 @@ action = env["sat.import.line"].browse(env.context.get("active_ids", [])).action
               action="action_reporte_estado_maquinas_partes"
               sequence="70"/>
 
+    <!-- seq 80-200: libres para futuras adiciones en Reportes -->
 
     <!-- ================================================================== -->
-    <!-- MENÚS BAJO sat.ajustes (Configuración)                             -->
-    <!-- Secuencias internas de 10 en 10, con huecos para futuras adiciones  -->
+    <!-- CONFIGURACIÓN (sat.ajustes) — seq interno de 10 en 10              -->
     <!-- ================================================================== -->
 
-    <!-- ── Catálogos básicos (seq 10-49) ──────────────────────────────── -->
+    <!-- ── Catálogos básicos (seq 10-50) ──────────────────────────────── -->
     <menuitem id="sat.menu_marca"
               name="Marcas"
               parent="sat.ajustes"
@@ -978,7 +1046,7 @@ action = env["sat.import.line"].browse(env.context.get("active_ids", [])).action
               action="sat.action_informe_window"
               sequence="50"/>
 
-    <!-- ── Informes / Visitas (seq 60-89) ─────────────────────────────── -->
+    <!-- ── Informes / Visitas (seq 60-80) ─────────────────────────────── -->
     <menuitem id="menu_equipment_visit_report_settings"
               name="Configuración de Informes"
               parent="sat.ajustes"
@@ -997,7 +1065,7 @@ action = env["sat.import.line"].browse(env.context.get("active_ids", [])).action
               action="action_equipment_technician_performance_report"
               sequence="80"/>
 
-    <!-- ── Herramientas / Utilidades (seq 90-119) ─────────────────────── -->
+    <!-- ── Herramientas / Utilidades (seq 90-120) ─────────────────────── -->
     <menuitem id="menu_reparacion_foto_action"
               name="Fotos de Reparaciones"
               parent="sat.ajustes"
@@ -1022,7 +1090,7 @@ action = env["sat.import.line"].browse(env.context.get("active_ids", [])).action
               action="action_sat_import_line"
               sequence="120"/>
 
-    <!-- ── Operaciones y seguimiento (seq 130-149) ────────────────────── -->
+    <!-- ── Operaciones y seguimiento (seq 130-140) ────────────────────── -->
     <menuitem id="sat.menu_incidencia"
               name="Incidencias"
               parent="sat.ajustes"
@@ -1035,7 +1103,7 @@ action = env["sat.import.line"].browse(env.context.get("active_ids", [])).action
               action="action_inspeccion_resultado"
               sequence="140"/>
 
-    <!-- ── Componentes técnicos (seq 150-179) ─────────────────────────── -->
+    <!-- ── Componentes técnicos (seq 150-200) ─────────────────────────── -->
     <menuitem id="menu_componente_tipo"
               name="Tipos de Componente"
               parent="sat.ajustes"
@@ -1072,7 +1140,7 @@ action = env["sat.import.line"].browse(env.context.get("active_ids", [])).action
               action="action_componente_estado"
               sequence="200"/>
 
-    <!-- ── Reglas / Mapas (seq 210-229) ───────────────────────────────── -->
+    <!-- ── Reglas / Mapas (seq 210-220) ───────────────────────────────── -->
     <menuitem id="menu_informe_regla"
               name="Reglas de Informe"
               parent="sat.ajustes"
@@ -1085,7 +1153,7 @@ action = env["sat.import.line"].browse(env.context.get("active_ids", [])).action
               action="action_checklist_map"
               sequence="220"/>
 
-    <!-- ── APIs (seq 230-249) ─────────────────────────────────────────── -->
+    <!-- ── APIs (seq 230-240) ─────────────────────────────────────────── -->
     <menuitem id="menu_gemini_config"
               name="Gemini API"
               parent="sat.ajustes"
@@ -1098,7 +1166,7 @@ action = env["sat.import.line"].browse(env.context.get("active_ids", [])).action
               action="action_mdm_config"
               sequence="240"/>
 
-    <!-- ── GPS Tracking (seq 250-269) ────────────────────────────────── -->
+    <!-- ── GPS Tracking (seq 250-260) ────────────────────────────────── -->
     <menuitem id="menu_gps_tracking_separator"
               name="━━━━━━━━━━━ GPS Tracking ━━━━━━━━━━━"
               parent="sat.ajustes"
@@ -1111,12 +1179,13 @@ action = env["sat.import.line"].browse(env.context.get("active_ids", [])).action
               sequence="260"
               groups="base.group_system"/>
 
-    <!-- ── Accesorios (submenú propio, seq 280) ────────────────────────── -->
+    <!-- ── Accesorios (submenú propio, seq 280) ───────────────────────── -->
     <menuitem id="menu_accesorios_root"
               name="Accesorios"
               parent="sat.ajustes"
               sequence="280"/>
 
+    <!-- seq interno Accesorios de 10 en 10 -->
     <menuitem id="menu_accesorio_tipos"
               name="Tipos"
               parent="menu_accesorios_root"
@@ -1185,6 +1254,8 @@ action = env["sat.import.line"].browse(env.context.get("active_ids", [])).action
               action="action_ticket_componente_intervencion"
               sequence="110"
               groups="base.group_system"/>
+
+    <!-- seq 120-200: libres para futuras adiciones en Accesorios -->
 
   </data>
 </odoo>

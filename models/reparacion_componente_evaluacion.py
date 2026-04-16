@@ -35,7 +35,7 @@ class ReparacionComponenteEvaluacion(models.Model):
         'componente.estado', 
         ondelete='restrict', 
         string='Estado',
-        required=False,  # ✅ CAMBIO CLAVE: Permitir que esté vacío inicialmente
+        required=False,
         help="Estado del componente. Debe ser completado por el técnico."
     )
     

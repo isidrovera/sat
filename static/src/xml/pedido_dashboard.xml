@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates>
+    <!-- Dashboard Component -->
+    <t t-name="sat.PedidoDashboard">
+        <div class="o_pedido_dashboard container-fluid py-2">
+            <div class="row g-1">
+
+                <!-- Total pedidos -->
+                <div class="col-4 col-md-2 col-lg-1">
+                    <div class="o_pedido_card_kpi" t-on-click="() => this.filterByState('all')">
+                        <div class="o_pedido_card_icon o_pedido_icon_primary">
+                            <i class="fa fa-list-alt"></i>
+                        </div>
+                        <div class="o_pedido_card_content">
+                            <div class="o_pedido_card_title">Total</div>
+                            <div class="o_pedido_card_value">
+                                <t t-esc="state.data.total_pedidos"/>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Borrador -->
+                <div class="col-4 col-md-2 col-lg-1" t-if="state.data.total_borrador > 0">
+                    <div class="o_pedido_card_kpi" t-on-click="() => this.filterByState('borrador')">
+                        <div class="o_pedido_card_icon o_pedido_icon_secondary">
+                            <i class="fa fa-pencil"></i>
+                        </div>
+                        <div class="o_pedido_card_content">
+                            <div class="o_pedido_card_title">Borrador</div>
+                            <div class="o_pedido_card_value">
+                                <t t-esc="state.data.total_borrador"/>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Esperando Gerencia -->
+                <div class="col-4 col-md-2 col-lg-1" t-if="state.data.total_esperando_gerencia > 0">
+                    <div class="o_pedido_card_kpi" t-on-click="() => this.filterByState('esperando_gerencia')">
+                        <div class="o_pedido_card_icon o_pedido_icon_warning">
+                            <i class="fa fa-clock-o"></i>
+                        </div>
+                        <div class="o_pedido_card_content">
+                            <div class="o_pedido_card_title">Esp. Gerencia</div>
+                            <div class="o_pedido_card_value">
+                                <t t-esc="state.data.total_esperando_gerencia"/>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Informe solicitado -->
+                <div class="col-4 col-md-2 col-lg-1" t-if="state.data.total_informe_solicitado > 0">
+                    <div class="o_pedido_card_kpi" t-on-click="() => this.filterByState('informe_solicitado')">
+                        <div class="o_pedido_card_icon o_pedido_icon_warning">
+                            <i class="fa fa-file-text-o"></i>
+                        </div>
+                        <div class="o_pedido_card_content">
+                            <div class="o_pedido_card_title">Inf. Solicitado</div>
+                            <div class="o_pedido_card_value">
+                                <t t-esc="state.data.total_informe_solicitado"/>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Informe recibido -->
+                <div class="col-4 col-md-2 col-lg-1" t-if="state.data.total_informe_recibido > 0">
+                    <div class="o_pedido_card_kpi" t-on-click="() => this.filterByState('informe_recibido')">
+                        <div class="o_pedido_card_icon o_pedido_icon_info">
+                            <i class="fa fa-file-text"></i>
+                        </div>
+                        <div class="o_pedido_card_content">
+                            <div class="o_pedido_card_title">Inf. Recibido</div>
+                            <div class="o_pedido_card_value">
+                                <t t-esc="state.data.total_informe_recibido"/>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Aprobado -->
+                <div class="col-4 col-md-2 col-lg-1" t-if="state.data.total_aprobado > 0">
+                    <div class="o_pedido_card_kpi" t-on-click="() => this.filterByState('aprobado')">
+                        <div class="o_pedido_card_icon o_pedido_icon_success">
+                            <i class="fa fa-check-circle"></i>
+                        </div>
+                        <div class="o_pedido_card_content">
+                            <div class="o_pedido_card_title">Aprobado</div>
+                            <div class="o_pedido_card_value">
+                                <t t-esc="state.data.total_aprobado"/>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Rechazado -->
+                <div class="col-4 col-md-2 col-lg-1" t-if="state.data.total_rechazado > 0">
+                    <div class="o_pedido_card_kpi" t-on-click="() => this.filterByState('rechazado')">
+                        <div class="o_pedido_card_icon o_pedido_icon_danger">
+                            <i class="fa fa-times-circle"></i>
+                        </div>
+                        <div class="o_pedido_card_content">
+                            <div class="o_pedido_card_title">Rechazado</div>
+                            <div class="o_pedido_card_value">
+                                <t t-esc="state.data.total_rechazado"/>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stock en revisión -->
+                <div class="col-4 col-md-2 col-lg-1" t-if="state.data.total_stock_en_revision > 0">
+                    <div class="o_pedido_card_kpi" t-on-click="() => this.filterByState('stock_en_revision')">
+                        <div class="o_pedido_card_icon o_pedido_icon_warning">
+                            <i class="fa fa-search"></i>
+                        </div>
+                        <div class="o_pedido_card_content">
+                            <div class="o_pedido_card_title">Stock Revisión</div>
+                            <div class="o_pedido_card_value">
+                                <t t-esc="state.data.total_stock_en_revision"/>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stock completo -->
+                <div class="col-4 col-md-2 col-lg-1" t-if="state.data.total_stock_completo > 0">
+                    <div class="o_pedido_card_kpi" t-on-click="() => this.filterByState('stock_completo')">
+                        <div class="o_pedido_card_icon o_pedido_icon_info">
+                            <i class="fa fa-cubes"></i>
+                        </div>
+                        <div class="o_pedido_card_content">
+                            <div class="o_pedido_card_title">Stock Listo</div>
+                            <div class="o_pedido_card_value">
+                                <t t-esc="state.data.total_stock_completo"/>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- En camino -->
+                <div class="col-4 col-md-2 col-lg-1" t-if="state.data.total_en_camino > 0">
+                    <div class="o_pedido_card_kpi" t-on-click="() => this.filterByState('en_camino')">
+                        <div class="o_pedido_card_icon o_pedido_icon_dark">
+                            <i class="fa fa-truck"></i>
+                        </div>
+                        <div class="o_pedido_card_content">
+                            <div class="o_pedido_card_title">En Camino</div>
+                            <div class="o_pedido_card_value">
+                                <t t-esc="state.data.total_en_camino"/>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Entregado -->
+                <div class="col-4 col-md-2 col-lg-1" t-if="state.data.total_entregado > 0">
+                    <div class="o_pedido_card_kpi" t-on-click="() => this.filterByState('entregado')">
+                        <div class="o_pedido_card_icon o_pedido_icon_success">
+                            <i class="fa fa-handshake-o"></i>
+                        </div>
+                        <div class="o_pedido_card_content">
+                            <div class="o_pedido_card_title">Entregado</div>
+                            <div class="o_pedido_card_value">
+                                <t t-esc="state.data.total_entregado"/>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Instalado -->
+                <div class="col-4 col-md-2 col-lg-1" t-if="state.data.total_instalado > 0">
+                    <div class="o_pedido_card_kpi" t-on-click="() => this.filterByState('instalado')">
+                        <div class="o_pedido_card_icon o_pedido_icon_success">
+                            <i class="fa fa-wrench"></i>
+                        </div>
+                        <div class="o_pedido_card_content">
+                            <div class="o_pedido_card_title">Instalado</div>
+                            <div class="o_pedido_card_value">
+                                <t t-esc="state.data.total_instalado"/>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cancelado -->
+                <div class="col-4 col-md-2 col-lg-1" t-if="state.data.total_cancelado > 0">
+                    <div class="o_pedido_card_kpi" t-on-click="() => this.filterByState('cancelado')">
+                        <div class="o_pedido_card_icon o_pedido_icon_danger">
+                            <i class="fa fa-ban"></i>
+                        </div>
+                        <div class="o_pedido_card_content">
+                            <div class="o_pedido_card_title">Cancelado</div>
+                            <div class="o_pedido_card_value">
+                                <t t-esc="state.data.total_cancelado"/>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </t>
+
+    <!-- Custom List View Template -->
+    <t t-name="sat.PedidoListView" t-inherit="web.ListView" t-inherit-mode="primary">
+        <xpath expr="//t[@t-component='props.Renderer']" position="before">
+            <PedidoDashboard model="props.model"/>
+        </xpath>
+    </t>
+</templates>

@@ -1152,8 +1152,6 @@ if (estadosBloqueoElement) {
                     filterButton.addEventListener("click", applyDateFilter);
                 }
 
-              
-
                 // Renderizar el gráfico inicial
                 const chart = renderTicketsTecnicoChart();
                 
@@ -1611,11 +1609,7 @@ if (estadosBloqueoElement) {
                 console.error('Error: No se encontró el elemento ticketsAnoChart');
             }
 
-
-
-
-
-                        // Gráfico de asesoras
+            // Gráfico de asesoras
             const asesoraElement = this._getChartElement("asesoraChart");
             if (asesoraElement) {
                 console.log('Renderizando gráfico de asesoras...');
