@@ -104,6 +104,11 @@
     <field name="tipo_id" ref="comp_tipo_developer"/>
     <field name="color_id"/>
   </record>
+  <record id="sub_dev_gears" model="componente.subparte">
+    <field name="name">Engranajes developer</field>
+    <field name="code">DEV_GEARS</field>
+    <field name="tipo_id" ref="comp_tipo_developer"/>
+</record>
 
   <!-- Extras developer -->
   <record id="sub_dev_drive_motor" model="componente.subparte">
