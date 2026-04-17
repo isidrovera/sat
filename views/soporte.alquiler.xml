@@ -729,291 +729,298 @@
         <!-- ticket.repuesto.pedido — FORM (actualizado)        -->
         <!-- ================================================= -->
         <record id="view_ticket_repuesto_pedido_form" model="ir.ui.view">
-            <field name="name">ticket.repuesto.pedido.form</field>
-            <field name="model">ticket.repuesto.pedido</field>
-            <field name="arch" type="xml">
-                <form string="Pedido de Repuestos">
-                    <header>
-                        <!-- Barra de estados completa con los 12 estados -->
-                        <field name="estado" widget="statusbar"
-                               statusbar_visible="borrador,esperando_gerencia,aprobado,stock_en_revision,stock_completo,entregado,instalado"/>
-                        <!-- Botón enviar a Gerencia -->
-                        <button string="📤 Enviar a Gerencia"
-                                name="action_enviar_a_gerencia"
-                                type="object"
-                                class="btn-primary oe_highlight"
-                                invisible="estado != 'borrador'"
-                                confirm="¿Enviar pedido a Gerencia para aprobación?"/>
-                        <!-- Botones Gerencia (desde UI) -->
-                        <button string="✅ Aprobar"
-                                name="action_aprobar_gerencia"
-                                type="object"
-                                class="btn-success"
-                                invisible="estado not in ('esperando_gerencia', 'informe_recibido')"
-                                confirm="¿Aprobar este pedido? Se notificará a Comercial y Logística."
-                                groups="base.group_system"/>
-                        <button string="📋 Pedir informe"
-                                name="action_solicitar_informe_comercial"
-                                type="object"
-                                class="btn-warning"
-                                invisible="estado != 'esperando_gerencia'"
-                                groups="base.group_system"/>
-                        <button string="❌ Rechazar"
-                                name="action_rechazar_gerencia"
-                                type="object"
-                                class="btn-danger"
-                                invisible="estado not in ('esperando_gerencia', 'informe_recibido')"
-                                groups="base.group_system"/>
-                        <!-- Botón Comercial confirmar stock -->
-                        <button string="📦 Confirmar stock completo"
-                                name="action_stock_completo"
-                                type="object"
-                                class="btn-success oe_highlight"
-                                invisible="estado != 'stock_en_revision'"
-                                confirm="¿Confirmar que todos los repuestos están disponibles? Se notificará a Logística."/>
-                        <!-- Botón cancelar -->
-                        <button string="❌ Cancelar"
-                                name="action_cancelar"
-                                type="object"
-                                class="btn-danger"
-                                invisible="estado in ('instalado', 'entregado', 'en_camino', 'cancelado')"
-                                confirm="¿Cancelar este pedido?"/>
-                        <!-- Botón reactivar -->
-                        <button string="🔄 Reactivar"
-                                name="action_volver_pendiente"
-                                type="object"
-                                class="btn-warning"
-                                invisible="estado not in ('cancelado', 'rechazado')"/>
-                        <button string="📤 Enviar a Gerencia"
-                            name="action_enviar_a_gerencia"
+    <field name="name">ticket.repuesto.pedido.form</field>
+    <field name="model">ticket.repuesto.pedido</field>
+    <field name="arch" type="xml">
+        <form string="Pedido de Repuestos">
+            <header>
+                <field name="estado" widget="statusbar"
+                       statusbar_visible="borrador,esperando_gerencia,aprobado,stock_en_revision,stock_completo,entregado,instalado"/>
+
+                <!-- Borrador -->
+                <button string="📤 Enviar a Gerencia"
+                        name="action_enviar_a_gerencia"
+                        type="object"
+                        class="btn-primary oe_highlight"
+                        invisible="estado != 'borrador'"
+                        confirm="¿Confirmar envío a Gerencia? Asegúrese de haber agregado todos los repuestos necesarios."/>
+
+                <!-- Gerencia -->
+                <button string="✅ Aprobar"
+                        name="action_aprobar_gerencia"
+                        type="object"
+                        class="btn-success"
+                        invisible="estado not in ('esperando_gerencia', 'informe_recibido')"
+                        confirm="¿Aprobar este pedido? Se notificará a Comercial y Logística."
+                        groups="base.group_system"/>
+
+                <button string="📋 Pedir informe"
+                        name="action_solicitar_informe_comercial"
+                        type="object"
+                        class="btn-warning"
+                        invisible="estado != 'esperando_gerencia'"
+                        groups="base.group_system"/>
+
+                <!-- ❌ Rechazar — abre wizard con campo motivo -->
+                <button string="❌ Rechazar"
+                        name="action_abrir_wizard_rechazo"
+                        type="object"
+                        class="btn-danger"
+                        invisible="estado not in ('esperando_gerencia', 'informe_recibido')"
+                        groups="base.group_system"/>
+
+                <!-- Comercial stock -->
+                <button string="📦 Confirmar stock completo"
+                        name="action_stock_completo"
+                        type="object"
+                        class="btn-success oe_highlight"
+                        invisible="estado != 'stock_en_revision'"
+                        confirm="¿Confirmar que todos los repuestos están disponibles? Se notificará a Logística."/>
+
+                <!-- Logística entrega -->
+                <button string="🚚 Confirmar Entrega al Técnico"
+                        name="action_confirmar_entrega"
+                        type="object"
+                        class="btn-success oe_highlight"
+                        invisible="estado != 'stock_completo'"
+                        confirm="¿Confirmar que los repuestos fueron entregados físicamente al técnico?"/>
+
+                <!-- Cancelar -->
+                <button string="❌ Cancelar"
+                        name="action_cancelar"
+                        type="object"
+                        class="btn-danger"
+                        invisible="estado in ('instalado', 'entregado', 'en_camino', 'cancelado')"
+                        confirm="¿Cancelar este pedido?"/>
+
+                <!-- Reactivar -->
+                <button string="🔄 Reactivar"
+                        name="action_volver_pendiente"
+                        type="object"
+                        class="btn-warning"
+                        invisible="estado not in ('cancelado', 'rechazado')"/>
+            </header>
+            <sheet>
+                <div name="button_box">
+                    <button class="oe_stat_button"
+                            icon="fa-wrench"
+                            invisible="not ticket_instalacion_id"
                             type="object"
-                            class="btn-primary oe_highlight"
-                            invisible="estado != 'borrador'"
-                            confirm="¿Confirmar envío a Gerencia? Asegúrese de haber agregado todos los repuestos necesarios."/>
-                    </header>
-                    <sheet>
-                        <!-- Smart button → ticket de instalación -->
-                        <div name="button_box">
-                            <button class="oe_stat_button"
-                                    icon="fa-wrench"
-                                    invisible="not ticket_instalacion_id"
-                                    type="object"
-                                    name="action_ver_ticket_instalacion">
-                                <div class="o_stat_info">
-                                    <span class="o_stat_text">Ticket instalación</span>
-                                    <span class="o_stat_value">
-                                        <field name="ticket_instalacion_id"
-                                               readonly="1"
-                                               nolabel="1"
-                                               string=""/>
-                                    </span>
-                                </div>
-                            </button>
+                            name="action_ver_ticket_instalacion">
+                        <div class="o_stat_info">
+                            <span class="o_stat_text">Ticket instalación</span>
+                            <span class="o_stat_value">
+                                <field name="ticket_instalacion_id"
+                                       readonly="1"
+                                       nolabel="1"
+                                       string=""/>
+                            </span>
                         </div>
-                        <!-- Alerta estado rechazado -->
-                        <div class="alert alert-danger"
-                             invisible="estado != 'rechazado'">
-                            <i class="fa fa-times-circle me-2"/>
-                            <strong>Pedido rechazado por Gerencia.</strong>
-                            <field name="motivo_rechazo"
-                                   readonly="1"
-                                   nolabel="1"
-                                   placeholder="Sin motivo especificado"/>
-                        </div>
-                        <!-- Alerta stock en revisión -->
-                        <div class="alert alert-warning"
-                             invisible="estado != 'stock_en_revision'">
-                            <i class="fa fa-search me-2"/>
-                            <strong>Comercial verificando stock.</strong>
-                            Faltan confirmar
-                            <strong>
-                                <field name="lineas_sin_stock"
-                                           readonly="1"
-                                           nolabel="1"/>
-                            </strong>
-                            item(s).
-                        </div>
-                        <!-- Alerta instalado -->
-                        <div class="alert alert-success"
-                             invisible="estado != 'instalado'">
-                            <i class="fa fa-check-circle me-2"/>
-                            <strong>Repuestos instalados.</strong>
-                            Historial de durabilidad actualizado con contómetros reales.
-                        </div>
-                        <div class="oe_title">
-                            <label for="name"/>
-                            <h1>
-                                <field name="name" readonly="1"/>
-                            </h1>
-                        </div>
+                    </button>
+                </div>
+
+                <div class="alert alert-danger"
+                     invisible="estado != 'rechazado'">
+                    <i class="fa fa-times-circle me-2"/>
+                    <strong>Pedido rechazado por Gerencia.</strong>
+                    <field name="motivo_rechazo"
+                           readonly="1"
+                           nolabel="1"
+                           placeholder="Sin motivo especificado"/>
+                </div>
+
+                <div class="alert alert-warning"
+                     invisible="estado != 'stock_en_revision'">
+                    <i class="fa fa-search me-2"/>
+                    <strong>Comercial verificando stock.</strong>
+                    Faltan confirmar
+                    <strong>
+                        <field name="lineas_sin_stock" readonly="1" nolabel="1"/>
+                    </strong>
+                    item(s).
+                </div>
+
+                <div class="alert alert-success"
+                     invisible="estado != 'instalado'">
+                    <i class="fa fa-check-circle me-2"/>
+                    <strong>Repuestos instalados.</strong>
+                    Historial de durabilidad actualizado con contómetros reales.
+                </div>
+
+                <div class="oe_title">
+                    <label for="name"/>
+                    <h1>
+                        <field name="name" readonly="1"/>
+                    </h1>
+                </div>
+
+                <group>
+                    <group string="📋 Origen">
+                        <field name="ticket_id" readonly="1"/>
+                        <field name="cliente_id" readonly="1"/>
+                        <field name="tecnico_id" readonly="1"/>
+                        <field name="fecha" readonly="1"/>
+                    </group>
+                    <group string="🖨️ Equipo">
+                        <field name="modelo_nombre" readonly="1"/>
+                        <field name="serie" readonly="1"/>
+                        <field name="contometro_k" readonly="1" string="Contómetro K (B/N)"/>
+                        <field name="contometro_color" readonly="1" string="Contómetro Color"
+                               invisible="not contometro_color"/>
+                    </group>
+                </group>
+
+                <group string="✅ Aprobación"
+                       invisible="estado in ('borrador', 'esperando_gerencia', 'rechazado', 'cancelado')">
+                    <group>
+                        <field name="aprobado_por" readonly="1"/>
+                        <field name="fecha_aprobacion" readonly="1"/>
+                    </group>
+                    <group>
+                        <field name="fecha_stock_completo" readonly="1"
+                               invisible="not fecha_stock_completo"/>
+                        <field name="fecha_entrega" readonly="1"
+                               invisible="not fecha_entrega"/>
+                        <field name="fecha_instalacion" readonly="1"
+                               invisible="not fecha_instalacion"/>
+                    </group>
+                </group>
+
+                <group string="📎 Informe de Comercial"
+                       invisible="estado not in ('informe_solicitado', 'informe_recibido', 'aprobado', 'stock_en_revision', 'stock_completo', 'en_camino', 'entregado', 'instalado')">
+                    <group>
+                        <field name="fecha_solicitud_informe" readonly="1"
+                               invisible="not fecha_solicitud_informe"/>
+                        <field name="fecha_informe_recibido" readonly="1"
+                               invisible="not fecha_informe_recibido"/>
+                        <field name="nota_comercial" invisible="not nota_comercial"/>
+                    </group>
+                    <group>
+                        <field name="informe_adjunto" widget="binary"
+                               invisible="not informe_adjunto"/>
+                        <field name="informe_adjunto_nombre" invisible="not informe_adjunto"
+                               readonly="1"/>
+                    </group>
+                </group>
+
+                <notebook>
+                    <page string="🔩 Repuestos Solicitados">
+                        <field name="linea_ids"
+                               readonly="estado in ('aprobado', 'instalado')">
+                            <list editable="bottom"
+                                  decoration-success="meses_desde_ultimo_cambio > 12"
+                                  decoration-warning="meses_desde_ultimo_cambio > 6 and meses_desde_ultimo_cambio &lt;= 12"
+                                  decoration-danger="meses_desde_ultimo_cambio &lt;= 6 and meses_desde_ultimo_cambio > 0">
+                                <field name="componente_display" readonly="1" string="Componente"/>
+                                <field name="color_id" readonly="1" optional="show" string="Color"/>
+                                <field name="subparte_id" string="Subparte / Repuesto"/>
+                                <field name="nombre_libre"
+                                       placeholder="Ej: Tapa lateral, cable, fusible, etc."
+                                       attrs="{'invisible': [('subparte_id','!=',False)]}"/>
+                                <field name="cantidad" string="Cant."/>
+                                <field name="observacion" optional="show"/>
+
+                                <!-- STOCK -->
+                                <field name="estado_stock"
+                                       widget="badge"
+                                       optional="show"
+                                       string="Stock"
+                                       decoration-success="estado_stock in ('disponible','recibido')"
+                                       decoration-warning="estado_stock == 'sin_stock'"
+                                       decoration-muted="estado_stock == 'pendiente'"/>
+                                <field name="fecha_disponible" optional="hide" string="Fecha est."/>
+                                <field name="observacion_stock" optional="hide" string="Nota stock"/>
+
+                                <!-- INFORME COMERCIAL — editable en informe_solicitado -->
+                                <field name="contador_informe_anterior"
+                                       optional="hide"
+                                       string="Cont. Anterior (informe)"/>
+                                <field name="fecha_informe_cambio"
+                                       optional="hide"
+                                       string="Fecha Últ. Cambio (informe)"/>
+                                <field name="observacion_informe"
+                                       optional="hide"
+                                       string="Obs. Informe"/>
+
+                                <!-- HISTORIAL -->
+                                <field name="ultimo_cambio_fecha" readonly="1" optional="show"
+                                       string="Último Cambio"/>
+                                <field name="ultimo_cambio_contometro" readonly="1" optional="show"
+                                       string="Cont. Anterior"/>
+                                <field name="meses_desde_ultimo_cambio" readonly="1" optional="show"
+                                       string="Meses"/>
+
+                                <!-- SNAPSHOT -->
+                                <field name="contometro_actual_snapshot" readonly="1" optional="hide"
+                                       string="Cont. Actual (aprobación)"/>
+                                <field name="contometro_anterior_snapshot" readonly="1" optional="hide"
+                                       string="Cont. Anterior (aprobación)"/>
+                                <field name="copias_snapshot" readonly="1" optional="hide"
+                                       string="Copias (aprobación)"/>
+                                <field name="meses_snapshot" readonly="1" optional="hide"
+                                       string="Meses (aprobación)"/>
+                            </list>
+                        </field>
+                    </page>
+
+                    <page string="📝 Observaciones">
                         <group>
-                            <group string="📋 Origen">
-                                <field name="ticket_id" readonly="1"/>
-                                <field name="cliente_id" readonly="1"/>
-                                <field name="tecnico_id" readonly="1"/>
-                                <field name="fecha" readonly="1"/>
+                            <field name="observaciones" nolabel="1"
+                                   placeholder="Observaciones generales..."/>
+                            <field name="nota_logistica" invisible="not nota_logistica"
+                                   string="Nota Logística" readonly="1"/>
+                        </group>
+                    </page>
+
+                    <page string="🔐 Trazabilidad" groups="base.group_system">
+                        <group>
+                            <group string="Acceso portal">
+                                <field name="token" readonly="1"/>
+                                <field name="fecha_envio_gerencia" readonly="1"/>
                             </group>
-                            <group string="🖨️ Equipo">
-                                <field name="modelo_nombre" readonly="1"/>
-                                <field name="serie" readonly="1"/>
-                                <field name="contometro_k"
-                                       readonly="1"
-                                       string="Contómetro K (B/N)"/>
-                                <field name="contometro_color"
-                                       readonly="1"
-                                       string="Contómetro Color"
-                                       invisible="not contometro_color"/>
+                            <group string="Instalación">
+                                <field name="ticket_instalacion_id" readonly="1"/>
+                                <field name="fecha_instalacion" readonly="1"/>
                             </group>
                         </group>
-                        <!-- Sección aprobación -->
-                        <group string="✅ Aprobación"
-                               invisible="estado in ('borrador', 'esperando_gerencia', 'rechazado', 'cancelado')">
-                            <group>
-                                <field name="aprobado_por" readonly="1"/>
-                                <field name="fecha_aprobacion" readonly="1"/>
-                            </group>
-                            <group>
-                                <field name="fecha_stock_completo"
-                                       readonly="1"
-                                       invisible="not fecha_stock_completo"/>
-                                <field name="fecha_entrega"
-                                       readonly="1"
-                                       invisible="not fecha_entrega"/>
-                                <field name="fecha_instalacion"
-                                       readonly="1"
-                                       invisible="not fecha_instalacion"/>
-                            </group>
-                        </group>
-                        <!-- Sección informe (visible cuando corresponde) -->
-                        <group string="📎 Informe de Comercial"
-                               invisible="estado not in ('informe_solicitado', 'informe_recibido', 'aprobado', 'stock_en_revision', 'stock_completo', 'en_camino', 'entregado', 'instalado')">
-                            <group>
-                                <field name="fecha_solicitud_informe"
-                                       readonly="1"
-                                       invisible="not fecha_solicitud_informe"/>
-                                <field name="fecha_informe_recibido"
-                                       readonly="1"
-                                       invisible="not fecha_informe_recibido"/>
-                                <field name="nota_comercial"
-                                       invisible="not nota_comercial"/>
-                            </group>
-                            <group>
-                                <field name="informe_adjunto"
-                                       widget="binary"
-                                       invisible="not informe_adjunto"/>
-                                <field name="informe_adjunto_nombre"
-                                       invisible="not informe_adjunto"
-                                       readonly="1"/>
-                            </group>
-                        </group>
-                        <notebook>
-                            <!-- Pestaña repuestos con columna stock -->
-                            <page string="🔩 Repuestos Solicitados">
-                                <field name="linea_ids"
-           readonly="estado in ('aprobado', 'instalado')">
-                                    <list editable="bottom"
-              decoration-success="meses_desde_ultimo_cambio > 12"
-              decoration-warning="meses_desde_ultimo_cambio > 6 and meses_desde_ultimo_cambio &lt;= 12"
-              decoration-danger="meses_desde_ultimo_cambio &lt;= 6 and meses_desde_ultimo_cambio > 0">
-                                        <!-- Componente -->
-                                        <field name="componente_display"
-                   readonly="1"
-                   string="Componente"/>
-                                        <!-- Color -->
-                                        <field name="color_id"
-                   readonly="1"
-                   optional="show"
-                   string="Color"/>
-                                        <!-- Subparte (editable) -->
-                                        <field name="subparte_id"
-                   string="Subparte / Repuesto"/>
-                                        <!-- 🔥 Descripción libre -->
-                                        <field name="nombre_libre"
-                   placeholder="Ej: Tapa lateral, cable, fusible, etc."
-                   attrs="{'invisible': [('subparte_id','!=',False)]}"/>
-                                        <!-- Cantidad -->
-                                        <field name="cantidad" string="Cant."/>
-                                        <!-- Observación -->
-                                        <field name="observacion" optional="show"/>
-                                        <!-- ================= STOCK ================= -->
-                                        <field name="estado_stock"
-                   widget="badge"
-                   optional="show"
-                   string="Stock"
-                   decoration-success="estado_stock in ('disponible','recibido')"
-                   decoration-warning="estado_stock == 'sin_stock'"
-                   decoration-muted="estado_stock == 'pendiente'"/>
-                                        <field name="fecha_disponible"
-                   optional="hide"
-                   string="Fecha est."/>
-                                        <field name="observacion_stock"
-                   optional="hide"
-                   string="Nota stock"/>
-                                        <!-- ================= HISTORIAL ================= -->
-                                        <field name="ultimo_cambio_fecha"
-                   readonly="1"
-                   optional="show"
-                   string="Último Cambio"/>
-                                        <field name="ultimo_cambio_contometro"
-                   readonly="1"
-                   optional="show"
-                   string="Cont. Anterior"/>
-                                        <field name="meses_desde_ultimo_cambio"
-                   readonly="1"
-                   optional="show"
-                   string="Meses"/>
-                                        <!-- ================= SNAPSHOT ================= -->
-                                        <field name="contometro_actual_snapshot"
-                   readonly="1"
-                   optional="hide"
-                   string="Cont. Actual (aprobación)"/>
-                                        <field name="contometro_anterior_snapshot"
-                   readonly="1"
-                   optional="hide"
-                   string="Cont. Anterior (aprobación)"/>
-                                        <field name="copias_snapshot"
-                   readonly="1"
-                   optional="hide"
-                   string="Copias (aprobación)"/>
-                                        <field name="meses_snapshot"
-                   readonly="1"
-                   optional="hide"
-                   string="Meses (aprobación)"/>
-                                    </list>
-                                </field>
-                            </page>
-                            <!-- Pestaña observaciones -->
-                            <page string="📝 Observaciones">
-                                <group>
-                                    <field name="observaciones"
-                                           nolabel="1"
-                                           placeholder="Observaciones generales..."/>
-                                    <field name="nota_logistica"
-                                           invisible="not nota_logistica"
-                                           string="Nota Logística"
-                                           readonly="1"/>
-                                </group>
-                            </page>
-                            <!-- Pestaña técnica — token y trazabilidad -->
-                            <page string="🔐 Trazabilidad"
-                                  groups="base.group_system">
-                                <group>
-                                    <group string="Acceso portal">
-                                        <field name="token" readonly="1"/>
-                                        <field name="fecha_envio_gerencia" readonly="1"/>
-                                    </group>
-                                    <group string="Instalación">
-                                        <field name="ticket_instalacion_id" readonly="1"/>
-                                        <field name="fecha_instalacion" readonly="1"/>
-                                    </group>
-                                </group>
-                            </page>
-                        </notebook>
-                    </sheet>
-                    <chatter/>
-                </form>
-            </field>
-        </record>
+                    </page>
+                </notebook>
+            </sheet>
+            <chatter/>
+        </form>
+    </field>
+</record>
+<record id="view_wizard_rechazar_pedido_form" model="ir.ui.view">
+    <field name="name">wizard.rechazar.pedido.form</field>
+    <field name="model">wizard.rechazar.pedido</field>
+    <field name="arch" type="xml">
+        <form string="Rechazar Pedido">
+            <sheet>
+                <div class="alert alert-danger" role="alert">
+                    <i class="fa fa-exclamation-triangle me-2"/>
+                    <strong>Atención:</strong>
+                    El técnico será notificado por correo con el motivo del rechazo.
+                </div>
+                <group>
+                    <field name="pedido_id" readonly="1"/>
+                    <field name="motivo"
+                           required="1"
+                           placeholder="Describa el motivo del rechazo..."/>
+                </group>
+            </sheet>
+            <footer>
+                <button string="❌ Confirmar Rechazo"
+                        name="action_confirmar"
+                        type="object"
+                        class="btn-danger"
+                        confirm="¿Confirmar el rechazo? El técnico será notificado por correo."/>
+                <button string="Cancelar"
+                        class="btn-secondary"
+                        special="cancel"/>
+            </footer>
+        </form>
+    </field>
+</record>
         <!-- ================================================= -->
         <!-- ticket.repuesto.pedido — LIST (actualizado)        -->
         <!-- ================================================= -->

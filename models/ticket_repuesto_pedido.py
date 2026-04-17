@@ -231,32 +231,86 @@ class TicketRepuestoPedido(models.Model):
 
     def _guardar_snapshot_lineas(self):
         self.ensure_one()
+    
         def _to_int(val):
-            if not val: return 0
+            if not val:
+                return 0
             digits = re.sub(r'[^\d]', '', str(val))
             return int(digits) if digits else 0
+    
         es_color = (self.equipo_id.tipo_maquina_id == 'color')
         k = _to_int(self.contometro_k)
         c = _to_int(self.contometro_color)
-        _logger.info("[_guardar_snapshot_lineas] pedido=%s | K=%s | C=%s | es_color=%s", self.name, k, c, es_color)
+    
+        _logger.info(
+            "[_guardar_snapshot_lineas] pedido=%s | K=%s | C=%s | es_color=%s",
+            self.name, k, c, es_color
+        )
+    
         for linea in self.linea_ids:
-            if linea.color_id: cont_actual = self.contometro_color or '0'
-            elif es_color: cont_actual = str(k + c) if (k + c) > 0 else '0'
-            else: cont_actual = self.contometro_k or '0'
-            domain = [('equipo_id', '=', self.equipo_id.id), ('subparte_id', '=', linea.subparte_id.id), ('pedido_id', '!=', self.id)]
-            if linea.color_id: domain.append(('color_id', '=', linea.color_id.id))
-            else: domain.append(('color_id', '=', False))
-            ultimo = self.env['ticket.repuesto.historial'].sudo().search(domain, order='fecha_cambio desc', limit=1)
+            # Contómetro actual según tipo de componente
+            if linea.color_id:
+                cont_actual = self.contometro_color or '0'
+            elif es_color:
+                cont_actual = str(k + c) if (k + c) > 0 else '0'
+            else:
+                cont_actual = self.contometro_k or '0'
+    
+            # Líneas libres (sin subparte_id) no tienen historial — solo guardar actual
+            if not linea.subparte_id:
+                _logger.info(
+                    "[snapshot] linea libre '%s' sin subparte — "
+                    "solo guarda cont_actual=%s",
+                    linea.nombre_libre or '?', cont_actual
+                )
+                linea.write({
+                    'contometro_actual_snapshot':   cont_actual,
+                    'contometro_anterior_snapshot': '',
+                    'copias_snapshot':              0,
+                    'meses_snapshot':               0,
+                })
+                continue
+    
+            # Buscar historial anterior excluyendo este pedido
+            domain = [
+                ('equipo_id',   '=', self.equipo_id.id),
+                ('subparte_id', '=', linea.subparte_id.id),
+                ('pedido_id',   '!=', self.id),
+            ]
+            if linea.color_id:
+                domain.append(('color_id', '=', linea.color_id.id))
+            else:
+                domain.append(('color_id', '=', False))
+    
+            ultimo = self.env['ticket.repuesto.historial'].sudo().search(
+                domain, order='fecha_cambio desc', limit=1
+            )
+    
             cont_anterior = ultimo.contometro_cambio if ultimo else ''
-            meses = copias = 0
+            meses  = 0
+            copias = 0
+    
             if ultimo and ultimo.fecha_cambio:
-                diff = relativedelta(datetime.now(), ultimo.fecha_cambio)
+                diff  = relativedelta(datetime.now(), ultimo.fecha_cambio)
                 meses = diff.months + (diff.years * 12)
+    
             if cont_anterior:
                 copias = max(0, _to_int(cont_actual) - _to_int(cont_anterior))
-            linea.write({'contometro_actual_snapshot': cont_actual, 'contometro_anterior_snapshot': cont_anterior, 'copias_snapshot': copias, 'meses_snapshot': meses})
-            _logger.info("[snapshot] linea=%s | color=%s | actual=%s | anterior=%s | copias=%s | meses=%s", linea.subparte_id.name, linea.color_id.name if linea.color_id else 'B/N', cont_actual, cont_anterior, copias, meses)
-
+    
+            linea.write({
+                'contometro_actual_snapshot':   cont_actual,
+                'contometro_anterior_snapshot': cont_anterior,
+                'copias_snapshot':              copias,
+                'meses_snapshot':               meses,
+            })
+    
+            _logger.info(
+                "[snapshot] linea=%s | color=%s | actual=%s | "
+                "anterior=%s | copias=%s | meses=%s",
+                linea.subparte_id.name,
+                linea.color_id.name if linea.color_id else 'B/N',
+                cont_actual, cont_anterior, copias, meses,
+            )
     # ============================================================
     # PASO 1 — enviar a Gerencia
     # ============================================================
@@ -315,18 +369,41 @@ class TicketRepuestoPedido(models.Model):
 
     def action_aprobar_gerencia(self, desde_token=False):
         self.ensure_one()
+    
         if self.estado not in ('esperando_gerencia', 'informe_recibido'):
-            raise UserError(_("No se puede aprobar desde estado: %s") % self.estado)
+            raise UserError(_(
+                "No se puede aprobar desde estado: %s"
+            ) % self.estado)
         if not self.linea_ids:
             raise UserError(_("El pedido no tiene líneas de repuestos."))
+    
         self._guardar_snapshot_lineas()
-        self.write({'estado': 'aprobado', 'fecha_aprobacion': fields.Datetime.now(), 'gerente_id': self.env.user.id if not desde_token else self.gerente_id.id})
+    
+        # Cuando se llama por token el usuario público no tiene ID válido
+        # Se deja gerente_id vacío — se puede completar desde Odoo si se necesita
+        gerente_id = False
+        if not desde_token:
+            gerente_id = self.env.user.id
+    
+        self.write({
+            'estado':           'aprobado',
+            'fecha_aprobacion': fields.Datetime.now(),
+            'gerente_id':       gerente_id,
+        })
+    
         self._correo_aprobado_comercial()
         self._correo_aprobado_logistica()
         self.write({'estado': 'stock_en_revision'})
-        self.message_post(body=_("✅ <b>Pedido aprobado por Gerencia</b><br/>Notificado a Comercial (%s) y Logística (%s)") % (EMAIL_COMERCIAL, EMAIL_LOGISTICA))
-        _logger.info("[action_aprobar_gerencia] pedido=%s | desde_token=%s", self.name, desde_token)
-
+    
+        self.message_post(body=_(
+            "✅ <b>Pedido aprobado por Gerencia</b><br/>"
+            "Notificado a Comercial (%s) y Logística (%s)"
+        ) % (EMAIL_COMERCIAL, EMAIL_LOGISTICA))
+    
+        _logger.info(
+            "[action_aprobar_gerencia] pedido=%s | desde_token=%s",
+            self.name, desde_token
+        )
     def _correo_aprobado_comercial(self):
         header = self._header_correo('✅ Pedido aprobado — Verificar stock', color='#059669')
         cuerpo = (
@@ -356,13 +433,27 @@ class TicketRepuestoPedido(models.Model):
 
     def action_solicitar_informe_comercial(self, desde_token=False):
         self.ensure_one()
+    
         if self.estado != 'esperando_gerencia':
-            raise UserError(_("Solo se puede solicitar informe desde 'Esperando Gerencia'."))
-        self.write({'estado': 'informe_solicitado', 'fecha_solicitud_informe': fields.Datetime.now()})
+            raise UserError(_(
+                "Solo se puede solicitar informe desde 'Esperando Gerencia'."
+            ))
+    
+        self.write({
+            'estado':                  'informe_solicitado',
+            'fecha_solicitud_informe': fields.Datetime.now(),
+        })
+    
         self._correo_informe_solicitado_comercial()
-        self.message_post(body=_("📋 <b>Informe solicitado a Comercial</b> (%s)") % EMAIL_COMERCIAL)
-        _logger.info("[action_solicitar_informe_comercial] pedido=%s | desde_token=%s", self.name, desde_token)
-
+    
+        self.message_post(body=_(
+            "📋 <b>Informe solicitado a Comercial</b> (%s)"
+        ) % EMAIL_COMERCIAL)
+    
+        _logger.info(
+            "[action_solicitar_informe_comercial] pedido=%s | desde_token=%s",
+            self.name, desde_token
+        )
     def _correo_informe_solicitado_comercial(self):
         header = self._header_correo('📋 Gerencia solicita informe técnico', color='#D97706')
         cuerpo = (
@@ -464,13 +555,50 @@ class TicketRepuestoPedido(models.Model):
 
     def action_rechazar_gerencia(self, motivo=None, desde_token=False):
         self.ensure_one()
+    
         if self.estado not in ('esperando_gerencia', 'informe_recibido'):
-            raise UserError(_("No se puede rechazar desde estado: %s") % self.estado)
-        self.write({'estado': 'rechazado', 'gerente_id': self.env.user.id if not desde_token else self.gerente_id.id, 'motivo_rechazo': motivo or _('Sin motivo especificado')})
+            raise UserError(_(
+                "No se puede rechazar desde estado: %s"
+            ) % self.estado)
+    
+        # Igual que en aprobar — usuario público no tiene ID válido
+        gerente_id = False
+        if not desde_token:
+            gerente_id = self.env.user.id
+    
+        self.write({
+            'estado':         'rechazado',
+            'gerente_id':     gerente_id,
+            'motivo_rechazo': motivo or _('Sin motivo especificado'),
+        })
+    
         self._correo_rechazado_tecnico()
-        self.message_post(body=_("❌ <b>Pedido rechazado</b><br/>Motivo: %s") % (motivo or '—'))
-        _logger.info("[action_rechazar_gerencia] pedido=%s | motivo=%s", self.name, motivo)
-
+    
+        self.message_post(body=_(
+            "❌ <b>Pedido rechazado</b><br/>Motivo: %s"
+        ) % (motivo or '—'))
+    
+        _logger.info(
+            "[action_rechazar_gerencia] pedido=%s | motivo=%s | desde_token=%s",
+            self.name, motivo, desde_token
+        )
+    def action_abrir_wizard_rechazo(self):
+        self.ensure_one()
+        if self.estado not in ('esperando_gerencia', 'informe_recibido'):
+            raise UserError(_(
+                "No se puede rechazar desde estado: %s"
+            ) % self.estado)
+        wizard = self.env['wizard.rechazar.pedido'].create({
+            'pedido_id': self.id,
+        })
+        return {
+            'type': 'ir.actions.act_window',
+            'name': f'Rechazar — {self.name}',
+            'res_model': 'wizard.rechazar.pedido',
+            'res_id': wizard.id,
+            'view_mode': 'form',
+            'target': 'new',
+        }
     def _correo_rechazado_tecnico(self):
         email_tecnico = self.tecnico_id.email or self.tecnico_id.partner_id.email or ''
         if not email_tecnico:

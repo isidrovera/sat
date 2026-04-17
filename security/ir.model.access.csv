@@ -257,3 +257,5 @@ access_ticket_repuesto_pedido_linea_user,ticket.repuesto.pedido.linea user,model
 access_ticket_repuesto_pedido_linea_admin,ticket.repuesto.pedido.linea admin,model_ticket_repuesto_pedido_linea,base.group_system,1,1,1,1
 access_ticket_repuesto_historial_user,ticket.repuesto.historial user,model_ticket_repuesto_historial,base.group_user,1,1,1,0
 access_ticket_repuesto_historial_admin,ticket.repuesto.historial admin,model_ticket_repuesto_historial,base.group_system,1,1,1,1
+access_wizard_rechazar_pedido_user,wizard.rechazar.pedido user,model_wizard_rechazar_pedido,base.group_user,1,1,1,0
+access_wizard_rechazar_pedido_admin,wizard.rechazar.pedido admin,model_wizard_rechazar_pedido,base.group_system,1,1,1,1
