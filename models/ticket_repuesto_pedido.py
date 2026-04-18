@@ -10,7 +10,7 @@ import uuid
 _logger = logging.getLogger(__name__)
 
 EMAIL_GERENCIA  = 'lincoln@corapsac.com'
-EMAIL_COMERCIAL = 'comercial01@andescopiers.com.pe'
+EMAIL_COMERCIAL = 'comercial01@andescopiers.com.pe, comercial@andescopiers.com.pe'
 EMAIL_LOGISTICA = 'logistica@corapsac.com'
 EMAIL_SOPORTE   = 'soporte@andescopiers.com.pe'
 
