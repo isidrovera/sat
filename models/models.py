@@ -691,6 +691,7 @@ class SatSat(models.Model):
             'alerta_proveedor_snmp_enviada',
             'last_snmp_counter_whatsapp',
             'last_snmp_whatsapp_at',
+            'location_change_token',  # ← FIX: evita re-entrada desde generate_location_change_token
         }
         if vals and set(vals.keys()).issubset(INTERNAL_ONLY_FIELDS):
             return super(SatSat, self).write(vals)
@@ -806,7 +807,7 @@ class SatSat(models.Model):
         # ---------------------------
         for record in self:
             # ---------------------------
-            # 🚚 NOTIFICACIÓN TRANSPORTISTAS (AQUÍ VA)
+            # 🚚 NOTIFICACIÓN TRANSPORTISTAS
             # ---------------------------
             try:
                 campos_relevantes = {'ubicacion_id', 'cliente_id', 'estado_ventas_id'}
@@ -823,7 +824,7 @@ class SatSat(models.Model):
                     _logger.info(f"[TRANSPORTE] Sin campos relevantes en vals, omitiendo notificación para ID {record.id}")
             except Exception as e:
                 _logger.error(f"[TRANSPORTE] Error enviando mensaje: {e}")
-            
+
             if need_problem_notification:
                 try:
                     record.enviar_mensaje_problema_asesora()
@@ -939,7 +940,7 @@ class SatSat(models.Model):
                                     record.notify_snmp_counter_update(
                                         previous_counter=prov_val,
                                         new_counter=new_val,
-                                        is_anomaly=True  # ✅ MARCAR COMO ANOMALÍA
+                                        is_anomaly=True
                                     )
                                 except Exception as e:
                                     _logger.error("[SNMP->MAIL] Error enviando correo proveedor vs SNMP: %s", e)
@@ -973,25 +974,24 @@ class SatSat(models.Model):
                         )
 
                         if not prov_alert_sent_this_cycle:
-                            # Evaluar si el cambio old->new es anómalo (SOLO incrementos)
                             is_anomaly = record._is_counter_anomaly(old_val, new_val)
-                            
+
                             _logger.error(
                                 "[SNMP DEBUG] _is_counter_anomaly(%s, %s) = %s",
                                 old_val, new_val, is_anomaly
                             )
-                            
+
                             if is_anomaly:
                                 _logger.error(
                                     "[SNMP ANOMALY] ✅ ENVIANDO correo técnico old->new: %s → %s | ID=%s",
                                     old_val, new_val, record.id
                                 )
-                                
+
                                 try:
                                     record.notify_snmp_counter_update(
                                         previous_counter=old_val,
                                         new_counter=new_val,
-                                        is_anomaly=True  # ✅ MARCAR COMO ANOMALÍA
+                                        is_anomaly=True
                                     )
                                     _logger.error("[SNMP ANOMALY] ✅ Correo enviado exitosamente")
                                 except Exception as e:
@@ -1032,9 +1032,6 @@ class SatSat(models.Model):
             # =========================================
             # ACTUALIZAR PRUEBA TÉCNICA DESDE SNMP
             # =========================================
-            # =========================================
-            # ACTUALIZAR PRUEBA TÉCNICA DESDE SNMP
-            # =========================================
             try:
                 Prueba = self.env['sat.prueba.maquina']
 
@@ -1047,8 +1044,6 @@ class SatSat(models.Model):
                         digits = re.sub(r'[^\d]', '', str(value or '0'))
                         return int(digits) if digits else 0
 
-                    # Leer counters y toner desde el context
-                    # (inyectados por _safe_update_counters del controller)
                     snmp_counters = self.env.context.get('snmp_counters') or {}
                     snmp_toner    = self.env.context.get('snmp_toner') or {}
 
@@ -1057,44 +1052,36 @@ class SatSat(models.Model):
                         'fecha_ultima_actualizacion': fields.Datetime.now(),
                     }
 
-                    # Contadores detallados (solo si llegaron en el payload)
                     if snmp_counters:
-                        # BN: intentar 'bw', luego 'print_bw', luego 'copy_bw'
                         bw = (snmp_counters.get('bw')
                             or snmp_counters.get('print_bw')
                             or snmp_counters.get('copy_bw'))
                         if bw is not None:
                             prueba_vals['contador_actual_bn'] = to_int(bw)
 
-                        # Color: intentar 'color', luego 'print_full_color'
                         color = (snmp_counters.get('color')
                                 or snmp_counters.get('print_full_color'))
                         if color is not None:
                             prueba_vals['contador_actual_color'] = to_int(color)
 
-                        # Impresiones
                         impresiones = (snmp_counters.get('print')
                                     or snmp_counters.get('print_total'))
                         if impresiones is not None:
                             prueba_vals['contador_impresiones'] = to_int(impresiones)
 
-                        # Copias
                         copias = (snmp_counters.get('copy')
                                 or snmp_counters.get('copy_total'))
                         if copias is not None:
                             prueba_vals['contador_copias'] = to_int(copias)
 
-                        # Scanner
                         scanner = snmp_counters.get('scan')
                         if scanner is not None:
                             prueba_vals['contador_scanner'] = to_int(scanner)
 
-                        # Duplex
                         duplex = snmp_counters.get('duplex')
                         if duplex is not None:
                             prueba_vals['contador_duplex'] = to_int(duplex)
 
-                    # Toner (solo si llegaron en el payload)
                     if snmp_toner:
                         negro = snmp_toner.get('black')
                         if negro is not None:
@@ -1127,12 +1114,8 @@ class SatSat(models.Model):
 
             except Exception as e:
                 _logger.error("[PRUEBA] Error actualizando desde SNMP: %s", e)
+
         return result
-    prueba_ids = fields.One2many(
-        'sat.prueba.maquina',
-        'maquina_id',
-        string='Pruebas técnicas'
-    )
     def _is_counter_anomaly(self, old_val, new_val):
         """
         Detecta si un cambio de contador es anómalo para RECLAMAR al proveedor.

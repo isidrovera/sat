@@ -278,19 +278,7 @@
                                     </list>
                                 </field>
                             </page>
-                            <page string="Productos">
-                                <field name="line_ids"
-                                       context="{'default_ticket_id': id}">
-                                    <list editable="bottom">
-                                        <field name="product_id"/>
-                                        <field name="product_uom_qty"/>
-                                        <field name="price_unit" optional="hide"/>
-                                        <field name="price_subtotal"
-                                               readonly="True"
-                                               optional="hide"/>
-                                    </list>
-                                </field>
-                            </page>
+                           
                             <page string="📍 Ubicación" name="ubicacion_ticket_page">
                                 <group invisible="not equipo_tiene_coordenadas">
                                     <group string="Dirección del equipo">
