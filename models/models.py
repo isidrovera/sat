@@ -1116,6 +1116,11 @@ class SatSat(models.Model):
                 _logger.error("[PRUEBA] Error actualizando desde SNMP: %s", e)
 
         return result
+    prueba_ids = fields.One2many(
+        'sat.prueba.maquina',
+        'maquina_id',
+        string='Pruebas técnicas'
+    )
     def _is_counter_anomaly(self, old_val, new_val):
         """
         Detecta si un cambio de contador es anómalo para RECLAMAR al proveedor.
