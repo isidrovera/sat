@@ -802,8 +802,7 @@ class TicketAlquiler(models.Model):
             errors = []
             if not ticket.contometrok_id:
                 errors.append("• Contador K es requerido")
-            if not ticket.contometros_id:
-                errors.append("• Contador S es requerido")
+            
             if ticket.tipo_id == 'color' and not ticket.contometroc_id:
                 errors.append("• Contador Color es requerido para equipos a color")
             if not ticket.informe_id:
@@ -1367,14 +1366,9 @@ class TicketAlquiler(models.Model):
                 if current_color == 0:
                     raise ValidationError(_("❗ El contómetro Color no puede ser 0."))
 
-            if previous_record and current_scanner < prev_scanner:
-                raise ValidationError(_(
-                    "❗ El contómetro Scanner debe ser igual o mayor al último registrado.\n"
-                    "Actual: %s | Anterior: %s | Ticket: %s"
-                ) % (f"{current_scanner:,}", f"{prev_scanner:,}", previous_record.name))
-
-            if current_k == 0 and current_scanner == 0:
-                raise ValidationError(_("❗ Los contómetros no pueden ser 0."))
+            
+            if current_k == 0:
+                raise ValidationError(_("❗ El contómetro K no puede ser 0."))
 
     @api.depends('agenda')
     def _compute_agenda_local(self):
