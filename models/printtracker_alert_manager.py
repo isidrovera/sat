@@ -10,6 +10,10 @@
 #   3. Para alertas ya existentes con resolutionStatus=Open, reenvía correo cada 3 horas.
 #   4. Cuando el event pasa a resolutionStatus=Closed, marca la alerta local como 'resuelta'.
 #   5. Procesa TODAS las alertas en estado 'nueva' (sin ventana de tiempo que pierda notificaciones).
+# ------------------------------------------------------------------------------------------------
+# COMPATIBILIDAD: Los campos revisar_* y sus contadores se MANTIENEN como legacy para que la
+# vista XML existente (printtracker_views.xml) siga cargando sin modificaciones. Ya no se usan
+# en la lógica, pero siguen existiendo en el modelo.
 # ================================================================================================
 
 from odoo import models, fields, api
@@ -32,7 +36,29 @@ class PrintTrackerAlertManager(models.TransientModel):
     _description = 'Gestor de Alertas PrintTracker (solo API events)'
 
     # ==========================================
-    # RESULTADOS DE EJECUCIÓN
+    # CAMPOS LEGACY (compatibilidad con vista XML existente)
+    # Ya no se usan en la lógica, pero se mantienen para que la vista XML siga cargando.
+    # ==========================================
+    revisar_suministros = fields.Boolean('Revisar Suministros (legacy)', default=False)
+    revisar_equipos_offline = fields.Boolean('Revisar Equipos Offline (legacy)', default=False)
+    revisar_uso_anomalo = fields.Boolean('Revisar Uso Anómalo (legacy)', default=False)
+    revisar_contadores_decrecen = fields.Boolean('Revisar Contadores (legacy)', default=False)
+    revisar_api_events = fields.Boolean('Revisar Events de API', default=True)
+
+    umbral_suministro_bajo = fields.Float('Umbral Suministro Bajo (legacy)', default=15.0)
+    umbral_suministro_critico = fields.Float('Umbral Suministro Crítico (legacy)', default=5.0)
+    dias_offline_alerta = fields.Integer('Días Offline Alerta (legacy)', default=3)
+    dias_offline_critico = fields.Integer('Días Offline Crítico (legacy)', default=7)
+
+    alertas_suministros = fields.Integer('Alertas Suministros (legacy)', readonly=True)
+    alertas_offline = fields.Integer('Alertas Offline (legacy)', readonly=True)
+    alertas_uso_anomalo = fields.Integer('Alertas Uso Anómalo (legacy)', readonly=True)
+    alertas_contadores = fields.Integer('Alertas Contadores (legacy)', readonly=True)
+    alertas_api_events = fields.Integer('Alertas API Events', readonly=True)
+    ultimo_event_procesado = fields.Char('Último Event ID Procesado', readonly=True)
+
+    # ==========================================
+    # RESULTADOS DE EJECUCIÓN (nuevos)
     # ==========================================
     alertas_nuevas = fields.Integer('Alertas Nuevas', readonly=True)
     alertas_reenviadas = fields.Integer('Alertas Reenviadas', readonly=True)
@@ -86,7 +112,7 @@ class PrintTrackerAlertManager(models.TransientModel):
     # EJECUTAR REVISIÓN COMPLETA
     # ==========================================
     def ejecutar_revision_completa(self):
-        """Ejecuta las 3 fases: detección, auto-cierre, reenvíos."""
+        """Ejecuta las 4 fases: detección, auto-cierre, reenvíos, huérfanas."""
         try:
             inicio = datetime.now()
             log_lines = [
@@ -101,6 +127,10 @@ class PrintTrackerAlertManager(models.TransientModel):
             res_detect = self._detectar_y_crear_alertas()
             log_lines.extend(res_detect['log'])
             self.alertas_nuevas = res_detect['alertas_nuevas']
+            # Mantener compatibilidad con el campo legacy
+            self.alertas_api_events = res_detect['alertas_nuevas']
+            if res_detect.get('ultimo_event_id'):
+                self.ultimo_event_procesado = res_detect['ultimo_event_id']
             log_lines.append("")
 
             # FASE 2: Auto-cerrar alertas cuyo event ya fue resuelto en PrintTracker
@@ -165,16 +195,27 @@ class PrintTrackerAlertManager(models.TransientModel):
             log_lines = []
             alertas_nuevas = 0
             notificaciones = 0
+            ultimo_event_id = None
 
             api_config = self._get_printtracker_api_config()
             if not api_config:
                 log_lines.append("❌ Config API no encontrada")
-                return {'alertas_nuevas': 0, 'notificaciones': 0, 'log': log_lines}
+                return {
+                    'alertas_nuevas': 0,
+                    'notificaciones': 0,
+                    'log': log_lines,
+                    'ultimo_event_id': None,
+                }
 
             series_ok = self._get_series_alquilados()
             if not series_ok:
                 log_lines.append("ℹ️ Sin equipos alquilados")
-                return {'alertas_nuevas': 0, 'notificaciones': 0, 'log': log_lines}
+                return {
+                    'alertas_nuevas': 0,
+                    'notificaciones': 0,
+                    'log': log_lines,
+                    'ultimo_event_id': None,
+                }
 
             log_lines.append(f"📋 Equipos alquilados monitoreados: {len(series_ok)}")
 
@@ -184,13 +225,20 @@ class PrintTrackerAlertManager(models.TransientModel):
 
             if not events:
                 log_lines.append("ℹ️ Sin events en la ventana consultada")
-                return {'alertas_nuevas': 0, 'notificaciones': 0, 'log': log_lines}
+                return {
+                    'alertas_nuevas': 0,
+                    'notificaciones': 0,
+                    'log': log_lines,
+                    'ultimo_event_id': None,
+                }
 
             # Filtrar solo equipos alquilados
             relevantes = [e for e in events if e.get('deviceSerialNumber', '') in series_ok]
             ignorados = len(events) - len(relevantes)
 
-            log_lines.append(f"📋 {len(relevantes)} events relevantes ({ignorados} de equipos no alquilados)")
+            log_lines.append(
+                f"📋 {len(relevantes)} events relevantes ({ignorados} de equipos no alquilados)"
+            )
 
             for event in relevantes:
                 try:
@@ -199,13 +247,15 @@ class PrintTrackerAlertManager(models.TransientModel):
                     desc = (event.get('description', 'N/A'))[:80]
 
                     # Dedup: si ya existe alerta para este event_id, omitir
-                    # (la actualización de estado se hace en fase 2 y 3)
                     if self._event_ya_procesado(eid):
                         continue
 
-                    alerta = self.env['printtracker.alert'].crear_alerta_desde_api_event(event, serial)
+                    alerta = self.env['printtracker.alert'].crear_alerta_desde_api_event(
+                        event, serial
+                    )
                     if alerta:
                         alertas_nuevas += 1
+                        ultimo_event_id = eid
                         log_lines.append(f"🆕 {serial}: {desc}")
 
                         # Enviar correo INMEDIATO para toda alerta nueva
@@ -217,24 +267,32 @@ class PrintTrackerAlertManager(models.TransientModel):
                     log_lines.append(f"❌ Event {event.get('id', '?')}: {e}")
                     self.errores_encontrados = (self.errores_encontrados or 0) + 1
 
-            log_lines.append(f"✅ {alertas_nuevas} alertas nuevas, {notificaciones} correos inmediatos")
+            log_lines.append(
+                f"✅ {alertas_nuevas} alertas nuevas, {notificaciones} correos inmediatos"
+            )
             return {
                 'alertas_nuevas': alertas_nuevas,
                 'notificaciones': notificaciones,
                 'log': log_lines,
+                'ultimo_event_id': ultimo_event_id,
             }
 
         except Exception as e:
             _logger.error(f"❌ Error detección: {e}\n{traceback.format_exc()}")
-            return {'alertas_nuevas': 0, 'notificaciones': 0, 'log': [f"❌ {e}"]}
+            return {
+                'alertas_nuevas': 0,
+                'notificaciones': 0,
+                'log': [f"❌ {e}"],
+                'ultimo_event_id': None,
+            }
 
     # ==========================================
     # FASE 2: AUTO-CERRAR ALERTAS RESUELTAS EN PRINTTRACKER
     # ==========================================
     def _auto_cerrar_alertas_resueltas(self):
         """
-        Consulta events con resolutionStatus=Closed en la ventana y cierra las alertas locales.
-        Así refleja el estado actual de PrintTracker sin intervención manual.
+        Consulta events con resolutionStatus=Closed y cierra las alertas locales.
+        Refleja el estado actual de PrintTracker sin intervención manual.
         """
         try:
             log_lines = []
@@ -282,7 +340,9 @@ class PrintTrackerAlertManager(models.TransientModel):
                             'notas_resolucion': 'Auto-cerrada: event resuelto en PrintTracker',
                         })
                         cerradas += 1
-                        log_lines.append(f"✅ Cerrada: {alerta.serie_equipo} (event {alerta.api_event_id})")
+                        log_lines.append(
+                            f"✅ Cerrada: {alerta.serie_equipo} (event {alerta.api_event_id})"
+                        )
                 except Exception as e:
                     log_lines.append(f"❌ Error cerrando {alerta.display_name}: {e}")
                     self.errores_encontrados = (self.errores_encontrados or 0) + 1
@@ -318,10 +378,14 @@ class PrintTrackerAlertManager(models.TransientModel):
             ])
 
             if not alertas:
-                log_lines.append(f"ℹ️ Sin alertas pendientes de reenvío (umbral {HORAS_REENVIO}h)")
+                log_lines.append(
+                    f"ℹ️ Sin alertas pendientes de reenvío (umbral {HORAS_REENVIO}h)"
+                )
                 return {'reenviadas': 0, 'log': log_lines}
 
-            log_lines.append(f"📧 {len(alertas)} alertas a reenviar (>= {HORAS_REENVIO}h sin envío)")
+            log_lines.append(
+                f"📧 {len(alertas)} alertas a reenviar (>= {HORAS_REENVIO}h sin envío)"
+            )
 
             for alerta in alertas:
                 try:
@@ -452,7 +516,10 @@ class PrintTrackerAlertManager(models.TransientModel):
             if resolution_status:
                 params['resolutionStatus'] = resolution_status
 
-            _logger.info(f"🌐 API events: {url} desde {params['start']} (status={resolution_status or 'todos'})")
+            _logger.info(
+                f"🌐 API events: {url} desde {params['start']} "
+                f"(status={resolution_status or 'todos'})"
+            )
             resp = requests.get(url, headers=headers, params=params, timeout=cfg['timeout'])
 
             if resp.status_code == 200:
@@ -460,7 +527,10 @@ class PrintTrackerAlertManager(models.TransientModel):
                 events = data if isinstance(data, list) else []
 
                 if solo_nuevos:
-                    events = [e for e in events if e.get('id') and not self._event_ya_procesado(e['id'])]
+                    events = [
+                        e for e in events
+                        if e.get('id') and not self._event_ya_procesado(e['id'])
+                    ]
 
                 _logger.info(f"📋 {len(events)} events (status={resolution_status or 'todos'})")
                 return events
