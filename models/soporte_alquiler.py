@@ -347,7 +347,12 @@ class TicketAlquiler(models.Model):
         )
     
     def _seed_evaluaciones_ticket(self):
-        """Carga automáticamente componentes y accesorios desde el catálogo del modelo."""
+        """Carga automáticamente componentes y accesorios desde el catálogo del modelo.
+        
+        Para accesorios: si existe un ticket anterior del mismo equipo, copia los valores
+        (estado_id y observaciones) de esa evaluación previa. Si es un accesorio nuevo
+        o no hay ticket anterior, usa los valores predeterminados del catálogo.
+        """
         self.ensure_one()
 
         if not self.product_alquiler or not self.product_alquiler.name:
@@ -398,31 +403,78 @@ class TicketAlquiler(models.Model):
 
         _logger.info("[_seed_evaluaciones_ticket] %s componentes creados para ticket %s", componentes_creados, self.id)
 
+        # ============================================================
         # ---- ACCESORIOS ----
+        # Si existe ticket anterior del mismo equipo con evaluaciones,
+        # copiar valores de ese ticket. Si no, usar valores del catálogo.
+        # ============================================================
+        AccEval = self.env['ticket.accesorio.evaluacion']
+
+        ticket_anterior = self.search([
+            ('product_alquiler', '=', self.product_alquiler.id),
+            ('id', '!=', self.id),
+            ('ticket_accesorio_eval_ids', '!=', False),
+        ], order='id desc', limit=1)
+
+        # Construir diccionario {tipo_id: (estado_id, observaciones)}
+        valores_anteriores = {}
+        if ticket_anterior:
+            _logger.info(
+                "[_seed_evaluaciones_ticket] Ticket anterior encontrado: %s (id=%s) — copiando accesorios",
+                ticket_anterior.name, ticket_anterior.id
+            )
+            for ev in ticket_anterior.ticket_accesorio_eval_ids:
+                if ev.tipo_id:
+                    valores_anteriores[ev.tipo_id.id] = (
+                        ev.estado_id.id if ev.estado_id else False,
+                        ev.observaciones or '',
+                    )
+            _logger.info(
+                "[_seed_evaluaciones_ticket] Se copiarán %s accesorios del ticket anterior",
+                len(valores_anteriores)
+            )
+        else:
+            _logger.info(
+                "[_seed_evaluaciones_ticket] No hay ticket anterior para equipo id=%s — usando valores del catálogo",
+                self.product_alquiler.id
+            )
+
         accesorios_modelo = self.env['modelo.maquina.accesorio'].search([
             ('modelo_id', '=', modelo.id)
         ])
 
-        AccEval = self.env['ticket.accesorio.evaluacion']
         accesorios_creados = 0
 
         for acc_line in accesorios_modelo:
             if AccEval.search([('ticket_id', '=', self.id), ('tipo_id', '=', acc_line.tipo_id.id)], limit=1):
                 continue
+
+            # Decidir origen de valores: ticket anterior o catálogo
+            if acc_line.tipo_id.id in valores_anteriores:
+                estado_id, observaciones = valores_anteriores[acc_line.tipo_id.id]
+                origen = "ticket anterior"
+            else:
+                estado_id = acc_line.estado_predeterminado_id.id if acc_line.estado_predeterminado_id else False
+                observaciones = acc_line.nota or ''
+                origen = "catálogo (accesorio nuevo o sin historial)"
+
             try:
                 AccEval.create({
                     'ticket_id': self.id,
                     'tipo_id': acc_line.tipo_id.id,
-                    'estado_id': acc_line.estado_predeterminado_id.id if acc_line.estado_predeterminado_id else False,
-                    'observaciones': acc_line.nota or '',
+                    'estado_id': estado_id,
+                    'observaciones': observaciones,
                 })
                 accesorios_creados += 1
+                _logger.info(
+                    "[_seed_evaluaciones_ticket] Accesorio '%s' creado desde %s (estado_id=%s)",
+                    acc_line.tipo_id.name, origen, estado_id
+                )
             except Exception as e:
                 _logger.error("[_seed_evaluaciones_ticket] Error creando accesorio %s: %s", acc_line.tipo_id.name, e)
 
         _logger.info("[_seed_evaluaciones_ticket] %s accesorios creados para ticket %s", accesorios_creados, self.id)
         _logger.info("[_seed_evaluaciones_ticket] Total: %s evaluaciones para ticket %s", componentes_creados + accesorios_creados, self.id)
-
     # ============================================================
     # DETECCIÓN DE PENDIENTES PARA WIZARD
     # ============================================================
