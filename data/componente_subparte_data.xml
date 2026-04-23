@@ -47,6 +47,11 @@
     <field name="code">UI_GEARS</field>
     <field name="tipo_id" ref="comp_tipo_ui"/>
   </record>
+  <record id="sub_ui_pcr_application_blade" model="componente.subparte">
+    <field name="name">Cuchilla de aplicación (PCR)</field>
+    <field name="code">UI_PCR_APPLICATION_BLADE</field>
+    <field name="tipo_id" ref="comp_tipo_ui"/>
+</record>
   <!-- Chips por color -->
   <record id="sub_ui_chip" model="componente.subparte">
     <field name="name">Chip IU</field>
