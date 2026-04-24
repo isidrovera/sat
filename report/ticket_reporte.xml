@@ -440,5 +440,328 @@
             </t>
         </template>
 
+        <template id="report_ticket_repuesto_pedido">
+    <t t-name="sat.report_ticket_repuesto_pedido">
+
+        <t t-foreach="docs" t-as="o">
+
+        <style>
+            @page {
+                size: A4 landscape;
+                margin: 8mm;
+            }
+
+            body {
+                font-family: Arial, sans-serif;
+                font-size: 10px;
+                color: #1f2d3d;
+            }
+
+            .page {
+                width: 100%;
+            }
+
+            /* HEADER */
+            .header {
+                display: flex;
+                justify-content: space-between;
+                border-bottom: 3px solid #1B3A6B;
+                padding-bottom: 6px;
+                margin-bottom: 10px;
+            }
+
+            .title {
+                font-size: 14px;
+                font-weight: bold;
+                color: #1B3A6B;
+            }
+
+            .doc-number {
+                font-size: 16px;
+                font-weight: bold;
+                font-family: monospace;
+            }
+
+            /* ESTADO */
+            .estado {
+                background: #f9fafb;
+                border-left: 4px solid #059669;
+                padding: 6px 10px;
+                margin-bottom: 10px;
+            }
+
+            /* GRID */
+            .grid {
+                display: table;
+                width: 100%;
+                margin-bottom: 10px;
+            }
+
+            .col {
+                display: table-cell;
+                width: 25%;
+                padding: 4px;
+            }
+
+            .box {
+                border: 1px solid #e5e7eb;
+                padding: 6px 8px;
+                border-radius: 3px;
+            }
+
+            /* TABLA */
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-bottom: 10px;
+            }
+
+            th {
+                background: #1B3A6B;
+                color: #fff;
+                font-size: 9px;
+                padding: 5px;
+                text-transform: uppercase;
+            }
+
+            td {
+                border: 1px solid #e5e7eb;
+                padding: 4px;
+                font-size: 9px;
+            }
+
+            .num {
+                text-align: right;
+                font-family: monospace;
+            }
+
+            .center {
+                text-align: center;
+            }
+
+            /* BADGES */
+            .badge {
+                padding: 2px 6px;
+                border-radius: 8px;
+                color: white;
+                font-size: 8px;
+                font-weight: bold;
+            }
+
+            .black { background: #374151; }
+            .cyan { background: #0891b2; }
+            .magenta { background: #db2777; }
+            .yellow { background: #d97706; }
+            .bn { background: #6b7280; }
+
+            /* DIFERENCIAS */
+            .pos { color: #059669; font-weight: bold; }
+            .neg { color: #DC2626; font-weight: bold; }
+            .muted { color: #9ca3af; font-style: italic; }
+
+            /* FOOTER */
+            .footer {
+                border-top: 1px solid #e5e7eb;
+                padding-top: 6px;
+                font-size: 8px;
+                color: #9ca3af;
+                display: flex;
+                justify-content: space-between;
+            }
+
+            thead { display: table-header-group; }
+            tr { page-break-inside: avoid; }
+
+        </style>
+
+        <div class="page">
+
+            <!-- HEADER -->
+            <div class="header">
+                <div>
+                    <div class="title">ANDES COPIERS SAC</div>
+                    <div>Sistema SAT — Pedido de Repuestos</div>
+                </div>
+                <div style="text-align:right;">
+                    <div class="title">PEDIDO</div>
+                    <div class="doc-number">
+                        <t t-esc="o.name"/>
+                    </div>
+                    <div>
+                        <t t-esc="o.fecha.strftime('%d/%m/%Y') if o.fecha else ''"/>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ESTADO -->
+            <div class="estado">
+                Estado: <b><t t-esc="o.estado"/></b><br/>
+                Aprobado por:
+                <t t-esc="o.aprobado_por.name if o.aprobado_por else '-'"/>
+            </div>
+
+            <!-- CONTADORES -->
+            <div class="grid">
+                <div class="col">
+                    <div class="box">
+                        K (B/N)<br/>
+                        <b><t t-esc="o.contometro_k"/></b>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="box">
+                        Color<br/>
+                        <b><t t-esc="o.contometro_color or '—'"/></b>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="box">
+                        Total líneas<br/>
+                        <b><t t-esc="o.total_lineas"/></b>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="box">
+                        Técnico<br/>
+                        <b><t t-esc="o.tecnico_id.name"/></b>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CLIENTE / EQUIPO -->
+            <div class="grid">
+                <div class="col">
+                    <div class="box">
+                        Cliente: <t t-esc="o.cliente_id.name"/><br/>
+                        Dirección: <t t-esc="o.cliente_id.street or ''"/>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="box">
+                        Modelo: <t t-esc="o.modelo_nombre"/><br/>
+                        Serie: <t t-esc="o.serie"/>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TABLA -->
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Componente</th>
+                        <th>Subparte</th>
+                        <th>Color</th>
+                        <th>Cant</th>
+                        <th>Actual</th>
+                        <th>Anterior</th>
+                        <th>Diferencia</th>
+                        <th>Fecha</th>
+                        <th>Meses</th>
+                        <th>Obs</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    <t t-foreach="o.linea_ids" t-as="l" t-index="i">
+
+                        <t t-set="actual" t-value="int((l.contometro_actual_linea or '0').replace(',', ''))"/>
+                        <t t-set="anterior" t-value="int((l.ultimo_cambio_contometro or '0').replace(',', ''))"/>
+                        <t t-set="diff" t-value="actual - anterior"/>
+
+                        <tr>
+                            <td class="center"><t t-esc="i+1"/></td>
+
+                            <td><t t-esc="l.componente_display"/></td>
+
+                            <td>
+                                <t t-esc="l.subparte_id.name or l.nombre_libre"/>
+                            </td>
+
+                            <td class="center">
+                                <span class="badge"
+                                    t-att-class="
+                                        'badge ' +
+                                        ('black' if l.color_id.name == 'Black' else
+                                         'cyan' if l.color_id.name == 'Cyan' else
+                                         'magenta' if l.color_id.name == 'Magenta' else
+                                         'yellow' if l.color_id.name == 'Yellow' else
+                                         'bn')">
+                                    <t t-esc="l.color_id.name or 'B/N'"/>
+                                </span>
+                            </td>
+
+                            <td class="center">
+                                <t t-esc="int(l.cantidad)"/>
+                            </td>
+
+                            <td class="num">
+                                <t t-esc="l.contometro_actual_linea or '0'"/>
+                            </td>
+
+                            <td class="num">
+                                <t t-if="l.ultimo_cambio_contometro">
+                                    <t t-esc="l.ultimo_cambio_contometro"/>
+                                </t>
+                                <t t-else="">
+                                    <span class="muted">—</span>
+                                </t>
+                            </td>
+
+                            <td class="num">
+                                <t t-if="l.ultimo_cambio_contometro">
+                                    <span t-att-class="'pos' if diff >= 0 else 'neg'">
+                                        <t t-esc="diff"/>
+                                    </span>
+                                </t>
+                                <t t-else="">
+                                    <span class="muted">Primer cambio</span>
+                                </t>
+                            </td>
+
+                            <td class="center">
+                                <t t-if="l.ultimo_cambio_fecha">
+                                    <t t-esc="l.ultimo_cambio_fecha.strftime('%d/%m/%Y')"/>
+                                </t>
+                                <t t-else="">
+                                    <span class="muted">—</span>
+                                </t>
+                            </td>
+
+                            <td class="center">
+                                <t t-if="l.meses_desde_ultimo_cambio">
+                                    <t t-esc="l.meses_desde_ultimo_cambio"/>m
+                                </t>
+                                <t t-else="">
+                                    <span class="muted">—</span>
+                                </t>
+                            </td>
+
+                            <td>
+                                <t t-esc="l.observacion or ''"/>
+                            </td>
+
+                        </tr>
+
+                    </t>
+                </tbody>
+            </table>
+
+            <!-- FOOTER -->
+            <div class="footer">
+                <div>
+                    Andes Copiers SAC
+                </div>
+                <div>
+                    Pedido: <t t-esc="o.name"/>
+                </div>
+            </div>
+
+        </div>
+
+        </t>
+    </t>
+</template>
+
     </data>
 </odoo>
