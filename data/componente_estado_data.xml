@@ -171,6 +171,81 @@
       <!-- Alta -->
       <field name="descripcion">Tóner agotado - requiere cambio inmediato</field>
     </record>
+    <!-- ====================================== -->
+    <!-- ESTADOS ADICIONALES PARA TÓNER (granularidad 10%) -->
+    <!-- ====================================== -->
+    <record id="estado_toner_90" model="componente.estado">
+      <field name="name">Tóner 90%</field>
+      <field name="code">toner_90</field>
+      <field name="color">10</field>
+      <!-- Verde - Saludable -->
+      <field name="prioridad">3</field>
+      <!-- Baja -->
+      <field name="descripcion">Tóner con aproximadamente 90% de capacidad restante</field>
+    </record>
+    <record id="estado_toner_80" model="componente.estado">
+      <field name="name">Tóner 80%</field>
+      <field name="code">toner_80</field>
+      <field name="color">10</field>
+      <!-- Verde - Saludable -->
+      <field name="prioridad">3</field>
+      <!-- Baja -->
+      <field name="descripcion">Tóner con aproximadamente 80% de capacidad restante</field>
+    </record>
+    <record id="estado_toner_70" model="componente.estado">
+      <field name="name">Tóner 70%</field>
+      <field name="code">toner_70</field>
+      <field name="color">10</field>
+      <!-- Verde - Saludable -->
+      <field name="prioridad">3</field>
+      <!-- Baja -->
+      <field name="descripcion">Tóner con aproximadamente 70% de capacidad restante</field>
+    </record>
+    <record id="estado_toner_60" model="componente.estado">
+      <field name="name">Tóner 60%</field>
+      <field name="code">toner_60</field>
+      <field name="color">4</field>
+      <!-- Amarillo - En uso normal -->
+      <field name="prioridad">3</field>
+      <!-- Baja -->
+      <field name="descripcion">Tóner con aproximadamente 60% de capacidad restante</field>
+    </record>
+    <record id="estado_toner_40" model="componente.estado">
+      <field name="name">Tóner 40%</field>
+      <field name="code">toner_40</field>
+      <field name="color">3</field>
+      <!-- Naranja - Preparar reemplazo -->
+      <field name="prioridad">2</field>
+      <!-- Media -->
+      <field name="descripcion">Tóner con aproximadamente 40% - considerar reemplazo próximo</field>
+    </record>
+    <record id="estado_toner_30" model="componente.estado">
+      <field name="name">Tóner 30%</field>
+      <field name="code">toner_30</field>
+      <field name="color">3</field>
+      <!-- Naranja - Preparar reemplazo -->
+      <field name="prioridad">2</field>
+      <!-- Media -->
+      <field name="descripcion">Tóner con aproximadamente 30% - preparar reemplazo</field>
+    </record>
+    <record id="estado_toner_20" model="componente.estado">
+      <field name="name">Tóner 20%</field>
+      <field name="code">toner_20</field>
+      <field name="color">3</field>
+      <!-- Naranja - Reemplazo próximo urgente -->
+      <field name="prioridad">1</field>
+      <!-- Alta -->
+      <field name="descripcion">Tóner bajo al 20% - reemplazo próximo urgente</field>
+    </record>
+    <record id="estado_toner_10" model="componente.estado">
+      <field name="name">Tóner 10%</field>
+      <field name="code">toner_10</field>
+      <field name="color">3</field>
+      <!-- Naranja - Reemplazo próximo urgente -->
+      <field name="prioridad">1</field>
+      <!-- Alta -->
+      <field name="descripcion">Tóner crítico al 10% - reemplazar de inmediato</field>
+    </record>
     <record id="estado_toner_sin_contenedor" model="componente.estado">
       <field name="name">Sin contenedor de tóner</field>
       <field name="code">toner_sin_contenedor</field>

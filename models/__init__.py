@@ -98,3 +98,4 @@ from . import ticket_repuesto_historial
 from . import ticket_repuesto_pedido
 from . import ticket_subpartes_wizard
 from . import wizard_rechazar_pedido
+from . import ticket_repuesto_pedido_recordatorios
