@@ -440,7 +440,7 @@
             </t>
         </template>
 
-            <template id="report_ticket_repuesto_pedido">
+             <template id="report_ticket_repuesto_pedido">
         <t t-name="sat.report_ticket_repuesto_pedido">
             <t t-call="web.basic_layout">
  
@@ -805,6 +805,8 @@
                 }"/>
  
                 <t t-foreach="docs" t-as="o">
+ 
+                    <!-- Compañía desde el entorno: el modelo ticket.repuesto.pedido no tiene company_id -->
                     <t t-set="company" t-value="o.env.company"/>
  
                     <t t-set="est_label" t-value="estado_map.get(o.estado, (o.estado, ''))[0]"/>
@@ -819,17 +821,17 @@
                         <!-- HEADER -->
                         <div class="sat-header">
                             <div class="sat-header-left">
-                                <t t-if="o.company_id and o.company_id.logo">
-                                    <img class="sat-logo" t-att-src="image_data_uri(o.company_id.logo)"/>
+                                <t t-if="company and company.logo">
+                                    <img class="sat-logo" t-att-src="image_data_uri(company.logo)"/>
                                 </t>
                                 <div>
                                     <p class="sat-company-name">
-                                        <t t-esc="o.company_id.name or ''"/>
+                                        <t t-esc="company.name or ''"/>
                                     </p>
                                     <p class="sat-company-sub">
                                         Sistema de Atención Técnica (SAT) — Gestión de Repuestos
-                                        <t t-if="o.company_id and o.company_id.vat">
-                                            — RUC <t t-esc="o.company_id.vat"/>
+                                        <t t-if="company and company.vat">
+                                            — RUC <t t-esc="company.vat"/>
                                         </t>
                                     </p>
                                 </div>
@@ -1194,12 +1196,12 @@
                         <!-- FOOTER -->
                         <div class="sat-footer">
                             <div>
-                                <t t-esc="o.company_id.name or ''"/>
-                                <t t-if="o.company_id and o.company_id.vat">
-                                    — RUC <t t-esc="o.company_id.vat"/>
+                                <t t-esc="company.name or ''"/>
+                                <t t-if="company and company.vat">
+                                    — RUC <t t-esc="company.vat"/>
                                 </t>
-                                <t t-if="o.company_id and o.company_id.email">
-                                    — <t t-esc="o.company_id.email"/>
+                                <t t-if="company and company.email">
+                                    — <t t-esc="company.email"/>
                                 </t>
                             </div>
                             <div>
@@ -1215,6 +1217,7 @@
             </t>
         </t>
     </template>
+
 
 
     </data>
