@@ -440,7 +440,7 @@
             </t>
         </template>
 
-             <template id="report_ticket_repuesto_pedido">
+              <template id="report_ticket_repuesto_pedido">
         <t t-name="sat.report_ticket_repuesto_pedido">
             <t t-call="web.basic_layout">
  
@@ -450,18 +450,17 @@
                         font-size: 10px;
                         color: #1f2d3d;
                     }
-                    /* HEADER */
-                    .sat-header {
-                        display: flex;
-                        justify-content: space-between;
-                        align-items: center;
+                    /* HEADER — usando tabla para compat wkhtmltopdf */
+                    table.sat-header-tbl {
+                        width: 100%;
+                        border-collapse: collapse;
                         border-bottom: 3px solid #1B3A6B;
                         padding-bottom: 8px;
                         margin-bottom: 10px;
                     }
-                    .sat-header-left {
-                        display: flex;
-                        align-items: center;
+                    table.sat-header-tbl td {
+                        vertical-align: middle;
+                        padding: 4px 0;
                     }
                     .sat-logo {
                         max-height: 48px;
@@ -479,9 +478,6 @@
                         font-size: 9px;
                         color: #6b7280;
                         margin: 2px 0 0 0;
-                    }
-                    .sat-header-right {
-                        text-align: right;
                     }
                     .sat-doc-title {
                         font-size: 13px;
@@ -502,20 +498,22 @@
                         color: #6b7280;
                         margin: 2px 0 0 0;
                     }
-                    /* ESTADO */
-                    .sat-estado {
-                        display: flex;
-                        justify-content: space-between;
-                        align-items: center;
+                    /* ESTADO — tabla */
+                    table.sat-estado-tbl {
+                        width: 100%;
+                        border-collapse: collapse;
                         background: #f9fafb;
                         border: 1px solid #e5e7eb;
                         border-left: 4px solid #059669;
-                        padding: 6px 12px;
                         margin-bottom: 10px;
                         border-radius: 3px;
                     }
-                    .sat-estado.rech { border-left-color: #DC2626; }
-                    .sat-estado.pend { border-left-color: #D97706; }
+                    table.sat-estado-tbl.rech { border-left-color: #DC2626; }
+                    table.sat-estado-tbl.pend { border-left-color: #D97706; }
+                    table.sat-estado-tbl td {
+                        padding: 6px 12px;
+                        vertical-align: middle;
+                    }
                     .sat-estado-label {
                         font-size: 9px;
                         color: #6b7280;
@@ -534,52 +532,67 @@
                         font-size: 9px;
                         color: #6b7280;
                     }
-                    /* INFO GRID */
-                    .sat-info-grid {
-                        display: grid;
-                        grid-template-columns: 1fr 1fr 1fr 1fr;
-                        gap: 8px;
+                    /* INFO CARDS — tabla 4 columnas */
+                    table.sat-info-tbl {
+                        width: 100%;
+                        border-collapse: separate;
+                        border-spacing: 8px 0;
                         margin-bottom: 10px;
+                        margin-left: -8px;
+                        margin-right: -8px;
                     }
-                    .sat-info-card {
+                    table.sat-info-tbl td {
+                        width: 25%;
+                        vertical-align: top;
                         background: #fff;
                         border: 1px solid #e5e7eb;
                         border-radius: 3px;
                         padding: 6px 10px;
                     }
-                    .sat-info-card.blue   { border-left: 3px solid #2D5AA0; }
-                    .sat-info-card.orange { border-left: 3px solid #D85A30; }
-                    .sat-info-card.green  { border-left: 3px solid #059669; }
-                    .sat-info-card.purple { border-left: 3px solid #7F77DD; }
+                    table.sat-info-tbl td.blue   { border-left: 3px solid #2D5AA0; }
+                    table.sat-info-tbl td.orange { border-left: 3px solid #D85A30; }
+                    table.sat-info-tbl td.green  { border-left: 3px solid #059669; }
+                    table.sat-info-tbl td.purple { border-left: 3px solid #7F77DD; }
                     .sat-info-label {
                         font-size: 8px;
                         color: #6b7280;
                         text-transform: uppercase;
                         letter-spacing: 0.4px;
                         margin-bottom: 2px;
+                        display: block;
                     }
                     .sat-info-value {
                         font-size: 11px;
                         font-weight: 700;
                         color: #1f2d3d;
                         font-family: 'Courier New', monospace;
+                        display: block;
                     }
                     .sat-info-value-text {
                         font-size: 10px;
                         font-weight: 600;
                         color: #1f2d3d;
+                        display: block;
                     }
                     .sat-info-sub {
                         font-size: 8px;
                         color: #9ca3af;
                         margin-top: 1px;
+                        display: block;
                     }
-                    /* META SECTION */
-                    .sat-meta {
-                        display: grid;
-                        grid-template-columns: 1fr 1fr;
-                        gap: 10px;
+                    /* META SECTION — tabla 2 columnas */
+                    table.sat-meta-tbl {
+                        width: 100%;
+                        border-collapse: separate;
+                        border-spacing: 10px 0;
                         margin-bottom: 10px;
+                        margin-left: -10px;
+                        margin-right: -10px;
+                    }
+                    table.sat-meta-tbl > tbody > tr > td {
+                        width: 50%;
+                        vertical-align: top;
+                        padding: 0;
                     }
                     .sat-meta-block {
                         border: 1px solid #e5e7eb;
@@ -595,13 +608,14 @@
                         letter-spacing: 0.5px;
                         font-weight: 700;
                     }
-                    .sat-meta-body {
-                        padding: 6px 10px;
+                    .sat-meta-body { padding: 6px 10px; }
+                    table.sat-meta-rows {
+                        width: 100%;
+                        border-collapse: collapse;
                     }
-                    .sat-meta-row {
-                        display: flex;
-                        justify-content: space-between;
+                    table.sat-meta-rows td {
                         padding: 2px 0;
+                        border: none;
                     }
                     .sat-meta-k {
                         color: #6b7280;
@@ -613,7 +627,7 @@
                         font-size: 10px;
                         text-align: right;
                     }
-                    /* TABLA */
+                    /* TABLA REPUESTOS */
                     .sat-table-title {
                         font-size: 11px;
                         font-weight: 700;
@@ -642,6 +656,7 @@
                         text-transform: uppercase;
                         letter-spacing: 0.3px;
                         border: 1px solid #1B3A6B;
+                        color: #fff;
                     }
                     table.sat-rep th.c { text-align: center; }
                     table.sat-rep th.r { text-align: right; }
@@ -680,13 +695,22 @@
                     .sat-diff-first { color: #9ca3af; font-style: italic; font-size: 8px; }
                     .sat-no-data    { color: #9ca3af; font-style: italic; font-size: 8px; }
                     .sat-obs        { font-size: 9px; color: #374151; line-height: 1.3; }
-                    /* RESUMEN */
-                    .sat-resumen {
-                        display: grid;
-                        grid-template-columns: 2fr 1fr;
-                        gap: 10px;
+                    /* RESUMEN — tabla 2 cols */
+                    table.sat-resumen-tbl {
+                        width: 100%;
+                        border-collapse: separate;
+                        border-spacing: 10px 0;
                         margin-bottom: 10px;
+                        margin-left: -10px;
+                        margin-right: -10px;
                     }
+                    table.sat-resumen-tbl > tbody > tr > td {
+                        vertical-align: top;
+                        padding: 0;
+                    }
+                    table.sat-resumen-tbl > tbody > tr > td.col-obs { width: 66%; }
+                    table.sat-resumen-tbl > tbody > tr > td.col-tot { width: 34%; }
+ 
                     .sat-obs-box {
                         border: 1px solid #e5e7eb;
                         border-radius: 3px;
@@ -728,32 +752,38 @@
                         font-weight: 700;
                     }
                     .sat-totales-body { padding: 6px 10px; }
-                    .sat-tot-row {
-                        display: flex;
-                        justify-content: space-between;
+                    table.sat-tot-rows {
+                        width: 100%;
+                        border-collapse: collapse;
+                    }
+                    table.sat-tot-rows td {
                         padding: 2px 0;
                         font-size: 10px;
+                        border: none;
                     }
                     .sat-tot-k { color: #6b7280; }
-                    .sat-tot-v { font-weight: 700; color: #1f2d3d; }
-                    .sat-tot-row.high {
+                    .sat-tot-v { font-weight: 700; color: #1f2d3d; text-align: right; }
+                    table.sat-tot-rows tr.high td {
                         border-top: 1px solid #e5e7eb;
-                        margin-top: 3px;
                         padding-top: 5px;
                     }
-                    .sat-tot-row.high .sat-tot-v {
+                    table.sat-tot-rows tr.high td.sat-tot-v {
                         color: #1B3A6B;
                         font-size: 12px;
                     }
-                    /* FIRMAS */
-                    .sat-firmas {
-                        display: grid;
-                        grid-template-columns: 1fr 1fr 1fr;
-                        gap: 20px;
+                    /* FIRMAS — tabla 3 cols */
+                    table.sat-firmas-tbl {
+                        width: 100%;
+                        border-collapse: collapse;
                         margin-top: 18px;
                         margin-bottom: 10px;
                     }
-                    .sat-firma { text-align: center; }
+                    table.sat-firmas-tbl td {
+                        width: 33.33%;
+                        text-align: center;
+                        vertical-align: top;
+                        padding: 0 10px;
+                    }
                     .sat-firma-linea {
                         border-top: 1px solid #1f2d3d;
                         margin: 30px 10px 4px 10px;
@@ -771,18 +801,20 @@
                         margin-top: 1px;
                     }
                     /* FOOTER */
-                    .sat-footer {
+                    table.sat-footer-tbl {
+                        width: 100%;
+                        border-collapse: collapse;
                         border-top: 1px solid #e5e7eb;
                         padding-top: 6px;
                         margin-top: 10px;
-                        display: flex;
-                        justify-content: space-between;
+                    }
+                    table.sat-footer-tbl td {
                         font-size: 8px;
                         color: #9ca3af;
+                        padding-top: 6px;
                     }
                 </style>
  
-                <!-- Variables de mapeo de estado -->
                 <t t-set="estado_map" t-value="{
                     'borrador':           ('Borrador',                       'pend'),
                     'esperando_gerencia': ('Esperando Gerencia',              'pend'),
@@ -806,7 +838,6 @@
  
                 <t t-foreach="docs" t-as="o">
  
-                    <!-- Compañía desde el entorno: el modelo ticket.repuesto.pedido no tiene company_id -->
                     <t t-set="company" t-value="o.env.company"/>
  
                     <t t-set="est_label" t-value="estado_map.get(o.estado, (o.estado, ''))[0]"/>
@@ -819,165 +850,187 @@
                     <div class="page sat-wrapper">
  
                         <!-- HEADER -->
-                        <div class="sat-header">
-                            <div class="sat-header-left">
-                                <t t-if="company and company.logo">
-                                    <img class="sat-logo" t-att-src="image_data_uri(company.logo)"/>
-                                </t>
-                                <div>
-                                    <p class="sat-company-name">
-                                        <t t-esc="company.name or ''"/>
-                                    </p>
-                                    <p class="sat-company-sub">
-                                        Sistema de Atención Técnica (SAT) — Gestión de Repuestos
-                                        <t t-if="company and company.vat">
-                                            — RUC <t t-esc="company.vat"/>
+                        <table class="sat-header-tbl">
+                            <tr>
+                                <td style="width: 60%;">
+                                    <table style="border-collapse: collapse;">
+                                        <tr>
+                                            <td style="vertical-align: middle; padding-right: 12px;">
+                                                <t t-if="company and company.logo">
+                                                    <img class="sat-logo" t-att-src="image_data_uri(company.logo)"/>
+                                                </t>
+                                            </td>
+                                            <td style="vertical-align: middle;">
+                                                <p class="sat-company-name">
+                                                    <t t-esc="company.name or ''"/>
+                                                </p>
+                                                <p class="sat-company-sub">
+                                                    Sistema de Atención Técnica (SAT) — Gestión de Repuestos
+                                                    <t t-if="company and company.vat">
+                                                        — RUC <t t-esc="company.vat"/>
+                                                    </t>
+                                                </p>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                                <td style="width: 40%; text-align: right;">
+                                    <p class="sat-doc-title">Pedido de Repuestos</p>
+                                    <p class="sat-doc-number"><t t-esc="o.name"/></p>
+                                    <p class="sat-doc-date">
+                                        Emitido:
+                                        <t t-if="o.fecha">
+                                            <span t-field="o.fecha" t-options='{"format": "dd/MM/yyyy HH:mm"}'/>
                                         </t>
                                     </p>
-                                </div>
-                            </div>
-                            <div class="sat-header-right">
-                                <p class="sat-doc-title">Pedido de Repuestos</p>
-                                <p class="sat-doc-number"><t t-esc="o.name"/></p>
-                                <p class="sat-doc-date">
-                                    Emitido:
-                                    <t t-if="o.fecha">
-                                        <span t-field="o.fecha" t-options='{"format": "dd/MM/yyyy HH:mm"}'/>
-                                    </t>
-                                </p>
-                            </div>
-                        </div>
+                                </td>
+                            </tr>
+                        </table>
  
                         <!-- ESTADO -->
-                        <div t-attf-class="sat-estado #{est_cls}">
-                            <div>
-                                <span class="sat-estado-label">Estado actual:</span>
-                                <span t-attf-class="sat-estado-value #{est_cls}">
-                                    <t t-esc="est_label"/>
-                                </span>
-                            </div>
-                            <div class="sat-estado-meta">
-                                <t t-if="o.ticket_id">
-                                    Ticket origen: <b><t t-esc="o.ticket_id.name or ''"/></b>
-                                </t>
-                                <t t-if="o.gerente_id">
-                                    · Aprobado por: <b><t t-esc="o.gerente_id.name"/></b>
-                                </t>
-                                <t t-if="o.fecha_aprobacion">
-                                    ·
-                                    <span t-field="o.fecha_aprobacion" t-options='{"format": "dd/MM/yyyy HH:mm"}'/>
-                                </t>
-                            </div>
-                        </div>
- 
-                        <!-- INFO GRID -->
-                        <div class="sat-info-grid">
-                            <div class="sat-info-card blue">
-                                <div class="sat-info-label">Contómetro K (B/N)</div>
-                                <div class="sat-info-value">
-                                    <t t-esc="o.contometro_k or '—'"/>
-                                </div>
-                                <div class="sat-info-sub">Lectura al momento del pedido</div>
-                            </div>
-                            <div class="sat-info-card orange">
-                                <div class="sat-info-label">Contómetro Color</div>
-                                <div class="sat-info-value">
-                                    <t t-esc="o.contometro_color or '—'"/>
-                                </div>
-                                <div class="sat-info-sub">
-                                    <t t-if="o.contometro_color">Lectura al momento del pedido</t>
-                                    <t t-else="">Equipo monocromo</t>
-                                </div>
-                            </div>
-                            <div class="sat-info-card green">
-                                <div class="sat-info-label">Total líneas</div>
-                                <div class="sat-info-value">
-                                    <t t-esc="o.total_lineas"/>
-                                </div>
-                                <div class="sat-info-sub">Repuestos solicitados</div>
-                            </div>
-                            <div class="sat-info-card purple">
-                                <div class="sat-info-label">Técnico asignado</div>
-                                <div class="sat-info-value-text">
-                                    <t t-esc="o.tecnico_id.name or '—'"/>
-                                </div>
-                                <div class="sat-info-sub">
-                                    <t t-esc="o.tecnico_id.email or o.tecnico_id.partner_id.email or ''"/>
-                                </div>
-                            </div>
-                        </div>
- 
-                        <!-- CLIENTE / EQUIPO -->
-                        <div class="sat-meta">
-                            <div class="sat-meta-block">
-                                <div class="sat-meta-head">Cliente</div>
-                                <div class="sat-meta-body">
-                                    <div class="sat-meta-row">
-                                        <span class="sat-meta-k">Razón social</span>
-                                        <span class="sat-meta-v">
-                                            <t t-esc="o.cliente_id.name or '—'"/>
-                                        </span>
-                                    </div>
-                                    <t t-if="o.cliente_id and o.cliente_id.vat">
-                                        <div class="sat-meta-row">
-                                            <span class="sat-meta-k">RUC / DNI</span>
-                                            <span class="sat-meta-v">
-                                                <t t-esc="o.cliente_id.vat"/>
-                                            </span>
-                                        </div>
-                                    </t>
-                                    <t t-if="o.cliente_id and (o.cliente_id.street or o.cliente_id.city)">
-                                        <div class="sat-meta-row">
-                                            <span class="sat-meta-k">Dirección</span>
-                                            <span class="sat-meta-v">
-                                                <t t-esc="o.cliente_id.street or ''"/>
-                                                <t t-if="o.cliente_id.city"> — <t t-esc="o.cliente_id.city"/></t>
-                                            </span>
-                                        </div>
-                                    </t>
-                                    <t t-if="o.cliente_id and (o.cliente_id.phone or o.cliente_id.mobile)">
-                                        <div class="sat-meta-row">
-                                            <span class="sat-meta-k">Teléfono</span>
-                                            <span class="sat-meta-v">
-                                                <t t-esc="o.cliente_id.phone or o.cliente_id.mobile"/>
-                                            </span>
-                                        </div>
-                                    </t>
-                                </div>
-                            </div>
-                            <div class="sat-meta-block">
-                                <div class="sat-meta-head">Equipo</div>
-                                <div class="sat-meta-body">
-                                    <div class="sat-meta-row">
-                                        <span class="sat-meta-k">Modelo</span>
-                                        <span class="sat-meta-v">
-                                            <t t-esc="o.modelo_nombre or '—'"/>
-                                        </span>
-                                    </div>
-                                    <div class="sat-meta-row">
-                                        <span class="sat-meta-k">Serie</span>
-                                        <span class="sat-meta-v">
-                                            <t t-esc="o.serie or '—'"/>
-                                        </span>
-                                    </div>
-                                    <div class="sat-meta-row">
-                                        <span class="sat-meta-k">Tipo de máquina</span>
-                                        <span class="sat-meta-v">
-                                            <t t-if="o.contometro_color">Color</t>
-                                            <t t-else="">Blanco y Negro</t>
-                                        </span>
-                                    </div>
+                        <table t-attf-class="sat-estado-tbl #{est_cls}">
+                            <tr>
+                                <td style="width: 50%;">
+                                    <span class="sat-estado-label">Estado actual:</span>
+                                    <span t-attf-class="sat-estado-value #{est_cls}">
+                                        <t t-esc="est_label"/>
+                                    </span>
+                                </td>
+                                <td style="width: 50%; text-align: right;" class="sat-estado-meta">
                                     <t t-if="o.ticket_id">
-                                        <div class="sat-meta-row">
-                                            <span class="sat-meta-k">Ticket origen</span>
-                                            <span class="sat-meta-v">
-                                                <t t-esc="o.ticket_id.name"/>
-                                            </span>
-                                        </div>
+                                        Ticket origen: <b><t t-esc="o.ticket_id.name or ''"/></b>
                                     </t>
-                                </div>
-                            </div>
-                        </div>
+                                    <t t-if="o.gerente_id">
+                                        · Aprobado por: <b><t t-esc="o.gerente_id.name"/></b>
+                                    </t>
+                                    <t t-if="o.fecha_aprobacion">
+                                        ·
+                                        <span t-field="o.fecha_aprobacion" t-options='{"format": "dd/MM/yyyy HH:mm"}'/>
+                                    </t>
+                                </td>
+                            </tr>
+                        </table>
+ 
+                        <!-- INFO CARDS — 4 columnas con tabla -->
+                        <table class="sat-info-tbl">
+                            <tr>
+                                <td class="blue">
+                                    <span class="sat-info-label">Contómetro K (B/N)</span>
+                                    <span class="sat-info-value">
+                                        <t t-esc="o.contometro_k or '—'"/>
+                                    </span>
+                                    <span class="sat-info-sub">Lectura al momento del pedido</span>
+                                </td>
+                                <td class="orange">
+                                    <span class="sat-info-label">Contómetro Color</span>
+                                    <span class="sat-info-value">
+                                        <t t-esc="o.contometro_color or '—'"/>
+                                    </span>
+                                    <span class="sat-info-sub">
+                                        <t t-if="o.contometro_color">Lectura al momento del pedido</t>
+                                        <t t-else="">Equipo monocromo</t>
+                                    </span>
+                                </td>
+                                <td class="green">
+                                    <span class="sat-info-label">Total líneas</span>
+                                    <span class="sat-info-value">
+                                        <t t-esc="o.total_lineas"/>
+                                    </span>
+                                    <span class="sat-info-sub">Repuestos solicitados</span>
+                                </td>
+                                <td class="purple">
+                                    <span class="sat-info-label">Técnico asignado</span>
+                                    <span class="sat-info-value-text">
+                                        <t t-esc="o.tecnico_id.name or '—'"/>
+                                    </span>
+                                    <span class="sat-info-sub">
+                                        <t t-esc="o.tecnico_id.email or o.tecnico_id.partner_id.email or ''"/>
+                                    </span>
+                                </td>
+                            </tr>
+                        </table>
+ 
+                        <!-- CLIENTE / EQUIPO — 2 columnas con tabla -->
+                        <table class="sat-meta-tbl">
+                            <tr>
+                                <td>
+                                    <div class="sat-meta-block">
+                                        <div class="sat-meta-head">Cliente</div>
+                                        <div class="sat-meta-body">
+                                            <table class="sat-meta-rows">
+                                                <tr>
+                                                    <td class="sat-meta-k">Razón social</td>
+                                                    <td class="sat-meta-v">
+                                                        <t t-esc="o.cliente_id.name or '—'"/>
+                                                    </td>
+                                                </tr>
+                                                <t t-if="o.cliente_id and o.cliente_id.vat">
+                                                    <tr>
+                                                        <td class="sat-meta-k">RUC / DNI</td>
+                                                        <td class="sat-meta-v">
+                                                            <t t-esc="o.cliente_id.vat"/>
+                                                        </td>
+                                                    </tr>
+                                                </t>
+                                                <t t-if="o.cliente_id and (o.cliente_id.street or o.cliente_id.city)">
+                                                    <tr>
+                                                        <td class="sat-meta-k">Dirección</td>
+                                                        <td class="sat-meta-v">
+                                                            <t t-esc="o.cliente_id.street or ''"/>
+                                                            <t t-if="o.cliente_id.city"> — <t t-esc="o.cliente_id.city"/></t>
+                                                        </td>
+                                                    </tr>
+                                                </t>
+                                                <t t-if="o.cliente_id and (o.cliente_id.phone or o.cliente_id.mobile)">
+                                                    <tr>
+                                                        <td class="sat-meta-k">Teléfono</td>
+                                                        <td class="sat-meta-v">
+                                                            <t t-esc="o.cliente_id.phone or o.cliente_id.mobile"/>
+                                                        </td>
+                                                    </tr>
+                                                </t>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="sat-meta-block">
+                                        <div class="sat-meta-head">Equipo</div>
+                                        <div class="sat-meta-body">
+                                            <table class="sat-meta-rows">
+                                                <tr>
+                                                    <td class="sat-meta-k">Modelo</td>
+                                                    <td class="sat-meta-v">
+                                                        <t t-esc="o.modelo_nombre or '—'"/>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td class="sat-meta-k">Serie</td>
+                                                    <td class="sat-meta-v">
+                                                        <t t-esc="o.serie or '—'"/>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td class="sat-meta-k">Tipo de máquina</td>
+                                                    <td class="sat-meta-v">
+                                                        <t t-if="o.contometro_color">Color</t>
+                                                        <t t-else="">Blanco y Negro</t>
+                                                    </td>
+                                                </tr>
+                                                <t t-if="o.ticket_id">
+                                                    <tr>
+                                                        <td class="sat-meta-k">Ticket origen</td>
+                                                        <td class="sat-meta-v">
+                                                            <t t-esc="o.ticket_id.name"/>
+                                                        </td>
+                                                    </tr>
+                                                </t>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        </table>
  
                         <!-- TABLA DE REPUESTOS -->
                         <div class="sat-table-title">Detalle de Repuestos Solicitados</div>
@@ -1030,7 +1083,6 @@
                                             <td class="c">
                                                 <t t-esc="int(l.cantidad)"/>
                                             </td>
-                                            <!-- Cont. Actual -->
                                             <td class="n">
                                                 <t t-if="l.contometro_actual_snapshot">
                                                     <t t-esc="l.contometro_actual_snapshot"/>
@@ -1039,7 +1091,6 @@
                                                     <span class="sat-no-data">—</span>
                                                 </t>
                                             </td>
-                                            <!-- Cont. Anterior -->
                                             <td class="n" style="color: #6b7280;">
                                                 <t t-if="l.contometro_anterior_snapshot">
                                                     <t t-esc="l.contometro_anterior_snapshot"/>
@@ -1051,7 +1102,6 @@
                                                     <span class="sat-no-data">—</span>
                                                 </t>
                                             </td>
-                                            <!-- Duración (copias) -->
                                             <td class="n">
                                                 <t t-if="l.contometro_anterior_snapshot and l.copias_snapshot">
                                                     <span class="sat-diff-pos">
@@ -1065,7 +1115,6 @@
                                                     <span class="sat-no-data">—</span>
                                                 </t>
                                             </td>
-                                            <!-- Último cambio (fecha) -->
                                             <td class="c" style="font-size: 9px;">
                                                 <t t-if="l.fecha_informe_cambio">
                                                     <span t-field="l.fecha_informe_cambio" t-options='{"format": "dd/MM/yyyy"}'/>
@@ -1074,7 +1123,6 @@
                                                     <span class="sat-no-data">—</span>
                                                 </t>
                                             </td>
-                                            <!-- Meses -->
                                             <td class="c" style="font-size: 9px;">
                                                 <t t-if="l.meses_snapshot">
                                                     <t t-esc="l.meses_snapshot"/>m
@@ -1083,7 +1131,6 @@
                                                     <span class="sat-no-data">—</span>
                                                 </t>
                                             </td>
-                                            <!-- Observación -->
                                             <td class="sat-obs">
                                                 <t t-if="l.observacion_informe">
                                                     <t t-esc="l.observacion_informe"/>
@@ -1108,108 +1155,117 @@
                             </tbody>
                         </table>
  
-                        <!-- RESUMEN Y OBSERVACIONES -->
-                        <div class="sat-resumen">
-                            <!-- Caja de observaciones / motivo rechazo / nota comercial -->
-                            <t t-if="o.motivo_rechazo">
-                                <div class="sat-obs-box rech">
-                                    <div class="sat-obs-title rech">Motivo de rechazo</div>
-                                    <p><t t-esc="o.motivo_rechazo"/></p>
-                                </div>
-                            </t>
-                            <t t-elif="o.observaciones or o.nota_comercial">
-                                <div class="sat-obs-box">
-                                    <div class="sat-obs-title">Observaciones generales</div>
-                                    <t t-if="o.observaciones">
-                                        <p><t t-esc="o.observaciones"/></p>
-                                    </t>
-                                    <t t-if="o.nota_comercial">
-                                        <p style="margin-top: 4px;">
-                                            <b>Nota de Comercial:</b>
-                                            <t t-esc="o.nota_comercial"/>
-                                        </p>
-                                    </t>
-                                </div>
-                            </t>
-                            <t t-else="">
-                                <div class="sat-obs-box" style="background: #f9fafb; border-left-color: #9ca3af;">
-                                    <div class="sat-obs-title" style="color: #6b7280;">Observaciones</div>
-                                    <p style="color: #9ca3af; font-style: italic;">Sin observaciones registradas.</p>
-                                </div>
-                            </t>
- 
-                            <!-- Caja resumen -->
-                            <div class="sat-totales">
-                                <div class="sat-totales-head">Resumen</div>
-                                <div class="sat-totales-body">
-                                    <div class="sat-tot-row">
-                                        <span class="sat-tot-k">Con historial</span>
-                                        <span class="sat-tot-v"><t t-esc="total_con_hist"/></span>
-                                    </div>
-                                    <div class="sat-tot-row">
-                                        <span class="sat-tot-k">Primer cambio</span>
-                                        <span class="sat-tot-v"><t t-esc="total_primer_cambio"/></span>
-                                    </div>
-                                    <div class="sat-tot-row">
-                                        <span class="sat-tot-k">Libres / sin historial</span>
-                                        <span class="sat-tot-v"><t t-esc="total_sin_hist"/></span>
-                                    </div>
-                                    <t t-if="total_copias">
-                                        <div class="sat-tot-row">
-                                            <span class="sat-tot-k">Copias acumuladas</span>
-                                            <span class="sat-tot-v">
-                                                <t t-esc="'{:,}'.format(total_copias)"/>
-                                            </span>
+                        <!-- RESUMEN — 2 columnas con tabla -->
+                        <table class="sat-resumen-tbl">
+                            <tr>
+                                <td class="col-obs">
+                                    <t t-if="o.motivo_rechazo">
+                                        <div class="sat-obs-box rech">
+                                            <div class="sat-obs-title rech">Motivo de rechazo</div>
+                                            <p><t t-esc="o.motivo_rechazo"/></p>
                                         </div>
                                     </t>
-                                    <div class="sat-tot-row high">
-                                        <span class="sat-tot-k">Total repuestos</span>
-                                        <span class="sat-tot-v"><t t-esc="o.total_lineas"/></span>
+                                    <t t-elif="o.observaciones or o.nota_comercial">
+                                        <div class="sat-obs-box">
+                                            <div class="sat-obs-title">Observaciones generales</div>
+                                            <t t-if="o.observaciones">
+                                                <p><t t-esc="o.observaciones"/></p>
+                                            </t>
+                                            <t t-if="o.nota_comercial">
+                                                <p style="margin-top: 4px;">
+                                                    <b>Nota de Comercial:</b>
+                                                    <t t-esc="o.nota_comercial"/>
+                                                </p>
+                                            </t>
+                                        </div>
+                                    </t>
+                                    <t t-else="">
+                                        <div class="sat-obs-box" style="background: #f9fafb; border-left-color: #9ca3af;">
+                                            <div class="sat-obs-title" style="color: #6b7280;">Observaciones</div>
+                                            <p style="color: #9ca3af; font-style: italic;">Sin observaciones registradas.</p>
+                                        </div>
+                                    </t>
+                                </td>
+                                <td class="col-tot">
+                                    <div class="sat-totales">
+                                        <div class="sat-totales-head">Resumen</div>
+                                        <div class="sat-totales-body">
+                                            <table class="sat-tot-rows">
+                                                <tr>
+                                                    <td class="sat-tot-k">Con historial</td>
+                                                    <td class="sat-tot-v"><t t-esc="total_con_hist"/></td>
+                                                </tr>
+                                                <tr>
+                                                    <td class="sat-tot-k">Primer cambio</td>
+                                                    <td class="sat-tot-v"><t t-esc="total_primer_cambio"/></td>
+                                                </tr>
+                                                <tr>
+                                                    <td class="sat-tot-k">Libres / sin historial</td>
+                                                    <td class="sat-tot-v"><t t-esc="total_sin_hist"/></td>
+                                                </tr>
+                                                <t t-if="total_copias">
+                                                    <tr>
+                                                        <td class="sat-tot-k">Copias acumuladas</td>
+                                                        <td class="sat-tot-v">
+                                                            <t t-esc="'{:,}'.format(total_copias)"/>
+                                                        </td>
+                                                    </tr>
+                                                </t>
+                                                <tr class="high">
+                                                    <td class="sat-tot-k">Total repuestos</td>
+                                                    <td class="sat-tot-v"><t t-esc="o.total_lineas"/></td>
+                                                </tr>
+                                            </table>
+                                        </div>
                                     </div>
-                                </div>
-                            </div>
-                        </div>
+                                </td>
+                            </tr>
+                        </table>
  
                         <!-- FIRMAS -->
-                        <div class="sat-firmas">
-                            <div class="sat-firma">
-                                <div class="sat-firma-linea"></div>
-                                <div class="sat-firma-rol">Técnico</div>
-                                <div class="sat-firma-nom">
-                                    <t t-esc="o.tecnico_id.name or '—'"/>
-                                </div>
-                            </div>
-                            <div class="sat-firma">
-                                <div class="sat-firma-linea"></div>
-                                <div class="sat-firma-rol">Gerencia</div>
-                                <div class="sat-firma-nom">
-                                    <t t-esc="o.gerente_id.name or '—'"/>
-                                </div>
-                            </div>
-                            <div class="sat-firma">
-                                <div class="sat-firma-linea"></div>
-                                <div class="sat-firma-rol">Logística / Entrega</div>
-                                <div class="sat-firma-nom">—</div>
-                            </div>
-                        </div>
+                        <table class="sat-firmas-tbl">
+                            <tr>
+                                <td>
+                                    <div class="sat-firma-linea"></div>
+                                    <div class="sat-firma-rol">Técnico</div>
+                                    <div class="sat-firma-nom">
+                                        <t t-esc="o.tecnico_id.name or '—'"/>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="sat-firma-linea"></div>
+                                    <div class="sat-firma-rol">Gerencia</div>
+                                    <div class="sat-firma-nom">
+                                        <t t-esc="o.gerente_id.name or '—'"/>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="sat-firma-linea"></div>
+                                    <div class="sat-firma-rol">Logística / Entrega</div>
+                                    <div class="sat-firma-nom">—</div>
+                                </td>
+                            </tr>
+                        </table>
  
                         <!-- FOOTER -->
-                        <div class="sat-footer">
-                            <div>
-                                <t t-esc="company.name or ''"/>
-                                <t t-if="company and company.vat">
-                                    — RUC <t t-esc="company.vat"/>
-                                </t>
-                                <t t-if="company and company.email">
-                                    — <t t-esc="company.email"/>
-                                </t>
-                            </div>
-                            <div>
-                                Generado el <t t-esc="time.strftime('%d/%m/%Y %H:%M')"/>
-                                — Página <span class="page"/> / <span class="topage"/>
-                                — Pedido <t t-esc="o.name"/>
-                            </div>
-                        </div>
+                        <table class="sat-footer-tbl">
+                            <tr>
+                                <td style="width: 60%;">
+                                    <t t-esc="company.name or ''"/>
+                                    <t t-if="company and company.vat">
+                                        — RUC <t t-esc="company.vat"/>
+                                    </t>
+                                    <t t-if="company and company.email">
+                                        — <t t-esc="company.email"/>
+                                    </t>
+                                </td>
+                                <td style="width: 40%; text-align: right;">
+                                    Generado el <t t-esc="time.strftime('%d/%m/%Y %H:%M')"/>
+                                    — Página <span class="page"/> / <span class="topage"/>
+                                    — Pedido <t t-esc="o.name"/>
+                                </td>
+                            </tr>
+                        </table>
  
                     </div>
                 </t>
@@ -1217,6 +1273,7 @@
             </t>
         </t>
     </template>
+ 
 
 
 
