@@ -15,6 +15,17 @@ EMAIL_LOGISTICA = 'logistica@corapsac.com'
 EMAIL_SOPORTE   = 'soporte@andescopiers.com.pe'
 
 
+# ============================================================
+# HELPER GLOBAL — conversión a entero robusta
+# ============================================================
+def _to_int(val):
+    """Extrae dígitos y convierte a int. Devuelve 0 si no hay dígitos."""
+    if not val:
+        return 0
+    digits = re.sub(r'[^\d]', '', str(val))
+    return int(digits) if digits else 0
+
+
 class TicketRepuestoPedido(models.Model):
     _name = 'ticket.repuesto.pedido'
     _description = 'Pedido de Repuestos generado desde Ticket de Servicio'
@@ -106,24 +117,70 @@ class TicketRepuestoPedido(models.Model):
     def _url_accion(self, accion):
         return f"{self._get_base_url()}/pedido/{self.token}/{accion}"
 
+    # ============================================================
+    # HELPER CENTRAL — DECIDE QUÉ CONTADOR USAR POR LÍNEA
+    # ============================================================
+    # Regla única aplicable a snapshot, historial y compute:
+    #
+    #   Solo C/M/Y usan el contómetro color.
+    #   Todo lo demás (incluyendo Black) usa el total de la máquina:
+    #     - máquina monocroma → K
+    #     - máquina color     → K + C
+    #
+    # Esto refleja la realidad física: el developer/drum Black se mueve
+    # con cada impresión (mono o color), así que comparte el mismo
+    # contador de volumen que las piezas genéricas (faja, fusora, etc.).
+    # ============================================================
+
+    def _get_contometro_linea(self, linea):
+        """
+        Devuelve (valor_str, tipo_contometro) para una línea del pedido.
+
+        tipo_contometro ∈ {'bn', 'color', 'total'}
+        """
+        self.ensure_one()
+
+        es_color = (self.equipo_id.tipo_maquina_id == 'color') if self.equipo_id else False
+        color_code = (linea.color_id.code or '').lower() if linea.color_id else ''
+        k = _to_int(self.contometro_k)
+        c = _to_int(self.contometro_color)
+
+        # Caso 1: línea con color C/M/Y → usa contómetro color
+        if color_code in ('c', 'm', 'y'):
+            if not es_color:
+                # Inconsistencia de datos — C/M/Y en máquina monocroma.
+                # Fallback a K + warning. No bloqueamos al usuario.
+                _logger.warning(
+                    "[_get_contometro_linea] INCONSISTENCIA: pedido=%s linea_id=%s "
+                    "tiene color=%s pero la máquina es monocroma. "
+                    "Usando contómetro K como fallback.",
+                    self.name, linea.id, color_code.upper()
+                )
+                return (self.contometro_k or '0', 'bn')
+            return (self.contometro_color or '0', 'color')
+
+        # Caso 2: Black (code='k') o sin color → total de la máquina
+        if es_color:
+            total = k + c
+            if total > 0:
+                return (str(total), 'total')
+            # Suma cero — fallback a K para no perder la referencia
+            _logger.warning(
+                "[_get_contometro_linea] pedido=%s linea_id=%s máquina color "
+                "pero K+C=0. Usando K como fallback.",
+                self.name, linea.id
+            )
+            return (self.contometro_k or '0', 'total')
+
+        # Máquina monocroma, cualquier componente → K
+        return (self.contometro_k or '0', 'bn')
+
     def _lineas_html(self, con_historial=False):
         def _fmt_num(val):
             try:
                 return f"{int(re.sub(r'[^\d]', '', str(val)) or 0):,}"
             except Exception:
                 return str(val) if val else '—'
-
-        def _cont_actual_linea(linea):
-            def _to_int(v):
-                if not v: return 0
-                d = re.sub(r'[^\d]', '', str(v))
-                return int(d) if d else 0
-            k = _to_int(self.contometro_k)
-            c = _to_int(self.contometro_color)
-            es_color = bool(self.contometro_color)
-            if linea.color_id: return self.contometro_color or '0'
-            elif es_color: return str(k + c) if (k + c) > 0 else '0'
-            else: return self.contometro_k or '0'
 
         filas = ''
         for i, l in enumerate(self.linea_ids, 1):
@@ -139,7 +196,8 @@ class TicketRepuestoPedido(models.Model):
                 f"<td style='padding:5px 8px;border:1px solid #e5e7eb;text-align:center;'>{int(l.cantidad)}</td>"
             )
             if con_historial:
-                cont_actual   = _cont_actual_linea(l)
+                # Usar helper central para consistencia
+                cont_actual, _tipo = self._get_contometro_linea(l)
                 cont_anterior = l.ultimo_cambio_contometro or ''
                 fecha_ult = meses_ult = diferencia = ''
                 dif_color = '#374151'
@@ -148,8 +206,8 @@ class TicketRepuestoPedido(models.Model):
                     meses_ult = str(l.meses_desde_ultimo_cambio) + 'm'
                 if cont_anterior:
                     try:
-                        ca = int(re.sub(r'[^\d]', '', str(cont_actual)) or 0)
-                        cp = int(re.sub(r'[^\d]', '', str(cont_anterior)) or 0)
+                        ca = _to_int(cont_actual)
+                        cp = _to_int(cont_anterior)
                         df = ca - cp
                         diferencia = f"+{df:,}" if df >= 0 else f"{df:,}"
                         dif_color  = '#059669' if df >= 0 else '#DC2626'
@@ -226,36 +284,28 @@ class TicketRepuestoPedido(models.Model):
                         self.name, email_to, smtp_server.name if smtp_server else 'default', asunto)
         except Exception as e:
             _logger.error("[correo] ERROR pedido=%s | to=%s | error=%s", self.name, email_to, str(e))
+
     def _wrap_correo(self, header_html, contenido_html):
         return (f"<div style='font-family:Arial,sans-serif;max-width:700px;margin:0 auto;'>{header_html}<div style='background:#f9fafb;border:1px solid #e5e7eb;padding:16px 20px;'>{contenido_html}{self._footer_correo()}</div></div>")
 
+    # ============================================================
+    # SNAPSHOT DE LÍNEAS AL APROBAR — USA HELPER CENTRAL
+    # ============================================================
+
     def _guardar_snapshot_lineas(self):
         self.ensure_one()
-    
-        def _to_int(val):
-            if not val:
-                return 0
-            digits = re.sub(r'[^\d]', '', str(val))
-            return int(digits) if digits else 0
-    
-        es_color = (self.equipo_id.tipo_maquina_id == 'color')
-        k = _to_int(self.contometro_k)
-        c = _to_int(self.contometro_color)
-    
+
+        es_color = (self.equipo_id.tipo_maquina_id == 'color') if self.equipo_id else False
+
         _logger.info(
             "[_guardar_snapshot_lineas] pedido=%s | K=%s | C=%s | es_color=%s",
-            self.name, k, c, es_color
+            self.name, self.contometro_k, self.contometro_color, es_color
         )
-    
+
         for linea in self.linea_ids:
-            # Contómetro actual según tipo de componente
-            if linea.color_id:
-                cont_actual = self.contometro_color or '0'
-            elif es_color:
-                cont_actual = str(k + c) if (k + c) > 0 else '0'
-            else:
-                cont_actual = self.contometro_k or '0'
-    
+            # Contómetro actual usando regla unificada
+            cont_actual, _tipo = self._get_contometro_linea(linea)
+
             # Líneas libres (sin subparte_id) no tienen historial — solo guardar actual
             if not linea.subparte_id:
                 _logger.info(
@@ -270,7 +320,7 @@ class TicketRepuestoPedido(models.Model):
                     'meses_snapshot':               0,
                 })
                 continue
-    
+
             # Buscar historial anterior excluyendo este pedido
             domain = [
                 ('equipo_id',   '=', self.equipo_id.id),
@@ -281,36 +331,89 @@ class TicketRepuestoPedido(models.Model):
                 domain.append(('color_id', '=', linea.color_id.id))
             else:
                 domain.append(('color_id', '=', False))
-    
+
             ultimo = self.env['ticket.repuesto.historial'].sudo().search(
                 domain, order='fecha_cambio desc', limit=1
             )
-    
+
             cont_anterior = ultimo.contometro_cambio if ultimo else ''
             meses  = 0
             copias = 0
-    
+
             if ultimo and ultimo.fecha_cambio:
                 diff  = relativedelta(datetime.now(), ultimo.fecha_cambio)
                 meses = diff.months + (diff.years * 12)
-    
+
             if cont_anterior:
                 copias = max(0, _to_int(cont_actual) - _to_int(cont_anterior))
-    
+
             linea.write({
                 'contometro_actual_snapshot':   cont_actual,
                 'contometro_anterior_snapshot': cont_anterior,
                 'copias_snapshot':              copias,
                 'meses_snapshot':               meses,
             })
-    
+
             _logger.info(
-                "[snapshot] linea=%s | color=%s | actual=%s | "
+                "[snapshot] linea=%s | color=%s | tipo=%s | actual=%s | "
                 "anterior=%s | copias=%s | meses=%s",
                 linea.subparte_id.name,
                 linea.color_id.name if linea.color_id else 'B/N',
+                _tipo,
                 cont_actual, cont_anterior, copias, meses,
             )
+
+    # ============================================================
+    # MIGRACIÓN RETROACTIVA — solo pedidos NO instalados
+    # ============================================================
+    # Los pedidos en estado 'instalado' ya generaron ticket.repuesto.historial
+    # con contómetros reales vía _registrar_historial_instalacion, entonces
+    # su snapshot es histórico y no debe modificarse.
+    #
+    # Para los demás estados (aprobado, stock_*, en_camino, entregado) que
+    # tengan snapshot guardado con la lógica vieja, se puede recalcular.
+    #
+    # USO desde la shell de Odoo:
+    #   env['ticket.repuesto.pedido']._recompute_snapshots_pedidos_no_instalados()
+    #   env.cr.commit()
+    # ============================================================
+
+    @api.model
+    def _recompute_snapshots_pedidos_no_instalados(self):
+        """Recalcula el snapshot de pedidos que ya tienen snapshot pero no
+        están instalados. Útil para corregir datos generados con lógica vieja.
+        """
+        pedidos = self.search([
+            ('estado', 'in', (
+                'aprobado', 'stock_en_revision', 'stock_completo',
+                'en_camino', 'entregado',
+            )),
+        ])
+        total = len(pedidos)
+        _logger.info(
+            "[_recompute_snapshots_pedidos_no_instalados] procesando %s pedidos",
+            total
+        )
+        corregidos = 0
+        for pedido in pedidos:
+            # Solo recalcular si tiene alguna línea con snapshot guardado
+            if not any(l.contometro_actual_snapshot for l in pedido.linea_ids):
+                continue
+            try:
+                pedido._guardar_snapshot_lineas()
+                corregidos += 1
+            except Exception as e:
+                _logger.error(
+                    "[_recompute_snapshots_pedidos_no_instalados] ERROR "
+                    "pedido=%s: %s", pedido.name, str(e)
+                )
+        _logger.info(
+            "[_recompute_snapshots_pedidos_no_instalados] completado — "
+            "%s de %s pedidos recalculados",
+            corregidos, total
+        )
+        return corregidos
+
     # ============================================================
     # PASO 1 — enviar a Gerencia
     # ============================================================
@@ -369,41 +472,42 @@ class TicketRepuestoPedido(models.Model):
 
     def action_aprobar_gerencia(self, desde_token=False):
         self.ensure_one()
-    
+
         if self.estado not in ('esperando_gerencia', 'informe_recibido'):
             raise UserError(_(
                 "No se puede aprobar desde estado: %s"
             ) % self.estado)
         if not self.linea_ids:
             raise UserError(_("El pedido no tiene líneas de repuestos."))
-    
+
         self._guardar_snapshot_lineas()
-    
+
         # Cuando se llama por token el usuario público no tiene ID válido
         # Se deja gerente_id vacío — se puede completar desde Odoo si se necesita
         gerente_id = False
         if not desde_token:
             gerente_id = self.env.user.id
-    
+
         self.write({
             'estado':           'aprobado',
             'fecha_aprobacion': fields.Datetime.now(),
             'gerente_id':       gerente_id,
         })
-    
+
         self._correo_aprobado_comercial()
         self._correo_aprobado_logistica()
         self.write({'estado': 'stock_en_revision'})
-    
+
         self.message_post(body=_(
             "✅ <b>Pedido aprobado por Gerencia</b><br/>"
             "Notificado a Comercial (%s) y Logística (%s)"
         ) % (EMAIL_COMERCIAL, EMAIL_LOGISTICA))
-    
+
         _logger.info(
             "[action_aprobar_gerencia] pedido=%s | desde_token=%s",
             self.name, desde_token
         )
+
     def _correo_aprobado_comercial(self):
         header = self._header_correo('✅ Pedido aprobado — Verificar stock', color='#059669')
         cuerpo = (
@@ -433,27 +537,28 @@ class TicketRepuestoPedido(models.Model):
 
     def action_solicitar_informe_comercial(self, desde_token=False):
         self.ensure_one()
-    
+
         if self.estado != 'esperando_gerencia':
             raise UserError(_(
                 "Solo se puede solicitar informe desde 'Esperando Gerencia'."
             ))
-    
+
         self.write({
             'estado':                  'informe_solicitado',
             'fecha_solicitud_informe': fields.Datetime.now(),
         })
-    
+
         self._correo_informe_solicitado_comercial()
-    
+
         self.message_post(body=_(
             "📋 <b>Informe solicitado a Comercial</b> (%s)"
         ) % EMAIL_COMERCIAL)
-    
+
         _logger.info(
             "[action_solicitar_informe_comercial] pedido=%s | desde_token=%s",
             self.name, desde_token
         )
+
     def _correo_informe_solicitado_comercial(self):
         header = self._header_correo('📋 Gerencia solicita informe técnico', color='#D97706')
         cuerpo = (
@@ -481,11 +586,6 @@ class TicketRepuestoPedido(models.Model):
         _logger.info("[action_informe_recibido] pedido=%s", self.name)
 
     def _correo_informe_recibido_gerencia(self):
-        def _to_int(val):
-            if not val: return 0
-            digits = re.sub(r'[^\d]', '', str(val))
-            return int(digits) if digits else 0
-
         def _fmt_num(val):
             try: return f"{int(re.sub(r'[^\d]', '', str(val)) or 0):,}"
             except Exception: return str(val) if val else '—'
@@ -499,10 +599,10 @@ class TicketRepuestoPedido(models.Model):
             bg       = '#f9fafb' if i % 2 == 0 else '#ffffff'
             color_bg = {'Black': '#374151', 'Cyan': '#0891b2', 'Magenta': '#db2777', 'Yellow': '#d97706', 'B/N': '#6b7280'}.get(color, '#6b7280')
             badge_color = f"<span style='background:{color_bg};color:#fff;padding:1px 6px;border-radius:8px;font-size:10px;font-weight:bold;'>{color}</span>"
-            if l.color_id: cont_actual_raw = self.contometro_color or '0'
-            else:
-                k = _to_int(self.contometro_k); c = _to_int(self.contometro_color)
-                cont_actual_raw = str(k + c) if bool(self.contometro_color) else (self.contometro_k or '0')
+
+            # Usar helper central
+            cont_actual_raw, _tipo = self._get_contometro_linea(l)
+
             cont_anterior_raw = l.contador_informe_anterior or ''
             cont_anterior_fmt = _fmt_num(cont_anterior_raw) if cont_anterior_raw else '<i style="color:#9ca3af;">Sin registro</i>'
             if cont_anterior_raw:
@@ -555,33 +655,34 @@ class TicketRepuestoPedido(models.Model):
 
     def action_rechazar_gerencia(self, motivo=None, desde_token=False):
         self.ensure_one()
-    
+
         if self.estado not in ('esperando_gerencia', 'informe_recibido'):
             raise UserError(_(
                 "No se puede rechazar desde estado: %s"
             ) % self.estado)
-    
+
         # Igual que en aprobar — usuario público no tiene ID válido
         gerente_id = False
         if not desde_token:
             gerente_id = self.env.user.id
-    
+
         self.write({
             'estado':         'rechazado',
             'gerente_id':     gerente_id,
             'motivo_rechazo': motivo or _('Sin motivo especificado'),
         })
-    
+
         self._correo_rechazado_tecnico()
-    
+
         self.message_post(body=_(
             "❌ <b>Pedido rechazado</b><br/>Motivo: %s"
         ) % (motivo or '—'))
-    
+
         _logger.info(
             "[action_rechazar_gerencia] pedido=%s | motivo=%s | desde_token=%s",
             self.name, motivo, desde_token
         )
+
     def action_abrir_wizard_rechazo(self):
         self.ensure_one()
         if self.estado not in ('esperando_gerencia', 'informe_recibido'):
@@ -599,6 +700,7 @@ class TicketRepuestoPedido(models.Model):
             'view_mode': 'form',
             'target': 'new',
         }
+
     def _correo_rechazado_tecnico(self):
         email_tecnico = self.tecnico_id.email or self.tecnico_id.partner_id.email or ''
         if not email_tecnico:
@@ -709,7 +811,7 @@ class TicketRepuestoPedido(models.Model):
             ticket = self.env['ticket.alquiler'].sudo().create({
                 'tipo_servicio_id': 'cambio_repuestos',
                 'product_alquiler': self.equipo_id.id if self.equipo_id else False,
-                'partner_id':       self.cliente_id.id if self.cliente_id else False,                
+                'partner_id':       self.cliente_id.id if self.cliente_id else False,
                 'description':      descripcion,
                 'estado':           'nuevo',
                 'pedido_origen_id': self.id,
@@ -853,27 +955,21 @@ class TicketRepuestoPedidoLinea(models.Model):
 
     @api.depends('contador_informe_anterior', 'pedido_id.contometro_k', 'pedido_id.contometro_color', 'color_id')
     def _compute_duracion_informe(self):
-        def _to_int(val):
-            if not val: return 0
-            digits = re.sub(r'[^\d]', '', str(val))
-            return int(digits) if digits else 0
         for record in self:
             anterior = _to_int(record.contador_informe_anterior)
             if not anterior:
                 record.duracion_informe = 0
                 continue
-            if record.color_id: actual = _to_int(record.pedido_id.contometro_color)
+            # Usa la misma regla del pedido para decidir contador
+            if record.pedido_id:
+                actual_str, _tipo = record.pedido_id._get_contometro_linea(record)
+                actual = _to_int(actual_str)
             else:
-                k = _to_int(record.pedido_id.contometro_k); c = _to_int(record.pedido_id.contometro_color)
-                actual = (k + c) if bool(record.pedido_id.contometro_color) else k
+                actual = 0
             record.duracion_informe = max(0, actual - anterior)
 
     @api.depends('subparte_id', 'color_id', 'pedido_id.equipo_id', 'pedido_id.contometro_k', 'pedido_id.contometro_color')
     def _compute_ultimo_cambio(self):
-        def _to_int(val):
-            if not val: return 0
-            digits = re.sub(r'[^\d]', '', str(val))
-            return int(digits) if digits else 0
         for record in self:
             equipo_id = record.pedido_id.equipo_id.id if record.pedido_id.equipo_id else False
             if not equipo_id or not record.subparte_id:
@@ -881,29 +977,27 @@ class TicketRepuestoPedidoLinea(models.Model):
                 record.meses_desde_ultimo_cambio = 0
                 continue
             domain = [('equipo_id', '=', equipo_id), ('subparte_id', '=', record.subparte_id.id), ('pedido_id', '!=', record.pedido_id.id)]
-            if record.color_id: domain.append(('color_id', '=', record.color_id.id))
-            else: domain.append(('color_id', '=', False))
+            if record.color_id:
+                domain.append(('color_id', '=', record.color_id.id))
+            else:
+                domain.append(('color_id', '=', False))
             ultimo = self.env['ticket.repuesto.historial'].search(domain, order='fecha_cambio desc', limit=1)
             _logger.debug("[_compute_ultimo_cambio] pedido=%s | subparte=%s | color=%s | ultimo_id=%s", record.pedido_id.name, record.subparte_id.name, record.color_id.name if record.color_id else 'B/N', ultimo.id if ultimo else 'ninguno')
-            k = _to_int(record.pedido_id.contometro_k); c = _to_int(record.pedido_id.contometro_color)
+
+            # Contador actual según regla unificada del pedido
+            cont_actual_str, _tipo_regla = record.pedido_id._get_contometro_linea(record)
+            record.contometro_actual_linea = cont_actual_str
+
             if ultimo:
                 record.ultimo_cambio_fecha = ultimo.fecha_cambio
                 record.ultimo_cambio_contometro = ultimo.contometro_cambio
                 record.ultimo_tipo_contometro = ultimo.tipo_contometro
-                tipo = ultimo.tipo_contometro
-                if tipo == 'color': record.contometro_actual_linea = record.pedido_id.contometro_color or '0'
-                elif tipo == 'total': record.contometro_actual_linea = str(k + c) if (k + c) > 0 else '0'
-                else: record.contometro_actual_linea = record.pedido_id.contometro_k or '0'
                 if ultimo.fecha_cambio:
                     diff = relativedelta(datetime.now(), ultimo.fecha_cambio)
                     record.meses_desde_ultimo_cambio = diff.months + (diff.years * 12)
                 else:
                     record.meses_desde_ultimo_cambio = 0
             else:
-                es_color = (record.pedido_id.equipo_id.tipo_maquina_id == 'color')
-                if record.color_id: record.contometro_actual_linea = record.pedido_id.contometro_color or '0'
-                elif es_color: record.contometro_actual_linea = str(k + c) if (k + c) > 0 else '0'
-                else: record.contometro_actual_linea = record.pedido_id.contometro_k or '0'
                 record.ultimo_cambio_fecha = record.ultimo_cambio_contometro = record.ultimo_tipo_contometro = False
                 record.meses_desde_ultimo_cambio = 0
 
