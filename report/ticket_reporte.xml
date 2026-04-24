@@ -805,6 +805,7 @@
                 }"/>
  
                 <t t-foreach="docs" t-as="o">
+                    <t t-set="company" t-value="o.env.company"/>
  
                     <t t-set="est_label" t-value="estado_map.get(o.estado, (o.estado, ''))[0]"/>
                     <t t-set="est_cls"   t-value="estado_map.get(o.estado, (o.estado, ''))[1]"/>
