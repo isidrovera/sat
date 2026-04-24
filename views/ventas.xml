@@ -249,35 +249,8 @@
                 </field>
               </page>
               <page string="Pruebas Técnicas">
-  <field name="prueba_ids"
-         nolabel="1"
-         context="{'default_maquina_id': active_id}">
-    <list string="Pruebas de Máquina"
-          create="0" edit="0" delete="0"
-          decoration-success="estado_prueba == 'completado'"
-          decoration-warning="estado_prueba == 'incompleto'"
-          decoration-muted="estado_prueba == 'pendiente'"
-          default_order="fecha_ultima_actualizacion desc, id desc">
-      <field name="fecha_inicio"/>
-      <field name="fecha_ultima_actualizacion"/>
-      <field name="tecnico_id" optional="show"/>
-      <field name="origen" optional="show"/>
-      <field name="contador_actual_total"/>
-      <field name="delta_total"/>
-      <field name="delta_impresiones" optional="show"/>
-      <field name="delta_copias" optional="show"/>
-      <field name="estado_toner"
-             decoration-danger="estado_toner == 'critico'"
-             decoration-warning="estado_toner == 'bajo'"
-             decoration-success="estado_toner == 'ok'"/>
-      <field name="nivel_prueba" optional="show"/>
-      <field name="estado_prueba"
-             decoration-success="estado_prueba == 'completado'"
-             decoration-warning="estado_prueba == 'incompleto'"
-             decoration-muted="estado_prueba == 'pendiente'"/>
-    </list>
-  </field>
-</page>
+                <field name="prueba_ids" nolabel="1"/>
+              </page>
             </notebook>
           </sheet>
           <!-- COMENTARIOS -->
