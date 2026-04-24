@@ -249,7 +249,27 @@
                 </field>
               </page>
               <page string="Pruebas Técnicas">
-                <field name="prueba_ids" nolabel="1"/>
+                <field name="prueba_ids" nolabel="1">
+                  <list create="0" edit="0" delete="0"
+          decoration-success="estado_toner == 'ok'"
+          decoration-warning="estado_toner == 'bajo'"
+          decoration-danger="estado_toner == 'critico'">
+                    <field name="reparacion_id"/>
+                    <!-- CONTADORES -->
+                    <field name="contador_inicial_total"/>
+                    <field name="contador_actual_total"/>
+                    <field name="contador_impresiones"/>
+                    <field name="contador_copias"/>
+                    <!-- TONER -->
+                    <field name="toner_negro" widget="progressbar"/>
+                    <field name="toner_cyan" widget="progressbar"/>
+                    <field name="toner_magenta" widget="progressbar"/>
+                    <field name="toner_amarillo" widget="progressbar"/>
+                    <!-- ESTADO -->
+                    <field name="estado_toner"/>
+                    <field name="fecha_ultima_actualizacion"/>
+                  </list>
+                </field>
               </page>
             </notebook>
           </sheet>

@@ -217,10 +217,7 @@
     </record>
 
 
-    <!-- ============================================================ -->
-    <!-- ACCIÓN (descomenta si necesitas acceso directo desde menú)   -->
-    <!-- ============================================================ -->
-    <!--
+    
     <record id="action_prueba_maquina" model="ir.actions.act_window">
       <field name="name">Pruebas de Máquina</field>
       <field name="res_model">sat.prueba.maquina</field>
@@ -228,12 +225,8 @@
       <field name="view_id" ref="view_prueba_maquina_list"/>
     </record>
 
-    <menuitem id="menu_prueba_maquina"
-              name="Pruebas de Máquina"
-              parent="sat_menu_root"
-              action="action_prueba_maquina"
-              sequence="48"/>
-    -->
+  
+    
 
   </data>
 </odoo>
