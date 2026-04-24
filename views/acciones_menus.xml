@@ -825,6 +825,12 @@ action = env["sat.import.line"].browse(env.context.get("active_ids", [])).action
               action="action_client_service_evaluation"
               sequence="20"/>
 
+      <menuitem id="menu_prueba_maquina"
+          name="Pruebas de Máquina"
+          parent="menu_evaluaciones_root"
+          action="action_prueba_maquina"
+          sequence="30"/>
+
     <!-- seq 30-200: libres para futuras adiciones en Evaluaciones -->
 
     <!-- ================================================================== -->
