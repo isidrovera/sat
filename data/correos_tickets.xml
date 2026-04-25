@@ -472,9 +472,9 @@
             <div style="background-color:#ebf8ff; padding:20px; margin:15px 0; border-left:4px solid #3182ce;">
                 <div style="margin:0;">
                     Se ha completado la revisión técnica del equipo indicado a continuación.
-                    Por favor, revisar el <strong>informe técnico adjunto</strong> para tomar la
-                    decisión correspondiente sobre el destino del equipo
-                    (<strong>alquiler</strong> o <strong>venta</strong>).
+                    Por favor, revisar el <strong>informe técnico adjunto</strong> y el
+                    <strong>checklist de evaluación</strong> para tomar la decisión sobre el
+                    destino del equipo (<strong>alquiler</strong> o <strong>venta</strong>).
                 </div>
             </div>
 
@@ -487,13 +487,13 @@
                 <div style="margin:10px 0;">Tipo: <strong><t t-out="object.tipo_id"/></strong></div>
 
                 <div style="font-size:16px; font-weight:bold; margin:15px 0 10px 0;">📊 Contadores</div>
-                <div style="background-color:#edf2f7; padding:8px 15px; margin:5px 0; display:inline-block;">
+                <div style="background-color:#edf2f7; padding:8px 15px; margin:5px 5px 5px 0; display:inline-block;">
                     ⚫ Negro: <strong><t t-out="object.contometrok_id"/></strong>
                 </div>
-                <div style="background-color:#edf2f7; padding:8px 15px; margin:5px 0; display:inline-block;">
+                <div style="background-color:#edf2f7; padding:8px 15px; margin:5px 5px 5px 0; display:inline-block;">
                     🎨 Color: <strong><t t-out="object.contometroc_id"/></strong>
                 </div>
-                <div style="background-color:#edf2f7; padding:8px 15px; margin:5px 0; display:inline-block;">
+                <div style="background-color:#edf2f7; padding:8px 15px; margin:5px 5px 5px 0; display:inline-block;">
                     📄 Scanner: <strong><t t-out="object.contometros_id"/></strong>
                 </div>
             </div>
@@ -504,25 +504,168 @@
                 <div style="margin:10px 0;">📅 Fecha: <strong><t t-out="object.agenda_local"/></strong></div>
                 <div style="margin:10px 0;">🔧 Tipo de Servicio: <strong><t t-out="object.tipo_servicio_id"/></strong></div>
                 <div style="margin:10px 0;">👨‍🔧 Técnico: <strong><t t-out="object.responsable.name"/></strong></div>
-                <div style="margin:10px 0;">✅ Calidad: <strong><t t-out="object.calidad_id"/></strong></div>
             </div>
 
             <!-- Informe Técnico -->
             <div style="background-color:#f0fff4; padding:20px; margin:15px 0;">
                 <div style="font-size:18px; font-weight:bold; margin-bottom:15px;">📝 Informe Técnico</div>
                 <div style="margin:10px 0;"><t t-out="object.informe_id"/></div>
-                <div style="margin:15px 0; color:#2c5282; font-style:italic;">
-                    📎 Se adjunta el informe técnico completo con el detalle de evaluación
-                    de componentes y accesorios en formato PDF.
-                </div>
             </div>
 
+            <!-- CHECKLIST DE COMPONENTES -->
+            <div style="background-color:#ffffff; padding:20px; margin:15px 0; border:1px solid #e2e8f0;">
+                <div style="font-size:18px; font-weight:bold; margin-bottom:15px; color:#2c3e50;">
+                    🔧 Evaluación de Componentes
+                </div>
+                <t t-if="object.ticket_componente_eval_ids">
+                    <table style="width:100%; border-collapse:collapse; font-size:13px;">
+                        <thead>
+                            <tr style="background-color:#2c3e50; color:#ffffff;">
+                                <th style="padding:10px; text-align:left; border:1px solid #1a252f;">Componente</th>
+                                <th style="padding:10px; text-align:left; border:1px solid #1a252f;">Color</th>
+                                <th style="padding:10px; text-align:left; border:1px solid #1a252f;">Estado</th>
+                                <th style="padding:10px; text-align:left; border:1px solid #1a252f;">Observaciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <t t-foreach="object.ticket_componente_eval_ids" t-as="ev">
+                                <tr t-att-style="'background-color:#fff5f5;' if ev.estado_id and ev.estado_id.code == 'requiere_cambio' else ('background-color:#ffffff;' if ev_index % 2 == 0 else 'background-color:#f7fafc;')">
+                                    <td style="padding:8px; border:1px solid #e2e8f0;">
+                                        <strong><t t-out="ev.componente_tipo_id.name"/></strong>
+                                    </td>
+                                    <td style="padding:8px; border:1px solid #e2e8f0;">
+                                        <t t-if="ev.color_id"><t t-out="ev.color_id.name"/></t>
+                                        <t t-else="">—</t>
+                                    </td>
+                                    <td style="padding:8px; border:1px solid #e2e8f0;">
+                                        <t t-if="ev.estado_id">
+                                            <t t-if="ev.estado_id.code == 'requiere_cambio'">
+                                                <span style="background-color:#fee2e2; color:#991b1b; padding:3px 8px; border-radius:10px; font-weight:bold; font-size:11px;">
+                                                    ⚠️ <t t-out="ev.estado_id.name"/>
+                                                </span>
+                                            </t>
+                                            <t t-elif="ev.estado_id.code in ('nuevo', 'correcto')">
+                                                <span style="background-color:#d1fae5; color:#065f46; padding:3px 8px; border-radius:10px; font-weight:bold; font-size:11px;">
+                                                    ✓ <t t-out="ev.estado_id.name"/>
+                                                </span>
+                                            </t>
+                                            <t t-elif="ev.estado_id.code in ('regular', 'gastada_pero_puede_trabajar')">
+                                                <span style="background-color:#fef3c7; color:#92400e; padding:3px 8px; border-radius:10px; font-weight:bold; font-size:11px;">
+                                                    <t t-out="ev.estado_id.name"/>
+                                                </span>
+                                            </t>
+                                            <t t-else="">
+                                                <span style="background-color:#dbeafe; color:#1e3a8a; padding:3px 8px; border-radius:10px; font-weight:bold; font-size:11px;">
+                                                    <t t-out="ev.estado_id.name"/>
+                                                </span>
+                                            </t>
+                                        </t>
+                                        <t t-else="">
+                                            <span style="color:#9ca3af;">Sin evaluar</span>
+                                        </t>
+                                    </td>
+                                    <td style="padding:8px; border:1px solid #e2e8f0; font-size:12px;">
+                                        <t t-if="ev.observaciones"><t t-out="ev.observaciones"/></t>
+                                        <t t-else="">—</t>
+                                    </td>
+                                </tr>
+                            </t>
+                        </tbody>
+                    </table>
+                </t>
+                <t t-else="">
+                    <p style="color:#9ca3af; font-style:italic; margin:0;">
+                        No hay evaluaciones de componentes registradas.
+                    </p>
+                </t>
+            </div>
+
+            <!-- CHECKLIST DE ACCESORIOS -->
+            <div style="background-color:#ffffff; padding:20px; margin:15px 0; border:1px solid #e2e8f0;">
+                <div style="font-size:18px; font-weight:bold; margin-bottom:15px; color:#2c3e50;">
+                    🧩 Evaluación de Accesorios
+                </div>
+                <t t-if="object.ticket_accesorio_eval_ids">
+                    <table style="width:100%; border-collapse:collapse; font-size:13px;">
+                        <thead>
+                            <tr style="background-color:#2c3e50; color:#ffffff;">
+                                <th style="padding:10px; text-align:left; border:1px solid #1a252f;">Accesorio</th>
+                                <th style="padding:10px; text-align:left; border:1px solid #1a252f;">Estado</th>
+                                <th style="padding:10px; text-align:left; border:1px solid #1a252f;">Observaciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <t t-foreach="object.ticket_accesorio_eval_ids" t-as="ac">
+                                <tr t-att-style="'background-color:#fff5f5;' if ac.estado_id and ac.estado_id.code == 'requiere_cambio' else ('background-color:#ffffff;' if ac_index % 2 == 0 else 'background-color:#f7fafc;')">
+                                    <td style="padding:8px; border:1px solid #e2e8f0;">
+                                        <strong><t t-out="ac.tipo_id.name"/></strong>
+                                    </td>
+                                    <td style="padding:8px; border:1px solid #e2e8f0;">
+                                        <t t-if="ac.estado_id">
+                                            <t t-if="ac.estado_id.code == 'requiere_cambio'">
+                                                <span style="background-color:#fee2e2; color:#991b1b; padding:3px 8px; border-radius:10px; font-weight:bold; font-size:11px;">
+                                                    ⚠️ <t t-out="ac.estado_id.name"/>
+                                                </span>
+                                            </t>
+                                            <t t-elif="ac.estado_id.code in ('instalado_operativo', 'revisado')">
+                                                <span style="background-color:#d1fae5; color:#065f46; padding:3px 8px; border-radius:10px; font-weight:bold; font-size:11px;">
+                                                    ✓ <t t-out="ac.estado_id.name"/>
+                                                </span>
+                                            </t>
+                                            <t t-elif="ac.estado_id.code == 'no_instalado'">
+                                                <span style="background-color:#fee2e2; color:#991b1b; padding:3px 8px; border-radius:10px; font-weight:bold; font-size:11px;">
+                                                    ✗ <t t-out="ac.estado_id.name"/>
+                                                </span>
+                                            </t>
+                                            <t t-else="">
+                                                <span style="background-color:#f3f4f6; color:#374151; padding:3px 8px; border-radius:10px; font-weight:bold; font-size:11px;">
+                                                    <t t-out="ac.estado_id.name"/>
+                                                </span>
+                                            </t>
+                                        </t>
+                                        <t t-else="">
+                                            <span style="color:#9ca3af;">Sin evaluar</span>
+                                        </t>
+                                    </td>
+                                    <td style="padding:8px; border:1px solid #e2e8f0; font-size:12px;">
+                                        <t t-if="ac.observaciones"><t t-out="ac.observaciones"/></t>
+                                        <t t-else="">—</t>
+                                    </td>
+                                </tr>
+                            </t>
+                        </tbody>
+                    </table>
+                </t>
+                <t t-else="">
+                    <p style="color:#9ca3af; font-style:italic; margin:0;">
+                        No hay evaluaciones de accesorios registradas.
+                    </p>
+                </t>
+            </div>
+
+            <!-- Resumen de pendientes -->
+            <t t-set="comp_cambio" t-value="object.ticket_componente_eval_ids.filtered(lambda e: e.estado_id and e.estado_id.code == 'requiere_cambio')"/>
+            <t t-set="acc_cambio" t-value="object.ticket_accesorio_eval_ids.filtered(lambda e: e.estado_id and e.estado_id.code == 'requiere_cambio')"/>
+            <t t-if="comp_cambio or acc_cambio">
+                <div style="background-color:#fff5f5; padding:20px; margin:15px 0; border-left:4px solid #e53e3e;">
+                    <div style="font-size:16px; font-weight:bold; margin-bottom:10px; color:#991b1b;">
+                        ⚠️ Resumen de Pendientes
+                    </div>
+                    <div style="margin:5px 0;">
+                        Componentes que requieren cambio: <strong><t t-out="len(comp_cambio)"/></strong>
+                    </div>
+                    <div style="margin:5px 0;">
+                        Accesorios que requieren cambio: <strong><t t-out="len(acc_cambio)"/></strong>
+                    </div>
+                </div>
+            </t>
+
             <!-- Acción requerida -->
-            <div style="background-color:#fff5f5; padding:20px; margin:15px 0; border-left:4px solid #e53e3e;">
-                <div style="font-size:16px; font-weight:bold; margin-bottom:10px;">⚠️ Acción Requerida</div>
+            <div style="background-color:#fffbeb; padding:20px; margin:15px 0; border-left:4px solid #f59e0b;">
+                <div style="font-size:16px; font-weight:bold; margin-bottom:10px;">📌 Acción Requerida</div>
                 <div style="margin:0;">
                     Por favor, evaluar el informe adjunto y comunicar la decisión sobre el
-                    destino del equipo a la brevedad.
+                    destino del equipo (<strong>alquiler</strong> o <strong>venta</strong>) a la brevedad.
                 </div>
             </div>
 
