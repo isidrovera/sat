@@ -77,7 +77,7 @@
                                 type="object"
                                 string="📤 Enviar Informe a Administración"
                                 class="btn-primary"
-                                invisible="estado != 'finalizado' or tipo_servicio_id != 'alquiler'"
+                                
                                 confirm="¿Enviar el informe técnico al área de administración para decisión?"/>
                     </header>
                     <sheet>
