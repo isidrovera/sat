@@ -491,6 +491,11 @@
     <field name="code">BYPASS_SEPARATION</field>
     <field name="tipo_id" ref="comp_tipo_bypass"/>
   </record>
+  <record id="sub_bypass_feed" model="componente.subparte">
+    <field name="name">Feed Bypass</field>
+    <field name="code">BYPASS_FEED</field>
+    <field name="tipo_id" ref="comp_tipo_bypass"/>
+</record>
   <record id="sub_bypass_guides" model="componente.subparte">
     <field name="name">Guías de Bypass</field>
     <field name="code">BYPASS_GUIDES</field>
