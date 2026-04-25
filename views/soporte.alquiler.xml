@@ -73,6 +73,12 @@
                                 class="oe_highlight"
                                 groups="base.group_system"
                                 options="{'no_required_fields_validation': true}"/>
+                        <button name="action_enviar_informe_administracion"
+                                type="object"
+                                string="📤 Enviar Informe a Administración"
+                                class="btn-primary"
+                                invisible="estado != 'finalizado' or tipo_servicio_id != 'alquiler'"
+                                confirm="¿Enviar el informe técnico al área de administración para decisión?"/>
                     </header>
                     <sheet>
                         <div name="button_box">

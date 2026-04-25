@@ -435,5 +435,105 @@
     </html>
         ]]></field>
         </record>
+        <record id="email_template_ticket_admin_decision" model="mail.template">
+    <field name="name">Informe Técnico para Decisión - Administración</field>
+    <field name="email_from">soporte@andescopiers.com.pe</field>
+    <field name="email_to">administracion@andescopiers.com.pe</field>
+    <field name="email_cc">comercial01@andescopiers.com.pe,
+        comercial@andescopiers.com.pe, gerencia@andescopiers.com.pe</field>
+    <field name="subject">📋 Informe Técnico para Decisión - Equipo {{object.serie_id_r}} - Ticket #{{object.name}}</field>
+    <field name="model_id" ref="model_ticket_alquiler"/>
+    <field name="report_template_ids" eval="[(4, ref('sat.action_ticket_alquiler'))]"/>
+    <field name="auto_delete" eval="True"/>
+    <field name="lang"></field>
+    <field name="body_html"><![CDATA[
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+</head>
+<body bgcolor="#f5f5f5" style="margin:0; padding:0; font-family: Arial, Helvetica, sans-serif; line-height:1.6; color:#2d3748;">
+    <div style="max-width:800px; margin:0 auto; padding:20px;">
+
+        <!-- Encabezado -->
+        <div style="background-color:#3182ce; padding:20px; text-align:center;">
+            <div style="color:#ffffff; font-size:24px; font-weight:bold;">📋 Informe Técnico para Decisión</div>
+            <div style="color:#ffffff; margin-top:10px;">Ticket #<t t-out="object.name"/></div>
+        </div>
+
+        <!-- Contenido -->
+        <div style="background-color:#ffffff; padding:25px; border:1px solid #e2e8f0;">
+
+            <div style="margin-bottom:20px;">
+                Estimado equipo de <strong>Administración</strong>,
+            </div>
+
+            <!-- Mensaje principal -->
+            <div style="background-color:#ebf8ff; padding:20px; margin:15px 0; border-left:4px solid #3182ce;">
+                <div style="margin:0;">
+                    Se ha completado la revisión técnica del equipo indicado a continuación.
+                    Por favor, revisar el <strong>informe técnico adjunto</strong> para tomar la
+                    decisión correspondiente sobre el destino del equipo
+                    (<strong>alquiler</strong> o <strong>venta</strong>).
+                </div>
+            </div>
+
+            <!-- Datos del Equipo -->
+            <div style="background-color:#e6fffa; padding:20px; margin:15px 0;">
+                <div style="font-size:18px; font-weight:bold; margin-bottom:15px;">🖨️ Equipo Evaluado</div>
+                <div style="margin:10px 0;">Marca: <strong><t t-out="object.marca_id_r"/></strong></div>
+                <div style="margin:10px 0;">Modelo: <strong><t t-out="object.product_alquiler.name.name"/></strong></div>
+                <div style="margin:10px 0;">Serie: <strong><t t-out="object.serie_id_r"/></strong></div>
+                <div style="margin:10px 0;">Tipo: <strong><t t-out="object.tipo_id"/></strong></div>
+
+                <div style="font-size:16px; font-weight:bold; margin:15px 0 10px 0;">📊 Contadores</div>
+                <div style="background-color:#edf2f7; padding:8px 15px; margin:5px 0; display:inline-block;">
+                    ⚫ Negro: <strong><t t-out="object.contometrok_id"/></strong>
+                </div>
+                <div style="background-color:#edf2f7; padding:8px 15px; margin:5px 0; display:inline-block;">
+                    🎨 Color: <strong><t t-out="object.contometroc_id"/></strong>
+                </div>
+                <div style="background-color:#edf2f7; padding:8px 15px; margin:5px 0; display:inline-block;">
+                    📄 Scanner: <strong><t t-out="object.contometros_id"/></strong>
+                </div>
+            </div>
+
+            <!-- Detalles del Servicio -->
+            <div style="background-color:#f7fafc; padding:20px; margin:15px 0;">
+                <div style="font-size:18px; font-weight:bold; margin-bottom:15px;">📋 Detalles de la Revisión</div>
+                <div style="margin:10px 0;">📅 Fecha: <strong><t t-out="object.agenda_local"/></strong></div>
+                <div style="margin:10px 0;">🔧 Tipo de Servicio: <strong><t t-out="object.tipo_servicio_id"/></strong></div>
+                <div style="margin:10px 0;">👨‍🔧 Técnico: <strong><t t-out="object.responsable.name"/></strong></div>
+                <div style="margin:10px 0;">✅ Calidad: <strong><t t-out="object.calidad_id"/></strong></div>
+            </div>
+
+            <!-- Informe Técnico -->
+            <div style="background-color:#f0fff4; padding:20px; margin:15px 0;">
+                <div style="font-size:18px; font-weight:bold; margin-bottom:15px;">📝 Informe Técnico</div>
+                <div style="margin:10px 0;"><t t-out="object.informe_id"/></div>
+                <div style="margin:15px 0; color:#2c5282; font-style:italic;">
+                    📎 Se adjunta el informe técnico completo con el detalle de evaluación
+                    de componentes y accesorios en formato PDF.
+                </div>
+            </div>
+
+            <!-- Acción requerida -->
+            <div style="background-color:#fff5f5; padding:20px; margin:15px 0; border-left:4px solid #e53e3e;">
+                <div style="font-size:16px; font-weight:bold; margin-bottom:10px;">⚠️ Acción Requerida</div>
+                <div style="margin:0;">
+                    Por favor, evaluar el informe adjunto y comunicar la decisión sobre el
+                    destino del equipo a la brevedad.
+                </div>
+            </div>
+
+            <div style="text-align:center; margin-top:30px; padding:20px; background-color:#f7fafc;">
+                <div>Saludos cordiales,<br/><strong>Área de Soporte Técnico</strong></div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+    ]]></field>
+</record>
     </data>
 </odoo>
