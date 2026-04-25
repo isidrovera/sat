@@ -81,7 +81,65 @@ class TicketAlquiler(models.Model):
     # ============================================================
     # CAMPOS EXISTENTES — SIN CAMBIOS
     # ============================================================
+    def action_enviar_informe_administracion(self):
+        """
+        Envía el informe técnico al área de administración para que
+        tomen la decisión sobre el destino del equipo (alquiler o venta).
+        Adjunta automáticamente el reporte PDF del ticket.
+        """
+        self.ensure_one()
 
+        # Validaciones mínimas
+        errores = []
+        if not self.informe_id:
+            errores.append("• El Informe Técnico es requerido")
+        if not self.product_alquiler:
+            errores.append("• El equipo (modelo) es requerido")
+        if not self.contometrok_id:
+            errores.append("• El contómetro K es requerido")
+
+        if errores:
+            raise UserError(_(
+                "No se puede enviar el informe a administración:\n\n%s"
+            ) % "\n".join(errores))
+
+        try:
+            tmpl = self.env.ref('sat.email_template_ticket_admin_decision')
+            tmpl.send_mail(self.id, force_send=True)
+
+            self.message_post(body=_(
+                "📤 <b>Informe técnico enviado a Administración</b><br/>"
+                "Equipo: %s (Serie: %s)<br/>"
+                "Pendiente de decisión: alquiler o venta."
+            ) % (
+                self.product_alquiler.name.name if self.product_alquiler.name else 'N/A',
+                self.serie_id_r or 'N/A',
+            ))
+
+            _logger.info(
+                "[action_enviar_informe_administracion] Informe enviado | ticket=%s | equipo=%s",
+                self.name, self.serie_id_r
+            )
+
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Informe enviado'),
+                    'message': _('El informe técnico fue enviado a Administración correctamente.'),
+                    'type': 'success',
+                    'sticky': False,
+                }
+            }
+
+        except Exception as e:
+            _logger.error(
+                "[action_enviar_informe_administracion] Error enviando informe | ticket=%s | error=%s",
+                self.name, str(e)
+            )
+            raise UserError(_(
+                "Error al enviar el informe a administración:\n%s"
+            ) % str(e))
     reporter_name = fields.Char(string="Nombre de quien reporta")
     reporter_phone = fields.Char(string="Numero de quien reporto")
     problem_photo = fields.Binary(string="Foto del problema")
@@ -1704,65 +1762,7 @@ class TicketAlquiler(models.Model):
         for tech_data in tecnicos_con_tickets.values():
             self._enviar_notificacion_pendientes(tech_data['tecnico'], tech_data['tickets'])
         return True
-    def action_enviar_informe_administracion(self):
-        """
-        Envía el informe técnico al área de administración para que
-        tomen la decisión sobre el destino del equipo (alquiler o venta).
-        Adjunta automáticamente el reporte PDF del ticket.
-        """
-        self.ensure_one()
-
-        # Validaciones mínimas
-        errores = []
-        if not self.informe_id:
-            errores.append("• El Informe Técnico es requerido")
-        if not self.product_alquiler:
-            errores.append("• El equipo (modelo) es requerido")
-        if not self.contometrok_id:
-            errores.append("• El contómetro K es requerido")
-
-        if errores:
-            raise UserError(_(
-                "No se puede enviar el informe a administración:\n\n%s"
-            ) % "\n".join(errores))
-
-        try:
-            tmpl = self.env.ref('sat.email_template_ticket_admin_decision')
-            tmpl.send_mail(self.id, force_send=True)
-
-            self.message_post(body=_(
-                "📤 <b>Informe técnico enviado a Administración</b><br/>"
-                "Equipo: %s (Serie: %s)<br/>"
-                "Pendiente de decisión: alquiler o venta."
-            ) % (
-                self.product_alquiler.name.name if self.product_alquiler.name else 'N/A',
-                self.serie_id_r or 'N/A',
-            ))
-
-            _logger.info(
-                "[action_enviar_informe_administracion] Informe enviado | ticket=%s | equipo=%s",
-                self.name, self.serie_id_r
-            )
-
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'title': _('Informe enviado'),
-                    'message': _('El informe técnico fue enviado a Administración correctamente.'),
-                    'type': 'success',
-                    'sticky': False,
-                }
-            }
-
-        except Exception as e:
-            _logger.error(
-                "[action_enviar_informe_administracion] Error enviando informe | ticket=%s | error=%s",
-                self.name, str(e)
-            )
-            raise UserError(_(
-                "Error al enviar el informe a administración:\n%s"
-            ) % str(e))
+    
 
 
 class ReportTicketAlquiler(models.AbstractModel):
