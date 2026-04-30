@@ -258,19 +258,19 @@
                             <a type="delete" class="o_card_delete">✕</a>
                         </div>
                         <div class="o_card_field">
-                            <label>Tipo *</label>
+                            <span class="o_card_field_label">Tipo *</span>
                             <field name="componente_tipo_id" required="1"/>
                         </div>
                         <div class="o_card_field">
-                            <label>Color</label>
+                            <span class="o_card_field_label">Color</span>
                             <field name="color_id"/>
                         </div>
                         <div class="o_card_field o_card_field_estado">
-                            <label>Estado *</label>
+                            <span class="o_card_field_label">Estado *</span>
                             <field name="estado_id" required="1"/>
                         </div>
                         <div class="o_card_field">
-                            <label>Observaciones</label>
+                            <span class="o_card_field_label">Observaciones</span>
                             <field name="observaciones" placeholder="Sin observaciones"/>
                         </div>
                     </div>
@@ -306,15 +306,15 @@
                             <a type="delete" class="o_card_delete">✕</a>
                         </div>
                         <div class="o_card_field">
-                            <label>Tipo *</label>
+                            <span class="o_card_field_label">Tipo *</span>
                             <field name="tipo_id" required="1"/>
                         </div>
                         <div class="o_card_field o_card_field_estado">
-                            <label>Estado *</label>
+                            <span class="o_card_field_label">Estado *</span>
                             <field name="estado_id" required="1"/>
                         </div>
                         <div class="o_card_field">
-                            <label>Observaciones</label>
+                            <span class="o_card_field_label">Observaciones</span>
                             <field name="observaciones" placeholder="Sin observaciones"/>
                         </div>
                     </div>
