@@ -541,8 +541,8 @@
                                        invisible="selected == False"
                                        optional="hide"
                                        string="Observación"/>
-                                <field name="componente_code"/>
-                                <field name="intervencion_id"/>
+                                <field name="componente_code" optional="hide"/>
+                                <field name="intervencion_id" optional="hide"/>
                             </list>
                         </field>
                     </sheet>
