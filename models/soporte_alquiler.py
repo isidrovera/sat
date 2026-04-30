@@ -628,7 +628,7 @@ class TicketAlquiler(models.Model):
         )
 
         wizard = self.env['ticket.subpartes.wizard'].create({'ticket_id': self.id})
-        modelo = self.product_alquiler
+        modelo = self.product_alquiler.name
         _logger.info(
             "[_abrir_wizard_subpartes] ticket=%s | modelo=%s (id=%s)",
             self.id, modelo.name if modelo else 'None', modelo.id if modelo else 'None'
