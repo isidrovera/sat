@@ -240,32 +240,96 @@
                                 <field name="informe_id" widget="html"/>
                             </page>
                             <page string="🔧 Componentes" name="componentes_dinamicos">
-                                <field name="ticket_componente_eval_ids"
-                                       readonly="estado == 'finalizado'"
-                                       context="{'default_ticket_id': id}">
-                                    <list editable="bottom"
-                                          decoration-danger="not estado_id"
-                                          decoration-warning="estado_id and estado_id.code == 'requiere_cambio'">
-                                        <field name="componente_tipo_id" required="1"/>
-                                        <field name="color_id" optional="show"/>
-                                        <field name="estado_id" required="1"/>
-                                        <field name="observaciones" optional="show"/>
-                                    </list>
-                                </field>
-                            </page>
-                            <page string="🔩 Accesorios" name="accesorios_dinamicos">
-                                <field name="ticket_accesorio_eval_ids"
-                                       readonly="estado == 'finalizado'"
-                                       context="{'default_ticket_id': id}">
-                                    <list editable="bottom"
-                                          decoration-danger="not estado_id"
-                                          decoration-warning="estado_id and estado_id.code == 'requiere_cambio'">
-                                        <field name="tipo_id" required="1"/>
-                                        <field name="estado_id" required="1"/>
-                                        <field name="observaciones" optional="show"/>
-                                    </list>
-                                </field>
-                            </page>
+    <field name="ticket_componente_eval_ids"
+           readonly="estado == 'finalizado'"
+           context="{'default_ticket_id': id}"
+           mode="kanban,list">
+        <kanban class="o_componente_eval_kanban" records_draggable="0">
+            <field name="componente_tipo_id"/>
+            <field name="color_id"/>
+            <field name="estado_id"/>
+            <field name="observaciones"/>
+            <templates>
+                <t t-name="kanban-box">
+                    <div class="o_componente_card"
+                         t-attf-class="#{!record.estado_id.raw_value ? 'o_card_danger' : (record.estado_id.raw_value and record.estado_id.value.includes('cambio') ? 'o_card_warning' : 'o_card_success')}">
+                        <div class="o_card_header">
+                            <span class="o_card_label">COMPONENTE</span>
+                            <a type="delete" class="o_card_delete">✕</a>
+                        </div>
+                        <div class="o_card_field">
+                            <label>Tipo *</label>
+                            <field name="componente_tipo_id" required="1"/>
+                        </div>
+                        <div class="o_card_field">
+                            <label>Color</label>
+                            <field name="color_id"/>
+                        </div>
+                        <div class="o_card_field o_card_field_estado">
+                            <label>Estado *</label>
+                            <field name="estado_id" required="1"/>
+                        </div>
+                        <div class="o_card_field">
+                            <label>Observaciones</label>
+                            <field name="observaciones" placeholder="Sin observaciones"/>
+                        </div>
+                    </div>
+                </t>
+            </templates>
+        </kanban>
+        <list editable="bottom"
+              decoration-danger="not estado_id"
+              decoration-warning="estado_id and estado_id.code == 'requiere_cambio'">
+            <field name="componente_tipo_id" required="1"/>
+            <field name="color_id" optional="show"/>
+            <field name="estado_id" required="1"/>
+            <field name="observaciones" optional="show"/>
+        </list>
+    </field>
+</page>
+
+<page string="🔩 Accesorios" name="accesorios_dinamicos">
+    <field name="ticket_accesorio_eval_ids"
+           readonly="estado == 'finalizado'"
+           context="{'default_ticket_id': id}"
+           mode="kanban,list">
+        <kanban class="o_accesorio_eval_kanban" records_draggable="0">
+            <field name="tipo_id"/>
+            <field name="estado_id"/>
+            <field name="observaciones"/>
+            <templates>
+                <t t-name="kanban-box">
+                    <div class="o_componente_card"
+                         t-attf-class="#{!record.estado_id.raw_value ? 'o_card_danger' : (record.estado_id.raw_value and record.estado_id.value.includes('cambio') ? 'o_card_warning' : 'o_card_success')}">
+                        <div class="o_card_header">
+                            <span class="o_card_label">ACCESORIO</span>
+                            <a type="delete" class="o_card_delete">✕</a>
+                        </div>
+                        <div class="o_card_field">
+                            <label>Tipo *</label>
+                            <field name="tipo_id" required="1"/>
+                        </div>
+                        <div class="o_card_field o_card_field_estado">
+                            <label>Estado *</label>
+                            <field name="estado_id" required="1"/>
+                        </div>
+                        <div class="o_card_field">
+                            <label>Observaciones</label>
+                            <field name="observaciones" placeholder="Sin observaciones"/>
+                        </div>
+                    </div>
+                </t>
+            </templates>
+        </kanban>
+        <list editable="bottom"
+              decoration-danger="not estado_id"
+              decoration-warning="estado_id and estado_id.code == 'requiere_cambio'">
+            <field name="tipo_id" required="1"/>
+            <field name="estado_id" required="1"/>
+            <field name="observaciones" optional="show"/>
+        </list>
+    </field>
+</page>
                             <page string="📦 Pedidos de Repuestos"
                                   name="pedidos_repuestos"
                                   invisible="ticket_pedido_count == 0">
@@ -370,6 +434,88 @@
                 </form>
             </field>
         </record>
+        <record id="view_ticket_componente_eval_kanban" model="ir.ui.view">
+    <field name="name">ticket.componente.eval.kanban</field>
+    <field name="model">ticket.componente.eval</field>
+    <field name="arch" type="xml">
+        <kanban class="o_componente_eval_kanban" records_draggable="0">
+            <field name="componente_tipo_id"/>
+            <field name="color_id"/>
+            <field name="estado_id"/>
+            <field name="observaciones"/>
+            <templates>
+                <t t-name="kanban-box">
+                    <div class="o_componente_card"
+                         t-attf-class="#{!record.estado_id.raw_value ? 'o_card_danger' : (record.estado_id.raw_value and record.estado_id.value.includes('cambio') ? 'o_card_warning' : 'o_card_success')}">
+
+                        <div class="o_card_header">
+                            <span class="o_card_label">COMPONENTE</span>
+                            <a type="delete" class="o_card_delete">✕</a>
+                        </div>
+
+                        <div class="o_card_field">
+                            <label>Tipo *</label>
+                            <field name="componente_tipo_id" required="1"/>
+                        </div>
+
+                        <div class="o_card_field">
+                            <label>Color</label>
+                            <field name="color_id"/>
+                        </div>
+
+                        <div class="o_card_field o_card_field_estado">
+                            <label>Estado *</label>
+                            <field name="estado_id" required="1"/>
+                        </div>
+
+                        <div class="o_card_field">
+                            <label>Observaciones</label>
+                            <field name="observaciones" placeholder="Sin observaciones"/>
+                        </div>
+                    </div>
+                </t>
+            </templates>
+        </kanban>
+    </field>
+</record>
+<record id="view_ticket_accesorio_eval_kanban" model="ir.ui.view">
+    <field name="name">ticket.accesorio.eval.kanban</field>
+    <field name="model">ticket.accesorio.eval</field>
+    <field name="arch" type="xml">
+        <kanban class="o_accesorio_eval_kanban" records_draggable="0">
+            <field name="tipo_id"/>
+            <field name="estado_id"/>
+            <field name="observaciones"/>
+            <templates>
+                <t t-name="kanban-box">
+                    <div class="o_componente_card"
+                         t-attf-class="#{!record.estado_id.raw_value ? 'o_card_danger' : (record.estado_id.raw_value and record.estado_id.value.includes('cambio') ? 'o_card_warning' : 'o_card_success')}">
+
+                        <div class="o_card_header">
+                            <span class="o_card_label">ACCESORIO</span>
+                            <a type="delete" class="o_card_delete">✕</a>
+                        </div>
+
+                        <div class="o_card_field">
+                            <label>Tipo *</label>
+                            <field name="tipo_id" required="1"/>
+                        </div>
+
+                        <div class="o_card_field o_card_field_estado">
+                            <label>Estado *</label>
+                            <field name="estado_id" required="1"/>
+                        </div>
+
+                        <div class="o_card_field">
+                            <label>Observaciones</label>
+                            <field name="observaciones" placeholder="Sin observaciones"/>
+                        </div>
+                    </div>
+                </t>
+            </templates>
+        </kanban>
+    </field>
+</record>
         <!-- ================================================= -->
         <!-- TICKET ALQUILER — LIST (sin cambios)               -->
         <!-- ================================================= -->

@@ -1,0 +1,132 @@
+.o_componente_eval_kanban,
+.o_accesorio_eval_kanban {
+
+    .o_kanban_record {
+        width: 100% !important;
+        margin: 0 0 10px 0 !important;
+        padding: 0 !important;
+        border: none !important;
+        background: transparent !important;
+        box-shadow: none !important;
+    }
+
+    .o_componente_card {
+        background: white;
+        border: 1.5px solid #dee2e6;
+        border-left: 4px solid #adb5bd;
+        border-radius: 10px;
+        padding: 14px;
+
+        &.o_card_success {
+            border-color: #97c459;
+            border-left-color: #639922;
+        }
+
+        &.o_card_warning {
+            border-color: #fac775;
+            border-left-color: #ba7517;
+        }
+
+        &.o_card_danger {
+            border-color: #f09595;
+            border-left-color: #e24b4a;
+        }
+    }
+
+    .o_card_header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 12px;
+    }
+
+    .o_card_label {
+        font-size: 11px;
+        font-weight: 600;
+        color: #6c757d;
+        letter-spacing: 0.5px;
+    }
+
+    .o_card_delete {
+        color: #6c757d;
+        font-size: 14px;
+        cursor: pointer;
+        padding: 4px 8px;
+        border-radius: 4px;
+        text-decoration: none !important;
+
+        &:hover {
+            background: #f8d7da;
+            color: #721c24;
+        }
+    }
+
+    .o_card_field {
+        margin-bottom: 12px;
+
+        &:last-child {
+            margin-bottom: 0;
+        }
+
+        label {
+            display: block;
+            font-size: 11px;
+            color: #6c757d;
+            margin-bottom: 4px;
+            font-weight: 500;
+        }
+
+        .o_field_widget {
+            width: 100%;
+
+            input,
+            select,
+            textarea,
+            .o_input {
+                width: 100%;
+                padding: 10px 12px !important;
+                border: 0.5px solid #dee2e6 !important;
+                border-radius: 6px !important;
+                background: white !important;
+                font-size: 14px !important;
+                min-height: 40px;
+            }
+
+            .o_input_dropdown input,
+            .o-autocomplete--input {
+                padding: 10px 12px !important;
+                min-height: 40px;
+            }
+        }
+    }
+
+    .o_card_field_estado {
+        .o_field_widget {
+            input,
+            .o_input,
+            .o-autocomplete--input {
+                font-weight: 500;
+            }
+        }
+    }
+
+    .o_kanban_quick_create_folded,
+    .o_kanban_quick_add {
+        display: none;
+    }
+
+    @media (min-width: 768px) {
+        .o_kanban_record {
+            width: calc(50% - 10px) !important;
+            display: inline-block;
+            vertical-align: top;
+            margin: 0 5px 10px !important;
+        }
+    }
+
+    @media (min-width: 1200px) {
+        .o_kanban_record {
+            width: calc(33.333% - 10px) !important;
+        }
+    }
+}
