@@ -436,7 +436,7 @@
         </record>
         <record id="view_ticket_componente_eval_kanban" model="ir.ui.view">
     <field name="name">ticket.componente.eval.kanban</field>
-    <field name="model">ticket.componente.eval</field>
+    <field name="model">ticket.componente.evaluacion</field>
     <field name="arch" type="xml">
         <kanban class="o_componente_eval_kanban" records_draggable="0">
             <field name="componente_tipo_id"/>
@@ -480,7 +480,7 @@
 </record>
 <record id="view_ticket_accesorio_eval_kanban" model="ir.ui.view">
     <field name="name">ticket.accesorio.eval.kanban</field>
-    <field name="model">ticket.accesorio.eval</field>
+    <field name="model">ticket.accesorio.evaluacion</field>
     <field name="arch" type="xml">
         <kanban class="o_accesorio_eval_kanban" records_draggable="0">
             <field name="tipo_id"/>
