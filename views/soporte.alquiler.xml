@@ -514,37 +514,16 @@
         <!-- ================================================= -->
         <!-- WIZARD: ticket.subpartes.wizard (sin cambios)      -->
         <!-- ================================================= -->
-     <record id="view_ticket_subpartes_wizard_form" model="ir.ui.view">
-    <field name="name">ticket.subpartes.wizard.form</field>
-    <field name="model">ticket.subpartes.wizard</field>
-    <field name="arch" type="xml">
-        <form string="Seleccionar Subpartes">
-            <sheet>
-                <div class="alert alert-warning" role="alert">
-                    <i class="fa fa-exclamation-triangle me-2"/>
-                    <strong>Atención:</strong>
-                    Los siguientes componentes requieren cambio pero no tienen
-                    subpartes especificadas. Selecciona las subpartes necesarias
-                    antes de cerrar el ticket.
-                </div>
-                <field name="componentes_info" readonly="1" nolabel="1"/>
-                <field name="line_ids"
-                       widget="subpartes_selector"
-                       nolabel="1"/>
-            </sheet>
-            <footer>
-                <button string="✅ Confirmar Subpartes"
-                        name="action_confirmar"
-                        type="object"
-                        class="btn-primary"
-                        confirm="¿Confirmar las subpartes? El ticket se cerrará y se generará el pedido."/>
-                <button string="Cancelar"
-                        class="btn-secondary"
-                        special="cancel"/>
-            </footer>
-        </form>
-    </field>
-</record>
+     <field name="line_ids"
+       widget="subpartes_selector"
+       nolabel="1">
+    <list>
+        <field name="componente_display"/>
+        <field name="subparte_id"/>
+        <field name="selected"/>
+        <field name="cantidad"/>
+    </list>
+</field>
         <!-- ================================================= -->
         <!-- ticket.componente.evaluacion (sin cambios)         -->
         <!-- ================================================= -->
