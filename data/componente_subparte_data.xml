@@ -385,7 +385,26 @@
     <field name="code">FUSER_HEAT_BUSHINGS</field>
     <field name="tipo_id" ref="comp_tipo_fusora"/>
 </record>
+<!-- Uñas de separación del rodillo de calor -->
+<record id="sub_fuser_heat_fingers" model="componente.subparte">
+    <field name="name">Uñas de separación del rodillo de calor</field>
+    <field name="code">FUSER_HEAT_SEP_FINGERS</field>
+    <field name="tipo_id" ref="comp_tipo_fusora"/>
+</record>
 
+<!-- Base/soporte de uñas del rodillo de calor -->
+<record id="sub_fuser_heat_fingers_base" model="componente.subparte">
+    <field name="name">Base de uñas del rodillo de calor</field>
+    <field name="code">FUSER_HEAT_FINGERS_BASE</field>
+    <field name="tipo_id" ref="comp_tipo_fusora"/>
+</record>
+
+<!-- Resorte de uñas (rodillo de calor / presión) -->
+<record id="sub_fuser_fingers_spring" model="componente.subparte">
+    <field name="name">Resorte de uñas de separación de rodillo de calor</field>
+    <field name="code">FUSER_FINGERS_SPRING</field>
+    <field name="tipo_id" ref="comp_tipo_fusora"/>
+</record>
 <!-- Bujes de presión -->
 <record id="sub_fuser_pressure_bushings" model="componente.subparte">
     <field name="name">Bujes de presión</field>
