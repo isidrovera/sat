@@ -663,7 +663,14 @@ class TicketAlquiler(models.Model):
                 intervencion.id, componente_code
             )
 
-            ya_existentes = set(intervencion.detalle_ids.mapped('subparte_id').ids)
+            # Mapear sub-partes ya guardadas en la intervención -> sus datos previos
+            # Esto permite re-abrir el wizard mostrando todas las sub-partes del catálogo,
+            # pero pre-marcando las que ya estaban (con su cantidad y observación previas).
+            detalles_previos = {
+                d.subparte_id.id: d
+                for d in intervencion.detalle_ids
+                if d.subparte_id
+            }
             agregadas = set()
             total_lineas = 0
 
@@ -741,25 +748,27 @@ class TicketAlquiler(models.Model):
                                 detalle.id
                             )
                             continue
-                        if sid in ya_existentes or sid in agregadas:
+                        if sid in agregadas:
                             _logger.info(
-                                "[_abrir_wizard_subpartes] subparte_id=%s ya existe, ignorando",
+                                "[_abrir_wizard_subpartes] subparte_id=%s ya agregada en este pase, ignorando",
                                 sid
                             )
                             continue
+                        prev = detalles_previos.get(sid)
                         self.env['ticket.subpartes.wizard.linea'].create({
                             'wizard_id': wizard.id,
                             'componente_code': componente_code,
                             'intervencion_id': intervencion.id,
                             'subparte_id': sid,
-                            'selected': False,
-                            'cantidad': detalle.cantidad or 1.0,
+                            'selected': bool(prev),
+                            'cantidad': prev.cantidad if prev else (detalle.cantidad or 1.0),
+                            'observacion': prev.observacion if prev else False,
                         })
                         agregadas.add(sid)
                         total_lineas += 1
                         _logger.info(
-                            "[_abrir_wizard_subpartes] linea creada: subparte_id=%s",
-                            sid
+                            "[_abrir_wizard_subpartes] linea creada: subparte_id=%s | preseleccionada=%s",
+                            sid, bool(prev)
                         )
 
             else:
@@ -785,21 +794,23 @@ class TicketAlquiler(models.Model):
                         tipo_id, len(subpartes)
                     )
                     for sp in subpartes:
-                        if sp.id in ya_existentes or sp.id in agregadas:
+                        if sp.id in agregadas:
                             continue
+                        prev = detalles_previos.get(sp.id)
                         self.env['ticket.subpartes.wizard.linea'].create({
                             'wizard_id': wizard.id,
                             'componente_code': componente_code,
                             'intervencion_id': intervencion.id,
                             'subparte_id': sp.id,
-                            'selected': False,
-                            'cantidad': 1.0,
+                            'selected': bool(prev),
+                            'cantidad': prev.cantidad if prev else 1.0,
+                            'observacion': prev.observacion if prev else False,
                         })
                         agregadas.add(sp.id)
                         total_lineas += 1
                         _logger.info(
-                            "[_abrir_wizard_subpartes] linea accesorio creada: subparte_id=%s",
-                            sp.id
+                            "[_abrir_wizard_subpartes] linea accesorio creada: subparte_id=%s | preseleccionada=%s",
+                            sp.id, bool(prev)
                         )
 
             _logger.info(
