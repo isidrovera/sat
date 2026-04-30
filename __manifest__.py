@@ -222,8 +222,10 @@
             'sat/static/src/js/selection_subparts.js',
             'sat/static/src/js/gallery_widget.js',
             'sat/static/src/js/**/*',
-          
-            
+            'sat/static/src/js/subpartes_selector.js',
+            'sat/static/src/xml/subpartes_selector.xml',
+            'sat/static/src/scss/subpartes_selector.scss',
+                
             # External Libraries existentes
             'https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js',
             'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css',

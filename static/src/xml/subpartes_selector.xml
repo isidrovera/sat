@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="copier_company.SubpartesSelector">
+        <div class="o_subpartes_selector">
+
+            <div class="o_subpartes_summary" t-if="totalSelected > 0">
+                <span class="o_subpartes_summary_count" t-esc="totalSelected"/>
+                <span> subpartes seleccionadas</span>
+            </div>
+
+            <t t-foreach="groupedRecords" t-as="group" t-key="group.name">
+                <t t-set="stats" t-value="getGroupStats(group)"/>
+                <t t-set="collapsed" t-value="isCollapsed(group.name)"/>
+
+                <div class="o_subpartes_group">
+                    <div class="o_subpartes_group_header"
+                         t-on-click="() => this.toggleGroup(group.name)">
+                        <div class="o_subpartes_group_avatar">
+                            <t t-esc="getInitials(group.name)"/>
+                        </div>
+                        <div class="o_subpartes_group_info">
+                            <div class="o_subpartes_group_name" t-esc="group.name"/>
+                            <div class="o_subpartes_group_stats">
+                                <t t-esc="stats.selected"/> de <t t-esc="stats.total"/> seleccionadas
+                            </div>
+                        </div>
+                        <div class="o_subpartes_group_chevron"
+                             t-att-class="{ 'o_collapsed': collapsed }">
+                            <i class="fa fa-chevron-down"/>
+                        </div>
+                    </div>
+
+                    <div class="o_subpartes_cards" t-if="!collapsed">
+                        <t t-foreach="group.records" t-as="record" t-key="record.id">
+                            <div class="o_subparte_card"
+                                 t-att-class="{ 'o_selected': record.data.selected }"
+                                 t-on-click="() => this.onCardClick(record)">
+
+                                <div class="o_subparte_card_main">
+                                    <div class="o_subparte_check"
+                                         t-att-class="{ 'o_checked': record.data.selected }">
+                                        <i class="fa fa-check" t-if="record.data.selected"/>
+                                    </div>
+                                    <div class="o_subparte_info">
+                                        <div class="o_subparte_name"
+                                             t-esc="record.data.subparte_id and record.data.subparte_id[1] or 'Sin nombre'"/>
+                                    </div>
+                                </div>
+
+                                <div class="o_subparte_qty" t-if="record.data.selected"
+                                     t-on-click.stop="">
+                                    <span class="o_subparte_qty_label">Cantidad</span>
+                                    <button class="o_subparte_qty_btn"
+                                            t-on-click="(ev) => this.onDecrement(ev, record)">−</button>
+                                    <span class="o_subparte_qty_value" t-esc="record.data.cantidad or 1"/>
+                                    <button class="o_subparte_qty_btn"
+                                            t-on-click="(ev) => this.onIncrement(ev, record)">+</button>
+                                </div>
+                            </div>
+                        </t>
+                    </div>
+                </div>
+            </t>
+        </div>
+    </t>
+
+</templates>
