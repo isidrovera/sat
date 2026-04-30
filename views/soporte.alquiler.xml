@@ -515,50 +515,85 @@
         <!-- WIZARD: ticket.subpartes.wizard (sin cambios)      -->
         <!-- ================================================= -->
         <record id="view_ticket_subpartes_wizard_form" model="ir.ui.view">
-            <field name="name">ticket.subpartes.wizard.form</field>
-            <field name="model">ticket.subpartes.wizard</field>
-            <field name="arch" type="xml">
-                <form string="Seleccionar Subpartes">
-                    <sheet>
-                        <div class="alert alert-warning" role="alert">
-                            <i class="fa fa-exclamation-triangle me-2"/>
-                            <strong>Atención:</strong>
-                            Los siguientes componentes requieren cambio pero no tienen
-                            subpartes especificadas. Selecciona las subpartes necesarias
-                            antes de cerrar el ticket.
-                        </div>
-                        <field name="componentes_info" readonly="1" nolabel="1"/>
-                        <field name="line_ids" nolabel="1">
-                            <list editable="bottom"
-                                  decoration-success="selected == True">
-                                <field name="componente_display" readonly="1" string="Componente"/>
-                                <field name="subparte_id" readonly="1" string="Subparte"/>
-                                <field name="selected" string="Seleccionar"/>
-                                <field name="cantidad"
-                                       invisible="selected == False"
-                                       string="Cantidad"/>
-                                <field name="observacion"
-                                       invisible="selected == False"
-                                       optional="hide"
-                                       string="Observación"/>
-                               <!-- <field name="componente_code" optional="hide"/>
-                                <field name="intervencion_id" optional="hide"/>-->
-                            </list>
-                        </field>
-                    </sheet>
-                    <footer>
-                        <button string="✅ Confirmar Subpartes"
-                                name="action_confirmar"
-                                type="object"
-                                class="btn-primary"
-                                confirm="¿Confirmar las subpartes? El ticket se cerrará y se generará el pedido."/>
-                        <button string="Cancelar"
-                                class="btn-secondary"
-                                special="cancel"/>
-                    </footer>
-                </form>
-            </field>
-        </record>
+    <field name="name">ticket.subpartes.wizard.form</field>
+    <field name="model">ticket.subpartes.wizard</field>
+    <field name="arch" type="xml">
+        <form string="Seleccionar Subpartes">
+            <style>
+                .o_subpartes_wizard_list .o-checkbox,
+                .o_subpartes_wizard_list input[type="checkbox"] {
+                    transform: scale(1.6);
+                    cursor: pointer;
+                }
+                .o_subpartes_wizard_list td[name="selected"],
+                .o_subpartes_wizard_list th[data-name="selected"] {
+                    text-align: center;
+                    min-width: 70px;
+                    padding: 12px 8px !important;
+                }
+                .o_subpartes_wizard_list tr.o_data_row.table-success,
+                .o_subpartes_wizard_list tr.o_data_row.text-bg-success {
+                    background-color: #c3e6cb !important;
+                }
+                .o_subpartes_wizard_list tr.o_data_row.table-success td,
+                .o_subpartes_wizard_list tr.o_data_row.text-bg-success td {
+                    background-color: transparent !important;
+                    font-weight: 500;
+                }
+                .o_subpartes_wizard_list tr.o_data_row td {
+                    padding-top: 10px;
+                    padding-bottom: 10px;
+                }
+                @media (max-width: 768px) {
+                    .o_subpartes_wizard_list .o-checkbox,
+                    .o_subpartes_wizard_list input[type="checkbox"] {
+                        transform: scale(1.9);
+                    }
+                    .o_subpartes_wizard_list tr.o_data_row td {
+                        padding-top: 14px;
+                        padding-bottom: 14px;
+                    }
+                }
+            </style>
+            <sheet>
+                <div class="alert alert-warning" role="alert">
+                    <i class="fa fa-exclamation-triangle me-2"/>
+                    <strong>Atención:</strong>
+                    Los siguientes componentes requieren cambio pero no tienen
+                    subpartes especificadas. Selecciona las subpartes necesarias
+                    antes de cerrar el ticket.
+                </div>
+                <field name="componentes_info" readonly="1" nolabel="1"/>
+                <field name="line_ids" nolabel="1">
+                    <list editable="bottom"
+                          class="o_subpartes_wizard_list"
+                          decoration-success="selected == True">
+                        <field name="componente_display" readonly="1" string="Componente"/>
+                        <field name="subparte_id" readonly="1" string="Subparte"/>
+                        <field name="selected" string="Seleccionar"/>
+                        <field name="cantidad"
+                               invisible="selected == False"
+                               string="Cantidad"/>
+                        <field name="observacion"
+                               invisible="selected == False"
+                               optional="hide"
+                               string="Observación"/>
+                    </list>
+                </field>
+            </sheet>
+            <footer>
+                <button string="✅ Confirmar Subpartes"
+                        name="action_confirmar"
+                        type="object"
+                        class="btn-primary"
+                        confirm="¿Confirmar las subpartes? El ticket se cerrará y se generará el pedido."/>
+                <button string="Cancelar"
+                        class="btn-secondary"
+                        special="cancel"/>
+            </footer>
+        </form>
+    </field>
+</record>
         <!-- ================================================= -->
         <!-- ticket.componente.evaluacion (sin cambios)         -->
         <!-- ================================================= -->
