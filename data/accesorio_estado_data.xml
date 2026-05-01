@@ -1,25 +1,41 @@
 <?xml version='1.0' encoding='utf-8'?>
 <odoo>
   <data>
+
+    <!-- ====================================== -->
+    <!-- ESTADOS GENERALES DE ACCESORIO         -->
+    <!-- (aplican a todos los tipos)            -->
+    <!-- ====================================== -->
+
     <record id="acc_estado_instalado_ok" model="accesorio.estado">
       <field name="name">Instalado y operativo</field>
       <field name="code">instalado_operativo</field>
       <field name="sequence">10</field>
     </record>
+
     <record id="acc_estado_instalado_falla" model="accesorio.estado">
       <field name="name">Instalado con falla</field>
       <field name="code">instalado_con_falla</field>
       <field name="sequence">20</field>
     </record>
+
     <record id="acc_estado_no_instalado" model="accesorio.estado">
       <field name="name">No instalado</field>
       <field name="code">no_instalado</field>
       <field name="sequence">30</field>
     </record>
+
     <record id="acc_estado_no_aplica" model="accesorio.estado">
       <field name="name">No aplica</field>
       <field name="code">no_aplica</field>
       <field name="sequence">40</field>
     </record>
+    <record id="acc_estado_wifi_sin_senal" model="accesorio.estado">
+  <field name="name">Sin señal</field>
+  <field name="code">wifi_sin_senal</field>
+  <field name="sequence">50</field>
+  <field name="accesorio_tipo_ids" eval="[(4, ref('acc_tipo_wifi'))]"/>
+</record>
+
   </data>
 </odoo>
