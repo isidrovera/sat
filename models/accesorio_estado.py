@@ -11,6 +11,10 @@ class AccesorioEstado(models.Model):
     sequence = fields.Integer(default=10)
     active = fields.Boolean(default=True)
     descripcion = fields.Text()
+    color = fields.Integer(
+    string="Color",
+    default=0
+)
 
     # ===== NUEVO CAMPO =====
     accesorio_tipo_ids = fields.Many2many(
