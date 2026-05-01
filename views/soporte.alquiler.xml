@@ -296,10 +296,12 @@
            readonly="estado == 'finalizado'"
            context="{'default_ticket_id': id}"
            mode="kanban,list">
+
         <kanban class="o_accesorio_eval_kanban" records_draggable="0">
             <field name="tipo_id"/>
             <field name="estado_id"/>
             <field name="observaciones"/>
+
             <templates>
                 <t t-name="kanban-box">
                     <div class="o_componente_card"
@@ -309,6 +311,7 @@
                             <div class="o_card_title">
                                 <field name="tipo_id" readonly="1"/>
                             </div>
+
                             <a type="delete" class="o_card_delete" title="Eliminar">✕</a>
                         </div>
 
@@ -317,17 +320,22 @@
                             <field name="estado_id"
                                    widget="chip_select"
                                    required="1"
-                                   options="{'filter_by_field': 'tipo_id', 'filter_relation': 'accesorio_tipo_ids', 'shorten_labels': false}"/>
+                                   options="{'shorten_labels': false}"/>
                         </div>
 
-                        <div class="o_card_field">
+                        <div class="o_card_field"
+                             t-on-click.stop="() => {}"
+                             t-on-touchstart.stop="() => {}"
+                             t-on-mousedown.stop="() => {}">
                             <span class="o_card_field_label">OBSERVACIONES</span>
                             <field name="observaciones" placeholder="Toca para escribir..."/>
                         </div>
+
                     </div>
                 </t>
             </templates>
         </kanban>
+
         <list editable="bottom"
               decoration-danger="not estado_id"
               decoration-warning="estado_id and estado_id.code == 'instalado_con_falla'">
@@ -335,6 +343,7 @@
             <field name="estado_id" required="1"/>
             <field name="observaciones" optional="show"/>
         </list>
+
     </field>
 </page>
                             <page string="📦 Pedidos de Repuestos"
