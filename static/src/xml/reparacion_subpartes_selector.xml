@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="sat.ReparacionSubpartesSelector">
+
+        <div class="o_reparacion_subpartes_selector">
+
+            <div class="o_reparacion_selector_header">
+                <div>
+                    <h4 class="o_reparacion_selector_title">
+                        Subpartes de reparación
+                    </h4>
+                    <div class="o_reparacion_selector_subtitle">
+                        Selecciona las subpartes intervenidas y completa la acción realizada.
+                    </div>
+                </div>
+
+                <div class="o_reparacion_selector_counter">
+                    <span t-esc="totalSelected"/>
+                    /
+                    <span t-esc="totalRecords"/>
+                    seleccionadas
+                </div>
+            </div>
+
+            <div t-if="!list.records.length" class="o_reparacion_empty">
+                No hay subpartes para seleccionar.
+            </div>
+
+            <t t-foreach="groupedRecords" t-as="group" t-key="group.name">
+
+                <div class="o_reparacion_group">
+
+                    <div class="o_reparacion_group_header"
+                         t-on-click="(ev) => this.toggleGroup(ev, group.name)">
+
+                        <div class="o_reparacion_group_left">
+                            <div class="o_reparacion_group_avatar">
+                                <span t-esc="getInitials(group.name)"/>
+                            </div>
+
+                            <div>
+                                <div class="o_reparacion_group_name" t-esc="group.name"/>
+                                <div class="o_reparacion_group_stats">
+                                    <t t-set="stats" t-value="getGroupStats(group)"/>
+                                    <span t-esc="stats.selected"/>
+                                    /
+                                    <span t-esc="stats.total"/>
+                                    seleccionadas
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="o_reparacion_group_arrow">
+                            <span t-if="isCollapsed(group.name)">▼</span>
+                            <span t-if="!isCollapsed(group.name)">▲</span>
+                        </div>
+
+                    </div>
+
+                    <div class="o_reparacion_cards" t-if="!isCollapsed(group.name)">
+
+                        <t t-foreach="group.records" t-as="record" t-key="record.id">
+
+                            <div class="o_reparacion_subparte_card"
+                                 t-att-class="{ 'o_selected': record.data.selected }"
+                                 t-on-click="(ev) => this.onCardClick(record, ev)">
+
+                                <div class="o_reparacion_card_top">
+
+                                    <div>
+                                        <div class="o_reparacion_subparte_name">
+                                            <span t-esc="getSubparteName(record)"/>
+                                        </div>
+
+                                        <div class="o_reparacion_subparte_code" t-if="record.data.codigo">
+                                            SKU:
+                                            <span t-esc="record.data.codigo"/>
+                                        </div>
+
+                                        <div class="o_reparacion_subparte_code" t-if="record.data.accion_sub">
+                                            Acción:
+                                            <span t-esc="getAccionLabel(record.data.accion_sub)"/>
+                                        </div>
+                                    </div>
+
+                                    <div class="o_reparacion_check">
+                                        ✓
+                                    </div>
+
+                                </div>
+
+                                <div class="o_reparacion_card_fields">
+
+                                    <div class="o_reparacion_field"
+                                         t-on-click.stop=""
+                                         t-on-touchstart.stop=""
+                                         t-on-mousedown.stop="">
+
+                                        <label>Acción</label>
+
+                                        <select class="o_input"
+                                                t-att-value="record.data.accion_sub || 'cambiado'"
+                                                t-on-click.stop=""
+                                                t-on-touchstart.stop=""
+                                                t-on-mousedown.stop=""
+                                                t-on-change="(ev) => this.onActionChange(ev, record)">
+                                            <option value="cambiado">Cambiado</option>
+                                            <option value="ajustado">Ajustado</option>
+                                            <option value="limpieza">Limpieza</option>
+                                            <option value="diagnosticado">Diagnosticado</option>
+                                            <option value="na">No aplica</option>
+                                        </select>
+
+                                    </div>
+
+                                    <div class="o_reparacion_field"
+                                         t-on-click.stop=""
+                                         t-on-touchstart.stop=""
+                                         t-on-mousedown.stop="">
+
+                                        <label>Código / SKU</label>
+
+                                        <input type="text"
+                                               class="o_input"
+                                               t-att-value="record.data.codigo || ''"
+                                               placeholder="Código opcional"
+                                               t-on-click.stop=""
+                                               t-on-touchstart.stop=""
+                                               t-on-mousedown.stop=""
+                                               t-on-change="(ev) => this.onCodigoChange(ev, record)"/>
+
+                                    </div>
+
+                                    <div class="o_reparacion_field">
+
+                                        <label>Cantidad</label>
+
+                                        <div class="o_reparacion_qty_row">
+                                            <button type="button"
+                                                    class="o_reparacion_qty_btn"
+                                                    t-on-click="(ev) => this.onDecrement(ev, record)">
+                                                −
+                                            </button>
+
+                                            <div class="o_reparacion_qty_value">
+                                                <span t-esc="record.data.cantidad || 0"/>
+                                            </div>
+
+                                            <button type="button"
+                                                    class="o_reparacion_qty_btn"
+                                                    t-on-click="(ev) => this.onIncrement(ev, record)">
+                                                +
+                                            </button>
+                                        </div>
+
+                                    </div>
+
+                                    <div class="o_reparacion_field o_reparacion_field_full"
+                                         t-on-click.stop=""
+                                         t-on-touchstart.stop=""
+                                         t-on-mousedown.stop="">
+
+                                        <label>Nota</label>
+
+                                        <input type="text"
+                                               class="o_input"
+                                               t-att-value="record.data.nota || ''"
+                                               placeholder="Detalle técnico..."
+                                               t-on-click.stop=""
+                                               t-on-touchstart.stop=""
+                                               t-on-mousedown.stop=""
+                                               t-on-change="(ev) => this.onNotaChange(ev, record)"/>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        </t>
+
+                    </div>
+
+                </div>
+
+            </t>
+
+        </div>
+
+    </t>
+
+</templates>

@@ -230,6 +230,9 @@
             'sat/static/src/scss/chip_select_field.scss',
             'sat/static/src/xml/chip_select_field.xml',
             'sat/static/src/js/chip_select_field.js',
+            'sat/static/src/js/reparacion_subpartes_selector.js',
+            'sat/static/src/xml/reparacion_subpartes_selector.xml',
+            'sat/static/src/scss/reparacion_subpartes_selector.scss',
                 
             # External Libraries existentes
             'https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js',

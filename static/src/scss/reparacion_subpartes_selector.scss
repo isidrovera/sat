@@ -1,0 +1,274 @@
+.o_reparacion_subpartes_selector {
+    width: 100%;
+
+    .o_reparacion_selector_header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 12px 14px;
+        margin-bottom: 12px;
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 10px;
+    }
+
+    .o_reparacion_selector_title {
+        font-size: 15px;
+        font-weight: 700;
+        color: #173404;
+        margin: 0;
+    }
+
+    .o_reparacion_selector_counter {
+        font-size: 12px;
+        font-weight: 600;
+        color: #495057;
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 999px;
+        padding: 5px 10px;
+        white-space: nowrap;
+    }
+
+    .o_reparacion_group {
+        margin-bottom: 14px;
+        border: 1px solid #dee2e6;
+        border-radius: 12px;
+        background: white;
+        overflow: hidden;
+    }
+
+    .o_reparacion_group_header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 12px 14px;
+        background: #f8f9fa;
+        cursor: pointer;
+        user-select: none;
+        border-bottom: 1px solid #dee2e6;
+    }
+
+    .o_reparacion_group_left {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+    }
+
+    .o_reparacion_group_avatar {
+        width: 34px;
+        height: 34px;
+        min-width: 34px;
+        border-radius: 50%;
+        background: #667eea;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: 700;
+    }
+
+    .o_reparacion_group_name {
+        font-size: 14px;
+        font-weight: 700;
+        color: #212529;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .o_reparacion_group_stats {
+        font-size: 12px;
+        font-weight: 600;
+        color: #6c757d;
+        white-space: nowrap;
+    }
+
+    .o_reparacion_group_arrow {
+        font-size: 12px;
+        color: #6c757d;
+        font-weight: 700;
+    }
+
+    .o_reparacion_cards {
+        padding: 10px;
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .o_reparacion_subparte_card {
+        border: 1.5px solid #dee2e6;
+        border-left: 4px solid #adb5bd;
+        border-radius: 10px;
+        padding: 12px;
+        background: white;
+        cursor: pointer;
+        transition: transform 0.1s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+        user-select: none;
+
+        &:hover {
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+        }
+
+        &:active {
+            transform: scale(0.99);
+        }
+
+        &.o_selected {
+            border-color: #97c459;
+            border-left-color: #639922;
+            background: #fbfff7;
+            box-shadow: 0 2px 8px rgba(99, 153, 34, 0.16);
+        }
+    }
+
+    .o_reparacion_card_top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 10px;
+    }
+
+    .o_reparacion_subparte_name {
+        font-size: 14px;
+        font-weight: 700;
+        color: #212529;
+        line-height: 1.25;
+    }
+
+    .o_reparacion_subparte_code {
+        font-size: 11px;
+        color: #6c757d;
+        margin-top: 2px;
+    }
+
+    .o_reparacion_check {
+        width: 24px;
+        height: 24px;
+        min-width: 24px;
+        border-radius: 50%;
+        border: 1.5px solid #adb5bd;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+        font-weight: 700;
+        color: transparent;
+        background: white;
+    }
+
+    .o_selected {
+        .o_reparacion_check {
+            background: #639922;
+            border-color: #639922;
+            color: white;
+        }
+    }
+
+    .o_reparacion_card_fields {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+
+    .o_reparacion_field {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+
+        label {
+            font-size: 11px;
+            font-weight: 600;
+            color: #6c757d;
+            margin: 0;
+        }
+
+        input,
+        select,
+        textarea,
+        .o_input {
+            width: 100%;
+            min-height: 38px;
+            padding: 8px 10px !important;
+            border: 1px solid #dee2e6 !important;
+            border-radius: 7px !important;
+            background: white !important;
+            font-size: 13px !important;
+        }
+    }
+
+    .o_reparacion_qty_row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .o_reparacion_qty_btn {
+        width: 34px;
+        height: 34px;
+        min-width: 34px;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        background: #f8f9fa;
+        color: #212529;
+        font-size: 16px;
+        font-weight: 700;
+        cursor: pointer;
+
+        &:hover {
+            background: #e9ecef;
+        }
+
+        &:active {
+            transform: scale(0.96);
+        }
+    }
+
+    .o_reparacion_qty_value {
+        min-width: 44px;
+        text-align: center;
+        font-size: 14px;
+        font-weight: 700;
+        color: #212529;
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 7px 10px;
+    }
+
+    .o_reparacion_empty {
+        padding: 16px;
+        text-align: center;
+        color: #856404;
+        background: #fff3cd;
+        border: 1px dashed #ffe69c;
+        border-radius: 10px;
+        font-size: 13px;
+    }
+
+    @media (min-width: 768px) {
+        .o_reparacion_cards {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .o_reparacion_card_fields {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .o_reparacion_field.o_reparacion_field_full {
+            grid-column: 1 / -1;
+        }
+    }
+
+    @media (min-width: 1200px) {
+        .o_reparacion_cards {
+            grid-template-columns: repeat(3, 1fr);
+        }
+    }
+}
