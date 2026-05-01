@@ -216,89 +216,141 @@
               </page>
               <!-- PESTAÑA: CHECK LIST NUEVO -->
               <page string="Check List" name="evaluaciones">
-                <div style="margin: 10px 0; padding: 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 10px; color: white; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
-                  <h4 style="margin-top: 0; font-size: 18px; color: white; font-weight: 600;">
-                    <i class="fa fa-cogs"></i> Sistema de Evaluación por Componentes
-                  </h4>
-                  <p style="margin-bottom: 0; font-size: 14px; opacity: 0.95;">
-                    ✅
-                    <b>Importante:</b> Debe completar el ESTADO de TODOS los componentes antes de finalizar
-                  </p>
-                </div>
-                <separator string="📋 Componentes Evaluados"/>
-                <field name="evaluacion_ids" nolabel="1">
-                  <list editable="bottom" 
-                        create="true" 
-                        delete="true"
-                        decoration-success="estado_id"
-                        decoration-warning="not estado_id">
-                    <field name="componente_tipo_id" 
-                           readonly="1"
-                           string="🔧 Componente"
-                           options="{'no_create': True, 'no_open': True}"/>
-                    <field name="color_id" 
-                           readonly="1" 
-                           optional="show"
-                           string="🎨 Color"
-                           options="{'no_create': True, 'no_open': True}"/>
-                    <field name="estado_id" 
-                           string="⭐ ESTADO (Obligatorio)"
-                           placeholder="⚠️ SELECCIONAR ESTADO"
-                           options="{'no_create': True, 'no_open': True}"/>
-                    <field name="observaciones" 
-                           optional="show"
-                           string="📝 Observaciones"
-                           placeholder="Detalles técnicos..."/>
-                  </list>
-                </field>
-                <div class="alert alert-info" role="alert" style="margin-top: 15px; border-left: 4px solid #667eea;">
-                  <i class="fa fa-info-circle"></i>
-                  <b>Guía Visual:</b> Filas
-                  <span style="background-color: #fff3cd; padding: 2px 8px; border-radius: 3px;">amarillas</span> necesitan estado. 
-                  Filas
-                  <span style="background-color: #d4edda; padding: 2px 8px; border-radius: 3px;">verdes</span> están completas.
-                </div>
-              </page>
-              <!-- PESTAÑA: ACCESORIOS -->
-              <page string="Accesorios" name="accesorios_eval">
-                <div style="margin: 10px 0; padding: 15px; background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); border-radius: 10px; color: white; box-shadow: 0 4px 15px rgba(17, 153, 142, 0.3);">
-                  <h4 style="margin-top: 0; font-size: 18px; color: white; font-weight: 600;">
-                    <i class="fa fa-puzzle-piece"></i> Evaluación de Accesorios
-                  </h4>
-                  <p style="margin-bottom: 0; font-size: 14px; opacity: 0.95;">
-                    ✅ Evalúe los accesorios opcionales instalados
-                  </p>
-                </div>
-                <separator string="🔌 Accesorios Evaluados"/>
-                <field name="accesorio_eval_ids" nolabel="1">
-                  <list editable="bottom" 
-                        create="false"
-                        delete="true"
-                        decoration-success="estado_id"
-                        decoration-warning="not estado_id">
-                    <field name="tipo_id" 
-                           readonly="1"
-                           string="🔌 Accesorio"/>
-                    <field name="estado_id"
-                           string="⭐ ESTADO (Obligatorio)"
-                           placeholder="⚠️ SELECCIONAR ESTADO"
-                           options="{'no_create': True, 'no_open': True}"/>
-                    <field name="subparte_ids" 
-                           widget="many2many_tags"
-                           string="🔩 Subpartes"
-                           options="{'no_create': True}"
-                           optional="show"/>
-                    <field name="observaciones" 
-                           optional="show"
-                           string="📝 Notas"
-                           placeholder="Detalles..."/>
-                  </list>
-                </field>
-                <div class="alert alert-success" role="alert" style="margin-top: 15px; border-left: 4px solid #38ef7d;">
-                  <i class="fa fa-lightbulb-o"></i>
-                  <b>Tip:</b> Si un accesorio no aplica al modelo, márquelo como "No Aplica"
-                </div>
-              </page>
+
+    <div style="margin: 10px 0; padding: 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 10px; color: white; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
+        <h4 style="margin-top: 0; font-size: 18px; color: white; font-weight: 600;">
+            <i class="fa fa-cogs"></i> Sistema de Evaluación por Componentes
+        </h4>
+        <p style="margin-bottom: 0; font-size: 14px; opacity: 0.95;">
+            ✅
+            <b>Importante:</b> Debe completar el ESTADO de TODOS los componentes antes de finalizar
+        </p>
+    </div>
+
+    <separator string="📋 Componentes Evaluados"/>
+
+    <field name="evaluacion_ids" nolabel="1" mode="kanban">
+        <kanban class="o_componente_eval_kanban" records_draggable="0" create="true" delete="true">
+            <field name="componente_tipo_id"/>
+            <field name="color_id"/>
+            <field name="estado_id"/>
+            <field name="observaciones"/>
+
+            <templates>
+                <t t-name="kanban-box">
+                    <div class="o_componente_card"
+                         t-attf-class="#{!record.estado_id.raw_value ? 'o_card_danger' : (record.estado_id.raw_value &amp;&amp; record.estado_id.value.includes('cambio') ? 'o_card_warning' : 'o_card_success')}">
+
+                        <div class="o_card_header">
+                            <div>
+                                <div class="o_card_title">
+                                    <field name="componente_tipo_id" readonly="1"/>
+                                </div>
+
+                                <div class="o_card_subtitle">
+                                    <field name="color_id" readonly="1"/>
+                                </div>
+                            </div>
+
+                            <a type="delete" class="o_card_delete" title="Eliminar">✕</a>
+                        </div>
+
+                        <div class="o_card_field o_card_field_estado">
+                            <span class="o_card_field_label">ESTADO *</span>
+                            <field name="estado_id"
+                                   widget="chip_select"
+                                   required="1"
+                                   options="{
+                                       'filter_by_field': 'componente_tipo_id',
+                                       'filter_relation': 'componente_tipo_ids',
+                                       'shorten_labels': true
+                                   }"/>
+                        </div>
+
+                        <div class="o_card_field o_card_field_observaciones">
+                            <span class="o_card_field_label">OBSERVACIONES</span>
+                            <field name="observaciones" placeholder="Detalles técnicos..."/>
+                        </div>
+
+                    </div>
+                </t>
+            </templates>
+        </kanban>
+    </field>
+
+    <div class="alert alert-info" role="alert" style="margin-top: 15px; border-left: 4px solid #667eea;">
+        <i class="fa fa-info-circle"></i>
+        <b>Guía Visual:</b> Tarjetas rojas necesitan estado. Tarjetas verdes están completas.
+    </div>
+
+</page>
+<page string="Accesorios" name="accesorios_eval">
+
+    <div style="margin: 10px 0; padding: 15px; background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); border-radius: 10px; color: white; box-shadow: 0 4px 15px rgba(17, 153, 142, 0.3);">
+        <h4 style="margin-top: 0; font-size: 18px; color: white; font-weight: 600;">
+            <i class="fa fa-puzzle-piece"></i> Evaluación de Accesorios
+        </h4>
+        <p style="margin-bottom: 0; font-size: 14px; opacity: 0.95;">
+            ✅ Evalúe los accesorios opcionales instalados
+        </p>
+    </div>
+
+    <separator string="🔌 Accesorios Evaluados"/>
+
+    <field name="accesorio_eval_ids" nolabel="1" mode="kanban">
+        <kanban class="o_accesorio_eval_kanban" records_draggable="0" create="false" delete="true">
+            <field name="tipo_id"/>
+            <field name="estado_id"/>
+            <field name="subparte_ids"/>
+            <field name="observaciones"/>
+
+            <templates>
+                <t t-name="kanban-box">
+                    <div class="o_componente_card"
+                         t-attf-class="#{!record.estado_id.raw_value ? 'o_card_danger' : 'o_card_success'}">
+
+                        <div class="o_card_header">
+                            <div class="o_card_title">
+                                <field name="tipo_id" readonly="1"/>
+                            </div>
+
+                            <a type="delete" class="o_card_delete" title="Eliminar">✕</a>
+                        </div>
+
+                        <div class="o_card_field o_card_field_estado">
+                            <span class="o_card_field_label">ESTADO *</span>
+                            <field name="estado_id"
+                                   widget="chip_select"
+                                   required="1"
+                                   options="{
+                                       'shorten_labels': false
+                                   }"/>
+                        </div>
+
+                        <div class="o_card_field">
+                            <span class="o_card_field_label">SUBPARTES</span>
+                            <field name="subparte_ids"
+                                   widget="many2many_tags"
+                                   options="{'no_create': True}"/>
+                        </div>
+
+                        <div class="o_card_field o_card_field_observaciones">
+                            <span class="o_card_field_label">NOTAS</span>
+                            <field name="observaciones" placeholder="Detalles..."/>
+                        </div>
+
+                    </div>
+                </t>
+            </templates>
+        </kanban>
+    </field>
+
+    <div class="alert alert-success" role="alert" style="margin-top: 15px; border-left: 4px solid #38ef7d;">
+        <i class="fa fa-lightbulb-o"></i>
+        <b>Tip:</b> Si un accesorio no aplica al modelo, márquelo como "No Aplica"
+    </div>
+
+</page>
               <!-- PESTAÑA: DETALLE DE FALLA PROVEEDOR -->
               <page string="Detalle de falla proveedor">
                 <group>
