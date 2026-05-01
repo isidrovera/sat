@@ -335,12 +335,12 @@
             </templates>
         </kanban>
 
-        <list editable="bottom"
+        <!--<list editable="bottom"
               decoration-danger="not estado_id">
             <field name="tipo_id" required="1"/>
             <field name="estado_id" required="1"/>
             <field name="observaciones" optional="show"/>
-        </list>
+        </list>-->
 
     </field>
 </page>
