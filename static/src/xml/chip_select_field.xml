@@ -14,18 +14,42 @@
                 <span>No hay estados disponibles para este componente</span>
             </div>
 
-            <div class="o_chip_select_grid" t-if="!uiState.loading and uiState.options.length > 0">
-                <t t-foreach="uiState.options" t-as="option" t-key="option.id">
-                    <button type="button"
-                            class="o_chip"
-                            t-att-class="{ 'o_chip_selected': isSelected(option) }"
-                            t-att-style="getChipStyle(option, isSelected(option))"
-                            t-att-title="option.name"
-                            t-on-click.stop.prevent="(ev) => this.select(option, ev)">
-                        <span class="o_chip_check" t-if="isSelected(option)">✓</span>
-                        <span class="o_chip_label" t-esc="getShortLabel(option)"/>
-                    </button>
-                </t>
+            <div t-if="!uiState.loading and uiState.options.length > 0">
+
+                <!-- Si ya existe un estado marcado, mostrar solo el estado seleccionado -->
+                <button t-if="selectedOption"
+                        type="button"
+                        class="o_chip o_chip_current"
+                        t-att-style="getChipStyle(selectedOption, true)"
+                        t-att-title="selectedOption.name"
+                        t-on-click.stop.prevent="(ev) => this.toggleOptions(ev)">
+
+                    <span class="o_chip_check">✓</span>
+                    <span class="o_chip_label" t-esc="getShortLabel(selectedOption)"/>
+
+                    <span class="o_chip_arrow" t-if="!uiState.expanded">▼</span>
+                    <span class="o_chip_arrow" t-if="uiState.expanded">▲</span>
+                </button>
+
+                <!-- Si no hay estado seleccionado, mostrar las opciones directamente.
+                     Si hay estado seleccionado, mostrar opciones solo cuando expanded = true -->
+                <div class="o_chip_select_grid"
+                     t-if="!selectedOption or uiState.expanded">
+
+                    <t t-foreach="uiState.options" t-as="option" t-key="option.id">
+                        <button type="button"
+                                class="o_chip"
+                                t-att-class="{ 'o_chip_selected': isSelected(option) }"
+                                t-att-style="getChipStyle(option, isSelected(option))"
+                                t-att-title="option.name"
+                                t-on-click.stop.prevent="(ev) => this.select(option, ev)">
+                            <span class="o_chip_check" t-if="isSelected(option)">✓</span>
+                            <span class="o_chip_label" t-esc="getShortLabel(option)"/>
+                        </button>
+                    </t>
+
+                </div>
+
             </div>
 
         </div>

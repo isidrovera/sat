@@ -32,6 +32,7 @@ export class ChipSelectField extends Many2OneField {
             options: [],
             loading: true,
             loaded: false,
+            expanded: false,
         });
 
         this._lastTypeId = this.filterTypeId;
@@ -45,7 +46,6 @@ export class ChipSelectField extends Many2OneField {
             shortenLabels: this.props.shortenLabels,
             currentId: this.currentId,
             filterTypeId: this.filterTypeId,
-            recordData: this.props.record && this.props.record.data,
         });
 
         this.loadOptions();
@@ -58,11 +58,11 @@ export class ChipSelectField extends Many2OneField {
                 oldTypeId: this._lastTypeId,
                 newTypeId: newTypeId,
                 readonly: nextProps.readonly,
-                recordData: nextProps.record && nextProps.record.data,
             });
 
             if (newTypeId !== this._lastTypeId) {
                 this._lastTypeId = newTypeId;
+                this.uiState.expanded = false;
                 this.loadOptions();
             }
         });
@@ -72,16 +72,10 @@ export class ChipSelectField extends Many2OneField {
         const filterField = props.filterByField;
 
         if (!filterField) {
-            console.log("[ChipSelect][_extractTypeId] No hay filterByField");
             return null;
         }
 
         const val = props.record.data[filterField];
-
-        console.log("[ChipSelect][_extractTypeId]", {
-            filterField: filterField,
-            value: val,
-        });
 
         if (!val) return null;
         if (Array.isArray(val)) return val[0];
@@ -102,6 +96,16 @@ export class ChipSelectField extends Many2OneField {
         if (typeof val === "object") return val.id;
 
         return val;
+    }
+
+    get selectedOption() {
+        const currentId = this.currentId;
+
+        if (!currentId || !this.uiState.options || !this.uiState.options.length) {
+            return null;
+        }
+
+        return this.uiState.options.find((option) => option.id === currentId) || null;
     }
 
     get filterTypeId() {
@@ -157,14 +161,13 @@ export class ChipSelectField extends Many2OneField {
         const typeId = this.filterTypeId;
         const filterRel = this.props.filterRelation;
 
-        console.log("[ChipSelect][buildDomain]", {
-            fieldName: this.props.name,
-            typeId: typeId,
-            filterRel: filterRel,
-        });
-
         if (!typeId || !filterRel) {
-            console.log("[ChipSelect][buildDomain] Sin filtro, retorna dominio vacío []");
+            console.log("[ChipSelect][buildDomain] Sin filtro, retorna []", {
+                fieldName: this.props.name,
+                typeId: typeId,
+                filterRel: filterRel,
+            });
+
             return [];
         }
 
@@ -174,7 +177,10 @@ export class ChipSelectField extends Many2OneField {
             [filterRel, "in", [typeId]],
         ];
 
-        console.log("[ChipSelect][buildDomain] Dominio generado", domain);
+        console.log("[ChipSelect][buildDomain] Dominio generado", {
+            fieldName: this.props.name,
+            domain: domain,
+        });
 
         return domain;
     }
@@ -210,14 +216,32 @@ export class ChipSelectField extends Many2OneField {
         return option.id === this.currentId;
     }
 
+    toggleOptions(ev = null) {
+        if (ev) {
+            ev.preventDefault();
+            ev.stopPropagation();
+
+            if (ev.stopImmediatePropagation) {
+                ev.stopImmediatePropagation();
+            }
+        }
+
+        this.uiState.expanded = !this.uiState.expanded;
+
+        console.log("[ChipSelect][toggleOptions]", {
+            fieldName: this.props.name,
+            expanded: this.uiState.expanded,
+            currentId: this.currentId,
+            selectedOption: this.selectedOption,
+        });
+    }
+
     async select(option, ev = null) {
         console.log("[ChipSelect][select] Click recibido", {
             fieldName: this.props.name,
             option: option,
             currentIdBefore: this.currentId,
             readonly: this.props.readonly,
-            record: this.props.record,
-            recordDataBefore: this.props.record && this.props.record.data,
         });
 
         if (ev) {
@@ -227,8 +251,6 @@ export class ChipSelectField extends Many2OneField {
             if (ev.stopImmediatePropagation) {
                 ev.stopImmediatePropagation();
             }
-
-            console.log("[ChipSelect][select] Evento detenido correctamente");
         }
 
         if (!option || !option.id) {
@@ -241,12 +263,14 @@ export class ChipSelectField extends Many2OneField {
                 [this.props.name]: [option.id, option.name],
             });
 
-            console.log("[ChipSelect][select] Record actualizado", {
+            this.uiState.expanded = false;
+
+            console.log("[ChipSelect][select] Estado actualizado y opciones cerradas", {
                 fieldName: this.props.name,
                 selectedId: option.id,
                 selectedName: option.name,
                 currentIdAfter: this.currentId,
-                recordDataAfter: this.props.record && this.props.record.data,
+                expanded: this.uiState.expanded,
             });
 
         } catch (err) {
