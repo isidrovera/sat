@@ -26,6 +26,7 @@
               <field name="prioridad"/>
               <field name="color"/>
               <field name="descripcion"/>
+              <field name="componente_tipo_ids"/>
             </group>
           </sheet>
         </form>
