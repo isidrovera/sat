@@ -243,7 +243,7 @@
     <field name="ticket_componente_eval_ids"
            readonly="estado == 'finalizado'"
            context="{'default_ticket_id': id}"
-           mode="kanban,list">
+           mode="kanban">
         <kanban class="o_componente_eval_kanban" records_draggable="0">
             <field name="componente_tipo_id"/>
             <field name="color_id"/>
@@ -295,7 +295,7 @@
     <field name="ticket_accesorio_eval_ids"
            readonly="estado == 'finalizado'"
            context="{'default_ticket_id': id}"
-           mode="kanban,list">
+           mode="kanban">
 
         <kanban class="o_accesorio_eval_kanban" records_draggable="0">
             <field name="tipo_id"/>
