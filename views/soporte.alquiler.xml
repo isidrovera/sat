@@ -320,13 +320,12 @@
                             <field name="estado_id"
                                    widget="chip_select"
                                    required="1"
-                                   options="{'shorten_labels': false}"/>
+                                   options="{
+                                       'shorten_labels': false
+                                   }"/>
                         </div>
 
-                        <div class="o_card_field"
-                             t-on-click.stop="() => {}"
-                             t-on-touchstart.stop="() => {}"
-                             t-on-mousedown.stop="() => {}">
+                        <div class="o_card_field o_card_field_observaciones">
                             <span class="o_card_field_label">OBSERVACIONES</span>
                             <field name="observaciones" placeholder="Toca para escribir..."/>
                         </div>
@@ -337,8 +336,7 @@
         </kanban>
 
         <list editable="bottom"
-              decoration-danger="not estado_id"
-              decoration-warning="estado_id and estado_id.code == 'instalado_con_falla'">
+              decoration-danger="not estado_id">
             <field name="tipo_id" required="1"/>
             <field name="estado_id" required="1"/>
             <field name="observaciones" optional="show"/>
