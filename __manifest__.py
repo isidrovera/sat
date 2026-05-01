@@ -226,6 +226,10 @@
             'sat/static/src/xml/subpartes_selector.xml',
             'sat/static/src/scss/subpartes_selector.scss',
             'sat/static/src/scss/componente_eval_kanban.scss',
+
+            'sat/static/src/scss/chip_select_field.scss',
+            'sat/static/src/xml/chip_select_field.xml',
+            'sat/static/src/js/chip_select_field.js',
                 
             # External Libraries existentes
             'https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js',

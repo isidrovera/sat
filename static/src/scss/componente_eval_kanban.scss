@@ -130,3 +130,75 @@
         }
     }
 }
+
+.o_componente_eval_kanban,
+.o_accesorio_eval_kanban {
+
+    .o_card_header {
+        position: relative;
+        padding-right: 32px;  // espacio para el botón de eliminar
+
+        .o_card_title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #173404;
+            line-height: 1.3;
+
+            .o_field_widget {
+                pointer-events: none;
+            }
+
+            .o_field_widget input,
+            .o_field_widget .o_input {
+                background: transparent !important;
+                border: none !important;
+                padding: 0 !important;
+                font-size: 15px !important;
+                font-weight: 600 !important;
+                color: inherit !important;
+                min-height: auto !important;
+            }
+        }
+
+        .o_card_subtitle {
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 2px;
+
+            .o_field_widget {
+                pointer-events: none;
+            }
+
+            .o_field_widget input,
+            .o_field_widget .o_input {
+                background: transparent !important;
+                border: none !important;
+                padding: 0 !important;
+                font-size: 12px !important;
+                color: inherit !important;
+                min-height: auto !important;
+            }
+        }
+
+        .o_card_delete {
+            position: absolute;
+            top: 0;
+            right: 0;
+            color: #6c757d;
+            font-size: 14px;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+            text-decoration: none !important;
+
+            &:hover {
+                background: #f8d7da;
+                color: #721c24;
+            }
+        }
+    }
+
+    // En las tarjetas warning/danger ajustar color del título
+    .o_card_warning .o_card_title { color: #412402; }
+    .o_card_danger .o_card_title { color: #791f1f; }
+}

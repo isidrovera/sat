@@ -1,0 +1,117 @@
+.o_chip_select {
+    width: 100%;
+
+    .o_chip_select_loading,
+    .o_chip_select_empty {
+        padding: 12px;
+        text-align: center;
+        color: #6c757d;
+        font-size: 12px;
+        font-style: italic;
+        background: #f8f9fa;
+        border-radius: 6px;
+        border: 0.5px dashed #dee2e6;
+    }
+
+    .o_chip_select_empty {
+        color: #856404;
+        background: #fff3cd;
+        border-color: #ffe69c;
+        font-style: normal;
+    }
+
+    .o_chip_select_grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+        width: 100%;
+    }
+
+    .o_chip {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        padding: 10px 6px;
+        border-radius: 8px;
+        border: 1.5px solid #dee2e6;
+        background: white;
+        font-size: 12px;
+        font-weight: 500;
+        line-height: 1.2;
+        text-align: center;
+        cursor: pointer;
+        user-select: none;
+        transition: transform 0.1s ease, box-shadow 0.15s ease;
+        min-height: 44px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+
+        &:hover {
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+        }
+
+        &:active {
+            transform: scale(0.97);
+        }
+
+        &.o_chip_selected {
+            font-weight: 600;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+        }
+    }
+
+    .o_chip_check {
+        font-size: 11px;
+        font-weight: 700;
+    }
+
+    .o_chip_label {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
+    }
+
+    &.o_readonly {
+        .o_chip {
+            cursor: default;
+            opacity: 0.7;
+
+            &:hover {
+                box-shadow: none;
+            }
+
+            &:active {
+                transform: none;
+            }
+        }
+    }
+
+    // En tablet → 4 columnas
+    @media (min-width: 768px) {
+        .o_chip_select_grid {
+            grid-template-columns: repeat(4, 1fr);
+        }
+
+        .o_chip {
+            font-size: 13px;
+        }
+    }
+
+    // En desktop → 5 columnas (cabe más en una fila)
+    @media (min-width: 1200px) {
+        .o_chip_select_grid {
+            grid-template-columns: repeat(5, 1fr);
+        }
+    }
+
+    // En desktop muy ancho → 6 columnas
+    @media (min-width: 1600px) {
+        .o_chip_select_grid {
+            grid-template-columns: repeat(6, 1fr);
+        }
+    }
+}
