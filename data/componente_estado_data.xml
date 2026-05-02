@@ -29,13 +29,7 @@
       <field name="prioridad">2</field>
     </record>
 
-    <record id="estado_mantenimiento" model="componente.estado">
-      <field name="name">Mantenimiento</field>
-      <field name="code">mantenimiento</field>
-      <field name="color">4</field>
-      <field name="prioridad">2</field>
-    </record>
-
+   
     <!-- Bajos / info -->
     <record id="estado_sin_revisar" model="componente.estado">
       <field name="name">Sin revisar</field>
@@ -44,12 +38,7 @@
       <field name="prioridad">3</field>
     </record>
 
-    <record id="estado_revisado" model="componente.estado">
-      <field name="name">Revisado</field>
-      <field name="code">revisado</field>
-      <field name="color">10</field>
-      <field name="prioridad">3</field>
-    </record>
+  
 
     <record id="estado_nuevo" model="componente.estado">
       <field name="name">Nuevo</field>
@@ -58,13 +47,7 @@
       <field name="prioridad">3</field>
     </record>
 
-    <record id="estado_no_aplica" model="componente.estado">
-      <field name="name">No aplica</field>
-      <field name="code">no_aplica</field>
-      <field name="color">0</field>
-      <field name="prioridad">3</field>
-    </record>
-
+   
     <record id="estado_correcto" model="componente.estado">
       <field name="name">Correcto</field>
       <field name="code">correcto</field>
