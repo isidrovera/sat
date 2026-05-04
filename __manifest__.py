@@ -154,6 +154,7 @@
         'wizards/sat_entrega_wizard_view.xml',
         'views/solicitud_parte_tecnico_views.xml',
         'views/solicitud_partes_portal.xml',
+        'views/ticket_evaluacion_mobile_views.xml',
         'views/acciones_menus.xml',
         
     ],

@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- ===================================================== -->
+        <!-- COMPONENTES - KANBAN INDEPENDIENTE PARA MÓVIL          -->
+        <!-- Usa el widget existente: chip_select                   -->
+        <!-- ===================================================== -->
+        <record id="view_ticket_componente_evaluacion_mobile_kanban" model="ir.ui.view">
+            <field name="name">ticket.componente.evaluacion.mobile.kanban</field>
+            <field name="model">ticket.componente.evaluacion</field>
+            <field name="arch" type="xml">
+                <kanban class="o_componente_eval_kanban o_mobile_eval_kanban"
+                        records_draggable="0"
+                        create="0"
+                        quick_create="0">
+                    <field name="ticket_id"/>
+                    <field name="componente_tipo_id"/>
+                    <field name="color_id"/>
+                    <field name="estado_id"/>
+                    <field name="observaciones"/>
+
+                    <templates>
+                        <t t-name="card">
+                            <div class="o_componente_card"
+                                 t-attf-class="#{!record.estado_id.raw_value ? 'o_card_danger' : (record.estado_id.raw_value and record.estado_id.value and record.estado_id.value.includes('cambio') ? 'o_card_warning' : 'o_card_success')}">
+
+                                <div class="o_card_header">
+                                    <div>
+                                        <div class="o_card_title">
+                                            <field name="componente_tipo_id" readonly="1"/>
+                                        </div>
+
+                                        <div class="o_card_subtitle" t-if="record.color_id.raw_value">
+                                            <field name="color_id" readonly="1"/>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="o_card_field o_card_field_estado">
+                                    <span class="o_card_field_label">ESTADO *</span>
+                                    <field name="estado_id"
+                                           widget="chip_select"
+                                           required="1"
+                                           options="{
+                                               'filter_by_field': 'componente_tipo_id',
+                                               'filter_relation': 'componente_tipo_ids',
+                                               'shorten_labels': true
+                                           }"/>
+                                </div>
+
+                                <div class="o_card_field o_card_field_observaciones">
+                                    <span class="o_card_field_label">OBSERVACIONES</span>
+                                    <field name="observaciones"
+                                           placeholder="Toca para escribir..."/>
+                                </div>
+
+                            </div>
+                        </t>
+                    </templates>
+                </kanban>
+            </field>
+        </record>
+
+
+        <!-- ===================================================== -->
+        <!-- ACCESORIOS - KANBAN INDEPENDIENTE PARA MÓVIL           -->
+        <!-- Usa el widget existente: chip_select                   -->
+        <!-- ===================================================== -->
+        <record id="view_ticket_accesorio_evaluacion_mobile_kanban" model="ir.ui.view">
+            <field name="name">ticket.accesorio.evaluacion.mobile.kanban</field>
+            <field name="model">ticket.accesorio.evaluacion</field>
+            <field name="arch" type="xml">
+                <kanban class="o_accesorio_eval_kanban o_mobile_eval_kanban"
+                        records_draggable="0"
+                        create="0"
+                        quick_create="0">
+                    <field name="ticket_id"/>
+                    <field name="tipo_id"/>
+                    <field name="estado_id"/>
+                    <field name="observaciones"/>
+
+                    <templates>
+                        <t t-name="card">
+                            <div class="o_componente_card"
+                                 t-attf-class="#{!record.estado_id.raw_value ? 'o_card_danger' : 'o_card_success'}">
+
+                                <div class="o_card_header">
+                                    <div class="o_card_title">
+                                        <field name="tipo_id" readonly="1"/>
+                                    </div>
+                                </div>
+
+                                <div class="o_card_field o_card_field_estado">
+                                    <span class="o_card_field_label">ESTADO *</span>
+                                    <field name="estado_id"
+                                           widget="chip_select"
+                                           required="1"
+                                           options="{
+                                               'shorten_labels': false
+                                           }"/>
+                                </div>
+
+                                <div class="o_card_field o_card_field_observaciones">
+                                    <span class="o_card_field_label">OBSERVACIONES</span>
+                                    <field name="observaciones"
+                                           placeholder="Toca para escribir..."/>
+                                </div>
+
+                            </div>
+                        </t>
+                    </templates>
+                </kanban>
+            </field>
+        </record>
+
+    </data>
+</odoo>

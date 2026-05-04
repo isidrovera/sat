@@ -420,6 +420,15 @@ export class MobileTicketLayout extends Component {
         }
     }
 
+    async getViewId(xmlid) {
+        try {
+            return await this.orm.call("ir.model.data", "_xmlid_to_res_id", [xmlid]);
+        } catch (error) {
+            console.error("[MobileTicket] No se pudo obtener view_id:", xmlid, error);
+            return false;
+        }
+    }
+
     async saveMobileValues(values) {
         if (!this.record?.resModel || !this.record?.resId) {
             return;
@@ -555,12 +564,20 @@ export class MobileTicketLayout extends Component {
             return;
         }
 
+        const kanbanViewId = await this.getViewId(
+            "sat.view_ticket_componente_evaluacion_mobile_kanban"
+        );
+
         await this.action.doAction({
             type: "ir.actions.act_window",
             name: "Componentes",
             res_model: "ticket.componente.evaluacion",
             view_mode: "kanban,list,form",
-            views: [[false, "kanban"], [false, "list"], [false, "form"]],
+            views: [
+                [kanbanViewId || false, "kanban"],
+                [false, "list"],
+                [false, "form"],
+            ],
             target: "current",
             domain: [["ticket_id", "=", this.record.resId]],
             context: {
@@ -579,12 +596,20 @@ export class MobileTicketLayout extends Component {
             return;
         }
 
+        const kanbanViewId = await this.getViewId(
+            "sat.view_ticket_accesorio_evaluacion_mobile_kanban"
+        );
+
         await this.action.doAction({
             type: "ir.actions.act_window",
             name: "Accesorios",
             res_model: "ticket.accesorio.evaluacion",
             view_mode: "kanban,list,form",
-            views: [[false, "kanban"], [false, "list"], [false, "form"]],
+            views: [
+                [kanbanViewId || false, "kanban"],
+                [false, "list"],
+                [false, "form"],
+            ],
             target: "current",
             domain: [["ticket_id", "=", this.record.resId]],
             context: {
@@ -608,7 +633,10 @@ export class MobileTicketLayout extends Component {
             name: "Pedidos de repuestos",
             res_model: "ticket.repuesto.pedido",
             view_mode: "list,form",
-            views: [[false, "list"], [false, "form"]],
+            views: [
+                [false, "list"],
+                [false, "form"],
+            ],
             target: "current",
             domain: [["ticket_id", "=", this.record.resId]],
             context: {
