@@ -30,24 +30,12 @@ export class MobileTicketLayout extends Component {
             menuOpen: false,
             saving: false,
             accordions: {
-                componentes: {
-                    open: true,
-                },
-                accesorios: {
-                    open: true,
-                },
-                informe: {
-                    open: false,
-                },
-                pedidos: {
-                    open: false,
-                },
-                ubicacion: {
-                    open: false,
-                },
-                gps: {
-                    open: false,
-                },
+                componentes: { open: true },
+                accesorios: { open: true },
+                informe: { open: false },
+                pedidos: { open: false },
+                ubicacion: { open: false },
+                gps: { open: false },
             },
         });
 
@@ -251,7 +239,7 @@ export class MobileTicketLayout extends Component {
             return 0;
         }
 
-        return list.records.filter((record) => !!record.data.estado_id).length;
+        return list.records.filter((item) => !!item.data.estado_id).length;
     }
 
     get componentesCount() {
@@ -432,6 +420,65 @@ export class MobileTicketLayout extends Component {
         }
     }
 
+    async saveMobileValues(values) {
+        if (!this.record?.resModel || !this.record?.resId) {
+            return;
+        }
+
+        if (this.uiState.saving) {
+            return;
+        }
+
+        this.uiState.saving = true;
+
+        try {
+            await this.orm.write(this.record.resModel, [this.record.resId], values);
+            await this.reloadRecord();
+
+            this.notification.add("Cambios guardados.", {
+                type: "success",
+            });
+        } catch (error) {
+            console.error("[MobileTicket] Error guardando valores móviles:", error);
+
+            this.notification.add("No se pudo guardar el cambio.", {
+                type: "danger",
+            });
+        } finally {
+            this.uiState.saving = false;
+        }
+    }
+
+    async onChangeContadorK(ev) {
+        await this.saveMobileValues({
+            contometrok_id: Number(ev.target.value || 0),
+        });
+    }
+
+    async onChangeContadorColor(ev) {
+        await this.saveMobileValues({
+            contometroc_id: Number(ev.target.value || 0),
+        });
+    }
+
+    async onChangeContadorScan(ev) {
+        await this.saveMobileValues({
+            contometros_id: Number(ev.target.value || 0),
+        });
+    }
+
+    async onChangeDescription(ev) {
+        await this.saveMobileValues({
+            description: ev.target.value || "",
+        });
+    }
+
+    async onChangeInforme(ev) {
+        await this.saveMobileValues({
+            informe_id: ev.target.value || "",
+        });
+    }
+
     async callAction(actionName) {
         this.closeMenu();
 
@@ -502,15 +549,75 @@ export class MobileTicketLayout extends Component {
     }
 
     async openComponentes() {
-        await this.callAction("action_ver_componentes_ticket");
+        this.closeMenu();
+
+        if (!this.record?.resId) {
+            return;
+        }
+
+        await this.action.doAction({
+            type: "ir.actions.act_window",
+            name: "Componentes",
+            res_model: "ticket.componente.evaluacion",
+            view_mode: "kanban,list,form",
+            views: [[false, "kanban"], [false, "list"], [false, "form"]],
+            target: "current",
+            domain: [["ticket_id", "=", this.record.resId]],
+            context: {
+                default_ticket_id: this.record.resId,
+                active_id: this.record.resId,
+                active_ids: [this.record.resId],
+                active_model: this.record.resModel,
+            },
+        });
     }
 
     async openAccesorios() {
-        await this.callAction("action_ver_accesorios_ticket");
+        this.closeMenu();
+
+        if (!this.record?.resId) {
+            return;
+        }
+
+        await this.action.doAction({
+            type: "ir.actions.act_window",
+            name: "Accesorios",
+            res_model: "ticket.accesorio.evaluacion",
+            view_mode: "kanban,list,form",
+            views: [[false, "kanban"], [false, "list"], [false, "form"]],
+            target: "current",
+            domain: [["ticket_id", "=", this.record.resId]],
+            context: {
+                default_ticket_id: this.record.resId,
+                active_id: this.record.resId,
+                active_ids: [this.record.resId],
+                active_model: this.record.resModel,
+            },
+        });
     }
 
     async openPedidos() {
-        await this.callAction("action_ver_pedidos_ticket");
+        this.closeMenu();
+
+        if (!this.record?.resId) {
+            return;
+        }
+
+        await this.action.doAction({
+            type: "ir.actions.act_window",
+            name: "Pedidos de repuestos",
+            res_model: "ticket.repuesto.pedido",
+            view_mode: "list,form",
+            views: [[false, "list"], [false, "form"]],
+            target: "current",
+            domain: [["ticket_id", "=", this.record.resId]],
+            context: {
+                default_ticket_id: this.record.resId,
+                active_id: this.record.resId,
+                active_ids: [this.record.resId],
+                active_model: this.record.resModel,
+            },
+        });
     }
 
     async openFullForm() {
@@ -522,10 +629,17 @@ export class MobileTicketLayout extends Component {
 
         await this.action.doAction({
             type: "ir.actions.act_window",
+            name: "Ticket",
             res_model: this.record.resModel,
             res_id: this.record.resId,
+            view_mode: "form",
             views: [[false, "form"]],
             target: "current",
+            context: {
+                active_id: this.record.resId,
+                active_ids: [this.record.resId],
+                active_model: this.record.resModel,
+            },
         });
     }
 

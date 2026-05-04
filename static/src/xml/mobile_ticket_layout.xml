@@ -57,7 +57,8 @@
                         </div>
 
                         <div class="o_mobile_actions_row" t-if="hasCoordinates">
-                            <button type="button" t-on-click="onAbrirMapa">
+                            <button type="button"
+                                    t-on-click="onAbrirMapa">
                                 🗺 Ver mapa
                             </button>
 
@@ -137,28 +138,43 @@
                         <div class="o_mobile_contadores">
                             <div class="o_contador_box">
                                 <div class="o_contador_label">K</div>
-                                <div class="o_contador_value" t-esc="contadorK"/>
+                                <input type="number"
+                                       inputmode="numeric"
+                                       class="o_mobile_counter_input"
+                                       t-att-value="contadorK"
+                                       t-on-change="onChangeContadorK"
+                                       t-att-disabled="uiState.saving"/>
                             </div>
 
                             <div class="o_contador_box" t-if="esColor">
                                 <div class="o_contador_label">COLOR</div>
-                                <div class="o_contador_value" t-esc="contadorColor"/>
+                                <input type="number"
+                                       inputmode="numeric"
+                                       class="o_mobile_counter_input"
+                                       t-att-value="contadorColor"
+                                       t-on-change="onChangeContadorColor"
+                                       t-att-disabled="uiState.saving"/>
                             </div>
 
                             <div class="o_contador_box">
                                 <div class="o_contador_label">SCAN</div>
-                                <div class="o_contador_value" t-esc="contadorScan"/>
+                                <input type="number"
+                                       inputmode="numeric"
+                                       class="o_mobile_counter_input"
+                                       t-att-value="contadorScan"
+                                       t-on-change="onChangeContadorScan"
+                                       t-att-disabled="uiState.saving"/>
                             </div>
                         </div>
 
                         <div class="o_mobile_hint">
-                            Para editar contadores usa “Abrir form completo” o el botón “Cargar contadores”.
+                            Los contadores se guardan al salir del campo.
                         </div>
                     </div>
                 </div>
 
                 <!-- PROBLEMA REPORTADO -->
-                <div class="o_mobile_card" t-if="descripcionProblema or reporterName or reporterPhone">
+                <div class="o_mobile_card">
                     <div class="o_mobile_problem_header">
                         <div class="o_mobile_section_label">PROBLEMA REPORTADO</div>
 
@@ -167,9 +183,11 @@
                         </span>
                     </div>
 
-                    <div class="o_mobile_section_value"
-                         t-if="descripcionProblema"
-                         t-esc="descripcionProblema"/>
+                    <textarea class="o_mobile_textarea"
+                              placeholder="Escribe el problema reportado..."
+                              t-att-value="descripcionProblema"
+                              t-on-change="onChangeDescription"
+                              t-att-disabled="uiState.saving"/>
 
                     <div class="o_mobile_reporter"
                          t-if="reporterName or reporterPhone">
@@ -187,7 +205,9 @@
 
                 <!-- COMPONENTES -->
                 <div t-att-class="accordionClass('componentes')">
-                    <div class="o_accordion_header" t-on-click="toggleComponentes">
+                    <div class="o_accordion_header"
+                         t-on-click="toggleComponentes">
+
                         <div class="o_accordion_icon_box">
                             <span t-if="componentesCompleto">✓</span>
                             <span t-else="">🔧</span>
@@ -213,9 +233,11 @@
                         <span class="o_accordion_chevron">▼</span>
                     </div>
 
-                    <div class="o_accordion_body" t-if="isAccordionOpen('componentes')">
+                    <div class="o_accordion_body"
+                         t-if="isAccordionOpen('componentes')">
+
                         <div class="o_mobile_hint">
-                            Los componentes se evalúan con el widget de chips existente.
+                            Abre la evaluación para cambiar estados y observaciones.
                         </div>
 
                         <button type="button"
@@ -228,7 +250,9 @@
 
                 <!-- ACCESORIOS -->
                 <div t-att-class="accordionClass('accesorios')">
-                    <div class="o_accordion_header" t-on-click="toggleAccesorios">
+                    <div class="o_accordion_header"
+                         t-on-click="toggleAccesorios">
+
                         <div class="o_accordion_icon_box">
                             <span t-if="accesoriosCompleto">✓</span>
                             <span t-else="">🔩</span>
@@ -254,9 +278,11 @@
                         <span class="o_accordion_chevron">▼</span>
                     </div>
 
-                    <div class="o_accordion_body" t-if="isAccordionOpen('accesorios')">
+                    <div class="o_accordion_body"
+                         t-if="isAccordionOpen('accesorios')">
+
                         <div class="o_mobile_hint">
-                            Los accesorios se evalúan con el widget de chips existente.
+                            Abre la evaluación para cambiar estados y observaciones.
                         </div>
 
                         <button type="button"
@@ -269,29 +295,54 @@
 
                 <!-- INFORME TÉCNICO -->
                 <div t-att-class="accordionClass('informe')">
-                    <div class="o_accordion_header" t-on-click="toggleInforme">
+                    <div class="o_accordion_header"
+                         t-on-click="toggleInforme">
+
                         <div class="o_accordion_icon_box">📄</div>
 
                         <div class="o_accordion_title_box">
                             <div class="o_accordion_title">Informe técnico</div>
                             <div class="o_accordion_subtitle">
-                                Ver informe generado
+                                Editar informe del ticket
                             </div>
                         </div>
 
                         <span class="o_accordion_chevron">▼</span>
                     </div>
 
-                    <div class="o_accordion_body" t-if="isAccordionOpen('informe')">
-                        <div t-if="informeHtml"
-                             class="o_mobile_informe_preview"
-                             t-out="informeHtml"/>
+                    <div class="o_accordion_body"
+                         t-if="isAccordionOpen('informe')">
 
-                        <div t-else=""
-                             class="o_mobile_hint">
-                            Sin informe técnico generado.
+                        <textarea class="o_mobile_informe_editor"
+                                  placeholder="Escribe o corrige el informe técnico..."
+                                  t-att-value="informeHtml"
+                                  t-on-change="onChangeInforme"
+                                  t-att-disabled="uiState.saving"/>
+
+                        <div class="o_mobile_hint">
+                            El informe se guarda al salir del campo.
                         </div>
                     </div>
+                </div>
+
+                <!-- PEDIDOS -->
+                <div class="o_mobile_card" t-if="pedidosCount">
+                    <div class="o_mobile_card_header">
+                        <div class="o_mobile_avatar">📦</div>
+
+                        <div class="o_mobile_card_title_box">
+                            <div class="o_mobile_card_label">PEDIDOS</div>
+                            <div class="o_mobile_card_title">
+                                <t t-esc="pedidosCount"/> pedido(s) de repuestos
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="button"
+                            class="o_mobile_full_width_btn"
+                            t-on-click="openPedidos">
+                        📦 Abrir pedidos
+                    </button>
                 </div>
 
             </div>
@@ -300,14 +351,14 @@
             <div class="o_mobile_bottom_bar">
                 <button type="button"
                         class="o_btn_secondary"
-                        t-att-disabled="!canCargarContadores"
+                        t-att-disabled="!canCargarContadores || uiState.saving"
                         t-on-click="onCargarContadores">
                     🔄 Cargar contadores
                 </button>
 
                 <button type="button"
                         class="o_btn_primary"
-                        t-att-disabled="!canCerrarTicket"
+                        t-att-disabled="!canCerrarTicket || uiState.saving"
                         t-on-click="onCerrarTicket">
                     ✓ Cerrar ticket
                 </button>

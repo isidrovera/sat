@@ -707,7 +707,60 @@
         }
     }
 }
+.o_mobile_counter_input {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    text-align: center;
+    font-size: 14px !important;
+    font-weight: 800 !important;
+    color: #212529;
+    padding: 4px;
+    outline: none;
 
+    &:focus {
+        background: #ffffff;
+        border-radius: 6px;
+        box-shadow: 0 0 0 2px #b6dcfe;
+    }
+
+    &:disabled {
+        opacity: 0.6;
+    }
+}
+
+.o_mobile_textarea,
+.o_mobile_informe_editor {
+    width: 100%;
+    border-radius: 8px;
+    padding: 10px;
+    font-size: 13px;
+    color: #212529;
+    line-height: 1.5;
+    font-family: inherit;
+    resize: vertical;
+
+    &:focus {
+        outline: 2px solid #b6dcfe;
+        border-color: #1f6abb;
+    }
+
+    &:disabled {
+        opacity: 0.6;
+    }
+}
+
+.o_mobile_textarea {
+    min-height: 90px;
+    border: 1px solid #dee2e6;
+    background: #ffffff;
+}
+
+.o_mobile_informe_editor {
+    min-height: 260px;
+    border: 1px solid #f5e9b8;
+    background: #fffef5;
+}
 // =====================================================
 // DESKTOP
 // En escritorio se oculta el layout móvil
