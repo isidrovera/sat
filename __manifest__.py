@@ -233,6 +233,10 @@
             'sat/static/src/js/reparacion_subpartes_selector.js',
             'sat/static/src/xml/reparacion_subpartes_selector.xml',
             'sat/static/src/scss/reparacion_subpartes_selector.scss',
+
+            'sat/static/src/scss/mobile_ticket_layout.scss',
+            'sat/static/src/xml/mobile_ticket_layout.xml',
+            'sat/static/src/js/mobile_ticket_layout.js',
                 
             # External Libraries existentes
             'https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js',

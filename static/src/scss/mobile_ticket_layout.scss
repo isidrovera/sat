@@ -1,0 +1,593 @@
+// =====================================================
+// MOBILE TICKET LAYOUT
+// Solo se activa en móvil/tablet (≤768px)
+// En desktop el form se ve como hoy, sin cambios
+// =====================================================
+
+@media (max-width: 768px) {
+
+    // Aplicar SOLO a forms con la clase o_mobile_ticket_form
+    .o_form_view.o_mobile_ticket_form {
+
+        // Esconder elementos del form que no queremos en móvil
+        > .o_form_sheet_bg,
+        > .o_form_sheet {
+            background: #f1f3f5 !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            box-shadow: none !important;
+            border: none !important;
+        }
+
+        .o_form_sheet {
+            background: transparent !important;
+            padding: 0 !important;
+            max-width: 100% !important;
+        }
+
+        // Esconder el button_box (stats numéricos) en móvil
+        .oe_button_box,
+        div[name="button_box"] {
+            display: none !important;
+        }
+
+        // Esconder el oe_title clásico
+        .oe_title {
+            display: none !important;
+        }
+
+        // Esconder los botones del header (los movemos al menú ⋮ y bottom bar)
+        > .o_form_renderer > .o_form_statusbar,
+        .o_form_statusbar {
+            display: none !important;
+        }
+
+        // Esconder el notebook clásico (lo reemplazamos con acordeones)
+        .o_notebook {
+            // Esconder los headers de tabs
+            > .o_notebook_headers {
+                display: none !important;
+            }
+
+            // El contenido de las pages: lo mostramos transformado en acordeones
+            > .tab-content {
+                display: block !important;
+
+                .tab-pane {
+                    display: block !important; // Mostrar TODAS las pages
+                    opacity: 1 !important;
+                    padding: 0 !important;
+                    margin-bottom: 8px;
+                    background: white;
+                    border-radius: 12px;
+                    border: 0.5px solid #dee2e6;
+                    overflow: hidden;
+                }
+            }
+        }
+
+        // Esconder el chatter en móvil (va dentro del acordeón "Conversación")
+        .o-mail-Form-chatter {
+            display: none !important;
+        }
+    }
+
+
+    // =====================================================
+    // HEADER STICKY (creado por el widget OWL)
+    // =====================================================
+    .o_mobile_ticket_header {
+        position: sticky;
+        top: 0;
+        z-index: 30;
+        background: white;
+        border-bottom: 0.5px solid #dee2e6;
+        padding: 10px 12px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+
+        .o_mobile_back {
+            font-size: 20px;
+            color: #6c757d;
+            cursor: pointer;
+            padding: 4px;
+        }
+
+        .o_mobile_title {
+            flex: 1;
+            min-width: 0;
+
+            .o_mobile_ticket_number {
+                font-size: 11px;
+                color: #6c757d;
+                font-weight: 500;
+                letter-spacing: 0.3px;
+            }
+
+            .o_mobile_ticket_subtitle {
+                font-size: 14px;
+                font-weight: 600;
+                color: #212529;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+        }
+
+        .o_mobile_status_badge {
+            padding: 3px 8px;
+            border-radius: 8px;
+            font-size: 10px;
+            font-weight: 700;
+            white-space: nowrap;
+
+            &.o_status_nuevo { background: #e9ecef; color: #495057; }
+            &.o_status_proceso,
+            &.o_status_en_ruta,
+            &.o_status_en_sitio { background: #DEE5F5; color: #1F3582; }
+            &.o_status_en_revision { background: #faeeda; color: #633806; }
+            &.o_status_finalizado { background: #eaf3de; color: #173404; }
+        }
+
+        .o_mobile_menu_btn {
+            font-size: 20px;
+            color: #6c757d;
+            cursor: pointer;
+            padding: 4px 6px;
+            border-radius: 4px;
+
+            &:active {
+                background: #f1f3f5;
+            }
+        }
+    }
+
+
+    // =====================================================
+    // CONTENIDO PRINCIPAL
+    // =====================================================
+    .o_mobile_ticket_body {
+        padding: 10px 12px 90px;  // 90px abajo para no tapar bottom bar
+        background: #f1f3f5;
+        min-height: 100vh;
+    }
+
+
+    // =====================================================
+    // TARJETAS FIJAS (Cliente, Equipo, Problema)
+    // =====================================================
+    .o_mobile_card {
+        background: white;
+        border-radius: 12px;
+        padding: 14px;
+        margin-bottom: 8px;
+        border: 0.5px solid #dee2e6;
+    }
+
+    .o_mobile_card_header {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        margin-bottom: 10px;
+
+        .o_mobile_avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            background: #DEE5F5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+
+            &.o_avatar_circle {
+                border-radius: 50%;
+                color: white;
+                font-weight: 700;
+                font-size: 14px;
+            }
+        }
+
+        .o_mobile_card_title_box {
+            flex: 1;
+            min-width: 0;
+
+            .o_mobile_card_label {
+                font-size: 10px;
+                color: #6c757d;
+                font-weight: 600;
+                letter-spacing: 0.3px;
+            }
+
+            .o_mobile_card_title {
+                font-size: 16px;
+                font-weight: 700;
+                color: #212529;
+                line-height: 1.2;
+            }
+
+            .o_mobile_card_subtitle {
+                font-size: 11px;
+                color: #6c757d;
+                margin-top: 2px;
+            }
+        }
+    }
+
+    .o_mobile_card_section {
+        padding: 10px 0;
+        border-top: 0.5px solid #dee2e6;
+
+        .o_mobile_section_label {
+            font-size: 9px;
+            color: #6c757d;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+            margin-bottom: 4px;
+        }
+
+        .o_mobile_section_value {
+            font-size: 12px;
+            color: #212529;
+            line-height: 1.4;
+        }
+    }
+
+    // Grid 2 columnas para datos del servicio
+    .o_mobile_grid_2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+
+        > div {
+            min-width: 0;
+        }
+    }
+
+    // Contadores en grid de 3
+    .o_mobile_contadores {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+
+        .o_contador_box {
+            background: #f8f9fa;
+            border-radius: 6px;
+            padding: 8px;
+            text-align: center;
+            border: 0.5px solid #dee2e6;
+
+            .o_contador_label {
+                font-size: 9px;
+                color: #6c757d;
+                font-weight: 600;
+            }
+
+            .o_contador_value {
+                font-size: 13px;
+                font-weight: 700;
+                color: #212529;
+                margin-top: 2px;
+
+                // Forzar teclado numérico al editar
+                input {
+                    text-align: center;
+                    font-size: 13px !important;
+                    font-weight: 700 !important;
+                    border: none !important;
+                    background: transparent !important;
+                    padding: 0 !important;
+                    width: 100%;
+                }
+            }
+        }
+    }
+
+    // Botones de acción dentro de tarjetas (Llamar, Mapa, Navegar)
+    .o_mobile_actions_row {
+        display: flex;
+        gap: 6px;
+        margin-top: 8px;
+
+        button, a.btn {
+            flex: 1;
+            padding: 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            border: 1px solid #1f6abb;
+            background: white;
+            color: #1f6abb;
+            text-decoration: none !important;
+            text-align: center;
+            cursor: pointer;
+
+            &.o_btn_primary {
+                background: #1f6abb;
+                color: white;
+                border-color: #1f6abb;
+            }
+        }
+    }
+
+
+    // =====================================================
+    // ACORDEONES (Componentes, Accesorios, etc.)
+    // =====================================================
+    .o_mobile_accordion {
+        background: white;
+        border-radius: 12px;
+        margin-bottom: 8px;
+        overflow: hidden;
+        border: 0.5px solid #dee2e6;
+
+        &.o_accordion_open {
+            border-color: #b6dcfe;
+            border-width: 1.5px;
+
+            > .o_accordion_header {
+                background: #e7f3ff;
+
+                .o_accordion_title { color: #0c447c; }
+                .o_accordion_icon_box { background: white; }
+            }
+        }
+
+        &.o_accordion_complete {
+            border-color: #c0dd97;
+            border-width: 1.5px;
+
+            > .o_accordion_header {
+                background: #eaf3de;
+
+                .o_accordion_title { color: #173404; }
+                .o_accordion_subtitle { color: #3b6d11; }
+                .o_accordion_icon_box {
+                    background: #639922;
+                    color: white;
+                }
+            }
+        }
+
+        &.o_accordion_pending {
+            border-color: #f09595;
+            border-width: 1.5px;
+
+            > .o_accordion_header {
+                .o_accordion_subtitle { color: #791f1f; }
+            }
+        }
+    }
+
+    .o_accordion_header {
+        padding: 12px 14px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        cursor: pointer;
+        user-select: none;
+        transition: background 0.15s ease;
+
+        &:active {
+            background: #f8f9fa;
+        }
+
+        .o_accordion_icon_box {
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            background: #f1f3f5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            flex-shrink: 0;
+        }
+
+        .o_accordion_title_box {
+            flex: 1;
+            min-width: 0;
+
+            .o_accordion_title {
+                font-size: 13px;
+                font-weight: 600;
+                color: #212529;
+            }
+
+            .o_accordion_subtitle {
+                font-size: 10px;
+                color: #6c757d;
+                margin-top: 2px;
+            }
+        }
+
+        .o_accordion_badge {
+            font-size: 9px;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 8px;
+            color: white;
+
+            &.o_badge_warning { background: #ba7517; }
+            &.o_badge_danger { background: #e24b4a; }
+            &.o_badge_info { background: #1f6abb; }
+        }
+
+        .o_accordion_chevron {
+            color: #6c757d;
+            font-size: 10px;
+            transition: transform 0.2s ease;
+        }
+    }
+
+    .o_accordion_open > .o_accordion_header .o_accordion_chevron {
+        transform: rotate(180deg);
+        color: #1f6abb;
+    }
+
+    .o_accordion_body {
+        padding: 0 12px 12px;
+        background: white;
+    }
+
+
+    // =====================================================
+    // BOTTOM ACTION BAR (siempre visible abajo)
+    // =====================================================
+    .o_mobile_bottom_bar {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 40;
+        background: white;
+        border-top: 0.5px solid #dee2e6;
+        padding: 10px 12px;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.06);
+        // safe-area para iPhones con notch
+        padding-bottom: calc(10px + env(safe-area-inset-bottom));
+
+        button {
+            flex: 1;
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            border: none;
+            cursor: pointer;
+            min-height: 44px;
+            white-space: nowrap;
+
+            &.o_btn_secondary {
+                background: white;
+                color: #1f6abb;
+                border: 1.5px solid #1f6abb;
+            }
+
+            &.o_btn_primary {
+                background: #639922;
+                color: white;
+                font-weight: 700;
+            }
+
+            &:active {
+                transform: scale(0.97);
+            }
+
+            &:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+            }
+        }
+    }
+
+
+    // =====================================================
+    // MENÚ ⋮ DESPLEGABLE (acciones secundarias)
+    // =====================================================
+    .o_mobile_actions_menu {
+        position: fixed;
+        top: 60px;
+        right: 12px;
+        z-index: 50;
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        border: 0.5px solid #dee2e6;
+        min-width: 240px;
+        max-height: 70vh;
+        overflow-y: auto;
+
+        .o_mobile_action_item {
+            padding: 12px 16px;
+            font-size: 13px;
+            color: #212529;
+            cursor: pointer;
+            border-bottom: 0.5px solid #f1f3f5;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+
+            &:last-child { border-bottom: none; }
+            &:active { background: #f1f3f5; }
+
+            i { color: #6c757d; font-size: 14px; min-width: 16px; }
+        }
+    }
+
+    .o_mobile_actions_overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.3);
+        z-index: 45;
+    }
+
+
+    // =====================================================
+    // INFORME TÉCNICO con corrector ortográfico
+    // =====================================================
+    .o_mobile_informe_editor {
+        background: #fffef5;
+        border: 1px solid #f5e9b8;
+        border-radius: 6px;
+        padding: 10px;
+        font-size: 13px;
+        color: #212529;
+        line-height: 1.5;
+        min-height: 120px;
+        font-family: inherit;
+        width: 100%;
+
+        &:focus {
+            outline: 2px solid #b6dcfe;
+            border-color: #1f6abb;
+        }
+    }
+
+
+    // =====================================================
+    // AJUSTES DE CAMPOS DENTRO DE TARJETAS
+    // =====================================================
+    .o_mobile_ticket_form {
+        // Inputs touch-friendly
+        .o_field_widget input,
+        .o_field_widget textarea,
+        .o_field_widget select {
+            min-height: 40px;
+            font-size: 14px !important;
+        }
+
+        // Esconder labels nativas dentro de las tarjetas
+        // (usamos nuestros propios labels)
+        .o_mobile_card .o_form_label {
+            display: none;
+        }
+    }
+}
+
+
+// =====================================================
+// DESKTOP — sin cambios visuales
+// (el form se ve como siempre)
+// =====================================================
+@media (min-width: 769px) {
+    .o_mobile_ticket_form {
+        // En desktop esconder los elementos generados por el widget móvil
+        .o_mobile_ticket_header,
+        .o_mobile_ticket_body,
+        .o_mobile_bottom_bar,
+        .o_mobile_actions_menu,
+        .o_mobile_actions_overlay {
+            display: none !important;
+        }
+    }
+}

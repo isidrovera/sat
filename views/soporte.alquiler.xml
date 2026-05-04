@@ -8,7 +8,7 @@
             <field name="name">soporte_ticket.form</field>
             <field name="model">ticket.alquiler</field>
             <field name="arch" type="xml">
-                <form string="">
+                <form string="" js_class="mobile_ticket_form" class="o_mobile_ticket_form">
                     <header>
                         <field name="estado" widget="statusbar"
                                options="{'clickable': '1'}"/>
