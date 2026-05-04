@@ -1172,7 +1172,7 @@
 <record id="sub_gen_tray_heater" model="componente.subparte">
     <field name="name">Calentador de papel (casetera)</field>
     <field name="code">GEN_TRAY_HEATER</field>
-    <field name="tipo_id" ref="comp_tipo_generico"/>
+    <field name="tipo_id" ref="comp_tipo_tray"/>
 </record>
 
 <record id="sub_gen_transformer" model="componente.subparte">
