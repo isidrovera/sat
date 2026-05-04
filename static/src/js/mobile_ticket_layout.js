@@ -1,14 +1,10 @@
 /** @odoo-module **/
 
 import { registry } from "@web/core/registry";
-import { formView } from "@web/views/form/form_view";
-import { FormController } from "@web/views/form/form_controller";
-import { FormRenderer } from "@web/views/form/form_renderer";
+import { Component, useState, onMounted, onWillUnmount } from "@odoo/owl";
 import { useService } from "@web/core/utils/hooks";
-import { useState, onMounted, onWillUnmount } from "@odoo/owl";
+import { standardFieldProps } from "@web/views/fields/standard_field_props";
 
-
-// Etiquetas legibles para el badge de estado
 const STATE_LABELS = {
     nuevo: "NUEVO",
     proceso: "PROCESO",
@@ -19,18 +15,17 @@ const STATE_LABELS = {
 };
 
 
-export class MobileTicketRenderer extends FormRenderer {
-    static template = "sat.MobileTicketRenderer";
+export class MobileTicketLayout extends Component {
+    static template = "sat.MobileTicketLayout";
+    static props = { ...standardFieldProps };
 
     setup() {
-        super.setup();
-        this.ui = useService("ui");
         this.action = useService("action");
+        this.orm = useService("orm");
 
         this.uiState = useState({
             isMobile: this._checkMobile(),
             menuOpen: false,
-            // Map de acordeones: { sectionId: { open: bool, manuallyToggled: bool } }
             accordions: {
                 componentes: { open: true, manuallyToggled: false },
                 accesorios: { open: true, manuallyToggled: false },
@@ -38,30 +33,29 @@ export class MobileTicketRenderer extends FormRenderer {
                 pedidos: { open: false, manuallyToggled: false },
                 ubicacion: { open: false, manuallyToggled: false },
                 gps: { open: false, manuallyToggled: false },
-                chat: { open: false, manuallyToggled: false },
             },
         });
 
-        // Listener de resize para detectar cambios móvil/desktop
         this._onResize = () => {
             this.uiState.isMobile = this._checkMobile();
         };
 
         onMounted(() => {
             window.addEventListener("resize", this._onResize);
-            this._autoCollapseCompleted();
+            if (this.uiState.isMobile) {
+                document.body.classList.add("o_mobile_ticket_active");
+            }
         });
 
         onWillUnmount(() => {
             window.removeEventListener("resize", this._onResize);
+            document.body.classList.remove("o_mobile_ticket_active");
         });
     }
 
     _checkMobile() {
         return window.innerWidth <= 768;
     }
-
-    // ===== GETTERS DE DATOS DEL TICKET =====
 
     get record() {
         return this.props.record;
@@ -71,204 +65,76 @@ export class MobileTicketRenderer extends FormRenderer {
         return this.record.data;
     }
 
-    get ticketNumber() {
-        return this.data.name || "";
-    }
-
-    get currentState() {
-        return this.data.estado || "nuevo";
-    }
-
-    get stateLabel() {
-        return STATE_LABELS[this.currentState] || this.currentState.toUpperCase();
-    }
-
-    get stateClass() {
-        return `o_status_${this.currentState}`;
-    }
-
-    // ===== DATOS DEL CLIENTE =====
-
-    get clientName() {
-        const val = this.data.partner_id;
-        if (!val) return "Sin cliente";
-        if (Array.isArray(val)) return val[1];
+    _readM2O(field) {
+        const val = this.data[field];
+        if (!val) return "";
+        if (Array.isArray(val)) return val[1] || "";
         if (typeof val === "object") return val.display_name || "";
         return String(val);
     }
 
+    get ticketNumber() { return this.data.name || ""; }
+    get currentState() { return this.data.estado || "nuevo"; }
+    get stateLabel() { return STATE_LABELS[this.currentState] || this.currentState.toUpperCase(); }
+    get stateClass() { return `o_status_${this.currentState}`; }
+
+    get clientName() { return this._readM2O("partner_id") || "Sin cliente"; }
     get clientInitials() {
-        const name = this.clientName;
-        return name.split(" ")
-            .filter(w => w.length > 0)
-            .slice(0, 2)
-            .map(w => w[0])
-            .join("")
-            .toUpperCase();
+        return this.clientName.split(" ").filter(w => w).slice(0, 2)
+            .map(w => w[0]).join("").toUpperCase();
     }
-
-    get clientAddress() {
-        return this.data.equipo_direccion_completa || "";
-    }
-
+    get clientAddress() { return this.data.equipo_direccion_completa || ""; }
     get clientLocation() {
-        const parts = [
-            this.data.equipo_distrito,
-            this.data.equipo_provincia,
-            this.data.equipo_departamento,
-        ].filter(p => p);
-        return parts.join(", ");
+        return [this.data.equipo_distrito, this.data.equipo_provincia, this.data.equipo_departamento]
+            .filter(p => p).join(", ");
+    }
+    get clientReference() { return this.data.equipo_direccion_referencia || ""; }
+    get hasCoordinates() { return !!this.data.equipo_tiene_coordenadas; }
+    get contactName() { return this._readM2O("contacto_id_r"); }
+    get reporterName() { return this.data.reporter_name || ""; }
+    get reporterPhone() { return this.data.reporter_phone || ""; }
+    get tipoServicio() { return this._readM2O("tipo_servicio_id"); }
+    get agendaTexto() { return this.data.agenda_local || this.data.agenda || ""; }
+    get responsableName() { return this._readM2O("responsable"); }
+    get asistenciaName() { return this._readM2O("asistencia_id"); }
+
+    get equipoMarca() { return this._readM2O("marca_id_r"); }
+    get equipoSerie() { return this._readM2O("serie_id_r"); }
+    get equipoModelo() { return this.data.product_alquiler || ""; }
+    get esColor() { return this.data.tipo_id === "color"; }
+
+    get contadorK() { return this.data.contometrok_id || 0; }
+    get contadorColor() { return this.data.contometroc_id || 0; }
+    get contadorScan() { return this.data.contometros_id || 0; }
+
+    get descripcionProblema() { return this.data.description || ""; }
+    get tienePhoto() { return !!this.data.problem_photo; }
+
+    _countList(field) {
+        const list = this.data[field];
+        if (!list) return 0;
+        if (Array.isArray(list)) return list.length;
+        if (list.records) return list.records.length;
+        return 0;
     }
 
-    get clientReference() {
-        return this.data.equipo_direccion_referencia || "";
-    }
-
-    get hasCoordinates() {
-        return !!this.data.equipo_tiene_coordenadas;
-    }
-
-    get contactName() {
-        const val = this.data.contacto_id_r;
-        if (!val) return "";
-        if (Array.isArray(val)) return val[1];
-        if (typeof val === "object") return val.display_name || "";
-        return String(val);
-    }
-
-    get reporterName() {
-        return this.data.reporter_name || "";
-    }
-
-    get reporterPhone() {
-        return this.data.reporter_phone || "";
-    }
-
-    get tipoServicio() {
-        const val = this.data.tipo_servicio_id;
-        if (!val) return "";
-        if (Array.isArray(val)) return val[1];
-        if (typeof val === "object") return val.display_name || "";
-        return String(val);
-    }
-
-    get agendaTexto() {
-        return this.data.agenda_local || this.data.agenda || "";
-    }
-
-    get responsableName() {
-        const val = this.data.responsable;
-        if (!val) return "";
-        if (Array.isArray(val)) return val[1];
-        if (typeof val === "object") return val.display_name || "";
-        return String(val);
-    }
-
-    get asistenciaName() {
-        const val = this.data.asistencia_id;
-        if (!val) return "";
-        if (Array.isArray(val)) return val[1];
-        if (typeof val === "object") return val.display_name || "";
-        return String(val);
-    }
-
-    // ===== DATOS DEL EQUIPO =====
-
-    get equipoMarca() {
-        const val = this.data.marca_id_r;
-        if (!val) return "";
-        if (Array.isArray(val)) return val[1];
-        if (typeof val === "object") return val.display_name || "";
-        return String(val);
-    }
-
-    get equipoSerie() {
-        const val = this.data.serie_id_r;
-        if (!val) return "";
-        if (Array.isArray(val)) return val[1];
-        if (typeof val === "object") return val.display_name || "";
-        return String(val);
-    }
-
-    get equipoModelo() {
-        return this.data.product_alquiler || "";
-    }
-
-    get equipoTipo() {
-        return this.data.tipo_id || "";
-    }
-
-    get esColor() {
-        return this.data.tipo_id === "color";
-    }
-
-    // ===== DATOS DEL PROBLEMA =====
-
-    get descripcionProblema() {
-        return this.data.description || "";
-    }
-
-    get tienePhoto() {
-        return !!this.data.problem_photo;
-    }
-
-    // ===== ACORDEONES =====
-
-    get componentesCount() {
-        const records = this.data.ticket_componente_eval_ids || [];
-        return Array.isArray(records) ? records.length : (records.records ? records.records.length : 0);
-    }
-
-    get componentesEvaluados() {
-        const list = this.data.ticket_componente_eval_ids;
+    _countWithEstado(field) {
+        const list = this.data[field];
         if (!list || !list.records) return 0;
         return list.records.filter(r => r.data.estado_id).length;
     }
 
-    get componentesPendientes() {
-        return this.componentesCount - this.componentesEvaluados;
-    }
+    get componentesCount() { return this._countList("ticket_componente_eval_ids"); }
+    get componentesEvaluados() { return this._countWithEstado("ticket_componente_eval_ids"); }
+    get componentesPendientes() { return this.componentesCount - this.componentesEvaluados; }
+    get componentesCompleto() { return this.componentesCount > 0 && this.componentesPendientes === 0; }
 
-    get componentesCompleto() {
-        return this.componentesCount > 0 && this.componentesPendientes === 0;
-    }
+    get accesoriosCount() { return this._countList("ticket_accesorio_eval_ids"); }
+    get accesoriosEvaluados() { return this._countWithEstado("ticket_accesorio_eval_ids"); }
+    get accesoriosPendientes() { return this.accesoriosCount - this.accesoriosEvaluados; }
+    get accesoriosCompleto() { return this.accesoriosCount > 0 && this.accesoriosPendientes === 0; }
 
-    get accesoriosCount() {
-        const records = this.data.ticket_accesorio_eval_ids || [];
-        return Array.isArray(records) ? records.length : (records.records ? records.records.length : 0);
-    }
-
-    get accesoriosEvaluados() {
-        const list = this.data.ticket_accesorio_eval_ids;
-        if (!list || !list.records) return 0;
-        return list.records.filter(r => r.data.estado_id).length;
-    }
-
-    get accesoriosPendientes() {
-        return this.accesoriosCount - this.accesoriosEvaluados;
-    }
-
-    get accesoriosCompleto() {
-        return this.accesoriosCount > 0 && this.accesoriosPendientes === 0;
-    }
-
-    get pedidosCount() {
-        const list = this.data.ticket_pedido_ids;
-        if (!list || !list.records) return 0;
-        return list.records.length;
-    }
-
-    // Auto-colapsar las secciones que están completas (sin override manual)
-    _autoCollapseCompleted() {
-        const acc = this.uiState.accordions;
-
-        if (this.componentesCompleto && !acc.componentes.manuallyToggled) {
-            acc.componentes.open = false;
-        }
-        if (this.accesoriosCompleto && !acc.accesorios.manuallyToggled) {
-            acc.accesorios.open = false;
-        }
-    }
+    get pedidosCount() { return this._countList("ticket_pedido_ids"); }
 
     toggleAccordion(sectionId) {
         const acc = this.uiState.accordions[sectionId];
@@ -280,10 +146,8 @@ export class MobileTicketRenderer extends FormRenderer {
     accordionClass(sectionId) {
         const acc = this.uiState.accordions[sectionId];
         if (!acc) return "";
-
         let cls = "o_mobile_accordion";
         if (acc.open) cls += " o_accordion_open";
-
         if (sectionId === "componentes") {
             if (this.componentesCompleto) cls += " o_accordion_complete";
             else if (this.componentesPendientes > 0) cls += " o_accordion_pending";
@@ -291,7 +155,6 @@ export class MobileTicketRenderer extends FormRenderer {
             if (this.accesoriosCompleto) cls += " o_accordion_complete";
             else if (this.accesoriosPendientes > 0) cls += " o_accordion_pending";
         }
-
         return cls;
     }
 
@@ -299,47 +162,28 @@ export class MobileTicketRenderer extends FormRenderer {
         return this.uiState.accordions[sectionId]?.open || false;
     }
 
-    // ===== ACCIONES =====
+    toggleMenu() { this.uiState.menuOpen = !this.uiState.menuOpen; }
+    closeMenu() { this.uiState.menuOpen = false; }
 
-    toggleMenu() {
-        this.uiState.menuOpen = !this.uiState.menuOpen;
-    }
-
-    closeMenu() {
-        this.uiState.menuOpen = false;
-    }
-
-    async callAction(actionName, options = {}) {
+    async callAction(actionName) {
         this.closeMenu();
         try {
-            const result = await this.record.model.orm.call(
+            const result = await this.orm.call(
                 this.record.resModel,
                 actionName,
                 [this.record.resId],
-                options.kwargs || {}
+                {}
             );
-            // Si la acción devuelve una acción Odoo, ejecutarla
             if (result && typeof result === "object" && result.type) {
                 await this.action.doAction(result);
             }
-            // Recargar el record para ver cambios
             await this.record.load();
         } catch (err) {
-            console.error("[MobileTicket] Error al ejecutar acción:", actionName, err);
+            console.error("[MobileTicket] Error en acción:", actionName, err);
         }
     }
 
-    callPhone(phone) {
-        if (!phone) return;
-        window.location.href = `tel:${phone}`;
-    }
-
-    // ===== ACCIONES PRINCIPALES (bottom bar) =====
-
-    get canCargarContadores() {
-        return !!this.data.mostrar_boton_contadores;
-    }
-
+    get canCargarContadores() { return !!this.data.mostrar_boton_contadores; }
     get canCerrarTicket() {
         return ["proceso", "en_ruta", "en_sitio", "en_revision"].includes(this.currentState);
     }
@@ -355,45 +199,23 @@ export class MobileTicketRenderer extends FormRenderer {
         await this.callAction("action_finalizar");
     }
 
-    // ===== ACCIONES SECUNDARIAS (menú ⋮) =====
-
     get menuActions() {
         const state = this.currentState;
         const actions = [];
 
         if (state === "nuevo") {
-            actions.push({
-                icon: "fa-paper-plane",
-                label: "Asignar ticket",
-                method: "action_asignar_ticket",
-            });
+            actions.push({ icon: "fa-paper-plane", label: "Asignar ticket", method: "action_asignar_ticket" });
         }
-
         if (state === "proceso") {
-            actions.push({
-                icon: "fa-car",
-                label: "🚗 En ruta",
-                method: "action_en_ruta",
-            });
+            actions.push({ icon: "fa-car", label: "🚗 En ruta", method: "action_en_ruta" });
         }
-
         if (["proceso", "en_ruta"].includes(state)) {
-            actions.push({
-                icon: "fa-map-marker",
-                label: "📍 Llegué al sitio",
-                method: "action_en_sitio",
-            });
+            actions.push({ icon: "fa-map-marker", label: "📍 Llegué al sitio", method: "action_en_sitio" });
         }
-
         if (state === "en_sitio") {
-            actions.push({
-                icon: "fa-wrench",
-                label: "🔧 Iniciar revisión",
-                method: "action_en_revision",
-            });
+            actions.push({ icon: "fa-wrench", label: "🔧 Iniciar revisión", method: "action_en_revision" });
         }
 
-        // Acciones siempre disponibles
         actions.push(
             { icon: "fa-refresh", label: "Regenerar informe", method: "action_regenerar_informe" },
             { icon: "fa-eraser", label: "Limpiar informe", method: "action_limpiar_informe" },
@@ -404,27 +226,15 @@ export class MobileTicketRenderer extends FormRenderer {
         return actions;
     }
 
-    // ===== UBICACIÓN =====
-
-    async onAbrirMapa() {
-        await this.callAction("action_abrir_mapa_equipo");
-    }
-
-    async onNavegar() {
-        await this.callAction("action_navegar_a_equipo");
-    }
+    async onAbrirMapa() { await this.callAction("action_abrir_mapa_equipo"); }
+    async onNavegar() { await this.callAction("action_navegar_a_equipo"); }
+    callPhone(phone) { if (phone) window.location.href = `tel:${phone}`; }
 }
 
 
-export class MobileTicketController extends FormController {
-    static template = "sat.MobileTicketController";
-}
-
-
-export const mobileTicketFormView = {
-    ...formView,
-    Renderer: MobileTicketRenderer,
-    Controller: MobileTicketController,
+export const mobileTicketLayoutField = {
+    component: MobileTicketLayout,
+    supportedTypes: ["char", "text", "boolean", "integer"],
 };
 
-registry.category("views").add("mobile_ticket_form", mobileTicketFormView);
+registry.category("fields").add("mobile_layout", mobileTicketLayoutField);
