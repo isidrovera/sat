@@ -558,82 +558,40 @@ export class MobileTicketLayout extends Component {
     }
 
     async openComponentes() {
-        this.closeMenu();
+    this.closeMenu();
 
-        if (!this.record?.resId) {
-            return;
-        }
-
-        const kanbanViewId = await this.getViewId(
-            "sat.view_ticket_componente_evaluacion_mobile_kanban"
-        );
-
-        if (!kanbanViewId) {
-            this.notification.add("No se encontró la vista kanban móvil de componentes.", {
-                type: "danger",
-            });
-            return;
-        }
-
-        await this.action.doAction({
-            type: "ir.actions.act_window",
-            name: "Componentes",
-            res_model: "ticket.componente.evaluacion",
-            view_mode: "kanban,form",
-            views: [
-                [kanbanViewId, "kanban"],
-                [false, "form"],
-            ],
-            target: "current",
-            domain: [["ticket_id", "=", this.record.resId]],
-            context: {
-                default_ticket_id: this.record.resId,
-                active_id: this.record.resId,
-                active_ids: [this.record.resId],
-                active_model: this.record.resModel,
-                mobile_ticket_eval: true,
-            },
-        });
+    if (!this.record?.resId) {
+        return;
     }
 
-    async openAccesorios() {
-        this.closeMenu();
+    await this.action.doAction("sat.action_ticket_componente_evaluacion_mobile", {
+        additionalContext: {
+            active_id: this.record.resId,
+            active_ids: [this.record.resId],
+            active_model: this.record.resModel,
+            default_ticket_id: this.record.resId,
+            mobile_ticket_eval: true,
+        },
+    });
+}
 
-        if (!this.record?.resId) {
-            return;
-        }
+async openAccesorios() {
+    this.closeMenu();
 
-        const kanbanViewId = await this.getViewId(
-            "sat.view_ticket_accesorio_evaluacion_mobile_kanban"
-        );
-
-        if (!kanbanViewId) {
-            this.notification.add("No se encontró la vista kanban móvil de accesorios.", {
-                type: "danger",
-            });
-            return;
-        }
-
-        await this.action.doAction({
-            type: "ir.actions.act_window",
-            name: "Accesorios",
-            res_model: "ticket.accesorio.evaluacion",
-            view_mode: "kanban,form",
-            views: [
-                [kanbanViewId, "kanban"],
-                [false, "form"],
-            ],
-            target: "current",
-            domain: [["ticket_id", "=", this.record.resId]],
-            context: {
-                default_ticket_id: this.record.resId,
-                active_id: this.record.resId,
-                active_ids: [this.record.resId],
-                active_model: this.record.resModel,
-                mobile_ticket_eval: true,
-            },
-        });
+    if (!this.record?.resId) {
+        return;
     }
+
+    await this.action.doAction("sat.action_ticket_accesorio_evaluacion_mobile", {
+        additionalContext: {
+            active_id: this.record.resId,
+            active_ids: [this.record.resId],
+            active_model: this.record.resModel,
+            default_ticket_id: this.record.resId,
+            mobile_ticket_eval: true,
+        },
+    });
+}
 
     async openPedidos() {
         this.closeMenu();

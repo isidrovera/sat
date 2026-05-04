@@ -657,7 +657,57 @@
       <field name="view_id" ref="view_reparacion_comp_eval_tree_v18"/>
       <field name="search_view_id" ref="view_reparacion_comp_eval_search_v18"/>
     </record>
+    <!-- ===================================================== -->
+<!-- ACCIONES MOBILE: EVALUACIONES DE TICKETS              -->
+<!-- Estas acciones son usadas por mobile_ticket_layout.js  -->
+<!-- ===================================================== -->
 
+<record id="action_ticket_componente_evaluacion_mobile" model="ir.actions.act_window">
+    <field name="name">Componentes</field>
+    <field name="res_model">ticket.componente.evaluacion</field>
+    <field name="view_mode">kanban,form</field>
+    <field name="view_id" ref="view_ticket_componente_evaluacion_mobile_kanban"/>
+    <field name="domain">[('ticket_id', '=', active_id)]</field>
+    <field name="context">{'default_ticket_id': active_id, 'mobile_ticket_eval': True}</field>
+</record>
+
+<record id="action_ticket_componente_evaluacion_mobile_kanban_view" model="ir.actions.act_window.view">
+    <field name="sequence" eval="1"/>
+    <field name="view_mode">kanban</field>
+    <field name="view_id" ref="view_ticket_componente_evaluacion_mobile_kanban"/>
+    <field name="act_window_id" ref="action_ticket_componente_evaluacion_mobile"/>
+</record>
+
+<record id="action_ticket_componente_evaluacion_mobile_form_view" model="ir.actions.act_window.view">
+    <field name="sequence" eval="2"/>
+    <field name="view_mode">form</field>
+    <field name="view_id" ref="view_ticket_componente_evaluacion_form"/>
+    <field name="act_window_id" ref="action_ticket_componente_evaluacion_mobile"/>
+</record>
+
+
+<record id="action_ticket_accesorio_evaluacion_mobile" model="ir.actions.act_window">
+    <field name="name">Accesorios</field>
+    <field name="res_model">ticket.accesorio.evaluacion</field>
+    <field name="view_mode">kanban,form</field>
+    <field name="view_id" ref="view_ticket_accesorio_evaluacion_mobile_kanban"/>
+    <field name="domain">[('ticket_id', '=', active_id)]</field>
+    <field name="context">{'default_ticket_id': active_id, 'mobile_ticket_eval': True}</field>
+</record>
+
+<record id="action_ticket_accesorio_evaluacion_mobile_kanban_view" model="ir.actions.act_window.view">
+    <field name="sequence" eval="1"/>
+    <field name="view_mode">kanban</field>
+    <field name="view_id" ref="view_ticket_accesorio_evaluacion_mobile_kanban"/>
+    <field name="act_window_id" ref="action_ticket_accesorio_evaluacion_mobile"/>
+</record>
+
+<record id="action_ticket_accesorio_evaluacion_mobile_form_view" model="ir.actions.act_window.view">
+    <field name="sequence" eval="2"/>
+    <field name="view_mode">form</field>
+    <field name="view_id" ref="view_ticket_accesorio_evaluacion_form"/>
+    <field name="act_window_id" ref="action_ticket_accesorio_evaluacion_mobile"/>
+</record>
     <!-- ── Tickets ────────────────────────────────────────────────────── -->
     <record id="action_ticket_componente_evaluacion" model="ir.actions.act_window">
       <field name="name">Evaluaciones de Componentes (Tickets)</field>
