@@ -568,14 +568,20 @@ export class MobileTicketLayout extends Component {
             "sat.view_ticket_componente_evaluacion_mobile_kanban"
         );
 
+        if (!kanbanViewId) {
+            this.notification.add("No se encontró la vista kanban móvil de componentes.", {
+                type: "danger",
+            });
+            return;
+        }
+
         await this.action.doAction({
             type: "ir.actions.act_window",
             name: "Componentes",
             res_model: "ticket.componente.evaluacion",
-            view_mode: "kanban,list,form",
+            view_mode: "kanban,form",
             views: [
-                [kanbanViewId || false, "kanban"],
-                [false, "list"],
+                [kanbanViewId, "kanban"],
                 [false, "form"],
             ],
             target: "current",
@@ -585,6 +591,7 @@ export class MobileTicketLayout extends Component {
                 active_id: this.record.resId,
                 active_ids: [this.record.resId],
                 active_model: this.record.resModel,
+                mobile_ticket_eval: true,
             },
         });
     }
@@ -600,14 +607,20 @@ export class MobileTicketLayout extends Component {
             "sat.view_ticket_accesorio_evaluacion_mobile_kanban"
         );
 
+        if (!kanbanViewId) {
+            this.notification.add("No se encontró la vista kanban móvil de accesorios.", {
+                type: "danger",
+            });
+            return;
+        }
+
         await this.action.doAction({
             type: "ir.actions.act_window",
             name: "Accesorios",
             res_model: "ticket.accesorio.evaluacion",
-            view_mode: "kanban,list,form",
+            view_mode: "kanban,form",
             views: [
-                [kanbanViewId || false, "kanban"],
-                [false, "list"],
+                [kanbanViewId, "kanban"],
                 [false, "form"],
             ],
             target: "current",
@@ -617,6 +630,7 @@ export class MobileTicketLayout extends Component {
                 active_id: this.record.resId,
                 active_ids: [this.record.resId],
                 active_model: this.record.resModel,
+                mobile_ticket_eval: true,
             },
         });
     }
