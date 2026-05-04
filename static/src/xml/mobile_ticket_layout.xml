@@ -5,20 +5,35 @@
         <div t-if="uiState.isMobile" class="o_mobile_ticket_layout">
 
             <div class="o_mobile_ticket_header">
-                <span class="o_mobile_back" t-on-click="() => window.history.back()">←</span>
+                <button type="button"
+                        class="o_mobile_back"
+                        t-on-click="() => window.history.back()">
+                    ←
+                </button>
+
                 <div class="o_mobile_title">
                     <div class="o_mobile_ticket_number" t-esc="ticketNumber"/>
                     <div class="o_mobile_ticket_subtitle">Ticket de servicio</div>
                 </div>
-                <span class="o_mobile_status_badge" t-att-class="stateClass" t-esc="stateLabel"/>
-                <span class="o_mobile_menu_btn" t-on-click="toggleMenu">⋮</span>
+
+                <span class="o_mobile_status_badge"
+                      t-att-class="stateClass"
+                      t-esc="stateLabel"/>
+
+                <button type="button"
+                        class="o_mobile_menu_btn"
+                        t-on-click="toggleMenu">
+                    ⋮
+                </button>
             </div>
 
             <div class="o_mobile_ticket_body">
 
+                <!-- CLIENTE -->
                 <div class="o_mobile_card">
                     <div class="o_mobile_card_header">
-                        <div class="o_mobile_avatar o_avatar_circle" style="background: #639922;" t-esc="clientInitials"/>
+                        <div class="o_mobile_avatar o_avatar_circle"
+                             t-esc="clientInitials"/>
                         <div class="o_mobile_card_title_box">
                             <div class="o_mobile_card_label">CLIENTE</div>
                             <div class="o_mobile_card_title" t-esc="clientName"/>
@@ -28,27 +43,42 @@
                     <div class="o_mobile_card_section" t-if="clientAddress">
                         <div class="o_mobile_section_label">DIRECCIÓN</div>
                         <div class="o_mobile_section_value" t-esc="clientAddress"/>
-                        <div class="o_mobile_section_value" style="color: #6c757d; font-size: 11px;" t-if="clientLocation" t-esc="clientLocation"/>
-                        <div style="font-size: 10px; color: #6c757d; margin-top: 4px; font-style: italic;" t-if="clientReference">
+
+                        <div class="o_mobile_section_muted"
+                             t-if="clientLocation"
+                             t-esc="clientLocation"/>
+
+                        <div class="o_mobile_reference"
+                             t-if="clientReference">
                             Ref: <t t-esc="clientReference"/>
                         </div>
+
                         <div class="o_mobile_actions_row" t-if="hasCoordinates">
-                            <button t-on-click="onAbrirMapa">🗺 Ver mapa</button>
-                            <button class="o_btn_primary" t-on-click="onNavegar">🧭 Navegar</button>
+                            <button type="button" t-on-click="onAbrirMapa">
+                                🗺 Ver mapa
+                            </button>
+                            <button type="button"
+                                    class="o_btn_primary"
+                                    t-on-click="onNavegar">
+                                🧭 Navegar
+                            </button>
                         </div>
                     </div>
 
                     <div class="o_mobile_card_section" t-if="contactName">
                         <div class="o_mobile_section_label">CONTACTO</div>
-                        <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px;">
-                            <div style="flex: 1; min-width: 0;">
-                                <div style="font-size: 12px; font-weight: 600; color: #212529;" t-esc="contactName"/>
-                            </div>
+                        <div class="o_mobile_contact_row">
+                            <div class="o_mobile_contact_name" t-esc="contactName"/>
                             <a t-if="reporterPhone"
                                t-att-href="'tel:' + reporterPhone"
-                               style="padding: 6px 10px; border-radius: 6px; border: 1px solid #639922; background: #eaf3de; color: #173404; font-size: 11px; font-weight: 600; text-decoration: none;">📞 Llamar</a>
+                               class="o_mobile_phone_btn">
+                                📞 Llamar
+                            </a>
                         </div>
-                        <div style="font-size: 11px; color: #1f6abb; margin-top: 4px;" t-if="reporterPhone" t-esc="reporterPhone"/>
+
+                        <div class="o_mobile_phone_text"
+                             t-if="reporterPhone"
+                             t-esc="reporterPhone"/>
                     </div>
 
                     <div class="o_mobile_card_section">
@@ -57,14 +87,17 @@
                                 <div class="o_mobile_section_label">TIPO SERVICIO</div>
                                 <div class="o_mobile_section_value" t-esc="tipoServicio"/>
                             </div>
+
                             <div t-if="agendaTexto">
                                 <div class="o_mobile_section_label">AGENDADO</div>
                                 <div class="o_mobile_section_value" t-esc="agendaTexto"/>
                             </div>
+
                             <div t-if="responsableName">
                                 <div class="o_mobile_section_label">RESPONSABLE</div>
                                 <div class="o_mobile_section_value" t-esc="responsableName"/>
                             </div>
+
                             <div t-if="asistenciaName">
                                 <div class="o_mobile_section_label">ASISTENCIA</div>
                                 <div class="o_mobile_section_value" t-esc="asistenciaName"/>
@@ -73,123 +106,240 @@
                     </div>
                 </div>
 
+                <!-- EQUIPO -->
                 <div class="o_mobile_card">
                     <div class="o_mobile_card_header">
                         <div class="o_mobile_avatar">🖨</div>
                         <div class="o_mobile_card_title_box">
                             <div class="o_mobile_card_label">EQUIPO</div>
                             <div class="o_mobile_card_title" t-esc="equipoMarca || 'Sin marca'"/>
-                            <div class="o_mobile_card_subtitle" t-if="equipoModelo" t-esc="equipoModelo"/>
+                            <div class="o_mobile_card_subtitle"
+                                 t-if="equipoModelo"
+                                 t-esc="equipoModelo"/>
                         </div>
                     </div>
 
                     <div class="o_mobile_card_section" t-if="equipoSerie">
                         <div class="o_mobile_section_label">SERIE</div>
-                        <div class="o_mobile_section_value" style="font-family: ui-monospace, monospace; font-weight: 600;" t-esc="equipoSerie"/>
+                        <div class="o_mobile_monospace" t-esc="equipoSerie"/>
                     </div>
 
                     <div class="o_mobile_card_section">
-                        <div class="o_mobile_section_label" style="margin-bottom: 6px;">CONTADORES</div>
+                        <div class="o_mobile_section_label o_mb_6">CONTADORES</div>
+
                         <div class="o_mobile_contadores">
                             <div class="o_contador_box">
                                 <div class="o_contador_label">K</div>
-                                <div class="o_contador_value" t-esc="contadorK"/>
+                                <input type="number"
+                                       inputmode="numeric"
+                                       class="o_mobile_counter_input"
+                                       t-att-value="contadorK"
+                                       t-on-change="onChangeContadorK"
+                                       t-att-disabled="uiState.saving"/>
                             </div>
+
                             <div class="o_contador_box" t-if="esColor">
                                 <div class="o_contador_label">COLOR</div>
-                                <div class="o_contador_value" t-esc="contadorColor"/>
+                                <input type="number"
+                                       inputmode="numeric"
+                                       class="o_mobile_counter_input"
+                                       t-att-value="contadorColor"
+                                       t-on-change="onChangeContadorColor"
+                                       t-att-disabled="uiState.saving"/>
                             </div>
+
                             <div class="o_contador_box">
                                 <div class="o_contador_label">SCAN</div>
-                                <div class="o_contador_value" t-esc="contadorScan"/>
+                                <input type="number"
+                                       inputmode="numeric"
+                                       class="o_mobile_counter_input"
+                                       t-att-value="contadorScan"
+                                       t-on-change="onChangeContadorScan"
+                                       t-att-disabled="uiState.saving"/>
                             </div>
                         </div>
-                        <div style="font-size: 10px; color: #6c757d; text-align: center; margin-top: 6px; font-style: italic;">
-                            Para editar contadores, abrí el form completo
+
+                        <div class="o_mobile_hint">
+                            Los contadores se guardan al cambiar el valor.
                         </div>
                     </div>
                 </div>
 
-                <div class="o_mobile_card" t-if="descripcionProblema or reporterName">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <!-- PROBLEMA -->
+                <div class="o_mobile_card">
+                    <div class="o_mobile_problem_header">
                         <div class="o_mobile_section_label">PROBLEMA REPORTADO</div>
-                        <span t-if="tienePhoto" style="font-size: 10px; color: #1f6abb; font-weight: 600;">📷 Foto disponible</span>
+                        <span t-if="tienePhoto" class="o_mobile_photo_badge">
+                            📷 Foto disponible
+                        </span>
                     </div>
-                    <div class="o_mobile_section_value" t-if="descripcionProblema" t-esc="descripcionProblema"/>
-                    <div style="font-size: 11px; color: #6c757d; padding-top: 8px; border-top: 0.5px solid #dee2e6; margin-top: 8px;" t-if="reporterName">
-                        Reportó <strong t-esc="reporterName"/>
-                        <t t-if="reporterPhone"> · 📞 </t>
-                        <a t-if="reporterPhone" t-att-href="'tel:' + reporterPhone" style="color: #1f6abb;" t-esc="reporterPhone"/>
+
+                    <textarea class="o_mobile_textarea"
+                              placeholder="Describe el problema reportado..."
+                              t-att-value="descripcionProblema"
+                              t-on-change="onChangeDescription"
+                              t-att-disabled="uiState.saving"/>
+
+                    <div class="o_mobile_reporter"
+                         t-if="reporterName or reporterPhone">
+                        <t t-if="reporterName">
+                            Reportó <strong t-esc="reporterName"/>
+                        </t>
+
+                        <t t-if="reporterPhone">
+                            ·
+                            <a t-att-href="'tel:' + reporterPhone"
+                               t-esc="reporterPhone"/>
+                        </t>
                     </div>
                 </div>
 
+                <!-- COMPONENTES -->
                 <div t-att-class="accordionClass('componentes')">
-                    <div class="o_accordion_header" t-on-click="() => this.toggleAccordion('componentes')">
+                    <div class="o_accordion_header"
+                         t-on-click="() => toggleAccordion('componentes')">
+
                         <div class="o_accordion_icon_box">
                             <span t-if="componentesCompleto">✓</span>
                             <span t-else="">🔧</span>
                         </div>
+
                         <div class="o_accordion_title_box">
                             <div class="o_accordion_title">Componentes</div>
                             <div class="o_accordion_subtitle">
-                                <t t-esc="componentesEvaluados"/> de <t t-esc="componentesCount"/> evaluados
+                                <t t-esc="componentesEvaluados"/>
+                                de
+                                <t t-esc="componentesCount"/>
+                                evaluados
                                 <t t-if="componentesCompleto"> · Completo</t>
                             </div>
                         </div>
-                        <span t-if="componentesPendientes &gt; 0" class="o_accordion_badge o_badge_warning">
+
+                        <span t-if="componentesPendientes &gt; 0"
+                              class="o_accordion_badge o_badge_warning">
                             <t t-esc="componentesPendientes"/> PEND.
                         </span>
+
                         <span class="o_accordion_chevron">▼</span>
                     </div>
-                    <div class="o_accordion_body" t-if="isAccordionOpen('componentes')">
-                        <div style="font-size: 11px; color: #6c757d; padding: 10px; text-align: center; font-style: italic;">
-                            Para evaluar componentes, abrí el form completo en desktop o desplazá hacia abajo en el form móvil.
+
+                    <div class="o_accordion_body"
+                         t-if="isAccordionOpen('componentes')">
+                        <div class="o_mobile_hint">
+                            La evaluación detallada de componentes sigue en la vista original.
+                            Usa “Abrir form completo” si necesitas cambiar estados o observaciones.
                         </div>
                     </div>
                 </div>
 
+                <!-- ACCESORIOS -->
                 <div t-att-class="accordionClass('accesorios')">
-                    <div class="o_accordion_header" t-on-click="() => this.toggleAccordion('accesorios')">
+                    <div class="o_accordion_header"
+                         t-on-click="() => toggleAccordion('accesorios')">
+
                         <div class="o_accordion_icon_box">
                             <span t-if="accesoriosCompleto">✓</span>
                             <span t-else="">🔩</span>
                         </div>
+
                         <div class="o_accordion_title_box">
                             <div class="o_accordion_title">Accesorios</div>
                             <div class="o_accordion_subtitle">
-                                <t t-esc="accesoriosEvaluados"/> de <t t-esc="accesoriosCount"/> evaluados
+                                <t t-esc="accesoriosEvaluados"/>
+                                de
+                                <t t-esc="accesoriosCount"/>
+                                evaluados
                                 <t t-if="accesoriosCompleto"> · Completo</t>
                             </div>
                         </div>
-                        <span t-if="accesoriosPendientes &gt; 0" class="o_accordion_badge o_badge_danger">
+
+                        <span t-if="accesoriosPendientes &gt; 0"
+                              class="o_accordion_badge o_badge_danger">
                             <t t-esc="accesoriosPendientes"/> PEND.
                         </span>
+
                         <span class="o_accordion_chevron">▼</span>
+                    </div>
+
+                    <div class="o_accordion_body"
+                         t-if="isAccordionOpen('accesorios')">
+                        <div class="o_mobile_hint">
+                            La evaluación detallada de accesorios sigue en la vista original.
+                            Usa “Abrir form completo” si necesitas cambiar estados u observaciones.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- INFORME -->
+                <div t-att-class="accordionClass('informe')">
+                    <div class="o_accordion_header"
+                         t-on-click="() => toggleAccordion('informe')">
+
+                        <div class="o_accordion_icon_box">📄</div>
+
+                        <div class="o_accordion_title_box">
+                            <div class="o_accordion_title">Informe técnico</div>
+                            <div class="o_accordion_subtitle">
+                                Vista de solo lectura
+                            </div>
+                        </div>
+
+                        <span class="o_accordion_chevron">▼</span>
+                    </div>
+
+                    <div class="o_accordion_body"
+                         t-if="isAccordionOpen('informe')">
+                        <div t-if="informeHtml"
+                             class="o_mobile_informe_preview"
+                             t-out="informeHtml"/>
+                        <div t-else=""
+                             class="o_mobile_hint">
+                            Sin informe técnico generado.
+                        </div>
                     </div>
                 </div>
 
             </div>
 
+            <!-- BOTTOM BAR -->
             <div class="o_mobile_bottom_bar">
-                <button class="o_btn_secondary" t-att-disabled="!canCargarContadores" t-on-click="onCargarContadores">
+                <button type="button"
+                        class="o_btn_secondary"
+                        t-att-disabled="!canCargarContadores || uiState.saving"
+                        t-on-click="onCargarContadores">
                     🔄 Cargar contadores
                 </button>
-                <button class="o_btn_primary" t-att-disabled="!canCerrarTicket" t-on-click="onCerrarTicket">
+
+                <button type="button"
+                        class="o_btn_primary"
+                        t-att-disabled="!canCerrarTicket || uiState.saving"
+                        t-on-click="onCerrarTicket">
                     ✓ Cerrar ticket
                 </button>
             </div>
 
-            <t t-if="uiState.menuOpen">
-                <div class="o_mobile_actions_overlay" t-on-click="closeMenu"/>
-                <div class="o_mobile_actions_menu">
-                    <t t-foreach="menuActions" t-as="action" t-key="action.method">
-                        <div class="o_mobile_action_item" t-on-click="() => this.callAction(action.method)">
-                            <i class="fa" t-att-class="action.icon"/>
-                            <span t-esc="action.label"/>
-                        </div>
-                    </t>
+            <!-- MENÚ -->
+            <div t-if="uiState.menuOpen"
+                 class="o_mobile_actions_overlay"
+                 t-on-click="closeMenu"/>
+
+            <div t-if="uiState.menuOpen"
+                 class="o_mobile_actions_menu">
+
+                <div class="o_mobile_action_item"
+                     t-on-click="openFullForm">
+                    <i class="fa fa-edit"/>
+                    <span>Abrir form completo</span>
                 </div>
-            </t>
+
+                <t t-foreach="menuActions" t-as="actionItem" t-key="actionItem.method">
+                    <div class="o_mobile_action_item"
+                         t-on-click="() => callAction(actionItem.method)">
+                        <i t-att-class="'fa ' + actionItem.icon"/>
+                        <span t-esc="actionItem.label"/>
+                    </div>
+                </t>
+            </div>
 
         </div>
     </t>

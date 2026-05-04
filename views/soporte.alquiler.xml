@@ -8,7 +8,7 @@
             <field name="name">soporte_ticket.form</field>
             <field name="model">ticket.alquiler</field>
             <field name="arch" type="xml">
-                <form string="" >
+                <form string="" class="o_mobile_ticket_form">
                     <header>
                         <field name="estado" widget="statusbar"
                                options="{'clickable': '1'}"/>
@@ -81,7 +81,11 @@
                                 confirm="¿Enviar el informe técnico al área de administración para decisión?"/>
                     </header>
                     <sheet>
-                        <field name="name" widget="mobile_layout" invisible="0" nolabel="1"/>
+                        <field name="name"
+                        widget="mobile_layout"
+                        class="o_mobile_ticket_anchor"
+                        invisible="0"
+                        nolabel="1"/>
                         <div name="button_box">
                             <button class="oe_stat_button"
                                     type="object"
