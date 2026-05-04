@@ -25,18 +25,18 @@
                                 type="object"
                                 class="btn-primary"
                                 invisible="estado != 'proceso'"
-                                confirm="¿Confirmar que está en ruta hacia el cliente?"/>
+                                confirm="¿Confirmar que está en ruta hacia el cliente?" groups="base.group_system"/>
                         <button name="action_en_sitio"
                                 string="📍 Llegué al sitio"
                                 type="object"
                                 class="btn-primary"
                                 invisible="estado not in ('proceso', 'en_ruta')"
-                                confirm="¿Confirmar llegada al sitio del cliente?"/>
+                                confirm="¿Confirmar llegada al sitio del cliente?" groups="base.group_system"/>
                         <button name="action_en_revision"
                                 string="🔧 Iniciar Revisión"
                                 type="object"
                                 class="btn-warning"
-                                invisible="estado != 'en_sitio'"/>
+                                invisible="estado != 'en_sitio'" groups="base.group_system"/>
                         <button string="Cerrar"
                                 name="action_finalizar"
                                 type="object"
@@ -56,7 +56,7 @@
                                 type="object"
                                 icon="fa-paper-plane"
                                 string="Asignar Ticket"
-                                invisible="estado != 'nuevo'"/>
+                                invisible="estado != 'nuevo'" groups="base.group_system"/>
                         <button name="action_crear_evaluacion"
                                 string="Generar Evaluación"
                                 type="object"
