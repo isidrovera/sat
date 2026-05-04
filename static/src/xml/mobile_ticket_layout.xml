@@ -4,6 +4,7 @@
     <t t-name="sat.MobileTicketLayout">
         <div t-if="uiState.isMobile" class="o_mobile_ticket_layout">
 
+            <!-- HEADER -->
             <div class="o_mobile_ticket_header">
                 <button type="button"
                         class="o_mobile_back"
@@ -27,6 +28,7 @@
                 </button>
             </div>
 
+            <!-- BODY -->
             <div class="o_mobile_ticket_body">
 
                 <!-- CLIENTE -->
@@ -34,6 +36,7 @@
                     <div class="o_mobile_card_header">
                         <div class="o_mobile_avatar o_avatar_circle"
                              t-esc="clientInitials"/>
+
                         <div class="o_mobile_card_title_box">
                             <div class="o_mobile_card_label">CLIENTE</div>
                             <div class="o_mobile_card_title" t-esc="clientName"/>
@@ -57,6 +60,7 @@
                             <button type="button" t-on-click="onAbrirMapa">
                                 🗺 Ver mapa
                             </button>
+
                             <button type="button"
                                     class="o_btn_primary"
                                     t-on-click="onNavegar">
@@ -67,8 +71,10 @@
 
                     <div class="o_mobile_card_section" t-if="contactName">
                         <div class="o_mobile_section_label">CONTACTO</div>
+
                         <div class="o_mobile_contact_row">
                             <div class="o_mobile_contact_name" t-esc="contactName"/>
+
                             <a t-if="reporterPhone"
                                t-att-href="'tel:' + reporterPhone"
                                class="o_mobile_phone_btn">
@@ -110,6 +116,7 @@
                 <div class="o_mobile_card">
                     <div class="o_mobile_card_header">
                         <div class="o_mobile_avatar">🖨</div>
+
                         <div class="o_mobile_card_title_box">
                             <div class="o_mobile_card_label">EQUIPO</div>
                             <div class="o_mobile_card_title" t-esc="equipoMarca || 'Sin marca'"/>
@@ -130,55 +137,39 @@
                         <div class="o_mobile_contadores">
                             <div class="o_contador_box">
                                 <div class="o_contador_label">K</div>
-                                <input type="number"
-                                       inputmode="numeric"
-                                       class="o_mobile_counter_input"
-                                       t-att-value="contadorK"
-                                       t-on-change="onChangeContadorK"
-                                       t-att-disabled="uiState.saving"/>
+                                <div class="o_contador_value" t-esc="contadorK"/>
                             </div>
 
                             <div class="o_contador_box" t-if="esColor">
                                 <div class="o_contador_label">COLOR</div>
-                                <input type="number"
-                                       inputmode="numeric"
-                                       class="o_mobile_counter_input"
-                                       t-att-value="contadorColor"
-                                       t-on-change="onChangeContadorColor"
-                                       t-att-disabled="uiState.saving"/>
+                                <div class="o_contador_value" t-esc="contadorColor"/>
                             </div>
 
                             <div class="o_contador_box">
                                 <div class="o_contador_label">SCAN</div>
-                                <input type="number"
-                                       inputmode="numeric"
-                                       class="o_mobile_counter_input"
-                                       t-att-value="contadorScan"
-                                       t-on-change="onChangeContadorScan"
-                                       t-att-disabled="uiState.saving"/>
+                                <div class="o_contador_value" t-esc="contadorScan"/>
                             </div>
                         </div>
 
                         <div class="o_mobile_hint">
-                            Los contadores se guardan al cambiar el valor.
+                            Para editar contadores usa “Abrir form completo” o el botón “Cargar contadores”.
                         </div>
                     </div>
                 </div>
 
-                <!-- PROBLEMA -->
-                <div class="o_mobile_card">
+                <!-- PROBLEMA REPORTADO -->
+                <div class="o_mobile_card" t-if="descripcionProblema or reporterName or reporterPhone">
                     <div class="o_mobile_problem_header">
                         <div class="o_mobile_section_label">PROBLEMA REPORTADO</div>
+
                         <span t-if="tienePhoto" class="o_mobile_photo_badge">
                             📷 Foto disponible
                         </span>
                     </div>
 
-                    <textarea class="o_mobile_textarea"
-                              placeholder="Describe el problema reportado..."
-                              t-att-value="descripcionProblema"
-                              t-on-change="onChangeDescription"
-                              t-att-disabled="uiState.saving"/>
+                    <div class="o_mobile_section_value"
+                         t-if="descripcionProblema"
+                         t-esc="descripcionProblema"/>
 
                     <div class="o_mobile_reporter"
                          t-if="reporterName or reporterPhone">
@@ -196,9 +187,7 @@
 
                 <!-- COMPONENTES -->
                 <div t-att-class="accordionClass('componentes')">
-                    <div class="o_accordion_header"
-                         t-on-click="() => toggleAccordion('componentes')">
-
+                    <div class="o_accordion_header" t-on-click="toggleComponentes">
                         <div class="o_accordion_icon_box">
                             <span t-if="componentesCompleto">✓</span>
                             <span t-else="">🔧</span>
@@ -206,6 +195,7 @@
 
                         <div class="o_accordion_title_box">
                             <div class="o_accordion_title">Componentes</div>
+
                             <div class="o_accordion_subtitle">
                                 <t t-esc="componentesEvaluados"/>
                                 de
@@ -223,20 +213,22 @@
                         <span class="o_accordion_chevron">▼</span>
                     </div>
 
-                    <div class="o_accordion_body"
-                         t-if="isAccordionOpen('componentes')">
+                    <div class="o_accordion_body" t-if="isAccordionOpen('componentes')">
                         <div class="o_mobile_hint">
-                            La evaluación detallada de componentes sigue en la vista original.
-                            Usa “Abrir form completo” si necesitas cambiar estados o observaciones.
+                            Los componentes se evalúan con el widget de chips existente.
                         </div>
+
+                        <button type="button"
+                                class="o_mobile_full_width_btn"
+                                t-on-click="openComponentes">
+                            🔧 Abrir evaluación de componentes
+                        </button>
                     </div>
                 </div>
 
                 <!-- ACCESORIOS -->
                 <div t-att-class="accordionClass('accesorios')">
-                    <div class="o_accordion_header"
-                         t-on-click="() => toggleAccordion('accesorios')">
-
+                    <div class="o_accordion_header" t-on-click="toggleAccesorios">
                         <div class="o_accordion_icon_box">
                             <span t-if="accesoriosCompleto">✓</span>
                             <span t-else="">🔩</span>
@@ -244,6 +236,7 @@
 
                         <div class="o_accordion_title_box">
                             <div class="o_accordion_title">Accesorios</div>
+
                             <div class="o_accordion_subtitle">
                                 <t t-esc="accesoriosEvaluados"/>
                                 de
@@ -261,37 +254,39 @@
                         <span class="o_accordion_chevron">▼</span>
                     </div>
 
-                    <div class="o_accordion_body"
-                         t-if="isAccordionOpen('accesorios')">
+                    <div class="o_accordion_body" t-if="isAccordionOpen('accesorios')">
                         <div class="o_mobile_hint">
-                            La evaluación detallada de accesorios sigue en la vista original.
-                            Usa “Abrir form completo” si necesitas cambiar estados u observaciones.
+                            Los accesorios se evalúan con el widget de chips existente.
                         </div>
+
+                        <button type="button"
+                                class="o_mobile_full_width_btn"
+                                t-on-click="openAccesorios">
+                            🔩 Abrir evaluación de accesorios
+                        </button>
                     </div>
                 </div>
 
-                <!-- INFORME -->
+                <!-- INFORME TÉCNICO -->
                 <div t-att-class="accordionClass('informe')">
-                    <div class="o_accordion_header"
-                         t-on-click="() => toggleAccordion('informe')">
-
+                    <div class="o_accordion_header" t-on-click="toggleInforme">
                         <div class="o_accordion_icon_box">📄</div>
 
                         <div class="o_accordion_title_box">
                             <div class="o_accordion_title">Informe técnico</div>
                             <div class="o_accordion_subtitle">
-                                Vista de solo lectura
+                                Ver informe generado
                             </div>
                         </div>
 
                         <span class="o_accordion_chevron">▼</span>
                     </div>
 
-                    <div class="o_accordion_body"
-                         t-if="isAccordionOpen('informe')">
+                    <div class="o_accordion_body" t-if="isAccordionOpen('informe')">
                         <div t-if="informeHtml"
                              class="o_mobile_informe_preview"
                              t-out="informeHtml"/>
+
                         <div t-else=""
                              class="o_mobile_hint">
                             Sin informe técnico generado.
@@ -305,41 +300,40 @@
             <div class="o_mobile_bottom_bar">
                 <button type="button"
                         class="o_btn_secondary"
-                        t-att-disabled="!canCargarContadores || uiState.saving"
+                        t-att-disabled="!canCargarContadores"
                         t-on-click="onCargarContadores">
                     🔄 Cargar contadores
                 </button>
 
                 <button type="button"
                         class="o_btn_primary"
-                        t-att-disabled="!canCerrarTicket || uiState.saving"
+                        t-att-disabled="!canCerrarTicket"
                         t-on-click="onCerrarTicket">
                     ✓ Cerrar ticket
                 </button>
             </div>
 
-            <!-- MENÚ -->
-            <div t-if="uiState.menuOpen"
-                 class="o_mobile_actions_overlay"
-                 t-on-click="closeMenu"/>
+            <!-- MENÚ DE ACCIONES -->
+            <t t-if="uiState.menuOpen">
+                <div class="o_mobile_actions_overlay"
+                     t-on-click="closeMenu"/>
 
-            <div t-if="uiState.menuOpen"
-                 class="o_mobile_actions_menu">
-
-                <div class="o_mobile_action_item"
-                     t-on-click="openFullForm">
-                    <i class="fa fa-edit"/>
-                    <span>Abrir form completo</span>
-                </div>
-
-                <t t-foreach="menuActions" t-as="actionItem" t-key="actionItem.method">
+                <div class="o_mobile_actions_menu">
                     <div class="o_mobile_action_item"
-                         t-on-click="() => callAction(actionItem.method)">
-                        <i t-att-class="'fa ' + actionItem.icon"/>
-                        <span t-esc="actionItem.label"/>
+                         t-on-click="openFullForm">
+                        <i class="fa fa-edit"/>
+                        <span>Abrir form completo</span>
                     </div>
-                </t>
-            </div>
+
+                    <t t-foreach="menuActions" t-as="actionItem" t-key="actionItem.method">
+                        <div class="o_mobile_action_item"
+                             t-on-click="() => onMenuAction(actionItem)">
+                            <i t-att-class="'fa ' + actionItem.icon"/>
+                            <span t-esc="actionItem.label"/>
+                        </div>
+                    </t>
+                </div>
+            </t>
 
         </div>
     </t>

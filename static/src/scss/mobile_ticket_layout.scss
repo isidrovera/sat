@@ -1,7 +1,7 @@
-/* =====================================================
-   MOBILE TICKET LAYOUT
-   Reemplaza visualmente el form SOLO en celulares
-   ===================================================== */
+// =====================================================
+// MOBILE TICKET LAYOUT
+// Reemplaza visualmente el form SOLO en móvil/tablet
+// =====================================================
 
 @media (max-width: 768px) {
 
@@ -9,6 +9,7 @@
         background: #f1f3f5 !important;
     }
 
+    // El form debe tener class="o_mobile_ticket_form"
     .o_form_view.o_mobile_ticket_form {
         background: #f1f3f5 !important;
 
@@ -28,25 +29,24 @@
             display: block !important;
         }
 
-        /* Oculta TODO el contenido clásico del sheet */
+        // Ocultar todo el contenido clásico del sheet
         .o_form_sheet > * {
             display: none !important;
         }
 
-        /* Muestra SOLO el widget móvil */
+        // Mostrar solamente el campo ancla del layout móvil
         .o_form_sheet > .o_mobile_ticket_anchor,
         .o_form_sheet .o_mobile_ticket_anchor,
         .o_mobile_ticket_layout {
             display: block !important;
         }
 
-        /* Oculta header/statusbar/chatter clásicos */
+        // Ocultar elementos clásicos de Odoo en móvil
         .o_form_statusbar,
         .o_statusbar_status,
         .o-mail-Form-chatter,
         .o_Chatter,
-        .oe_chatter,
-        .o_control_panel {
+        .oe_chatter {
             display: none !important;
         }
     }
@@ -59,7 +59,10 @@
         font-size: 13px;
     }
 
-    /* HEADER */
+    // =====================================================
+    // HEADER
+    // =====================================================
+
     .o_mobile_ticket_header {
         position: sticky;
         top: 0;
@@ -81,6 +84,10 @@
         padding: 4px 6px;
         border-radius: 6px;
         line-height: 1;
+
+        &:active {
+            background: #f1f3f5;
+        }
     }
 
     .o_mobile_back {
@@ -89,11 +96,6 @@
 
     .o_mobile_menu_btn {
         font-size: 22px;
-    }
-
-    .o_mobile_back:active,
-    .o_mobile_menu_btn:active {
-        background: #f1f3f5;
     }
 
     .o_mobile_title {
@@ -147,14 +149,20 @@
         }
     }
 
-    /* BODY */
+    // =====================================================
+    // BODY
+    // =====================================================
+
     .o_mobile_ticket_body {
         padding: 10px 12px 96px;
         background: #f1f3f5;
         min-height: 100vh;
     }
 
-    /* CARDS */
+    // =====================================================
+    // CARDS
+    // =====================================================
+
     .o_mobile_card {
         background: #ffffff;
         border-radius: 12px;
@@ -232,6 +240,7 @@
         font-size: 12px;
         color: #212529;
         line-height: 1.4;
+        word-break: break-word;
     }
 
     .o_mobile_section_muted {
@@ -267,7 +276,10 @@
         }
     }
 
-    /* CONTACTO */
+    // =====================================================
+    // CONTACTO
+    // =====================================================
+
     .o_mobile_contact_row {
         display: flex;
         align-items: center;
@@ -300,7 +312,10 @@
         margin-top: 4px;
     }
 
-    /* ACCIONES EN CARD */
+    // =====================================================
+    // BOTONES INTERNOS
+    // =====================================================
+
     .o_mobile_actions_row {
         display: flex;
         gap: 6px;
@@ -323,10 +338,34 @@
                 color: #ffffff;
                 border-color: #1f6abb;
             }
+
+            &:active {
+                transform: scale(0.98);
+            }
         }
     }
 
-    /* CONTADORES */
+    .o_mobile_full_width_btn {
+        width: 100%;
+        border: 1px solid #1f6abb;
+        background: #1f6abb;
+        color: #ffffff;
+        border-radius: 10px;
+        padding: 12px;
+        font-size: 13px;
+        font-weight: 700;
+        cursor: pointer;
+        margin-top: 8px;
+
+        &:active {
+            transform: scale(0.98);
+        }
+    }
+
+    // =====================================================
+    // CONTADORES
+    // =====================================================
+
     .o_mobile_contadores {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
@@ -348,26 +387,10 @@
         margin-bottom: 4px;
     }
 
-    .o_mobile_counter_input {
-        width: 100%;
-        border: 0;
-        background: transparent;
-        text-align: center;
-        font-size: 14px !important;
-        font-weight: 800 !important;
+    .o_contador_value {
+        font-size: 14px;
+        font-weight: 800;
         color: #212529;
-        padding: 2px;
-        outline: none;
-
-        &:focus {
-            background: #ffffff;
-            border-radius: 6px;
-            box-shadow: 0 0 0 2px #b6dcfe;
-        }
-
-        &:disabled {
-            opacity: 0.6;
-        }
     }
 
     .o_mobile_hint {
@@ -379,7 +402,10 @@
         line-height: 1.4;
     }
 
-    /* PROBLEMA */
+    // =====================================================
+    // PROBLEMA REPORTADO
+    // =====================================================
+
     .o_mobile_problem_header {
         display: flex;
         justify-content: space-between;
@@ -391,25 +417,6 @@
         font-size: 10px;
         color: #1f6abb;
         font-weight: 700;
-    }
-
-    .o_mobile_textarea {
-        width: 100%;
-        min-height: 88px;
-        border: 1px solid #dee2e6;
-        border-radius: 8px;
-        background: #ffffff;
-        padding: 10px;
-        font-size: 13px;
-        color: #212529;
-        line-height: 1.4;
-        resize: vertical;
-
-        &:focus {
-            outline: none;
-            border-color: #1f6abb;
-            box-shadow: 0 0 0 2px #b6dcfe;
-        }
     }
 
     .o_mobile_reporter {
@@ -426,7 +433,10 @@
         }
     }
 
-    /* ACORDEONES */
+    // =====================================================
+    // ACORDEONES
+    // =====================================================
+
     .o_mobile_accordion {
         background: #ffffff;
         border-radius: 12px;
@@ -563,6 +573,10 @@
         background: #ffffff;
     }
 
+    // =====================================================
+    // INFORME
+    // =====================================================
+
     .o_mobile_informe_preview {
         background: #fffef5;
         border: 1px solid #f5e9b8;
@@ -572,9 +586,25 @@
         color: #212529;
         line-height: 1.5;
         overflow-x: auto;
+        max-height: 320px;
+        overflow-y: auto;
+
+        p {
+            margin-bottom: 8px;
+        }
+
+        table {
+            width: 100%;
+            max-width: 100%;
+            overflow-x: auto;
+            display: block;
+        }
     }
 
-    /* BOTTOM BAR */
+    // =====================================================
+    // BOTTOM BAR
+    // =====================================================
+
     .o_mobile_bottom_bar {
         position: fixed;
         bottom: 0;
@@ -627,7 +657,10 @@
         }
     }
 
-    /* MENÚ */
+    // =====================================================
+    // MENÚ
+    // =====================================================
+
     .o_mobile_actions_overlay {
         position: fixed;
         inset: 0;
@@ -675,10 +708,10 @@
     }
 }
 
-/* =====================================================
-   DESKTOP
-   En escritorio se oculta el layout móvil
-   ===================================================== */
+// =====================================================
+// DESKTOP
+// En escritorio se oculta el layout móvil
+// =====================================================
 
 @media (min-width: 769px) {
     .o_mobile_ticket_anchor,

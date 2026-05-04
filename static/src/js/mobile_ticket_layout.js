@@ -30,12 +30,24 @@ export class MobileTicketLayout extends Component {
             menuOpen: false,
             saving: false,
             accordions: {
-                componentes: { open: true },
-                accesorios: { open: true },
-                informe: { open: false },
-                pedidos: { open: false },
-                ubicacion: { open: false },
-                gps: { open: false },
+                componentes: {
+                    open: true,
+                },
+                accesorios: {
+                    open: true,
+                },
+                informe: {
+                    open: false,
+                },
+                pedidos: {
+                    open: false,
+                },
+                ubicacion: {
+                    open: false,
+                },
+                gps: {
+                    open: false,
+                },
             },
         });
 
@@ -76,40 +88,22 @@ export class MobileTicketLayout extends Component {
         return this.record?.data || {};
     }
 
-    _readM2O(field) {
-        const val = this.data[field];
+    _readM2O(fieldName) {
+        const value = this.data[fieldName];
 
-        if (!val) {
+        if (!value) {
             return "";
         }
 
-        if (Array.isArray(val)) {
-            return val[1] || "";
+        if (Array.isArray(value)) {
+            return value[1] || "";
         }
 
-        if (typeof val === "object") {
-            return val.display_name || val.name || "";
+        if (typeof value === "object") {
+            return value.display_name || value.name || "";
         }
 
-        return String(val);
-    }
-
-    _readRawM2OId(field) {
-        const val = this.data[field];
-
-        if (!val) {
-            return false;
-        }
-
-        if (Array.isArray(val)) {
-            return val[0] || false;
-        }
-
-        if (typeof val === "object") {
-            return val.resId || val.id || false;
-        }
-
-        return false;
+        return String(value);
     }
 
     get ticketNumber() {
@@ -135,9 +129,9 @@ export class MobileTicketLayout extends Component {
     get clientInitials() {
         return this.clientName
             .split(" ")
-            .filter((w) => w)
+            .filter((word) => word)
             .slice(0, 2)
-            .map((w) => w[0])
+            .map((word) => word[0])
             .join("")
             .toUpperCase();
     }
@@ -152,7 +146,7 @@ export class MobileTicketLayout extends Component {
             this.data.equipo_provincia,
             this.data.equipo_departamento,
         ]
-            .filter((p) => p)
+            .filter((part) => part)
             .join(", ");
     }
 
@@ -232,8 +226,8 @@ export class MobileTicketLayout extends Component {
         return this.data.informe_id || "";
     }
 
-    _countList(field) {
-        const list = this.data[field];
+    _countList(fieldName) {
+        const list = this.data[fieldName];
 
         if (!list) {
             return 0;
@@ -250,14 +244,14 @@ export class MobileTicketLayout extends Component {
         return 0;
     }
 
-    _countWithEstado(field) {
-        const list = this.data[field];
+    _countWithEstado(fieldName) {
+        const list = this.data[fieldName];
 
         if (!list || !list.records) {
             return 0;
         }
 
-        return list.records.filter((r) => !!r.data.estado_id).length;
+        return list.records.filter((record) => !!record.data.estado_id).length;
     }
 
     get componentesCount() {
@@ -269,7 +263,7 @@ export class MobileTicketLayout extends Component {
     }
 
     get componentesPendientes() {
-        return this.componentesCount - this.componentesEvaluados;
+        return Math.max(this.componentesCount - this.componentesEvaluados, 0);
     }
 
     get componentesCompleto() {
@@ -285,7 +279,7 @@ export class MobileTicketLayout extends Component {
     }
 
     get accesoriosPendientes() {
-        return this.accesoriosCount - this.accesoriosEvaluados;
+        return Math.max(this.accesoriosCount - this.accesoriosEvaluados, 0);
     }
 
     get accesoriosCompleto() {
@@ -366,50 +360,62 @@ export class MobileTicketLayout extends Component {
         return actions;
     }
 
-    toggleAccordion(sectionId) {
-        const acc = this.uiState.accordions[sectionId];
+    accordionClass(sectionId) {
+        const accordion = this.uiState.accordions[sectionId];
 
-        if (!acc) {
-            return;
+        if (!accordion) {
+            return "o_mobile_accordion";
         }
 
-        acc.open = !acc.open;
+        let className = "o_mobile_accordion";
+
+        if (accordion.open) {
+            className += " o_accordion_open";
+        }
+
+        if (sectionId === "componentes") {
+            if (this.componentesCompleto) {
+                className += " o_accordion_complete";
+            } else if (this.componentesPendientes > 0) {
+                className += " o_accordion_pending";
+            }
+        }
+
+        if (sectionId === "accesorios") {
+            if (this.accesoriosCompleto) {
+                className += " o_accordion_complete";
+            } else if (this.accesoriosPendientes > 0) {
+                className += " o_accordion_pending";
+            }
+        }
+
+        return className;
     }
 
     isAccordionOpen(sectionId) {
         return !!this.uiState.accordions[sectionId]?.open;
     }
 
-    accordionClass(sectionId) {
-        const acc = this.uiState.accordions[sectionId];
+    toggleAccordion(sectionId) {
+        const accordion = this.uiState.accordions[sectionId];
 
-        if (!acc) {
-            return "o_mobile_accordion";
+        if (!accordion) {
+            return;
         }
 
-        let cls = "o_mobile_accordion";
+        accordion.open = !accordion.open;
+    }
 
-        if (acc.open) {
-            cls += " o_accordion_open";
-        }
+    toggleComponentes() {
+        this.toggleAccordion("componentes");
+    }
 
-        if (sectionId === "componentes") {
-            if (this.componentesCompleto) {
-                cls += " o_accordion_complete";
-            } else if (this.componentesPendientes > 0) {
-                cls += " o_accordion_pending";
-            }
-        }
+    toggleAccesorios() {
+        this.toggleAccordion("accesorios");
+    }
 
-        if (sectionId === "accesorios") {
-            if (this.accesoriosCompleto) {
-                cls += " o_accordion_complete";
-            } else if (this.accesoriosPendientes > 0) {
-                cls += " o_accordion_pending";
-            }
-        }
-
-        return cls;
+    toggleInforme() {
+        this.toggleAccordion("informe");
     }
 
     toggleMenu() {
@@ -420,58 +426,10 @@ export class MobileTicketLayout extends Component {
         this.uiState.menuOpen = false;
     }
 
-    async _saveRecordChanges(values) {
-        if (!this.record || this.uiState.saving) {
-            return;
+    async reloadRecord() {
+        if (this.record?.load) {
+            await this.record.load();
         }
-
-        this.uiState.saving = true;
-
-        try {
-            await this.record.update(values);
-
-            if (this.record.save) {
-                await this.record.save();
-            }
-
-            this.notification.add("Cambios guardados.", {
-                type: "success",
-            });
-        } catch (err) {
-            console.error("[MobileTicket] Error guardando cambios:", err);
-            this.notification.add("No se pudo guardar el cambio.", {
-                type: "danger",
-            });
-        } finally {
-            this.uiState.saving = false;
-        }
-    }
-
-    async onChangeContadorK(ev) {
-        const value = Number(ev.target.value || 0);
-        await this._saveRecordChanges({
-            contometrok_id: value,
-        });
-    }
-
-    async onChangeContadorColor(ev) {
-        const value = Number(ev.target.value || 0);
-        await this._saveRecordChanges({
-            contometroc_id: value,
-        });
-    }
-
-    async onChangeContadorScan(ev) {
-        const value = Number(ev.target.value || 0);
-        await this._saveRecordChanges({
-            contometros_id: value,
-        });
-    }
-
-    async onChangeDescription(ev) {
-        await this._saveRecordChanges({
-            description: ev.target.value || "",
-        });
     }
 
     async callAction(actionName) {
@@ -493,15 +451,22 @@ export class MobileTicketLayout extends Component {
                 await this.action.doAction(result);
             }
 
-            if (this.record.load) {
-                await this.record.load();
-            }
-        } catch (err) {
-            console.error("[MobileTicket] Error en acción:", actionName, err);
+            await this.reloadRecord();
+        } catch (error) {
+            console.error("[MobileTicket] Error en acción:", actionName, error);
+
             this.notification.add("No se pudo ejecutar la acción.", {
                 type: "danger",
             });
         }
+    }
+
+    async onMenuAction(actionItem) {
+        if (!actionItem || !actionItem.method) {
+            return;
+        }
+
+        await this.callAction(actionItem.method);
     }
 
     async onCargarContadores() {
@@ -536,10 +501,22 @@ export class MobileTicketLayout extends Component {
         await this.callAction("action_navegar_a_equipo");
     }
 
+    async openComponentes() {
+        await this.callAction("action_ver_componentes_ticket");
+    }
+
+    async openAccesorios() {
+        await this.callAction("action_ver_accesorios_ticket");
+    }
+
+    async openPedidos() {
+        await this.callAction("action_ver_pedidos_ticket");
+    }
+
     async openFullForm() {
         this.closeMenu();
 
-        if (!this.record?.resId) {
+        if (!this.record?.resModel || !this.record?.resId) {
             return;
         }
 
@@ -561,7 +538,7 @@ export class MobileTicketLayout extends Component {
 
 export const mobileTicketLayoutField = {
     component: MobileTicketLayout,
-    supportedTypes: ["char", "text"],
+    supportedTypes: ["char", "text", "boolean", "integer"],
 };
 
 registry.category("fields").add("mobile_layout", mobileTicketLayoutField);
