@@ -21,3 +21,4 @@ from . import solicitud_partes_controller
 from . import copier_parts_controller
 from . import retiro_controller
 from . import ticket_alquiler_changes
+from . import evidencia

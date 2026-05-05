@@ -105,3 +105,5 @@ from . import mantenimiento_ausencia
 from . import mantenimiento_planificador
 from . import alquiler_inherit
 from . import ticket_alquiler_inherit
+from . import ticket_evidencia_foto
+from . import ticket_alquiler_evidencia

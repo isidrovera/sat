@@ -162,6 +162,8 @@
         'views/mantenimiento_planificador_views.xml',
         'views/alquiler_inherit_views.xml',
         'views/ticket_alquiler_inherit_views.xml',
+        'views/evidencia_page_template.xml',
+        'views/ticket_alquiler_evidencia_view.xml',
         'views/acciones_menus.xml',
         
     ],

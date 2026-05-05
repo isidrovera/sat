@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+
+    <record id="view_ticket_alquiler_form_evidencia" model="ir.ui.view">
+        <field name="name">ticket.alquiler.form.evidencia</field>
+        <field name="model">ticket.alquiler</field>
+        <field name="inherit_id" ref="sat.view_ticket_alquiler_form"/>
+        <field name="arch" type="xml">
+
+            <!-- Agregar pestaña al final del notebook -->
+            <xpath expr="//notebook" position="inside">
+                <page string="📸 Evidencia fotográfica" name="evidencia">
+
+                    <group>
+                        <group string="Acciones">
+                            <button name="action_abrir_link_evidencia"
+                                    type="object"
+                                    string="🔗 Abrir link de subida"
+                                    class="btn-primary"/>
+                            <button name="action_copiar_link_evidencia"
+                                    type="object"
+                                    string="📋 Mostrar link"
+                                    class="btn-secondary"/>
+                            <button name="action_enviar_link_whatsapp_tecnico"
+                                    type="object"
+                                    string="📲 Enviar al técnico por WhatsApp"
+                                    class="btn-success"
+                                    invisible="not responsable"/>
+                        </group>
+                        <group string="Resumen">
+                            <field name="evidencia_antes_count" readonly="1"/>
+                            <field name="evidencia_despues_count" readonly="1"/>
+                            <field name="evidencia_token" readonly="1" groups="base.group_no_one"/>
+                        </group>
+                    </group>
+
+                    <separator string="📷 Fotos antes (al llegar)"/>
+                    <field name="evidencia_foto_ids"
+                           domain="[('momento', '=', 'antes')]"
+                           context="{'default_momento': 'antes'}"
+                           mode="kanban"
+                           nolabel="1">
+                        <kanban>
+                            <field name="id"/>
+                            <field name="imagen_original"/>
+                            <field name="timestamp_captura"/>
+                            <field name="latitud"/>
+                            <field name="longitud"/>
+                            <field name="tiene_coordenadas"/>
+                            <templates>
+                                <t t-name="kanban-box">
+                                    <div class="oe_kanban_global_click" style="padding:8px;">
+                                        <img t-att-src="kanban_image('ticket.evidencia.foto', 'imagen_original', record.id.raw_value)"
+                                             style="width:100%; height:140px; object-fit:cover; border-radius:6px;"/>
+                                        <div style="margin-top:6px; font-size:12px; color:#718096;">
+                                            <field name="timestamp_captura"/>
+                                        </div>
+                                        <div style="font-size:11px; color:#a0aec0;" t-if="record.tiene_coordenadas.raw_value">
+                                            📍 <field name="latitud"/>, <field name="longitud"/>
+                                        </div>
+                                    </div>
+                                </t>
+                            </templates>
+                        </kanban>
+                    </field>
+
+                    <separator string="✅ Fotos después (al finalizar)"/>
+                    <field name="evidencia_foto_ids"
+                           domain="[('momento', '=', 'despues')]"
+                           context="{'default_momento': 'despues'}"
+                           mode="kanban"
+                           nolabel="1">
+                        <kanban>
+                            <field name="id"/>
+                            <field name="imagen_original"/>
+                            <field name="timestamp_captura"/>
+                            <field name="latitud"/>
+                            <field name="longitud"/>
+                            <field name="tiene_coordenadas"/>
+                            <templates>
+                                <t t-name="kanban-box">
+                                    <div class="oe_kanban_global_click" style="padding:8px;">
+                                        <img t-att-src="kanban_image('ticket.evidencia.foto', 'imagen_original', record.id.raw_value)"
+                                             style="width:100%; height:140px; object-fit:cover; border-radius:6px;"/>
+                                        <div style="margin-top:6px; font-size:12px; color:#718096;">
+                                            <field name="timestamp_captura"/>
+                                        </div>
+                                        <div style="font-size:11px; color:#a0aec0;" t-if="record.tiene_coordenadas.raw_value">
+                                            📍 <field name="latitud"/>, <field name="longitud"/>
+                                        </div>
+                                    </div>
+                                </t>
+                            </templates>
+                        </kanban>
+                    </field>
+
+                </page>
+            </xpath>
+
+        </field>
+    </record>
+
+</odoo>
