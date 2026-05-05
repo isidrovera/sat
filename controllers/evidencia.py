@@ -44,7 +44,7 @@ class EvidenciaController(http.Controller):
         })
 
     @http.route('/evidencia/<string:token>/upload', type='json', auth='public',
-                csrf=False, methods=['POST'])
+            csrf=False, methods=['POST'])
     def evidencia_upload(self, token, **kw):
         """Recibe la foto en base64 desde el cliente."""
         ticket = self._buscar_ticket_por_token(token)
@@ -55,9 +55,8 @@ class EvidenciaController(http.Controller):
         if ticket.estado == 'finalizado':
             return {'success': False, 'error': 'El ticket ya fue finalizado, no se aceptan más fotos.'}
 
-        # Datos esperados desde el JS del cliente
         momento = kw.get('momento')
-        imagen_base64 = kw.get('imagen_base64')  # data:image/jpeg;base64,...
+        imagen_base64 = kw.get('imagen_base64')
         latitud = kw.get('latitud')
         longitud = kw.get('longitud')
         precision = kw.get('precision', 0)
@@ -68,28 +67,26 @@ class EvidenciaController(http.Controller):
             return {'success': False, 'error': 'Momento inválido (debe ser antes o después).'}
         if not imagen_base64:
             return {'success': False, 'error': 'No se recibió imagen.'}
-        if not latitud or not longitud:
-            return {'success': False, 'error': 'Coordenadas GPS requeridas.'}
+        # GPS ya no es obligatorio - se acepta sin coordenadas pero se loguea
 
-        # Limpiar prefijo data:image/...;base64,
         if ',' in imagen_base64:
             imagen_base64 = imagen_base64.split(',', 1)[1]
 
         try:
-            # Validar que sea base64 válido
             base64.b64decode(imagen_base64)
         except Exception as e:
             _logger.error("[evidencia_upload] base64 inválido: %s", e)
             return {'success': False, 'error': 'Formato de imagen inválido.'}
 
         try:
+            sin_gps = not (latitud and longitud)
             foto = request.env['ticket.evidencia.foto'].sudo().create({
                 'ticket_id': ticket.id,
                 'momento': momento,
                 'imagen_original': imagen_base64,
                 'imagen_original_filename': filename,
-                'latitud': float(latitud),
-                'longitud': float(longitud),
+                'latitud': float(latitud) if latitud else 0,
+                'longitud': float(longitud) if longitud else 0,
                 'precision_gps': float(precision) if precision else 0,
                 'timestamp_captura': fields.Datetime.now(),
                 'user_agent': request.httprequest.headers.get('User-Agent', ''),
@@ -97,17 +94,17 @@ class EvidenciaController(http.Controller):
             })
 
             _logger.info(
-                "[evidencia_upload] Foto creada id=%s ticket=%s momento=%s lat=%s lng=%s",
-                foto.id, ticket.name, momento, latitud, longitud
+                "[evidencia_upload] Foto creada id=%s ticket=%s momento=%s lat=%s lng=%s sin_gps=%s",
+                foto.id, ticket.name, momento, latitud, longitud, sin_gps
             )
 
-            ticket.message_post(
-                body=_(
-                    "📸 Nueva foto de evidencia (%s) subida desde el link público.<br/>"
-                    "Coordenadas: %s, %s"
-                ) % (momento, latitud, longitud),
-                message_type='notification',
-            )
+            msg = "📸 Nueva foto de evidencia (%s) subida desde el link público.<br/>" % momento
+            if sin_gps:
+                msg += "⚠️ Sin coordenadas GPS"
+            else:
+                msg += "Coordenadas: %s, %s" % (latitud, longitud)
+
+            ticket.message_post(body=msg, message_type='notification')
 
             return {
                 'success': True,

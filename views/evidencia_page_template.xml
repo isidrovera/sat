@@ -84,6 +84,7 @@
                     }
                     .gps-status.ok { background: #f0fff4; color: #22543d; }
                     .gps-status.error { background: #fff5f5; color: #742a2a; }
+                    .gps-status.warning { background: #fffaf0; color: #7c2d12; }
                     .btn-tomar-foto {
                         display: block;
                         width: 100%;
@@ -99,6 +100,18 @@
                     }
                     .btn-tomar-foto:disabled { background: #a0aec0; cursor: not-allowed; }
                     .btn-tomar-foto:active { transform: scale(0.98); }
+                    .btn-reintentar {
+                        display: block;
+                        width: 100%;
+                        background: white;
+                        color: #38a169;
+                        padding: 10px;
+                        border: 1px solid #38a169;
+                        border-radius: 6px;
+                        font-size: 13px;
+                        cursor: pointer;
+                        margin-bottom: 10px;
+                    }
                     .hidden-input { display: none; }
                     .galeria {
                         margin-top: 20px;
@@ -169,6 +182,22 @@
                         margin: 0 auto 10px;
                     }
                     @keyframes spin { to { transform: rotate(360deg); } }
+                    .debug-panel {
+                        margin-top: 12px;
+                        padding: 8px 10px;
+                        background: #1a202c;
+                        color: #68d391;
+                        font-family: monospace;
+                        font-size: 11px;
+                        border-radius: 4px;
+                        max-height: 150px;
+                        overflow-y: auto;
+                        word-break: break-all;
+                    }
+                    .debug-panel .log-line { margin-bottom: 2px; }
+                    .debug-panel .log-error { color: #fc8181; }
+                    .debug-panel .log-warn { color: #f6ad55; }
+                    .debug-panel .log-ok { color: #68d391; }
                 </style>
             </head>
             <body>
@@ -208,10 +237,13 @@
 
                     <div class="upload-section">
                         <div id="gps-status" class="gps-status">
-                            ⏳ Solicitando ubicación GPS...
+                            ⏳ Iniciando...
                         </div>
-                        <button id="btn-tomar" class="btn-tomar-foto" disabled="disabled">
+                        <button id="btn-tomar" class="btn-tomar-foto">
                             📸 Tomar / Subir foto
+                        </button>
+                        <button id="btn-reintentar-gps" class="btn-reintentar" style="display:none">
+                            🔄 Reintentar GPS
                         </button>
                         <input type="file" id="input-foto" class="hidden-input"
                                accept="image/*" capture="environment"/>
@@ -229,6 +261,11 @@
                                      data-momento="despues" style="display:none"/>
                             </t>
                         </div>
+                    </div>
+
+                    <!-- Panel de debug visible -->
+                    <div id="debug-panel" class="debug-panel">
+                        <div class="log-line log-ok">[debug] Esperando inicialización...</div>
                     </div>
                 </div>
 
@@ -250,6 +287,7 @@
 
                         var statusEl = document.getElementById('gps-status');
                         var btnTomar = document.getElementById('btn-tomar');
+                        var btnReintentar = document.getElementById('btn-reintentar-gps');
                         var inputFoto = document.getElementById('input-foto');
                         var btnAntes = document.getElementById('btn-antes');
                         var btnDespues = document.getElementById('btn-despues');
@@ -257,23 +295,72 @@
                         var toastEl = document.getElementById('toast');
                         var galeriaTitulo = document.getElementById('galeria-titulo');
                         var gridFotos = document.getElementById('grid-fotos');
+                        var debugPanel = document.getElementById('debug-panel');
+
+                        // ─── LOGGER VISIBLE ─────────────────────────────────
+                        function log(msg, tipo) {
+                            tipo = tipo || 'ok';
+                            var ts = new Date().toLocaleTimeString();
+                            var line = document.createElement('div');
+                            line.className = 'log-line log-' + tipo;
+                            line.textContent = '[' + ts + '] ' + msg;
+                            debugPanel.appendChild(line);
+                            debugPanel.scrollTop = debugPanel.scrollHeight;
+                            // También a consola
+                            if (tipo === 'error') console.error('[evidencia]', msg);
+                            else if (tipo === 'warn') console.warn('[evidencia]', msg);
+                            else console.log('[evidencia]', msg);
+                        }
+
+                        // ─── INFO INICIAL DEL ENTORNO ───────────────────────
+                        log('User-Agent: ' + navigator.userAgent.substring(0, 80));
+                        log('URL: ' + window.location.href);
+                        log('Es contexto seguro (HTTPS): ' + window.isSecureContext);
+                        log('En iframe: ' + (window.self !== window.top));
+                        log('navigator.geolocation disponible: ' + !!navigator.geolocation);
+                        log('navigator.mediaDevices disponible: ' + !!navigator.mediaDevices);
+                        log('Token: ' + TOKEN);
 
                         function showToast(msg, tipo) {
                             toastEl.textContent = msg;
                             toastEl.className = 'toast show ' + (tipo || 'ok');
                             setTimeout(function() {
                                 toastEl.className = 'toast';
-                            }, 3000);
+                            }, 4000);
                         }
 
+                        // ─── PEDIR GPS ───────────────────────────────────────
                         function pedirGPS() {
+                            log('=== Solicitando GPS ===');
+
                             if (!navigator.geolocation) {
+                                log('navigator.geolocation no disponible', 'error');
                                 statusEl.className = 'gps-status error';
                                 statusEl.textContent = '❌ Tu navegador no soporta GPS';
+                                btnReintentar.style.display = 'block';
                                 return;
                             }
+
+                            if (!window.isSecureContext) {
+                                log('Contexto inseguro - HTTPS requerido', 'error');
+                                statusEl.className = 'gps-status error';
+                                statusEl.textContent = '❌ Se requiere HTTPS';
+                                return;
+                            }
+
+                            if (window.self !== window.top) {
+                                log('Detectado iframe - GPS puede estar bloqueado', 'warn');
+                            }
+
+                            statusEl.className = 'gps-status warning';
+                            statusEl.textContent = '⏳ Solicitando permiso de ubicación... (acepta el popup)';
+                            log('Llamando a getCurrentPosition...');
+
                             navigator.geolocation.getCurrentPosition(
                                 function(pos) {
+                                    log('GPS éxito: lat=' + pos.coords.latitude +
+                                        ' lng=' + pos.coords.longitude +
+                                        ' precision=' + pos.coords.accuracy + 'm');
                                     coords = {
                                         lat: pos.coords.latitude,
                                         lng: pos.coords.longitude
@@ -282,19 +369,34 @@
                                     statusEl.className = 'gps-status ok';
                                     statusEl.textContent = '✅ GPS activo (precisión: ' +
                                         Math.round(precision) + ' m)';
-                                    btnTomar.disabled = false;
+                                    btnReintentar.style.display = 'none';
                                 },
                                 function(err) {
+                                    log('GPS error: codigo=' + err.code +
+                                        ' mensaje=' + err.message, 'error');
+                                    var mensaje = '⚠️ ';
+                                    if (err.code === 1) {
+                                        mensaje += 'Permiso denegado. Habilita la ubicación en el icono ' +
+                                                   'del candado y reintenta.';
+                                    } else if (err.code === 2) {
+                                        mensaje += 'GPS no disponible en este dispositivo.';
+                                    } else if (err.code === 3) {
+                                        mensaje += 'GPS tardó mucho. Reintenta.';
+                                    } else {
+                                        mensaje += err.message;
+                                    }
+                                    mensaje += ' La foto se subirá sin coordenadas.';
                                     statusEl.className = 'gps-status error';
-                                    statusEl.textContent = '❌ Permiso de ubicación denegado. ' +
-                                        'Activa el GPS y recarga la página.';
-                                    btnTomar.disabled = true;
+                                    statusEl.textContent = mensaje;
+                                    btnReintentar.style.display = 'block';
                                 },
                                 { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
                             );
                         }
 
+                        // ─── TOGGLE ANTES/DESPUÉS ────────────────────────────
                         function setMomento(nuevoMomento) {
+                            log('Cambio de momento a: ' + nuevoMomento);
                             momento = nuevoMomento;
                             btnAntes.classList.toggle('active', momento === 'antes');
                             btnDespues.classList.toggle('active', momento === 'despues');
@@ -308,34 +410,70 @@
                         btnAntes.addEventListener('click', function() { setMomento('antes'); });
                         btnDespues.addEventListener('click', function() { setMomento('despues'); });
 
-                        btnTomar.addEventListener('click', function() {
-                            if (!coords) {
-                                showToast('Esperando ubicación GPS...', 'error');
-                                return;
+                        // ─── BOTÓN TOMAR FOTO ────────────────────────────────
+                        btnTomar.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            log('=== Click en btn-tomar ===');
+                            log('Estado coords: ' + (coords ? 'lat='+coords.lat+' lng='+coords.lng : 'null'));
+                            log('Disparando inputFoto.click()...');
+                            try {
+                                inputFoto.click();
+                                log('inputFoto.click() ejecutado sin error');
+                            } catch (err) {
+                                log('Error al disparar input: ' + err.message, 'error');
+                                showToast('Error abriendo selector de archivos', 'error');
                             }
-                            inputFoto.click();
                         });
 
+                        // ─── BOTÓN REINTENTAR GPS ────────────────────────────
+                        btnReintentar.addEventListener('click', function() {
+                            log('=== Reintentar GPS solicitado ===');
+                            pedirGPS();
+                        });
+
+                        // ─── INPUT FILE: SE SELECCIONÓ ARCHIVO ───────────────
                         inputFoto.addEventListener('change', function(e) {
+                            log('=== Input file change disparado ===');
                             var file = e.target.files[0];
-                            if (!file) return;
-                            if (!coords) {
-                                showToast('Sin ubicación GPS', 'error');
+                            if (!file) {
+                                log('No hay archivo en el evento', 'warn');
+                                showToast('No se seleccionó ningún archivo', 'error');
+                                return;
+                            }
+                            log('Archivo: ' + file.name + ' tipo=' + file.type +
+                                ' tamaño=' + Math.round(file.size/1024) + 'KB');
+
+                            if (!file.type.startsWith('image/')) {
+                                log('Tipo de archivo no es imagen: ' + file.type, 'error');
+                                showToast('El archivo no es una imagen', 'error');
                                 return;
                             }
 
+                            log('Leyendo archivo con FileReader...');
                             var reader = new FileReader();
                             reader.onload = function(ev) {
+                                log('FileReader cargó. Tamaño base64: ' +
+                                    Math.round(ev.target.result.length/1024) + 'KB');
                                 subirFoto(ev.target.result, file.name);
                             };
                             reader.onerror = function() {
+                                log('FileReader error', 'error');
                                 showToast('Error leyendo el archivo', 'error');
                             };
                             reader.readAsDataURL(file);
                         });
 
+                        // ─── SUBIR FOTO AL SERVIDOR ──────────────────────────
                         function subirFoto(base64, filename) {
+                            log('=== Iniciando subida ===');
                             progressEl.classList.add('show');
+
+                            var lat = coords ? coords.lat : 0;
+                            var lng = coords ? coords.lng : 0;
+                            var prec = precision || 0;
+
+                            log('Enviando a /evidencia/' + TOKEN + '/upload');
+                            log('momento=' + momento + ' lat=' + lat + ' lng=' + lng);
 
                             fetch('/evidencia/' + TOKEN + '/upload', {
                                 method: 'POST',
@@ -346,35 +484,44 @@
                                     params: {
                                         momento: momento,
                                         imagen_base64: base64,
-                                        latitud: coords.lat,
-                                        longitud: coords.lng,
-                                        precision: precision,
+                                        latitud: lat,
+                                        longitud: lng,
+                                        precision: prec,
                                         filename: filename || 'evidencia.jpg'
                                     }
                                 })
                             })
-                            .then(function(r) { return r.json(); })
+                            .then(function(r) {
+                                log('Respuesta HTTP: ' + r.status);
+                                return r.json();
+                            })
                             .then(function(data) {
                                 progressEl.classList.remove('show');
+                                log('Respuesta JSON recibida');
                                 var result = data.result || {};
                                 if (result.success) {
+                                    log('Subida exitosa. foto_id=' + result.foto_id);
                                     showToast('✅ Foto subida correctamente', 'ok');
                                     setTimeout(function() { location.reload(); }, 1500);
                                 } else {
+                                    log('Backend rechazó: ' + (result.error || 'sin detalle'), 'error');
                                     showToast('❌ ' + (result.error || 'Error desconocido'), 'error');
                                 }
                             })
                             .catch(function(err) {
                                 progressEl.classList.remove('show');
+                                log('Error fetch: ' + err.message, 'error');
                                 showToast('❌ Error de conexión', 'error');
-                                console.error(err);
                             });
 
                             inputFoto.value = '';
                         }
 
+                        // ─── INICIO ──────────────────────────────────────────
+                        log('=== Inicializando aplicación ===');
                         pedirGPS();
                         setMomento('antes');
+                        log('Inicialización completa. Esperando interacción del usuario.');
                     })();
                 </script>
             </body>
