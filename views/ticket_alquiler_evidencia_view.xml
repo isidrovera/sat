@@ -17,16 +17,19 @@
                                     type="object"
                                     string="🔗 Abrir link de subida"
                                     class="btn-primary"/>
+
                             <button name="action_copiar_link_evidencia"
                                     type="object"
                                     string="📋 Mostrar link"
                                     class="btn-secondary"/>
+
                             <button name="action_enviar_link_whatsapp_tecnico"
                                     type="object"
                                     string="📲 Enviar al técnico por WhatsApp"
                                     class="btn-success"
                                     invisible="not responsable"/>
                         </group>
+
                         <group string="Resumen">
                             <field name="evidencia_antes_count" readonly="1"/>
                             <field name="evidencia_despues_count" readonly="1"/>
@@ -34,60 +37,118 @@
                         </group>
                     </group>
 
+                    <!-- ════════════════════════════════════════════════
+                         FOTOS ANTES
+                         ════════════════════════════════════════════════ -->
                     <separator string="📷 Fotos antes (al llegar)"/>
+
                     <field name="evidencia_foto_ids"
                            domain="[('momento', '=', 'antes')]"
                            context="{'default_momento': 'antes'}"
                            mode="kanban"
                            nolabel="1">
-                        <kanban records_draggable="0">
+
+                        <kanban records_draggable="0" create="1" edit="0" delete="0">
                             <field name="id"/>
                             <field name="imagen_original"/>
                             <field name="timestamp_captura"/>
                             <field name="latitud"/>
                             <field name="longitud"/>
                             <field name="tiene_coordenadas"/>
+
                             <templates>
                                 <t t-name="kanban-box">
-                                    <div class="oe_kanban_global_click" style="padding:8px;">
-                                        <img t-att-src="kanban_image('ticket.evidencia.foto', 'imagen_original', record.id.raw_value)"
-                                             style="width:100%; height:140px; object-fit:cover; border-radius:6px;"/>
+                                    <div class="o_evidencia_card"
+                                         style="padding:8px; border:1px solid #d8dee4; border-radius:6px; background:white;">
+
+                                        <a t-att-href="'/web/image/ticket.evidencia.foto/%s/imagen_original' % record.id.raw_value"
+                                           target="_blank"
+                                           title="Abrir foto"
+                                           onclick="event.stopPropagation();"
+                                           style="display:block; cursor:zoom-in; text-decoration:none;">
+
+                                            <img t-att-src="kanban_image('ticket.evidencia.foto', 'imagen_original', record.id.raw_value)"
+                                                 alt="Foto evidencia antes"
+                                                 style="width:100%; height:140px; object-fit:cover; border-radius:6px; border:1px solid #e5e7eb;"/>
+                                        </a>
+
                                         <div style="margin-top:6px; font-size:12px; color:#718096;">
                                             <field name="timestamp_captura"/>
                                         </div>
-                                        <div style="font-size:11px; color:#a0aec0;" t-if="record.tiene_coordenadas.raw_value">
+
+                                        <div style="font-size:11px; color:#a0aec0;"
+                                             t-if="record.tiene_coordenadas.raw_value">
                                             📍 <field name="latitud"/>, <field name="longitud"/>
                                         </div>
+
+                                        <div style="margin-top:6px;">
+                                            <a t-att-href="'/web/image/ticket.evidencia.foto/%s/imagen_original' % record.id.raw_value"
+                                               target="_blank"
+                                               onclick="event.stopPropagation();"
+                                               style="font-size:12px; color:#2563eb; text-decoration:none;">
+                                                🔍 Ver foto grande
+                                            </a>
+                                        </div>
+
                                     </div>
                                 </t>
                             </templates>
                         </kanban>
                     </field>
 
+                    <!-- ════════════════════════════════════════════════
+                         FOTOS DESPUÉS
+                         ════════════════════════════════════════════════ -->
                     <separator string="✅ Fotos después (al finalizar)"/>
+
                     <field name="evidencia_foto_ids"
                            domain="[('momento', '=', 'despues')]"
                            context="{'default_momento': 'despues'}"
                            mode="kanban"
                            nolabel="1">
-                        <kanban records_draggable="0">
+
+                        <kanban records_draggable="0" create="1" edit="0" delete="0">
                             <field name="id"/>
                             <field name="imagen_original"/>
                             <field name="timestamp_captura"/>
                             <field name="latitud"/>
                             <field name="longitud"/>
                             <field name="tiene_coordenadas"/>
+
                             <templates>
                                 <t t-name="kanban-box">
-                                    <div class="oe_kanban_global_click" style="padding:8px;">
-                                        <img t-att-src="kanban_image('ticket.evidencia.foto', 'imagen_original', record.id.raw_value)"
-                                             style="width:100%; height:140px; object-fit:cover; border-radius:6px;"/>
+                                    <div class="o_evidencia_card"
+                                         style="padding:8px; border:1px solid #d8dee4; border-radius:6px; background:white;">
+
+                                        <a t-att-href="'/web/image/ticket.evidencia.foto/%s/imagen_original' % record.id.raw_value"
+                                           target="_blank"
+                                           title="Abrir foto"
+                                           onclick="event.stopPropagation();"
+                                           style="display:block; cursor:zoom-in; text-decoration:none;">
+
+                                            <img t-att-src="kanban_image('ticket.evidencia.foto', 'imagen_original', record.id.raw_value)"
+                                                 alt="Foto evidencia después"
+                                                 style="width:100%; height:140px; object-fit:cover; border-radius:6px; border:1px solid #e5e7eb;"/>
+                                        </a>
+
                                         <div style="margin-top:6px; font-size:12px; color:#718096;">
                                             <field name="timestamp_captura"/>
                                         </div>
-                                        <div style="font-size:11px; color:#a0aec0;" t-if="record.tiene_coordenadas.raw_value">
+
+                                        <div style="font-size:11px; color:#a0aec0;"
+                                             t-if="record.tiene_coordenadas.raw_value">
                                             📍 <field name="latitud"/>, <field name="longitud"/>
                                         </div>
+
+                                        <div style="margin-top:6px;">
+                                            <a t-att-href="'/web/image/ticket.evidencia.foto/%s/imagen_original' % record.id.raw_value"
+                                               target="_blank"
+                                               onclick="event.stopPropagation();"
+                                               style="font-size:12px; color:#2563eb; text-decoration:none;">
+                                                🔍 Ver foto grande
+                                            </a>
+                                        </div>
+
                                     </div>
                                 </t>
                             </templates>
