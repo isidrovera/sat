@@ -477,7 +477,7 @@
                 <div id="toast" class="toast"></div>
 
                 <!-- JS separado del XML -->
-                <script type="text/javascript" src="/sat/static/src/js/evidencia_public.js"></script>
+                <script type="text/javascript" src="/sat/static/src/js/evidencia_publicv1.js"></script>
             </body>
         </html>
     </template>

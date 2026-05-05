@@ -259,7 +259,7 @@
         
         'web.assets_frontend': [
             'sat/static/src/js/searchFilter.js',
-            'sat/static/src/js/evidencia_public.js',
+            'sat/static/src/js/evidencia_publicv1.js',
             'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
             
         ],
