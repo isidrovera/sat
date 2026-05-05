@@ -384,9 +384,7 @@
                             string="Futuras"
                             domain="[('fecha_inicio', '&gt;=', context_today())]"/>
 
-                    <filter name="filter_con_tickets"
-                            string="Con tickets afectados"
-                            domain="[('ticket_afectado_count', '&gt;', 0)]"/>
+                    
 
                     <group expand="0" string="Agrupar por">
                         <filter name="group_tecnico"
