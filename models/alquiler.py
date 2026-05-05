@@ -740,3 +740,59 @@ class UnidadAlquiler(models.Model):
     partes_retiradas_ids = fields.One2many(
         'solicitud.parte.tecnico.linea', 'maquina_origen_alquiler_id',
         string='Partes Retiradas', readonly=True)
+
+
+    # ═══════════════════════════════════════════════════════════════════
+    #  NOTIFICACIÓN POR CAMBIO DE ESTADO
+    # ═══════════════════════════════════════════════════════════════════
+
+    def write(self, vals):
+        """Override para notificar por correo cualquier cambio de estado_alquiler_id."""
+        # Capturar estados anteriores ANTES de escribir
+        old_states = {rec.id: rec.estado_alquiler_id for rec in self}
+
+        res = super().write(vals)
+
+        # Solo procesar si el campo de estado fue modificado
+        if 'estado_alquiler_id' in vals:
+            for rec in self:
+                old_state = old_states.get(rec.id)
+                new_state = rec.estado_alquiler_id
+
+                # Evitar disparos por escrituras redundantes (mismo valor)
+                if old_state == new_state:
+                    continue
+
+                rec._enviar_notificacion_cambio_estado(old_state, new_state)
+
+        return res
+
+    def _enviar_notificacion_cambio_estado(self, old_state, new_state):
+        """Envía correo a logística y contabilidad notificando el cambio de estado."""
+        self.ensure_one()
+
+        template = self.env.ref(
+            'sat.mail_template_cambio_estado_alquiler',
+            raise_if_not_found=False,
+        )
+        if not template:
+            _logger.error(
+                "No se encontró el template 'sat.mail_template_cambio_estado_alquiler'."
+            )
+            return
+
+        # Etiquetas legibles de los estados
+        estados_dict = dict(self._fields['estado_alquiler_id'].selection)
+        old_label = estados_dict.get(old_state, old_state or 'Sin estado')
+        new_label = estados_dict.get(new_state, new_state or 'Sin estado')
+
+        try:
+            template.with_context(
+                old_state_label=old_label,
+                new_state_label=new_label,
+            ).send_mail(self.id, force_send=True)
+        except Exception as e:
+            _logger.error(
+                "Error al enviar notificación de cambio de estado para equipo %s: %s",
+                self.serie or self.id, str(e),
+            )
