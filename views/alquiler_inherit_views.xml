@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- ========================================================= -->
+        <!-- HERENCIA: ALQUILER FORM - PLANIFICADOR INTELIGENTE        -->
+        <!-- Odoo 18: sin attrs, sin states, sin tree                  -->
+        <!-- ========================================================= -->
+        <record id="view_alquiler_form_planificador_inherit" model="ir.ui.view">
+            <field name="name">alquiler.form.planificador.inherit</field>
+            <field name="model">alquiler</field>
+            <field name="inherit_id" ref="sat.Alquiler_form_view"/>
+            <field name="arch" type="xml">
+
+                <!-- Agregar botones en el header junto a tus botones actuales -->
+                <xpath expr="//form/header" position="inside">
+
+                    <button name="action_detectar_zona_mantenimiento"
+                            string="📍 Detectar Zona"
+                            type="object"
+                            class="btn-secondary"
+                            invisible="not control_mantenimiento or not distrito"/>
+
+                    <button name="action_crear_linea_planificador_activo"
+                            string="🧠 Crear Planificación"
+                            type="object"
+                            class="btn-primary"
+                            invisible="not control_mantenimiento or estado_alquiler_id != 'alquilada'"/>
+
+                    <button name="action_auto_programar_mantenimiento"
+                            string="⚡ Auto-programar"
+                            type="object"
+                            class="btn-success"
+                            invisible="not control_mantenimiento or estado_alquiler_id != 'alquilada'"/>
+
+                </xpath>
+
+                <!-- Agregar stat button en el button_box existente -->
+                <xpath expr="//div[@name='button_box']" position="inside">
+
+                    <button name="action_ver_planificaciones_mantenimiento"
+                            type="object"
+                            class="oe_stat_button"
+                            icon="fa-calendar-check-o"
+                            invisible="planificador_linea_count == 0">
+                        <field name="planificador_linea_count"
+                               widget="statinfo"
+                               string="Planificaciones"/>
+                    </button>
+
+                </xpath>
+
+                <!-- Insertar bloque dentro de la pestaña actual de mantenimiento -->
+                <xpath expr="//page[@name='maintenance_page']/div" position="inside">
+
+                    <div class="card border-primary mt-4" invisible="not control_mantenimiento">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">
+                                <i class="fa fa-magic me-2"></i>
+                                Planificador Inteligente
+                            </h5>
+                        </div>
+
+                        <div class="card-body">
+
+                            <!-- Estado resumido -->
+                            <div class="row g-3 mb-3">
+                                <div class="col-12 col-md-3">
+                                    <div class="p-3 rounded border bg-light">
+                                        <div class="text-muted small">Estado planificación</div>
+                                        <field name="estado_planificacion_mantenimiento"
+                                               widget="badge"/>
+                                    </div>
+                                </div>
+
+                                <div class="col-12 col-md-3">
+                                    <div class="p-3 rounded border bg-light">
+                                        <div class="text-muted small">Fecha ideal</div>
+                                        <field name="fecha_recurrente" readonly="1"/>
+                                    </div>
+                                </div>
+
+                                <div class="col-12 col-md-3">
+                                    <div class="p-3 rounded border bg-light">
+                                        <div class="text-muted small">Fecha real</div>
+                                        <field name="fecha_programada_mantenimiento"/>
+                                    </div>
+                                </div>
+
+                                <div class="col-12 col-md-3">
+                                    <div class="p-3 rounded border bg-light">
+                                        <div class="text-muted small">Hora real</div>
+                                        <field name="hora_programada_mantenimiento"
+                                               widget="float_time"/>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Configuración operativa -->
+                            <div class="row g-3">
+
+                                <div class="col-12 col-lg-6">
+                                    <div class="card h-100">
+                                        <div class="card-body">
+                                            <h6 class="mb-3">
+                                                <i class="fa fa-map-marker text-danger me-2"></i>
+                                                Zona y ubicación operativa
+                                            </h6>
+
+                                            <group>
+                                                <field name="distrito" readonly="1"/>
+                                                <field name="provincia" readonly="1"/>
+                                                <field name="departamento" readonly="1"/>
+                                                <field name="zona_mantenimiento_id"/>
+                                                <field name="ignorar_zona_mantenimiento"
+                                                       widget="boolean_toggle"/>
+                                            </group>
+
+                                            <div class="alert alert-info mt-2"
+                                                 invisible="zona_mantenimiento_id">
+                                                <strong>Sin zona asignada.</strong>
+                                                Usa el botón <strong>Detectar Zona</strong> o selecciona una zona manualmente.
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-12 col-lg-6">
+                                    <div class="card h-100">
+                                        <div class="card-body">
+                                            <h6 class="mb-3">
+                                                <i class="fa fa-users text-success me-2"></i>
+                                                Técnico y capacidad requerida
+                                            </h6>
+
+                                            <group>
+                                                <field name="tecnico_mantenimiento_id"
+                                                       widget="many2one_avatar"/>
+                                                <field name="cantidad_tecnicos_mantenimiento"/>
+                                                <field name="duracion_mantenimiento_horas"/>
+                                            </group>
+
+                                            <div class="alert alert-warning mt-2"
+                                                 invisible="cantidad_tecnicos_mantenimiento &lt;= 1">
+                                                Este mantenimiento requiere más de un técnico.
+                                                El planificador buscará técnico principal y apoyo.
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+
+                            <!-- Disponibilidad sugerida -->
+                            <div class="card mt-3">
+                                <div class="card-body">
+                                    <h6 class="mb-3">
+                                        <i class="fa fa-calendar text-primary me-2"></i>
+                                        Próximos cupos sugeridos
+                                    </h6>
+
+                                    <field name="dias_disponibles_mantenimiento"
+                                           readonly="1"
+                                           nolabel="1"/>
+                                </div>
+                            </div>
+
+                            <!-- Acciones rápidas -->
+                            <div class="d-flex flex-wrap gap-2 mt-3">
+                                <button name="action_detectar_zona_mantenimiento"
+                                        string="📍 Detectar zona"
+                                        type="object"
+                                        class="btn btn-secondary"
+                                        invisible="not distrito"/>
+
+                                <button name="action_crear_linea_planificador_activo"
+                                        string="🧠 Crear línea en planificador"
+                                        type="object"
+                                        class="btn btn-primary"
+                                        invisible="estado_alquiler_id != 'alquilada'"/>
+
+                                <button name="action_auto_programar_mantenimiento"
+                                        string="⚡ Auto-programar mantenimiento"
+                                        type="object"
+                                        class="btn btn-success"
+                                        invisible="estado_alquiler_id != 'alquilada'"/>
+
+                                <button name="action_ver_planificaciones_mantenimiento"
+                                        string="📅 Ver planificaciones"
+                                        type="object"
+                                        class="btn btn-info"
+                                        invisible="planificador_linea_count == 0"/>
+                            </div>
+
+                        </div>
+                    </div>
+
+                </xpath>
+
+            </field>
+        </record>
+
+    </data>
+</odoo>

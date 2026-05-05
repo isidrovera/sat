@@ -1,0 +1,235 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- ========================================================= -->
+        <!-- HERENCIA: TICKET ALQUILER FORM - PLANIFICADOR             -->
+        <!-- Odoo 18: sin attrs, sin states, sin tree                  -->
+        <!-- ========================================================= -->
+        <record id="view_ticket_alquiler_form_planificador_inherit" model="ir.ui.view">
+            <field name="name">ticket.alquiler.form.planificador.inherit</field>
+            <field name="model">ticket.alquiler</field>
+            <field name="inherit_id" ref="sat.soporte_form_viw"/>
+            <field name="arch" type="xml">
+
+                <!-- Botones en header -->
+                <xpath expr="//form/header" position="inside">
+
+                    <button name="action_crear_linea_planificador"
+                            string="🧠 Crear planificación"
+                            type="object"
+                            class="btn-secondary"
+                            invisible="tipo_servicio_id != 'mantenimiento_preventivo' or planificador_linea_id"/>
+
+                    <button name="action_ver_linea_planificador"
+                            string="📅 Ver planificación"
+                            type="object"
+                            class="btn-secondary"
+                            invisible="not planificador_linea_id"/>
+
+                    <button name="action_marcar_requiere_reasignacion"
+                            string="⚠️ Reasignar"
+                            type="object"
+                            class="btn-warning"
+                            invisible="estado == 'finalizado' or requiere_reasignacion"/>
+
+                    <button name="action_reasignar_automaticamente"
+                            string="⚡ Reasignar automático"
+                            type="object"
+                            class="btn-success"
+                            invisible="estado == 'finalizado' or not requiere_reasignacion"/>
+
+                </xpath>
+
+                <!-- Stat button en button_box -->
+                <xpath expr="//div[@name='button_box']" position="inside">
+
+                    <button name="action_ver_linea_planificador"
+                            type="object"
+                            class="oe_stat_button"
+                            icon="fa-calendar"
+                            invisible="not planificador_linea_id">
+                        <div class="o_stat_info">
+                            <span class="o_stat_text">Planificador</span>
+                            <span class="o_stat_value">
+                                <field name="planificador_id"
+                                       readonly="1"
+                                       nolabel="1"/>
+                            </span>
+                        </div>
+                    </button>
+
+                </xpath>
+
+                <!-- Alerta visual si requiere reasignación -->
+                <xpath expr="//sheet/div[@class='oe_title']" position="before">
+
+                    <div class="alert alert-warning"
+                         invisible="not requiere_reasignacion">
+                        <i class="fa fa-exclamation-triangle me-2"/>
+                        <strong>Este ticket requiere reasignación.</strong>
+                        <div class="mt-1" invisible="not motivo_reasignacion">
+                            <field name="motivo_reasignacion" readonly="1"/>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info"
+                         invisible="not es_mantenimiento_programado">
+                        <i class="fa fa-calendar-check-o me-2"/>
+                        <strong>Mantenimiento programado desde planificador inteligente.</strong>
+                    </div>
+
+                </xpath>
+
+                <!-- Agregar campos debajo de agenda/responsable en el bloque principal -->
+                <xpath expr="//field[@name='responsable']" position="after">
+
+                    <field name="tecnico_apoyo_ids"
+                           widget="many2many_tags"
+                           readonly="estado == 'proceso' or estado == 'finalizado'"/>
+
+                    <field name="duracion_programada_horas"
+                           readonly="estado == 'proceso' or estado == 'finalizado'"/>
+
+                </xpath>
+
+                <!-- Nueva pestaña -->
+                <xpath expr="//notebook" position="inside">
+
+                    <page string="🧠 Planificación" name="planificador_ticket_page">
+                        <group>
+                            <group string="Origen de planificación">
+                                <field name="es_mantenimiento_programado" readonly="1"/>
+                                <field name="planificador_linea_id" readonly="1"/>
+                                <field name="planificador_id" readonly="1"/>
+                                <field name="requiere_reasignacion"/>
+                            </group>
+
+                            <group string="Fecha y técnico">
+                                <field name="fecha_programada_mantenimiento" readonly="1"/>
+                                <field name="hora_programada_mantenimiento"
+                                       widget="float_time"
+                                       readonly="1"/>
+                                <field name="responsable"
+                                       widget="many2one_avatar"/>
+                                <field name="tecnico_apoyo_ids"
+                                       widget="many2many_tags"/>
+                            </group>
+                        </group>
+
+                        <group>
+                            <group string="Ubicación operativa">
+                                <field name="zona_mantenimiento_id"/>
+                                <field name="distrito_mantenimiento"/>
+                            </group>
+
+                            <group string="Duración y control">
+                                <field name="duracion_programada_horas"/>
+                                <field name="motivo_reasignacion"
+                                       placeholder="Motivo por el cual este ticket requiere reasignación..."/>
+                            </group>
+                        </group>
+
+                        <div class="d-flex flex-wrap gap-2 mt-3">
+                            <button name="action_crear_linea_planificador"
+                                    string="🧠 Crear línea de planificación"
+                                    type="object"
+                                    class="btn btn-primary"
+                                    invisible="planificador_linea_id or tipo_servicio_id != 'mantenimiento_preventivo'"/>
+
+                            <button name="action_ver_linea_planificador"
+                                    string="📅 Ver línea de planificación"
+                                    type="object"
+                                    class="btn btn-info"
+                                    invisible="not planificador_linea_id"/>
+
+                            <button name="action_marcar_requiere_reasignacion"
+                                    string="⚠️ Marcar para reasignación"
+                                    type="object"
+                                    class="btn btn-warning"
+                                    invisible="requiere_reasignacion or estado == 'finalizado'"/>
+
+                            <button name="action_reasignar_automaticamente"
+                                    string="⚡ Reasignar automáticamente"
+                                    type="object"
+                                    class="btn btn-success"
+                                    invisible="not requiere_reasignacion or estado == 'finalizado'"/>
+                        </div>
+                    </page>
+
+                </xpath>
+
+            </field>
+        </record>
+
+        <!-- ========================================================= -->
+        <!-- HERENCIA: TICKET LIST - CAMPOS PLANIFICADOR               -->
+        <!-- ========================================================= -->
+        <record id="view_ticket_alquiler_list_planificador_inherit" model="ir.ui.view">
+            <field name="name">ticket.alquiler.list.planificador.inherit</field>
+            <field name="model">ticket.alquiler</field>
+            <field name="inherit_id" ref="sat.ticket_tree_view"/>
+            <field name="arch" type="xml">
+
+                <xpath expr="//field[@name='responsable']" position="after">
+                    <field name="tecnico_apoyo_ids"
+                           widget="many2many_tags"
+                           optional="hide"/>
+                    <field name="requiere_reasignacion"
+                           optional="show"/>
+                </xpath>
+
+                <xpath expr="//field[@name='tipo_servicio_id']" position="after">
+                    <field name="zona_mantenimiento_id"
+                           optional="hide"/>
+                    <field name="distrito_mantenimiento"
+                           optional="hide"/>
+                </xpath>
+
+            </field>
+        </record>
+
+        <!-- ========================================================= -->
+        <!-- HERENCIA: TICKET SEARCH - FILTROS PLANIFICADOR            -->
+        <!-- ========================================================= -->
+        <record id="view_ticket_alquiler_search_planificador_inherit" model="ir.ui.view">
+            <field name="name">ticket.alquiler.search.planificador.inherit</field>
+            <field name="model">ticket.alquiler</field>
+            <field name="inherit_id" ref="sat.ticket_search"/>
+            <field name="arch" type="xml">
+
+                <xpath expr="//search" position="inside">
+
+                    <separator/>
+
+                    <filter string="Mantenimientos programados"
+                            name="filter_mantenimiento_programado"
+                            domain="[('es_mantenimiento_programado', '=', True)]"/>
+
+                    <filter string="Requiere reasignación"
+                            name="filter_requiere_reasignacion"
+                            domain="[('requiere_reasignacion', '=', True)]"/>
+
+                    <filter string="Sin planificador"
+                            name="filter_sin_planificador"
+                            domain="[('tipo_servicio_id', '=', 'mantenimiento_preventivo'), ('planificador_linea_id', '=', False)]"/>
+
+                    <group expand="0" string="Planificador">
+                        <filter string="Zona"
+                                name="group_zona_mantenimiento"
+                                context="{'group_by': 'zona_mantenimiento_id'}"/>
+                        <filter string="Distrito"
+                                name="group_distrito_mantenimiento"
+                                context="{'group_by': 'distrito_mantenimiento'}"/>
+                        <filter string="Planificador"
+                                name="group_planificador"
+                                context="{'group_by': 'planificador_id'}"/>
+                    </group>
+
+                </xpath>
+
+            </field>
+        </record>
+
+    </data>
+</odoo>

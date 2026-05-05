@@ -155,6 +155,12 @@
         'views/solicitud_parte_tecnico_views.xml',
         'views/solicitud_partes_portal.xml',
         'views/ticket_evaluacion_mobile_views.xml',
+        'views/mantenimiento_zona_views.xml',
+        'views/mantenimiento_disponibilidad_views.xml',
+        'views/mantenimiento_ausencia_views.xml',
+        'views/mantenimiento_planificador_views.xml',
+        'views/alquiler_inherit_views.xml',
+        'views/ticket_alquiler_inherit_views.xml',
         'views/acciones_menus.xml',
         
     ],
