@@ -123,89 +123,136 @@
     }
 
     function pedirGPS() {
-        log('=== Solicitando GPS ===', 'info');
+    log('=== Solicitando GPS mejorado ===', 'info');
 
-        coords = null;
-        precision = null;
-        direccionActual = null;
-        direccionProvider = null;
+    coords = null;
+    precision = null;
+    direccionActual = null;
+    direccionProvider = null;
 
-        if (!navigator.geolocation) {
-            log('navigator.geolocation no disponible', 'error');
-            statusEl.className = 'gps-status error';
-            statusEl.textContent = '❌ Tu navegador no soporta GPS. La foto se subirá sin coordenadas.';
-            btnReintentar.style.display = 'block';
-            return;
-        }
-
-        if (!window.isSecureContext) {
-            log('Contexto inseguro. HTTPS requerido para GPS.', 'error');
-            statusEl.className = 'gps-status error';
-            statusEl.textContent = '❌ Se requiere HTTPS para obtener ubicación. La foto se subirá sin GPS.';
-            btnReintentar.style.display = 'block';
-            return;
-        }
-
-        if (window.self !== window.top) {
-            log('Página dentro de iframe. GPS podría estar bloqueado.', 'warn');
-        }
-
-        statusEl.className = 'gps-status warning';
-        statusEl.textContent = '⏳ Solicitando permiso de ubicación... acepta el permiso del navegador.';
-
-        navigator.geolocation.getCurrentPosition(
-            function (pos) {
-                coords = {
-                    lat: pos.coords.latitude,
-                    lng: pos.coords.longitude
-                };
-
-                precision = pos.coords.accuracy;
-
-                log(
-                    'GPS OK | lat=' + coords.lat +
-                    ' | lng=' + coords.lng +
-                    ' | precision=' + precision + 'm',
-                    'ok'
-                );
-
-                statusEl.className = 'gps-status ok';
-                statusEl.textContent =
-                    '✅ GPS activo | Precisión: ' + Math.round(precision) + ' m';
-
-                btnReintentar.style.display = 'none';
-            },
-            function (err) {
-                log(
-                    'GPS ERROR | code=' + err.code + ' | message=' + err.message,
-                    'error'
-                );
-
-                var mensaje = '⚠️ ';
-
-                if (err.code === 1) {
-                    mensaje += 'Permiso de ubicación denegado. ';
-                } else if (err.code === 2) {
-                    mensaje += 'Ubicación no disponible. ';
-                } else if (err.code === 3) {
-                    mensaje += 'El GPS tardó demasiado. ';
-                } else {
-                    mensaje += err.message + '. ';
-                }
-
-                mensaje += 'La foto se subirá sin coordenadas si continúas.';
-
-                statusEl.className = 'gps-status error';
-                statusEl.textContent = mensaje;
-                btnReintentar.style.display = 'block';
-            },
-            {
-                enableHighAccuracy: true,
-                timeout: 15000,
-                maximumAge: 0
-            }
-        );
+    if (!navigator.geolocation) {
+        log('navigator.geolocation no disponible', 'error');
+        statusEl.className = 'gps-status error';
+        statusEl.textContent = '❌ Tu navegador no soporta GPS. La foto se subirá sin coordenadas.';
+        btnReintentar.style.display = 'block';
+        return;
     }
+
+    if (!window.isSecureContext) {
+        log('Contexto inseguro. HTTPS requerido para GPS.', 'error');
+        statusEl.className = 'gps-status error';
+        statusEl.textContent = '❌ Se requiere HTTPS para obtener ubicación.';
+        btnReintentar.style.display = 'block';
+        return;
+    }
+
+    var mejorPosicion = null;
+    var watchId = null;
+    var terminado = false;
+
+    function guardarMejorPosicion(pos, origen) {
+        var acc = pos.coords.accuracy || 999999;
+
+        if (!mejorPosicion || acc < mejorPosicion.coords.accuracy) {
+            mejorPosicion = pos;
+
+            coords = {
+                lat: pos.coords.latitude,
+                lng: pos.coords.longitude
+            };
+
+            precision = acc;
+
+            log(
+                'GPS ' + origen + ' | lat=' + coords.lat +
+                ' | lng=' + coords.lng +
+                ' | precision=' + precision + 'm',
+                precision <= 100 ? 'ok' : 'warn'
+            );
+
+            if (precision <= 100) {
+                statusEl.className = 'gps-status ok';
+                statusEl.textContent = '✅ GPS activo | Precisión: ' + Math.round(precision) + ' m';
+            } else {
+                statusEl.className = 'gps-status warning';
+                statusEl.textContent = '⚠️ GPS aproximado | Precisión: ' + Math.round(precision) + ' m. Esperando mejora...';
+            }
+        }
+    }
+
+    function finalizarGPS(motivo) {
+        if (terminado) {
+            return;
+        }
+
+        terminado = true;
+
+        if (watchId !== null) {
+            navigator.geolocation.clearWatch(watchId);
+            log('watchPosition detenido | motivo=' + motivo, 'info');
+        }
+
+        if (coords) {
+            if (precision && precision <= 100) {
+                statusEl.className = 'gps-status ok';
+                statusEl.textContent = '✅ GPS listo | Precisión: ' + Math.round(precision) + ' m';
+            } else {
+                statusEl.className = 'gps-status warning';
+                statusEl.textContent = '⚠️ GPS aproximado | Precisión: ' + Math.round(precision || 0) + ' m. Puedes tomar foto, pero la ubicación puede variar.';
+            }
+
+            btnReintentar.style.display = 'block';
+        } else {
+            statusEl.className = 'gps-status error';
+            statusEl.textContent = '❌ No se pudo obtener ubicación. La foto se subirá sin coordenadas.';
+            btnReintentar.style.display = 'block';
+        }
+    }
+
+    statusEl.className = 'gps-status warning';
+    statusEl.textContent = '⏳ Buscando ubicación precisa...';
+
+    navigator.geolocation.getCurrentPosition(
+        function (pos) {
+            guardarMejorPosicion(pos, 'getCurrentPosition');
+
+            if (pos.coords.accuracy <= 80) {
+                finalizarGPS('precision_suficiente_getCurrentPosition');
+            }
+        },
+        function (err) {
+            log('GPS getCurrentPosition error | code=' + err.code + ' | message=' + err.message, 'warn');
+        },
+        {
+            enableHighAccuracy: true,
+            timeout: 15000,
+            maximumAge: 0
+        }
+    );
+
+    watchId = navigator.geolocation.watchPosition(
+        function (pos) {
+            guardarMejorPosicion(pos, 'watchPosition');
+
+            if (pos.coords.accuracy <= 80) {
+                finalizarGPS('precision_suficiente_watchPosition');
+            }
+        },
+        function (err) {
+            log('GPS watchPosition error | code=' + err.code + ' | message=' + err.message, 'error');
+            finalizarGPS('error_watchPosition');
+        },
+        {
+            enableHighAccuracy: true,
+            timeout: 20000,
+            maximumAge: 0
+        }
+    );
+
+    setTimeout(function () {
+        finalizarGPS('timeout_12s');
+    }, 12000);
+}
 
     function obtenerDireccionPorGPS() {
         return new Promise(function (resolve) {
