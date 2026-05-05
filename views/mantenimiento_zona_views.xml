@@ -1,0 +1,357 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- ========================================================= -->
+        <!-- VISTA LISTA: ZONAS DE MANTENIMIENTO                       -->
+        <!-- ========================================================= -->
+        <record id="view_mantenimiento_zona_list" model="ir.ui.view">
+            <field name="name">mantenimiento.zona.list</field>
+            <field name="model">mantenimiento.zona</field>
+            <field name="arch" type="xml">
+                <list string="Zonas de mantenimiento"
+                      decoration-muted="not active">
+                    <field name="sequence" widget="handle"/>
+                    <field name="name"/>
+                    <field name="distrito_count"/>
+                    <field name="equipo_count"/>
+                    <field name="tecnico_count"/>
+                    <field name="flexible"/>
+                    <field name="active"/>
+                </list>
+            </field>
+        </record>
+
+        <!-- ========================================================= -->
+        <!-- VISTA FORM: ZONA DE MANTENIMIENTO                         -->
+        <!-- ========================================================= -->
+        <record id="view_mantenimiento_zona_form" model="ir.ui.view">
+            <field name="name">mantenimiento.zona.form</field>
+            <field name="model">mantenimiento.zona</field>
+            <field name="arch" type="xml">
+                <form string="Zona de mantenimiento">
+                    <sheet>
+
+                        <div class="oe_button_box" name="button_box">
+                            <button name="action_ver_maquinas"
+                                    type="object"
+                                    class="oe_stat_button"
+                                    icon="fa-print">
+                                <field name="equipo_count"
+                                       widget="statinfo"
+                                       string="Máquinas"/>
+                            </button>
+
+                            <button name="action_ver_distritos"
+                                    type="object"
+                                    class="oe_stat_button"
+                                    icon="fa-map-marker">
+                                <field name="distrito_count"
+                                       widget="statinfo"
+                                       string="Distritos"/>
+                            </button>
+                        </div>
+
+                        <widget name="web_ribbon"
+                                title="Archivado"
+                                bg_color="text-bg-danger"
+                                invisible="active"/>
+
+                        <group>
+                            <group>
+                                <field name="name"/>
+                                <field name="sequence"/>
+                                <field name="active"/>
+                                <field name="color" widget="color_picker"/>
+                            </group>
+
+                            <group>
+                                <field name="flexible"/>
+                                <field name="tecnico_ids"
+                                       widget="many2many_tags"/>
+                            </group>
+                        </group>
+
+                        <group>
+                            <field name="descripcion"
+                                   placeholder="Notas internas sobre esta zona operativa..."/>
+                        </group>
+
+                        <notebook>
+                            <page string="Distritos">
+                                <field name="distrito_ids">
+                                    <list editable="bottom">
+                                        <field name="sequence" widget="handle"/>
+                                        <field name="name"/>
+                                        <field name="alias"/>
+                                        <field name="provincia"/>
+                                        <field name="departamento"/>
+                                        <field name="equipo_count"/>
+                                        <field name="active"/>
+                                    </list>
+                                </field>
+                            </page>
+
+                            <page string="Técnicos preferidos">
+                                <field name="tecnico_ids"
+                                       widget="many2many_tags"/>
+                            </page>
+
+                            <page string="Notas">
+                                <field name="descripcion"
+                                       nolabel="1"/>
+                            </page>
+                        </notebook>
+
+                    </sheet>
+
+                    <chatter/>
+                </form>
+            </field>
+        </record>
+
+        <!-- ========================================================= -->
+        <!-- VISTA KANBAN: ZONAS                                       -->
+        <!-- ========================================================= -->
+        <record id="view_mantenimiento_zona_kanban" model="ir.ui.view">
+            <field name="name">mantenimiento.zona.kanban</field>
+            <field name="model">mantenimiento.zona</field>
+            <field name="arch" type="xml">
+                <kanban class="o_kanban_mobile">
+                    <field name="name"/>
+                    <field name="active"/>
+                    <field name="flexible"/>
+                    <field name="distrito_count"/>
+                    <field name="equipo_count"/>
+                    <field name="tecnico_count"/>
+                    <templates>
+                        <t t-name="card">
+                            <div class="oe_kanban_global_click o_kanban_record">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div>
+                                        <strong class="fs-5">
+                                            <field name="name"/>
+                                        </strong>
+                                        <div class="text-muted small">
+                                            Zona operativa
+                                        </div>
+                                    </div>
+
+                                    <span class="badge rounded-pill text-bg-primary"
+                                          t-if="record.flexible.raw_value">
+                                        Flexible
+                                    </span>
+                                </div>
+
+                                <div class="row g-2 mt-2">
+                                    <div class="col-4">
+                                        <div class="border rounded p-2 text-center">
+                                            <div class="fw-bold">
+                                                <field name="distrito_count"/>
+                                            </div>
+                                            <div class="text-muted small">Distritos</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-4">
+                                        <div class="border rounded p-2 text-center">
+                                            <div class="fw-bold">
+                                                <field name="equipo_count"/>
+                                            </div>
+                                            <div class="text-muted small">Máquinas</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-4">
+                                        <div class="border rounded p-2 text-center">
+                                            <div class="fw-bold">
+                                                <field name="tecnico_count"/>
+                                            </div>
+                                            <div class="text-muted small">Técnicos</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mt-3 text-muted small"
+                                     t-if="!record.active.raw_value">
+                                    Archivado
+                                </div>
+                            </div>
+                        </t>
+                    </templates>
+                </kanban>
+            </field>
+        </record>
+
+        <!-- ========================================================= -->
+        <!-- VISTA SEARCH: ZONAS                                      -->
+        <!-- ========================================================= -->
+        <record id="view_mantenimiento_zona_search" model="ir.ui.view">
+            <field name="name">mantenimiento.zona.search</field>
+            <field name="model">mantenimiento.zona</field>
+            <field name="arch" type="xml">
+                <search string="Buscar zonas">
+                    <field name="name"/>
+                    <field name="tecnico_ids"/>
+                    <filter name="filter_active"
+                            string="Activas"
+                            domain="[('active', '=', True)]"/>
+                    <filter name="filter_inactive"
+                            string="Archivadas"
+                            domain="[('active', '=', False)]"/>
+                    <filter name="filter_flexible"
+                            string="Flexibles"
+                            domain="[('flexible', '=', True)]"/>
+                    <group expand="0" string="Agrupar por">
+                        <filter name="group_flexible"
+                                string="Flexible"
+                                context="{'group_by': 'flexible'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <!-- ========================================================= -->
+        <!-- VISTA LISTA: DISTRITOS                                   -->
+        <!-- ========================================================= -->
+        <record id="view_mantenimiento_zona_distrito_list" model="ir.ui.view">
+            <field name="name">mantenimiento.zona.distrito.list</field>
+            <field name="model">mantenimiento.zona.distrito</field>
+            <field name="arch" type="xml">
+                <list string="Distritos de mantenimiento"
+                      decoration-muted="not active">
+                    <field name="sequence" widget="handle"/>
+                    <field name="name"/>
+                    <field name="zona_id"/>
+                    <field name="alias"/>
+                    <field name="provincia"/>
+                    <field name="departamento"/>
+                    <field name="pais"/>
+                    <field name="equipo_count"/>
+                    <field name="active"/>
+                </list>
+            </field>
+        </record>
+
+        <!-- ========================================================= -->
+        <!-- VISTA FORM: DISTRITO                                     -->
+        <!-- ========================================================= -->
+        <record id="view_mantenimiento_zona_distrito_form" model="ir.ui.view">
+            <field name="name">mantenimiento.zona.distrito.form</field>
+            <field name="model">mantenimiento.zona.distrito</field>
+            <field name="arch" type="xml">
+                <form string="Distrito de mantenimiento">
+                    <sheet>
+
+                        <div class="oe_button_box" name="button_box">
+                            <button name="action_ver_maquinas"
+                                    type="object"
+                                    class="oe_stat_button"
+                                    icon="fa-print">
+                                <field name="equipo_count"
+                                       widget="statinfo"
+                                       string="Máquinas"/>
+                            </button>
+                        </div>
+
+                        <group>
+                            <group>
+                                <field name="name"/>
+                                <field name="zona_id"/>
+                                <field name="sequence"/>
+                                <field name="active"/>
+                            </group>
+
+                            <group>
+                                <field name="provincia"/>
+                                <field name="departamento"/>
+                                <field name="pais"/>
+                            </group>
+                        </group>
+
+                        <group>
+                            <field name="alias"
+                                   placeholder="Ej: Surco, Santiago de Surco, Distrito de Santiago de Surco"/>
+                        </group>
+
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <!-- ========================================================= -->
+        <!-- VISTA SEARCH: DISTRITOS                                  -->
+        <!-- ========================================================= -->
+        <record id="view_mantenimiento_zona_distrito_search" model="ir.ui.view">
+            <field name="name">mantenimiento.zona.distrito.search</field>
+            <field name="model">mantenimiento.zona.distrito</field>
+            <field name="arch" type="xml">
+                <search string="Buscar distritos">
+                    <field name="name"/>
+                    <field name="alias"/>
+                    <field name="zona_id"/>
+                    <field name="provincia"/>
+                    <field name="departamento"/>
+
+                    <filter name="filter_active"
+                            string="Activos"
+                            domain="[('active', '=', True)]"/>
+                    <filter name="filter_inactive"
+                            string="Archivados"
+                            domain="[('active', '=', False)]"/>
+
+                    <group expand="0" string="Agrupar por">
+                        <filter name="group_zona"
+                                string="Zona"
+                                context="{'group_by': 'zona_id'}"/>
+                        <filter name="group_provincia"
+                                string="Provincia"
+                                context="{'group_by': 'provincia'}"/>
+                        <filter name="group_departamento"
+                                string="Departamento"
+                                context="{'group_by': 'departamento'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <!-- ========================================================= -->
+        <!-- ACCIONES                                                  -->
+        <!-- Si prefieres tener acciones separadas en tu archivo menú,  -->
+        <!-- puedes mover estos records allá.                           -->
+        <!-- ========================================================= -->
+
+        <record id="action_mantenimiento_zona" model="ir.actions.act_window">
+            <field name="name">Zonas de mantenimiento</field>
+            <field name="res_model">mantenimiento.zona</field>
+            <field name="view_mode">kanban,list,form</field>
+            <field name="search_view_id" ref="view_mantenimiento_zona_search"/>
+            <field name="context">{'search_default_filter_active': 1}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Configura tus zonas de mantenimiento
+                </p>
+                <p>
+                    Agrupa distritos como Lima Norte, Lima Centro, Lima Sur, Lima Este o Callao.
+                </p>
+            </field>
+        </record>
+
+        <record id="action_mantenimiento_zona_distrito" model="ir.actions.act_window">
+            <field name="name">Distritos por zona</field>
+            <field name="res_model">mantenimiento.zona.distrito</field>
+            <field name="view_mode">list,form</field>
+            <field name="search_view_id" ref="view_mantenimiento_zona_distrito_search"/>
+            <field name="context">{'search_default_filter_active': 1, 'search_default_group_zona': 1}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Registra distritos y asígnalos a zonas
+                </p>
+                <p>
+                    Estos distritos se compararán con el distrito obtenido desde Google Maps.
+                </p>
+            </field>
+        </record>
+
+    </data>
+</odoo>

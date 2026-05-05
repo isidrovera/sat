@@ -48,5 +48,14 @@
             <field name="active">True</field>
             <field name="company_id" eval="False"/>
         </record>
+         <record id="seq_mantenimiento_tecnico_ausencia" model="ir.sequence">
+        <field name="name">Ausencia / Permiso Técnico</field>
+        <field name="code">mantenimiento.tecnico.ausencia</field>
+        <field name="prefix">AUS/</field>
+        <field name="padding">5</field>
+        <field name="number_next">1</field>
+        <field name="number_increment">1</field>
+        <field name="company_id" eval="False"/>
+    </record>
     </data>
 </odoo>

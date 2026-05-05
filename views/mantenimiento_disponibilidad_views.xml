@@ -1,0 +1,563 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- ========================================================= -->
+        <!-- PERFIL TÉCNICO - LISTA                                   -->
+        <!-- ========================================================= -->
+        <record id="view_mantenimiento_tecnico_perfil_list" model="ir.ui.view">
+            <field name="name">mantenimiento.tecnico.perfil.list</field>
+            <field name="model">mantenimiento.tecnico.perfil</field>
+            <field name="arch" type="xml">
+                <list string="Perfiles técnicos"
+                      decoration-muted="not active">
+                    <field name="tecnico_id"/>
+                    <field name="zona_preferida_ids" widget="many2many_tags"/>
+                    <field name="capacidad_diaria"/>
+                    <field name="capacidad_sabado"/>
+                    <field name="duracion_servicio_horas"/>
+                    <field name="trabaja_sabado"/>
+                    <field name="active"/>
+                </list>
+            </field>
+        </record>
+
+        <!-- ========================================================= -->
+        <!-- PERFIL TÉCNICO - FORM                                    -->
+        <!-- ========================================================= -->
+        <record id="view_mantenimiento_tecnico_perfil_form" model="ir.ui.view">
+            <field name="name">mantenimiento.tecnico.perfil.form</field>
+            <field name="model">mantenimiento.tecnico.perfil</field>
+            <field name="arch" type="xml">
+                <form string="Perfil operativo del técnico">
+                    <sheet>
+
+                        <div class="oe_button_box" name="button_box">
+                            <button name="action_ver_disponibilidades"
+                                    type="object"
+                                    class="oe_stat_button"
+                                    icon="fa-calendar">
+                                <span>Disponibilidad</span>
+                            </button>
+                        </div>
+
+                        <widget name="web_ribbon"
+                                title="Archivado"
+                                bg_color="text-bg-danger"
+                                invisible="active"/>
+
+                        <group>
+                            <group string="Técnico">
+                                <field name="tecnico_id"/>
+                                <field name="active"/>
+                                <field name="zona_preferida_ids" widget="many2many_tags"/>
+                            </group>
+
+                            <group string="Capacidad">
+                                <field name="capacidad_diaria"/>
+                                <field name="capacidad_sabado"/>
+                                <field name="duracion_servicio_horas"/>
+                            </group>
+                        </group>
+
+                        <notebook>
+
+                            <page string="Horario semanal">
+                                <group>
+                                    <group string="Lunes">
+                                        <field name="trabaja_lunes"/>
+                                        <field name="hora_inicio_lunes" widget="float_time" invisible="not trabaja_lunes"/>
+                                        <field name="hora_fin_lunes" widget="float_time" invisible="not trabaja_lunes"/>
+                                    </group>
+
+                                    <group string="Martes">
+                                        <field name="trabaja_martes"/>
+                                        <field name="hora_inicio_martes" widget="float_time" invisible="not trabaja_martes"/>
+                                        <field name="hora_fin_martes" widget="float_time" invisible="not trabaja_martes"/>
+                                    </group>
+
+                                    <group string="Miércoles">
+                                        <field name="trabaja_miercoles"/>
+                                        <field name="hora_inicio_miercoles" widget="float_time" invisible="not trabaja_miercoles"/>
+                                        <field name="hora_fin_miercoles" widget="float_time" invisible="not trabaja_miercoles"/>
+                                    </group>
+
+                                    <group string="Jueves">
+                                        <field name="trabaja_jueves"/>
+                                        <field name="hora_inicio_jueves" widget="float_time" invisible="not trabaja_jueves"/>
+                                        <field name="hora_fin_jueves" widget="float_time" invisible="not trabaja_jueves"/>
+                                    </group>
+
+                                    <group string="Viernes">
+                                        <field name="trabaja_viernes"/>
+                                        <field name="hora_inicio_viernes" widget="float_time" invisible="not trabaja_viernes"/>
+                                        <field name="hora_fin_viernes" widget="float_time" invisible="not trabaja_viernes"/>
+                                    </group>
+
+                                    <group string="Sábado">
+                                        <field name="trabaja_sabado"/>
+                                        <field name="hora_inicio_sabado" widget="float_time" invisible="not trabaja_sabado"/>
+                                        <field name="hora_fin_sabado" widget="float_time" invisible="not trabaja_sabado"/>
+                                    </group>
+
+                                    <group string="Domingo">
+                                        <field name="trabaja_domingo"/>
+                                        <field name="hora_inicio_domingo" widget="float_time" invisible="not trabaja_domingo"/>
+                                        <field name="hora_fin_domingo" widget="float_time" invisible="not trabaja_domingo"/>
+                                    </group>
+                                </group>
+                            </page>
+
+                            <page string="Disponibilidades / excepciones">
+                                <field name="disponibilidad_ids">
+                                    <list editable="bottom"
+                                          decoration-success="estado == 'aprobado' and disponible"
+                                          decoration-danger="estado == 'aprobado' and not disponible"
+                                          decoration-warning="estado == 'pendiente'"
+                                          decoration-muted="estado in ('rechazado', 'cancelado')">
+                                        <field name="fecha"/>
+                                        <field name="tipo"/>
+                                        <field name="disponible"/>
+                                        <field name="dia_completo"/>
+                                        <field name="hora_inicio" widget="float_time"/>
+                                        <field name="hora_fin" widget="float_time"/>
+                                        <field name="capacidad"/>
+                                        <field name="estado"/>
+                                    </list>
+                                </field>
+                            </page>
+
+                        </notebook>
+
+                    </sheet>
+
+                    <chatter/>
+                </form>
+            </field>
+        </record>
+
+        <!-- ========================================================= -->
+        <!-- PERFIL TÉCNICO - KANBAN                                  -->
+        <!-- ========================================================= -->
+        <record id="view_mantenimiento_tecnico_perfil_kanban" model="ir.ui.view">
+            <field name="name">mantenimiento.tecnico.perfil.kanban</field>
+            <field name="model">mantenimiento.tecnico.perfil</field>
+            <field name="arch" type="xml">
+                <kanban class="o_kanban_mobile">
+                    <field name="tecnico_id"/>
+                    <field name="active"/>
+                    <field name="capacidad_diaria"/>
+                    <field name="capacidad_sabado"/>
+                    <field name="duracion_servicio_horas"/>
+                    <field name="trabaja_sabado"/>
+                    <field name="zona_preferida_ids"/>
+                    <templates>
+                        <t t-name="card">
+                            <div class="oe_kanban_global_click o_kanban_record">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div>
+                                        <strong class="fs-5">
+                                            <field name="tecnico_id"/>
+                                        </strong>
+                                        <div class="text-muted small">
+                                            Perfil operativo
+                                        </div>
+                                    </div>
+
+                                    <span class="badge rounded-pill text-bg-success"
+                                          t-if="record.active.raw_value">
+                                        Activo
+                                    </span>
+
+                                    <span class="badge rounded-pill text-bg-secondary"
+                                          t-if="!record.active.raw_value">
+                                        Archivado
+                                    </span>
+                                </div>
+
+                                <div class="row g-2 mt-2">
+                                    <div class="col-4">
+                                        <div class="border rounded p-2 text-center">
+                                            <div class="fw-bold">
+                                                <field name="capacidad_diaria"/>
+                                            </div>
+                                            <div class="text-muted small">Día</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-4">
+                                        <div class="border rounded p-2 text-center">
+                                            <div class="fw-bold">
+                                                <field name="capacidad_sabado"/>
+                                            </div>
+                                            <div class="text-muted small">Sábado</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-4">
+                                        <div class="border rounded p-2 text-center">
+                                            <div class="fw-bold">
+                                                <field name="duracion_servicio_horas"/>
+                                            </div>
+                                            <div class="text-muted small">Horas</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mt-3">
+                                    <span class="badge rounded-pill text-bg-primary"
+                                          t-if="record.trabaja_sabado.raw_value">
+                                        Trabaja sábado
+                                    </span>
+
+                                    <span class="badge rounded-pill text-bg-light text-dark"
+                                          t-if="!record.trabaja_sabado.raw_value">
+                                        No trabaja sábado
+                                    </span>
+                                </div>
+                            </div>
+                        </t>
+                    </templates>
+                </kanban>
+            </field>
+        </record>
+
+        <!-- ========================================================= -->
+        <!-- PERFIL TÉCNICO - SEARCH                                  -->
+        <!-- ========================================================= -->
+        <record id="view_mantenimiento_tecnico_perfil_search" model="ir.ui.view">
+            <field name="name">mantenimiento.tecnico.perfil.search</field>
+            <field name="model">mantenimiento.tecnico.perfil</field>
+            <field name="arch" type="xml">
+                <search string="Buscar perfiles técnicos">
+                    <field name="tecnico_id"/>
+                    <field name="zona_preferida_ids"/>
+
+                    <filter name="filter_active"
+                            string="Activos"
+                            domain="[('active', '=', True)]"/>
+
+                    <filter name="filter_inactive"
+                            string="Archivados"
+                            domain="[('active', '=', False)]"/>
+
+                    <filter name="filter_trabaja_sabado"
+                            string="Trabaja sábado"
+                            domain="[('trabaja_sabado', '=', True)]"/>
+
+                    <group expand="0" string="Agrupar por">
+                        <filter name="group_tecnico"
+                                string="Técnico"
+                                context="{'group_by': 'tecnico_id'}"/>
+                        <filter name="group_sabado"
+                                string="Trabaja sábado"
+                                context="{'group_by': 'trabaja_sabado'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <!-- ========================================================= -->
+        <!-- DISPONIBILIDAD EXCEPCIONAL - LISTA                       -->
+        <!-- ========================================================= -->
+        <record id="view_mantenimiento_tecnico_disponibilidad_list" model="ir.ui.view">
+            <field name="name">mantenimiento.tecnico.disponibilidad.list</field>
+            <field name="model">mantenimiento.tecnico.disponibilidad</field>
+            <field name="arch" type="xml">
+                <list string="Disponibilidad técnica"
+                      decoration-success="estado == 'aprobado' and disponible"
+                      decoration-danger="estado == 'aprobado' and not disponible"
+                      decoration-warning="estado == 'pendiente'"
+                      decoration-muted="estado in ('rechazado', 'cancelado')">
+                    <field name="fecha"/>
+                    <field name="tecnico_id"/>
+                    <field name="tipo"/>
+                    <field name="disponible"/>
+                    <field name="dia_completo"/>
+                    <field name="hora_inicio" widget="float_time"/>
+                    <field name="hora_fin" widget="float_time"/>
+                    <field name="capacidad"/>
+                    <field name="estado"/>
+                </list>
+            </field>
+        </record>
+
+        <!-- ========================================================= -->
+        <!-- DISPONIBILIDAD EXCEPCIONAL - FORM                        -->
+        <!-- ========================================================= -->
+        <record id="view_mantenimiento_tecnico_disponibilidad_form" model="ir.ui.view">
+            <field name="name">mantenimiento.tecnico.disponibilidad.form</field>
+            <field name="model">mantenimiento.tecnico.disponibilidad</field>
+            <field name="arch" type="xml">
+                <form string="Disponibilidad / excepción técnica">
+                    <header>
+                        <button name="action_enviar_aprobacion"
+                                string="Enviar a aprobación"
+                                type="object"
+                                class="btn-primary"
+                                invisible="estado not in ('borrador', 'rechazado')"/>
+
+                        <button name="action_aprobar"
+                                string="Aprobar"
+                                type="object"
+                                class="btn-success"
+                                invisible="estado != 'pendiente'"/>
+
+                        <button name="action_rechazar"
+                                string="Rechazar"
+                                type="object"
+                                class="btn-secondary"
+                                invisible="estado != 'pendiente'"/>
+
+                        <button name="action_cancelar"
+                                string="Cancelar"
+                                type="object"
+                                class="btn-secondary"
+                                invisible="estado in ('cancelado', 'rechazado')"/>
+
+                        <field name="estado"
+                               widget="statusbar"
+                               statusbar_visible="borrador,pendiente,aprobado,rechazado,cancelado"/>
+                    </header>
+
+                    <sheet>
+
+                        <div class="oe_title">
+                            <h1>
+                                <field name="name" readonly="1"/>
+                            </h1>
+                        </div>
+
+                        <group>
+                            <group string="Técnico">
+                                <field name="perfil_id"/>
+                                <field name="tecnico_id" readonly="1"/>
+                                <field name="fecha"/>
+                                <field name="tipo"/>
+                            </group>
+
+                            <group string="Disponibilidad">
+                                <field name="disponible"/>
+                                <field name="dia_completo"/>
+                                <field name="hora_inicio" widget="float_time" invisible="dia_completo"/>
+                                <field name="hora_fin" widget="float_time" invisible="dia_completo"/>
+                                <field name="capacidad"/>
+                                <field name="sequence"/>
+                            </group>
+                        </group>
+
+                        <group string="Motivo / nota">
+                            <field name="motivo"
+                                   nolabel="1"
+                                   placeholder="Explique el motivo de esta disponibilidad especial o bloqueo..."/>
+                        </group>
+
+                        <group string="Aprobación" invisible="estado not in ('aprobado', 'rechazado')">
+                            <group>
+                                <field name="aprobado_por_id" readonly="1"/>
+                                <field name="fecha_aprobacion" readonly="1"/>
+                            </group>
+                        </group>
+
+                    </sheet>
+
+                    <chatter/>
+                </form>
+            </field>
+        </record>
+
+        <!-- ========================================================= -->
+        <!-- DISPONIBILIDAD EXCEPCIONAL - CALENDAR                    -->
+        <!-- ========================================================= -->
+        <record id="view_mantenimiento_tecnico_disponibilidad_calendar" model="ir.ui.view">
+            <field name="name">mantenimiento.tecnico.disponibilidad.calendar</field>
+            <field name="model">mantenimiento.tecnico.disponibilidad</field>
+            <field name="arch" type="xml">
+                <calendar string="Disponibilidad técnica"
+                          date_start="fecha"
+                          color="tecnico_id"
+                          mode="month">
+                    <field name="name"/>
+                    <field name="tecnico_id"/>
+                    <field name="tipo"/>
+                    <field name="disponible"/>
+                    <field name="estado"/>
+                </calendar>
+            </field>
+        </record>
+
+        <!-- ========================================================= -->
+        <!-- DISPONIBILIDAD EXCEPCIONAL - KANBAN                      -->
+        <!-- ========================================================= -->
+        <record id="view_mantenimiento_tecnico_disponibilidad_kanban" model="ir.ui.view">
+            <field name="name">mantenimiento.tecnico.disponibilidad.kanban</field>
+            <field name="model">mantenimiento.tecnico.disponibilidad</field>
+            <field name="arch" type="xml">
+                <kanban class="o_kanban_mobile"
+                        default_group_by="estado">
+                    <field name="name"/>
+                    <field name="tecnico_id"/>
+                    <field name="fecha"/>
+                    <field name="tipo"/>
+                    <field name="disponible"/>
+                    <field name="hora_inicio"/>
+                    <field name="hora_fin"/>
+                    <field name="capacidad"/>
+                    <field name="estado"/>
+                    <templates>
+                        <t t-name="card">
+                            <div class="oe_kanban_global_click o_kanban_record">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <strong>
+                                            <field name="tecnico_id"/>
+                                        </strong>
+                                        <div class="text-muted small">
+                                            <field name="fecha"/>
+                                        </div>
+                                    </div>
+
+                                    <span class="badge rounded-pill text-bg-success"
+                                          t-if="record.disponible.raw_value">
+                                        Disponible
+                                    </span>
+
+                                    <span class="badge rounded-pill text-bg-danger"
+                                          t-if="!record.disponible.raw_value">
+                                        No disponible
+                                    </span>
+                                </div>
+
+                                <div class="mt-3">
+                                    <div>
+                                        <strong>Tipo:</strong>
+                                        <field name="tipo"/>
+                                    </div>
+
+                                    <div>
+                                        <strong>Horario:</strong>
+                                        <field name="hora_inicio" widget="float_time"/>
+                                        -
+                                        <field name="hora_fin" widget="float_time"/>
+                                    </div>
+
+                                    <div>
+                                        <strong>Capacidad:</strong>
+                                        <field name="capacidad"/>
+                                    </div>
+                                </div>
+
+                                <div class="mt-3">
+                                    <field name="estado" widget="badge"/>
+                                </div>
+                            </div>
+                        </t>
+                    </templates>
+                </kanban>
+            </field>
+        </record>
+
+        <!-- ========================================================= -->
+        <!-- DISPONIBILIDAD EXCEPCIONAL - SEARCH                      -->
+        <!-- ========================================================= -->
+        <record id="view_mantenimiento_tecnico_disponibilidad_search" model="ir.ui.view">
+            <field name="name">mantenimiento.tecnico.disponibilidad.search</field>
+            <field name="model">mantenimiento.tecnico.disponibilidad</field>
+            <field name="arch" type="xml">
+                <search string="Buscar disponibilidad técnica">
+                    <field name="tecnico_id"/>
+                    <field name="perfil_id"/>
+                    <field name="fecha"/>
+                    <field name="tipo"/>
+                    <field name="estado"/>
+
+                    <filter name="filter_pendiente"
+                            string="Pendientes"
+                            domain="[('estado', '=', 'pendiente')]"/>
+
+                    <filter name="filter_aprobado"
+                            string="Aprobadas"
+                            domain="[('estado', '=', 'aprobado')]"/>
+
+                    <filter name="filter_disponible"
+                            string="Disponible"
+                            domain="[('disponible', '=', True)]"/>
+
+                    <filter name="filter_no_disponible"
+                            string="No disponible"
+                            domain="[('disponible', '=', False)]"/>
+
+                    <filter name="filter_sabado_extra"
+                            string="Sábado excepcional"
+                            domain="[('tipo', '=', 'sabado_extra')]"/>
+
+                    <filter name="filter_bloqueo"
+                            string="Bloqueos"
+                            domain="[('tipo', '=', 'bloqueo')]"/>
+
+                    <separator/>
+
+                    <filter name="filter_today"
+                            string="Hoy"
+                            domain="[('fecha', '=', context_today())]"/>
+
+                    <filter name="filter_future"
+                            string="Próximas"
+                            domain="[('fecha', '&gt;=', context_today())]"/>
+
+                    <group expand="0" string="Agrupar por">
+                        <filter name="group_tecnico"
+                                string="Técnico"
+                                context="{'group_by': 'tecnico_id'}"/>
+                        <filter name="group_estado"
+                                string="Estado"
+                                context="{'group_by': 'estado'}"/>
+                        <filter name="group_tipo"
+                                string="Tipo"
+                                context="{'group_by': 'tipo'}"/>
+                        <filter name="group_fecha"
+                                string="Fecha"
+                                context="{'group_by': 'fecha'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <!-- ========================================================= -->
+        <!-- ACCIONES                                                  -->
+        <!-- ========================================================= -->
+
+        <record id="action_mantenimiento_tecnico_perfil" model="ir.actions.act_window">
+            <field name="name">Perfiles técnicos</field>
+            <field name="res_model">mantenimiento.tecnico.perfil</field>
+            <field name="view_mode">kanban,list,form</field>
+            <field name="search_view_id" ref="view_mantenimiento_tecnico_perfil_search"/>
+            <field name="context">{'search_default_filter_active': 1}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Configura perfiles técnicos
+                </p>
+                <p>
+                    Define horarios, capacidad diaria, capacidad de sábado y zonas preferidas.
+                </p>
+            </field>
+        </record>
+
+        <record id="action_mantenimiento_tecnico_disponibilidad" model="ir.actions.act_window">
+            <field name="name">Disponibilidad técnica</field>
+            <field name="res_model">mantenimiento.tecnico.disponibilidad</field>
+            <field name="view_mode">calendar,kanban,list,form</field>
+            <field name="search_view_id" ref="view_mantenimiento_tecnico_disponibilidad_search"/>
+            <field name="context">{'search_default_filter_future': 1}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Registra disponibilidades o bloqueos excepcionales
+                </p>
+                <p>
+                    Ejemplo: técnico que trabaja un sábado especial o bloqueo manual por capacitación.
+                </p>
+            </field>
+        </record>
+
+    </data>
+</odoo>

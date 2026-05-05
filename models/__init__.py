@@ -99,3 +99,9 @@ from . import ticket_repuesto_pedido
 from . import ticket_subpartes_wizard
 from . import wizard_rechazar_pedido
 from . import ticket_repuesto_pedido_recordatorios
+from . import mantenimiento_zona
+from . import mantenimiento_tecnico_disponibilidad
+from . import mantenimiento_ausencia
+from . import mantenimiento_planificador
+from . import alquiler_inherit
+from . import ticket_alquiler_inherit

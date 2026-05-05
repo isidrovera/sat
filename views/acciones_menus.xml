@@ -1311,7 +1311,54 @@ action = env["sat.import.line"].browse(env.context.get("active_ids", [])).action
               sequence="110"
               groups="base.group_system"/>
 
-    <!-- seq 120-200: libres para futuras adiciones en Accesorios -->
+   <!-- ── Planificador de Mantenimientos ─────────────────────────────── -->
+<menuitem id="menu_mantenimiento_root"
+          name="Mantenimientos"
+          parent="menu_andes_root"
+          sequence="60"/>
+
+<menuitem id="menu_mantenimiento_zonas"
+          name="Zonas"
+          parent="menu_mantenimiento_root"
+          action="action_mantenimiento_zona"
+          sequence="10"/>
+
+<menuitem id="menu_mantenimiento_distritos"
+          name="Distritos"
+          parent="menu_mantenimiento_root"
+          action="action_mantenimiento_zona_distrito"
+          sequence="20"/>
+
+    <menuitem id="menu_mantenimiento_tecnicos"
+          name="Perfiles técnicos"
+          parent="menu_mantenimiento_root"
+          action="action_mantenimiento_tecnico_perfil"
+          sequence="30"/>
+
+<menuitem id="menu_mantenimiento_disponibilidad"
+          name="Disponibilidad técnica"
+          parent="menu_mantenimiento_root"
+          action="action_mantenimiento_tecnico_disponibilidad"
+          sequence="40"/>
+
+<menuitem id="menu_mantenimiento_ausencias"
+          name="Ausencias y permisos"
+          parent="menu_mantenimiento_root"
+          action="action_mantenimiento_tecnico_ausencia"
+          sequence="50"/>
+
+
+  <menuitem id="menu_mantenimiento_planificador"
+          name="Planificador inteligente"
+          parent="menu_mantenimiento_root"
+          action="action_mantenimiento_planificador"
+          sequence="60"/>
+
+<menuitem id="menu_mantenimiento_lineas"
+          name="Líneas de planificación"
+          parent="menu_mantenimiento_root"
+          action="action_mantenimiento_planificador_linea"
+          sequence="70"/>
 
   </data>
 </odoo>

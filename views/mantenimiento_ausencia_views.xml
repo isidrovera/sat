@@ -1,0 +1,429 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- ========================================================= -->
+        <!-- AUSENCIAS / PERMISOS - LISTA                              -->
+        <!-- ========================================================= -->
+        <record id="view_mantenimiento_tecnico_ausencia_list" model="ir.ui.view">
+            <field name="name">mantenimiento.tecnico.ausencia.list</field>
+            <field name="model">mantenimiento.tecnico.ausencia</field>
+            <field name="arch" type="xml">
+                <list string="Ausencias y permisos técnicos"
+                      decoration-warning="estado == 'pendiente'"
+                      decoration-success="estado == 'aprobado'"
+                      decoration-danger="estado == 'ausente_activo'"
+                      decoration-muted="estado in ('rechazado', 'cancelado', 'cerrado')">
+                    <field name="name"/>
+                    <field name="tecnico_id"/>
+                    <field name="tipo"/>
+                    <field name="fecha_inicio"/>
+                    <field name="fecha_fin"/>
+                    <field name="fecha_retorno_real"/>
+                    <field name="dia_completo"/>
+                    <field name="estado"/>
+                    <field name="ticket_afectado_count"/>
+                    <field name="notificar_contabilidad"/>
+                    <field name="aprobado_por_id"/>
+                </list>
+            </field>
+        </record>
+
+        <!-- ========================================================= -->
+        <!-- AUSENCIAS / PERMISOS - FORM                               -->
+        <!-- ========================================================= -->
+        <record id="view_mantenimiento_tecnico_ausencia_form" model="ir.ui.view">
+            <field name="name">mantenimiento.tecnico.ausencia.form</field>
+            <field name="model">mantenimiento.tecnico.ausencia</field>
+            <field name="arch" type="xml">
+                <form string="Ausencia / permiso técnico">
+                    <header>
+                        <button name="action_enviar_aprobacion"
+                                string="Enviar a aprobación"
+                                type="object"
+                                class="btn-primary"
+                                invisible="estado not in ('borrador', 'rechazado')"/>
+
+                        <button name="action_aprobar"
+                                string="Aprobar"
+                                type="object"
+                                class="btn-success"
+                                invisible="estado not in ('pendiente', 'borrador')"/>
+
+                        <button name="action_reportar_ausencia_inmediata"
+                                string="Reportar ausencia inmediata"
+                                type="object"
+                                class="btn-danger"
+                                invisible="tipo not in ('enfermedad', 'falta') or estado not in ('borrador', 'pendiente')"/>
+
+                        <button name="action_rechazar"
+                                string="Rechazar"
+                                type="object"
+                                class="btn-secondary"
+                                invisible="estado not in ('pendiente', 'borrador')"/>
+
+                        <button name="action_cerrar_retorno"
+                                string="Registrar retorno"
+                                type="object"
+                                class="btn-primary"
+                                invisible="estado not in ('ausente_activo', 'aprobado')"/>
+
+                        <button name="action_cancelar"
+                                string="Cancelar"
+                                type="object"
+                                class="btn-secondary"
+                                invisible="estado in ('cancelado', 'cerrado', 'rechazado')"/>
+
+                        <field name="estado"
+                               widget="statusbar"
+                               statusbar_visible="borrador,pendiente,aprobado,ausente_activo,cerrado"/>
+                    </header>
+
+                    <sheet>
+
+                        <div class="oe_button_box" name="button_box">
+                            <button name="action_ver_tickets_afectados"
+                                    type="object"
+                                    class="oe_stat_button"
+                                    icon="fa-ticket"
+                                    invisible="ticket_afectado_count == 0">
+                                <field name="ticket_afectado_count"
+                                       widget="statinfo"
+                                       string="Tickets"/>
+                            </button>
+                        </div>
+
+                        <widget name="web_ribbon"
+                                title="Activo"
+                                bg_color="text-bg-danger"
+                                invisible="estado != 'ausente_activo'"/>
+
+                        <widget name="web_ribbon"
+                                title="Aprobado"
+                                bg_color="text-bg-success"
+                                invisible="estado != 'aprobado'"/>
+
+                        <widget name="web_ribbon"
+                                title="Pendiente"
+                                bg_color="text-bg-warning"
+                                invisible="estado != 'pendiente'"/>
+
+                        <div class="oe_title">
+                            <label for="name"/>
+                            <h1>
+                                <field name="name" readonly="1"/>
+                            </h1>
+                        </div>
+
+                        <group>
+                            <group string="Técnico">
+                                <field name="tecnico_id"/>
+                                <field name="perfil_id" readonly="1"/>
+                                <field name="tipo"/>
+                                <field name="active"/>
+                            </group>
+
+                            <group string="Periodo">
+                                <field name="fecha_inicio"/>
+                                <field name="fecha_fin"
+                                       invisible="tipo == 'enfermedad' and es_abierta"/>
+                                <field name="es_abierta" readonly="1"/>
+                                <field name="fecha_retorno_real"
+                                       invisible="estado not in ('ausente_activo', 'aprobado', 'cerrado')"/>
+                            </group>
+                        </group>
+
+                        <group>
+                            <group string="Horario">
+                                <field name="dia_completo"/>
+                                <field name="hora_inicio"
+                                       widget="float_time"
+                                       invisible="dia_completo"/>
+                                <field name="hora_fin"
+                                       widget="float_time"
+                                       invisible="dia_completo"/>
+                            </group>
+
+                            <group string="Notificación">
+                                <field name="notificar_contabilidad"/>
+                                <field name="correo_contabilidad" readonly="1" invisible="not notificar_contabilidad"/>
+                                <field name="disponibilidad_id" readonly="1"/>
+                            </group>
+                        </group>
+
+                        <notebook>
+
+                            <page string="Motivo">
+                                <group>
+                                    <field name="motivo"
+                                           nolabel="1"
+                                           placeholder="Indique el motivo del permiso, ausencia, enfermedad o vacaciones..."/>
+                                </group>
+
+                                <group string="Sustento">
+                                    <field name="adjunto"
+                                           filename="adjunto_filename"/>
+                                    <field name="adjunto_filename" invisible="1"/>
+                                </group>
+                            </page>
+
+                            <page string="Aprobación">
+                                <group>
+                                    <group string="Aprobación">
+                                        <field name="aprobado_por_id" readonly="1"/>
+                                        <field name="fecha_aprobacion" readonly="1"/>
+                                    </group>
+
+                                    <group string="Rechazo">
+                                        <field name="rechazado_por_id" readonly="1"/>
+                                        <field name="fecha_rechazo" readonly="1"/>
+                                    </group>
+                                </group>
+
+                                <group string="Motivo de rechazo"
+                                       invisible="estado != 'rechazado'">
+                                    <field name="motivo_rechazo" nolabel="1"/>
+                                </group>
+                            </page>
+
+                            <page string="Tickets afectados">
+                                <field name="ticket_afectado_ids" readonly="1">
+                                    <list>
+                                        <field name="name"/>
+                                        <field name="partner_id"/>
+                                        <field name="product_alquiler"/>
+                                        <field name="responsable"/>
+                                        <field name="agenda"/>
+                                        <field name="estado"/>
+                                        <field name="tipo_servicio_id"/>
+                                    </list>
+                                </field>
+                            </page>
+
+                        </notebook>
+
+                    </sheet>
+
+                    <chatter/>
+                </form>
+            </field>
+        </record>
+
+        <!-- ========================================================= -->
+        <!-- AUSENCIAS / PERMISOS - KANBAN                             -->
+        <!-- ========================================================= -->
+        <record id="view_mantenimiento_tecnico_ausencia_kanban" model="ir.ui.view">
+            <field name="name">mantenimiento.tecnico.ausencia.kanban</field>
+            <field name="model">mantenimiento.tecnico.ausencia</field>
+            <field name="arch" type="xml">
+                <kanban class="o_kanban_mobile"
+                        default_group_by="estado">
+                    <field name="name"/>
+                    <field name="tecnico_id"/>
+                    <field name="tipo"/>
+                    <field name="fecha_inicio"/>
+                    <field name="fecha_fin"/>
+                    <field name="fecha_retorno_real"/>
+                    <field name="estado"/>
+                    <field name="ticket_afectado_count"/>
+                    <field name="es_abierta"/>
+                    <templates>
+                        <t t-name="card">
+                            <div class="oe_kanban_global_click o_kanban_record">
+
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div>
+                                        <strong class="fs-5">
+                                            <field name="tecnico_id"/>
+                                        </strong>
+                                        <div class="text-muted small">
+                                            <field name="name"/>
+                                        </div>
+                                    </div>
+
+                                    <span class="badge rounded-pill text-bg-danger"
+                                          t-if="record.estado.raw_value == 'ausente_activo'">
+                                        Ausente
+                                    </span>
+
+                                    <span class="badge rounded-pill text-bg-warning"
+                                          t-if="record.estado.raw_value == 'pendiente'">
+                                        Pendiente
+                                    </span>
+
+                                    <span class="badge rounded-pill text-bg-success"
+                                          t-if="record.estado.raw_value == 'aprobado'">
+                                        Aprobado
+                                    </span>
+                                </div>
+
+                                <div class="mt-2">
+                                    <div>
+                                        <strong>Tipo:</strong>
+                                        <field name="tipo"/>
+                                    </div>
+
+                                    <div>
+                                        <strong>Desde:</strong>
+                                        <field name="fecha_inicio"/>
+                                    </div>
+
+                                    <div>
+                                        <strong>Hasta:</strong>
+                                        <t t-if="record.fecha_fin.raw_value">
+                                            <field name="fecha_fin"/>
+                                        </t>
+                                        <t t-if="!record.fecha_fin.raw_value">
+                                            Por definir
+                                        </t>
+                                    </div>
+                                </div>
+
+                                <div class="row g-2 mt-3">
+                                    <div class="col-6">
+                                        <div class="border rounded p-2 text-center">
+                                            <div class="fw-bold">
+                                                <field name="ticket_afectado_count"/>
+                                            </div>
+                                            <div class="text-muted small">Tickets</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-6">
+                                        <div class="border rounded p-2 text-center">
+                                            <div class="fw-bold">
+                                                <field name="estado"/>
+                                            </div>
+                                            <div class="text-muted small">Estado</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </t>
+                    </templates>
+                </kanban>
+            </field>
+        </record>
+
+        <!-- ========================================================= -->
+        <!-- AUSENCIAS / PERMISOS - CALENDAR                           -->
+        <!-- ========================================================= -->
+        <record id="view_mantenimiento_tecnico_ausencia_calendar" model="ir.ui.view">
+            <field name="name">mantenimiento.tecnico.ausencia.calendar</field>
+            <field name="model">mantenimiento.tecnico.ausencia</field>
+            <field name="arch" type="xml">
+                <calendar string="Ausencias técnicas"
+                          date_start="fecha_inicio"
+                          date_stop="fecha_fin"
+                          color="tecnico_id"
+                          mode="month">
+                    <field name="name"/>
+                    <field name="tecnico_id"/>
+                    <field name="tipo"/>
+                    <field name="estado"/>
+                </calendar>
+            </field>
+        </record>
+
+        <!-- ========================================================= -->
+        <!-- AUSENCIAS / PERMISOS - SEARCH                             -->
+        <!-- ========================================================= -->
+        <record id="view_mantenimiento_tecnico_ausencia_search" model="ir.ui.view">
+            <field name="name">mantenimiento.tecnico.ausencia.search</field>
+            <field name="model">mantenimiento.tecnico.ausencia</field>
+            <field name="arch" type="xml">
+                <search string="Buscar ausencias técnicas">
+                    <field name="name"/>
+                    <field name="tecnico_id"/>
+                    <field name="tipo"/>
+                    <field name="estado"/>
+                    <field name="fecha_inicio"/>
+                    <field name="fecha_fin"/>
+
+                    <filter name="filter_pendiente"
+                            string="Pendientes"
+                            domain="[('estado', '=', 'pendiente')]"/>
+
+                    <filter name="filter_aprobado"
+                            string="Aprobadas"
+                            domain="[('estado', '=', 'aprobado')]"/>
+
+                    <filter name="filter_ausente_activo"
+                            string="Ausentes activos"
+                            domain="[('estado', '=', 'ausente_activo')]"/>
+
+                    <filter name="filter_enfermedad"
+                            string="Enfermedad"
+                            domain="[('tipo', '=', 'enfermedad')]"/>
+
+                    <filter name="filter_vacaciones"
+                            string="Vacaciones"
+                            domain="[('tipo', '=', 'vacaciones')]"/>
+
+                    <filter name="filter_permiso"
+                            string="Permisos"
+                            domain="[('tipo', '=', 'permiso')]"/>
+
+                    <filter name="filter_falta"
+                            string="Faltas"
+                            domain="[('tipo', '=', 'falta')]"/>
+
+                    <separator/>
+
+                    <filter name="filter_hoy"
+                            string="Hoy"
+                            domain="[
+                                ('fecha_inicio', '&lt;=', context_today()),
+                                '|',
+                                ('fecha_fin', '=', False),
+                                ('fecha_fin', '&gt;=', context_today())
+                            ]"/>
+
+                    <filter name="filter_futuras"
+                            string="Futuras"
+                            domain="[('fecha_inicio', '&gt;=', context_today())]"/>
+
+                    <filter name="filter_con_tickets"
+                            string="Con tickets afectados"
+                            domain="[('ticket_afectado_count', '&gt;', 0)]"/>
+
+                    <group expand="0" string="Agrupar por">
+                        <filter name="group_tecnico"
+                                string="Técnico"
+                                context="{'group_by': 'tecnico_id'}"/>
+                        <filter name="group_tipo"
+                                string="Tipo"
+                                context="{'group_by': 'tipo'}"/>
+                        <filter name="group_estado"
+                                string="Estado"
+                                context="{'group_by': 'estado'}"/>
+                        <filter name="group_fecha_inicio"
+                                string="Fecha inicio"
+                                context="{'group_by': 'fecha_inicio'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <!-- ========================================================= -->
+        <!-- ACCIÓN                                                    -->
+        <!-- ========================================================= -->
+        <record id="action_mantenimiento_tecnico_ausencia" model="ir.actions.act_window">
+            <field name="name">Ausencias y permisos</field>
+            <field name="res_model">mantenimiento.tecnico.ausencia</field>
+            <field name="view_mode">kanban,calendar,list,form</field>
+            <field name="search_view_id" ref="view_mantenimiento_tecnico_ausencia_search"/>
+            <field name="context">{'search_default_filter_hoy': 1}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Registra permisos, vacaciones, enfermedad o faltas
+                </p>
+                <p>
+                    Las ausencias aprobadas bloquearán automáticamente la disponibilidad del técnico.
+                </p>
+            </field>
+        </record>
+
+    </data>
+</odoo>
