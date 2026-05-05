@@ -1,13 +1,69 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <odoo>
 
+    <!-- ════════════════════════════════════════════════════════════════
+         Vista modal para ver foto de evidencia
+         ════════════════════════════════════════════════════════════════ -->
+    <record id="view_ticket_evidencia_foto_form_modal" model="ir.ui.view">
+        <field name="name">ticket.evidencia.foto.form.modal</field>
+        <field name="model">ticket.evidencia.foto</field>
+        <field name="arch" type="xml">
+            <form string="Foto de evidencia" create="false" edit="false" delete="false">
+                <sheet>
+
+                    <group>
+                        <group string="Datos de la evidencia">
+                            <field name="ticket_id" readonly="1"/>
+                            <field name="momento" readonly="1"/>
+                            <field name="timestamp_captura" readonly="1"/>
+                            <field name="imagen_original_filename" readonly="1"/>
+                        </group>
+
+                        <group string="Ubicación">
+                            <field name="latitud" readonly="1"/>
+                            <field name="longitud" readonly="1"/>
+                            <field name="precision_gps" readonly="1"/>
+                            <field name="tiene_coordenadas" readonly="1"/>
+                        </group>
+                    </group>
+
+                    <separator string="Imagen"/>
+
+                    <div style="text-align:center; background:#f8fafc; padding:12px; border-radius:8px;">
+                        <field name="imagen_original"
+                               widget="image"
+                               readonly="1"
+                               nolabel="1"
+                               options="{'size': [1400, 1000]}"/>
+                    </div>
+
+                    <separator string="Información técnica"/>
+
+                    <group>
+                        <field name="user_agent" readonly="1"/>
+                        <field name="ip_origen" readonly="1"/>
+                    </group>
+
+                </sheet>
+
+                <footer>
+                    <button string="Cerrar" special="cancel" class="btn-secondary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+
+    <!-- ════════════════════════════════════════════════════════════════
+         Herencia del formulario de ticket.alquiler
+         Agrega pestaña Evidencia fotográfica
+         ════════════════════════════════════════════════════════════════ -->
     <record id="view_ticket_alquiler_form_evidencia" model="ir.ui.view">
         <field name="name">ticket.alquiler.form.evidencia</field>
         <field name="model">ticket.alquiler</field>
         <field name="inherit_id" ref="sat.soporte_form_viw"/>
         <field name="arch" type="xml">
 
-            <!-- Agregar pestaña al final del notebook -->
             <xpath expr="//notebook" position="inside">
                 <page string="📸 Evidencia fotográfica" name="evidencia">
 
@@ -37,6 +93,7 @@
                         </group>
                     </group>
 
+
                     <!-- ════════════════════════════════════════════════
                          FOTOS ANTES
                          ════════════════════════════════════════════════ -->
@@ -54,23 +111,21 @@
                             <field name="timestamp_captura"/>
                             <field name="latitud"/>
                             <field name="longitud"/>
+                            <field name="precision_gps"/>
                             <field name="tiene_coordenadas"/>
 
                             <templates>
                                 <t t-name="kanban-box">
-                                    <div class="o_evidencia_card"
-                                         style="padding:8px; border:1px solid #d8dee4; border-radius:6px; background:white;">
+                                    <div style="padding:8px; border:1px solid #d8dee4; border-radius:6px; background:white;">
 
-                                        <a t-att-href="'/web/image/ticket.evidencia.foto/%s/imagen_original' % record.id.raw_value"
-                                           target="_blank"
-                                           title="Abrir foto"
-                                           onclick="event.stopPropagation();"
-                                           style="display:block; cursor:zoom-in; text-decoration:none;">
-
+                                        <button name="action_ver_foto"
+                                                type="object"
+                                                class="btn btn-link p-0"
+                                                style="display:block; width:100%; border:0; background:transparent; padding:0; cursor:zoom-in;">
                                             <img t-att-src="kanban_image('ticket.evidencia.foto', 'imagen_original', record.id.raw_value)"
                                                  alt="Foto evidencia antes"
                                                  style="width:100%; height:140px; object-fit:cover; border-radius:6px; border:1px solid #e5e7eb;"/>
-                                        </a>
+                                        </button>
 
                                         <div style="margin-top:6px; font-size:12px; color:#718096;">
                                             <field name="timestamp_captura"/>
@@ -82,12 +137,12 @@
                                         </div>
 
                                         <div style="margin-top:6px;">
-                                            <a t-att-href="'/web/image/ticket.evidencia.foto/%s/imagen_original' % record.id.raw_value"
-                                               target="_blank"
-                                               onclick="event.stopPropagation();"
-                                               style="font-size:12px; color:#2563eb; text-decoration:none;">
-                                                🔍 Ver foto grande
-                                            </a>
+                                            <button name="action_ver_foto"
+                                                    type="object"
+                                                    class="btn btn-sm btn-secondary"
+                                                    style="font-size:12px;">
+                                                🔍 Ver foto
+                                            </button>
                                         </div>
 
                                     </div>
@@ -95,6 +150,7 @@
                             </templates>
                         </kanban>
                     </field>
+
 
                     <!-- ════════════════════════════════════════════════
                          FOTOS DESPUÉS
@@ -113,23 +169,21 @@
                             <field name="timestamp_captura"/>
                             <field name="latitud"/>
                             <field name="longitud"/>
+                            <field name="precision_gps"/>
                             <field name="tiene_coordenadas"/>
 
                             <templates>
                                 <t t-name="kanban-box">
-                                    <div class="o_evidencia_card"
-                                         style="padding:8px; border:1px solid #d8dee4; border-radius:6px; background:white;">
+                                    <div style="padding:8px; border:1px solid #d8dee4; border-radius:6px; background:white;">
 
-                                        <a t-att-href="'/web/image/ticket.evidencia.foto/%s/imagen_original' % record.id.raw_value"
-                                           target="_blank"
-                                           title="Abrir foto"
-                                           onclick="event.stopPropagation();"
-                                           style="display:block; cursor:zoom-in; text-decoration:none;">
-
+                                        <button name="action_ver_foto"
+                                                type="object"
+                                                class="btn btn-link p-0"
+                                                style="display:block; width:100%; border:0; background:transparent; padding:0; cursor:zoom-in;">
                                             <img t-att-src="kanban_image('ticket.evidencia.foto', 'imagen_original', record.id.raw_value)"
                                                  alt="Foto evidencia después"
                                                  style="width:100%; height:140px; object-fit:cover; border-radius:6px; border:1px solid #e5e7eb;"/>
-                                        </a>
+                                        </button>
 
                                         <div style="margin-top:6px; font-size:12px; color:#718096;">
                                             <field name="timestamp_captura"/>
@@ -141,12 +195,12 @@
                                         </div>
 
                                         <div style="margin-top:6px;">
-                                            <a t-att-href="'/web/image/ticket.evidencia.foto/%s/imagen_original' % record.id.raw_value"
-                                               target="_blank"
-                                               onclick="event.stopPropagation();"
-                                               style="font-size:12px; color:#2563eb; text-decoration:none;">
-                                                🔍 Ver foto grande
-                                            </a>
+                                            <button name="action_ver_foto"
+                                                    type="object"
+                                                    class="btn btn-sm btn-secondary"
+                                                    style="font-size:12px;">
+                                                🔍 Ver foto
+                                            </button>
                                         </div>
 
                                     </div>

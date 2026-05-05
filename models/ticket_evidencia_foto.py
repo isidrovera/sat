@@ -97,3 +97,22 @@ class TicketEvidenciaFoto(models.Model):
             'url': url,
             'target': 'new',
         }
+
+
+    def action_ver_foto(self):
+        self.ensure_one()
+
+        view = self.env.ref('sat.view_ticket_evidencia_foto_form_modal', raise_if_not_found=False)
+
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Foto de evidencia',
+            'res_model': 'ticket.evidencia.foto',
+            'res_id': self.id,
+            'view_mode': 'form',
+            'views': [(view.id, 'form')] if view else [(False, 'form')],
+            'target': 'new',
+            'context': {
+                'form_view_initial_mode': 'readonly',
+            },
+        }
