@@ -39,78 +39,91 @@ class SoporteMensajes(models.Model):
 
     def _generar_mensaje_tecnico_consolidado(self, tickets, tecnico):
         """
-        Genera un mensaje consolidado para el técnico con todos sus tickets
+        Genera un mensaje consolidado para el técnico con todos sus tickets.
+        Incluye el link público de evidencia fotográfica por cada ticket.
         """
         cantidad = len(tickets)
         tecnico_name = tecnico.name if tecnico else 'NA'
-        
-        # Agrupar por tipo de servicio
+
         servicios_agrupados = {}
+
         for ticket in tickets:
-            tipo_servicio = dict(ticket._fields['tipo_servicio_id'].selection).get(ticket.tipo_servicio_id, 'NA')
+            tipo_servicio = dict(ticket._fields['tipo_servicio_id'].selection).get(
+                ticket.tipo_servicio_id,
+                'NA'
+            )
             if tipo_servicio not in servicios_agrupados:
                 servicios_agrupados[tipo_servicio] = []
             servicios_agrupados[tipo_servicio].append(ticket)
-        
+
         mensaje = f"Hola *{tecnico_name}*,\n\n"
-        
+
         if cantidad == 1:
             mensaje += "Se le ha asignado un Ticket de servicio:"
         else:
             mensaje += f"Se le han asignado *{cantidad} Tickets* de servicio:"
-        
+
         mensaje += "\n\n"
-        
-        # Resumen por tipo de servicio
+
         if len(servicios_agrupados) > 1:
             mensaje += "*RESUMEN POR TIPO DE SERVICIO:*\n"
             for tipo, tickets_tipo in servicios_agrupados.items():
                 mensaje += f"• {tipo}: {len(tickets_tipo)} ticket(s)\n"
             mensaje += "\n"
-        
-        # Detalles de cada ticket agrupado por cliente
+
         clientes_agrupados = {}
+
         for ticket in tickets:
             cliente_name = ticket.partner_id.name if ticket.partner_id else 'Sin cliente'
             if cliente_name not in clientes_agrupados:
                 clientes_agrupados[cliente_name] = []
             clientes_agrupados[cliente_name].append(ticket)
-        
+
         for cliente_name, tickets_cliente in clientes_agrupados.items():
             mensaje += f"*CLIENTE: {cliente_name}*\n"
-            
-            # Información común del cliente (usar primer ticket)
+
             primer_ticket = tickets_cliente[0]
+
             mensaje += f"📍 Dirección: {primer_ticket.direccion_id_r or 'NA'}\n"
             mensaje += f"📞 Contacto: {primer_ticket.contacto_id_r or 'NA'}\n"
             mensaje += f"📱 Celular: {primer_ticket.product_alquiler.celular if primer_ticket.product_alquiler else 'NA'}\n"
             mensaje += f"📅 Fecha de visita: {primer_ticket.agenda_local or 'NA'}\n"
-            
-            # ¿Hay asistencia directa?
+
             tickets_directos = [t for t in tickets_cliente if t.asistencia_id == 'si']
+
             if tickets_directos:
                 mensaje += "⚠️ *ASISTENCIA DIRECTA*\n"
-            
+
             mensaje += "\n*EQUIPOS A ATENDER:*\n"
-            
+
             for i, ticket in enumerate(tickets_cliente, 1):
-                tipo_servicio = dict(ticket._fields['tipo_servicio_id'].selection).get(ticket.tipo_servicio_id, 'NA')
+                tipo_servicio = dict(ticket._fields['tipo_servicio_id'].selection).get(
+                    ticket.tipo_servicio_id,
+                    'NA'
+                )
+
+                evidencia_url = ticket._get_evidencia_url()
+
                 mensaje += f"  {i}. *{ticket.name}* - {tipo_servicio}\n"
                 mensaje += f"     Modelo: {ticket.product_alquiler.name.name if ticket.product_alquiler and ticket.product_alquiler.name else 'NA'}\n"
                 mensaje += f"     Serie: {ticket.serie_id_r or 'NA'}\n"
                 mensaje += f"     Problema: {ticket.description or 'NA'}\n"
-                mensaje += f"     URL: {ticket.url}\n\n"
-            
+                mensaje += f"     URL Ticket: {ticket.url}\n"
+                mensaje += f"     📸 Fotos evidencia: {evidencia_url}\n\n"
+
             mensaje += "---\n\n"
-        
+
         if cantidad > 1:
             mensaje += f"*TOTAL DE TICKETS: {cantidad}*\n"
             mensaje += "Revise cada ticket en Odoo para detalles completos.\n\n"
-        
-        mensaje += "Lea atentamente todos los detalles del servicio."
-        
-        return mensaje
 
+        mensaje += (
+            "Lea atentamente todos los detalles del servicio.\n\n"
+            "*Importante:* use el link de fotos de evidencia para subir imágenes "
+            "ANTES al llegar y DESPUÉS al finalizar."
+        )
+
+        return mensaje
     def _generar_mensaje_cliente_consolidado(self, tickets, cliente, tecnico):
         """
         Genera un mensaje consolidado para el cliente con todos sus tickets
@@ -529,6 +542,8 @@ Para finalizar rápidamente un ticket, ingresa a Odoo y usa la opción "Finaliza
 
         # Mensaje para el técnico
         try:
+            evidencia_url = self._get_evidencia_url()
+
             msg_tecnico = (
                 f"Hola *{self.responsable.name if self.responsable and self.responsable.name else 'NA'}*,\n\n"
                 "Se le ha asignado un Ticket de servicio. Lea atentamente los detalles del servicio:\n\n"
@@ -541,7 +556,13 @@ Para finalizar rápidamente un ticket, ingresa a Odoo y usa la opción "Finaliza
                 f"*Fecha de visita:* {self.agenda_local if self.agenda_local else 'NA'}\n"
                 f"*Tipo de servicio:* {dict(self._fields['tipo_servicio_id'].selection).get(self.tipo_servicio_id, 'NA')}\n"
                 f"*Asistencia directa:* {dict(self._fields['asistencia_id'].selection).get(self.asistencia_id, 'NA')}\n\n"
-                f"*URL del Ticket:* {self.url}"
+                f"*URL del Ticket:* {self.url}\n"
+                f"*📸 Fotos de evidencia:* {evidencia_url}\n\n"
+                f"*Indicaciones de evidencia:*\n"
+                f"1. Abrir el link desde el celular.\n"
+                f"2. Permitir ubicación/GPS.\n"
+                f"3. Subir fotos en ANTES al llegar.\n"
+                f"4. Subir fotos en DESPUÉS al finalizar."
             )
             _logger.debug("Mensaje para técnico generado: %s", msg_tecnico)
         except Exception as e:
