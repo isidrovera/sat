@@ -102,7 +102,10 @@ class TicketEvidenciaFoto(models.Model):
     def action_ver_foto(self):
         self.ensure_one()
 
-        view = self.env.ref('sat.view_ticket_evidencia_foto_form_modal', raise_if_not_found=False)
+        view = self.env.ref(
+            'sat.view_ticket_evidencia_foto_form_modal',
+            raise_if_not_found=False
+        )
 
         return {
             'type': 'ir.actions.act_window',
@@ -115,4 +118,29 @@ class TicketEvidenciaFoto(models.Model):
             'context': {
                 'form_view_initial_mode': 'readonly',
             },
+        }
+
+
+    def action_abrir_foto_original(self):
+        self.ensure_one()
+
+        return {
+            'type': 'ir.actions.act_url',
+            'url': '/web/image/ticket.evidencia.foto/%s/imagen_original' % self.id,
+            'target': 'new',
+        }
+
+
+    def action_descargar_foto(self):
+        self.ensure_one()
+
+        filename = self.imagen_original_filename or ('evidencia_%s.jpg' % self.id)
+
+        return {
+            'type': 'ir.actions.act_url',
+            'url': '/web/content/ticket.evidencia.foto/%s/imagen_original/%s?download=true' % (
+                self.id,
+                filename,
+            ),
+            'target': 'self',
         }

@@ -2,14 +2,58 @@
 <odoo>
 
     <!-- ════════════════════════════════════════════════════════════════
-         Vista modal para ver foto de evidencia
+         VISTA MODAL: FOTO DE EVIDENCIA
+         Se abre como wizard interno de Odoo
          ════════════════════════════════════════════════════════════════ -->
     <record id="view_ticket_evidencia_foto_form_modal" model="ir.ui.view">
         <field name="name">ticket.evidencia.foto.form.modal</field>
         <field name="model">ticket.evidencia.foto</field>
         <field name="arch" type="xml">
             <form string="Foto de evidencia" create="false" edit="false" delete="false">
+
                 <sheet>
+
+                    <div style="
+                        display:flex;
+                        align-items:center;
+                        justify-content:space-between;
+                        gap:12px;
+                        padding:10px 12px;
+                        margin-bottom:12px;
+                        background:#f8fafc;
+                        border:1px solid #e5e7eb;
+                        border-radius:10px;
+                    ">
+                        <div>
+                            <h2 style="
+                                margin:0;
+                                font-size:18px;
+                                font-weight:700;
+                                color:#1f2937;
+                            ">
+                                📸 Foto de evidencia
+                            </h2>
+                            <div style="
+                                margin-top:4px;
+                                color:#6b7280;
+                                font-size:13px;
+                            ">
+                                Vista previa, ubicación y datos técnicos
+                            </div>
+                        </div>
+
+                        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                            <button name="action_abrir_foto_original"
+                                    type="object"
+                                    string="🔎 Abrir original"
+                                    class="btn-secondary"/>
+
+                            <button name="action_descargar_foto"
+                                    type="object"
+                                    string="⬇️ Descargar"
+                                    class="btn-primary"/>
+                        </div>
+                    </div>
 
                     <group>
                         <group string="Datos de la evidencia">
@@ -19,7 +63,7 @@
                             <field name="imagen_original_filename" readonly="1"/>
                         </group>
 
-                        <group string="Ubicación">
+                        <group string="Ubicación GPS">
                             <field name="latitud" readonly="1"/>
                             <field name="longitud" readonly="1"/>
                             <field name="precision_gps" readonly="1"/>
@@ -29,12 +73,45 @@
 
                     <separator string="Imagen"/>
 
-                    <div style="text-align:center; background:#f8fafc; padding:12px; border-radius:8px;">
-                        <field name="imagen_original"
-                               widget="image"
-                               readonly="1"
-                               nolabel="1"
-                               options="{'size': [1400, 1000]}"/>
+                    <div style="
+                        width:100%;
+                        text-align:center;
+                        background:#111827;
+                        padding:14px;
+                        border-radius:12px;
+                        border:1px solid #374151;
+                        max-height:72vh;
+                        overflow:auto;
+                    ">
+                        <div style="
+                            display:inline-block;
+                            max-width:100%;
+                            background:#ffffff;
+                            padding:8px;
+                            border-radius:10px;
+                            box-shadow:0 10px 28px rgba(0,0,0,0.30);
+                        ">
+                            <field name="imagen_original"
+                                   widget="image"
+                                   readonly="1"
+                                   nolabel="1"
+                                   class="o_evidencia_modal_image"
+                                   options="{'size': [1200, 0]}"/>
+                        </div>
+                    </div>
+
+                    <div style="
+                        margin-top:12px;
+                        padding:10px 12px;
+                        background:#f9fafb;
+                        border:1px solid #e5e7eb;
+                        border-radius:10px;
+                        color:#6b7280;
+                        font-size:13px;
+                    ">
+                        💡 Si la imagen se ve reducida dentro del modal, usa
+                        <strong>“Abrir original”</strong> para verla en tamaño completo
+                        o <strong>“Descargar”</strong> para guardarla.
                     </div>
 
                     <separator string="Información técnica"/>
@@ -47,7 +124,19 @@
                 </sheet>
 
                 <footer>
-                    <button string="Cerrar" special="cancel" class="btn-secondary"/>
+                    <button name="action_abrir_foto_original"
+                            type="object"
+                            string="🔎 Abrir original"
+                            class="btn-secondary"/>
+
+                    <button name="action_descargar_foto"
+                            type="object"
+                            string="⬇️ Descargar"
+                            class="btn-primary"/>
+
+                    <button string="Cerrar"
+                            special="cancel"
+                            class="btn-secondary"/>
                 </footer>
             </form>
         </field>
@@ -55,8 +144,8 @@
 
 
     <!-- ════════════════════════════════════════════════════════════════
-         Herencia del formulario de ticket.alquiler
-         Agrega pestaña Evidencia fotográfica
+         HERENCIA FORMULARIO TICKET.ALQUILER
+         Agrega pestaña Evidencia Fotográfica
          ════════════════════════════════════════════════════════════════ -->
     <record id="view_ticket_alquiler_form_evidencia" model="ir.ui.view">
         <field name="name">ticket.alquiler.form.evidencia</field>
@@ -67,6 +156,9 @@
             <xpath expr="//notebook" position="inside">
                 <page string="📸 Evidencia fotográfica" name="evidencia">
 
+                    <!-- ════════════════════════════════════════════════
+                         ACCIONES / RESUMEN
+                         ════════════════════════════════════════════════ -->
                     <group>
                         <group string="Acciones">
                             <button name="action_abrir_link_evidencia"
@@ -105,7 +197,12 @@
                            mode="kanban"
                            nolabel="1">
 
-                        <kanban records_draggable="0" create="1" edit="0" delete="0">
+                        <kanban records_draggable="0"
+                                create="1"
+                                edit="0"
+                                delete="0"
+                                class="o_evidencia_kanban">
+
                             <field name="id"/>
                             <field name="imagen_original"/>
                             <field name="timestamp_captura"/>
@@ -116,33 +213,130 @@
 
                             <templates>
                                 <t t-name="kanban-box">
-                                    <div style="padding:8px; border:1px solid #d8dee4; border-radius:6px; background:white;">
+                                    <div style="
+                                        padding:10px;
+                                        border:1px solid #d8dee4;
+                                        border-radius:10px;
+                                        background:#ffffff;
+                                        box-shadow:0 2px 8px rgba(15,23,42,0.06);
+                                    ">
 
                                         <button name="action_ver_foto"
                                                 type="object"
                                                 class="btn btn-link p-0"
-                                                style="display:block; width:100%; border:0; background:transparent; padding:0; cursor:zoom-in;">
-                                            <img t-att-src="kanban_image('ticket.evidencia.foto', 'imagen_original', record.id.raw_value)"
-                                                 alt="Foto evidencia antes"
-                                                 style="width:100%; height:140px; object-fit:cover; border-radius:6px; border:1px solid #e5e7eb;"/>
+                                                title="Ver foto"
+                                                style="
+                                                    display:block;
+                                                    width:100%;
+                                                    border:0;
+                                                    background:transparent;
+                                                    padding:0;
+                                                    cursor:zoom-in;
+                                                    text-align:left;
+                                                ">
+                                            <div style="
+                                                position:relative;
+                                                width:100%;
+                                                height:150px;
+                                                overflow:hidden;
+                                                border-radius:8px;
+                                                background:#f1f5f9;
+                                                border:1px solid #e5e7eb;
+                                            ">
+                                                <img t-att-src="kanban_image('ticket.evidencia.foto', 'imagen_original', record.id.raw_value)"
+                                                     alt="Foto evidencia antes"
+                                                     style="
+                                                        width:100%;
+                                                        height:100%;
+                                                        object-fit:cover;
+                                                        display:block;
+                                                     "/>
+
+                                                <div style="
+                                                    position:absolute;
+                                                    left:8px;
+                                                    top:8px;
+                                                    padding:3px 8px;
+                                                    border-radius:999px;
+                                                    background:rgba(22,163,74,0.92);
+                                                    color:white;
+                                                    font-size:11px;
+                                                    font-weight:700;
+                                                ">
+                                                    ANTES
+                                                </div>
+
+                                                <div style="
+                                                    position:absolute;
+                                                    right:8px;
+                                                    bottom:8px;
+                                                    padding:4px 8px;
+                                                    border-radius:999px;
+                                                    background:rgba(0,0,0,0.62);
+                                                    color:white;
+                                                    font-size:11px;
+                                                ">
+                                                    🔍 Ver
+                                                </div>
+                                            </div>
                                         </button>
 
-                                        <div style="margin-top:6px; font-size:12px; color:#718096;">
-                                            <field name="timestamp_captura"/>
+                                        <div style="
+                                            margin-top:8px;
+                                            padding:7px 8px;
+                                            background:#f8fafc;
+                                            border-radius:7px;
+                                            border:1px solid #eef2f7;
+                                        ">
+                                            <div style="
+                                                font-size:12px;
+                                                color:#475569;
+                                                font-weight:600;
+                                                margin-bottom:4px;
+                                            ">
+                                                🕒 <field name="timestamp_captura"/>
+                                            </div>
+
+                                            <div style="
+                                                font-size:11px;
+                                                color:#64748b;
+                                                line-height:1.35;
+                                            " t-if="record.tiene_coordenadas.raw_value">
+                                                📍 <field name="latitud"/>, <field name="longitud"/>
+                                            </div>
+
+                                            <div style="
+                                                font-size:11px;
+                                                color:#94a3b8;
+                                                margin-top:3px;
+                                            " t-if="record.precision_gps.raw_value">
+                                                🎯 Precisión: <field name="precision_gps"/> m
+                                            </div>
                                         </div>
 
-                                        <div style="font-size:11px; color:#a0aec0;"
-                                             t-if="record.tiene_coordenadas.raw_value">
-                                            📍 <field name="latitud"/>, <field name="longitud"/>
-                                        </div>
-
-                                        <div style="margin-top:6px;">
+                                        <div style="
+                                            display:flex;
+                                            gap:6px;
+                                            margin-top:8px;
+                                            flex-wrap:wrap;
+                                        ">
                                             <button name="action_ver_foto"
                                                     type="object"
+                                                    string="🔍 Ver foto"
                                                     class="btn btn-sm btn-secondary"
-                                                    style="font-size:12px;">
-                                                🔍 Ver foto
-                                            </button>
+                                                    style="font-size:12px;"/>
+
+                                            <button name="action_abrir_foto_original"
+                                                    type="object"
+                                                    string="🖼️ Original"
+                                                    class="btn btn-sm btn-secondary"
+                                                    style="font-size:12px;"/>
+
+                                            <button name="action_descargar_foto"
+                                                    type="object"
+                                                    string="⬇️ Descargar"
+                                                    class="btn btn-sm btn-primary"
+                                                    style="font-size:12px;"/>
                                         </div>
 
                                     </div>
@@ -163,7 +357,12 @@
                            mode="kanban"
                            nolabel="1">
 
-                        <kanban records_draggable="0" create="1" edit="0" delete="0">
+                        <kanban records_draggable="0"
+                                create="1"
+                                edit="0"
+                                delete="0"
+                                class="o_evidencia_kanban">
+
                             <field name="id"/>
                             <field name="imagen_original"/>
                             <field name="timestamp_captura"/>
@@ -174,33 +373,130 @@
 
                             <templates>
                                 <t t-name="kanban-box">
-                                    <div style="padding:8px; border:1px solid #d8dee4; border-radius:6px; background:white;">
+                                    <div style="
+                                        padding:10px;
+                                        border:1px solid #d8dee4;
+                                        border-radius:10px;
+                                        background:#ffffff;
+                                        box-shadow:0 2px 8px rgba(15,23,42,0.06);
+                                    ">
 
                                         <button name="action_ver_foto"
                                                 type="object"
                                                 class="btn btn-link p-0"
-                                                style="display:block; width:100%; border:0; background:transparent; padding:0; cursor:zoom-in;">
-                                            <img t-att-src="kanban_image('ticket.evidencia.foto', 'imagen_original', record.id.raw_value)"
-                                                 alt="Foto evidencia después"
-                                                 style="width:100%; height:140px; object-fit:cover; border-radius:6px; border:1px solid #e5e7eb;"/>
+                                                title="Ver foto"
+                                                style="
+                                                    display:block;
+                                                    width:100%;
+                                                    border:0;
+                                                    background:transparent;
+                                                    padding:0;
+                                                    cursor:zoom-in;
+                                                    text-align:left;
+                                                ">
+                                            <div style="
+                                                position:relative;
+                                                width:100%;
+                                                height:150px;
+                                                overflow:hidden;
+                                                border-radius:8px;
+                                                background:#f1f5f9;
+                                                border:1px solid #e5e7eb;
+                                            ">
+                                                <img t-att-src="kanban_image('ticket.evidencia.foto', 'imagen_original', record.id.raw_value)"
+                                                     alt="Foto evidencia después"
+                                                     style="
+                                                        width:100%;
+                                                        height:100%;
+                                                        object-fit:cover;
+                                                        display:block;
+                                                     "/>
+
+                                                <div style="
+                                                    position:absolute;
+                                                    left:8px;
+                                                    top:8px;
+                                                    padding:3px 8px;
+                                                    border-radius:999px;
+                                                    background:rgba(37,99,235,0.92);
+                                                    color:white;
+                                                    font-size:11px;
+                                                    font-weight:700;
+                                                ">
+                                                    DESPUÉS
+                                                </div>
+
+                                                <div style="
+                                                    position:absolute;
+                                                    right:8px;
+                                                    bottom:8px;
+                                                    padding:4px 8px;
+                                                    border-radius:999px;
+                                                    background:rgba(0,0,0,0.62);
+                                                    color:white;
+                                                    font-size:11px;
+                                                ">
+                                                    🔍 Ver
+                                                </div>
+                                            </div>
                                         </button>
 
-                                        <div style="margin-top:6px; font-size:12px; color:#718096;">
-                                            <field name="timestamp_captura"/>
+                                        <div style="
+                                            margin-top:8px;
+                                            padding:7px 8px;
+                                            background:#f8fafc;
+                                            border-radius:7px;
+                                            border:1px solid #eef2f7;
+                                        ">
+                                            <div style="
+                                                font-size:12px;
+                                                color:#475569;
+                                                font-weight:600;
+                                                margin-bottom:4px;
+                                            ">
+                                                🕒 <field name="timestamp_captura"/>
+                                            </div>
+
+                                            <div style="
+                                                font-size:11px;
+                                                color:#64748b;
+                                                line-height:1.35;
+                                            " t-if="record.tiene_coordenadas.raw_value">
+                                                📍 <field name="latitud"/>, <field name="longitud"/>
+                                            </div>
+
+                                            <div style="
+                                                font-size:11px;
+                                                color:#94a3b8;
+                                                margin-top:3px;
+                                            " t-if="record.precision_gps.raw_value">
+                                                🎯 Precisión: <field name="precision_gps"/> m
+                                            </div>
                                         </div>
 
-                                        <div style="font-size:11px; color:#a0aec0;"
-                                             t-if="record.tiene_coordenadas.raw_value">
-                                            📍 <field name="latitud"/>, <field name="longitud"/>
-                                        </div>
-
-                                        <div style="margin-top:6px;">
+                                        <div style="
+                                            display:flex;
+                                            gap:6px;
+                                            margin-top:8px;
+                                            flex-wrap:wrap;
+                                        ">
                                             <button name="action_ver_foto"
                                                     type="object"
+                                                    string="🔍 Ver foto"
                                                     class="btn btn-sm btn-secondary"
-                                                    style="font-size:12px;">
-                                                🔍 Ver foto
-                                            </button>
+                                                    style="font-size:12px;"/>
+
+                                            <button name="action_abrir_foto_original"
+                                                    type="object"
+                                                    string="🖼️ Original"
+                                                    class="btn btn-sm btn-secondary"
+                                                    style="font-size:12px;"/>
+
+                                            <button name="action_descargar_foto"
+                                                    type="object"
+                                                    string="⬇️ Descargar"
+                                                    class="btn btn-sm btn-primary"
+                                                    style="font-size:12px;"/>
                                         </div>
 
                                     </div>
