@@ -5,384 +5,379 @@
          Página principal de subida de evidencia
          ════════════════════════════════════════════════════════════════ -->
     <template id="evidencia_page_template" name="Subir Evidencia Fotográfica">
-        <!DOCTYPE html>
         <html lang="es">
-        <head>
-            <meta charset="UTF-8"/>
-            <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-            <title>Evidencia Ticket <t t-out="ticket.name"/></title>
-            <style>
-                * { box-sizing: border-box; margin: 0; padding: 0; }
-                body {
-                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
-                    background: #f5f5f5;
-                    color: #2d3748;
-                    padding: 12px;
-                    -webkit-font-smoothing: antialiased;
-                }
-                .container { max-width: 500px; margin: 0 auto; }
-                .header {
-                    background: #38a169;
-                    color: white;
-                    padding: 16px;
-                    border-radius: 8px 8px 0 0;
-                    text-align: center;
-                }
-                .header h1 { font-size: 18px; margin-bottom: 4px; }
-                .header .subtitle { font-size: 13px; opacity: 0.9; }
-                .ticket-info {
-                    background: white;
-                    padding: 14px 16px;
-                    border-left: 1px solid #e2e8f0;
-                    border-right: 1px solid #e2e8f0;
-                }
-                .info-row {
-                    display: flex;
-                    justify-content: space-between;
-                    padding: 4px 0;
-                    font-size: 13px;
-                }
-                .info-row .label { color: #718096; }
-                .info-row .value { font-weight: 600; text-align: right; max-width: 60%; }
-                .toggle-momento {
-                    display: flex;
-                    background: white;
-                    border-left: 1px solid #e2e8f0;
-                    border-right: 1px solid #e2e8f0;
-                    border-top: 1px solid #e2e8f0;
-                    margin-top: 8px;
-                }
-                .toggle-momento button {
-                    flex: 1;
-                    padding: 14px;
-                    border: none;
-                    background: white;
-                    font-size: 14px;
-                    font-weight: 600;
-                    cursor: pointer;
-                    color: #718096;
-                    transition: all 0.2s;
-                }
-                .toggle-momento button.active {
-                    background: #38a169;
-                    color: white;
-                }
-                .upload-section {
-                    background: white;
-                    padding: 20px 16px;
-                    border-left: 1px solid #e2e8f0;
-                    border-right: 1px solid #e2e8f0;
-                    border-bottom: 1px solid #e2e8f0;
-                    border-radius: 0 0 8px 8px;
-                }
-                .gps-status {
-                    padding: 10px 14px;
-                    background: #fff5e6;
-                    border-radius: 6px;
-                    margin-bottom: 14px;
-                    font-size: 13px;
-                    text-align: center;
-                }
-                .gps-status.ok { background: #f0fff4; color: #22543d; }
-                .gps-status.error { background: #fff5f5; color: #742a2a; }
-                .btn-tomar-foto {
-                    display: block;
-                    width: 100%;
-                    background: #38a169;
-                    color: white;
-                    padding: 16px;
-                    border: none;
-                    border-radius: 8px;
-                    font-size: 16px;
-                    font-weight: 600;
-                    cursor: pointer;
-                    margin-bottom: 10px;
-                }
-                .btn-tomar-foto:disabled { background: #a0aec0; cursor: not-allowed; }
-                .btn-tomar-foto:active { transform: scale(0.98); }
-                .hidden-input { display: none; }
-                .galeria {
-                    margin-top: 20px;
-                    background: white;
-                    padding: 16px;
-                    border: 1px solid #e2e8f0;
-                    border-radius: 8px;
-                }
-                .galeria h3 {
-                    font-size: 14px;
-                    color: #718096;
-                    margin-bottom: 10px;
-                }
-                .grid-fotos {
-                    display: grid;
-                    grid-template-columns: repeat(3, 1fr);
-                    gap: 6px;
-                }
-                .grid-fotos img {
-                    width: 100%;
-                    aspect-ratio: 1;
-                    object-fit: cover;
-                    border-radius: 4px;
-                    border: 1px solid #e2e8f0;
-                }
-                .toast {
-                    position: fixed;
-                    bottom: 20px;
-                    left: 50%;
-                    transform: translateX(-50%);
-                    padding: 12px 20px;
-                    border-radius: 6px;
-                    color: white;
-                    font-size: 14px;
-                    z-index: 1000;
-                    opacity: 0;
-                    transition: opacity 0.3s;
-                    max-width: 90%;
-                    text-align: center;
-                }
-                .toast.show { opacity: 1; }
-                .toast.ok { background: #38a169; }
-                .toast.error { background: #e53e3e; }
-                .progress-overlay {
-                    position: fixed;
-                    inset: 0;
-                    background: rgba(0,0,0,0.5);
-                    display: none;
-                    align-items: center;
-                    justify-content: center;
-                    z-index: 999;
-                }
-                .progress-overlay.show { display: flex; }
-                .progress-box {
-                    background: white;
-                    padding: 24px 32px;
-                    border-radius: 8px;
-                    text-align: center;
-                    font-size: 14px;
-                }
-                .spinner {
-                    border: 3px solid #e2e8f0;
-                    border-top-color: #38a169;
-                    border-radius: 50%;
-                    width: 30px;
-                    height: 30px;
-                    animation: spin 0.8s linear infinite;
-                    margin: 0 auto 10px;
-                }
-                @keyframes spin { to { transform: rotate(360deg); } }
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="header">
-                    <h1>📸 Evidencia Fotográfica</h1>
-                    <div class="subtitle">Ticket <t t-out="ticket.name"/></div>
-                </div>
-
-                <div class="ticket-info">
-                    <div class="info-row">
-                        <span class="label">Cliente</span>
-                        <span class="value"><t t-out="ticket.partner_id.name or 'N/A'"/></span>
-                    </div>
-                    <div class="info-row">
-                        <span class="label">Equipo</span>
-                        <span class="value"><t t-out="ticket.modelo_id_r or 'N/A'"/></span>
-                    </div>
-                    <div class="info-row">
-                        <span class="label">Serie</span>
-                        <span class="value"><t t-out="ticket.serie_id_r or 'N/A'"/></span>
-                    </div>
-                    <div class="info-row">
-                        <span class="label">Técnico</span>
-                        <span class="value"><t t-out="ticket.responsable.name or 'N/A'"/></span>
-                    </div>
-                </div>
-
-                <div class="toggle-momento">
-                    <button id="btn-antes" class="active" data-momento="antes">
-                        📷 Antes (<span id="count-antes" t-out="len(fotos_antes)"/>)
-                    </button>
-                    <button id="btn-despues" data-momento="despues">
-                        ✅ Después (<span id="count-despues" t-out="len(fotos_despues)"/>)
-                    </button>
-                </div>
-
-                <div class="upload-section">
-                    <div id="gps-status" class="gps-status">
-                        ⏳ Solicitando ubicación GPS...
-                    </div>
-                    <button id="btn-tomar" class="btn-tomar-foto" disabled="disabled">
-                        📸 Tomar / Subir foto
-                    </button>
-                    <input type="file" id="input-foto" class="hidden-input"
-                           accept="image/*" capture="environment"/>
-                </div>
-
-                <div class="galeria">
-                    <h3 id="galeria-titulo">Fotos subidas</h3>
-                    <div id="grid-fotos" class="grid-fotos">
-                        <t t-foreach="fotos_antes" t-as="foto">
-                            <img t-att-src="'/web/image/ticket.evidencia.foto/%s/imagen_original' % foto.id"
-                                 t-att-data-momento="'antes'"/>
-                        </t>
-                        <t t-foreach="fotos_despues" t-as="foto">
-                            <img t-att-src="'/web/image/ticket.evidencia.foto/%s/imagen_original' % foto.id"
-                                 t-att-data-momento="'despues'" style="display:none"/>
-                        </t>
-                    </div>
-                </div>
-            </div>
-
-            <div id="progress" class="progress-overlay">
-                <div class="progress-box">
-                    <div class="spinner"></div>
-                    <div>Subiendo foto...</div>
-                </div>
-            </div>
-
-            <div id="toast" class="toast"></div>
-
-            <script type="text/javascript">
-                (function() {
-                    var TOKEN = "<t t-out='token'/>";
-                    var coords = null;
-                    var precision = null;
-                    var momento = 'antes';
-
-                    var statusEl = document.getElementById('gps-status');
-                    var btnTomar = document.getElementById('btn-tomar');
-                    var inputFoto = document.getElementById('input-foto');
-                    var btnAntes = document.getElementById('btn-antes');
-                    var btnDespues = document.getElementById('btn-despues');
-                    var progressEl = document.getElementById('progress');
-                    var toastEl = document.getElementById('toast');
-                    var galeriaTitulo = document.getElementById('galeria-titulo');
-                    var gridFotos = document.getElementById('grid-fotos');
-
-                    function showToast(msg, tipo) {
-                        toastEl.textContent = msg;
-                        toastEl.className = 'toast show ' + (tipo || 'ok');
-                        setTimeout(function() {
-                            toastEl.className = 'toast';
-                        }, 3000);
+            <head>
+                <meta charset="UTF-8"/>
+                <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+                <title>Evidencia Ticket <t t-out="ticket.name"/></title>
+                <style>
+                    * { box-sizing: border-box; margin: 0; padding: 0; }
+                    body {
+                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+                        background: #f5f5f5;
+                        color: #2d3748;
+                        padding: 12px;
+                        -webkit-font-smoothing: antialiased;
                     }
+                    .container { max-width: 500px; margin: 0 auto; }
+                    .header {
+                        background: #38a169;
+                        color: white;
+                        padding: 16px;
+                        border-radius: 8px 8px 0 0;
+                        text-align: center;
+                    }
+                    .header h1 { font-size: 18px; margin-bottom: 4px; }
+                    .header .subtitle { font-size: 13px; opacity: 0.9; }
+                    .ticket-info {
+                        background: white;
+                        padding: 14px 16px;
+                        border-left: 1px solid #e2e8f0;
+                        border-right: 1px solid #e2e8f0;
+                    }
+                    .info-row {
+                        display: flex;
+                        justify-content: space-between;
+                        padding: 4px 0;
+                        font-size: 13px;
+                    }
+                    .info-row .label { color: #718096; }
+                    .info-row .value { font-weight: 600; text-align: right; max-width: 60%; }
+                    .toggle-momento {
+                        display: flex;
+                        background: white;
+                        border-left: 1px solid #e2e8f0;
+                        border-right: 1px solid #e2e8f0;
+                        border-top: 1px solid #e2e8f0;
+                        margin-top: 8px;
+                    }
+                    .toggle-momento button {
+                        flex: 1;
+                        padding: 14px;
+                        border: none;
+                        background: white;
+                        font-size: 14px;
+                        font-weight: 600;
+                        cursor: pointer;
+                        color: #718096;
+                        transition: all 0.2s;
+                    }
+                    .toggle-momento button.active {
+                        background: #38a169;
+                        color: white;
+                    }
+                    .upload-section {
+                        background: white;
+                        padding: 20px 16px;
+                        border-left: 1px solid #e2e8f0;
+                        border-right: 1px solid #e2e8f0;
+                        border-bottom: 1px solid #e2e8f0;
+                        border-radius: 0 0 8px 8px;
+                    }
+                    .gps-status {
+                        padding: 10px 14px;
+                        background: #fff5e6;
+                        border-radius: 6px;
+                        margin-bottom: 14px;
+                        font-size: 13px;
+                        text-align: center;
+                    }
+                    .gps-status.ok { background: #f0fff4; color: #22543d; }
+                    .gps-status.error { background: #fff5f5; color: #742a2a; }
+                    .btn-tomar-foto {
+                        display: block;
+                        width: 100%;
+                        background: #38a169;
+                        color: white;
+                        padding: 16px;
+                        border: none;
+                        border-radius: 8px;
+                        font-size: 16px;
+                        font-weight: 600;
+                        cursor: pointer;
+                        margin-bottom: 10px;
+                    }
+                    .btn-tomar-foto:disabled { background: #a0aec0; cursor: not-allowed; }
+                    .btn-tomar-foto:active { transform: scale(0.98); }
+                    .hidden-input { display: none; }
+                    .galeria {
+                        margin-top: 20px;
+                        background: white;
+                        padding: 16px;
+                        border: 1px solid #e2e8f0;
+                        border-radius: 8px;
+                    }
+                    .galeria h3 {
+                        font-size: 14px;
+                        color: #718096;
+                        margin-bottom: 10px;
+                    }
+                    .grid-fotos {
+                        display: grid;
+                        grid-template-columns: repeat(3, 1fr);
+                        gap: 6px;
+                    }
+                    .grid-fotos img {
+                        width: 100%;
+                        aspect-ratio: 1;
+                        object-fit: cover;
+                        border-radius: 4px;
+                        border: 1px solid #e2e8f0;
+                    }
+                    .toast {
+                        position: fixed;
+                        bottom: 20px;
+                        left: 50%;
+                        transform: translateX(-50%);
+                        padding: 12px 20px;
+                        border-radius: 6px;
+                        color: white;
+                        font-size: 14px;
+                        z-index: 1000;
+                        opacity: 0;
+                        transition: opacity 0.3s;
+                        max-width: 90%;
+                        text-align: center;
+                    }
+                    .toast.show { opacity: 1; }
+                    .toast.ok { background: #38a169; }
+                    .toast.error { background: #e53e3e; }
+                    .progress-overlay {
+                        position: fixed;
+                        inset: 0;
+                        background: rgba(0,0,0,0.5);
+                        display: none;
+                        align-items: center;
+                        justify-content: center;
+                        z-index: 999;
+                    }
+                    .progress-overlay.show { display: flex; }
+                    .progress-box {
+                        background: white;
+                        padding: 24px 32px;
+                        border-radius: 8px;
+                        text-align: center;
+                        font-size: 14px;
+                    }
+                    .spinner {
+                        border: 3px solid #e2e8f0;
+                        border-top-color: #38a169;
+                        border-radius: 50%;
+                        width: 30px;
+                        height: 30px;
+                        animation: spin 0.8s linear infinite;
+                        margin: 0 auto 10px;
+                    }
+                    @keyframes spin { to { transform: rotate(360deg); } }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1>📸 Evidencia Fotográfica</h1>
+                        <div class="subtitle">Ticket <t t-out="ticket.name"/></div>
+                    </div>
 
-                    function pedirGPS() {
-                        if (!navigator.geolocation) {
-                            statusEl.className = 'gps-status error';
-                            statusEl.textContent = '❌ Tu navegador no soporta GPS';
-                            return;
+                    <div class="ticket-info">
+                        <div class="info-row">
+                            <span class="label">Cliente</span>
+                            <span class="value"><t t-out="ticket.partner_id.name or 'N/A'"/></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Equipo</span>
+                            <span class="value"><t t-out="ticket.modelo_id_r or 'N/A'"/></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Serie</span>
+                            <span class="value"><t t-out="ticket.serie_id_r or 'N/A'"/></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Técnico</span>
+                            <span class="value"><t t-out="ticket.responsable.name or 'N/A'"/></span>
+                        </div>
+                    </div>
+
+                    <div class="toggle-momento">
+                        <button id="btn-antes" class="active" data-momento="antes">
+                            📷 Antes (<span id="count-antes" t-out="len(fotos_antes)"/>)
+                        </button>
+                        <button id="btn-despues" data-momento="despues">
+                            ✅ Después (<span id="count-despues" t-out="len(fotos_despues)"/>)
+                        </button>
+                    </div>
+
+                    <div class="upload-section">
+                        <div id="gps-status" class="gps-status">
+                            ⏳ Solicitando ubicación GPS...
+                        </div>
+                        <button id="btn-tomar" class="btn-tomar-foto" disabled="disabled">
+                            📸 Tomar / Subir foto
+                        </button>
+                        <input type="file" id="input-foto" class="hidden-input"
+                               accept="image/*" capture="environment"/>
+                    </div>
+
+                    <div class="galeria">
+                        <h3 id="galeria-titulo">Fotos subidas</h3>
+                        <div id="grid-fotos" class="grid-fotos">
+                            <t t-foreach="fotos_antes" t-as="foto">
+                                <img t-att-src="'/web/image/ticket.evidencia.foto/%s/imagen_original' % foto.id"
+                                     data-momento="antes"/>
+                            </t>
+                            <t t-foreach="fotos_despues" t-as="foto">
+                                <img t-att-src="'/web/image/ticket.evidencia.foto/%s/imagen_original' % foto.id"
+                                     data-momento="despues" style="display:none"/>
+                            </t>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="progress" class="progress-overlay">
+                    <div class="progress-box">
+                        <div class="spinner"></div>
+                        <div>Subiendo foto...</div>
+                    </div>
+                </div>
+
+                <div id="toast" class="toast"></div>
+
+                <script type="text/javascript">
+                    (function() {
+                        var TOKEN = "<t t-out='token'/>";
+                        var coords = null;
+                        var precision = null;
+                        var momento = 'antes';
+
+                        var statusEl = document.getElementById('gps-status');
+                        var btnTomar = document.getElementById('btn-tomar');
+                        var inputFoto = document.getElementById('input-foto');
+                        var btnAntes = document.getElementById('btn-antes');
+                        var btnDespues = document.getElementById('btn-despues');
+                        var progressEl = document.getElementById('progress');
+                        var toastEl = document.getElementById('toast');
+                        var galeriaTitulo = document.getElementById('galeria-titulo');
+                        var gridFotos = document.getElementById('grid-fotos');
+
+                        function showToast(msg, tipo) {
+                            toastEl.textContent = msg;
+                            toastEl.className = 'toast show ' + (tipo || 'ok');
+                            setTimeout(function() {
+                                toastEl.className = 'toast';
+                            }, 3000);
                         }
-                        navigator.geolocation.getCurrentPosition(
-                            function(pos) {
-                                coords = {
-                                    lat: pos.coords.latitude,
-                                    lng: pos.coords.longitude
-                                };
-                                precision = pos.coords.accuracy;
-                                statusEl.className = 'gps-status ok';
-                                statusEl.textContent = '✅ GPS activo (precisión: ' +
-                                    Math.round(precision) + ' m)';
-                                btnTomar.disabled = false;
-                            },
-                            function(err) {
+
+                        function pedirGPS() {
+                            if (!navigator.geolocation) {
                                 statusEl.className = 'gps-status error';
-                                statusEl.textContent = '❌ Permiso de ubicación denegado. ' +
-                                    'Activa el GPS y recarga la página.';
-                                btnTomar.disabled = true;
-                            },
-                            { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-                        );
-                    }
+                                statusEl.textContent = '❌ Tu navegador no soporta GPS';
+                                return;
+                            }
+                            navigator.geolocation.getCurrentPosition(
+                                function(pos) {
+                                    coords = {
+                                        lat: pos.coords.latitude,
+                                        lng: pos.coords.longitude
+                                    };
+                                    precision = pos.coords.accuracy;
+                                    statusEl.className = 'gps-status ok';
+                                    statusEl.textContent = '✅ GPS activo (precisión: ' +
+                                        Math.round(precision) + ' m)';
+                                    btnTomar.disabled = false;
+                                },
+                                function(err) {
+                                    statusEl.className = 'gps-status error';
+                                    statusEl.textContent = '❌ Permiso de ubicación denegado. ' +
+                                        'Activa el GPS y recarga la página.';
+                                    btnTomar.disabled = true;
+                                },
+                                { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+                            );
+                        }
 
-                    function setMomento(nuevoMomento) {
-                        momento = nuevoMomento;
-                        btnAntes.classList.toggle('active', momento === 'antes');
-                        btnDespues.classList.toggle('active', momento === 'despues');
-                        galeriaTitulo.textContent = 'Fotos ' + (momento === 'antes' ? 'antes' : 'después');
-                        // Mostrar solo las fotos del momento seleccionado
-                        var imgs = gridFotos.querySelectorAll('img');
-                        imgs.forEach(function(img) {
-                            img.style.display = img.dataset.momento === momento ? '' : 'none';
+                        function setMomento(nuevoMomento) {
+                            momento = nuevoMomento;
+                            btnAntes.classList.toggle('active', momento === 'antes');
+                            btnDespues.classList.toggle('active', momento === 'despues');
+                            galeriaTitulo.textContent = 'Fotos ' + (momento === 'antes' ? 'antes' : 'después');
+                            var imgs = gridFotos.querySelectorAll('img');
+                            imgs.forEach(function(img) {
+                                img.style.display = img.dataset.momento === momento ? '' : 'none';
+                            });
+                        }
+
+                        btnAntes.addEventListener('click', function() { setMomento('antes'); });
+                        btnDespues.addEventListener('click', function() { setMomento('despues'); });
+
+                        btnTomar.addEventListener('click', function() {
+                            if (!coords) {
+                                showToast('Esperando ubicación GPS...', 'error');
+                                return;
+                            }
+                            inputFoto.click();
                         });
-                    }
 
-                    btnAntes.addEventListener('click', function() { setMomento('antes'); });
-                    btnDespues.addEventListener('click', function() { setMomento('despues'); });
+                        inputFoto.addEventListener('change', function(e) {
+                            var file = e.target.files[0];
+                            if (!file) return;
+                            if (!coords) {
+                                showToast('Sin ubicación GPS', 'error');
+                                return;
+                            }
 
-                    btnTomar.addEventListener('click', function() {
-                        if (!coords) {
-                            showToast('Esperando ubicación GPS...', 'error');
-                            return;
-                        }
-                        inputFoto.click();
-                    });
+                            var reader = new FileReader();
+                            reader.onload = function(ev) {
+                                subirFoto(ev.target.result, file.name);
+                            };
+                            reader.onerror = function() {
+                                showToast('Error leyendo el archivo', 'error');
+                            };
+                            reader.readAsDataURL(file);
+                        });
 
-                    inputFoto.addEventListener('change', function(e) {
-                        var file = e.target.files[0];
-                        if (!file) return;
-                        if (!coords) {
-                            showToast('Sin ubicación GPS', 'error');
-                            return;
-                        }
+                        function subirFoto(base64, filename) {
+                            progressEl.classList.add('show');
 
-                        var reader = new FileReader();
-                        reader.onload = function(ev) {
-                            subirFoto(ev.target.result, file.name);
-                        };
-                        reader.onerror = function() {
-                            showToast('Error leyendo el archivo', 'error');
-                        };
-                        reader.readAsDataURL(file);
-                    });
-
-                    function subirFoto(base64, filename) {
-                        progressEl.classList.add('show');
-
-                        fetch('/evidencia/' + TOKEN + '/upload', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                jsonrpc: '2.0',
-                                method: 'call',
-                                params: {
-                                    momento: momento,
-                                    imagen_base64: base64,
-                                    latitud: coords.lat,
-                                    longitud: coords.lng,
-                                    precision: precision,
-                                    filename: filename || 'evidencia.jpg'
+                            fetch('/evidencia/' + TOKEN + '/upload', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    jsonrpc: '2.0',
+                                    method: 'call',
+                                    params: {
+                                        momento: momento,
+                                        imagen_base64: base64,
+                                        latitud: coords.lat,
+                                        longitud: coords.lng,
+                                        precision: precision,
+                                        filename: filename || 'evidencia.jpg'
+                                    }
+                                })
+                            })
+                            .then(function(r) { return r.json(); })
+                            .then(function(data) {
+                                progressEl.classList.remove('show');
+                                var result = data.result || {};
+                                if (result.success) {
+                                    showToast('✅ Foto subida correctamente', 'ok');
+                                    setTimeout(function() { location.reload(); }, 1500);
+                                } else {
+                                    showToast('❌ ' + (result.error || 'Error desconocido'), 'error');
                                 }
                             })
-                        })
-                        .then(function(r) { return r.json(); })
-                        .then(function(data) {
-                            progressEl.classList.remove('show');
-                            var result = data.result || {};
-                            if (result.success) {
-                                showToast('✅ Foto subida correctamente', 'ok');
-                                // Refrescar galería en 1.5s
-                                setTimeout(function() { location.reload(); }, 1500);
-                            } else {
-                                showToast('❌ ' + (result.error || 'Error desconocido'), 'error');
-                            }
-                        })
-                        .catch(function(err) {
-                            progressEl.classList.remove('show');
-                            showToast('❌ Error de conexión', 'error');
-                            console.error(err);
-                        });
+                            .catch(function(err) {
+                                progressEl.classList.remove('show');
+                                showToast('❌ Error de conexión', 'error');
+                                console.error(err);
+                            });
 
-                        // Reset input para permitir subir el mismo archivo otra vez
-                        inputFoto.value = '';
-                    }
+                            inputFoto.value = '';
+                        }
 
-                    // Iniciar
-                    pedirGPS();
-                    setMomento('antes');
-                })();
-            </script>
-        </body>
+                        pedirGPS();
+                        setMomento('antes');
+                    })();
+                </script>
+            </body>
         </html>
     </template>
 
@@ -390,29 +385,28 @@
          Página: Token inválido
          ════════════════════════════════════════════════════════════════ -->
     <template id="evidencia_token_invalido" name="Token Inválido">
-        <!DOCTYPE html>
         <html lang="es">
-        <head>
-            <meta charset="UTF-8"/>
-            <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-            <title>Link inválido</title>
-            <style>
-                body { font-family: Arial, sans-serif; background: #f5f5f5;
-                       display: flex; align-items: center; justify-content: center;
-                       height: 100vh; margin: 0; padding: 20px; }
-                .box { background: white; padding: 30px; border-radius: 8px;
-                       text-align: center; max-width: 400px; }
-                h1 { color: #e53e3e; font-size: 22px; margin-bottom: 12px; }
-                p { color: #4a5568; font-size: 14px; line-height: 1.6; }
-            </style>
-        </head>
-        <body>
-            <div class="box">
-                <h1>❌ Link inválido</h1>
-                <p>Este link de evidencia no existe o ha sido modificado.<br/>
-                Por favor solicita un nuevo link.</p>
-            </div>
-        </body>
+            <head>
+                <meta charset="UTF-8"/>
+                <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+                <title>Link inválido</title>
+                <style>
+                    body { font-family: Arial, sans-serif; background: #f5f5f5;
+                           display: flex; align-items: center; justify-content: center;
+                           height: 100vh; margin: 0; padding: 20px; }
+                    .box { background: white; padding: 30px; border-radius: 8px;
+                           text-align: center; max-width: 400px; }
+                    h1 { color: #e53e3e; font-size: 22px; margin-bottom: 12px; }
+                    p { color: #4a5568; font-size: 14px; line-height: 1.6; }
+                </style>
+            </head>
+            <body>
+                <div class="box">
+                    <h1>❌ Link inválido</h1>
+                    <p>Este link de evidencia no existe o ha sido modificado.<br/>
+                    Por favor solicita un nuevo link.</p>
+                </div>
+            </body>
         </html>
     </template>
 
@@ -420,34 +414,33 @@
          Página: Ticket cerrado
          ════════════════════════════════════════════════════════════════ -->
     <template id="evidencia_ticket_cerrado" name="Ticket Cerrado">
-        <!DOCTYPE html>
         <html lang="es">
-        <head>
-            <meta charset="UTF-8"/>
-            <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-            <title>Ticket finalizado</title>
-            <style>
-                body { font-family: Arial, sans-serif; background: #f5f5f5;
-                       display: flex; align-items: center; justify-content: center;
-                       height: 100vh; margin: 0; padding: 20px; }
-                .box { background: white; padding: 30px; border-radius: 8px;
-                       text-align: center; max-width: 400px; }
-                h1 { color: #d69e2e; font-size: 22px; margin-bottom: 12px; }
-                p { color: #4a5568; font-size: 14px; line-height: 1.6; }
-                .ticket { background: #f7fafc; padding: 12px; border-radius: 6px;
-                          margin-top: 14px; font-size: 13px; }
-            </style>
-        </head>
-        <body>
-            <div class="box">
-                <h1>🔒 Ticket finalizado</h1>
-                <p>Este ticket ya fue cerrado y no se aceptan más fotos de evidencia.</p>
-                <div class="ticket">
-                    Ticket: <strong t-out="ticket.name"/><br/>
-                    Cliente: <span t-out="ticket.partner_id.name or 'N/A'"/>
+            <head>
+                <meta charset="UTF-8"/>
+                <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+                <title>Ticket finalizado</title>
+                <style>
+                    body { font-family: Arial, sans-serif; background: #f5f5f5;
+                           display: flex; align-items: center; justify-content: center;
+                           height: 100vh; margin: 0; padding: 20px; }
+                    .box { background: white; padding: 30px; border-radius: 8px;
+                           text-align: center; max-width: 400px; }
+                    h1 { color: #d69e2e; font-size: 22px; margin-bottom: 12px; }
+                    p { color: #4a5568; font-size: 14px; line-height: 1.6; }
+                    .ticket { background: #f7fafc; padding: 12px; border-radius: 6px;
+                              margin-top: 14px; font-size: 13px; }
+                </style>
+            </head>
+            <body>
+                <div class="box">
+                    <h1>🔒 Ticket finalizado</h1>
+                    <p>Este ticket ya fue cerrado y no se aceptan más fotos de evidencia.</p>
+                    <div class="ticket">
+                        Ticket: <strong t-out="ticket.name"/><br/>
+                        Cliente: <span t-out="ticket.partner_id.name or 'N/A'"/>
+                    </div>
                 </div>
-            </div>
-        </body>
+            </body>
         </html>
     </template>
 
