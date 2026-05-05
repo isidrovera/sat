@@ -273,3 +273,5 @@ access_mantenimiento_planificador_user,mantenimiento.planificador user,model_man
 access_mantenimiento_planificador_manager,mantenimiento.planificador manager,model_mantenimiento_planificador,base.group_system,1,1,1,1
 access_mantenimiento_planificador_linea_user,mantenimiento.planificador.linea user,model_mantenimiento_planificador_linea,base.group_user,1,1,1,0
 access_mantenimiento_planificador_linea_manager,mantenimiento.planificador.linea manager,model_mantenimiento_planificador_linea,base.group_system,1,1,1,1
+access_ticket_evidencia_foto_user,ticket.evidencia.foto.user,model_ticket_evidencia_foto,base.group_user,1,1,1,0
+access_ticket_evidencia_foto_manager,ticket.evidencia.foto.manager,model_ticket_evidencia_foto,base.group_system,1,1,1,1
