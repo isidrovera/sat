@@ -1,10 +1,6 @@
 (function () {
     'use strict';
 
-    // ---------------------------------------------------------------------
-    // Evitar romper si la página no es la de evidencia
-    // ---------------------------------------------------------------------
-
     var app = document.getElementById('evidencia-app');
 
     if (!app) {
@@ -12,15 +8,13 @@
         return;
     }
 
-    // ---------------------------------------------------------------------
-    // Variables principales
-    // ---------------------------------------------------------------------
-
     var TOKEN = app.dataset.token || '';
 
     var coords = null;
     var precision = null;
     var momento = 'antes';
+    var direccionActual = null;
+    var direccionProvider = null;
 
     var statusEl = document.getElementById('gps-status');
     var btnTomar = document.getElementById('btn-tomar');
@@ -36,10 +30,6 @@
     var debugPanel = document.getElementById('debug-panel');
     var previewSection = document.getElementById('preview-section');
     var previewImg = document.getElementById('preview-img');
-
-    // ---------------------------------------------------------------------
-    // Logger visible + consola
-    // ---------------------------------------------------------------------
 
     function log(msg, tipo) {
         tipo = tipo || 'ok';
@@ -97,10 +87,6 @@
         }
     }
 
-    // ---------------------------------------------------------------------
-    // Validación de elementos
-    // ---------------------------------------------------------------------
-
     function validarElementos() {
         var faltantes = [];
 
@@ -121,10 +107,6 @@
         return true;
     }
 
-    // ---------------------------------------------------------------------
-    // Info inicial
-    // ---------------------------------------------------------------------
-
     log('=== Inicializando evidencia pública JS externo ===', 'info');
     log('TOKEN: ' + TOKEN, 'info');
     log('User-Agent: ' + navigator.userAgent.substring(0, 120), 'info');
@@ -140,15 +122,13 @@
         return;
     }
 
-    // ---------------------------------------------------------------------
-    // GPS
-    // ---------------------------------------------------------------------
-
     function pedirGPS() {
         log('=== Solicitando GPS ===', 'info');
 
         coords = null;
         precision = null;
+        direccionActual = null;
+        direccionProvider = null;
 
         if (!navigator.geolocation) {
             log('navigator.geolocation no disponible', 'error');
@@ -227,9 +207,70 @@
         );
     }
 
-    // ---------------------------------------------------------------------
-    // Toggle antes / después
-    // ---------------------------------------------------------------------
+    function obtenerDireccionPorGPS() {
+        return new Promise(function (resolve) {
+            direccionActual = null;
+            direccionProvider = null;
+
+            if (!coords) {
+                log('No hay coordenadas. No se consultará dirección.', 'warn');
+                resolve(null);
+                return;
+            }
+
+            log(
+                'Consultando dirección vía Odoo/Traccar | lat=' + coords.lat + ' | lng=' + coords.lng,
+                'info'
+            );
+
+            fetch('/evidencia/' + TOKEN + '/geocode', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    jsonrpc: '2.0',
+                    method: 'call',
+                    params: {
+                        lat: coords.lat,
+                        lng: coords.lng
+                    }
+                })
+            })
+                .then(function (r) {
+                    log('Respuesta HTTP geocode: ' + r.status, r.ok ? 'ok' : 'error');
+                    return r.json();
+                })
+                .then(function (data) {
+                    log('Respuesta geocode JSON: ' + JSON.stringify(data).substring(0, 500), 'info');
+
+                    var result = data.result || {};
+
+                    if (result.success && result.address) {
+                        direccionActual = result.address;
+                        direccionProvider = result.provider || 'desconocido';
+
+                        log(
+                            'Dirección obtenida OK | provider=' + direccionProvider + ' | address=' + direccionActual,
+                            'ok'
+                        );
+
+                        resolve(direccionActual);
+                    } else {
+                        log(
+                            'No se pudo obtener dirección: ' + (result.error || 'sin detalle'),
+                            'warn'
+                        );
+
+                        resolve(null);
+                    }
+                })
+                .catch(function (err) {
+                    log('Error consultando dirección: ' + err.message, 'warn');
+                    resolve(null);
+                });
+        });
+    }
 
     function setMomento(nuevoMomento) {
         log('Cambio de momento: ' + nuevoMomento, 'info');
@@ -249,10 +290,6 @@
             item.style.display = item.dataset.momento === momento ? '' : 'none';
         });
     }
-
-    // ---------------------------------------------------------------------
-    // Utilidades de imagen / canvas
-    // ---------------------------------------------------------------------
 
     function cargarImagen(src) {
         return new Promise(function (resolve, reject) {
@@ -278,12 +315,12 @@
             img.crossOrigin = 'anonymous';
 
             img.onload = function () {
-                log('Mini mapa cargado correctamente', 'ok');
+                log('Imagen externa cargada correctamente: ' + src.substring(0, 80), 'ok');
                 resolve(img);
             };
 
             img.onerror = function () {
-                log('No se pudo cargar mini mapa. Se continuará sin mapa.', 'warn');
+                log('No se pudo cargar imagen externa: ' + src.substring(0, 120), 'warn');
                 resolve(null);
             };
 
@@ -309,7 +346,53 @@
         return fecha + ' ' + hora;
     }
 
-    function obtenerTextoUbicacion() {
+    function limpiarDireccion(address) {
+        if (!address) {
+            return '';
+        }
+
+        return String(address)
+            .replace(/\s+/g, ' ')
+            .replace(/,\s*,/g, ',')
+            .trim();
+    }
+
+    function dividirTextoEnLineas(ctx, texto, maxWidth, maxLines) {
+        if (!texto) {
+            return [];
+        }
+
+        var palabras = texto.split(/\s+/);
+        var lineas = [];
+        var lineaActual = '';
+
+        for (var i = 0; i < palabras.length; i++) {
+            var prueba = lineaActual ? lineaActual + ' ' + palabras[i] : palabras[i];
+            var medida = ctx.measureText(prueba).width;
+
+            if (medida <= maxWidth) {
+                lineaActual = prueba;
+            } else {
+                if (lineaActual) {
+                    lineas.push(lineaActual);
+                }
+
+                lineaActual = palabras[i];
+
+                if (lineas.length >= maxLines) {
+                    break;
+                }
+            }
+        }
+
+        if (lineaActual && lineas.length < maxLines) {
+            lineas.push(lineaActual);
+        }
+
+        return lineas;
+    }
+
+    function obtenerTextoUbicacion(ctx, maxWidth) {
         if (!coords) {
             return [
                 'Ubicación GPS no disponible',
@@ -317,10 +400,22 @@
             ];
         }
 
-        return [
-            'Lat: ' + coords.lat.toFixed(6) + ', Lng: ' + coords.lng.toFixed(6),
-            'Precisión GPS: ' + Math.round(precision || 0) + ' m'
-        ];
+        var lineas = [];
+
+        if (direccionActual) {
+            var direccionLimpia = limpiarDireccion(direccionActual);
+            var direccionLineas = dividirTextoEnLineas(ctx, direccionLimpia, maxWidth, 3);
+
+            direccionLineas.forEach(function (linea) {
+                lineas.push(linea);
+            });
+        } else {
+            lineas.push('Lat: ' + coords.lat.toFixed(6) + ', Lng: ' + coords.lng.toFixed(6));
+        }
+
+        lineas.push('Precisión GPS: ' + Math.round(precision || 0) + ' m');
+
+        return lineas;
     }
 
     function obtenerUrlMapaMini() {
@@ -336,6 +431,10 @@
             + '&zoom=16'
             + '&size=320x220'
             + '&markers=' + encodeURIComponent(lat + ',' + lng + ',red-pushpin');
+    }
+
+    function obtenerUrlLogoEmpresa() {
+        return '/evidencia/' + TOKEN + '/logo?ts=' + new Date().getTime();
     }
 
     function dibujarTextoConSombra(ctx, texto, x, y, tamano, align) {
@@ -396,6 +495,57 @@
         log('Mini mapa dibujado en canvas', 'ok');
     }
 
+    function dibujarLogoEmpresa(ctx, canvas, logoImg) {
+        var margen = Math.round(canvas.width * 0.035);
+
+        if (!logoImg) {
+            log('Logo no disponible. Se usará texto como respaldo.', 'warn');
+
+            var fontFallback = Math.max(18, Math.round(canvas.width * 0.026));
+
+            dibujarTextoConSombra(
+                ctx,
+                'Andes Solution Copiers',
+                canvas.width - margen,
+                margen,
+                fontFallback,
+                'right'
+            );
+
+            return;
+        }
+
+        var maxLogoW = Math.round(canvas.width * 0.30);
+        var maxLogoH = Math.round(canvas.height * 0.13);
+
+        var ratio = Math.min(
+            maxLogoW / logoImg.width,
+            maxLogoH / logoImg.height,
+            1
+        );
+
+        var logoW = Math.round(logoImg.width * ratio);
+        var logoH = Math.round(logoImg.height * ratio);
+
+        var logoX = canvas.width - logoW - margen;
+        var logoY = margen;
+
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.88)';
+        ctx.fillRect(
+            logoX - 10,
+            logoY - 10,
+            logoW + 20,
+            logoH + 20
+        );
+
+        ctx.drawImage(logoImg, logoX, logoY, logoW, logoH);
+
+        log(
+            'Logo dibujado en canvas | width=' + logoW + ' | height=' + logoH,
+            'ok'
+        );
+    }
+
     function crearFotoConMarca(base64Original, filename) {
         return new Promise(function (resolve, reject) {
             log('=== Crear foto con marca ===', 'info');
@@ -422,29 +572,24 @@
                     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
                     var fechaHora = formatearFechaHora();
-                    var lineasUbicacion = obtenerTextoUbicacion();
 
                     var margen = Math.round(canvas.width * 0.035);
                     var fontGrande = Math.max(28, Math.round(canvas.width * 0.045));
                     var fontMediano = Math.max(22, Math.round(canvas.width * 0.034));
                     var fontPequeno = Math.max(18, Math.round(canvas.width * 0.026));
 
-                    var panelAlto = Math.round(canvas.height * 0.24);
+                    ctx.font = 'bold ' + fontMediano + 'px Arial, sans-serif';
+
+                    var maxTextoWidth = Math.round(canvas.width * 0.62);
+                    var lineasUbicacion = obtenerTextoUbicacion(ctx, maxTextoWidth);
+
+                    var panelAlto = Math.round(canvas.height * 0.28);
                     var panelY = canvas.height - panelAlto;
 
                     dibujarPanelInferior(ctx, canvas, panelY, panelAlto);
 
-                    dibujarTextoConSombra(
-                        ctx,
-                        'Andes Solution Copiers',
-                        canvas.width - margen,
-                        margen,
-                        fontPequeno,
-                        'right'
-                    );
-
                     var xTexto = canvas.width - margen;
-                    var yTexto = panelY + Math.round(panelAlto * 0.16);
+                    var yTexto = panelY + Math.round(panelAlto * 0.12);
 
                     dibujarTextoConSombra(
                         ctx,
@@ -480,20 +625,44 @@
                     );
 
                     var urlMapa = obtenerUrlMapaMini();
+                    var urlLogo = obtenerUrlLogoEmpresa();
 
                     if (!urlMapa) {
-                        log('No hay coordenadas. Se generará foto sin mapa.', 'warn');
-                        finalizarCanvas();
+                        log('No hay coordenadas. Se generará foto sin mapa, pero con logo.', 'warn');
+
+                        cargarImagenExterna(urlLogo).then(function (logoImg) {
+                            try {
+                                dibujarLogoEmpresa(ctx, canvas, logoImg);
+                            } catch (errLogoSinGps) {
+                                log('Error dibujando logo sin GPS: ' + errLogoSinGps.message, 'warn');
+                            }
+
+                            finalizarCanvas();
+                        });
+
                         return;
                     }
 
                     log('URL mini mapa: ' + urlMapa, 'info');
+                    log('URL logo empresa: ' + urlLogo, 'info');
 
-                    cargarImagenExterna(urlMapa).then(function (mapaImg) {
+                    Promise.all([
+                        cargarImagenExterna(urlMapa),
+                        cargarImagenExterna(urlLogo)
+                    ]).then(function (resultados) {
+                        var mapaImg = resultados[0];
+                        var logoImg = resultados[1];
+
                         try {
                             dibujarMiniMapa(ctx, canvas, mapaImg);
                         } catch (errMapa) {
                             log('Error dibujando mini mapa: ' + errMapa.message, 'warn');
+                        }
+
+                        try {
+                            dibujarLogoEmpresa(ctx, canvas, logoImg);
+                        } catch (errLogo) {
+                            log('Error dibujando logo: ' + errLogo.message, 'warn');
                         }
 
                         finalizarCanvas();
@@ -521,10 +690,6 @@
         });
     }
 
-    // ---------------------------------------------------------------------
-    // Subida al backend Odoo
-    // ---------------------------------------------------------------------
-
     function subirFoto(base64, filename) {
         log('=== Iniciando subida a Odoo ===', 'info');
 
@@ -538,6 +703,7 @@
             ' | lat=' + lat +
             ' | lng=' + lng +
             ' | precision=' + prec +
+            ' | direccion=' + (direccionActual || '') +
             ' | filename=' + filename,
             'info'
         );
@@ -556,6 +722,7 @@
                     latitud: lat,
                     longitud: lng,
                     precision: prec,
+                    direccion: direccionActual || '',
                     filename: filename || 'evidencia.jpg'
                 }
             })
@@ -599,10 +766,6 @@
                 inputFoto.value = '';
             });
     }
-
-    // ---------------------------------------------------------------------
-    // Eventos
-    // ---------------------------------------------------------------------
 
     btnAntes.addEventListener('click', function () {
         setMomento('antes');
@@ -680,9 +843,13 @@
                 'ok'
             );
 
-            showProgress('Agregando fecha, GPS y mapa...');
+            showProgress('Obteniendo dirección desde Traccar...');
 
-            crearFotoConMarca(ev.target.result, file.name)
+            obtenerDireccionPorGPS()
+                .then(function () {
+                    showProgress('Agregando logo, fecha, dirección y mapa...');
+                    return crearFotoConMarca(ev.target.result, file.name);
+                })
                 .then(function (imagenMarcada) {
                     log('Foto marcada generada correctamente', 'ok');
 
@@ -712,10 +879,6 @@
 
         reader.readAsDataURL(file);
     });
-
-    // ---------------------------------------------------------------------
-    // Inicio
-    // ---------------------------------------------------------------------
 
     pedirGPS();
     setMomento('antes');
