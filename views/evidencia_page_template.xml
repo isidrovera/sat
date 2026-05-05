@@ -5,6 +5,7 @@
          Página principal de subida de evidencia
          ════════════════════════════════════════════════════════════════ -->
     <template id="evidencia_page_template" name="Subir Evidencia Fotográfica">
+        <t t-raw="'<!DOCTYPE html>'"/>
         <html lang="es">
             <head>
                 <meta charset="UTF-8"/>
@@ -230,13 +231,19 @@
                         gap: 7px;
                     }
 
-                    .grid-fotos img {
+                    .grid-fotos .foto-link {
+                        display: block;
+                        text-decoration: none;
+                    }
+
+                    .grid-fotos .foto-link img {
                         width: 100%;
                         aspect-ratio: 1;
                         object-fit: cover;
                         border-radius: 6px;
                         border: 1px solid #e2e8f0;
                         background: #edf2f7;
+                        cursor: zoom-in;
                     }
 
                     .empty-gallery {
@@ -446,18 +453,32 @@
                             </t>
 
                             <t t-foreach="fotos_antes" t-as="foto">
-                                <img
-                                    t-att-src="'/evidencia/%s/foto/%s' % (token, foto.id)"
+                                <a
+                                    t-att-href="'/evidencia/%s/foto/%s' % (token, foto.id)"
+                                    target="_blank"
+                                    class="foto-link"
                                     data-momento="antes"
-                                />
+                                >
+                                    <img
+                                        t-att-src="'/evidencia/%s/foto/%s' % (token, foto.id)"
+                                        alt="Foto antes"
+                                    />
+                                </a>
                             </t>
 
                             <t t-foreach="fotos_despues" t-as="foto">
-                                <img
-                                    t-att-src="'/evidencia/%s/foto/%s' % (token, foto.id)"
+                                <a
+                                    t-att-href="'/evidencia/%s/foto/%s' % (token, foto.id)"
+                                    target="_blank"
+                                    class="foto-link"
                                     data-momento="despues"
                                     style="display:none"
-                                />
+                                >
+                                    <img
+                                        t-att-src="'/evidencia/%s/foto/%s' % (token, foto.id)"
+                                        alt="Foto después"
+                                    />
+                                </a>
                             </t>
                         </div>
                     </div>
@@ -477,7 +498,7 @@
                 <div id="toast" class="toast"></div>
 
                 <!-- JS separado del XML -->
-                <script type="text/javascript" src="/sat/static/src/js/evidencia_publicv1.js"></script>
+                <script type="text/javascript" src="/sat/static/src/js/evidencia_publicv1.js?v=20260505_1915"></script>
             </body>
         </html>
     </template>
@@ -486,6 +507,7 @@
          Página: Token inválido
          ════════════════════════════════════════════════════════════════ -->
     <template id="evidencia_token_invalido" name="Token Inválido">
+        <t t-raw="'<!DOCTYPE html>'"/>
         <html lang="es">
             <head>
                 <meta charset="UTF-8"/>
@@ -543,6 +565,7 @@
          Página: Ticket cerrado
          ════════════════════════════════════════════════════════════════ -->
     <template id="evidencia_ticket_cerrado" name="Ticket Cerrado">
+        <t t-raw="'<!DOCTYPE html>'"/>
         <html lang="es">
             <head>
                 <meta charset="UTF-8"/>
