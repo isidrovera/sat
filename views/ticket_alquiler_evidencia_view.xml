@@ -4,7 +4,7 @@
     <record id="view_ticket_alquiler_form_evidencia" model="ir.ui.view">
         <field name="name">ticket.alquiler.form.evidencia</field>
         <field name="model">ticket.alquiler</field>
-        <field name="inherit_id" ref="sat.view_ticket_alquiler_form"/>
+        <field name="inherit_id" ref="sat.soporte_form_viw"/>
         <field name="arch" type="xml">
 
             <!-- Agregar pestaña al final del notebook -->
@@ -40,7 +40,7 @@
                            context="{'default_momento': 'antes'}"
                            mode="kanban"
                            nolabel="1">
-                        <kanban>
+                        <kanban records_draggable="0">
                             <field name="id"/>
                             <field name="imagen_original"/>
                             <field name="timestamp_captura"/>
@@ -70,7 +70,7 @@
                            context="{'default_momento': 'despues'}"
                            mode="kanban"
                            nolabel="1">
-                        <kanban>
+                        <kanban records_draggable="0">
                             <field name="id"/>
                             <field name="imagen_original"/>
                             <field name="timestamp_captura"/>
