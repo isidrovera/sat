@@ -5,7 +5,6 @@
          Página principal de subida de evidencia
          ════════════════════════════════════════════════════════════════ -->
     <template id="evidencia_page_template" name="Subir Evidencia Fotográfica">
-        <t t-raw="'<!DOCTYPE html>'"/>
         <html lang="es">
             <head>
                 <meta charset="UTF-8"/>
@@ -497,7 +496,6 @@
 
                 <div id="toast" class="toast"></div>
 
-                <!-- JS separado del XML -->
                 <script type="text/javascript" src="/sat/static/src/js/evidencia_publicv1.js?v=20260505_1915"></script>
             </body>
         </html>
@@ -507,7 +505,6 @@
          Página: Token inválido
          ════════════════════════════════════════════════════════════════ -->
     <template id="evidencia_token_invalido" name="Token Inválido">
-        <t t-raw="'<!DOCTYPE html>'"/>
         <html lang="es">
             <head>
                 <meta charset="UTF-8"/>
@@ -565,7 +562,6 @@
          Página: Ticket cerrado
          ════════════════════════════════════════════════════════════════ -->
     <template id="evidencia_ticket_cerrado" name="Ticket Cerrado">
-        <t t-raw="'<!DOCTYPE html>'"/>
         <html lang="es">
             <head>
                 <meta charset="UTF-8"/>
