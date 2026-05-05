@@ -65,22 +65,22 @@ class MantenimientoTecnicoPerfil(models.Model):
     trabaja_sabado = fields.Boolean(string='Sábado', default=True)
     trabaja_domingo = fields.Boolean(string='Domingo', default=False)
 
-    hora_inicio_lunes = fields.Float(string='Inicio lunes', default=8.0)
-    hora_fin_lunes = fields.Float(string='Fin lunes', default=18.0)
+    hora_inicio_lunes = fields.Float(string='Inicio lunes', default=8.30)
+    hora_fin_lunes = fields.Float(string='Fin lunes', default=18.30)
 
-    hora_inicio_martes = fields.Float(string='Inicio martes', default=8.0)
-    hora_fin_martes = fields.Float(string='Fin martes', default=18.0)
+    hora_inicio_martes = fields.Float(string='Inicio martes', default=8.30)
+    hora_fin_martes = fields.Float(string='Fin martes', default=18.30)
 
-    hora_inicio_miercoles = fields.Float(string='Inicio miércoles', default=8.0)
-    hora_fin_miercoles = fields.Float(string='Fin miércoles', default=18.0)
+    hora_inicio_miercoles = fields.Float(string='Inicio miércoles', default=8.30)
+    hora_fin_miercoles = fields.Float(string='Fin miércoles', default=18.30)
 
-    hora_inicio_jueves = fields.Float(string='Inicio jueves', default=8.0)
+    hora_inicio_jueves = fields.Float(string='Inicio jueves', default=8.30)
     hora_fin_jueves = fields.Float(string='Fin jueves', default=18.0)
 
-    hora_inicio_viernes = fields.Float(string='Inicio viernes', default=8.0)
+    hora_inicio_viernes = fields.Float(string='Inicio viernes', default=8.30)
     hora_fin_viernes = fields.Float(string='Fin viernes', default=18.0)
 
-    hora_inicio_sabado = fields.Float(string='Inicio sábado', default=8.0)
+    hora_inicio_sabado = fields.Float(string='Inicio sábado', default=9.0)
     hora_fin_sabado = fields.Float(string='Fin sábado', default=13.0)
 
     hora_inicio_domingo = fields.Float(string='Inicio domingo', default=0.0)
