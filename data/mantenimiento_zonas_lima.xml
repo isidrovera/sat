@@ -1,0 +1,583 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data >
+
+        <!-- ========================================================= -->
+        <!-- ZONAS OPERATIVAS                                         -->
+        <!-- ========================================================= -->
+
+        <record id="zona_lima_norte" model="mantenimiento.zona">
+            <field name="name">Lima Norte</field>
+            <field name="sequence">10</field>
+            <field name="flexible">True</field>
+            <field name="descripcion">Zona operativa para distritos del norte de Lima.</field>
+        </record>
+
+        <record id="zona_lima_centro" model="mantenimiento.zona">
+            <field name="name">Lima Centro</field>
+            <field name="sequence">20</field>
+            <field name="flexible">True</field>
+            <field name="descripcion">Zona operativa para distritos céntricos y corporativos de Lima.</field>
+        </record>
+
+        <record id="zona_lima_este" model="mantenimiento.zona">
+            <field name="name">Lima Este</field>
+            <field name="sequence">30</field>
+            <field name="flexible">True</field>
+            <field name="descripcion">Zona operativa para distritos del este de Lima.</field>
+        </record>
+
+        <record id="zona_lima_sur" model="mantenimiento.zona">
+            <field name="name">Lima Sur</field>
+            <field name="sequence">40</field>
+            <field name="flexible">True</field>
+            <field name="descripcion">Zona operativa para distritos del sur de Lima.</field>
+        </record>
+
+        <record id="zona_lima_oeste" model="mantenimiento.zona">
+            <field name="name">Lima Oeste</field>
+            <field name="sequence">50</field>
+            <field name="flexible">True</field>
+            <field name="descripcion">Zona operativa para distritos costeros y del oeste de Lima.</field>
+        </record>
+
+        <record id="zona_callao" model="mantenimiento.zona">
+            <field name="name">Callao</field>
+            <field name="sequence">60</field>
+            <field name="flexible">True</field>
+            <field name="descripcion">Zona operativa para la Provincia Constitucional del Callao.</field>
+        </record>
+
+        <record id="zona_provincia" model="mantenimiento.zona">
+            <field name="name">Provincia / Lejanos</field>
+            <field name="sequence">90</field>
+            <field name="flexible">True</field>
+            <field name="descripcion">Zona para clientes fuera de Lima Metropolitana o rutas especiales.</field>
+        </record>
+
+        <!-- ========================================================= -->
+        <!-- LIMA NORTE                                               -->
+        <!-- ========================================================= -->
+
+        <record id="distrito_ancon" model="mantenimiento.zona.distrito">
+            <field name="name">Ancón</field>
+            <field name="alias">Ancon, Distrito de Ancón, Distrito de Ancon</field>
+            <field name="zona_id" ref="zona_lima_norte"/>
+            <field name="provincia">Lima</field>
+            <field name="departamento">Lima</field>
+            <field name="pais">Perú</field>
+            <field name="sequence">10</field>
+        </record>
+
+        <record id="distrito_carabayllo" model="mantenimiento.zona.distrito">
+            <field name="name">Carabayllo</field>
+            <field name="alias">Distrito de Carabayllo</field>
+            <field name="zona_id" ref="zona_lima_norte"/>
+            <field name="provincia">Lima</field>
+            <field name="departamento">Lima</field>
+            <field name="pais">Perú</field>
+            <field name="sequence">20</field>
+        </record>
+
+        <record id="distrito_comas" model="mantenimiento.zona.distrito">
+            <field name="name">Comas</field>
+            <field name="alias">Distrito de Comas</field>
+            <field name="zona_id" ref="zona_lima_norte"/>
+            <field name="provincia">Lima</field>
+            <field name="departamento">Lima</field>
+            <field name="pais">Perú</field>
+            <field name="sequence">30</field>
+        </record>
+
+        <record id="distrito_independencia" model="mantenimiento.zona.distrito">
+            <field name="name">Independencia</field>
+            <field name="alias">Distrito de Independencia</field>
+            <field name="zona_id" ref="zona_lima_norte"/>
+            <field name="provincia">Lima</field>
+            <field name="departamento">Lima</field>
+            <field name="pais">Perú</field>
+            <field name="sequence">40</field>
+        </record>
+
+        <record id="distrito_los_olivos" model="mantenimiento.zona.distrito">
+            <field name="name">Los Olivos</field>
+            <field name="alias">Distrito de Los Olivos</field>
+            <field name="zona_id" ref="zona_lima_norte"/>
+            <field name="provincia">Lima</field>
+            <field name="departamento">Lima</field>
+            <field name="pais">Perú</field>
+            <field name="sequence">50</field>
+        </record>
+
+        <record id="distrito_puente_piedra" model="mantenimiento.zona.distrito">
+            <field name="name">Puente Piedra</field>
+            <field name="alias">Distrito de Puente Piedra</field>
+            <field name="zona_id" ref="zona_lima_norte"/>
+            <field name="provincia">Lima</field>
+            <field name="departamento">Lima</field>
+            <field name="pais">Perú</field>
+            <field name="sequence">60</field>
+        </record>
+
+        <record id="distrito_san_martin_de_porres" model="mantenimiento.zona.distrito">
+            <field name="name">San Martín de Porres</field>
+            <field name="alias">San Martin de Porres, SMP, Distrito de San Martín de Porres, Distrito de San Martin de Porres</field>
+            <field name="zona_id" ref="zona_lima_norte"/>
+            <field name="provincia">Lima</field>
+            <field name="departamento">Lima</field>
+            <field name="pais">Perú</field>
+            <field name="sequence">70</field>
+        </record>
+
+        <record id="distrito_santa_rosa" model="mantenimiento.zona.distrito">
+            <field name="name">Santa Rosa</field>
+            <field name="alias">Distrito de Santa Rosa, Santa Rosa de Lima</field>
+            <field name="zona_id" ref="zona_lima_norte"/>
+            <field name="provincia">Lima</field>
+            <field name="departamento">Lima</field>
+            <field name="pais">Perú</field>
+            <field name="sequence">80</field>
+        </record>
+
+        <!-- ========================================================= -->
+        <!-- LIMA CENTRO                                              -->
+        <!-- ========================================================= -->
+
+        <record id="distrito_brena" model="mantenimiento.zona.distrito">
+            <field name="name">Breña</field>
+            <field name="alias">Brena, Distrito de Breña, Distrito de Brena</field>
+            <field name="zona_id" ref="zona_lima_centro"/>
+            <field name="provincia">Lima</field>
+            <field name="departamento">Lima</field>
+            <field name="pais">Perú</field>
+            <field name="sequence">10</field>
+        </record>
+
+        <record id="distrito_jesus_maria" model="mantenimiento.zona.distrito">
+            <field name="name">Jesús María</field>
+            <field name="alias">Jesus Maria, Distrito de Jesús María, Distrito de Jesus Maria</field>
+            <field name="zona_id" ref="zona_lima_centro"/>
+            <field name="provincia">Lima</field>
+            <field name="departamento">Lima</field>
+            <field name="pais">Perú</field>
+            <field name="sequence">20</field>
+        </record>
+
+        <record id="distrito_la_victoria" model="mantenimiento.zona.distrito">
+            <field name="name">La Victoria</field>
+            <field name="alias">Distrito de La Victoria</field>
+            <field name="zona_id" ref="zona_lima_centro"/>
+            <field name="provincia">Lima</field>
+            <field name="departamento">Lima</field>
+            <field name="pais">Perú</field>
+            <field name="sequence">30</field>
+        </record>
+
+        <record id="distrito_lima" model="mantenimiento.zona.distrito">
+            <field name="name">Lima</field>
+            <field name="alias">Cercado de Lima, Lima Cercado, Distrito de Lima, Centro de Lima</field>
+            <field name="zona_id" ref="zona_lima_centro"/>
+            <field name="provincia">Lima</field>
+            <field name="departamento">Lima</field>
+            <field name="pais">Perú</field>
+            <field name="sequence">40</field>
+        </record>
+
+        <record id="distrito_lince" model="mantenimiento.zona.distrito">
+            <field name="name">Lince</field>
+            <field name="alias">Distrito de Lince</field>
+            <field name="zona_id" ref="zona_lima_centro"/>
+            <field name="provincia">Lima</field>
+            <field name="departamento">Lima</field>
+            <field name="pais">Perú</field>
+            <field name="sequence">50</field>
+        </record>
+
+        <record id="distrito_magdalena_del_mar" model="mantenimiento.zona.distrito">
+            <field name="name">Magdalena del Mar</field>
+            <field name="alias">Magdalena, Distrito de Magdalena del Mar</field>
+            <field name="zona_id" ref="zona_lima_centro"/>
+            <field name="provincia">Lima</field>
+            <field name="departamento">Lima</field>
+            <field name="pais">Perú</field>
+            <field name="sequence">60</field>
+        </record>
+
+        <record id="distrito_pueblo_libre" model="mantenimiento.zona.distrito">
+            <field name="name">Pueblo Libre</field>
+            <field name="alias">Magdalena Vieja, Distrito de Pueblo Libre</field>
+            <field name="zona_id" ref="zona_lima_centro"/>
+            <field name="provincia">Lima</field>
+            <field name="departamento">Lima</field>
+            <field name="pais">Perú</field>
+            <field name="sequence">70</field>
+        </record>
+
+        <record id="distrito_rimac" model="mantenimiento.zona.distrito">
+            <field name="name">Rímac</field>
+            <field name="alias">Rimac, Distrito del Rímac, Distrito del Rimac</field>
+            <field name="zona_id" ref="zona_lima_centro"/>
+            <field name="provincia">Lima</field>
+            <field name="departamento">Lima</field>
+            <field name="pais">Perú</field>
+            <field name="sequence">80</field>
+        </record>
+
+        <record id="distrito_san_borja" model="mantenimiento.zona.distrito">
+            <field name="name">San Borja</field>
+            <field name="alias">Distrito de San Borja</field>
+            <field name="zona_id" ref="zona_lima_centro"/>
+            <field name="provincia">Lima</field>
+            <field name="departamento">Lima</field>
+            <field name="pais">Perú</field>
+            <field name="sequence">90</field>
+        </record>
+
+        <record id="distrito_san_isidro" model="mantenimiento.zona.distrito">
+            <field name="name">San Isidro</field>
+            <field name="alias">Distrito de San Isidro</field>
+            <field name="zona_id" ref="zona_lima_centro"/>
+            <field name="provincia">Lima</field>
+            <field name="departamento">Lima</field>
+            <field name="pais">Perú</field>
+            <field name="sequence">100</field>
+        </record>
+
+        <record id="distrito_surquillo" model="mantenimiento.zona.distrito">
+            <field name="name">Surquillo</field>
+            <field name="alias">Distrito de Surquillo</field>
+            <field name="zona_id" ref="zona_lima_centro"/>
+            <field name="provincia">Lima</field>
+            <field name="departamento">Lima</field>
+            <field name="pais">Perú</field>
+            <field name="sequence">110</field>
+        </record>
+
+        <!-- ========================================================= -->
+        <!-- LIMA ESTE                                                -->
+        <!-- ========================================================= -->
+
+        <record id="distrito_ate" model="mantenimiento.zona.distrito">
+            <field name="name">Ate</field>
+            <field name="alias">Ate Vitarte, Vitarte, Distrito de Ate</field>
+            <field name="zona_id" ref="zona_lima_este"/>
+            <field name="provincia">Lima</field>
+            <field name="departamento">Lima</field>
+            <field name="pais">Perú</field>
+            <field name="sequence">10</field>
+        </record>
+
+        <record id="distrito_chaclacayo" model="mantenimiento.zona.distrito">
+            <field name="name">Chaclacayo</field>
+            <field name="alias">Distrito de Chaclacayo</field>
+            <field name="zona_id" ref="zona_lima_este"/>
+            <field name="provincia">Lima</field>
+            <field name="departamento">Lima</field>
+            <field name="pais">Perú</field>
+            <field name="sequence">20</field>
+        </record>
+
+        <record id="distrito_cieneguilla" model="mantenimiento.zona.distrito">
+            <field name="name">Cieneguilla</field>
+            <field name="alias">Distrito de Cieneguilla</field>
+            <field name="zona_id" ref="zona_lima_este"/>
+            <field name="provincia">Lima</field>
+            <field name="departamento">Lima</field>
+            <field name="pais">Perú</field>
+            <field name="sequence">30</field>
+        </record>
+
+        <record id="distrito_el_agustino" model="mantenimiento.zona.distrito">
+            <field name="name">El Agustino</field>
+            <field name="alias">Distrito de El Agustino</field>
+            <field name="zona_id" ref="zona_lima_este"/>
+            <field name="provincia">Lima</field>
+            <field name="departamento">Lima</field>
+            <field name="pais">Perú</field>
+            <field name="sequence">40</field>
+        </record>
+
+        <record id="distrito_la_molina" model="mantenimiento.zona.distrito">
+            <field name="name">La Molina</field>
+            <field name="alias">Distrito de La Molina</field>
+            <field name="zona_id" ref="zona_lima_este"/>
+            <field name="provincia">Lima</field>
+            <field name="departamento">Lima</field>
+            <field name="pais">Perú</field>
+            <field name="sequence">50</field>
+        </record>
+
+        <record id="distrito_lurigancho" model="mantenimiento.zona.distrito">
+            <field name="name">Lurigancho</field>
+            <field name="alias">Chosica, Lurigancho-Chosica, Lurigancho Chosica, Distrito de Lurigancho</field>
+            <field name="zona_id" ref="zona_lima_este"/>
+            <field name="provincia">Lima</field>
+            <field name="departamento">Lima</field>
+            <field name="pais">Perú</field>
+            <field name="sequence">60</field>
+        </record>
+
+        <record id="distrito_san_juan_de_lurigancho" model="mantenimiento.zona.distrito">
+            <field name="name">San Juan de Lurigancho</field>
+            <field name="alias">SJL, Distrito de San Juan de Lurigancho</field>
+            <field name="zona_id" ref="zona_lima_este"/>
+            <field name="provincia">Lima</field>
+            <field name="departamento">Lima</field>
+            <field name="pais">Perú</field>
+            <field name="sequence">70</field>
+        </record>
+
+        <record id="distrito_san_luis" model="mantenimiento.zona.distrito">
+            <field name="name">San Luis</field>
+            <field name="alias">Distrito de San Luis</field>
+            <field name="zona_id" ref="zona_lima_este"/>
+            <field name="provincia">Lima</field>
+            <field name="departamento">Lima</field>
+            <field name="pais">Perú</field>
+            <field name="sequence">80</field>
+        </record>
+
+        <record id="distrito_santa_anita" model="mantenimiento.zona.distrito">
+            <field name="name">Santa Anita</field>
+            <field name="alias">Distrito de Santa Anita</field>
+            <field name="zona_id" ref="zona_lima_este"/>
+            <field name="provincia">Lima</field>
+            <field name="departamento">Lima</field>
+            <field name="pais">Perú</field>
+            <field name="sequence">90</field>
+        </record>
+
+        <!-- ========================================================= -->
+        <!-- LIMA SUR                                                 -->
+        <!-- ========================================================= -->
+
+        <record id="distrito_chorrillos" model="mantenimiento.zona.distrito">
+            <field name="name">Chorrillos</field>
+            <field name="alias">Distrito de Chorrillos</field>
+            <field name="zona_id" ref="zona_lima_sur"/>
+            <field name="provincia">Lima</field>
+            <field name="departamento">Lima</field>
+            <field name="pais">Perú</field>
+            <field name="sequence">10</field>
+        </record>
+
+        <record id="distrito_lurin" model="mantenimiento.zona.distrito">
+            <field name="name">Lurín</field>
+            <field name="alias">Lurin, Distrito de Lurín, Distrito de Lurin</field>
+            <field name="zona_id" ref="zona_lima_sur"/>
+            <field name="provincia">Lima</field>
+            <field name="departamento">Lima</field>
+            <field name="pais">Perú</field>
+            <field name="sequence">20</field>
+        </record>
+
+        <record id="distrito_pachacamac" model="mantenimiento.zona.distrito">
+            <field name="name">Pachacámac</field>
+            <field name="alias">Pachacamac, Distrito de Pachacámac, Distrito de Pachacamac</field>
+            <field name="zona_id" ref="zona_lima_sur"/>
+            <field name="provincia">Lima</field>
+            <field name="departamento">Lima</field>
+            <field name="pais">Perú</field>
+            <field name="sequence">30</field>
+        </record>
+
+        <record id="distrito_pucusana" model="mantenimiento.zona.distrito">
+            <field name="name">Pucusana</field>
+            <field name="alias">Distrito de Pucusana</field>
+            <field name="zona_id" ref="zona_lima_sur"/>
+            <field name="provincia">Lima</field>
+            <field name="departamento">Lima</field>
+            <field name="pais">Perú</field>
+            <field name="sequence">40</field>
+        </record>
+
+        <record id="distrito_punta_hermosa" model="mantenimiento.zona.distrito">
+            <field name="name">Punta Hermosa</field>
+            <field name="alias">Distrito de Punta Hermosa</field>
+            <field name="zona_id" ref="zona_lima_sur"/>
+            <field name="provincia">Lima</field>
+            <field name="departamento">Lima</field>
+            <field name="pais">Perú</field>
+            <field name="sequence">50</field>
+        </record>
+
+        <record id="distrito_punta_negra" model="mantenimiento.zona.distrito">
+            <field name="name">Punta Negra</field>
+            <field name="alias">Distrito de Punta Negra</field>
+            <field name="zona_id" ref="zona_lima_sur"/>
+            <field name="provincia">Lima</field>
+            <field name="departamento">Lima</field>
+            <field name="pais">Perú</field>
+            <field name="sequence">60</field>
+        </record>
+
+        <record id="distrito_san_bartolo" model="mantenimiento.zona.distrito">
+            <field name="name">San Bartolo</field>
+            <field name="alias">Distrito de San Bartolo</field>
+            <field name="zona_id" ref="zona_lima_sur"/>
+            <field name="provincia">Lima</field>
+            <field name="departamento">Lima</field>
+            <field name="pais">Perú</field>
+            <field name="sequence">70</field>
+        </record>
+
+        <record id="distrito_san_juan_de_miraflores" model="mantenimiento.zona.distrito">
+            <field name="name">San Juan de Miraflores</field>
+            <field name="alias">SJM, Distrito de San Juan de Miraflores</field>
+            <field name="zona_id" ref="zona_lima_sur"/>
+            <field name="provincia">Lima</field>
+            <field name="departamento">Lima</field>
+            <field name="pais">Perú</field>
+            <field name="sequence">80</field>
+        </record>
+
+        <record id="distrito_santa_maria_del_mar" model="mantenimiento.zona.distrito">
+            <field name="name">Santa María del Mar</field>
+            <field name="alias">Santa Maria del Mar, Distrito de Santa María del Mar, Distrito de Santa Maria del Mar</field>
+            <field name="zona_id" ref="zona_lima_sur"/>
+            <field name="provincia">Lima</field>
+            <field name="departamento">Lima</field>
+            <field name="pais">Perú</field>
+            <field name="sequence">90</field>
+        </record>
+
+        <record id="distrito_villa_el_salvador" model="mantenimiento.zona.distrito">
+            <field name="name">Villa El Salvador</field>
+            <field name="alias">VES, Distrito de Villa El Salvador</field>
+            <field name="zona_id" ref="zona_lima_sur"/>
+            <field name="provincia">Lima</field>
+            <field name="departamento">Lima</field>
+            <field name="pais">Perú</field>
+            <field name="sequence">100</field>
+        </record>
+
+        <record id="distrito_villa_maria_del_triunfo" model="mantenimiento.zona.distrito">
+            <field name="name">Villa María del Triunfo</field>
+            <field name="alias">Villa Maria del Triunfo, VMT, Distrito de Villa María del Triunfo, Distrito de Villa Maria del Triunfo</field>
+            <field name="zona_id" ref="zona_lima_sur"/>
+            <field name="provincia">Lima</field>
+            <field name="departamento">Lima</field>
+            <field name="pais">Perú</field>
+            <field name="sequence">110</field>
+        </record>
+
+        <!-- ========================================================= -->
+        <!-- LIMA OESTE                                               -->
+        <!-- ========================================================= -->
+
+        <record id="distrito_barranco" model="mantenimiento.zona.distrito">
+            <field name="name">Barranco</field>
+            <field name="alias">Distrito de Barranco</field>
+            <field name="zona_id" ref="zona_lima_oeste"/>
+            <field name="provincia">Lima</field>
+            <field name="departamento">Lima</field>
+            <field name="pais">Perú</field>
+            <field name="sequence">10</field>
+        </record>
+
+        <record id="distrito_miraflores" model="mantenimiento.zona.distrito">
+            <field name="name">Miraflores</field>
+            <field name="alias">Distrito de Miraflores</field>
+            <field name="zona_id" ref="zona_lima_oeste"/>
+            <field name="provincia">Lima</field>
+            <field name="departamento">Lima</field>
+            <field name="pais">Perú</field>
+            <field name="sequence">20</field>
+        </record>
+
+        <record id="distrito_san_miguel" model="mantenimiento.zona.distrito">
+            <field name="name">San Miguel</field>
+            <field name="alias">Distrito de San Miguel</field>
+            <field name="zona_id" ref="zona_lima_oeste"/>
+            <field name="provincia">Lima</field>
+            <field name="departamento">Lima</field>
+            <field name="pais">Perú</field>
+            <field name="sequence">30</field>
+        </record>
+
+        <record id="distrito_santiago_de_surco" model="mantenimiento.zona.distrito">
+            <field name="name">Santiago de Surco</field>
+            <field name="alias">Surco, Distrito de Santiago de Surco</field>
+            <field name="zona_id" ref="zona_lima_oeste"/>
+            <field name="provincia">Lima</field>
+            <field name="departamento">Lima</field>
+            <field name="pais">Perú</field>
+            <field name="sequence">40</field>
+        </record>
+
+        <!-- ========================================================= -->
+        <!-- CALLAO                                                    -->
+        <!-- ========================================================= -->
+
+        <record id="distrito_callao" model="mantenimiento.zona.distrito">
+            <field name="name">Callao</field>
+            <field name="alias">Cercado Callao, Callao Cercado, Provincia Constitucional del Callao</field>
+            <field name="zona_id" ref="zona_callao"/>
+            <field name="provincia">Callao</field>
+            <field name="departamento">Callao</field>
+            <field name="pais">Perú</field>
+            <field name="sequence">10</field>
+        </record>
+
+        <record id="distrito_bellavista" model="mantenimiento.zona.distrito">
+            <field name="name">Bellavista</field>
+            <field name="alias">Distrito de Bellavista Callao, Bellavista Callao</field>
+            <field name="zona_id" ref="zona_callao"/>
+            <field name="provincia">Callao</field>
+            <field name="departamento">Callao</field>
+            <field name="pais">Perú</field>
+            <field name="sequence">20</field>
+        </record>
+
+        <record id="distrito_carmen_de_la_legua_reynoso" model="mantenimiento.zona.distrito">
+            <field name="name">Carmen de la Legua Reynoso</field>
+            <field name="alias">Carmen de la Legua, Distrito de Carmen de la Legua Reynoso</field>
+            <field name="zona_id" ref="zona_callao"/>
+            <field name="provincia">Callao</field>
+            <field name="departamento">Callao</field>
+            <field name="pais">Perú</field>
+            <field name="sequence">30</field>
+        </record>
+
+        <record id="distrito_la_perla" model="mantenimiento.zona.distrito">
+            <field name="name">La Perla</field>
+            <field name="alias">Distrito de La Perla</field>
+            <field name="zona_id" ref="zona_callao"/>
+            <field name="provincia">Callao</field>
+            <field name="departamento">Callao</field>
+            <field name="pais">Perú</field>
+            <field name="sequence">40</field>
+        </record>
+
+        <record id="distrito_la_punta" model="mantenimiento.zona.distrito">
+            <field name="name">La Punta</field>
+            <field name="alias">Distrito de La Punta</field>
+            <field name="zona_id" ref="zona_callao"/>
+            <field name="provincia">Callao</field>
+            <field name="departamento">Callao</field>
+            <field name="pais">Perú</field>
+            <field name="sequence">50</field>
+        </record>
+
+        <record id="distrito_ventanilla" model="mantenimiento.zona.distrito">
+            <field name="name">Ventanilla</field>
+            <field name="alias">Distrito de Ventanilla</field>
+            <field name="zona_id" ref="zona_callao"/>
+            <field name="provincia">Callao</field>
+            <field name="departamento">Callao</field>
+            <field name="pais">Perú</field>
+            <field name="sequence">60</field>
+        </record>
+
+        <record id="distrito_mi_peru" model="mantenimiento.zona.distrito">
+            <field name="name">Mi Perú</field>
+            <field name="alias">Mi Peru, Distrito de Mi Perú, Distrito de Mi Peru</field>
+            <field name="zona_id" ref="zona_callao"/>
+            <field name="provincia">Callao</field>
+            <field name="departamento">Callao</field>
+            <field name="pais">Perú</field>
+            <field name="sequence">70</field>
+        </record>
+
+    </data>
+</odoo>
