@@ -2424,12 +2424,6 @@
                 border: none;
             }
 
-            .info-card-header.danger {
-                background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-                color: #fff;
-                border: none;
-            }
-
             .info-card-header.dark {
                 background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
                 color: #fff;
@@ -2611,6 +2605,37 @@
                 border-color: #9ca3af;
             }
 
+            .collapse-toggle-btn {
+                margin-left: auto;
+                background: rgba(255,255,255,0.18);
+                border: 1px solid rgba(255,255,255,0.35);
+                color: #fff;
+                border-radius: 999px;
+                padding: 0.45rem 0.85rem;
+                font-size: 0.85rem;
+                font-weight: 700;
+                display: inline-flex;
+                align-items: center;
+                gap: 0.45rem;
+                text-decoration: none;
+                transition: all 0.2s;
+                cursor: pointer;
+            }
+
+            .collapse-toggle-btn:hover {
+                background: rgba(255,255,255,0.28);
+                color: #fff;
+                text-decoration: none;
+            }
+
+            .collapse-toggle-btn .fa-chevron-down {
+                transition: transform 0.25s ease;
+            }
+
+            .collapse-toggle-btn[aria-expanded="true"] .fa-chevron-down {
+                transform: rotate(180deg);
+            }
+
             .eval-table-wrap {
                 overflow-x: auto;
             }
@@ -2769,6 +2794,7 @@
                 height: 180px;
                 background: #f3f4f6;
                 overflow: hidden;
+                cursor: pointer;
             }
 
             .photo-img-wrap img {
@@ -2814,6 +2840,8 @@
                 font-weight: 700;
                 text-decoration: none;
                 transition: all 0.2s;
+                border: 0;
+                cursor: pointer;
             }
 
             .photo-btn-view {
@@ -2857,6 +2885,56 @@
                 font-size: 2.5rem;
                 margin-bottom: 0.75rem;
                 color: #d1d5db;
+            }
+
+            .evidence-modal .modal-content {
+                border: 0;
+                border-radius: 20px;
+                overflow: hidden;
+                box-shadow: 0 24px 80px rgba(0,0,0,0.35);
+            }
+
+            .evidence-modal .modal-header {
+                background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+                color: #fff;
+                border: 0;
+                padding: 1rem 1.25rem;
+            }
+
+            .evidence-modal .modal-title {
+                font-weight: 700;
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+            }
+
+            .evidence-modal .modal-body {
+                padding: 0;
+                background: #111827;
+            }
+
+            .evidence-modal-img {
+                width: 100%;
+                max-height: 78vh;
+                object-fit: contain;
+                display: block;
+                background: #111827;
+            }
+
+            .evidence-modal .modal-footer {
+                background: #f9fafb;
+                border: 0;
+                padding: 1rem 1.25rem;
+                display: flex;
+                justify-content: space-between;
+                gap: 1rem;
+                flex-wrap: wrap;
+            }
+
+            .modal-photo-meta {
+                color: #374151;
+                font-size: 0.9rem;
+                line-height: 1.5;
             }
             
             @media (max-width: 768px) {
@@ -3163,87 +3241,101 @@
                     <div class="info-card-header dark">
                         <i class="fa fa-wrench"></i>
                         <span>Evaluación de Componentes</span>
+
+                        <a class="collapse-toggle-btn"
+                           data-bs-toggle="collapse"
+                           href="#collapseComponentesTicket"
+                           role="button"
+                           aria-expanded="false"
+                           aria-controls="collapseComponentesTicket">
+                            <span>Ver detalle</span>
+                            <i class="fa fa-chevron-down"></i>
+                        </a>
                     </div>
-                    <div class="info-card-body">
-                        <t t-if="ticket.ticket_componente_eval_ids">
-                            <div class="eval-table-wrap">
-                                <table class="eval-table">
-                                    <thead>
-                                        <tr>
-                                            <th style="width: 28%;">Componente</th>
-                                            <th style="width: 12%;">Color</th>
-                                            <th style="width: 20%;">Estado</th>
-                                            <th style="width: 40%;">Observaciones</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <t t-foreach="ticket.ticket_componente_eval_ids" t-as="eval_comp">
+
+                    <div id="collapseComponentesTicket" class="collapse">
+                        <div class="info-card-body">
+                            <t t-if="ticket.ticket_componente_eval_ids">
+                                <div class="eval-table-wrap">
+                                    <table class="eval-table">
+                                        <thead>
                                             <tr>
-                                                <td>
-                                                    <div class="eval-name">
-                                                        <t t-if="eval_comp.componente_tipo_id">
-                                                            <t t-esc="eval_comp.componente_tipo_id.name"/>
+                                                <th style="width: 28%;">Componente</th>
+                                                <th style="width: 12%;">Color</th>
+                                                <th style="width: 20%;">Estado</th>
+                                                <th style="width: 40%;">Observaciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <t t-foreach="ticket.ticket_componente_eval_ids" t-as="eval_comp">
+                                                <tr>
+                                                    <td>
+                                                        <div class="eval-name">
+                                                            <t t-if="eval_comp.componente_tipo_id">
+                                                                <t t-esc="eval_comp.componente_tipo_id.name"/>
+                                                            </t>
+                                                            <t t-else="">
+                                                                <span class="eval-muted">Sin componente</span>
+                                                            </t>
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <t t-if="eval_comp.color_id">
+                                                            <span class="eval-color">
+                                                                <t t-esc="eval_comp.color_id.name"/>
+                                                            </span>
                                                         </t>
                                                         <t t-else="">
-                                                            <span class="eval-muted">Sin componente</span>
+                                                            <span class="eval-muted">—</span>
                                                         </t>
-                                                    </div>
-                                                </td>
-                                                <td>
-                                                    <t t-if="eval_comp.color_id">
-                                                        <span class="eval-color">
-                                                            <t t-esc="eval_comp.color_id.name"/>
-                                                        </span>
-                                                    </t>
-                                                    <t t-else="">
-                                                        <span class="eval-muted">—</span>
-                                                    </t>
-                                                </td>
-                                                <td>
-                                                    <t t-if="eval_comp.estado_id">
-                                                        <t t-set="ec" t-value="eval_comp.estado_id.code or ''"/>
-                                                        <span t-att-class="'eval-badge ' + (
-                                                            'eval-requiere' if ec == 'requiere_cambio' else
-                                                            'eval-ok' if ec in ('nuevo', 'correcto') else
-                                                            'eval-warning' if ec in ('regular', 'gastada_pero_puede_trabajar') else
-                                                            'eval-info' if ec == 'revisado' else
-                                                            'eval-requiere' if ec == 'falla' else
-                                                            'eval-default'
-                                                        )">
-                                                            <i t-att-class="'fa ' + (
-                                                                'fa-exclamation-triangle' if ec in ('requiere_cambio', 'falla') else
-                                                                'fa-check-circle' if ec in ('nuevo', 'correcto') else
-                                                                'fa-info-circle'
-                                                            )"></i>
-                                                            <t t-esc="eval_comp.estado_id.name"/>
-                                                        </span>
-                                                    </t>
-                                                    <t t-else="">
-                                                        <span class="eval-muted">Sin evaluar</span>
-                                                    </t>
-                                                </td>
-                                                <td>
-                                                    <t t-if="eval_comp.observaciones">
-                                                        <div class="observacion-box">
-                                                            <t t-esc="eval_comp.observaciones"/>
-                                                        </div>
-                                                    </t>
-                                                    <t t-else="">
-                                                        <span class="eval-muted">Sin observaciones</span>
-                                                    </t>
-                                                </td>
-                                            </tr>
-                                        </t>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </t>
-                        <t t-else="">
-                            <div class="empty-state">
-                                <i class="fa fa-wrench"></i>
-                                <p>No hay evaluaciones de componentes registradas para este ticket.</p>
-                            </div>
-                        </t>
+                                                    </td>
+                                                    <td>
+                                                        <t t-if="eval_comp.estado_id">
+                                                            <t t-set="ec" t-value="eval_comp.estado_id.code or ''"/>
+                                                            <span t-att-class="'eval-badge ' + (
+                                                                'eval-requiere' if ec == 'requiere_cambio' else
+                                                                'eval-ok' if ec in ('nuevo', 'correcto') else
+                                                                'eval-warning' if ec in ('regular', 'gastada_pero_puede_trabajar') else
+                                                                'eval-info' if ec == 'revisado' else
+                                                                'eval-requiere' if ec == 'falla' else
+                                                                'eval-default'
+                                                            )">
+                                                                <i t-att-class="'fa ' + (
+                                                                    'fa-exclamation-triangle' if ec in ('requiere_cambio', 'falla') else
+                                                                    'fa-check-circle' if ec in ('nuevo', 'correcto') else
+                                                                    'fa-info-circle'
+                                                                )"></i>
+                                                                <t t-esc="eval_comp.estado_id.name"/>
+                                                            </span>
+                                                        </t>
+                                                        <t t-else="">
+                                                            <span class="eval-muted">Sin evaluar</span>
+                                                        </t>
+                                                    </td>
+                                                    <td>
+                                                        <t t-if="eval_comp.observaciones">
+                                                            <div class="observacion-box">
+                                                                <t t-esc="eval_comp.observaciones"/>
+                                                            </div>
+                                                        </t>
+                                                        <t t-else="">
+                                                            <span class="eval-muted">Sin observaciones</span>
+                                                        </t>
+                                                    </td>
+                                                </tr>
+                                            </t>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </t>
+
+                            <t t-else="">
+                                <div class="empty-state">
+                                    <i class="fa fa-wrench"></i>
+                                    <p>No hay evaluaciones de componentes registradas para este ticket.</p>
+                                </div>
+                            </t>
+                        </div>
                     </div>
                 </div>
 
@@ -3252,75 +3344,89 @@
                     <div class="info-card-header primary">
                         <i class="fa fa-puzzle-piece"></i>
                         <span>Evaluación de Accesorios</span>
+
+                        <a class="collapse-toggle-btn"
+                           data-bs-toggle="collapse"
+                           href="#collapseAccesoriosTicket"
+                           role="button"
+                           aria-expanded="false"
+                           aria-controls="collapseAccesoriosTicket">
+                            <span>Ver detalle</span>
+                            <i class="fa fa-chevron-down"></i>
+                        </a>
                     </div>
-                    <div class="info-card-body">
-                        <t t-if="ticket.ticket_accesorio_eval_ids">
-                            <div class="eval-table-wrap">
-                                <table class="eval-table">
-                                    <thead>
-                                        <tr>
-                                            <th style="width: 35%;">Accesorio</th>
-                                            <th style="width: 25%;">Estado</th>
-                                            <th style="width: 40%;">Observaciones</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <t t-foreach="ticket.ticket_accesorio_eval_ids" t-as="eval_acc">
+
+                    <div id="collapseAccesoriosTicket" class="collapse">
+                        <div class="info-card-body">
+                            <t t-if="ticket.ticket_accesorio_eval_ids">
+                                <div class="eval-table-wrap">
+                                    <table class="eval-table">
+                                        <thead>
                                             <tr>
-                                                <td>
-                                                    <div class="eval-name">
-                                                        <t t-if="eval_acc.tipo_id">
-                                                            <t t-esc="eval_acc.tipo_id.name"/>
+                                                <th style="width: 35%;">Accesorio</th>
+                                                <th style="width: 25%;">Estado</th>
+                                                <th style="width: 40%;">Observaciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <t t-foreach="ticket.ticket_accesorio_eval_ids" t-as="eval_acc">
+                                                <tr>
+                                                    <td>
+                                                        <div class="eval-name">
+                                                            <t t-if="eval_acc.tipo_id">
+                                                                <t t-esc="eval_acc.tipo_id.name"/>
+                                                            </t>
+                                                            <t t-else="">
+                                                                <span class="eval-muted">Sin accesorio</span>
+                                                            </t>
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <t t-if="eval_acc.estado_id">
+                                                            <t t-set="ea" t-value="eval_acc.estado_id.code or ''"/>
+                                                            <span t-att-class="'eval-badge ' + (
+                                                                'eval-requiere' if ea == 'requiere_cambio' else
+                                                                'eval-ok' if ea in ('instalado_operativo', 'revisado') else
+                                                                'eval-requiere' if ea in ('no_instalado', 'falla') else
+                                                                'eval-warning' if ea == 'instalado_con_falla' else
+                                                                'eval-default'
+                                                            )">
+                                                                <i t-att-class="'fa ' + (
+                                                                    'fa-exclamation-triangle' if ea in ('requiere_cambio', 'no_instalado', 'falla', 'instalado_con_falla') else
+                                                                    'fa-check-circle' if ea in ('instalado_operativo', 'revisado') else
+                                                                    'fa-info-circle'
+                                                                )"></i>
+                                                                <t t-esc="eval_acc.estado_id.name"/>
+                                                            </span>
                                                         </t>
                                                         <t t-else="">
-                                                            <span class="eval-muted">Sin accesorio</span>
+                                                            <span class="eval-muted">Sin evaluar</span>
                                                         </t>
-                                                    </div>
-                                                </td>
-                                                <td>
-                                                    <t t-if="eval_acc.estado_id">
-                                                        <t t-set="ea" t-value="eval_acc.estado_id.code or ''"/>
-                                                        <span t-att-class="'eval-badge ' + (
-                                                            'eval-requiere' if ea == 'requiere_cambio' else
-                                                            'eval-ok' if ea in ('instalado_operativo', 'revisado') else
-                                                            'eval-requiere' if ea in ('no_instalado', 'falla') else
-                                                            'eval-warning' if ea == 'instalado_con_falla' else
-                                                            'eval-default'
-                                                        )">
-                                                            <i t-att-class="'fa ' + (
-                                                                'fa-exclamation-triangle' if ea in ('requiere_cambio', 'no_instalado', 'falla', 'instalado_con_falla') else
-                                                                'fa-check-circle' if ea in ('instalado_operativo', 'revisado') else
-                                                                'fa-info-circle'
-                                                            )"></i>
-                                                            <t t-esc="eval_acc.estado_id.name"/>
-                                                        </span>
-                                                    </t>
-                                                    <t t-else="">
-                                                        <span class="eval-muted">Sin evaluar</span>
-                                                    </t>
-                                                </td>
-                                                <td>
-                                                    <t t-if="eval_acc.observaciones">
-                                                        <div class="observacion-box">
-                                                            <t t-esc="eval_acc.observaciones"/>
-                                                        </div>
-                                                    </t>
-                                                    <t t-else="">
-                                                        <span class="eval-muted">Sin observaciones</span>
-                                                    </t>
-                                                </td>
-                                            </tr>
-                                        </t>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </t>
-                        <t t-else="">
-                            <div class="empty-state">
-                                <i class="fa fa-puzzle-piece"></i>
-                                <p>No hay evaluaciones de accesorios registradas para este ticket.</p>
-                            </div>
-                        </t>
+                                                    </td>
+                                                    <td>
+                                                        <t t-if="eval_acc.observaciones">
+                                                            <div class="observacion-box">
+                                                                <t t-esc="eval_acc.observaciones"/>
+                                                            </div>
+                                                        </t>
+                                                        <t t-else="">
+                                                            <span class="eval-muted">Sin observaciones</span>
+                                                        </t>
+                                                    </td>
+                                                </tr>
+                                            </t>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </t>
+
+                            <t t-else="">
+                                <div class="empty-state">
+                                    <i class="fa fa-puzzle-piece"></i>
+                                    <p>No hay evaluaciones de accesorios registradas para este ticket.</p>
+                                </div>
+                            </t>
+                        </div>
                     </div>
                 </div>
 
@@ -3348,14 +3454,17 @@
                             <t t-if="ticket.evidencia_foto_antes_ids">
                                 <div class="photo-grid">
                                     <t t-foreach="ticket.evidencia_foto_antes_ids" t-as="foto">
+                                        <t t-set="foto_field" t-value="'imagen_procesada' if foto.imagen_procesada else 'imagen_original'"/>
+                                        <t t-set="foto_url" t-value="'/web/image/ticket.evidencia.foto/%s/%s' % (foto.id, foto_field)"/>
+                                        <t t-set="modal_id" t-value="'fotoAntesModal_%s' % foto.id"/>
+
                                         <div class="photo-card">
-                                            <a t-att-href="'/web/image/ticket.evidencia.foto/%s/%s' % (foto.id, 'imagen_procesada' if foto.imagen_procesada else 'imagen_original')"
-                                               target="_blank">
-                                                <div class="photo-img-wrap">
-                                                    <img t-att-src="'/web/image/ticket.evidencia.foto/%s/%s' % (foto.id, 'imagen_procesada' if foto.imagen_procesada else 'imagen_original')"
-                                                         alt="Foto al llegar"/>
-                                                </div>
-                                            </a>
+                                            <div class="photo-img-wrap"
+                                                 data-bs-toggle="modal"
+                                                 t-att-data-bs-target="'#%s' % modal_id">
+                                                <img t-att-src="foto_url" alt="Foto al llegar"/>
+                                            </div>
+
                                             <div class="photo-body">
                                                 <div class="photo-title">
                                                     <i class="fa fa-camera"></i>
@@ -3381,13 +3490,16 @@
                                                         </div>
                                                     </t>
                                                 </div>
+
                                                 <div class="photo-actions">
-                                                    <a class="photo-btn photo-btn-view"
-                                                       t-att-href="'/web/image/ticket.evidencia.foto/%s/%s' % (foto.id, 'imagen_procesada' if foto.imagen_procesada else 'imagen_original')"
-                                                       target="_blank">
+                                                    <button type="button"
+                                                            class="photo-btn photo-btn-view"
+                                                            data-bs-toggle="modal"
+                                                            t-att-data-bs-target="'#%s' % modal_id">
                                                         <i class="fa fa-eye"></i>
                                                         Ver foto
-                                                    </a>
+                                                    </button>
+
                                                     <t t-if="foto.tiene_coordenadas">
                                                         <a class="photo-btn photo-btn-map"
                                                            t-att-href="'https://www.google.com/maps?q=%s,%s' % (foto.latitud, foto.longitud)"
@@ -3396,6 +3508,63 @@
                                                             Mapa
                                                         </a>
                                                     </t>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Modal Foto Antes -->
+                                        <div class="modal fade evidence-modal"
+                                             t-att-id="modal_id"
+                                             tabindex="-1"
+                                             aria-hidden="true">
+                                            <div class="modal-dialog modal-xl modal-dialog-centered">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title">
+                                                            <i class="fa fa-camera"></i>
+                                                            Foto al llegar
+                                                        </h5>
+                                                        <button type="button"
+                                                                class="btn-close btn-close-white"
+                                                                data-bs-dismiss="modal"
+                                                                aria-label="Cerrar"/>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        <img class="evidence-modal-img"
+                                                             t-att-src="foto_url"
+                                                             alt="Foto al llegar"/>
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <div class="modal-photo-meta">
+                                                            <t t-if="foto.timestamp_captura">
+                                                                <div>
+                                                                    <strong>Fecha:</strong>
+                                                                    <t t-esc="foto.timestamp_captura.strftime('%d/%m/%Y %H:%M')"/>
+                                                                </div>
+                                                            </t>
+                                                            <t t-if="foto.direccion_capturada">
+                                                                <div>
+                                                                    <strong>Dirección:</strong>
+                                                                    <t t-esc="foto.direccion_capturada"/>
+                                                                </div>
+                                                            </t>
+                                                        </div>
+                                                        <div>
+                                                            <t t-if="foto.tiene_coordenadas">
+                                                                <a class="btn btn-info text-white"
+                                                                   t-att-href="'https://www.google.com/maps?q=%s,%s' % (foto.latitud, foto.longitud)"
+                                                                   target="_blank">
+                                                                    <i class="fa fa-map me-1"></i>
+                                                                    Ver ubicación
+                                                                </a>
+                                                            </t>
+                                                            <button type="button"
+                                                                    class="btn btn-secondary"
+                                                                    data-bs-dismiss="modal">
+                                                                Cerrar
+                                                            </button>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -3426,14 +3595,17 @@
                             <t t-if="ticket.evidencia_foto_despues_ids">
                                 <div class="photo-grid">
                                     <t t-foreach="ticket.evidencia_foto_despues_ids" t-as="foto">
+                                        <t t-set="foto_field" t-value="'imagen_procesada' if foto.imagen_procesada else 'imagen_original'"/>
+                                        <t t-set="foto_url" t-value="'/web/image/ticket.evidencia.foto/%s/%s' % (foto.id, foto_field)"/>
+                                        <t t-set="modal_id" t-value="'fotoDespuesModal_%s' % foto.id"/>
+
                                         <div class="photo-card">
-                                            <a t-att-href="'/web/image/ticket.evidencia.foto/%s/%s' % (foto.id, 'imagen_procesada' if foto.imagen_procesada else 'imagen_original')"
-                                               target="_blank">
-                                                <div class="photo-img-wrap">
-                                                    <img t-att-src="'/web/image/ticket.evidencia.foto/%s/%s' % (foto.id, 'imagen_procesada' if foto.imagen_procesada else 'imagen_original')"
-                                                         alt="Foto al finalizar"/>
-                                                </div>
-                                            </a>
+                                            <div class="photo-img-wrap"
+                                                 data-bs-toggle="modal"
+                                                 t-att-data-bs-target="'#%s' % modal_id">
+                                                <img t-att-src="foto_url" alt="Foto al finalizar"/>
+                                            </div>
+
                                             <div class="photo-body">
                                                 <div class="photo-title">
                                                     <i class="fa fa-camera"></i>
@@ -3459,13 +3631,16 @@
                                                         </div>
                                                     </t>
                                                 </div>
+
                                                 <div class="photo-actions">
-                                                    <a class="photo-btn photo-btn-view"
-                                                       t-att-href="'/web/image/ticket.evidencia.foto/%s/%s' % (foto.id, 'imagen_procesada' if foto.imagen_procesada else 'imagen_original')"
-                                                       target="_blank">
+                                                    <button type="button"
+                                                            class="photo-btn photo-btn-view"
+                                                            data-bs-toggle="modal"
+                                                            t-att-data-bs-target="'#%s' % modal_id">
                                                         <i class="fa fa-eye"></i>
                                                         Ver foto
-                                                    </a>
+                                                    </button>
+
                                                     <t t-if="foto.tiene_coordenadas">
                                                         <a class="photo-btn photo-btn-map"
                                                            t-att-href="'https://www.google.com/maps?q=%s,%s' % (foto.latitud, foto.longitud)"
@@ -3474,6 +3649,63 @@
                                                             Mapa
                                                         </a>
                                                     </t>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Modal Foto Después -->
+                                        <div class="modal fade evidence-modal"
+                                             t-att-id="modal_id"
+                                             tabindex="-1"
+                                             aria-hidden="true">
+                                            <div class="modal-dialog modal-xl modal-dialog-centered">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title">
+                                                            <i class="fa fa-camera"></i>
+                                                            Foto al finalizar
+                                                        </h5>
+                                                        <button type="button"
+                                                                class="btn-close btn-close-white"
+                                                                data-bs-dismiss="modal"
+                                                                aria-label="Cerrar"/>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        <img class="evidence-modal-img"
+                                                             t-att-src="foto_url"
+                                                             alt="Foto al finalizar"/>
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <div class="modal-photo-meta">
+                                                            <t t-if="foto.timestamp_captura">
+                                                                <div>
+                                                                    <strong>Fecha:</strong>
+                                                                    <t t-esc="foto.timestamp_captura.strftime('%d/%m/%Y %H:%M')"/>
+                                                                </div>
+                                                            </t>
+                                                            <t t-if="foto.direccion_capturada">
+                                                                <div>
+                                                                    <strong>Dirección:</strong>
+                                                                    <t t-esc="foto.direccion_capturada"/>
+                                                                </div>
+                                                            </t>
+                                                        </div>
+                                                        <div>
+                                                            <t t-if="foto.tiene_coordenadas">
+                                                                <a class="btn btn-info text-white"
+                                                                   t-att-href="'https://www.google.com/maps?q=%s,%s' % (foto.latitud, foto.longitud)"
+                                                                   target="_blank">
+                                                                    <i class="fa fa-map me-1"></i>
+                                                                    Ver ubicación
+                                                                </a>
+                                                            </t>
+                                                            <button type="button"
+                                                                    class="btn btn-secondary"
+                                                                    data-bs-dismiss="modal">
+                                                                Cerrar
+                                                            </button>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
