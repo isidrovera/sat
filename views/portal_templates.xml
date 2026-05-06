@@ -2256,7 +2256,7 @@
         <!-- ===================================================== -->
         <!-- DETALLE DE TICKET (LO MANTIENES) -->
         <!-- ===================================================== -->
-        <template id="portal_ticket_detail" name="Detalle de Ticket">
+      <template id="portal_ticket_detail" name="Detalle de Ticket">
     <t t-call="portal.portal_layout">
         <t t-set="o_portal_fullwidth_alert" groups="base.group_portal">
             <t t-call="portal.portal_back_in_edit_mode">
@@ -2264,7 +2264,6 @@
             </t>
         </t>
 
-        <!-- Custom CSS -->
         <style>
             @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap');
             
@@ -2421,6 +2420,18 @@
             
             .info-card-header.secondary {
                 background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+                color: #fff;
+                border: none;
+            }
+
+            .info-card-header.danger {
+                background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+                color: #fff;
+                border: none;
+            }
+
+            .info-card-header.dark {
+                background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
                 color: #fff;
                 border: none;
             }
@@ -2599,6 +2610,254 @@
                 color: #374151;
                 border-color: #9ca3af;
             }
+
+            .eval-table-wrap {
+                overflow-x: auto;
+            }
+
+            .eval-table {
+                width: 100%;
+                border-collapse: separate;
+                border-spacing: 0;
+                min-width: 760px;
+            }
+
+            .eval-table thead th {
+                background: #f9fafb;
+                color: #374151;
+                padding: 1rem;
+                font-size: 0.8rem;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                border-bottom: 2px solid #e5e7eb;
+                white-space: nowrap;
+            }
+
+            .eval-table tbody td {
+                padding: 1rem;
+                border-bottom: 1px solid #f3f4f6;
+                vertical-align: top;
+                color: #374151;
+            }
+
+            .eval-table tbody tr:hover {
+                background: #f9fafb;
+            }
+
+            .eval-name {
+                font-weight: 700;
+                color: #111827;
+            }
+
+            .eval-color {
+                display: inline-flex;
+                align-items: center;
+                padding: 0.35rem 0.75rem;
+                border-radius: 999px;
+                background: #eef2ff;
+                color: #3730a3;
+                font-size: 0.8rem;
+                font-weight: 700;
+            }
+
+            .eval-muted {
+                color: #9ca3af;
+                font-style: italic;
+            }
+
+            .eval-badge {
+                display: inline-flex;
+                align-items: center;
+                gap: 0.35rem;
+                padding: 0.45rem 0.8rem;
+                border-radius: 999px;
+                font-size: 0.8rem;
+                font-weight: 700;
+                border: 2px solid;
+                white-space: nowrap;
+            }
+
+            .eval-requiere {
+                background: #fee2e2;
+                color: #991b1b;
+                border-color: #ef4444;
+            }
+
+            .eval-ok {
+                background: #d1fae5;
+                color: #065f46;
+                border-color: #10b981;
+            }
+
+            .eval-warning {
+                background: #fef3c7;
+                color: #92400e;
+                border-color: #f59e0b;
+            }
+
+            .eval-info {
+                background: #dbeafe;
+                color: #1e40af;
+                border-color: #3b82f6;
+            }
+
+            .eval-default {
+                background: #f3f4f6;
+                color: #374151;
+                border-color: #9ca3af;
+            }
+
+            .observacion-box {
+                background: #f9fafb;
+                border-left: 4px solid #e5e7eb;
+                padding: 0.75rem 1rem;
+                border-radius: 10px;
+                line-height: 1.5;
+                color: #374151;
+                white-space: pre-line;
+            }
+
+            .photo-section-title {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 1rem;
+                margin-bottom: 1rem;
+                flex-wrap: wrap;
+            }
+
+            .photo-section-title h5 {
+                margin: 0;
+                font-weight: 700;
+                color: #111827;
+            }
+
+            .photo-count {
+                display: inline-flex;
+                align-items: center;
+                gap: 0.4rem;
+                padding: 0.4rem 0.8rem;
+                border-radius: 999px;
+                background: #f3f4f6;
+                color: #374151;
+                font-size: 0.85rem;
+                font-weight: 700;
+            }
+
+            .photo-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+                gap: 1rem;
+            }
+
+            .photo-card {
+                background: #fff;
+                border: 1px solid #e5e7eb;
+                border-radius: 16px;
+                overflow: hidden;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+                transition: all 0.2s;
+            }
+
+            .photo-card:hover {
+                transform: translateY(-3px);
+                box-shadow: 0 8px 20px rgba(0,0,0,0.10);
+            }
+
+            .photo-img-wrap {
+                width: 100%;
+                height: 180px;
+                background: #f3f4f6;
+                overflow: hidden;
+            }
+
+            .photo-img-wrap img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                display: block;
+            }
+
+            .photo-body {
+                padding: 1rem;
+            }
+
+            .photo-title {
+                font-weight: 700;
+                color: #111827;
+                margin-bottom: 0.5rem;
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+            }
+
+            .photo-meta {
+                font-size: 0.85rem;
+                color: #6b7280;
+                line-height: 1.5;
+            }
+
+            .photo-actions {
+                display: flex;
+                gap: 0.5rem;
+                margin-top: 0.8rem;
+                flex-wrap: wrap;
+            }
+
+            .photo-btn {
+                display: inline-flex;
+                align-items: center;
+                gap: 0.35rem;
+                padding: 0.45rem 0.75rem;
+                border-radius: 10px;
+                font-size: 0.8rem;
+                font-weight: 700;
+                text-decoration: none;
+                transition: all 0.2s;
+            }
+
+            .photo-btn-view {
+                background: #eef2ff;
+                color: #3730a3;
+                border: 1px solid #c7d2fe;
+            }
+
+            .photo-btn-view:hover {
+                background: #3730a3;
+                color: #fff;
+                text-decoration: none;
+            }
+
+            .photo-btn-map {
+                background: #ecfeff;
+                color: #0e7490;
+                border: 1px solid #a5f3fc;
+            }
+
+            .photo-btn-map:hover {
+                background: #0e7490;
+                color: #fff;
+                text-decoration: none;
+            }
+
+            .photo-block {
+                margin-bottom: 2rem;
+            }
+
+            .photo-empty {
+                background: #f9fafb;
+                border: 2px dashed #e5e7eb;
+                border-radius: 16px;
+                padding: 2rem;
+                text-align: center;
+                color: #9ca3af;
+            }
+
+            .photo-empty i {
+                font-size: 2.5rem;
+                margin-bottom: 0.75rem;
+                color: #d1d5db;
+            }
             
             @media (max-width: 768px) {
                 .ticket-hero {
@@ -2611,6 +2870,14 @@
                 
                 .counter-value {
                     font-size: 2rem;
+                }
+
+                .eval-table {
+                    min-width: 680px;
+                }
+
+                .photo-img-wrap {
+                    height: 210px;
                 }
             }
         </style>
@@ -2847,7 +3114,7 @@
                 </t>
 
                 <!-- Contadores Registrados -->
-                <t t-if="ticket.estado == 'finalizado' and (ticket.contometrok_id or ticket.contometroc_id)">
+                <t t-if="ticket.estado == 'finalizado' and (ticket.contometrok_id or ticket.contometroc_id or ticket.contometros_id)">
                     <div class="info-card">
                         <div class="info-card-header secondary">
                             <i class="fa fa-tachometer-alt"></i>
@@ -2890,6 +3157,339 @@
                         </div>
                     </div>
                 </t>
+
+                <!-- Evaluación de Componentes -->
+                <div class="info-card">
+                    <div class="info-card-header dark">
+                        <i class="fa fa-wrench"></i>
+                        <span>Evaluación de Componentes</span>
+                    </div>
+                    <div class="info-card-body">
+                        <t t-if="ticket.ticket_componente_eval_ids">
+                            <div class="eval-table-wrap">
+                                <table class="eval-table">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 28%;">Componente</th>
+                                            <th style="width: 12%;">Color</th>
+                                            <th style="width: 20%;">Estado</th>
+                                            <th style="width: 40%;">Observaciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <t t-foreach="ticket.ticket_componente_eval_ids" t-as="eval_comp">
+                                            <tr>
+                                                <td>
+                                                    <div class="eval-name">
+                                                        <t t-if="eval_comp.componente_tipo_id">
+                                                            <t t-esc="eval_comp.componente_tipo_id.name"/>
+                                                        </t>
+                                                        <t t-else="">
+                                                            <span class="eval-muted">Sin componente</span>
+                                                        </t>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <t t-if="eval_comp.color_id">
+                                                        <span class="eval-color">
+                                                            <t t-esc="eval_comp.color_id.name"/>
+                                                        </span>
+                                                    </t>
+                                                    <t t-else="">
+                                                        <span class="eval-muted">—</span>
+                                                    </t>
+                                                </td>
+                                                <td>
+                                                    <t t-if="eval_comp.estado_id">
+                                                        <t t-set="ec" t-value="eval_comp.estado_id.code or ''"/>
+                                                        <span t-att-class="'eval-badge ' + (
+                                                            'eval-requiere' if ec == 'requiere_cambio' else
+                                                            'eval-ok' if ec in ('nuevo', 'correcto') else
+                                                            'eval-warning' if ec in ('regular', 'gastada_pero_puede_trabajar') else
+                                                            'eval-info' if ec == 'revisado' else
+                                                            'eval-requiere' if ec == 'falla' else
+                                                            'eval-default'
+                                                        )">
+                                                            <i t-att-class="'fa ' + (
+                                                                'fa-exclamation-triangle' if ec in ('requiere_cambio', 'falla') else
+                                                                'fa-check-circle' if ec in ('nuevo', 'correcto') else
+                                                                'fa-info-circle'
+                                                            )"></i>
+                                                            <t t-esc="eval_comp.estado_id.name"/>
+                                                        </span>
+                                                    </t>
+                                                    <t t-else="">
+                                                        <span class="eval-muted">Sin evaluar</span>
+                                                    </t>
+                                                </td>
+                                                <td>
+                                                    <t t-if="eval_comp.observaciones">
+                                                        <div class="observacion-box">
+                                                            <t t-esc="eval_comp.observaciones"/>
+                                                        </div>
+                                                    </t>
+                                                    <t t-else="">
+                                                        <span class="eval-muted">Sin observaciones</span>
+                                                    </t>
+                                                </td>
+                                            </tr>
+                                        </t>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </t>
+                        <t t-else="">
+                            <div class="empty-state">
+                                <i class="fa fa-wrench"></i>
+                                <p>No hay evaluaciones de componentes registradas para este ticket.</p>
+                            </div>
+                        </t>
+                    </div>
+                </div>
+
+                <!-- Evaluación de Accesorios -->
+                <div class="info-card">
+                    <div class="info-card-header primary">
+                        <i class="fa fa-puzzle-piece"></i>
+                        <span>Evaluación de Accesorios</span>
+                    </div>
+                    <div class="info-card-body">
+                        <t t-if="ticket.ticket_accesorio_eval_ids">
+                            <div class="eval-table-wrap">
+                                <table class="eval-table">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 35%;">Accesorio</th>
+                                            <th style="width: 25%;">Estado</th>
+                                            <th style="width: 40%;">Observaciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <t t-foreach="ticket.ticket_accesorio_eval_ids" t-as="eval_acc">
+                                            <tr>
+                                                <td>
+                                                    <div class="eval-name">
+                                                        <t t-if="eval_acc.tipo_id">
+                                                            <t t-esc="eval_acc.tipo_id.name"/>
+                                                        </t>
+                                                        <t t-else="">
+                                                            <span class="eval-muted">Sin accesorio</span>
+                                                        </t>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <t t-if="eval_acc.estado_id">
+                                                        <t t-set="ea" t-value="eval_acc.estado_id.code or ''"/>
+                                                        <span t-att-class="'eval-badge ' + (
+                                                            'eval-requiere' if ea == 'requiere_cambio' else
+                                                            'eval-ok' if ea in ('instalado_operativo', 'revisado') else
+                                                            'eval-requiere' if ea in ('no_instalado', 'falla') else
+                                                            'eval-warning' if ea == 'instalado_con_falla' else
+                                                            'eval-default'
+                                                        )">
+                                                            <i t-att-class="'fa ' + (
+                                                                'fa-exclamation-triangle' if ea in ('requiere_cambio', 'no_instalado', 'falla', 'instalado_con_falla') else
+                                                                'fa-check-circle' if ea in ('instalado_operativo', 'revisado') else
+                                                                'fa-info-circle'
+                                                            )"></i>
+                                                            <t t-esc="eval_acc.estado_id.name"/>
+                                                        </span>
+                                                    </t>
+                                                    <t t-else="">
+                                                        <span class="eval-muted">Sin evaluar</span>
+                                                    </t>
+                                                </td>
+                                                <td>
+                                                    <t t-if="eval_acc.observaciones">
+                                                        <div class="observacion-box">
+                                                            <t t-esc="eval_acc.observaciones"/>
+                                                        </div>
+                                                    </t>
+                                                    <t t-else="">
+                                                        <span class="eval-muted">Sin observaciones</span>
+                                                    </t>
+                                                </td>
+                                            </tr>
+                                        </t>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </t>
+                        <t t-else="">
+                            <div class="empty-state">
+                                <i class="fa fa-puzzle-piece"></i>
+                                <p>No hay evaluaciones de accesorios registradas para este ticket.</p>
+                            </div>
+                        </t>
+                    </div>
+                </div>
+
+                <!-- Evidencia Fotográfica -->
+                <div class="info-card">
+                    <div class="info-card-header info">
+                        <i class="fa fa-camera"></i>
+                        <span>Evidencia Fotográfica</span>
+                    </div>
+                    <div class="info-card-body">
+
+                        <!-- Fotos Antes -->
+                        <div class="photo-block">
+                            <div class="photo-section-title">
+                                <h5>
+                                    <i class="fa fa-sign-in-alt me-2" style="color: #0891b2;"></i>
+                                    Fotos al llegar
+                                </h5>
+                                <span class="photo-count">
+                                    <i class="fa fa-images"></i>
+                                    <t t-esc="ticket.evidencia_antes_count or len(ticket.evidencia_foto_antes_ids)"/>
+                                </span>
+                            </div>
+
+                            <t t-if="ticket.evidencia_foto_antes_ids">
+                                <div class="photo-grid">
+                                    <t t-foreach="ticket.evidencia_foto_antes_ids" t-as="foto">
+                                        <div class="photo-card">
+                                            <a t-att-href="'/web/image/ticket.evidencia.foto/%s/%s' % (foto.id, 'imagen_procesada' if foto.imagen_procesada else 'imagen_original')"
+                                               target="_blank">
+                                                <div class="photo-img-wrap">
+                                                    <img t-att-src="'/web/image/ticket.evidencia.foto/%s/%s' % (foto.id, 'imagen_procesada' if foto.imagen_procesada else 'imagen_original')"
+                                                         alt="Foto al llegar"/>
+                                                </div>
+                                            </a>
+                                            <div class="photo-body">
+                                                <div class="photo-title">
+                                                    <i class="fa fa-camera"></i>
+                                                    Antes
+                                                </div>
+                                                <div class="photo-meta">
+                                                    <t t-if="foto.timestamp_captura">
+                                                        <div>
+                                                            <i class="fa fa-clock me-1"></i>
+                                                            <t t-esc="foto.timestamp_captura.strftime('%d/%m/%Y %H:%M')"/>
+                                                        </div>
+                                                    </t>
+                                                    <t t-if="foto.direccion_capturada">
+                                                        <div>
+                                                            <i class="fa fa-map-marker-alt me-1"></i>
+                                                            <t t-esc="foto.direccion_capturada"/>
+                                                        </div>
+                                                    </t>
+                                                    <t t-if="foto.tiene_coordenadas">
+                                                        <div>
+                                                            <i class="fa fa-location-arrow me-1"></i>
+                                                            GPS registrado
+                                                        </div>
+                                                    </t>
+                                                </div>
+                                                <div class="photo-actions">
+                                                    <a class="photo-btn photo-btn-view"
+                                                       t-att-href="'/web/image/ticket.evidencia.foto/%s/%s' % (foto.id, 'imagen_procesada' if foto.imagen_procesada else 'imagen_original')"
+                                                       target="_blank">
+                                                        <i class="fa fa-eye"></i>
+                                                        Ver foto
+                                                    </a>
+                                                    <t t-if="foto.tiene_coordenadas">
+                                                        <a class="photo-btn photo-btn-map"
+                                                           t-att-href="'https://www.google.com/maps?q=%s,%s' % (foto.latitud, foto.longitud)"
+                                                           target="_blank">
+                                                            <i class="fa fa-map"></i>
+                                                            Mapa
+                                                        </a>
+                                                    </t>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </t>
+                                </div>
+                            </t>
+                            <t t-else="">
+                                <div class="photo-empty">
+                                    <i class="fa fa-camera-retro"></i>
+                                    <p>No hay fotos al llegar registradas.</p>
+                                </div>
+                            </t>
+                        </div>
+
+                        <!-- Fotos Después -->
+                        <div class="photo-block" style="margin-bottom: 0;">
+                            <div class="photo-section-title">
+                                <h5>
+                                    <i class="fa fa-flag-checkered me-2" style="color: #10b981;"></i>
+                                    Fotos al finalizar
+                                </h5>
+                                <span class="photo-count">
+                                    <i class="fa fa-images"></i>
+                                    <t t-esc="ticket.evidencia_despues_count or len(ticket.evidencia_foto_despues_ids)"/>
+                                </span>
+                            </div>
+
+                            <t t-if="ticket.evidencia_foto_despues_ids">
+                                <div class="photo-grid">
+                                    <t t-foreach="ticket.evidencia_foto_despues_ids" t-as="foto">
+                                        <div class="photo-card">
+                                            <a t-att-href="'/web/image/ticket.evidencia.foto/%s/%s' % (foto.id, 'imagen_procesada' if foto.imagen_procesada else 'imagen_original')"
+                                               target="_blank">
+                                                <div class="photo-img-wrap">
+                                                    <img t-att-src="'/web/image/ticket.evidencia.foto/%s/%s' % (foto.id, 'imagen_procesada' if foto.imagen_procesada else 'imagen_original')"
+                                                         alt="Foto al finalizar"/>
+                                                </div>
+                                            </a>
+                                            <div class="photo-body">
+                                                <div class="photo-title">
+                                                    <i class="fa fa-camera"></i>
+                                                    Después
+                                                </div>
+                                                <div class="photo-meta">
+                                                    <t t-if="foto.timestamp_captura">
+                                                        <div>
+                                                            <i class="fa fa-clock me-1"></i>
+                                                            <t t-esc="foto.timestamp_captura.strftime('%d/%m/%Y %H:%M')"/>
+                                                        </div>
+                                                    </t>
+                                                    <t t-if="foto.direccion_capturada">
+                                                        <div>
+                                                            <i class="fa fa-map-marker-alt me-1"></i>
+                                                            <t t-esc="foto.direccion_capturada"/>
+                                                        </div>
+                                                    </t>
+                                                    <t t-if="foto.tiene_coordenadas">
+                                                        <div>
+                                                            <i class="fa fa-location-arrow me-1"></i>
+                                                            GPS registrado
+                                                        </div>
+                                                    </t>
+                                                </div>
+                                                <div class="photo-actions">
+                                                    <a class="photo-btn photo-btn-view"
+                                                       t-att-href="'/web/image/ticket.evidencia.foto/%s/%s' % (foto.id, 'imagen_procesada' if foto.imagen_procesada else 'imagen_original')"
+                                                       target="_blank">
+                                                        <i class="fa fa-eye"></i>
+                                                        Ver foto
+                                                    </a>
+                                                    <t t-if="foto.tiene_coordenadas">
+                                                        <a class="photo-btn photo-btn-map"
+                                                           t-att-href="'https://www.google.com/maps?q=%s,%s' % (foto.latitud, foto.longitud)"
+                                                           target="_blank">
+                                                            <i class="fa fa-map"></i>
+                                                            Mapa
+                                                        </a>
+                                                    </t>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </t>
+                                </div>
+                            </t>
+                            <t t-else="">
+                                <div class="photo-empty">
+                                    <i class="fa fa-camera-retro"></i>
+                                    <p>No hay fotos al finalizar registradas.</p>
+                                </div>
+                            </t>
+                        </div>
+
+                    </div>
+                </div>
 
             </div>
         </div>
