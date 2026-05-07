@@ -86,7 +86,6 @@ export class MobileTicketLayout extends Component {
 
         onWillUnmount(() => {
             console.log(TAG, "[willUnmount]");
-
             window.removeEventListener("resize", this._onResize);
             document.body.classList.remove("o_mobile_ticket_active");
         });
@@ -122,16 +121,15 @@ export class MobileTicketLayout extends Component {
         return String(value);
     }
 
-    get retornoRelation() {
-        const field = this.record?.fields?.retorno_id;
-        const relation = field?.relation || null;
+    get retornoField() {
+        const field = this.record?.fields?.retorno_id || null;
 
-        console.log(TAG, "[retornoRelation]", {
+        console.log(TAG, "[retornoField]", {
             field,
-            relation,
+            value: this.data.retorno_id,
         });
 
-        return relation;
+        return field;
     }
 
     get retornoId() {
@@ -142,18 +140,27 @@ export class MobileTicketLayout extends Component {
         }
 
         if (Array.isArray(value)) {
-            return value[0] || "";
+            return String(value[0] || "");
         }
 
         if (typeof value === "object") {
-            return value.id || value.resId || "";
+            return String(value.id || value.resId || "");
         }
 
-        return value || "";
+        return String(value);
     }
 
     get retornoLabel() {
-        return this._readM2O("retorno_id") || "";
+        const retornoId = this.retornoId;
+        const options = this.uiState.retornoOptions || [];
+
+        const found = options.find((opt) => String(opt.value) === String(retornoId));
+
+        if (found) {
+            return found.label;
+        }
+
+        return retornoId || "";
     }
 
     get retornoIsSet() {
@@ -162,31 +169,71 @@ export class MobileTicketLayout extends Component {
 
     async loadRetornoOptions() {
         console.log(TAG, "[loadRetornoOptions] start", {
-            relation: this.retornoRelation,
+            field: this.retornoField,
             currentValue: this.data.retorno_id,
             retornoId: this.retornoId,
         });
 
-        if (!this.retornoRelation) {
-            console.warn(TAG, "[loadRetornoOptions] retorno_id no tiene relation. Verifica que el campo retorno_id esté cargado en la vista.");
+        const field = this.retornoField;
+
+        if (!field) {
+            console.warn(TAG, "[loadRetornoOptions] retorno_id no está disponible en record.fields.");
             return;
         }
 
         this.uiState.retornoLoading = true;
 
         try {
-            const records = await this.orm.searchRead(
-                this.retornoRelation,
-                [],
-                ["id", "name"],
-                { limit: 100 }
-            );
+            if (field.selection && Array.isArray(field.selection)) {
+                this.uiState.retornoOptions = field.selection
+                    .filter((opt) => opt)
+                    .map((opt) => {
+                        if (Array.isArray(opt)) {
+                            return {
+                                value: String(opt[0]),
+                                label: opt[1] || String(opt[0]),
+                            };
+                        }
 
-            this.uiState.retornoOptions = records || [];
+                        return {
+                            value: String(opt.value || opt[0] || ""),
+                            label: opt.label || opt[1] || opt.value || "",
+                        };
+                    })
+                    .filter((opt) => opt.value);
 
-            console.log(TAG, "[loadRetornoOptions] success", {
-                total: this.uiState.retornoOptions.length,
-                records: this.uiState.retornoOptions,
+                console.log(TAG, "[loadRetornoOptions] selection cargada", {
+                    total: this.uiState.retornoOptions.length,
+                    options: this.uiState.retornoOptions,
+                });
+
+                return;
+            }
+
+            if (field.relation) {
+                const records = await this.orm.searchRead(
+                    field.relation,
+                    [],
+                    ["id", "name"],
+                    { limit: 100 }
+                );
+
+                this.uiState.retornoOptions = (records || []).map((record) => ({
+                    value: String(record.id),
+                    label: record.name,
+                }));
+
+                console.log(TAG, "[loadRetornoOptions] many2one cargado", {
+                    relation: field.relation,
+                    total: this.uiState.retornoOptions.length,
+                    options: this.uiState.retornoOptions,
+                });
+
+                return;
+            }
+
+            console.warn(TAG, "[loadRetornoOptions] retorno_id no tiene selection ni relation", {
+                field,
             });
 
         } catch (error) {
@@ -201,18 +248,20 @@ export class MobileTicketLayout extends Component {
 
             console.log(TAG, "[loadRetornoOptions] finally", {
                 retornoLoading: this.uiState.retornoLoading,
+                options: this.uiState.retornoOptions,
             });
         }
     }
 
     async onChangeRetorno(ev) {
         const rawValue = ev?.target?.value || "";
-        const value = rawValue ? Number(rawValue) : false;
+        const value = rawValue || false;
 
         console.log(TAG, "[onChangeRetorno] start", {
             rawValue,
             value,
             oldValue: this.data.retorno_id,
+            field: this.retornoField,
         });
 
         await this.saveMobileValues({
@@ -908,13 +957,11 @@ export class MobileTicketLayout extends Component {
 
     async onAbrirMapa() {
         console.log(TAG, "[onAbrirMapa]");
-
         await this.callAction("action_abrir_mapa_equipo");
     }
 
     async onNavegar() {
         console.log(TAG, "[onNavegar]");
-
         await this.callAction("action_navegar_a_equipo");
     }
 
