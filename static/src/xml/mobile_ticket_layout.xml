@@ -110,7 +110,7 @@
                                 <div class="o_mobile_section_value" t-esc="asistenciaName"/>
                             </div>
 
-                            <!-- RETORNO: debajo de asistencia -->
+                            <!-- RETORNO -->
                             <div>
                                 <div class="o_mobile_section_label">RETORNO</div>
 
@@ -125,7 +125,7 @@
 
                                     <t t-foreach="uiState.retornoOptions" t-as="opt" t-key="opt.value">
                                         <option t-att-value="opt.value"
-                                                t-att-selected="String(opt.value) === String(retornoId)">
+                                                t-att-selected="opt.value == retornoId">
                                             <t t-esc="opt.label"/>
                                         </option>
                                     </t>
