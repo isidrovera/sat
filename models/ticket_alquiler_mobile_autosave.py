@@ -9,11 +9,12 @@ class TicketAlquilerMobileAutosave(models.Model):
 
     def action_guardar_cambios_movil(self):
         """
-        Botón visible para móvil.
+        Botón visible para técnicos.
 
-        En formularios normales de Odoo, los campos editados se guardan
-        cuando el usuario presiona guardar. Este botón sirve como acción clara
-        para técnicos, especialmente cuando están trabajando desde celular.
+        Nota:
+        En Odoo, al presionar un botón type='object', el formulario intenta
+        guardar primero los cambios del formulario actual antes de ejecutar
+        el método. Este botón sirve como confirmación clara para móvil.
         """
         self.ensure_one()
 
@@ -22,15 +23,34 @@ class TicketAlquilerMobileAutosave(models.Model):
             "tag": "display_notification",
             "params": {
                 "title": _("Cambios guardados"),
-                "message": _("Los cambios del ticket fueron confirmados."),
+                "message": _("Los cambios del ticket fueron guardados correctamente."),
                 "type": "success",
                 "sticky": False,
             },
         }
 
+    def action_guardar_y_volver_movil(self):
+        """
+        Botón propio para volver.
+
+        No usa la flecha nativa de Odoo. Guarda y regresa a la lista/kanban
+        de tickets para evitar que el técnico pierda cambios.
+        """
+        self.ensure_one()
+
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Tickets"),
+            "res_model": "ticket.alquiler",
+            "view_mode": "list,kanban,form",
+            "target": "current",
+            "domain": [],
+            "context": dict(self.env.context),
+        }
+
     def action_enviar_informe_administracion(self):
         """
-        Evita enviar el informe si el técnico no indicó retorno.
+        Evita enviar el informe si no se indicó si requiere retorno.
         """
         for ticket in self:
             if not ticket.retorno_id:

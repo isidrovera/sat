@@ -135,7 +135,6 @@
         }
     }
 
-    // En tablet → 4 columnas
     @media (min-width: 768px) {
         .o_chip_select_grid {
             grid-template-columns: repeat(4, 1fr);
@@ -146,14 +145,12 @@
         }
     }
 
-    // En desktop → 5 columnas
     @media (min-width: 1200px) {
         .o_chip_select_grid {
             grid-template-columns: repeat(5, 1fr);
         }
     }
 
-    // En desktop muy ancho → 6 columnas
     @media (min-width: 1600px) {
         .o_chip_select_grid {
             grid-template-columns: repeat(6, 1fr);
@@ -163,7 +160,7 @@
 
 
 /* ==========================================================
-   BLOQUE MÓVIL PARA RETORNO Y GUARDADO MANUAL
+   BOTONES MÓVILES DEL TICKET
    ========================================================== */
 
 .o_mobile_ticket_form {
@@ -202,7 +199,7 @@
 
 
 /* ==========================================================
-   TARJETAS DE COMPONENTES / ACCESORIOS
+   TARJETAS COMPONENTES / ACCESORIOS
    ========================================================== */
 
 .o_mobile_eval_kanban,

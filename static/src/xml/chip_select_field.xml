@@ -17,7 +17,6 @@
 
             <div t-if="!uiState.loading and uiState.options.length > 0">
 
-                <!-- Estado actual -->
                 <button t-if="selectedOption"
                         type="button"
                         class="o_chip o_chip_current"
@@ -28,7 +27,7 @@
                         }"
                         t-att-style="getChipStyle(selectedOption, true)"
                         t-att-title="selectedOption.name"
-                        t-on-click.stop.prevent="(ev) => this.toggleOptions(ev)">
+                        t-on-click.stop.prevent="(ev) => onToggleOptions(ev)">
 
                     <span class="o_chip_check" t-if="!uiState.saving">✓</span>
 
@@ -42,7 +41,6 @@
                     <span class="o_chip_arrow" t-if="uiState.expanded">▲</span>
                 </button>
 
-                <!-- Mensaje de autoguardado -->
                 <div class="o_chip_save_status"
                      t-if="uiState.saveMessage"
                      t-att-class="{
@@ -53,7 +51,6 @@
                     <span t-esc="uiState.saveMessage"/>
                 </div>
 
-                <!-- Opciones -->
                 <div class="o_chip_select_grid"
                      t-if="!selectedOption or uiState.expanded">
 
@@ -63,7 +60,7 @@
                                 t-att-class="{ 'o_chip_selected': isSelected(option) }"
                                 t-att-style="getChipStyle(option, isSelected(option))"
                                 t-att-title="option.name"
-                                t-on-click.stop.prevent="(ev) => this.select(option, ev)">
+                                t-on-click.stop.prevent="(ev) => onSelectOption(option, ev)">
 
                             <span class="o_chip_check" t-if="isSelected(option)">✓</span>
                             <span class="o_chip_label" t-esc="getShortLabel(option)"/>

@@ -8,13 +8,14 @@
             <field name="inherit_id" ref="sat.soporte_form_viw"/>
             <field name="arch" type="xml">
 
-                <!-- Ocultamos el retorno_id original para mostrarlo mejor en una zona móvil clara -->
+                <!-- Ocultar el retorno_id original para mostrarlo en una sección más visible -->
                 <xpath expr="//field[@name='retorno_id']" position="attributes">
                     <attribute name="invisible">1</attribute>
                 </xpath>
 
-                <!-- Nueva sección clara para el técnico -->
+                <!-- Insertar bloque móvil después del título -->
                 <xpath expr="//div[contains(@class, 'oe_title')]" position="after">
+
                     <group string="📩 Decisión del técnico" class="o_mobile_retorno_box">
                         <group>
                             <field name="retorno_id"
@@ -37,15 +38,23 @@
                                 string="💾 Guardar cambios"
                                 class="btn btn-primary oe_highlight"
                                 invisible="estado == 'finalizado'"/>
+
+                        <button name="action_guardar_y_volver_movil"
+                                type="object"
+                                string="← Guardar y volver"
+                                class="btn btn-secondary"
+                                invisible="estado == 'finalizado'"
+                                confirm="¿Guardar los cambios y volver a la lista de tickets?"/>
                     </div>
+
                 </xpath>
 
-                <!-- Componentes: dejamos explícito auto_save -->
+                <!-- Activar autoguardado en componentes -->
                 <xpath expr="//page[@name='componentes_dinamicos']//field[@name='estado_id'][@widget='chip_select']" position="attributes">
                     <attribute name="options">{'filter_by_field': 'componente_tipo_id', 'filter_relation': 'componente_tipo_ids', 'shorten_labels': true, 'auto_save': true}</attribute>
                 </xpath>
 
-                <!-- Accesorios: dejamos explícito auto_save -->
+                <!-- Activar autoguardado en accesorios -->
                 <xpath expr="//page[@name='accesorios_dinamicos']//field[@name='estado_id'][@widget='chip_select']" position="attributes">
                     <attribute name="options">{'shorten_labels': false, 'auto_save': true}</attribute>
                 </xpath>
