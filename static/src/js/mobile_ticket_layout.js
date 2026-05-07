@@ -36,6 +36,18 @@ export class MobileTicketLayout extends Component {
             lastActionName: null,
             retornoLoading: false,
             retornoOptions: [],
+
+            // ============================================================
+            // CONTADORES TEMPORALES EN MÓVIL
+            // Evita guardar K/Color/Scan por separado.
+            // ============================================================
+            contadoresDirty: false,
+            contadorDraft: {
+                k: "",
+                color: "",
+                scan: "",
+            },
+
             accordions: {
                 componentes: { open: true },
                 accesorios: { open: true },
@@ -82,6 +94,7 @@ export class MobileTicketLayout extends Component {
             }
 
             this.loadRetornoOptions();
+            this.initContadoresDraft();
         });
 
         onWillUnmount(() => {
@@ -122,6 +135,10 @@ export class MobileTicketLayout extends Component {
         return String(value);
     }
 
+    // ============================================================
+    // RETORNO
+    // ============================================================
+
     get retornoField() {
         const field = this.record?.fields?.retorno_id || null;
 
@@ -136,7 +153,7 @@ export class MobileTicketLayout extends Component {
     get retornoId() {
         const value = this.data.retorno_id;
 
-        if (!value) {
+        if (value === false || value === null || value === undefined || value === "") {
             return "";
         }
 
@@ -145,7 +162,7 @@ export class MobileTicketLayout extends Component {
         }
 
         if (typeof value === "object") {
-            return String(value.id || value.resId || "");
+            return String(value.id || value.resId || value.value || "");
         }
 
         return String(value);
@@ -161,11 +178,26 @@ export class MobileTicketLayout extends Component {
             return found.label;
         }
 
+        if (retornoId === "si") {
+            return "Si";
+        }
+
+        if (retornoId === "no") {
+            return "No";
+        }
+
         return retornoId || "";
     }
 
     get retornoIsSet() {
         return !!this.retornoId;
+    }
+
+    _getRetornoFallbackOptions() {
+        return [
+            { value: "si", label: "Si" },
+            { value: "no", label: "No" },
+        ];
     }
 
     async loadRetornoOptions() {
@@ -177,14 +209,21 @@ export class MobileTicketLayout extends Component {
 
         const field = this.retornoField;
 
-        if (!field) {
-            console.warn(TAG, "[loadRetornoOptions] retorno_id no está disponible en record.fields.");
-            return;
-        }
-
         this.uiState.retornoLoading = true;
 
         try {
+            if (!field) {
+                this.uiState.retornoOptions = this._getRetornoFallbackOptions();
+
+                console.warn(TAG, "[loadRetornoOptions] retorno_id no está disponible en record.fields. Usando fallback.", {
+                    options: this.uiState.retornoOptions,
+                    currentValue: this.data.retorno_id,
+                    retornoId: this.retornoId,
+                });
+
+                return;
+            }
+
             if (field.selection && Array.isArray(field.selection)) {
                 this.uiState.retornoOptions = field.selection
                     .filter((opt) => opt)
@@ -203,9 +242,15 @@ export class MobileTicketLayout extends Component {
                     })
                     .filter((opt) => opt.value);
 
+                if (!this.uiState.retornoOptions.length) {
+                    this.uiState.retornoOptions = this._getRetornoFallbackOptions();
+                }
+
                 console.log(TAG, "[loadRetornoOptions] selection cargada", {
                     total: this.uiState.retornoOptions.length,
                     options: this.uiState.retornoOptions,
+                    retornoId: this.retornoId,
+                    retornoLabel: this.retornoLabel,
                 });
 
                 return;
@@ -228,19 +273,26 @@ export class MobileTicketLayout extends Component {
                     relation: field.relation,
                     total: this.uiState.retornoOptions.length,
                     options: this.uiState.retornoOptions,
+                    retornoId: this.retornoId,
+                    retornoLabel: this.retornoLabel,
                 });
 
                 return;
             }
 
-            console.warn(TAG, "[loadRetornoOptions] retorno_id no tiene selection ni relation", {
+            this.uiState.retornoOptions = this._getRetornoFallbackOptions();
+
+            console.warn(TAG, "[loadRetornoOptions] retorno_id no tiene selection ni relation. Usando fallback.", {
                 field,
+                options: this.uiState.retornoOptions,
             });
 
         } catch (error) {
             console.error(TAG, "[loadRetornoOptions] error", error);
 
-            this.notification.add("No se pudieron cargar las opciones de retorno.", {
+            this.uiState.retornoOptions = this._getRetornoFallbackOptions();
+
+            this.notification.add("No se pudieron cargar las opciones de retorno. Se usaron opciones por defecto.", {
                 type: "warning",
             });
 
@@ -250,6 +302,8 @@ export class MobileTicketLayout extends Component {
             console.log(TAG, "[loadRetornoOptions] finally", {
                 retornoLoading: this.uiState.retornoLoading,
                 options: this.uiState.retornoOptions,
+                retornoId: this.retornoId,
+                retornoLabel: this.retornoLabel,
             });
         }
     }
@@ -262,18 +316,26 @@ export class MobileTicketLayout extends Component {
             rawValue,
             value,
             oldValue: this.data.retorno_id,
+            oldRetornoId: this.retornoId,
             field: this.retornoField,
         });
 
-        await this.saveMobileValues({
+        const ok = await this.saveMobileValues({
             retorno_id: value,
         });
 
         console.log(TAG, "[onChangeRetorno] done", {
+            ok,
             value,
             newValue: this.data.retorno_id,
+            newRetornoId: this.retornoId,
+            retornoLabel: this.retornoLabel,
         });
     }
+
+    // ============================================================
+    // GETTERS BASE
+    // ============================================================
 
     get ticketNumber() {
         return this.data.name || "";
@@ -529,6 +591,10 @@ export class MobileTicketLayout extends Component {
         return actions;
     }
 
+    // ============================================================
+    // ACCORDIONS / UI
+    // ============================================================
+
     accordionClass(sectionId) {
         const accordion = this.uiState.accordions[sectionId];
 
@@ -610,6 +676,10 @@ export class MobileTicketLayout extends Component {
         this.uiState.menuOpen = false;
     }
 
+    // ============================================================
+    // RECARGA / GUARDADO
+    // ============================================================
+
     async reloadRecord() {
         console.log(TAG, "[reloadRecord] start", {
             hasLoad: !!this.record?.load,
@@ -636,12 +706,12 @@ export class MobileTicketLayout extends Component {
 
         if (!this.record?.resModel || !this.record?.resId) {
             console.warn(TAG, "[saveMobileValues] no resModel/resId");
-            return;
+            return false;
         }
 
         if (this.uiState.saving) {
             console.warn(TAG, "[saveMobileValues] already saving");
-            return;
+            return false;
         }
 
         this.uiState.saving = true;
@@ -657,12 +727,16 @@ export class MobileTicketLayout extends Component {
                 type: "success",
             });
 
+            return true;
+
         } catch (error) {
             console.error(TAG, "[saveMobileValues] error", error);
 
             this.notification.add("No se pudo guardar el cambio.", {
                 type: "danger",
             });
+
+            return false;
 
         } finally {
             this.uiState.saving = false;
@@ -678,7 +752,15 @@ export class MobileTicketLayout extends Component {
             saving: this.uiState.saving,
             actionLoading: this.uiState.actionLoading,
             lastActionName: this.uiState.lastActionName,
+            contadoresDirty: this.uiState.contadoresDirty,
         });
+
+        if (this.uiState.contadoresDirty) {
+            if (!confirm("Hay contadores pendientes por guardar. ¿Deseas salir sin guardar?")) {
+                console.log(TAG, "[onMobileBack] cancelado por contadores pendientes");
+                return;
+            }
+        }
 
         if (this.uiState.saving || this.uiState.actionLoading) {
             this.notification.add("Espera un momento, se está guardando o ejecutando una acción.", {
@@ -704,29 +786,145 @@ export class MobileTicketLayout extends Component {
         }
     }
 
-    async onChangeContadorK(ev) {
-        console.log(TAG, "[onChangeContadorK]", ev.target.value);
+    // ============================================================
+    // CONTADORES MÓVIL
+    // ============================================================
 
-        await this.saveMobileValues({
-            contometrok_id: Number(ev.target.value || 0),
+    initContadoresDraft() {
+        console.log(TAG, "[initContadoresDraft] start", {
+            contometrok_id: this.data.contometrok_id,
+            contometroc_id: this.data.contometroc_id,
+            contometros_id: this.data.contometros_id,
+            dirtyBefore: this.uiState.contadoresDirty,
+        });
+
+        this.uiState.contadorDraft.k = String(this.data.contometrok_id || "");
+        this.uiState.contadorDraft.color = String(this.data.contometroc_id || "");
+        this.uiState.contadorDraft.scan = String(this.data.contometros_id || "");
+        this.uiState.contadoresDirty = false;
+
+        console.log(TAG, "[initContadoresDraft] done", {
+            draft: this.uiState.contadorDraft,
+            dirty: this.uiState.contadoresDirty,
         });
     }
 
-    async onChangeContadorColor(ev) {
-        console.log(TAG, "[onChangeContadorColor]", ev.target.value);
+    _cleanCounterInput(value) {
+        const cleaned = String(value || "")
+            .trim()
+            .replace(/,/g, "");
 
-        await this.saveMobileValues({
-            contometroc_id: Number(ev.target.value || 0),
-        });
+        if (!cleaned) {
+            return "";
+        }
+
+        return cleaned;
     }
 
-    async onChangeContadorScan(ev) {
-        console.log(TAG, "[onChangeContadorScan]", ev.target.value);
+    onInputContadorK(ev) {
+        const value = this._cleanCounterInput(ev.target.value);
 
-        await this.saveMobileValues({
-            contometros_id: Number(ev.target.value || 0),
+        console.log(TAG, "[onInputContadorK]", {
+            raw: ev.target.value,
+            value,
+            previous: this.uiState.contadorDraft.k,
         });
+
+        this.uiState.contadorDraft.k = value;
+        this.uiState.contadoresDirty = true;
     }
+
+    onInputContadorColor(ev) {
+        const value = this._cleanCounterInput(ev.target.value);
+
+        console.log(TAG, "[onInputContadorColor]", {
+            raw: ev.target.value,
+            value,
+            previous: this.uiState.contadorDraft.color,
+        });
+
+        this.uiState.contadorDraft.color = value;
+        this.uiState.contadoresDirty = true;
+    }
+
+    onInputContadorScan(ev) {
+        const value = this._cleanCounterInput(ev.target.value);
+
+        console.log(TAG, "[onInputContadorScan]", {
+            raw: ev.target.value,
+            value,
+            previous: this.uiState.contadorDraft.scan,
+        });
+
+        this.uiState.contadorDraft.scan = value;
+        this.uiState.contadoresDirty = true;
+    }
+
+    async onGuardarContadores() {
+        console.log(TAG, "[onGuardarContadores] start", {
+            draft: this.uiState.contadorDraft,
+            esColor: this.esColor,
+            currentData: {
+                contometrok_id: this.data.contometrok_id,
+                contometroc_id: this.data.contometroc_id,
+                contometros_id: this.data.contometros_id,
+            },
+        });
+
+        const k = this._cleanCounterInput(this.uiState.contadorDraft.k);
+        const color = this._cleanCounterInput(this.uiState.contadorDraft.color);
+        const scan = this._cleanCounterInput(this.uiState.contadorDraft.scan);
+
+        if (!k || Number(k) <= 0) {
+            this.notification.add("Ingrese el contador K antes de guardar.", {
+                type: "warning",
+            });
+
+            console.warn(TAG, "[onGuardarContadores] K inválido", {
+                k,
+            });
+
+            return;
+        }
+
+        if (this.esColor && (!color || Number(color) <= 0)) {
+            this.notification.add("Ingrese el contador Color antes de guardar.", {
+                type: "warning",
+            });
+
+            console.warn(TAG, "[onGuardarContadores] Color inválido", {
+                color,
+            });
+
+            return;
+        }
+
+        const values = {
+            contometrok_id: k,
+            contometros_id: scan || false,
+        };
+
+        if (this.esColor) {
+            values.contometroc_id = color;
+        }
+
+        console.log(TAG, "[onGuardarContadores] values", values);
+
+        const ok = await this.saveMobileValues(values);
+
+        console.log(TAG, "[onGuardarContadores] save result", {
+            ok,
+            values,
+        });
+
+        if (ok) {
+            this.initContadoresDraft();
+        }
+    }
+
+    // ============================================================
+    // OTROS CAMPOS
+    // ============================================================
 
     async onChangeDescription(ev) {
         console.log(TAG, "[onChangeDescription]", ev.target.value);
@@ -743,6 +941,10 @@ export class MobileTicketLayout extends Component {
             informe_id: ev.target.value || "",
         });
     }
+
+    // ============================================================
+    // ACCIONES
+    // ============================================================
 
     normalizeAction(action, actionName = "") {
         console.log(TAG, "[normalizeAction] input", {
@@ -818,6 +1020,7 @@ export class MobileTicketLayout extends Component {
             resId: this.record?.resId,
             currentState: this.currentState,
             retornoId: this.retornoId,
+            contadoresDirty: this.uiState.contadoresDirty,
             data: this.data,
         });
 
@@ -892,6 +1095,7 @@ export class MobileTicketLayout extends Component {
 
             if (!(normalizedAction && normalizedAction.type === "ir.actions.act_window" && normalizedAction.target === "new")) {
                 await this.reloadRecord();
+                this.initContadoresDraft();
             } else {
                 console.log(TAG, "[callAction] no reload porque se abrió modal/wizard", {
                     actionName,
@@ -959,12 +1163,25 @@ export class MobileTicketLayout extends Component {
             canCerrarTicket: this.canCerrarTicket,
             currentState: this.currentState,
             retornoId: this.retornoId,
+            contadoresDirty: this.uiState.contadoresDirty,
             resId: this.record?.resId,
         });
 
         if (!this.canCerrarTicket) {
             console.warn(TAG, "[onCerrarTicket] no permitido por estado", {
                 currentState: this.currentState,
+            });
+
+            return;
+        }
+
+        if (this.uiState.contadoresDirty) {
+            this.notification.add("Guarda los contadores antes de cerrar el ticket.", {
+                type: "warning",
+            });
+
+            console.warn(TAG, "[onCerrarTicket] contadores pendientes por guardar", {
+                draft: this.uiState.contadorDraft,
             });
 
             return;

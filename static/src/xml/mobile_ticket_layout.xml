@@ -115,16 +115,17 @@
                                 <div class="o_mobile_section_label">RETORNO</div>
 
                                 <select class="o_mobile_select"
-                                        t-att-value="retornoId"
                                         t-on-change="onChangeRetorno"
                                         t-att-disabled="uiState.saving || uiState.retornoLoading || currentState === 'finalizado'">
 
-                                    <option value="">
+                                    <option value=""
+                                            t-att-selected="!retornoId">
                                         Seleccione...
                                     </option>
 
                                     <t t-foreach="uiState.retornoOptions" t-as="opt" t-key="opt.value">
-                                        <option t-att-value="opt.value">
+                                        <option t-att-value="opt.value"
+                                                t-att-selected="String(opt.value) === String(retornoId)">
                                             <t t-esc="opt.label"/>
                                         </option>
                                     </t>
@@ -132,6 +133,10 @@
 
                                 <div class="o_mobile_hint" t-if="uiState.retornoLoading">
                                     Cargando retorno...
+                                </div>
+
+                                <div class="o_mobile_hint" t-if="!uiState.retornoLoading and retornoLabel">
+                                    Valor actual: <t t-esc="retornoLabel"/>
                                 </div>
                             </div>
                         </div>
@@ -166,9 +171,9 @@
                                 <input type="number"
                                        inputmode="numeric"
                                        class="o_mobile_counter_input"
-                                       t-att-value="contadorK"
-                                       t-on-change="onChangeContadorK"
-                                       t-att-disabled="uiState.saving"/>
+                                       t-att-value="uiState.contadorDraft.k || contadorK"
+                                       t-on-input="onInputContadorK"
+                                       t-att-disabled="uiState.saving || currentState === 'finalizado'"/>
                             </div>
 
                             <div class="o_contador_box" t-if="esColor">
@@ -176,9 +181,9 @@
                                 <input type="number"
                                        inputmode="numeric"
                                        class="o_mobile_counter_input"
-                                       t-att-value="contadorColor"
-                                       t-on-change="onChangeContadorColor"
-                                       t-att-disabled="uiState.saving"/>
+                                       t-att-value="uiState.contadorDraft.color || contadorColor"
+                                       t-on-input="onInputContadorColor"
+                                       t-att-disabled="uiState.saving || currentState === 'finalizado'"/>
                             </div>
 
                             <div class="o_contador_box">
@@ -186,14 +191,27 @@
                                 <input type="number"
                                        inputmode="numeric"
                                        class="o_mobile_counter_input"
-                                       t-att-value="contadorScan"
-                                       t-on-change="onChangeContadorScan"
-                                       t-att-disabled="uiState.saving"/>
+                                       t-att-value="uiState.contadorDraft.scan || contadorScan"
+                                       t-on-input="onInputContadorScan"
+                                       t-att-disabled="uiState.saving || currentState === 'finalizado'"/>
                             </div>
                         </div>
 
-                        <div class="o_mobile_hint">
-                            Los contadores se guardan al salir del campo.
+                        <div class="o_mobile_actions_row o_mt_10">
+                            <button type="button"
+                                    class="o_btn_primary o_mobile_full_width_btn"
+                                    t-on-click="onGuardarContadores"
+                                    t-att-disabled="uiState.saving || currentState === 'finalizado'">
+                                💾 Guardar contadores
+                            </button>
+                        </div>
+
+                        <div class="o_mobile_hint" t-if="!uiState.contadoresDirty">
+                            Complete los contadores y presione Guardar.
+                        </div>
+
+                        <div class="o_mobile_hint" t-if="uiState.contadoresDirty">
+                            Hay contadores pendientes por guardar.
                         </div>
                     </div>
                 </div>
@@ -383,7 +401,7 @@
 
                 <button type="button"
                         class="o_btn_primary"
-                        t-att-disabled="!canCerrarTicket || uiState.saving"
+                        t-att-disabled="!canCerrarTicket || uiState.saving || uiState.contadoresDirty"
                         t-on-click="onCerrarTicket">
                     ✓ Cerrar ticket
                 </button>
