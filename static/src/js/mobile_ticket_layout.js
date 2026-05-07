@@ -34,10 +34,8 @@ export class MobileTicketLayout extends Component {
             saving: false,
             actionLoading: false,
             lastActionName: null,
-
             retornoLoading: false,
             retornoOptions: [],
-
             accordions: {
                 componentes: { open: true },
                 accesorios: { open: true },
@@ -155,18 +153,11 @@ export class MobileTicketLayout extends Component {
     }
 
     get retornoLabel() {
-        return this._readM2O("retorno_id") || "Sin definir";
+        return this._readM2O("retorno_id") || "";
     }
 
     get retornoIsSet() {
         return !!this.retornoId;
-    }
-
-    get showRetornoWarning() {
-        return (
-            !this.retornoIsSet &&
-            ["proceso", "en_ruta", "en_sitio", "en_revision"].includes(this.currentState)
-        );
     }
 
     async loadRetornoOptions() {
@@ -177,7 +168,7 @@ export class MobileTicketLayout extends Component {
         });
 
         if (!this.retornoRelation) {
-            console.warn(TAG, "[loadRetornoOptions] retorno_id no tiene relation. Verifica que el campo esté en la vista.");
+            console.warn(TAG, "[loadRetornoOptions] retorno_id no tiene relation. Verifica que el campo retorno_id esté cargado en la vista.");
             return;
         }
 
@@ -230,7 +221,7 @@ export class MobileTicketLayout extends Component {
 
         console.log(TAG, "[onChangeRetorno] done", {
             value,
-            newData: this.data.retorno_id,
+            newValue: this.data.retorno_id,
         });
     }
 
@@ -632,73 +623,6 @@ export class MobileTicketLayout extends Component {
         }
     }
 
-    async onGuardarCambios() {
-        console.log(TAG, "[onGuardarCambios] start", {
-            resModel: this.record?.resModel,
-            resId: this.record?.resId,
-            data: this.data,
-        });
-
-        try {
-            await this.reloadRecord();
-
-            this.notification.add("Cambios guardados.", {
-                type: "success",
-            });
-
-            console.log(TAG, "[onGuardarCambios] success");
-
-        } catch (error) {
-            console.error(TAG, "[onGuardarCambios] error", error);
-
-            this.notification.add("No se pudo confirmar el guardado.", {
-                type: "danger",
-            });
-        }
-    }
-
-    async onGuardarYVolver() {
-        console.log(TAG, "[onGuardarYVolver] start", {
-            resModel: this.record?.resModel,
-            resId: this.record?.resId,
-        });
-
-        try {
-            await this.reloadRecord();
-
-            const action = {
-                type: "ir.actions.act_window",
-                name: "Tickets",
-                res_model: this.record?.resModel || "ticket.alquiler",
-                view_mode: "list,kanban,form",
-                views: [
-                    [false, "list"],
-                    [false, "kanban"],
-                    [false, "form"],
-                ],
-                target: "current",
-                context: {
-                    active_model: this.record?.resModel || "ticket.alquiler",
-                },
-            };
-
-            console.log(TAG, "[onGuardarYVolver] doAction", {
-                action,
-            });
-
-            await this.action.doAction(action);
-
-            console.log(TAG, "[onGuardarYVolver] success");
-
-        } catch (error) {
-            console.error(TAG, "[onGuardarYVolver] error", error);
-
-            this.notification.add("No se pudo volver a la lista.", {
-                type: "danger",
-            });
-        }
-    }
-
     async onChangeContadorK(ev) {
         console.log(TAG, "[onChangeContadorK]", ev.target.value);
 
@@ -812,6 +736,7 @@ export class MobileTicketLayout extends Component {
             resModel: this.record?.resModel,
             resId: this.record?.resId,
             currentState: this.currentState,
+            retornoId: this.retornoId,
             data: this.data,
         });
 

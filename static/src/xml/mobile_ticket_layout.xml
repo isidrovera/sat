@@ -8,7 +8,7 @@
             <div class="o_mobile_ticket_header">
                 <button type="button"
                         class="o_mobile_back"
-                        t-on-click="onGuardarYVolver">
+                        t-on-click="() => window.history.back()">
                     ←
                 </button>
 
@@ -30,69 +30,6 @@
 
             <!-- BODY -->
             <div class="o_mobile_ticket_body">
-
-                <!-- DECISIÓN DEL TÉCNICO -->
-                <div class="o_mobile_card o_mobile_retorno_card">
-                    <div class="o_mobile_card_header">
-                        <div class="o_mobile_avatar">📩</div>
-
-                        <div class="o_mobile_card_title_box">
-                            <div class="o_mobile_card_label">DECISIÓN DEL TÉCNICO</div>
-                            <div class="o_mobile_card_title">Retorno</div>
-                            <div class="o_mobile_card_subtitle">
-                                Indica si este ticket requiere retorno.
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="o_mobile_card_section">
-                        <div class="o_mobile_section_label">¿REQUIERE RETORNO?</div>
-
-                        <select class="o_mobile_select"
-                                t-att-value="retornoId"
-                                t-on-change="onChangeRetorno"
-                                t-att-disabled="uiState.saving || uiState.retornoLoading || currentState === 'finalizado'">
-
-                            <option value="">Seleccione...</option>
-
-                            <t t-foreach="uiState.retornoOptions" t-as="opt" t-key="opt.id">
-                                <option t-att-value="opt.id"
-                                        t-att-selected="String(opt.id) === String(retornoId)">
-                                    <t t-esc="opt.name"/>
-                                </option>
-                            </t>
-                        </select>
-
-                        <div class="o_mobile_hint" t-if="uiState.retornoLoading">
-                            Cargando opciones de retorno...
-                        </div>
-
-                        <div class="o_mobile_hint" t-if="retornoIsSet">
-                            Seleccionado:
-                            <strong t-esc="retornoLabel"/>
-                        </div>
-
-                        <div class="o_mobile_warning" t-if="showRetornoWarning">
-                            ⚠ Antes de cerrar o enviar el informe, indica si requiere retorno.
-                        </div>
-                    </div>
-
-                    <div class="o_mobile_actions_row o_mobile_save_actions">
-                        <button type="button"
-                                class="o_btn_primary"
-                                t-on-click="onGuardarCambios"
-                                t-att-disabled="uiState.saving">
-                            💾 Guardar cambios
-                        </button>
-
-                        <button type="button"
-                                class="o_btn_secondary"
-                                t-on-click="onGuardarYVolver"
-                                t-att-disabled="uiState.saving">
-                            ← Guardar y volver
-                        </button>
-                    </div>
-                </div>
 
                 <!-- CLIENTE -->
                 <div class="o_mobile_card">
@@ -171,6 +108,30 @@
                             <div t-if="asistenciaName">
                                 <div class="o_mobile_section_label">ASISTENCIA</div>
                                 <div class="o_mobile_section_value" t-esc="asistenciaName"/>
+                            </div>
+
+                            <!-- RETORNO: debajo de asistencia -->
+                            <div>
+                                <div class="o_mobile_section_label">RETORNO</div>
+
+                                <select class="o_mobile_select"
+                                        t-att-value="retornoId"
+                                        t-on-change="onChangeRetorno"
+                                        t-att-disabled="uiState.saving || uiState.retornoLoading || currentState === 'finalizado'">
+
+                                    <option value="">Seleccione...</option>
+
+                                    <t t-foreach="uiState.retornoOptions" t-as="opt" t-key="opt.id">
+                                        <option t-att-value="opt.id"
+                                                t-att-selected="String(opt.id) === String(retornoId)">
+                                            <t t-esc="opt.name"/>
+                                        </option>
+                                    </t>
+                                </select>
+
+                                <div class="o_mobile_hint" t-if="uiState.retornoLoading">
+                                    Cargando retorno...
+                                </div>
                             </div>
                         </div>
                     </div>
