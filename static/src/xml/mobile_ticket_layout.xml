@@ -119,14 +119,12 @@
                                         t-on-change="onChangeRetorno"
                                         t-att-disabled="uiState.saving || uiState.retornoLoading || currentState === 'finalizado'">
 
-                                    <option value=""
-                                            t-att-selected="!retornoId">
+                                    <option value="">
                                         Seleccione...
                                     </option>
 
                                     <t t-foreach="uiState.retornoOptions" t-as="opt" t-key="opt.value">
-                                        <option t-att-value="opt.value"
-                                                t-att-selected="String(opt.value) === String(retornoId)">
+                                        <option t-att-value="opt.value">
                                             <t t-esc="opt.label"/>
                                         </option>
                                     </t>
