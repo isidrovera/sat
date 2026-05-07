@@ -403,7 +403,7 @@ class WhatsappNotificationWizard(models.TransientModel):
             count += 1
         _logger.info("✅ [_crear_lineas_tickets] creadas=%s", count)
 
-        def action_confirmar_asignacion_masiva(self):
+    def action_confirmar_asignacion_masiva(self):
         """Confirma la asignación masiva con trazabilidad completa por logs."""
         self.ensure_one()
 
