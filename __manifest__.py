@@ -246,6 +246,7 @@
             'sat/static/src/scss/reparacion_subpartes_selector.scss',
 
             'sat/static/src/scss/mobile_ticket_layout.scss',
+            'sat/static/src/scss/mobile_ticket_retorno.scss',
             'sat/static/src/xml/mobile_ticket_layout.xml',
             'sat/static/src/js/mobile_ticket_layout.js',
                 

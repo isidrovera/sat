@@ -1,0 +1,44 @@
+.o_mobile_ticket_layout {
+    .o_mobile_retorno_card {
+        border-left: 4px solid #7c4dff;
+
+        .o_mobile_select {
+            width: 100%;
+            min-height: 42px;
+            border: 1px solid #d8dadd;
+            border-radius: 10px;
+            padding: 8px 10px;
+            font-size: 14px;
+            background: #ffffff;
+            color: #1f2937;
+        }
+
+        .o_mobile_select:disabled {
+            background: #f1f3f5;
+            color: #868e96;
+        }
+
+        .o_mobile_warning {
+            margin-top: 8px;
+            padding: 8px 10px;
+            border-radius: 8px;
+            background: #fff3cd;
+            color: #856404;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .o_mobile_save_actions {
+            margin-top: 10px;
+            display: flex;
+            gap: 8px;
+
+            button {
+                flex: 1;
+                min-height: 38px;
+                font-weight: 700;
+                border-radius: 10px;
+            }
+        }
+    }
+}

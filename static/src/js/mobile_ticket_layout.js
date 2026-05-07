@@ -34,6 +34,10 @@ export class MobileTicketLayout extends Component {
             saving: false,
             actionLoading: false,
             lastActionName: null,
+
+            retornoLoading: false,
+            retornoOptions: [],
+
             accordions: {
                 componentes: { open: true },
                 accesorios: { open: true },
@@ -45,14 +49,14 @@ export class MobileTicketLayout extends Component {
         });
 
         this._onResize = () => {
-            const oldValue = this.uiState.isMobile;
-            const newValue = this._checkMobile();
+            const oldIsMobile = this.uiState.isMobile;
+            const newIsMobile = this._checkMobile();
 
-            this.uiState.isMobile = newValue;
+            this.uiState.isMobile = newIsMobile;
 
             console.log(TAG, "[resize]", {
-                oldIsMobile: oldValue,
-                newIsMobile: newValue,
+                oldIsMobile,
+                newIsMobile,
                 width: window.innerWidth,
             });
 
@@ -67,10 +71,10 @@ export class MobileTicketLayout extends Component {
         onMounted(() => {
             console.log(TAG, "[mounted]", {
                 isMobile: this.uiState.isMobile,
-                record: this.record,
-                data: this.data,
                 resModel: this.record?.resModel,
                 resId: this.record?.resId,
+                data: this.data,
+                fields: this.record?.fields,
             });
 
             window.addEventListener("resize", this._onResize);
@@ -78,6 +82,8 @@ export class MobileTicketLayout extends Component {
             if (this.uiState.isMobile) {
                 document.body.classList.add("o_mobile_ticket_active");
             }
+
+            this.loadRetornoOptions();
         });
 
         onWillUnmount(() => {
@@ -116,6 +122,116 @@ export class MobileTicketLayout extends Component {
         }
 
         return String(value);
+    }
+
+    get retornoRelation() {
+        const field = this.record?.fields?.retorno_id;
+        const relation = field?.relation || null;
+
+        console.log(TAG, "[retornoRelation]", {
+            field,
+            relation,
+        });
+
+        return relation;
+    }
+
+    get retornoId() {
+        const value = this.data.retorno_id;
+
+        if (!value) {
+            return "";
+        }
+
+        if (Array.isArray(value)) {
+            return value[0] || "";
+        }
+
+        if (typeof value === "object") {
+            return value.id || value.resId || "";
+        }
+
+        return value || "";
+    }
+
+    get retornoLabel() {
+        return this._readM2O("retorno_id") || "Sin definir";
+    }
+
+    get retornoIsSet() {
+        return !!this.retornoId;
+    }
+
+    get showRetornoWarning() {
+        return (
+            !this.retornoIsSet &&
+            ["proceso", "en_ruta", "en_sitio", "en_revision"].includes(this.currentState)
+        );
+    }
+
+    async loadRetornoOptions() {
+        console.log(TAG, "[loadRetornoOptions] start", {
+            relation: this.retornoRelation,
+            currentValue: this.data.retorno_id,
+            retornoId: this.retornoId,
+        });
+
+        if (!this.retornoRelation) {
+            console.warn(TAG, "[loadRetornoOptions] retorno_id no tiene relation. Verifica que el campo esté en la vista.");
+            return;
+        }
+
+        this.uiState.retornoLoading = true;
+
+        try {
+            const records = await this.orm.searchRead(
+                this.retornoRelation,
+                [],
+                ["id", "name"],
+                { limit: 100 }
+            );
+
+            this.uiState.retornoOptions = records || [];
+
+            console.log(TAG, "[loadRetornoOptions] success", {
+                total: this.uiState.retornoOptions.length,
+                records: this.uiState.retornoOptions,
+            });
+
+        } catch (error) {
+            console.error(TAG, "[loadRetornoOptions] error", error);
+
+            this.notification.add("No se pudieron cargar las opciones de retorno.", {
+                type: "warning",
+            });
+
+        } finally {
+            this.uiState.retornoLoading = false;
+
+            console.log(TAG, "[loadRetornoOptions] finally", {
+                retornoLoading: this.uiState.retornoLoading,
+            });
+        }
+    }
+
+    async onChangeRetorno(ev) {
+        const rawValue = ev?.target?.value || "";
+        const value = rawValue ? Number(rawValue) : false;
+
+        console.log(TAG, "[onChangeRetorno] start", {
+            rawValue,
+            value,
+            oldValue: this.data.retorno_id,
+        });
+
+        await this.saveMobileValues({
+            retorno_id: value,
+        });
+
+        console.log(TAG, "[onChangeRetorno] done", {
+            value,
+            newData: this.data.retorno_id,
+        });
     }
 
     get ticketNumber() {
@@ -469,31 +585,6 @@ export class MobileTicketLayout extends Component {
         });
     }
 
-    async getViewId(xmlid) {
-        console.log(TAG, "[getViewId] start", {
-            xmlid,
-        });
-
-        try {
-            const viewId = await this.orm.call("ir.model.data", "_xmlid_to_res_id", [xmlid]);
-
-            console.log(TAG, "[getViewId] success", {
-                xmlid,
-                viewId,
-            });
-
-            return viewId;
-
-        } catch (error) {
-            console.error(TAG, "[getViewId] error", {
-                xmlid,
-                error,
-            });
-
-            return false;
-        }
-    }
-
     async saveMobileValues(values) {
         console.log(TAG, "[saveMobileValues] start", {
             values,
@@ -537,6 +628,73 @@ export class MobileTicketLayout extends Component {
 
             console.log(TAG, "[saveMobileValues] finally", {
                 saving: this.uiState.saving,
+            });
+        }
+    }
+
+    async onGuardarCambios() {
+        console.log(TAG, "[onGuardarCambios] start", {
+            resModel: this.record?.resModel,
+            resId: this.record?.resId,
+            data: this.data,
+        });
+
+        try {
+            await this.reloadRecord();
+
+            this.notification.add("Cambios guardados.", {
+                type: "success",
+            });
+
+            console.log(TAG, "[onGuardarCambios] success");
+
+        } catch (error) {
+            console.error(TAG, "[onGuardarCambios] error", error);
+
+            this.notification.add("No se pudo confirmar el guardado.", {
+                type: "danger",
+            });
+        }
+    }
+
+    async onGuardarYVolver() {
+        console.log(TAG, "[onGuardarYVolver] start", {
+            resModel: this.record?.resModel,
+            resId: this.record?.resId,
+        });
+
+        try {
+            await this.reloadRecord();
+
+            const action = {
+                type: "ir.actions.act_window",
+                name: "Tickets",
+                res_model: this.record?.resModel || "ticket.alquiler",
+                view_mode: "list,kanban,form",
+                views: [
+                    [false, "list"],
+                    [false, "kanban"],
+                    [false, "form"],
+                ],
+                target: "current",
+                context: {
+                    active_model: this.record?.resModel || "ticket.alquiler",
+                },
+            };
+
+            console.log(TAG, "[onGuardarYVolver] doAction", {
+                action,
+            });
+
+            await this.action.doAction(action);
+
+            console.log(TAG, "[onGuardarYVolver] success");
+
+        } catch (error) {
+            console.error(TAG, "[onGuardarYVolver] error", error);
+
+            this.notification.add("No se pudo volver a la lista.", {
+                type: "danger",
             });
         }
     }
@@ -599,11 +757,6 @@ export class MobileTicketLayout extends Component {
         if (action.type === "ir.actions.act_window") {
             const viewMode = action.view_mode || "form";
 
-            /*
-             * Odoo 18 necesita action.views.
-             * Desde la interfaz estándar a veces Odoo completa esto,
-             * pero desde este componente móvil debemos normalizarlo.
-             */
             if (!action.views) {
                 const firstViewMode = viewMode.split(",")[0] || "form";
                 let viewId = false;
@@ -612,8 +765,6 @@ export class MobileTicketLayout extends Component {
                     viewId = action.view_id[0] || false;
                 } else if (typeof action.view_id === "number") {
                     viewId = action.view_id;
-                } else {
-                    viewId = false;
                 }
 
                 action.views = [[viewId, firstViewMode]];
@@ -689,12 +840,10 @@ export class MobileTicketLayout extends Component {
         this.uiState.actionLoading = true;
         this.uiState.lastActionName = actionName;
 
+        let result = null;
+        let normalizedAction = null;
+
         try {
-            /*
-             * Importante:
-             * Para llamar métodos type='object' de un recordset,
-             * usamos [[resId]], no [resId].
-             */
             console.log(TAG, "[callAction] orm.call before", {
                 model: this.record.resModel,
                 method: actionName,
@@ -702,7 +851,7 @@ export class MobileTicketLayout extends Component {
                 kwargs,
             });
 
-            const result = await this.orm.call(
+            result = await this.orm.call(
                 this.record.resModel,
                 actionName,
                 [[this.record.resId]],
@@ -715,7 +864,7 @@ export class MobileTicketLayout extends Component {
             });
 
             if (result && typeof result === "object" && result.type) {
-                const normalizedAction = this.normalizeAction(result, actionName);
+                normalizedAction = this.normalizeAction(result, actionName);
 
                 console.log(TAG, "[callAction] doAction before", {
                     actionName,
@@ -735,16 +884,12 @@ export class MobileTicketLayout extends Component {
                 });
             }
 
-            /*
-             * Si abrió un wizard modal target='new', no forzamos reload inmediato.
-             * Si no, recargamos el ticket.
-             */
-            if (!(result && result.type === "ir.actions.act_window" && result.target === "new")) {
+            if (!(normalizedAction && normalizedAction.type === "ir.actions.act_window" && normalizedAction.target === "new")) {
                 await this.reloadRecord();
             } else {
                 console.log(TAG, "[callAction] no reload porque se abrió modal/wizard", {
                     actionName,
-                    result,
+                    normalizedAction,
                 });
             }
 
@@ -807,6 +952,7 @@ export class MobileTicketLayout extends Component {
         console.log(TAG, "[onCerrarTicket] start", {
             canCerrarTicket: this.canCerrarTicket,
             currentState: this.currentState,
+            retornoId: this.retornoId,
             resId: this.record?.resId,
         });
 
@@ -815,6 +961,15 @@ export class MobileTicketLayout extends Component {
                 currentState: this.currentState,
             });
 
+            return;
+        }
+
+        if (!this.retornoIsSet) {
+            this.notification.add("Antes de cerrar, indica si requiere retorno.", {
+                type: "warning",
+            });
+
+            console.warn(TAG, "[onCerrarTicket] retorno no definido");
             return;
         }
 
