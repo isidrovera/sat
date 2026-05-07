@@ -1,8 +1,13 @@
 # -*- coding: utf-8 -*-
 
+import logging
+
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError, ValidationError
 from datetime import timedelta
+
+
+_logger = logging.getLogger(__name__)
 
 
 class TicketAlquilerMantenimientoPlanificador(models.Model):
@@ -167,7 +172,7 @@ class TicketAlquilerMantenimientoPlanificador(models.Model):
             rec.responsable = linea.tecnico_id.id if linea.tecnico_id else False
             rec.tecnico_apoyo_ids = [(6, 0, linea.tecnico_apoyo_ids.ids)]
             rec.tipo_servicio_id = 'mantenimiento_preventivo'
-            rec.duracion_programada_horas = linea.duracion_horas or 2.0
+            rec.duracion_programada_horas = linea.duracion_horas or 1.0
 
             agenda_dt = linea._get_agenda_datetime()
             if agenda_dt:
@@ -183,46 +188,166 @@ class TicketAlquilerMantenimientoPlanificador(models.Model):
                 rec.zona_mantenimiento_id = rec.product_alquiler.zona_mantenimiento_id.id
                 rec.distrito_mantenimiento = rec.product_alquiler.distrito
 
+    @api.onchange('tipo_servicio_id')
+    def _onchange_tipo_servicio_duracion_planificador(self):
+        for rec in self:
+            if rec.tipo_servicio_id == 'mantenimiento_preventivo':
+                rec.duracion_programada_horas = 1.0
+            elif rec.tipo_servicio_id == 'remoto':
+                rec.duracion_programada_horas = 1.0
+            elif not rec.duracion_programada_horas:
+                rec.duracion_programada_horas = 2.0
+
+    # ============================================================
+    # HELPERS DE DURACIÓN
+    # ============================================================
+
+    def _get_duracion_planificador_ticket(self):
+        """
+        Duración real usada para validar cruces de agenda.
+
+        Regla:
+        - Si el ticket tiene duracion_programada_horas válida, se usa esa.
+        - Mantenimiento preventivo sin duración explícita: 1 hora.
+        - Remoto sin duración explícita: 1 hora.
+        - Otros servicios: 2 horas.
+        """
+        self.ensure_one()
+
+        if self.duracion_programada_horas and self.duracion_programada_horas > 0:
+            return self.duracion_programada_horas
+
+        if self.tipo_servicio_id == 'mantenimiento_preventivo':
+            return 1.0
+
+        if self.tipo_servicio_id == 'remoto':
+            return 1.0
+
+        return 2.0
+
     # ============================================================
     # VALIDACIONES
     # ============================================================
 
-    @api.constrains('agenda', 'responsable', 'tecnico_apoyo_ids', 'duracion_programada_horas')
+    @api.constrains(
+        'agenda',
+        'responsable',
+        'tecnico_apoyo_ids',
+        'duracion_programada_horas',
+        'tipo_servicio_id',
+        'estado',
+    )
     def _check_tecnicos_disponibles_planificador(self):
+        """
+        Valida disponibilidad y cruces para mantenimientos.
+
+        Corrección:
+        Antes todo mantenimiento quedaba con duración default 2.0 horas.
+        Eso hacía que:
+            14:00 - 15:00
+            15:00 - 16:00
+        se detectara incorrectamente como cruce, porque el primer ticket se tomaba
+        como 14:00 - 16:00.
+
+        Ahora se usa la duración real del ticket:
+            mantenimiento_preventivo = 1 hora si no hay duración explícita.
+        """
         Perfil = self.env['mantenimiento.tecnico.perfil']
 
         for rec in self:
+            _logger.warning(
+                "🧭 [PLANIFICADOR VALIDACION][INICIO] ticket=%s id=%s responsable=%s agenda=%s estado=%s tipo=%s duracion=%s contexto=%s",
+                rec.name,
+                rec.id,
+                rec.responsable.name if rec.responsable else False,
+                rec.agenda,
+                rec.estado,
+                rec.tipo_servicio_id,
+                rec.duracion_programada_horas,
+                self.env.context,
+            )
+
+            if self.env.context.get('skip_planificador_validation'):
+                _logger.warning(
+                    "🧭 [PLANIFICADOR VALIDACION][SKIP_CONTEXT] ticket=%s",
+                    rec.name,
+                )
+                continue
+
             if not rec.agenda or not rec.responsable:
+                _logger.warning(
+                    "🧭 [PLANIFICADOR VALIDACION][SKIP] ticket=%s sin agenda/responsable",
+                    rec.name,
+                )
+                continue
+
+            if rec.estado == 'finalizado':
+                _logger.warning(
+                    "🧭 [PLANIFICADOR VALIDACION][SKIP] ticket=%s finalizado",
+                    rec.name,
+                )
                 continue
 
             if rec.tipo_servicio_id != 'mantenimiento_preventivo':
-                continue
-
-            if self.env.context.get('skip_planificador_validation'):
+                _logger.warning(
+                    "🧭 [PLANIFICADOR VALIDACION][SKIP] ticket=%s no es mantenimiento_preventivo tipo=%s",
+                    rec.name,
+                    rec.tipo_servicio_id,
+                )
                 continue
 
             agenda_dt = fields.Datetime.to_datetime(rec.agenda)
             fecha = agenda_dt.date()
             hora_inicio = agenda_dt.hour + agenda_dt.minute / 60.0
-            duracion = rec.duracion_programada_horas or 2.0
+
+            duracion = rec._get_duracion_planificador_ticket()
             hora_fin = hora_inicio + duracion
             fin_dt = agenda_dt + timedelta(hours=duracion)
+
+            _logger.warning(
+                "🧭 [PLANIFICADOR VALIDACION][RANGO_ACTUAL] ticket=%s inicio=%s fin=%s hora_inicio=%.2f hora_fin=%.2f duracion=%s",
+                rec.name,
+                agenda_dt,
+                fin_dt,
+                hora_inicio,
+                hora_fin,
+                duracion,
+            )
 
             tecnicos = rec.responsable | rec.tecnico_apoyo_ids
 
             for tecnico in tecnicos:
+                _logger.warning(
+                    "🧭 [PLANIFICADOR VALIDACION][TECNICO] ticket=%s tecnico=%s tecnico_id=%s",
+                    rec.name,
+                    tecnico.name,
+                    tecnico.id,
+                )
+
                 perfil = Perfil.search([
                     ('tecnico_id', '=', tecnico.id),
                     ('active', '=', True),
                 ], limit=1)
 
                 if not perfil:
+                    _logger.error(
+                        "🔴 [PLANIFICADOR VALIDACION][SIN_PERFIL] tecnico=%s ticket=%s",
+                        tecnico.name,
+                        rec.name,
+                    )
                     raise ValidationError(
                         _("El técnico %s no tiene perfil operativo de mantenimiento.")
                         % tecnico.name
                     )
 
                 disp = perfil.get_disponibilidad_fecha(fecha)
+
+                _logger.warning(
+                    "🧭 [PLANIFICADOR VALIDACION][DISPONIBILIDAD] tecnico=%s fecha=%s disp=%s",
+                    tecnico.name,
+                    fecha,
+                    disp,
+                )
 
                 if not disp.get('disponible'):
                     raise ValidationError(
@@ -245,24 +370,65 @@ class TicketAlquilerMantenimientoPlanificador(models.Model):
                     ('tecnico_apoyo_ids', 'in', tecnico.id),
                 ])
 
+                _logger.warning(
+                    "🧭 [PLANIFICADOR VALIDACION][CANDIDATOS] ticket=%s tecnico=%s candidatos=%s",
+                    rec.name,
+                    tecnico.name,
+                    tickets_cruzados.ids,
+                )
+
+                cruces = []
+
                 for other in tickets_cruzados:
                     other_inicio = fields.Datetime.to_datetime(other.agenda)
-                    other_duracion = other.duracion_programada_horas or 2.0
+                    other_duracion = other._get_duracion_planificador_ticket()
                     other_fin = other_inicio + timedelta(hours=other_duracion)
 
-                    if other_inicio < fin_dt and other_fin > agenda_dt:
-                        raise ValidationError(
-                            _(
-                                "El técnico %s ya tiene programación cruzada:\n"
-                                "%s\n"
-                                "%s - %s"
-                            ) % (
-                                tecnico.name,
-                                other.name,
+                    hay_cruce = other_inicio < fin_dt and other_fin > agenda_dt
+
+                    _logger.warning(
+                        "🧭 [PLANIFICADOR VALIDACION][COMPARA] actual=%s %s-%s duracion=%s | otro=%s %s-%s duracion=%s | cruce=%s",
+                        rec.name,
+                        agenda_dt,
+                        fin_dt,
+                        duracion,
+                        other.name,
+                        other_inicio,
+                        other_fin,
+                        other_duracion,
+                        hay_cruce,
+                    )
+
+                    if hay_cruce:
+                        cruces.append(
+                            "%s\n%s - %s" % (
+                                other.name or other.id,
                                 other_inicio.strftime('%d/%m/%Y %H:%M'),
                                 other_fin.strftime('%H:%M'),
                             )
                         )
+
+                if cruces:
+                    _logger.error(
+                        "🔴 [PLANIFICADOR VALIDACION][CRUCE] ticket=%s tecnico=%s cruces=%s",
+                        rec.name,
+                        tecnico.name,
+                        cruces,
+                    )
+
+                    raise ValidationError(
+                        _(
+                            "El técnico %s ya tiene programación cruzada:\n\n%s"
+                        ) % (
+                            tecnico.name,
+                            "\n\n".join(cruces),
+                        )
+                    )
+
+            _logger.warning(
+                "🟢 [PLANIFICADOR VALIDACION][OK] ticket=%s sin cruces",
+                rec.name,
+            )
 
     # ============================================================
     # CREATE / WRITE
@@ -270,6 +436,9 @@ class TicketAlquilerMantenimientoPlanificador(models.Model):
 
     @api.model
     def create(self, vals):
+        if vals.get('tipo_servicio_id') == 'mantenimiento_preventivo':
+            vals.setdefault('duracion_programada_horas', 1.0)
+
         ticket = super().create(vals)
 
         if ticket.planificador_linea_id:
@@ -278,6 +447,9 @@ class TicketAlquilerMantenimientoPlanificador(models.Model):
         return ticket
 
     def write(self, vals):
+        if vals.get('tipo_servicio_id') == 'mantenimiento_preventivo':
+            vals.setdefault('duracion_programada_horas', 1.0)
+
         res = super().write(vals)
 
         campos_sync = {
@@ -310,13 +482,14 @@ class TicketAlquilerMantenimientoPlanificador(models.Model):
 
             if rec.agenda:
                 agenda_dt = fields.Datetime.to_datetime(rec.agenda)
+                hora_inicio = agenda_dt.hour + agenda_dt.minute / 60.0
+                duracion = rec._get_duracion_planificador_ticket()
+
                 vals.update({
                     'fecha_programada': agenda_dt.date(),
-                    'hora_inicio': agenda_dt.hour + agenda_dt.minute / 60.0,
-                    'hora_fin': (
-                        agenda_dt.hour + agenda_dt.minute / 60.0
-                        + (rec.duracion_programada_horas or 2.0)
-                    ),
+                    'hora_inicio': hora_inicio,
+                    'hora_fin': hora_inicio + duracion,
+                    'duracion_horas': duracion,
                 })
 
             if rec.responsable:
@@ -394,6 +567,8 @@ class TicketAlquilerMantenimientoPlanificador(models.Model):
             fecha_programada = agenda_dt.date()
             hora_inicio = agenda_dt.hour + agenda_dt.minute / 60.0
 
+        duracion = self._get_duracion_planificador_ticket()
+
         linea = self.env['mantenimiento.planificador.linea'].create({
             'planificador_id': plan.id,
             'equipo_id': equipo.id,
@@ -403,11 +578,11 @@ class TicketAlquilerMantenimientoPlanificador(models.Model):
             'fecha_ideal': fecha_ideal,
             'fecha_programada': fecha_programada,
             'hora_inicio': hora_inicio,
-            'hora_fin': hora_inicio + (self.duracion_programada_horas or 2.0),
+            'hora_fin': hora_inicio + duracion,
             'tecnico_id': self.responsable.id if self.responsable else False,
             'tecnico_apoyo_ids': [(6, 0, self.tecnico_apoyo_ids.ids)],
             'cantidad_tecnicos': 1 + len(self.tecnico_apoyo_ids),
-            'duracion_horas': self.duracion_programada_horas or 2.0,
+            'duracion_horas': duracion,
             'estado': 'programado' if self.agenda and self.responsable else 'pendiente',
             'ticket_id': self.id,
         })
@@ -466,6 +641,7 @@ class TicketAlquilerMantenimientoPlanificador(models.Model):
                 'responsable': linea.tecnico_id.id,
                 'tecnico_apoyo_ids': [(6, 0, linea.tecnico_apoyo_ids.ids)],
                 'agenda': agenda_dt,
+                'duracion_programada_horas': linea.duracion_horas or 1.0,
                 'requiere_reasignacion': False,
                 'motivo_reasignacion': False,
             })
