@@ -407,27 +407,30 @@ class WhatsappNotificationWizard(models.TransientModel):
     def action_confirmar_asignacion_masiva(self):
         """Confirma la asignación masiva con valores del wizard"""
         self.ensure_one()
-        
+
         if not self.es_asignacion_masiva:
             # Si no es masiva, usar método original
             return self.action_confirmar_asignacion()
-        
+
         # Validaciones para asignación masiva
         if not self.tecnico_asignado:
             raise UserError("Debe asignar un técnico responsable para todos los tickets")
-        
+
         if not self.fecha_visita:
             raise UserError("Debe asignar una fecha de visita para todos los tickets")
-        
+
         if not self.ticket_line_ids:
             raise UserError("No se encontraron tickets para procesar")
-        
+
         # Validar que todas las líneas tengan tipo de servicio
         lineas_sin_servicio = self.ticket_line_ids.filtered(lambda l: not l.tipo_servicio_id)
         if lineas_sin_servicio:
             tickets_sin_servicio = lineas_sin_servicio.mapped('ticket_id.name')
-            raise UserError(f"Los siguientes tickets no tienen tipo de servicio definido: {', '.join(tickets_sin_servicio)}")
-        
+            raise UserError(
+                f"Los siguientes tickets no tienen tipo de servicio definido: "
+                f"{', '.join(tickets_sin_servicio)}"
+            )
+
         try:
             # Preparar datos del wizard para procesamiento
             wizard_data = {
@@ -444,38 +447,45 @@ class WhatsappNotificationWizard(models.TransientModel):
                     {
                         'ticket_id': line.ticket_id.id,
                         'tipo_servicio_id': line.tipo_servicio_id,
-                        'observaciones': line.observaciones
+                        'observaciones': line.observaciones,
                     }
                     for line in self.ticket_line_ids
-                ]
+                ],
             }
-            
+
             # 1. Enviar notificación a grupos si está habilitada
+            # NO SE MODIFICA LA LÓGICA DE WHATSAPP.
             if self.notificar_grupos and self.grupo_seleccionado:
-                self.tickets_masivos_ids._enviar_notificacion_grupo_consolidada(self.tickets_masivos_ids, wizard_data)
-            
-            # 2. Registrar información en tickets
-            self._registrar_informacion_masiva()
-            
-            # 3. Procesar asignación masiva
+                self.tickets_masivos_ids._enviar_notificacion_grupo_consolidada(
+                    self.tickets_masivos_ids,
+                    wizard_data
+                )
+
+            # 2. Procesar asignación masiva inteligente
+            # Aquí se asigna una hora diferente por ticket.
             self.tickets_masivos_ids._procesar_asignacion_masiva(wizard_data)
-            
-            
+
+            # 3. Registrar información en tickets después de asignar
+            # Así evitamos que el chatter quede con una hora común incorrecta.
+            self._registrar_informacion_masiva()
+
             return {
                 'type': 'ir.actions.client',
                 'tag': 'display_notification',
                 'params': {
                     'title': 'Asignación Masiva Completada',
                     'message': f'Se asignaron correctamente {len(self.tickets_masivos_ids)} tickets.',
-                    'type': 'ir.actions.act_window_close',
+                    'type': 'success',
                     'sticky': True,
                 }
             }
-            
+
+        except UserError:
+            raise
+
         except Exception as e:
             _logger.error(f"Error en asignación masiva: {e}")
             raise UserError(f"Error al procesar la asignación masiva: {str(e)}")
-
     def _registrar_informacion_masiva(self):
         """Registra información del wizard en todos los tickets masivos"""
         self.ensure_one()

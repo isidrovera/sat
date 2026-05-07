@@ -1400,36 +1400,64 @@ class TicketAlquiler(models.Model):
 
     def crear_evento_calendario(self):
         self.ensure_one()
+
         CalendarEvent = self.env['calendar.event']
+
         if not self.agenda:
             return False
+
         try:
-            start_datetime = self.agenda
-            stop_datetime = start_datetime + timedelta(hours=2)
+            start_datetime = fields.Datetime.to_datetime(self.agenda)
+            duracion_horas = self._get_duracion_ticket_calendario()
+            stop_datetime = start_datetime + timedelta(hours=duracion_horas)
+
             partner_ids = []
+
             if self.partner_id:
                 partner_ids.append(self.partner_id.id)
+
             if self.responsable and self.responsable.partner_id:
                 partner_ids.append(self.responsable.partner_id.id)
+
+            tipo_servicio_label = dict(self._fields['tipo_servicio_id'].selection).get(
+                self.tipo_servicio_id,
+                self.tipo_servicio_id or 'NA'
+            )
+
             event_vals = {
                 'name': f"Visita Técnica - {self.name or 'NA'} - {self.partner_id.name or 'NA'}",
                 'start': start_datetime,
                 'stop': stop_datetime,
                 'partner_ids': [(6, 0, partner_ids)],
                 'user_id': self.responsable.id if self.responsable else None,
-                'description': f"Ticket: {self.name}\nCliente: {self.partner_id.name or 'NA'}\nSerie: {self.serie_id_r or 'NA'}",
+                'description': (
+                    f"Ticket: {self.name}\n"
+                    f"Cliente: {self.partner_id.name or 'NA'}\n"
+                    f"Serie: {self.serie_id_r or 'NA'}\n"
+                    f"Tipo de servicio: {tipo_servicio_label}\n"
+                    f"Duración estimada: {duracion_horas} hora(s)"
+                ),
                 'location': self.direccion_id_r or 'NA',
                 'allday': False,
             }
+
             if self.calendar_event_id:
                 self.calendar_event_id.write(event_vals)
             else:
                 event = CalendarEvent.create(event_vals)
                 self.calendar_event_id = event.id
+
             return True
+
         except Exception as e:
-            _logger.error("Error creando evento calendario ticket %s: %s", self.id, str(e))
-            self.message_post(body=f"Error al gestionar evento de calendario: {str(e)}")
+            _logger.error(
+                "Error creando evento calendario ticket %s: %s",
+                self.id,
+                str(e)
+            )
+            self.message_post(
+                body=f"Error al gestionar evento de calendario: {str(e)}"
+            )
             return False
 
     @api.depends('contometrok_id', 'contometroc_id')
@@ -1708,28 +1736,406 @@ class TicketAlquiler(models.Model):
                 'default_notificar_grupos': False
             }
         }
+        # ============================================================
+    # ASIGNACIÓN MASIVA INTELIGENTE - HELPERS DE AGENDA
+    # ============================================================
 
+    def _get_duracion_servicio_masivo(self, tipo_servicio):
+        """
+        Devuelve la duración en horas para la asignación masiva.
+
+        Regla principal:
+        - Mantenimiento preventivo: 1 hora por máquina.
+        - Otros servicios: 2 horas por defecto.
+        """
+        if tipo_servicio == 'mantenimiento_preventivo':
+            return 1.0
+
+        if tipo_servicio == 'remoto':
+            return 1.0
+
+        if tipo_servicio in ('revision', 'mantenimiento_correctivo', 'cambio_repuestos'):
+            return 2.0
+
+        if tipo_servicio in ('instalacion', 'retiro', 'alquiler'):
+            return 2.0
+
+        return 2.0
+
+    def _get_duracion_ticket_calendario(self):
+        """
+        Devuelve la duración del ticket actual para crear/actualizar evento calendario.
+        Se usa también para que el calendario no cree siempre eventos de 2 horas.
+        """
+        self.ensure_one()
+        return self._get_duracion_servicio_masivo(self.tipo_servicio_id)
+
+    def _get_horarios_laborales_masivo(self, fecha_dt):
+        """
+        Horarios de búsqueda para asignación masiva.
+
+        Por ahora usamos jornada estándar:
+        - Mañana: 09:00 a 13:00
+        - Tarde: 14:00 a 18:00
+
+        Si luego quieres usar el perfil del técnico, aquí se puede extender.
+        """
+        fecha = fecha_dt.date()
+
+        return [
+            (
+                fecha_dt.replace(hour=9, minute=0, second=0, microsecond=0),
+                fecha_dt.replace(hour=13, minute=0, second=0, microsecond=0),
+            ),
+            (
+                fecha_dt.replace(hour=14, minute=0, second=0, microsecond=0),
+                fecha_dt.replace(hour=18, minute=0, second=0, microsecond=0),
+            ),
+        ]
+
+    def _normalizar_inicio_bloque_masivo(self, fecha_dt):
+        """
+        Normaliza la hora inicial.
+        Si el usuario coloca 09:15, se redondea a 10:00.
+        Si coloca 09:00, se mantiene 09:00.
+        """
+        fecha_dt = fields.Datetime.to_datetime(fecha_dt)
+
+        if fecha_dt.minute == 0 and fecha_dt.second == 0:
+            return fecha_dt.replace(second=0, microsecond=0)
+
+        fecha_dt = fecha_dt.replace(second=0, microsecond=0)
+        return fecha_dt.replace(minute=0) + timedelta(hours=1)
+
+    def _ticket_cruza_horario_masivo(
+        self,
+        tecnico_id,
+        inicio_dt,
+        fin_dt,
+        excluir_ticket_id=False,
+        ocupaciones_temporales=None,
+    ):
+        """
+        Valida si el técnico tiene un cruce real en ese rango.
+
+        Revisa:
+        1. Tickets existentes en BD.
+        2. Tickets del mismo lote que aún no se han escrito, mediante ocupaciones_temporales.
+        """
+        ocupaciones_temporales = ocupaciones_temporales or []
+
+        # 1. Revisar cruces temporales del mismo lote
+        for ocupacion in ocupaciones_temporales:
+            if ocupacion.get('tecnico_id') != tecnico_id:
+                continue
+
+            ocupado_inicio = ocupacion.get('inicio')
+            ocupado_fin = ocupacion.get('fin')
+
+            if ocupado_inicio and ocupado_fin:
+                if ocupado_inicio < fin_dt and ocupado_fin > inicio_dt:
+                    return True
+
+        # 2. Revisar tickets existentes en BD
+        domain = [
+            ('responsable', '=', tecnico_id),
+            ('agenda', '!=', False),
+            ('estado', 'not in', ['finalizado']),
+        ]
+
+        if excluir_ticket_id:
+            domain.append(('id', '!=', excluir_ticket_id))
+
+        tickets = self.search(domain)
+
+        for ticket in tickets:
+            if not ticket.agenda:
+                continue
+
+            ticket_inicio = fields.Datetime.to_datetime(ticket.agenda)
+            duracion = ticket._get_duracion_ticket_calendario()
+            ticket_fin = ticket_inicio + timedelta(hours=duracion)
+
+            if ticket_inicio < fin_dt and ticket_fin > inicio_dt:
+                return True
+
+        return False
+
+    def _buscar_siguiente_agenda_libre_masiva(
+        self,
+        tecnico,
+        fecha_inicio,
+        duracion_horas,
+        excluir_ticket_id=False,
+        ocupaciones_temporales=None,
+        dias_busqueda=10,
+    ):
+        """
+        Busca el siguiente horario libre para el técnico.
+
+        Ejemplo:
+        - Si empieza 09:00 y mantenimiento dura 1 hora:
+          09:00, 10:00, 11:00, 12:00, 14:00, 15:00...
+
+        Si un bloque está ocupado, salta al siguiente.
+        Si no alcanza el día, pasa al siguiente día.
+        """
+        if not tecnico:
+            raise UserError(_("Debe indicar un técnico para buscar agenda libre."))
+
+        if not fecha_inicio:
+            raise UserError(_("Debe indicar fecha de visita para la asignación masiva."))
+
+        fecha_inicio = self._normalizar_inicio_bloque_masivo(fecha_inicio)
+        ocupaciones_temporales = ocupaciones_temporales or []
+
+        paso_minutos = int(duracion_horas * 60)
+        if paso_minutos <= 0:
+            paso_minutos = 60
+
+        for dia_offset in range(0, dias_busqueda + 1):
+            fecha_base = fecha_inicio + timedelta(days=dia_offset)
+            ventanas = self._get_horarios_laborales_masivo(fecha_base)
+
+            for ventana_inicio, ventana_fin in ventanas:
+                # El primer día respetamos la hora indicada por el usuario.
+                # Los siguientes días empezamos desde la ventana laboral.
+                if dia_offset == 0:
+                    cursor = max(fecha_inicio, ventana_inicio)
+                else:
+                    cursor = ventana_inicio
+
+                while cursor + timedelta(hours=duracion_horas) <= ventana_fin:
+                    inicio_dt = cursor
+                    fin_dt = cursor + timedelta(hours=duracion_horas)
+
+                    ocupado = self._ticket_cruza_horario_masivo(
+                        tecnico_id=tecnico.id,
+                        inicio_dt=inicio_dt,
+                        fin_dt=fin_dt,
+                        excluir_ticket_id=excluir_ticket_id,
+                        ocupaciones_temporales=ocupaciones_temporales,
+                    )
+
+                    if not ocupado:
+                        return inicio_dt
+
+                    cursor += timedelta(minutes=paso_minutos)
+
+        raise UserError(_(
+            "No se encontró horario libre para el técnico %s desde %s "
+            "en los próximos %s días."
+        ) % (
+            tecnico.name,
+            fecha_inicio.strftime('%d/%m/%Y %H:%M'),
+            dias_busqueda,
+        ))
+
+    def _ordenar_ticket_lines_masivo(self, ticket_lines):
+        """
+        Ordena los tickets para que la ruta quede más lógica:
+        1. Cliente
+        2. Dirección
+        3. Distrito aproximado desde el equipo
+        4. Serie
+        5. Ticket
+
+        ticket_lines es una lista de diccionarios recibida desde wizard_data.
+        """
+        def _key(line_data):
+            ticket = self.browse(line_data.get('ticket_id'))
+
+            cliente = ticket.partner_id.name or ''
+            direccion = ticket.direccion_id_r or ''
+
+            distrito = ''
+            if ticket.product_alquiler:
+                distrito = getattr(ticket.product_alquiler, 'distrito', '') or ''
+
+            serie = ticket.serie_id_r or ''
+            name = ticket.name or ''
+
+            return (
+                cliente.lower(),
+                direccion.lower(),
+                distrito.lower(),
+                serie.lower(),
+                name.lower(),
+            )
+
+        return sorted(ticket_lines, key=_key)
     def _procesar_asignacion_masiva(self, wizard_data):
-        valores_comunes = {
-            'responsable': wizard_data.get('tecnico_asignado').id if wizard_data.get('tecnico_asignado') else False,
-            'agenda': wizard_data.get('fecha_visita'),
-            'asistencia_id': wizard_data.get('asistencia_directa', 'no'),
-        }
-        for ticket_data in wizard_data.get('ticket_lines', []):
-            ticket = self.browse(ticket_data['ticket_id'])
-            valores_ticket = valores_comunes.copy()
-            valores_ticket['tipo_servicio_id'] = ticket_data['tipo_servicio_id']
+        """
+        Procesa la asignación masiva sin poner todos los tickets en la misma hora.
+
+        Antes:
+            Todos los tickets recibían la misma agenda del wizard.
+
+        Ahora:
+            - Toma la fecha/hora inicial del wizard.
+            - Ordena tickets por cliente/dirección/zona aproximada.
+            - Calcula duración por tipo de servicio.
+            - Busca el siguiente bloque libre del técnico.
+            - Asigna una agenda distinta por ticket.
+            - Mantiene intacto el flujo posterior de grupos, WhatsApp, correos y gerente.
+        """
+        tecnico = wizard_data.get('tecnico_asignado')
+        fecha_visita = wizard_data.get('fecha_visita')
+        asistencia_directa = wizard_data.get('asistencia_directa', 'no')
+        ticket_lines = wizard_data.get('ticket_lines', [])
+
+        if not tecnico:
+            raise UserError(_("Debe asignar un técnico responsable para todos los tickets."))
+
+        if not fecha_visita:
+            raise UserError(_("Debe asignar una fecha de visita para todos los tickets."))
+
+        if not ticket_lines:
+            raise UserError(_("No se encontraron tickets para procesar."))
+
+        ticket_lines_ordenadas = self._ordenar_ticket_lines_masivo(ticket_lines)
+
+        ocupaciones_temporales = []
+        asignaciones = []
+
+        fecha_cursor = fields.Datetime.to_datetime(fecha_visita)
+
+        _logger.info(
+            "[ASIGNACION MASIVA] Inicio | tecnico=%s | fecha_base=%s | tickets=%s",
+            tecnico.name,
+            fecha_cursor,
+            len(ticket_lines_ordenadas)
+        )
+
+        # ============================================================
+        # 1. Calcular agenda libre para cada ticket ANTES de escribir
+        # ============================================================
+        for ticket_data in ticket_lines_ordenadas:
+            ticket = self.browse(ticket_data.get('ticket_id'))
+
+            if not ticket.exists():
+                continue
+
+            tipo_servicio = ticket_data.get('tipo_servicio_id') or ticket.tipo_servicio_id or 'revision'
+            duracion_horas = self._get_duracion_servicio_masivo(tipo_servicio)
+
+            agenda_libre = self._buscar_siguiente_agenda_libre_masiva(
+                tecnico=tecnico,
+                fecha_inicio=fecha_cursor,
+                duracion_horas=duracion_horas,
+                excluir_ticket_id=ticket.id,
+                ocupaciones_temporales=ocupaciones_temporales,
+                dias_busqueda=10,
+            )
+
+            agenda_fin = agenda_libre + timedelta(hours=duracion_horas)
+
+            ocupaciones_temporales.append({
+                'ticket_id': ticket.id,
+                'tecnico_id': tecnico.id,
+                'inicio': agenda_libre,
+                'fin': agenda_fin,
+                'tipo_servicio_id': tipo_servicio,
+                'duracion_horas': duracion_horas,
+            })
+
+            asignaciones.append({
+                'ticket': ticket,
+                'tipo_servicio_id': tipo_servicio,
+                'agenda': agenda_libre,
+                'agenda_fin': agenda_fin,
+                'duracion_horas': duracion_horas,
+                'observaciones': ticket_data.get('observaciones') or '',
+            })
+
+            # El siguiente ticket empieza desde el fin del anterior.
+            fecha_cursor = agenda_fin
+
+            _logger.info(
+                "[ASIGNACION MASIVA] Slot reservado | ticket=%s | tecnico=%s | %s - %s | tipo=%s | duracion=%s",
+                ticket.name,
+                tecnico.name,
+                agenda_libre.strftime('%d/%m/%Y %H:%M'),
+                agenda_fin.strftime('%H:%M'),
+                tipo_servicio,
+                duracion_horas,
+            )
+
+        if not asignaciones:
+            raise UserError(_("No se pudo preparar ninguna asignación."))
+
+        # ============================================================
+        # 2. Escribir tickets con agenda individual
+        # ============================================================
+        for item in asignaciones:
+            ticket = item['ticket']
+
+            valores_ticket = {
+                'responsable': tecnico.id,
+                'agenda': item['agenda'],
+                'asistencia_id': asistencia_directa,
+                'tipo_servicio_id': item['tipo_servicio_id'],
+            }
+
             ticket.write(valores_ticket)
+
+            mensaje = _(
+                "📅 <b>Agenda asignada automáticamente por asignación masiva</b><br/>"
+                "👨‍🔧 <b>Técnico:</b> %s<br/>"
+                "🕒 <b>Horario:</b> %s - %s<br/>"
+                "🔧 <b>Tipo de servicio:</b> %s<br/>"
+                "⏱️ <b>Duración estimada:</b> %s hora(s)"
+            ) % (
+                tecnico.name,
+                item['agenda'].strftime('%d/%m/%Y %H:%M'),
+                item['agenda_fin'].strftime('%H:%M'),
+                dict(ticket._fields['tipo_servicio_id'].selection).get(
+                    item['tipo_servicio_id'],
+                    item['tipo_servicio_id']
+                ),
+                item['duracion_horas'],
+            )
+
+            if item.get('observaciones'):
+                mensaje += _("<br/>📝 <b>Observaciones:</b> %s") % item['observaciones']
+
+            ticket.message_post(
+                body=mensaje,
+                message_type='notification'
+            )
+
+        # ============================================================
+        # 3. Agrupar y continuar con el flujo existente
+        # No se toca WhatsApp, Traccar, correo ni notificaciones.
+        # ============================================================
         grupos = {}
+
         for ticket in self:
-            key = (ticket.partner_id.id if ticket.partner_id else 0,
-                   ticket.responsable.id if ticket.responsable else 0)
+            key = (
+                ticket.partner_id.id if ticket.partner_id else 0,
+                ticket.responsable.id if ticket.responsable else 0,
+            )
+
             if key not in grupos:
-                grupos[key] = {'cliente': ticket.partner_id, 'tecnico': ticket.responsable, 'tickets': self.env['ticket.alquiler']}
+                grupos[key] = {
+                    'cliente': ticket.partner_id,
+                    'tecnico': ticket.responsable,
+                    'tickets': self.env['ticket.alquiler'],
+                }
+
             grupos[key]['tickets'] |= ticket
+
         for grupo_data in grupos.values():
             self._procesar_grupo_tickets_consolidado(grupo_data, wizard_data)
+
         self.write({'estado': 'proceso'})
+
+        _logger.info(
+            "[ASIGNACION MASIVA] Finalizada correctamente | tecnico=%s | tickets=%s",
+            tecnico.name,
+            len(asignaciones)
+        )
+
         return True
 
     def _procesar_grupo_tickets_consolidado(self, grupo_data, wizard_data):
