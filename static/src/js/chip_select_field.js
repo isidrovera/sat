@@ -30,16 +30,18 @@ export class ChipSelectField extends Many2OneField {
         this.notification = useService("notification");
 
         /*
-         * Importante:
-         * Estas funciones puente evitan el error de contexto:
-         * undefined is not an object (evaluating 'this._stopEvent')
+         * Versión fija.
+         * No usamos select() porque puede chocar con métodos internos del Many2OneField.
+         * Usamos funciones puente para que no se pierda el contexto de this.
          */
         this.onToggleOptions = (ev) => {
+            console.log("[ChipSelect][onToggleOptions] click flecha");
             return this.toggleOptions(ev);
         };
 
         this.onSelectOption = (option, ev) => {
-            return this.select(option, ev);
+            console.log("[ChipSelect][onSelectOption] click opcion", option);
+            return this.selectOption(option, ev);
         };
 
         this.uiState = useState({
@@ -51,22 +53,20 @@ export class ChipSelectField extends Many2OneField {
             saved: false,
             saveError: false,
             saveMessage: "",
+            localSelectedId: null,
         });
 
         this._lastTypeId = this.filterTypeId;
 
-        console.log("[ChipSelect][setup]", {
+        console.log("[ChipSelect][setup VERSION AUTOSAVE 2026-05-07]", {
             fieldName: this.props.name,
             relation: this.relation,
             readonly: this.props.readonly,
-            filterByField: this.props.filterByField,
-            filterRelation: this.props.filterRelation,
-            shortenLabels: this.props.shortenLabels,
             autoSave: this.props.autoSave,
             recordModel: this.recordModel,
             recordResId: this.recordResId,
             currentId: this.currentId,
-            filterTypeId: this.filterTypeId,
+            record: this.props.record,
             recordData: this.props.record && this.props.record.data,
         });
 
@@ -74,14 +74,6 @@ export class ChipSelectField extends Many2OneField {
 
         onWillUpdateProps((nextProps) => {
             const newTypeId = this._extractTypeId(nextProps);
-
-            console.log("[ChipSelect][onWillUpdateProps]", {
-                fieldName: nextProps.name,
-                oldTypeId: this._lastTypeId,
-                newTypeId: newTypeId,
-                readonly: nextProps.readonly,
-                recordData: nextProps.record && nextProps.record.data,
-            });
 
             if (newTypeId !== this._lastTypeId) {
                 this._lastTypeId = newTypeId;
@@ -125,15 +117,18 @@ export class ChipSelectField extends Many2OneField {
             this.props.record.modelName ||
             this.props.record.config?.resModel ||
             this.props.record._config?.resModel ||
+            this.props.record.model?.config?.resModel ||
             null
         );
     }
 
     get recordResId() {
+        const dataId = this.props.record.data && this.props.record.data.id;
+
         const resId =
             this.props.record.resId ||
             this.props.record.res_id ||
-            this.props.record.data?.id ||
+            dataId ||
             null;
 
         if (!resId) {
@@ -152,6 +147,10 @@ export class ChipSelectField extends Many2OneField {
     }
 
     get currentId() {
+        if (this.uiState.localSelectedId) {
+            return this.uiState.localSelectedId;
+        }
+
         const val = this.props.record.data[this.props.name];
 
         if (!val) {
@@ -193,9 +192,6 @@ export class ChipSelectField extends Many2OneField {
                 fieldName: this.props.name,
                 relation: this.relation,
                 domain: domain,
-                filterTypeId: this.filterTypeId,
-                filterByField: this.props.filterByField,
-                filterRelation: this.props.filterRelation,
             });
 
             let records = [];
@@ -208,12 +204,7 @@ export class ChipSelectField extends Many2OneField {
                     { limit: 100 }
                 );
             } catch (colorErr) {
-                console.warn("[ChipSelect][loadOptions] Falló lectura con color, reintentando sin color", {
-                    fieldName: this.props.name,
-                    relation: this.relation,
-                    domain: domain,
-                    error: colorErr,
-                });
+                console.warn("[ChipSelect][loadOptions] Sin campo color, reintentando", colorErr);
 
                 records = await this.orm.searchRead(
                     this.relation,
@@ -231,25 +222,11 @@ export class ChipSelectField extends Many2OneField {
             this.uiState.options = records;
             this.uiState.loaded = true;
 
-            console.log("[ChipSelect][loadOptions] Opciones cargadas", {
-                fieldName: this.props.name,
-                relation: this.relation,
-                total: records.length,
-                records: records,
-            });
+            console.log("[ChipSelect][loadOptions] Opciones cargadas", records);
 
         } catch (err) {
-            console.error("[ChipSelect][loadOptions] Error cargando opciones", {
-                fieldName: this.props.name,
-                relation: this.relation,
-                filterByField: this.props.filterByField,
-                filterRelation: this.props.filterRelation,
-                filterTypeId: this.filterTypeId,
-                error: err,
-            });
-
+            console.error("[ChipSelect][loadOptions] Error", err);
             this.uiState.options = [];
-
         } finally {
             this.uiState.loading = false;
         }
@@ -325,19 +302,17 @@ export class ChipSelectField extends Many2OneField {
     toggleOptions(ev = null) {
         this._stopEvent(ev);
 
-        if (this.props.readonly) {
-            return;
-        }
-
+        /*
+         * No bloquear con props.readonly.
+         * En One2many/Kanban embebido Odoo puede mandar readonly=true
+         * aunque el campo se deba poder editar.
+         */
         this.uiState.expanded = !this.uiState.expanded;
 
         console.log("[ChipSelect][toggleOptions]", {
-            fieldName: this.props.name,
-            relation: this.relation,
             expanded: this.uiState.expanded,
+            readonly: this.props.readonly,
             currentId: this.currentId,
-            selectedOption: this.selectedOption,
-            optionsCount: this.uiState.options.length,
         });
     }
 
@@ -374,14 +349,13 @@ export class ChipSelectField extends Many2OneField {
         this.uiState.saveMessage = message;
     }
 
-    async select(option, ev = null) {
+    async selectOption(option, ev = null) {
         this._stopEvent(ev);
 
-        console.log("[ChipSelect][select] Click recibido", {
+        console.log("[ChipSelect][selectOption] INICIO", {
+            option: option,
             fieldName: this.props.name,
             relation: this.relation,
-            option: option,
-            currentIdBefore: this.currentId,
             readonly: this.props.readonly,
             autoSave: this.props.autoSave,
             recordModel: this.recordModel,
@@ -389,55 +363,58 @@ export class ChipSelectField extends Many2OneField {
             recordDataBefore: this.props.record && this.props.record.data,
         });
 
-        if (this.props.readonly) {
-            return;
-        }
-
         if (!option || !option.id) {
-            console.warn("[ChipSelect][select] Opción inválida", {
-                fieldName: this.props.name,
-                option: option,
-            });
+            console.warn("[ChipSelect][selectOption] Opción inválida", option);
             return;
         }
 
-        try {
-            this._resetSaveStatus();
+        this._resetSaveStatus();
 
+        /*
+         * Primero marcamos localmente para que visualmente cambie sí o sí.
+         */
+        this.uiState.localSelectedId = option.id;
+        this.uiState.expanded = false;
+
+        /*
+         * Luego intentamos actualizar el record de Odoo.
+         */
+        try {
             await this.props.record.update({
                 [this.props.name]: [option.id, option.name],
             });
 
-            this.uiState.expanded = false;
-
-            if (this.props.autoSave) {
-                await this._autoSaveOption(option);
-            }
-
-            console.log("[ChipSelect][select] Estado actualizado", {
-                fieldName: this.props.name,
-                relation: this.relation,
+            console.log("[ChipSelect][selectOption] record.update OK", {
                 selectedId: option.id,
                 selectedName: option.name,
-                currentIdAfter: this.currentId,
-                expanded: this.uiState.expanded,
-                recordDataAfter: this.props.record && this.props.record.data,
             });
 
-        } catch (err) {
-            console.error("[ChipSelect][select] Error actualizando estado", {
-                fieldName: this.props.name,
-                relation: this.relation,
-                option: option,
-                error: err,
-            });
-
-            this._markSaveError("No guardado");
-
-            this.notification.add("No se pudo guardar el estado. Guarda manualmente antes de salir.", {
-                type: "danger",
-            });
+        } catch (updateErr) {
+            console.warn("[ChipSelect][selectOption] record.update FALLÓ, pero selección local queda marcada", updateErr);
         }
+
+        /*
+         * Finalmente intentamos autoguardar.
+         */
+        if (this.props.autoSave) {
+            try {
+                await this._autoSaveOption(option);
+            } catch (saveErr) {
+                console.error("[ChipSelect][selectOption] autosave FALLÓ", saveErr);
+
+                this._markSaveError("No guardado");
+
+                this.notification.add("No se pudo guardar automáticamente. Usa Guardar cambios antes de salir.", {
+                    type: "warning",
+                });
+            }
+        }
+
+        console.log("[ChipSelect][selectOption] FIN", {
+            localSelectedId: this.uiState.localSelectedId,
+            currentId: this.currentId,
+            selectedOption: this.selectedOption,
+        });
     }
 
     async _autoSaveOption(option) {
@@ -445,8 +422,7 @@ export class ChipSelectField extends Many2OneField {
         const resId = this.recordResId;
 
         if (!model || !resId) {
-            console.warn("[ChipSelect][_autoSaveOption] Registro sin ID real. Queda pendiente de guardar.", {
-                fieldName: this.props.name,
+            console.warn("[ChipSelect][_autoSaveOption] Sin modelo o ID real", {
                 model: model,
                 resId: resId,
                 record: this.props.record,
@@ -474,7 +450,6 @@ export class ChipSelectField extends Many2OneField {
             resId: resId,
             fieldName: this.props.name,
             selectedId: option.id,
-            selectedName: option.name,
         });
     }
 }
@@ -504,11 +479,7 @@ export const chipSelectField = {
             autoSave: autoSave,
         };
 
-        console.log("[ChipSelect][extractProps]", {
-            attrs: attrs,
-            options: options,
-            finalProps: finalProps,
-        });
+        console.log("[ChipSelect][extractProps]", finalProps);
 
         return finalProps;
     },
