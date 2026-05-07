@@ -86,6 +86,7 @@ export class MobileTicketLayout extends Component {
 
         onWillUnmount(() => {
             console.log(TAG, "[willUnmount]");
+
             window.removeEventListener("resize", this._onResize);
             document.body.classList.remove("o_mobile_ticket_active");
         });
@@ -672,6 +673,37 @@ export class MobileTicketLayout extends Component {
         }
     }
 
+    async onMobileBack() {
+        console.log(TAG, "[onMobileBack] start", {
+            saving: this.uiState.saving,
+            actionLoading: this.uiState.actionLoading,
+            lastActionName: this.uiState.lastActionName,
+        });
+
+        if (this.uiState.saving || this.uiState.actionLoading) {
+            this.notification.add("Espera un momento, se está guardando o ejecutando una acción.", {
+                type: "warning",
+            });
+
+            console.warn(TAG, "[onMobileBack] bloqueado por proceso activo");
+
+            return;
+        }
+
+        try {
+            window.history.back();
+
+            console.log(TAG, "[onMobileBack] history.back ejecutado");
+
+        } catch (error) {
+            console.error(TAG, "[onMobileBack] error", error);
+
+            this.notification.add("No se pudo volver atrás.", {
+                type: "danger",
+            });
+        }
+    }
+
     async onChangeContadorK(ev) {
         console.log(TAG, "[onChangeContadorK]", ev.target.value);
 
@@ -957,11 +989,13 @@ export class MobileTicketLayout extends Component {
 
     async onAbrirMapa() {
         console.log(TAG, "[onAbrirMapa]");
+
         await this.callAction("action_abrir_mapa_equipo");
     }
 
     async onNavegar() {
         console.log(TAG, "[onNavegar]");
+
         await this.callAction("action_navegar_a_equipo");
     }
 

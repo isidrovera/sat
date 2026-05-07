@@ -8,7 +8,7 @@
             <div class="o_mobile_ticket_header">
                 <button type="button"
                         class="o_mobile_back"
-                        t-on-click="() => window.history.back()">
+                        t-on-click="onMobileBack">
                     ←
                 </button>
 
