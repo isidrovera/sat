@@ -27,12 +27,17 @@ export class ChipSelectField extends Many2OneField {
         super.setup();
 
         this.orm = useService("orm");
+        this.notification = useService("notification");
 
         this.uiState = useState({
             options: [],
             loading: true,
             loaded: false,
             expanded: false,
+            saving: false,
+            saved: false,
+            saveError: false,
+            saveMessage: "",
         });
 
         this._lastTypeId = this.filterTypeId;
@@ -40,10 +45,13 @@ export class ChipSelectField extends Many2OneField {
         console.log("[ChipSelect][setup]", {
             fieldName: this.props.name,
             relation: this.relation,
+            recordModel: this.recordModel,
+            recordResId: this.recordResId,
             readonly: this.props.readonly,
             filterByField: this.props.filterByField,
             filterRelation: this.props.filterRelation,
             shortenLabels: this.props.shortenLabels,
+            autoSave: this.props.autoSave,
             currentId: this.currentId,
             filterTypeId: this.filterTypeId,
             recordData: this.props.record && this.props.record.data,
@@ -74,23 +82,26 @@ export class ChipSelectField extends Many2OneField {
         const filterField = props.filterByField;
 
         if (!filterField) {
-            console.log("[ChipSelect][_extractTypeId] No hay filterByField", {
-                fieldName: props.name,
-            });
+            return null;
+        }
+
+        if (!props.record || !props.record.data) {
             return null;
         }
 
         const val = props.record.data[filterField];
 
-        console.log("[ChipSelect][_extractTypeId]", {
-            fieldName: props.name,
-            filterField: filterField,
-            value: val,
-        });
+        if (!val) {
+            return null;
+        }
 
-        if (!val) return null;
-        if (Array.isArray(val)) return val[0];
-        if (typeof val === "object") return val.id;
+        if (Array.isArray(val)) {
+            return val[0];
+        }
+
+        if (typeof val === "object") {
+            return val.id || val.resId || null;
+        }
 
         return val;
     }
@@ -99,12 +110,47 @@ export class ChipSelectField extends Many2OneField {
         return this.props.record.fields[this.props.name].relation;
     }
 
+    get recordModel() {
+        return (
+            this.props.record.resModel ||
+            this.props.record.modelName ||
+            this.props.record.config?.resModel ||
+            null
+        );
+    }
+
+    get recordResId() {
+        const resId = this.props.record.resId;
+
+        if (!resId) {
+            return null;
+        }
+
+        if (typeof resId === "number") {
+            return resId;
+        }
+
+        if (typeof resId === "string" && /^\d+$/.test(resId)) {
+            return parseInt(resId, 10);
+        }
+
+        return null;
+    }
+
     get currentId() {
         const val = this.props.record.data[this.props.name];
 
-        if (!val) return null;
-        if (Array.isArray(val)) return val[0];
-        if (typeof val === "object") return val.id;
+        if (!val) {
+            return null;
+        }
+
+        if (Array.isArray(val)) {
+            return val[0];
+        }
+
+        if (typeof val === "object") {
+            return val.id || val.resId || null;
+        }
 
         return val;
     }
@@ -147,16 +193,8 @@ export class ChipSelectField extends Many2OneField {
                     ["id", "name", "color"],
                     { limit: 100 }
                 );
-
-                console.log("[ChipSelect][loadOptions] Opciones con color encontradas", {
-                    fieldName: this.props.name,
-                    relation: this.relation,
-                    total: records.length,
-                    records: records,
-                });
-
             } catch (colorErr) {
-                console.warn("[ChipSelect][loadOptions] Falló lectura con campo color, reintentando sin color", {
+                console.warn("[ChipSelect][loadOptions] Falló lectura con color. Reintentando sin color.", {
                     fieldName: this.props.name,
                     relation: this.relation,
                     domain: domain,
@@ -174,28 +212,20 @@ export class ChipSelectField extends Many2OneField {
                     ...record,
                     color: 0,
                 }));
-
-                console.log("[ChipSelect][loadOptions] Opciones sin color encontradas", {
-                    fieldName: this.props.name,
-                    relation: this.relation,
-                    total: records.length,
-                    records: records,
-                });
             }
 
             this.uiState.options = records;
             this.uiState.loaded = true;
 
-            console.log("[ChipSelect][loadOptions] Carga finalizada correctamente", {
+            console.log("[ChipSelect][loadOptions] Opciones cargadas", {
                 fieldName: this.props.name,
                 relation: this.relation,
-                loaded: this.uiState.loaded,
-                loading: this.uiState.loading,
-                optionsCount: this.uiState.options.length,
+                total: records.length,
+                records: records,
             });
 
         } catch (err) {
-            console.error("[ChipSelect][loadOptions] Error cargando opciones definitivo", {
+            console.error("[ChipSelect][loadOptions] Error cargando opciones", {
                 fieldName: this.props.name,
                 relation: this.relation,
                 filterByField: this.props.filterByField,
@@ -208,13 +238,6 @@ export class ChipSelectField extends Many2OneField {
 
         } finally {
             this.uiState.loading = false;
-
-            console.log("[ChipSelect][loadOptions] Finally", {
-                fieldName: this.props.name,
-                relation: this.relation,
-                loading: this.uiState.loading,
-                optionsCount: this.uiState.options.length,
-            });
         }
     }
 
@@ -223,29 +246,14 @@ export class ChipSelectField extends Many2OneField {
         const filterRel = this.props.filterRelation;
 
         if (!typeId || !filterRel) {
-            console.log("[ChipSelect][buildDomain] Sin filtro, retorna []", {
-                fieldName: this.props.name,
-                typeId: typeId,
-                filterRel: filterRel,
-            });
-
             return [];
         }
 
-        const domain = [
+        return [
             "|",
             [filterRel, "=", false],
             [filterRel, "in", [typeId]],
         ];
-
-        console.log("[ChipSelect][buildDomain] Dominio generado", {
-            fieldName: this.props.name,
-            typeId: typeId,
-            filterRel: filterRel,
-            domain: domain,
-        });
-
-        return domain;
     }
 
     getChipStyle(option, isSelected) {
@@ -288,13 +296,10 @@ export class ChipSelectField extends Many2OneField {
     }
 
     toggleOptions(ev = null) {
-        if (ev) {
-            ev.preventDefault();
-            ev.stopPropagation();
+        this._stopEvent(ev);
 
-            if (ev.stopImmediatePropagation) {
-                ev.stopImmediatePropagation();
-            }
+        if (this.props.readonly) {
+            return;
         }
 
         this.uiState.expanded = !this.uiState.expanded;
@@ -309,28 +314,69 @@ export class ChipSelectField extends Many2OneField {
         });
     }
 
+    _stopEvent(ev = null) {
+        if (!ev) {
+            return;
+        }
+
+        ev.preventDefault();
+        ev.stopPropagation();
+
+        if (ev.stopImmediatePropagation) {
+            ev.stopImmediatePropagation();
+        }
+    }
+
+    _resetSaveStatus() {
+        this.uiState.saving = false;
+        this.uiState.saved = false;
+        this.uiState.saveError = false;
+        this.uiState.saveMessage = "";
+    }
+
+    _markSaving() {
+        this.uiState.saving = true;
+        this.uiState.saved = false;
+        this.uiState.saveError = false;
+        this.uiState.saveMessage = "Guardando...";
+    }
+
+    _markSaved() {
+        this.uiState.saving = false;
+        this.uiState.saved = true;
+        this.uiState.saveError = false;
+        this.uiState.saveMessage = "Guardado";
+
+        window.setTimeout(() => {
+            this.uiState.saved = false;
+            this.uiState.saveMessage = "";
+        }, 1800);
+    }
+
+    _markSaveError(message = "No se pudo guardar") {
+        this.uiState.saving = false;
+        this.uiState.saved = false;
+        this.uiState.saveError = true;
+        this.uiState.saveMessage = message;
+    }
+
     async select(option, ev = null) {
+        this._stopEvent(ev);
+
         console.log("[ChipSelect][select] Click recibido", {
             fieldName: this.props.name,
             relation: this.relation,
             option: option,
             currentIdBefore: this.currentId,
             readonly: this.props.readonly,
+            autoSave: this.props.autoSave,
+            recordModel: this.recordModel,
+            recordResId: this.recordResId,
             recordDataBefore: this.props.record && this.props.record.data,
         });
 
-        if (ev) {
-            ev.preventDefault();
-            ev.stopPropagation();
-
-            if (ev.stopImmediatePropagation) {
-                ev.stopImmediatePropagation();
-            }
-
-            console.log("[ChipSelect][select] Evento detenido correctamente", {
-                fieldName: this.props.name,
-                optionId: option && option.id,
-            });
+        if (this.props.readonly) {
+            return;
         }
 
         if (!option || !option.id) {
@@ -342,13 +388,19 @@ export class ChipSelectField extends Many2OneField {
         }
 
         try {
+            this._resetSaveStatus();
+
             await this.props.record.update({
                 [this.props.name]: [option.id, option.name],
             });
 
             this.uiState.expanded = false;
 
-            console.log("[ChipSelect][select] Estado actualizado y opciones cerradas", {
+            if (this.props.autoSave) {
+                await this._autoSaveOption(option);
+            }
+
+            console.log("[ChipSelect][select] Estado actualizado", {
                 fieldName: this.props.name,
                 relation: this.relation,
                 selectedId: option.id,
@@ -365,6 +417,68 @@ export class ChipSelectField extends Many2OneField {
                 option: option,
                 error: err,
             });
+
+            this._markSaveError("No se pudo actualizar");
+            this.notification.add("No se pudo actualizar el estado.", {
+                type: "danger",
+            });
+        }
+    }
+
+    async _autoSaveOption(option) {
+        const model = this.recordModel;
+        const resId = this.recordResId;
+
+        if (!model || !resId) {
+            console.warn("[ChipSelect][_autoSaveOption] Registro sin ID real. Solo queda en memoria hasta guardar formulario.", {
+                fieldName: this.props.name,
+                model: model,
+                resId: resId,
+                record: this.props.record,
+            });
+
+            this._markSaveError("Pendiente de guardar");
+
+            this.notification.add("Cambio pendiente. Guarda el ticket antes de salir.", {
+                type: "warning",
+            });
+
+            return;
+        }
+
+        this._markSaving();
+
+        try {
+            await this.orm.write(model, [resId], {
+                [this.props.name]: option.id,
+            });
+
+            this._markSaved();
+
+            console.log("[ChipSelect][_autoSaveOption] Guardado en BD", {
+                model: model,
+                resId: resId,
+                fieldName: this.props.name,
+                selectedId: option.id,
+                selectedName: option.name,
+            });
+
+        } catch (err) {
+            console.error("[ChipSelect][_autoSaveOption] Error guardando en BD", {
+                model: model,
+                resId: resId,
+                fieldName: this.props.name,
+                selectedId: option.id,
+                error: err,
+            });
+
+            this._markSaveError("No guardado");
+
+            this.notification.add("No se pudo guardar automáticamente. Usa Guardar cambios antes de salir.", {
+                type: "danger",
+            });
+
+            throw err;
         }
     }
 }
@@ -376,11 +490,22 @@ export const chipSelectField = {
     extractProps({ attrs, options }) {
         const props = many2OneField.extractProps(...arguments);
 
+        const rawAutoSave =
+            (attrs && attrs.auto_save) ||
+            (options && options.auto_save);
+
+        let autoSave = true;
+
+        if (rawAutoSave === false || rawAutoSave === "false" || rawAutoSave === "0") {
+            autoSave = false;
+        }
+
         const finalProps = {
             ...props,
             filterByField: (attrs && attrs.filter_by_field) || (options && options.filter_by_field) || null,
             filterRelation: (attrs && attrs.filter_relation) || (options && options.filter_relation) || null,
             shortenLabels: !!((attrs && attrs.shorten_labels) || (options && options.shorten_labels)),
+            autoSave: autoSave,
         };
 
         console.log("[ChipSelect][extractProps]", {
@@ -397,6 +522,7 @@ export const chipSelectField = {
         { label: "Filter by field", name: "filter_by_field", type: "string" },
         { label: "Filter relation", name: "filter_relation", type: "string" },
         { label: "Shorten labels", name: "shorten_labels", type: "boolean" },
+        { label: "Auto save", name: "auto_save", type: "boolean" },
     ],
 };
 

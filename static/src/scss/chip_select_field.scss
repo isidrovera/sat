@@ -43,7 +43,7 @@
         text-align: center;
         cursor: pointer;
         user-select: none;
-        transition: transform 0.1s ease, box-shadow 0.15s ease;
+        transition: transform 0.1s ease, box-shadow 0.15s ease, outline 0.15s ease;
         min-height: 44px;
         white-space: nowrap;
         overflow: hidden;
@@ -61,6 +61,24 @@
             font-weight: 600;
             box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
         }
+
+        &.o_chip_current {
+            width: 100%;
+            margin-bottom: 6px;
+        }
+
+        &.o_chip_saving {
+            opacity: 0.85;
+            outline: 2px solid rgba(108, 117, 125, 0.25);
+        }
+
+        &.o_chip_saved {
+            outline: 2px solid rgba(25, 135, 84, 0.35);
+        }
+
+        &.o_chip_error {
+            outline: 2px solid rgba(220, 53, 69, 0.35);
+        }
     }
 
     .o_chip_check {
@@ -73,6 +91,33 @@
         overflow: hidden;
         text-overflow: ellipsis;
         max-width: 100%;
+    }
+
+    .o_chip_arrow {
+        margin-left: 6px;
+        font-size: 10px;
+        font-weight: 700;
+    }
+
+    .o_chip_save_status {
+        margin-top: -2px;
+        margin-bottom: 6px;
+        padding-left: 2px;
+        font-size: 11px;
+        font-weight: 600;
+        line-height: 1.2;
+    }
+
+    .o_chip_save_status_saving {
+        color: #6c757d;
+    }
+
+    .o_chip_save_status_saved {
+        color: #198754;
+    }
+
+    .o_chip_save_status_error {
+        color: #dc3545;
     }
 
     &.o_readonly {
@@ -101,7 +146,7 @@
         }
     }
 
-    // En desktop → 5 columnas (cabe más en una fila)
+    // En desktop → 5 columnas
     @media (min-width: 1200px) {
         .o_chip_select_grid {
             grid-template-columns: repeat(5, 1fr);
@@ -115,13 +160,111 @@
         }
     }
 }
-.o_chip_current {
-    width: 100%;
-    margin-bottom: 6px;
+
+
+/* ==========================================================
+   BLOQUE MÓVIL PARA RETORNO Y GUARDADO MANUAL
+   ========================================================== */
+
+.o_mobile_ticket_form {
+    .o_mobile_retorno_box {
+        border: 1px solid #dee2e6;
+        border-radius: 10px;
+        padding: 12px;
+        margin: 12px 0;
+        background: #f8f9fa;
+
+        .o_form_label {
+            font-weight: 700;
+        }
+
+        .alert {
+            margin-bottom: 0;
+            padding: 8px 10px;
+            font-size: 12px;
+            border-radius: 8px;
+        }
+    }
+
+    .o_mobile_save_bar {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin: 10px 0 14px 0;
+
+        .btn {
+            border-radius: 8px;
+            font-weight: 700;
+            min-height: 38px;
+        }
+    }
 }
 
-.o_chip_arrow {
-    margin-left: 6px;
-    font-size: 10px;
-    font-weight: 700;
+
+/* ==========================================================
+   TARJETAS DE COMPONENTES / ACCESORIOS
+   ========================================================== */
+
+.o_mobile_eval_kanban,
+.o_componente_eval_kanban,
+.o_accesorio_eval_kanban {
+    .o_componente_card {
+        border-radius: 12px;
+        padding: 12px;
+        margin-bottom: 10px;
+        border: 1px solid #e5e5e5;
+        background: #ffffff;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    }
+
+    .o_card_header {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        align-items: flex-start;
+        margin-bottom: 10px;
+    }
+
+    .o_card_title {
+        font-weight: 800;
+        font-size: 15px;
+        line-height: 1.25;
+    }
+
+    .o_card_subtitle {
+        font-size: 12px;
+        color: #6c757d;
+    }
+
+    .o_card_field {
+        margin-top: 10px;
+    }
+
+    .o_card_field_label {
+        display: block;
+        font-size: 11px;
+        font-weight: 800;
+        color: #6c757d;
+        margin-bottom: 4px;
+        letter-spacing: 0.04em;
+    }
+
+    .o_card_danger {
+        border-left: 5px solid #dc3545;
+    }
+
+    .o_card_warning {
+        border-left: 5px solid #ffc107;
+    }
+
+    .o_card_success {
+        border-left: 5px solid #198754;
+    }
+
+    .o_card_delete {
+        color: #dc3545;
+        font-weight: 800;
+        text-decoration: none;
+        padding: 2px 6px;
+    }
 }

@@ -107,3 +107,4 @@ from . import alquiler_inherit
 from . import ticket_alquiler_inherit
 from . import ticket_evidencia_foto
 from . import ticket_alquiler_evidencia
+from . import ticket_alquiler_mobile_autosave

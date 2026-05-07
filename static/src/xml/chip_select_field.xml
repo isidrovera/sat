@@ -9,30 +9,47 @@
                 <span> Cargando estados...</span>
             </div>
 
-            <div class="o_chip_select_empty" t-if="!uiState.loading and uiState.options.length === 0">
+            <div class="o_chip_select_empty"
+                 t-if="!uiState.loading and uiState.options.length === 0">
                 <i class="fa fa-info-circle me-1"/>
-                <span>No hay estados disponibles para este componente</span>
+                <span>No hay estados disponibles</span>
             </div>
 
             <div t-if="!uiState.loading and uiState.options.length > 0">
 
-                <!-- Si ya existe un estado marcado, mostrar solo el estado seleccionado -->
                 <button t-if="selectedOption"
                         type="button"
                         class="o_chip o_chip_current"
+                        t-att-class="{
+                            'o_chip_saving': uiState.saving,
+                            'o_chip_saved': uiState.saved,
+                            'o_chip_error': uiState.saveError
+                        }"
                         t-att-style="getChipStyle(selectedOption, true)"
                         t-att-title="selectedOption.name"
-                        t-on-click.stop.prevent="(ev) => this.toggleOptions(ev)">
+                        t-on-click.stop.prevent="(ev) => toggleOptions(ev)">
 
-                    <span class="o_chip_check">✓</span>
+                    <span class="o_chip_check" t-if="!uiState.saving">✓</span>
+                    <span class="o_chip_check" t-if="uiState.saving">
+                        <i class="fa fa-spinner fa-spin"/>
+                    </span>
+
                     <span class="o_chip_label" t-esc="getShortLabel(selectedOption)"/>
 
                     <span class="o_chip_arrow" t-if="!uiState.expanded">▼</span>
                     <span class="o_chip_arrow" t-if="uiState.expanded">▲</span>
                 </button>
 
-                <!-- Si no hay estado seleccionado, mostrar las opciones directamente.
-                     Si hay estado seleccionado, mostrar opciones solo cuando expanded = true -->
+                <div class="o_chip_save_status"
+                     t-if="uiState.saveMessage"
+                     t-att-class="{
+                        'o_chip_save_status_saving': uiState.saving,
+                        'o_chip_save_status_saved': uiState.saved,
+                        'o_chip_save_status_error': uiState.saveError
+                     }">
+                    <span t-esc="uiState.saveMessage"/>
+                </div>
+
                 <div class="o_chip_select_grid"
                      t-if="!selectedOption or uiState.expanded">
 
@@ -42,9 +59,11 @@
                                 t-att-class="{ 'o_chip_selected': isSelected(option) }"
                                 t-att-style="getChipStyle(option, isSelected(option))"
                                 t-att-title="option.name"
-                                t-on-click.stop.prevent="(ev) => this.select(option, ev)">
+                                t-on-click.stop.prevent="(ev) => select(option, ev)">
+
                             <span class="o_chip_check" t-if="isSelected(option)">✓</span>
                             <span class="o_chip_label" t-esc="getShortLabel(option)"/>
+
                         </button>
                     </t>
 
