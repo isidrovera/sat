@@ -403,36 +403,58 @@ class WhatsappNotificationWizard(models.TransientModel):
             count += 1
         _logger.info("✅ [_crear_lineas_tickets] creadas=%s", count)
 
-
-    def action_confirmar_asignacion_masiva(self):
-        """Confirma la asignación masiva con valores del wizard"""
+        def action_confirmar_asignacion_masiva(self):
+        """Confirma la asignación masiva con trazabilidad completa por logs."""
         self.ensure_one()
 
+        _logger.warning(
+            "🟢 [WIZARD MASIVO][INICIO] wizard_id=%s es_masiva=%s tickets=%s tecnico=%s fecha_visita=%s notificar_grupos=%s grupo=%s",
+            self.id,
+            self.es_asignacion_masiva,
+            self.tickets_masivos_ids.ids,
+            self.tecnico_asignado.name if self.tecnico_asignado else False,
+            self.fecha_visita,
+            self.notificar_grupos,
+            self.grupo_seleccionado,
+        )
+
         if not self.es_asignacion_masiva:
-            # Si no es masiva, usar método original
+            _logger.warning(
+                "🟢 [WIZARD MASIVO] No es asignación masiva. Redirigiendo a action_confirmar_asignacion."
+            )
             return self.action_confirmar_asignacion()
 
-        # Validaciones para asignación masiva
+        # ============================================================
+        # VALIDACIONES BÁSICAS
+        # ============================================================
         if not self.tecnico_asignado:
+            _logger.error("🔴 [WIZARD MASIVO] Sin técnico asignado.")
             raise UserError("Debe asignar un técnico responsable para todos los tickets")
 
         if not self.fecha_visita:
+            _logger.error("🔴 [WIZARD MASIVO] Sin fecha de visita.")
             raise UserError("Debe asignar una fecha de visita para todos los tickets")
 
         if not self.ticket_line_ids:
+            _logger.error("🔴 [WIZARD MASIVO] Sin líneas de tickets.")
             raise UserError("No se encontraron tickets para procesar")
 
-        # Validar que todas las líneas tengan tipo de servicio
         lineas_sin_servicio = self.ticket_line_ids.filtered(lambda l: not l.tipo_servicio_id)
         if lineas_sin_servicio:
             tickets_sin_servicio = lineas_sin_servicio.mapped('ticket_id.name')
+            _logger.error(
+                "🔴 [WIZARD MASIVO] Líneas sin tipo de servicio: %s",
+                tickets_sin_servicio,
+            )
             raise UserError(
                 f"Los siguientes tickets no tienen tipo de servicio definido: "
                 f"{', '.join(tickets_sin_servicio)}"
             )
 
         try:
-            # Preparar datos del wizard para procesamiento
+            # ============================================================
+            # ARMAR DATA
+            # ============================================================
             wizard_data = {
                 'tecnico_asignado': self.tecnico_asignado,
                 'fecha_visita': self.fecha_visita,
@@ -446,6 +468,7 @@ class WhatsappNotificationWizard(models.TransientModel):
                 'ticket_lines': [
                     {
                         'ticket_id': line.ticket_id.id,
+                        'ticket_name': line.ticket_id.name,
                         'tipo_servicio_id': line.tipo_servicio_id,
                         'observaciones': line.observaciones,
                     }
@@ -453,21 +476,46 @@ class WhatsappNotificationWizard(models.TransientModel):
                 ],
             }
 
-            # 1. Enviar notificación a grupos si está habilitada
-            # NO SE MODIFICA LA LÓGICA DE WHATSAPP.
-            if self.notificar_grupos and self.grupo_seleccionado:
-                self.tickets_masivos_ids._enviar_notificacion_grupo_consolidada(
-                    self.tickets_masivos_ids,
-                    wizard_data
-                )
+            _logger.warning(
+                "🟢 [WIZARD MASIVO][DATA] tecnico=%s fecha=%s asistencia=%s total_lineas=%s ticket_lines=%s",
+                self.tecnico_asignado.name,
+                self.fecha_visita,
+                self.asistencia_directa,
+                len(wizard_data['ticket_lines']),
+                wizard_data['ticket_lines'],
+            )
 
-            # 2. Procesar asignación masiva inteligente
-            # Aquí se asigna una hora diferente por ticket.
+            # ============================================================
+            # PROCESAR ASIGNACIÓN MASIVA
+            # IMPORTANTE:
+            # No enviamos WhatsApp directo aquí.
+            # El flujo consolidado se ejecuta dentro de _procesar_asignacion_masiva.
+            # ============================================================
+            _logger.warning(
+                "🟢 [WIZARD MASIVO][ANTES_PROCESAR] llamando _procesar_asignacion_masiva tickets=%s",
+                self.tickets_masivos_ids.ids,
+            )
+
             self.tickets_masivos_ids._procesar_asignacion_masiva(wizard_data)
 
-            # 3. Registrar información en tickets después de asignar
-            # Así evitamos que el chatter quede con una hora común incorrecta.
+            _logger.warning(
+                "🟢 [WIZARD MASIVO][DESPUES_PROCESAR] terminó _procesar_asignacion_masiva tickets=%s",
+                self.tickets_masivos_ids.ids,
+            )
+
+            # ============================================================
+            # REGISTRAR CHATTER
+            # ============================================================
+            _logger.warning(
+                "🟢 [WIZARD MASIVO][ANTES_CHATTER] registrando información masiva"
+            )
+
             self._registrar_informacion_masiva()
+
+            _logger.warning(
+                "🟢 [WIZARD MASIVO][FIN] asignación masiva completada correctamente tickets=%s",
+                self.tickets_masivos_ids.ids,
+            )
 
             return {
                 'type': 'ir.actions.client',
@@ -480,12 +528,23 @@ class WhatsappNotificationWizard(models.TransientModel):
                 }
             }
 
-        except UserError:
+        except UserError as e:
+            _logger.error(
+                "🔴 [WIZARD MASIVO][USERERROR] %s",
+                str(e),
+                exc_info=True,
+            )
             raise
 
         except Exception as e:
-            _logger.error(f"Error en asignación masiva: {e}")
+            _logger.error(
+                "🔴 [WIZARD MASIVO][EXCEPTION] Error inesperado: %s",
+                str(e),
+                exc_info=True,
+            )
             raise UserError(f"Error al procesar la asignación masiva: {str(e)}")
+    
+    
     def _registrar_informacion_masiva(self):
         """Registra información del wizard en todos los tickets masivos"""
         self.ensure_one()

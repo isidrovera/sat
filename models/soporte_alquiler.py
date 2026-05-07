@@ -1966,72 +1966,137 @@ class TicketAlquiler(models.Model):
         return sorted(ticket_lines, key=_key)
     def _procesar_asignacion_masiva(self, wizard_data):
         """
-        Procesa la asignación masiva sin poner todos los tickets en la misma hora.
+        Procesa la asignación masiva con agenda inteligente y logs completos.
 
-        Antes:
-            Todos los tickets recibían la misma agenda del wizard.
-
-        Ahora:
-            - Toma la fecha/hora inicial del wizard.
-            - Ordena tickets por cliente/dirección/zona aproximada.
-            - Calcula duración por tipo de servicio.
-            - Busca el siguiente bloque libre del técnico.
-            - Asigna una agenda distinta por ticket.
-            - Mantiene intacto el flujo posterior de grupos, WhatsApp, correos y gerente.
+        Objetivo:
+        - Evitar que todos los tickets reciban la misma hora.
+        - Asignar horarios consecutivos.
+        - Detectar exactamente dónde falla:
+          cálculo de horarios, write del ticket, eventos, WhatsApp, correos o consolidado.
         """
+        _logger.warning(
+            "🟣 [ASIGNACION MASIVA][INICIO] self_ids=%s wizard_keys=%s",
+            self.ids,
+            list(wizard_data.keys()) if wizard_data else [],
+        )
+
         tecnico = wizard_data.get('tecnico_asignado')
         fecha_visita = wizard_data.get('fecha_visita')
         asistencia_directa = wizard_data.get('asistencia_directa', 'no')
         ticket_lines = wizard_data.get('ticket_lines', [])
 
+        _logger.warning(
+            "🟣 [ASIGNACION MASIVA][DATA] tecnico=%s tecnico_id=%s fecha_visita=%s asistencia=%s total_ticket_lines=%s self_count=%s",
+            tecnico.name if tecnico else False,
+            tecnico.id if tecnico else False,
+            fecha_visita,
+            asistencia_directa,
+            len(ticket_lines),
+            len(self),
+        )
+
         if not tecnico:
+            _logger.error("🔴 [ASIGNACION MASIVA] No se recibió técnico.")
             raise UserError(_("Debe asignar un técnico responsable para todos los tickets."))
 
         if not fecha_visita:
+            _logger.error("🔴 [ASIGNACION MASIVA] No se recibió fecha_visita.")
             raise UserError(_("Debe asignar una fecha de visita para todos los tickets."))
 
         if not ticket_lines:
+            _logger.error("🔴 [ASIGNACION MASIVA] No se recibieron ticket_lines.")
             raise UserError(_("No se encontraron tickets para procesar."))
 
-        ticket_lines_ordenadas = self._ordenar_ticket_lines_masivo(ticket_lines)
+        # ============================================================
+        # 1. ORDENAR TICKETS
+        # ============================================================
+        try:
+            ticket_lines_ordenadas = self._ordenar_ticket_lines_masivo(ticket_lines)
+            _logger.warning(
+                "🟣 [ASIGNACION MASIVA][ORDEN] líneas ordenadas=%s",
+                ticket_lines_ordenadas,
+            )
+        except Exception as e:
+            _logger.error(
+                "🔴 [ASIGNACION MASIVA][ORDEN] Error ordenando tickets: %s",
+                str(e),
+                exc_info=True,
+            )
+            raise
 
         ocupaciones_temporales = []
         asignaciones = []
 
         fecha_cursor = fields.Datetime.to_datetime(fecha_visita)
 
-        _logger.info(
-            "[ASIGNACION MASIVA] Inicio | tecnico=%s | fecha_base=%s | tickets=%s",
-            tecnico.name,
+        _logger.warning(
+            "🟣 [ASIGNACION MASIVA][CURSOR_INICIAL] fecha_cursor=%s",
             fecha_cursor,
-            len(ticket_lines_ordenadas)
         )
 
         # ============================================================
-        # 1. Calcular agenda libre para cada ticket ANTES de escribir
+        # 2. CALCULAR AGENDA LIBRE POR TICKET
         # ============================================================
-        for ticket_data in ticket_lines_ordenadas:
+        for index, ticket_data in enumerate(ticket_lines_ordenadas, start=1):
             ticket = self.browse(ticket_data.get('ticket_id'))
 
+            _logger.warning(
+                "🟣 [ASIGNACION MASIVA][CALCULO][%s] ticket_data=%s ticket_exists=%s",
+                index,
+                ticket_data,
+                ticket.exists(),
+            )
+
             if not ticket.exists():
+                _logger.warning(
+                    "🟡 [ASIGNACION MASIVA][CALCULO][%s] Ticket no existe, se omite. data=%s",
+                    index,
+                    ticket_data,
+                )
                 continue
 
             tipo_servicio = ticket_data.get('tipo_servicio_id') or ticket.tipo_servicio_id or 'revision'
             duracion_horas = self._get_duracion_servicio_masivo(tipo_servicio)
 
-            agenda_libre = self._buscar_siguiente_agenda_libre_masiva(
-                tecnico=tecnico,
-                fecha_inicio=fecha_cursor,
-                duracion_horas=duracion_horas,
-                excluir_ticket_id=ticket.id,
-                ocupaciones_temporales=ocupaciones_temporales,
-                dias_busqueda=10,
+            _logger.warning(
+                "🟣 [ASIGNACION MASIVA][CALCULO][%s] ticket=%s tipo=%s duracion=%s fecha_cursor=%s responsable_actual=%s agenda_actual=%s estado_actual=%s",
+                index,
+                ticket.name,
+                tipo_servicio,
+                duracion_horas,
+                fecha_cursor,
+                ticket.responsable.name if ticket.responsable else False,
+                ticket.agenda,
+                ticket.estado,
             )
+
+            try:
+                agenda_libre = self._buscar_siguiente_agenda_libre_masiva(
+                    tecnico=tecnico,
+                    fecha_inicio=fecha_cursor,
+                    duracion_horas=duracion_horas,
+                    excluir_ticket_id=ticket.id,
+                    ocupaciones_temporales=ocupaciones_temporales,
+                    dias_busqueda=10,
+                )
+            except Exception as e:
+                _logger.error(
+                    "🔴 [ASIGNACION MASIVA][CALCULO][%s] Error buscando agenda libre para ticket=%s tecnico=%s fecha_cursor=%s duracion=%s error=%s",
+                    index,
+                    ticket.name,
+                    tecnico.name,
+                    fecha_cursor,
+                    duracion_horas,
+                    str(e),
+                    exc_info=True,
+                )
+                raise
 
             agenda_fin = agenda_libre + timedelta(hours=duracion_horas)
 
             ocupaciones_temporales.append({
                 'ticket_id': ticket.id,
+                'ticket_name': ticket.name,
                 'tecnico_id': tecnico.id,
                 'inicio': agenda_libre,
                 'fin': agenda_fin,
@@ -2048,26 +2113,35 @@ class TicketAlquiler(models.Model):
                 'observaciones': ticket_data.get('observaciones') or '',
             })
 
-            # El siguiente ticket empieza desde el fin del anterior.
             fecha_cursor = agenda_fin
 
-            _logger.info(
-                "[ASIGNACION MASIVA] Slot reservado | ticket=%s | tecnico=%s | %s - %s | tipo=%s | duracion=%s",
+            _logger.warning(
+                "🟢 [ASIGNACION MASIVA][SLOT][%s] ticket=%s tecnico=%s inicio=%s fin=%s tipo=%s duracion=%s",
+                index,
                 ticket.name,
                 tecnico.name,
                 agenda_libre.strftime('%d/%m/%Y %H:%M'),
-                agenda_fin.strftime('%H:%M'),
+                agenda_fin.strftime('%d/%m/%Y %H:%M'),
                 tipo_servicio,
                 duracion_horas,
             )
 
+        _logger.warning(
+            "🟣 [ASIGNACION MASIVA][RESUMEN_SLOTS] total_asignaciones=%s ocupaciones_temporales=%s",
+            len(asignaciones),
+            ocupaciones_temporales,
+        )
+
         if not asignaciones:
+            _logger.error("🔴 [ASIGNACION MASIVA] No se pudo preparar ninguna asignación.")
             raise UserError(_("No se pudo preparar ninguna asignación."))
 
         # ============================================================
-        # 2. Escribir tickets con agenda individual
+        # 3. ESCRIBIR TICKETS UNO POR UNO
         # ============================================================
-        for item in asignaciones:
+        tickets_escritos = self.env['ticket.alquiler']
+
+        for index, item in enumerate(asignaciones, start=1):
             ticket = item['ticket']
 
             valores_ticket = {
@@ -2075,42 +2149,98 @@ class TicketAlquiler(models.Model):
                 'agenda': item['agenda'],
                 'asistencia_id': asistencia_directa,
                 'tipo_servicio_id': item['tipo_servicio_id'],
+                'estado': 'proceso',
             }
 
-            ticket.write(valores_ticket)
+            _logger.warning(
+                "🟣 [ASIGNACION MASIVA][WRITE][%s][ANTES] ticket=%s id=%s vals=%s",
+                index,
+                ticket.name,
+                ticket.id,
+                valores_ticket,
+            )
 
-            mensaje = _(
-                "📅 <b>Agenda asignada automáticamente por asignación masiva</b><br/>"
-                "👨‍🔧 <b>Técnico:</b> %s<br/>"
-                "🕒 <b>Horario:</b> %s - %s<br/>"
-                "🔧 <b>Tipo de servicio:</b> %s<br/>"
-                "⏱️ <b>Duración estimada:</b> %s hora(s)"
-            ) % (
-                tecnico.name,
-                item['agenda'].strftime('%d/%m/%Y %H:%M'),
-                item['agenda_fin'].strftime('%H:%M'),
-                dict(ticket._fields['tipo_servicio_id'].selection).get(
+            try:
+                ticket.write(valores_ticket)
+                tickets_escritos |= ticket
+
+                _logger.warning(
+                    "🟢 [ASIGNACION MASIVA][WRITE][%s][OK] ticket=%s nueva_agenda=%s responsable=%s estado=%s",
+                    index,
+                    ticket.name,
+                    ticket.agenda,
+                    ticket.responsable.name if ticket.responsable else False,
+                    ticket.estado,
+                )
+
+            except Exception as e:
+                _logger.error(
+                    "🔴 [ASIGNACION MASIVA][WRITE][%s][ERROR] ticket=%s id=%s vals=%s error=%s",
+                    index,
+                    ticket.name,
+                    ticket.id,
+                    valores_ticket,
+                    str(e),
+                    exc_info=True,
+                )
+                raise
+
+            # Chatter individual
+            try:
+                tipo_label = dict(ticket._fields['tipo_servicio_id'].selection).get(
                     item['tipo_servicio_id'],
                     item['tipo_servicio_id']
-                ),
-                item['duracion_horas'],
-            )
+                )
 
-            if item.get('observaciones'):
-                mensaje += _("<br/>📝 <b>Observaciones:</b> %s") % item['observaciones']
+                mensaje = _(
+                    "📅 <b>Agenda asignada automáticamente por asignación masiva</b><br/>"
+                    "👨‍🔧 <b>Técnico:</b> %s<br/>"
+                    "🕒 <b>Horario:</b> %s - %s<br/>"
+                    "🔧 <b>Tipo de servicio:</b> %s<br/>"
+                    "⏱️ <b>Duración estimada:</b> %s hora(s)"
+                ) % (
+                    tecnico.name,
+                    item['agenda'].strftime('%d/%m/%Y %H:%M'),
+                    item['agenda_fin'].strftime('%H:%M'),
+                    tipo_label,
+                    item['duracion_horas'],
+                )
 
-            ticket.message_post(
-                body=mensaje,
-                message_type='notification'
-            )
+                if item.get('observaciones'):
+                    mensaje += _("<br/>📝 <b>Observaciones:</b> %s") % item['observaciones']
+
+                ticket.message_post(
+                    body=mensaje,
+                    message_type='notification'
+                )
+
+                _logger.warning(
+                    "🟢 [ASIGNACION MASIVA][CHATTER][%s][OK] ticket=%s",
+                    index,
+                    ticket.name,
+                )
+
+            except Exception as e:
+                _logger.error(
+                    "🔴 [ASIGNACION MASIVA][CHATTER][%s][ERROR] ticket=%s error=%s",
+                    index,
+                    ticket.name,
+                    str(e),
+                    exc_info=True,
+                )
+                # No detenemos el proceso solo por chatter.
 
         # ============================================================
-        # 3. Agrupar y continuar con el flujo existente
-        # No se toca WhatsApp, Traccar, correo ni notificaciones.
+        # 4. AGRUPAR TICKETS YA ESCRITOS
         # ============================================================
         grupos = {}
 
-        for ticket in self:
+        _logger.warning(
+            "🟣 [ASIGNACION MASIVA][AGRUPAR] tickets_escritos=%s",
+            tickets_escritos.ids,
+        )
+
+        for ticket in tickets_escritos:
             key = (
                 ticket.partner_id.id if ticket.partner_id else 0,
                 ticket.responsable.id if ticket.responsable else 0,
@@ -2125,19 +2255,65 @@ class TicketAlquiler(models.Model):
 
             grupos[key]['tickets'] |= ticket
 
-        for grupo_data in grupos.values():
-            self._procesar_grupo_tickets_consolidado(grupo_data, wizard_data)
+            _logger.warning(
+                "🟣 [ASIGNACION MASIVA][AGRUPAR] ticket=%s key=%s cliente=%s tecnico=%s agenda=%s",
+                ticket.name,
+                key,
+                ticket.partner_id.name if ticket.partner_id else False,
+                ticket.responsable.name if ticket.responsable else False,
+                ticket.agenda,
+            )
 
-        self.write({'estado': 'proceso'})
+        _logger.warning(
+            "🟣 [ASIGNACION MASIVA][GRUPOS] total_grupos=%s keys=%s",
+            len(grupos),
+            list(grupos.keys()),
+        )
 
-        _logger.info(
-            "[ASIGNACION MASIVA] Finalizada correctamente | tecnico=%s | tickets=%s",
+        # ============================================================
+        # 5. PROCESAR FLUJO CONSOLIDADO
+        # Aquí puede entrar WhatsApp, correos, calendario, gerente, etc.
+        # Si falla aquí, ya sabremos que los writes sí pasaron.
+        # ============================================================
+        for index, grupo_data in enumerate(grupos.values(), start=1):
+            _logger.warning(
+                "🟣 [ASIGNACION MASIVA][GRUPO][%s][ANTES] cliente=%s tecnico=%s tickets=%s",
+                index,
+                grupo_data['cliente'].name if grupo_data.get('cliente') else False,
+                grupo_data['tecnico'].name if grupo_data.get('tecnico') else False,
+                grupo_data['tickets'].ids,
+            )
+
+            try:
+                self._procesar_grupo_tickets_consolidado(grupo_data, wizard_data)
+
+                _logger.warning(
+                    "🟢 [ASIGNACION MASIVA][GRUPO][%s][OK] tickets=%s",
+                    index,
+                    grupo_data['tickets'].ids,
+                )
+
+            except Exception as e:
+                _logger.error(
+                    "🔴 [ASIGNACION MASIVA][GRUPO][%s][ERROR] cliente=%s tecnico=%s tickets=%s error=%s",
+                    index,
+                    grupo_data['cliente'].name if grupo_data.get('cliente') else False,
+                    grupo_data['tecnico'].name if grupo_data.get('tecnico') else False,
+                    grupo_data['tickets'].ids,
+                    str(e),
+                    exc_info=True,
+                )
+                raise
+
+        _logger.warning(
+            "🟢 [ASIGNACION MASIVA][FIN] completado tecnico=%s tickets_escritos=%s total=%s",
             tecnico.name,
-            len(asignaciones)
+            tickets_escritos.ids,
+            len(tickets_escritos),
         )
 
         return True
-
+    
     def _procesar_grupo_tickets_consolidado(self, grupo_data, wizard_data):
         tickets = grupo_data['tickets']
         for ticket in tickets:
