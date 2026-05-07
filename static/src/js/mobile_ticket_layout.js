@@ -5,6 +5,8 @@ import { Component, useState, onMounted, onWillUnmount } from "@odoo/owl";
 import { useService } from "@web/core/utils/hooks";
 import { standardFieldProps } from "@web/views/fields/standard_field_props";
 
+const TAG = "[MobileTicket]";
+
 const STATE_LABELS = {
     nuevo: "NUEVO",
     proceso: "PROCESO",
@@ -16,6 +18,7 @@ const STATE_LABELS = {
 
 export class MobileTicketLayout extends Component {
     static template = "sat.MobileTicketLayout";
+
     static props = {
         ...standardFieldProps,
     };
@@ -29,6 +32,8 @@ export class MobileTicketLayout extends Component {
             isMobile: this._checkMobile(),
             menuOpen: false,
             saving: false,
+            actionLoading: false,
+            lastActionName: null,
             accordions: {
                 componentes: { open: true },
                 accesorios: { open: true },
@@ -40,7 +45,16 @@ export class MobileTicketLayout extends Component {
         });
 
         this._onResize = () => {
-            this.uiState.isMobile = this._checkMobile();
+            const oldValue = this.uiState.isMobile;
+            const newValue = this._checkMobile();
+
+            this.uiState.isMobile = newValue;
+
+            console.log(TAG, "[resize]", {
+                oldIsMobile: oldValue,
+                newIsMobile: newValue,
+                width: window.innerWidth,
+            });
 
             if (this.uiState.isMobile) {
                 document.body.classList.add("o_mobile_ticket_active");
@@ -51,6 +65,14 @@ export class MobileTicketLayout extends Component {
         };
 
         onMounted(() => {
+            console.log(TAG, "[mounted]", {
+                isMobile: this.uiState.isMobile,
+                record: this.record,
+                data: this.data,
+                resModel: this.record?.resModel,
+                resId: this.record?.resId,
+            });
+
             window.addEventListener("resize", this._onResize);
 
             if (this.uiState.isMobile) {
@@ -59,6 +81,8 @@ export class MobileTicketLayout extends Component {
         });
 
         onWillUnmount(() => {
+            console.log(TAG, "[willUnmount]");
+
             window.removeEventListener("resize", this._onResize);
             document.body.classList.remove("o_mobile_ticket_active");
         });
@@ -387,11 +411,22 @@ export class MobileTicketLayout extends Component {
     toggleAccordion(sectionId) {
         const accordion = this.uiState.accordions[sectionId];
 
+        console.log(TAG, "[toggleAccordion]", {
+            sectionId,
+            exists: !!accordion,
+            before: accordion?.open,
+        });
+
         if (!accordion) {
             return;
         }
 
         accordion.open = !accordion.open;
+
+        console.log(TAG, "[toggleAccordion] after", {
+            sectionId,
+            after: accordion.open,
+        });
     }
 
     toggleComponentes() {
@@ -408,6 +443,10 @@ export class MobileTicketLayout extends Component {
 
     toggleMenu() {
         this.uiState.menuOpen = !this.uiState.menuOpen;
+
+        console.log(TAG, "[toggleMenu]", {
+            menuOpen: this.uiState.menuOpen,
+        });
     }
 
     closeMenu() {
@@ -415,26 +454,61 @@ export class MobileTicketLayout extends Component {
     }
 
     async reloadRecord() {
+        console.log(TAG, "[reloadRecord] start", {
+            hasLoad: !!this.record?.load,
+            resModel: this.record?.resModel,
+            resId: this.record?.resId,
+        });
+
         if (this.record?.load) {
             await this.record.load();
         }
+
+        console.log(TAG, "[reloadRecord] done", {
+            data: this.data,
+        });
     }
 
     async getViewId(xmlid) {
+        console.log(TAG, "[getViewId] start", {
+            xmlid,
+        });
+
         try {
-            return await this.orm.call("ir.model.data", "_xmlid_to_res_id", [xmlid]);
+            const viewId = await this.orm.call("ir.model.data", "_xmlid_to_res_id", [xmlid]);
+
+            console.log(TAG, "[getViewId] success", {
+                xmlid,
+                viewId,
+            });
+
+            return viewId;
+
         } catch (error) {
-            console.error("[MobileTicket] No se pudo obtener view_id:", xmlid, error);
+            console.error(TAG, "[getViewId] error", {
+                xmlid,
+                error,
+            });
+
             return false;
         }
     }
 
     async saveMobileValues(values) {
+        console.log(TAG, "[saveMobileValues] start", {
+            values,
+            resModel: this.record?.resModel,
+            resId: this.record?.resId,
+            saving: this.uiState.saving,
+        });
+
         if (!this.record?.resModel || !this.record?.resId) {
+            console.warn(TAG, "[saveMobileValues] no resModel/resId");
             return;
         }
 
         if (this.uiState.saving) {
+            console.warn(TAG, "[saveMobileValues] already saving");
             return;
         }
 
@@ -442,83 +516,269 @@ export class MobileTicketLayout extends Component {
 
         try {
             await this.orm.write(this.record.resModel, [this.record.resId], values);
+
+            console.log(TAG, "[saveMobileValues] write OK");
+
             await this.reloadRecord();
 
             this.notification.add("Cambios guardados.", {
                 type: "success",
             });
+
         } catch (error) {
-            console.error("[MobileTicket] Error guardando valores móviles:", error);
+            console.error(TAG, "[saveMobileValues] error", error);
 
             this.notification.add("No se pudo guardar el cambio.", {
                 type: "danger",
             });
+
         } finally {
             this.uiState.saving = false;
+
+            console.log(TAG, "[saveMobileValues] finally", {
+                saving: this.uiState.saving,
+            });
         }
     }
 
     async onChangeContadorK(ev) {
+        console.log(TAG, "[onChangeContadorK]", ev.target.value);
+
         await this.saveMobileValues({
             contometrok_id: Number(ev.target.value || 0),
         });
     }
 
     async onChangeContadorColor(ev) {
+        console.log(TAG, "[onChangeContadorColor]", ev.target.value);
+
         await this.saveMobileValues({
             contometroc_id: Number(ev.target.value || 0),
         });
     }
 
     async onChangeContadorScan(ev) {
+        console.log(TAG, "[onChangeContadorScan]", ev.target.value);
+
         await this.saveMobileValues({
             contometros_id: Number(ev.target.value || 0),
         });
     }
 
     async onChangeDescription(ev) {
+        console.log(TAG, "[onChangeDescription]", ev.target.value);
+
         await this.saveMobileValues({
             description: ev.target.value || "",
         });
     }
 
     async onChangeInforme(ev) {
+        console.log(TAG, "[onChangeInforme]", ev.target.value);
+
         await this.saveMobileValues({
             informe_id: ev.target.value || "",
         });
     }
 
-    async callAction(actionName) {
+    normalizeAction(action, actionName = "") {
+        console.log(TAG, "[normalizeAction] input", {
+            actionName,
+            action,
+        });
+
+        if (!action || typeof action !== "object") {
+            console.log(TAG, "[normalizeAction] action vacía o no objeto", {
+                actionName,
+                action,
+            });
+
+            return action;
+        }
+
+        if (action.type === "ir.actions.act_window") {
+            const viewMode = action.view_mode || "form";
+
+            /*
+             * Odoo 18 necesita action.views.
+             * Desde la interfaz estándar a veces Odoo completa esto,
+             * pero desde este componente móvil debemos normalizarlo.
+             */
+            if (!action.views) {
+                const firstViewMode = viewMode.split(",")[0] || "form";
+                let viewId = false;
+
+                if (Array.isArray(action.view_id)) {
+                    viewId = action.view_id[0] || false;
+                } else if (typeof action.view_id === "number") {
+                    viewId = action.view_id;
+                } else {
+                    viewId = false;
+                }
+
+                action.views = [[viewId, firstViewMode]];
+
+                console.warn(TAG, "[normalizeAction] action.views no venía definido. Se agregó.", {
+                    actionName,
+                    viewMode,
+                    viewId,
+                    views: action.views,
+                });
+            }
+
+            if (!action.view_mode) {
+                action.view_mode = action.views.map((view) => view[1]).join(",");
+
+                console.warn(TAG, "[normalizeAction] action.view_mode no venía definido. Se agregó.", {
+                    actionName,
+                    view_mode: action.view_mode,
+                });
+            }
+
+            if (!action.target) {
+                action.target = "current";
+
+                console.warn(TAG, "[normalizeAction] action.target no venía definido. Se agregó current.", {
+                    actionName,
+                });
+            }
+        }
+
+        console.log(TAG, "[normalizeAction] output", {
+            actionName,
+            action,
+        });
+
+        return action;
+    }
+
+    async callAction(actionName, kwargs = {}) {
         this.closeMenu();
 
+        console.log(TAG, "[callAction] start", {
+            actionName,
+            kwargs,
+            resModel: this.record?.resModel,
+            resId: this.record?.resId,
+            currentState: this.currentState,
+            data: this.data,
+        });
+
         if (!this.record?.resModel || !this.record?.resId) {
+            console.warn(TAG, "[callAction] no resModel/resId", {
+                actionName,
+                record: this.record,
+            });
+
+            this.notification.add("No se pudo ejecutar la acción: ticket sin ID.", {
+                type: "warning",
+            });
+
             return;
         }
 
+        if (this.uiState.actionLoading) {
+            console.warn(TAG, "[callAction] acción bloqueada porque otra está en ejecución", {
+                actionName,
+                lastActionName: this.uiState.lastActionName,
+            });
+
+            return;
+        }
+
+        this.uiState.actionLoading = true;
+        this.uiState.lastActionName = actionName;
+
         try {
+            /*
+             * Importante:
+             * Para llamar métodos type='object' de un recordset,
+             * usamos [[resId]], no [resId].
+             */
+            console.log(TAG, "[callAction] orm.call before", {
+                model: this.record.resModel,
+                method: actionName,
+                args: [[this.record.resId]],
+                kwargs,
+            });
+
             const result = await this.orm.call(
                 this.record.resModel,
                 actionName,
-                [this.record.resId],
-                {}
+                [[this.record.resId]],
+                kwargs
             );
 
+            console.log(TAG, "[callAction] orm.call result", {
+                actionName,
+                result,
+            });
+
             if (result && typeof result === "object" && result.type) {
-                await this.action.doAction(result);
+                const normalizedAction = this.normalizeAction(result, actionName);
+
+                console.log(TAG, "[callAction] doAction before", {
+                    actionName,
+                    normalizedAction,
+                });
+
+                await this.action.doAction(normalizedAction);
+
+                console.log(TAG, "[callAction] doAction success", {
+                    actionName,
+                    normalizedAction,
+                });
+            } else {
+                console.log(TAG, "[callAction] método sin acción retornada", {
+                    actionName,
+                    result,
+                });
             }
 
-            await this.reloadRecord();
+            /*
+             * Si abrió un wizard modal target='new', no forzamos reload inmediato.
+             * Si no, recargamos el ticket.
+             */
+            if (!(result && result.type === "ir.actions.act_window" && result.target === "new")) {
+                await this.reloadRecord();
+            } else {
+                console.log(TAG, "[callAction] no reload porque se abrió modal/wizard", {
+                    actionName,
+                    result,
+                });
+            }
+
         } catch (error) {
-            console.error("[MobileTicket] Error en acción:", actionName, error);
+            console.error(TAG, "[callAction] error", {
+                actionName,
+                error,
+            });
 
             this.notification.add("No se pudo ejecutar la acción.", {
                 type: "danger",
+            });
+
+        } finally {
+            this.uiState.actionLoading = false;
+            this.uiState.lastActionName = null;
+
+            console.log(TAG, "[callAction] finally", {
+                actionName,
+                actionLoading: this.uiState.actionLoading,
             });
         }
     }
 
     async onMenuAction(actionItem) {
+        console.log(TAG, "[onMenuAction]", {
+            actionItem,
+        });
+
         if (!actionItem || !actionItem.method) {
+            console.warn(TAG, "[onMenuAction] actionItem inválido", {
+                actionItem,
+            });
+
             return;
         }
 
@@ -526,11 +786,17 @@ export class MobileTicketLayout extends Component {
     }
 
     async onCargarContadores() {
+        console.log(TAG, "[onCargarContadores] start", {
+            canCargarContadores: this.canCargarContadores,
+        });
+
         if (!this.canCargarContadores) {
+            console.warn(TAG, "[onCargarContadores] no permitido");
             return;
         }
 
         if (!confirm("¿Cargar los contadores desde el equipo?")) {
+            console.log(TAG, "[onCargarContadores] cancelado por usuario");
             return;
         }
 
@@ -538,11 +804,22 @@ export class MobileTicketLayout extends Component {
     }
 
     async onCerrarTicket() {
+        console.log(TAG, "[onCerrarTicket] start", {
+            canCerrarTicket: this.canCerrarTicket,
+            currentState: this.currentState,
+            resId: this.record?.resId,
+        });
+
         if (!this.canCerrarTicket) {
+            console.warn(TAG, "[onCerrarTicket] no permitido por estado", {
+                currentState: this.currentState,
+            });
+
             return;
         }
 
         if (!confirm("¿Cerrar este ticket?")) {
+            console.log(TAG, "[onCerrarTicket] cancelado por usuario");
             return;
         }
 
@@ -550,57 +827,83 @@ export class MobileTicketLayout extends Component {
     }
 
     async onAbrirMapa() {
+        console.log(TAG, "[onAbrirMapa]");
+
         await this.callAction("action_abrir_mapa_equipo");
     }
 
     async onNavegar() {
+        console.log(TAG, "[onNavegar]");
+
         await this.callAction("action_navegar_a_equipo");
     }
 
     async openComponentes() {
-    this.closeMenu();
+        this.closeMenu();
 
-    if (!this.record?.resId) {
-        return;
+        console.log(TAG, "[openComponentes] start", {
+            resId: this.record?.resId,
+            resModel: this.record?.resModel,
+        });
+
+        if (!this.record?.resId) {
+            console.warn(TAG, "[openComponentes] no resId");
+            return;
+        }
+
+        await this.action.doAction("sat.action_ticket_componente_evaluacion_mobile", {
+            additionalContext: {
+                active_id: this.record.resId,
+                active_ids: [this.record.resId],
+                active_model: this.record.resModel,
+                default_ticket_id: this.record.resId,
+                mobile_ticket_eval: true,
+            },
+        });
+
+        console.log(TAG, "[openComponentes] doAction OK");
     }
 
-    await this.action.doAction("sat.action_ticket_componente_evaluacion_mobile", {
-        additionalContext: {
-            active_id: this.record.resId,
-            active_ids: [this.record.resId],
-            active_model: this.record.resModel,
-            default_ticket_id: this.record.resId,
-            mobile_ticket_eval: true,
-        },
-    });
-}
+    async openAccesorios() {
+        this.closeMenu();
 
-async openAccesorios() {
-    this.closeMenu();
+        console.log(TAG, "[openAccesorios] start", {
+            resId: this.record?.resId,
+            resModel: this.record?.resModel,
+        });
 
-    if (!this.record?.resId) {
-        return;
+        if (!this.record?.resId) {
+            console.warn(TAG, "[openAccesorios] no resId");
+            return;
+        }
+
+        await this.action.doAction("sat.action_ticket_accesorio_evaluacion_mobile", {
+            additionalContext: {
+                active_id: this.record.resId,
+                active_ids: [this.record.resId],
+                active_model: this.record.resModel,
+                default_ticket_id: this.record.resId,
+                mobile_ticket_eval: true,
+            },
+        });
+
+        console.log(TAG, "[openAccesorios] doAction OK");
     }
-
-    await this.action.doAction("sat.action_ticket_accesorio_evaluacion_mobile", {
-        additionalContext: {
-            active_id: this.record.resId,
-            active_ids: [this.record.resId],
-            active_model: this.record.resModel,
-            default_ticket_id: this.record.resId,
-            mobile_ticket_eval: true,
-        },
-    });
-}
 
     async openPedidos() {
         this.closeMenu();
 
+        console.log(TAG, "[openPedidos] start", {
+            resId: this.record?.resId,
+            resModel: this.record?.resModel,
+        });
+
         if (!this.record?.resId) {
+            console.warn(TAG, "[openPedidos] no resId");
             return;
         }
 
-        await this.action.doAction({
+        const action = {
             type: "ir.actions.act_window",
             name: "Pedidos de repuestos",
             res_model: "ticket.repuesto.pedido",
@@ -617,17 +920,29 @@ async openAccesorios() {
                 active_ids: [this.record.resId],
                 active_model: this.record.resModel,
             },
+        };
+
+        console.log(TAG, "[openPedidos] doAction", {
+            action,
         });
+
+        await this.action.doAction(action);
     }
 
     async openFullForm() {
         this.closeMenu();
 
+        console.log(TAG, "[openFullForm] start", {
+            resModel: this.record?.resModel,
+            resId: this.record?.resId,
+        });
+
         if (!this.record?.resModel || !this.record?.resId) {
+            console.warn(TAG, "[openFullForm] no resModel/resId");
             return;
         }
 
-        await this.action.doAction({
+        const action = {
             type: "ir.actions.act_window",
             name: "Ticket",
             res_model: this.record.resModel,
@@ -640,10 +955,20 @@ async openAccesorios() {
                 active_ids: [this.record.resId],
                 active_model: this.record.resModel,
             },
+        };
+
+        console.log(TAG, "[openFullForm] doAction", {
+            action,
         });
+
+        await this.action.doAction(action);
     }
 
     callPhone(phone) {
+        console.log(TAG, "[callPhone]", {
+            phone,
+        });
+
         if (phone) {
             window.location.href = `tel:${phone}`;
         }
