@@ -955,15 +955,17 @@ class PedidoPortalController(http.Controller):
     def pedido_informe_form(self, token, **kwargs):
         """
         Página de informe técnico para Comercial.
-        Por cada línea muestra:
-          - Componente / Subparte / Color / Cantidad  (readonly)
-          - Contador actual del pedido                (readonly, desde pedido)
-          - Contador anterior                         (pre-llenado desde historial o manual)
-          - Duración (copias)                         (calculado en JS)
-          - Fecha último cambio                       (pre-llenada desde historial o manual)
-          - Observación                               (libre)
-        Más nota general y adjunto opcional.
-        Al guardar notifica a Gerencia con la tabla completa.
+
+        Regla de contómetros:
+          - C / M / Y usan contador color.
+          - Black / K usan contador total de máquina.
+          - Repuestos sin color usan contador total de máquina.
+          - En máquina monocroma, el total equivale al contador K.
+
+        La regla real se toma desde:
+          pedido._get_contometro_linea(linea)
+
+        Así se evita duplicar lógica en el controller.
         """
         pedido, error = _get_pedido_by_token(token)
         if error:
@@ -981,7 +983,7 @@ class PedidoPortalController(http.Controller):
 
         import re
 
-        def _to_int(val):
+        def _to_int_local(val):
             if not val:
                 return 0
             digits = re.sub(r'[^\d]', '', str(val))
@@ -994,30 +996,90 @@ class PedidoPortalController(http.Controller):
             except Exception:
                 return ''
 
+        # Totales para barra informativa
+        cont_k_int = _to_int_local(pedido.contometro_k)
+        cont_color_int = _to_int_local(pedido.contometro_color)
+
+        # Si hay contador color, se muestra total K + Color.
+        # Si no hay contador color, el total será solo K.
+        cont_total_int = cont_k_int + cont_color_int if cont_color_int else cont_k_int
+        cont_total_fmt = f"{cont_total_int:,}" if cont_total_int else '—'
+
+        _logger.info(
+            "[portal/informe] pedido=%s | K=%s | Color=%s | Total=%s",
+            pedido.name,
+            pedido.contometro_k,
+            pedido.contometro_color,
+            cont_total_fmt,
+        )
+
         # ── Generar filas de la tabla ──────────────────────────────────
         filas_html = ''
+
         for i, linea in enumerate(pedido.linea_ids):
             color_nombre = linea.color_id.name if linea.color_id else 'B/N'
+            color_code = (linea.color_id.code or '').lower() if linea.color_id else ''
+
             color_bg = {
-                'Black':   '#374151', 'Cyan':    '#0891b2',
-                'Magenta': '#db2777', 'Yellow':  '#d97706', 'B/N': '#4b5563',
+                'Black':   '#374151',
+                'Cyan':    '#0891b2',
+                'Magenta': '#db2777',
+                'Yellow':  '#d97706',
+                'B/N':     '#4b5563',
             }.get(color_nombre, '#4b5563')
 
-            # Contador actual según tipo de línea (viene del pedido, readonly)
-            if linea.color_id:
-                cont_actual_raw = pedido.contometro_color or '0'
-            else:
-                k = _to_int(pedido.contometro_k)
-                c = _to_int(pedido.contometro_color)
-                es_color = bool(pedido.contometro_color)
-                cont_actual_raw = str(k + c) if es_color else (pedido.contometro_k or '0')
+            # ============================================================
+            # CORRECCIÓN PRINCIPAL
+            # ============================================================
+            # Antes:
+            #   if linea.color_id:
+            #       cont_actual_raw = pedido.contometro_color
+            #
+            # Eso hacía que Black/K use contador color.
+            #
+            # Ahora usamos la regla central del modelo:
+            #   C/M/Y => contador color
+            #   Black/K/general => total máquina
+            # ============================================================
+            try:
+                cont_actual_raw, tipo_contador = pedido._get_contometro_linea(linea)
+            except Exception as e:
+                _logger.error(
+                    "[portal/informe] ERROR obteniendo contador línea | "
+                    "pedido=%s | linea=%s | color=%s | error=%s",
+                    pedido.name,
+                    linea.id,
+                    color_nombre,
+                    str(e),
+                )
 
-            cont_actual_int = _to_int(cont_actual_raw)
+                # Fallback seguro:
+                # C/M/Y usan color.
+                # Todo lo demás usa total.
+                if color_code in ('c', 'm', 'y'):
+                    cont_actual_raw = pedido.contometro_color or '0'
+                    tipo_contador = 'color'
+                else:
+                    cont_actual_raw = str(cont_total_int) if cont_total_int else (pedido.contometro_k or '0')
+                    tipo_contador = 'total'
+
+            cont_actual_int = _to_int_local(cont_actual_raw)
             cont_actual_fmt = _fmt_num(cont_actual_raw)
+
+            _logger.info(
+                "[portal/informe] linea=%s | subparte=%s | color=%s | code=%s | "
+                "tipo_contador=%s | cont_actual=%s",
+                linea.id,
+                linea.subparte_id.name if linea.subparte_id else linea.nombre_libre,
+                color_nombre,
+                color_code,
+                tipo_contador,
+                cont_actual_fmt,
+            )
 
             # Pre-llenar desde historial si existe
             hist_anterior = linea.ultimo_cambio_contometro or ''
-            hist_fecha    = (
+            hist_fecha = (
                 linea.ultimo_cambio_fecha.strftime('%Y-%m-%d')
                 if linea.ultimo_cambio_fecha else ''
             )
@@ -1025,7 +1087,7 @@ class PedidoPortalController(http.Controller):
 
             # Valor guardado tiene prioridad sobre historial
             val_anterior = linea.contador_informe_anterior or hist_anterior
-            val_fecha    = (
+            val_fecha = (
                 linea.fecha_informe_cambio.strftime('%Y-%m-%d')
                 if linea.fecha_informe_cambio
                 else hist_fecha
@@ -1035,7 +1097,8 @@ class PedidoPortalController(http.Controller):
             # Duración inicial pre-calculada
             dur_inicial = 0
             if val_anterior:
-                dur_inicial = max(0, cont_actual_int - _to_int(val_anterior))
+                dur_inicial = max(0, cont_actual_int - _to_int_local(val_anterior))
+
             dur_display = f"+{dur_inicial:,}" if dur_inicial else '—'
 
             badge_fuente = (
@@ -1043,26 +1106,41 @@ class PedidoPortalController(http.Controller):
                 if tiene_historial else
                 "<span class='badge-manual'>Manual</span>"
             )
+
             readonly_attr = 'readonly' if tiene_historial else ''
+
+            # Etiqueta pequeña para saber qué contador se está usando
+            if tipo_contador == 'color':
+                badge_tipo_contador = "<div class='contador-tipo contador-color'>Color</div>"
+            elif tipo_contador == 'total':
+                badge_tipo_contador = "<div class='contador-tipo contador-total'>Total</div>"
+            else:
+                badge_tipo_contador = "<div class='contador-tipo contador-bn'>B/N</div>"
 
             filas_html += f"""
             <tr class="fila-linea">
                 <td class="td-num">{i + 1}</td>
+
                 <td class="td-comp">
                     <strong>{linea.componente_display or '—'}</strong>
                     <div class="sub-text">
                         {linea.subparte_id.name or linea.nombre_libre or '—'}
                     </div>
                 </td>
+
                 <td class="td-color">
                     <span class="badge-color" style="background:{color_bg};">
                         {color_nombre}
                     </span>
                 </td>
+
                 <td class="td-cant">{int(linea.cantidad)}</td>
+
                 <td class="td-actual">
                     {cont_actual_fmt or '—'}
+                    {badge_tipo_contador}
                 </td>
+
                 <td class="td-anterior">
                     {badge_fuente}
                     <input type="text"
@@ -1075,11 +1153,13 @@ class PedidoPortalController(http.Controller):
                            {readonly_attr}
                     />
                 </td>
+
                 <td class="td-duracion">
                     <span class="duracion-valor" id="dur_{linea.id}">
                         {dur_display}
                     </span>
                 </td>
+
                 <td class="td-fecha">
                     <input type="date"
                            name="fecha_cambio_{linea.id}"
@@ -1088,6 +1168,7 @@ class PedidoPortalController(http.Controller):
                            {readonly_attr}
                     />
                 </td>
+
                 <td class="td-obs">
                     <input type="text"
                            name="observacion_{linea.id}"
@@ -1109,8 +1190,10 @@ class PedidoPortalController(http.Controller):
             <meta charset="UTF-8"/>
             <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
             <title>Informe técnico — {pedido.name}</title>
+
             <style>
                 * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+
                 body {{
                     font-family: Arial, Helvetica, sans-serif;
                     background: #f3f4f6;
@@ -1118,7 +1201,11 @@ class PedidoPortalController(http.Controller):
                     color: #1f2d3d;
                     font-size: 13px;
                 }}
-                .container {{ max-width: 1100px; margin: 0 auto; }}
+
+                .container {{
+                    max-width: 1100px;
+                    margin: 0 auto;
+                }}
 
                 .header {{
                     background: #D97706;
@@ -1131,8 +1218,16 @@ class PedidoPortalController(http.Controller):
                     flex-wrap: wrap;
                     gap: 10px;
                 }}
-                .header h1 {{ font-size: 17px; }}
-                .header .sub {{ font-size: 12px; opacity: 0.85; margin-top: 3px; }}
+
+                .header h1 {{
+                    font-size: 17px;
+                }}
+
+                .header .sub {{
+                    font-size: 12px;
+                    opacity: 0.85;
+                    margin-top: 3px;
+                }}
 
                 .info-bar {{
                     background: #fffbeb;
@@ -1146,7 +1241,10 @@ class PedidoPortalController(http.Controller):
                     flex-wrap: wrap;
                     align-items: center;
                 }}
-                .info-bar b {{ color: #1f2d3d; }}
+
+                .info-bar b {{
+                    color: #1f2d3d;
+                }}
 
                 .tabla-wrap {{
                     background: #fff;
@@ -1154,231 +1252,323 @@ class PedidoPortalController(http.Controller):
                     border-top: none;
                     overflow-x: auto;
                 }}
+
                 table {{
                     width: 100%;
                     border-collapse: collapse;
                     font-size: 12px;
                 }}
-                thead tr {{ background: #1B3A6B; color: #fff; }}
+
+                thead tr {{
+                    background: #1B3A6B;
+                    color: #fff;
+                }}
+
                 thead th {{
                     padding: 9px 8px;
                     text-align: left;
                     white-space: nowrap;
                     font-size: 11px;
                 }}
-                tbody tr:nth-child(even) {{ background: #f9fafb; }}
-                tbody tr:nth-child(odd)  {{ background: #fff; }}
+
+                tbody tr:nth-child(even) {{
+                    background: #f9fafb;
+                }}
+
+                tbody tr:nth-child(odd) {{
+                    background: #fff;
+                }}
+
                 tbody td {{
                     padding: 7px 8px;
                     border-bottom: 1px solid #f0f0f0;
                     vertical-align: middle;
                 }}
-                .td-num      {{ text-align:center; color:#9ca3af; width:36px; }}
-                .td-cant     {{ text-align:center; width:46px; }}
-                .td-color    {{ text-align:center; width:76px; }}
-                .td-actual   {{
-                    text-align:right;
-                    font-family:monospace;
-                    font-size:12px;
-                    width:100px;
-                    color:#1B3A6B;
-                    font-weight:bold;
+
+                .td-num {{
+                    text-align: center;
+                    color: #9ca3af;
+                    width: 36px;
                 }}
-                .td-anterior {{ width:170px; }}
+
+                .td-cant {{
+                    text-align: center;
+                    width: 46px;
+                }}
+
+                .td-color {{
+                    text-align: center;
+                    width: 76px;
+                }}
+
+                .td-actual {{
+                    text-align: right;
+                    font-family: monospace;
+                    font-size: 12px;
+                    width: 110px;
+                    color: #1B3A6B;
+                    font-weight: bold;
+                }}
+
+                .td-anterior {{
+                    width: 170px;
+                }}
+
                 .td-duracion {{
-                    text-align:right;
-                    width:90px;
-                    font-weight:bold;
-                    color:#059669;
-                    font-family:monospace;
-                    font-size:13px;
+                    text-align: right;
+                    width: 90px;
+                    font-weight: bold;
+                    color: #059669;
+                    font-family: monospace;
+                    font-size: 13px;
                 }}
-                .td-fecha {{ width:140px; }}
-                .td-obs   {{ min-width:160px; }}
+
+                .td-fecha {{
+                    width: 140px;
+                }}
+
+                .td-obs {{
+                    min-width: 160px;
+                }}
 
                 .badge-color {{
-                    color:#fff;
-                    padding:2px 8px;
-                    border-radius:10px;
-                    font-size:10px;
-                    font-weight:bold;
+                    color: #fff;
+                    padding: 2px 8px;
+                    border-radius: 10px;
+                    font-size: 10px;
+                    font-weight: bold;
                 }}
+
                 .badge-auto {{
-                    background:#dbeafe;
-                    color:#1d4ed8;
-                    font-size:9px;
-                    padding:1px 5px;
-                    border-radius:8px;
-                    display:block;
-                    margin-bottom:3px;
-                    width:fit-content;
+                    background: #dbeafe;
+                    color: #1d4ed8;
+                    font-size: 9px;
+                    padding: 1px 5px;
+                    border-radius: 8px;
+                    display: block;
+                    margin-bottom: 3px;
+                    width: fit-content;
                 }}
+
                 .badge-manual {{
-                    background:#fef3c7;
-                    color:#92400e;
-                    font-size:9px;
-                    padding:1px 5px;
-                    border-radius:8px;
-                    display:block;
-                    margin-bottom:3px;
-                    width:fit-content;
+                    background: #fef3c7;
+                    color: #92400e;
+                    font-size: 9px;
+                    padding: 1px 5px;
+                    border-radius: 8px;
+                    display: block;
+                    margin-bottom: 3px;
+                    width: fit-content;
                 }}
+
+                .contador-tipo {{
+                    display: inline-block;
+                    margin-top: 3px;
+                    padding: 1px 5px;
+                    border-radius: 8px;
+                    font-size: 9px;
+                    font-family: Arial, Helvetica, sans-serif;
+                    font-weight: bold;
+                }}
+
+                .contador-total {{
+                    background: #e0f2fe;
+                    color: #075985;
+                }}
+
+                .contador-color {{
+                    background: #fef3c7;
+                    color: #92400e;
+                }}
+
+                .contador-bn {{
+                    background: #f3f4f6;
+                    color: #374151;
+                }}
+
                 .sub-text {{
-                    font-size:11px;
-                    color:#6b7280;
-                    margin-top:2px;
+                    font-size: 11px;
+                    color: #6b7280;
+                    margin-top: 2px;
                 }}
-                .input-contador, .input-fecha, .input-obs {{
-                    width:100%;
-                    padding:5px 7px;
-                    border:1px solid #d1d5db;
-                    border-radius:4px;
-                    font-size:12px;
-                    outline:none;
-                    transition:border-color 0.15s;
+
+                .input-contador,
+                .input-fecha,
+                .input-obs {{
+                    width: 100%;
+                    padding: 5px 7px;
+                    border: 1px solid #d1d5db;
+                    border-radius: 4px;
+                    font-size: 12px;
+                    outline: none;
+                    transition: border-color 0.15s;
                 }}
+
                 .input-contador:focus,
                 .input-fecha:focus,
-                .input-obs:focus {{ border-color:#D97706; }}
+                .input-obs:focus {{
+                    border-color: #D97706;
+                }}
+
                 .input-contador[readonly],
                 .input-fecha[readonly] {{
-                    background:#f3f4f6;
-                    color:#6b7280;
-                    cursor:default;
-                    border-color:#e5e7eb;
+                    background: #f3f4f6;
+                    color: #6b7280;
+                    cursor: default;
+                    border-color: #e5e7eb;
                 }}
-                .duracion-valor.negativo {{ color:#DC2626; }}
+
+                .duracion-valor.negativo {{
+                    color: #DC2626;
+                }}
 
                 .leyenda {{
-                    background:#fff;
-                    border:1px solid #e5e7eb;
-                    border-top:none;
-                    padding:8px 20px;
-                    font-size:11px;
-                    color:#6b7280;
-                    display:flex;
-                    gap:20px;
-                    flex-wrap:wrap;
-                    align-items:center;
+                    background: #fff;
+                    border: 1px solid #e5e7eb;
+                    border-top: none;
+                    padding: 8px 20px;
+                    font-size: 11px;
+                    color: #6b7280;
+                    display: flex;
+                    gap: 20px;
+                    flex-wrap: wrap;
+                    align-items: center;
                 }}
 
                 .nota-wrap {{
-                    background:#fff;
-                    border:1px solid #e5e7eb;
-                    border-top:none;
-                    padding:12px 20px;
-                    display:flex;
-                    gap:14px;
-                    align-items:flex-start;
-                    flex-wrap:wrap;
+                    background: #fff;
+                    border: 1px solid #e5e7eb;
+                    border-top: none;
+                    padding: 12px 20px;
+                    display: flex;
+                    gap: 14px;
+                    align-items: flex-start;
+                    flex-wrap: wrap;
                 }}
+
                 .nota-wrap label {{
-                    font-size:12px;
-                    font-weight:bold;
-                    color:#374151;
-                    white-space:nowrap;
-                    padding-top:8px;
-                    min-width:90px;
+                    font-size: 12px;
+                    font-weight: bold;
+                    color: #374151;
+                    white-space: nowrap;
+                    padding-top: 8px;
+                    min-width: 90px;
                 }}
+
                 .nota-wrap textarea {{
-                    flex:1;
-                    min-width:200px;
-                    padding:8px 10px;
-                    border:1px solid #d1d5db;
-                    border-radius:5px;
-                    font-size:13px;
-                    font-family:Arial, sans-serif;
-                    resize:vertical;
-                    min-height:60px;
-                    outline:none;
+                    flex: 1;
+                    min-width: 200px;
+                    padding: 8px 10px;
+                    border: 1px solid #d1d5db;
+                    border-radius: 5px;
+                    font-size: 13px;
+                    font-family: Arial, sans-serif;
+                    resize: vertical;
+                    min-height: 60px;
+                    outline: none;
                 }}
-                .nota-wrap textarea:focus {{ border-color:#D97706; }}
+
+                .nota-wrap textarea:focus {{
+                    border-color: #D97706;
+                }}
 
                 .adjunto-wrap {{
-                    background:#fff;
-                    border:1px solid #e5e7eb;
-                    border-top:none;
-                    padding:10px 20px;
-                    display:flex;
-                    align-items:center;
-                    gap:14px;
-                    flex-wrap:wrap;
+                    background: #fff;
+                    border: 1px solid #e5e7eb;
+                    border-top: none;
+                    padding: 10px 20px;
+                    display: flex;
+                    align-items: center;
+                    gap: 14px;
+                    flex-wrap: wrap;
                 }}
+
                 .adjunto-wrap label {{
-                    font-size:12px;
-                    font-weight:bold;
-                    color:#374151;
-                    white-space:nowrap;
-                    min-width:90px;
+                    font-size: 12px;
+                    font-weight: bold;
+                    color: #374151;
+                    white-space: nowrap;
+                    min-width: 90px;
                 }}
+
                 .adjunto-wrap input[type=file] {{
-                    font-size:12px;
-                    border:1px solid #d1d5db;
-                    border-radius:5px;
-                    padding:5px 8px;
+                    font-size: 12px;
+                    border: 1px solid #d1d5db;
+                    border-radius: 5px;
+                    padding: 5px 8px;
                 }}
 
                 .acciones {{
-                    background:#fff;
-                    border:1px solid #e5e7eb;
-                    border-top:none;
-                    padding:12px 20px;
-                    display:flex;
-                    gap:10px;
-                    align-items:center;
-                    flex-wrap:wrap;
+                    background: #fff;
+                    border: 1px solid #e5e7eb;
+                    border-top: none;
+                    padding: 12px 20px;
+                    display: flex;
+                    gap: 10px;
+                    align-items: center;
+                    flex-wrap: wrap;
                 }}
+
                 .btn {{
-                    padding:9px 20px;
-                    border:none;
-                    border-radius:6px;
-                    font-size:13px;
-                    font-weight:bold;
-                    cursor:pointer;
-                    transition:opacity 0.2s;
+                    padding: 9px 20px;
+                    border: none;
+                    border-radius: 6px;
+                    font-size: 13px;
+                    font-weight: bold;
+                    cursor: pointer;
+                    transition: opacity 0.2s;
                 }}
-                .btn:hover {{ opacity:0.85; }}
+
+                .btn:hover {{
+                    opacity: 0.85;
+                }}
+
                 .btn-enviar {{
-                    background:#D97706;
-                    color:#fff;
-                    margin-left:auto;
-                    padding:10px 28px;
-                    font-size:14px;
+                    background: #D97706;
+                    color: #fff;
+                    margin-left: auto;
+                    padding: 10px 28px;
+                    font-size: 14px;
                 }}
+
                 .btn-limpiar {{
-                    background:#f3f4f6;
-                    color:#374151;
-                    border:1px solid #d1d5db;
+                    background: #f3f4f6;
+                    color: #374151;
+                    border: 1px solid #d1d5db;
                 }}
 
                 .toast {{
-                    position:fixed;
-                    bottom:20px;
-                    right:20px;
-                    background:#1B3A6B;
-                    color:#fff;
-                    padding:12px 20px;
-                    border-radius:8px;
-                    font-size:13px;
-                    font-weight:bold;
-                    opacity:0;
-                    transition:opacity 0.3s;
-                    z-index:999;
+                    position: fixed;
+                    bottom: 20px;
+                    right: 20px;
+                    background: #1B3A6B;
+                    color: #fff;
+                    padding: 12px 20px;
+                    border-radius: 8px;
+                    font-size: 13px;
+                    font-weight: bold;
+                    opacity: 0;
+                    transition: opacity 0.3s;
+                    z-index: 999;
                 }}
-                .toast.show {{ opacity:1; }}
+
+                .toast.show {{
+                    opacity: 1;
+                }}
 
                 .footer {{
-                    text-align:center;
-                    font-size:11px;
-                    color:#9ca3af;
-                    padding:14px;
-                    background:#fff;
-                    border:1px solid #e5e7eb;
-                    border-top:none;
-                    border-radius:0 0 8px 8px;
+                    text-align: center;
+                    font-size: 11px;
+                    color: #9ca3af;
+                    padding: 14px;
+                    background: #fff;
+                    border: 1px solid #e5e7eb;
+                    border-top: none;
+                    border-radius: 0 0 8px 8px;
                 }}
             </style>
         </head>
+
         <body>
             <div class="container">
 
@@ -1402,6 +1592,7 @@ class PedidoPortalController(http.Controller):
                 <div class="info-bar">
                     <span><b>Cont. K (B/N):</b> {pedido.contometro_k or '—'}</span>
                     {'<span><b>Cont. Color:</b> ' + (pedido.contometro_color or '—') + '</span>' if pedido.contometro_color else ''}
+                    <span><b>Cont. Total:</b> {cont_total_fmt}</span>
                     <span><b>Total repuestos:</b> {total_lineas}</span>
                 </div>
 
@@ -1440,6 +1631,14 @@ class PedidoPortalController(http.Controller):
                         <span>
                             <span class="badge-manual">Manual</span>
                             Sin historial — ingrese manualmente
+                        </span>
+                        <span>
+                            <span class="contador-tipo contador-total">Total</span>
+                            Black/K y repuestos generales
+                        </span>
+                        <span>
+                            <span class="contador-tipo contador-color">Color</span>
+                            Cyan/Magenta/Yellow
                         </span>
                         <span style="margin-left:auto;">
                             Duración = Contador actual − Contador anterior
@@ -1488,6 +1687,7 @@ class PedidoPortalController(http.Controller):
                     const rawVal   = input.value.replace(/[^\d]/g, '');
                     const anterior = parseInt(rawVal) || 0;
                     const durEl    = document.getElementById('dur_' + linea);
+
                     if (!durEl) return;
 
                     if (!anterior) {{
@@ -1497,31 +1697,44 @@ class PedidoPortalController(http.Controller):
                     }}
 
                     const dur = actual - anterior;
+
                     durEl.textContent = (dur >= 0 ? '+' : '') +
                                         dur.toLocaleString('es-PE');
+
                     durEl.className = 'duracion-valor' + (dur < 0 ? ' negativo' : '');
                 }}
 
                 // ── Formatear número con separador de miles ─────────────
                 function formatearContador(input) {{
                     const cursor = input.selectionStart;
-                    const raw    = input.value.replace(/[^\d]/g, '');
-                    if (!raw) {{ input.value = ''; return; }}
+                    const raw = input.value.replace(/[^\d]/g, '');
+
+                    if (!raw) {{
+                        input.value = '';
+                        return;
+                    }}
+
                     input.value = parseInt(raw).toLocaleString('es-PE');
-                    try {{ input.setSelectionRange(cursor, cursor); }} catch(e) {{}}
+
+                    try {{
+                        input.setSelectionRange(cursor, cursor);
+                    }} catch(e) {{}}
                 }}
 
                 // ── Limpiar solo campos manuales (no readonly) ──────────
                 function limpiarManuales() {{
                     if (!confirm('¿Limpiar los campos ingresados manualmente?')) return;
+
                     document.querySelectorAll(
                         '.input-anterior:not([readonly]), .input-fecha:not([readonly])'
                     ).forEach(el => {{
                         el.value = '';
+
                         if (el.classList.contains('input-anterior')) {{
                             calcularDuracion(el);
                         }}
                     }});
+
                     mostrarToast('🔄 Campos manuales limpiados');
                 }}
 
@@ -1529,6 +1742,7 @@ class PedidoPortalController(http.Controller):
                     const t = document.getElementById('toast');
                     t.textContent = msg;
                     t.classList.add('show');
+
                     setTimeout(() => t.classList.remove('show'), 2500);
                 }}
 
@@ -1545,7 +1759,6 @@ class PedidoPortalController(http.Controller):
         </body>
         </html>
         """
-
     # ============================================================
     # COMERCIAL — Guardar informe (POST)
     # ============================================================
