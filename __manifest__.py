@@ -163,7 +163,8 @@
         'views/alquiler_inherit_views.xml',
         'views/ticket_alquiler_inherit_views.xml',
         'views/evidencia_page_template.xml',
-        'views/ticket_alquiler_evidencia_view.xml',        
+        'views/ticket_alquiler_evidencia_view.xml',
+        'views/permisos_templates.xml',       
         'views/acciones_menus.xml',
         
     ],
@@ -248,6 +249,10 @@
             'sat/static/src/scss/mobile_ticket_retorno.scss',
             'sat/static/src/xml/mobile_ticket_layout.xml',
             'sat/static/src/js/mobile_ticket_layout.js',
+
+
+            'sat/static/src/css/permisos.css',
+            'sat/static/src/js/permisos.js',
                 
             # External Libraries existentes
             'https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js',

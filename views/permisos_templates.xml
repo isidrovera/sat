@@ -1,0 +1,282 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <data>
+
+        <!-- ============================================================
+             FORMULARIO WEB RESPONSIVE PARA SOLICITUD DE PERMISOS
+             Modelo backend: mantenimiento.tecnico.ausencia
+             Ruta: /leave/request
+             Submit: /leave/request/submit
+        ============================================================= -->
+        <template id="leave_request_template" name="Solicitud de Permiso Responsive">
+            <t t-call="website.layout">
+
+                <div id="wrap" class="o_leave_request_page">
+
+                    <section class="o_leave_hero">
+                        <div class="o_leave_container">
+                            <div class="o_leave_hero_card">
+                                <div>
+                                    <div class="o_leave_badge">Solicitud interna</div>
+                                    <h1>Solicitar permiso o ausencia</h1>
+                                    <p>
+                                        Registra tu solicitud indicando el tipo de permiso, fecha, motivo y sustento si corresponde.
+                                    </p>
+                                </div>
+
+                                <div class="o_leave_user_box">
+                                    <div class="o_leave_user_avatar">
+                                        <t t-out="(user.name or 'U')[:1]"/>
+                                    </div>
+                                    <div>
+                                        <strong><t t-out="user.name"/></strong>
+                                        <span>
+                                            <t t-if="employee">
+                                                <t t-out="employee.department_id.name or 'Sin departamento'"/>
+                                            </t>
+                                            <t t-else="">Usuario sin empleado vinculado</t>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="o_leave_content">
+                        <div class="o_leave_container">
+
+                            <div class="o_leave_layout">
+
+                                <!-- Panel informativo -->
+                                <aside class="o_leave_side">
+                                    <div class="o_leave_info_card">
+                                        <h3>Antes de enviar</h3>
+
+                                        <div class="o_leave_info_item">
+                                            <span class="o_leave_info_icon">1</span>
+                                            <div>
+                                                <strong>Selecciona el tipo</strong>
+                                                <p>Permiso personal, vacaciones, descanso médico, enfermedad u otro.</p>
+                                            </div>
+                                        </div>
+
+                                        <div class="o_leave_info_item">
+                                            <span class="o_leave_info_icon">2</span>
+                                            <div>
+                                                <strong>Indica la fecha</strong>
+                                                <p>Si es por horas, desactiva día completo e indica el horario.</p>
+                                            </div>
+                                        </div>
+
+                                        <div class="o_leave_info_item">
+                                            <span class="o_leave_info_icon">3</span>
+                                            <div>
+                                                <strong>Adjunta sustento</strong>
+                                                <p>Opcional, pero recomendado para descanso médico, enfermedad o permisos especiales.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </aside>
+
+                                <!-- Formulario -->
+                                <main class="o_leave_form_card">
+
+                                    <div class="o_leave_form_header">
+                                        <div>
+                                            <h2>Nueva solicitud</h2>
+                                            <p>Completa los datos para enviar tu solicitud a revisión.</p>
+                                        </div>
+                                    </div>
+
+                                    <div id="leaveAlertBox" class="o_leave_alert d-none"></div>
+
+                                    <form id="leaveRequestForm"
+                                          action="/leave/request/submit"
+                                          method="post"
+                                          enctype="multipart/form-data"
+                                          class="o_leave_form">
+
+                                        <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+
+                                        <!-- Datos del solicitante -->
+                                        <div class="o_leave_section">
+                                            <div class="o_leave_section_title">
+                                                <span>Datos del trabajador</span>
+                                            </div>
+
+                                            <div class="o_leave_grid">
+                                                <div class="o_leave_field">
+                                                    <label>Trabajador</label>
+                                                    <input type="text"
+                                                           class="o_leave_input"
+                                                           t-att-value="user.name"
+                                                           readonly="readonly"/>
+                                                </div>
+
+                                                <div class="o_leave_field">
+                                                    <label>Departamento</label>
+                                                    <input type="text"
+                                                           class="o_leave_input"
+                                                           t-att-value="employee.department_id.name if employee and employee.department_id else 'Sin departamento'"
+                                                           readonly="readonly"/>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Tipo -->
+                                        <div class="o_leave_section">
+                                            <div class="o_leave_section_title">
+                                                <span>Tipo de solicitud</span>
+                                            </div>
+
+                                            <div class="o_leave_field">
+                                                <label for="tipo">
+                                                    Tipo de permiso <span class="o_leave_required">*</span>
+                                                </label>
+
+                                                <select name="tipo" id="tipo" class="o_leave_input" required="required">
+                                                    <option value="">Selecciona una opción</option>
+                                                    <t t-foreach="absence_types" t-as="absence_type">
+                                                        <option t-att-value="absence_type['key']">
+                                                            <t t-out="absence_type['name']"/>
+                                                        </option>
+                                                    </t>
+                                                </select>
+
+                                                <small>
+                                                    El tipo seleccionado será usado para registrar la ausencia en la agenda técnica.
+                                                </small>
+                                            </div>
+                                        </div>
+
+                                        <!-- Fechas -->
+                                        <div class="o_leave_section">
+                                            <div class="o_leave_section_title">
+                                                <span>Fecha y horario</span>
+                                            </div>
+
+                                            <div class="o_leave_grid">
+                                                <div class="o_leave_field">
+                                                    <label for="fecha_inicio">
+                                                        Fecha inicio <span class="o_leave_required">*</span>
+                                                    </label>
+                                                    <input type="date"
+                                                           name="fecha_inicio"
+                                                           id="fecha_inicio"
+                                                           class="o_leave_input"
+                                                           t-att-min="today"
+                                                           required="required"/>
+                                                </div>
+
+                                                <div class="o_leave_field">
+                                                    <label for="fecha_fin">Fecha fin</label>
+                                                    <input type="date"
+                                                           name="fecha_fin"
+                                                           id="fecha_fin"
+                                                           class="o_leave_input"
+                                                           t-att-min="today"/>
+                                                </div>
+                                            </div>
+
+                                            <div class="o_leave_switch_row">
+                                                <label class="o_leave_switch_label" for="dia_completo">
+                                                    <input type="checkbox"
+                                                           name="dia_completo"
+                                                           id="dia_completo"
+                                                           checked="checked"/>
+                                                    <span>Día completo</span>
+                                                </label>
+                                            </div>
+
+                                            <div id="hoursBlock" class="o_leave_grid o_leave_hours d-none">
+                                                <div class="o_leave_field">
+                                                    <label for="hora_inicio">Hora inicio</label>
+                                                    <input type="time"
+                                                           name="hora_inicio"
+                                                           id="hora_inicio"
+                                                           class="o_leave_input"
+                                                           value="08:00"/>
+                                                </div>
+
+                                                <div class="o_leave_field">
+                                                    <label for="hora_fin">Hora fin</label>
+                                                    <input type="time"
+                                                           name="hora_fin"
+                                                           id="hora_fin"
+                                                           class="o_leave_input"
+                                                           value="17:00"/>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Motivo -->
+                                        <div class="o_leave_section">
+                                            <div class="o_leave_section_title">
+                                                <span>Motivo</span>
+                                            </div>
+
+                                            <div class="o_leave_field">
+                                                <label for="motivo">
+                                                    Motivo de la solicitud <span class="o_leave_required">*</span>
+                                                </label>
+
+                                                <textarea name="motivo"
+                                                          id="motivo"
+                                                          class="o_leave_input o_leave_textarea"
+                                                          rows="5"
+                                                          required="required"
+                                                          placeholder="Ejemplo: Solicito permiso personal por motivos familiares..."></textarea>
+
+                                                <small>
+                                                    Escribe un motivo claro para que la solicitud pueda ser revisada correctamente.
+                                                </small>
+                                            </div>
+                                        </div>
+
+                                        <!-- Adjunto -->
+                                        <div class="o_leave_section">
+                                            <div class="o_leave_section_title">
+                                                <span>Sustento</span>
+                                            </div>
+
+                                            <div class="o_leave_upload">
+                                                <input type="file"
+                                                       name="adjunto"
+                                                       id="adjunto"
+                                                       class="o_leave_file"
+                                                       accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"/>
+
+                                                <label for="adjunto" class="o_leave_upload_box">
+                                                    <span class="o_leave_upload_icon">📎</span>
+                                                    <strong>Adjuntar documento</strong>
+                                                    <small>PDF, imagen o documento Word. Máximo recomendado: 10 MB.</small>
+                                                    <em id="fileNameLabel">Ningún archivo seleccionado</em>
+                                                </label>
+                                            </div>
+                                        </div>
+
+                                        <!-- Acciones -->
+                                        <div class="o_leave_actions">
+                                            <button type="submit" id="submitLeaveBtn" class="o_leave_btn_primary">
+                                                Enviar solicitud
+                                            </button>
+
+                                            <a href="/web" class="o_leave_btn_secondary">
+                                                Cancelar
+                                            </a>
+                                        </div>
+
+                                    </form>
+                                </main>
+
+                            </div>
+                        </div>
+                    </section>
+
+                </div>
+
+            </t>
+        </template>
+
+    </data>
+</odoo>

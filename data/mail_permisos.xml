@@ -1,12 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <data>
-       <record id="email_template_leave_request" model="mail.template">
-            <field name="name">Solicitud de Permiso - CORAPSAC</field>
-            <field name="model_id" ref="hr_holidays.model_hr_leave"/>
-            <field name="subject">Solicitud de permiso - {{object.employee_id.name}} - {{object.holiday_status_id.name}}</field>
+
+        <!-- ============================================================
+             1) SOLICITUD NUEVA → JEFE DE ÁREA
+             Se envía cuando el trabajador solicita permiso y pasa a pendiente.
+             XML ID esperado: sat.email_template_leave_request
+        ============================================================= -->
+        <record id="email_template_leave_request" model="mail.template">
+            <field name="name">Permisos - Solicitud pendiente para Jefe de Área</field>
+            <field name="model_id" ref="sat.model_mantenimiento_tecnico_ausencia"/>
+            <field name="subject">Solicitud de permiso pendiente - {{object.tecnico_id.name}} - {{object.name}}</field>
             <field name="email_from">soporte@andescopiers.com.pe</field>
-            <field name="email_to">verapolo@icloud.com</field>
+
+            <!--
+                IMPORTANTE:
+                El correo del jefe debe enviarse por contexto desde Python:
+                template.with_context(correo_jefe_area='correo@dominio.com').send_mail(...)
+                Si no llega contexto, usa este correo de respaldo.
+            -->
+            <field name="email_to">{{ctx.get('correo_jefe_area') or 'verapolo@icloud.com'}}</field>
+
             <field name="email_cc">soporte@andescopiers.com.pe</field>
             <field name="reply_to">soporte@andescopiers.com.pe</field>
             <field name="auto_delete" eval="True"/>
@@ -18,260 +32,133 @@
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Solicitud de Permiso - CORAPSAC</title>
+    <title>Solicitud pendiente</title>
 </head>
 
 <body style="margin:0; padding:0; background-color:#f4f6f8; font-family:Arial, Helvetica, sans-serif; color:#2d3748; line-height:1.6;">
-
     <div style="max-width:800px; margin:20px auto; padding:20px;">
 
-        <!-- Contenedor principal -->
         <div style="background-color:#ffffff; border:1px solid #e2e8f0; border-radius:10px; overflow:hidden;">
 
-            <!-- Encabezado -->
             <div style="background-color:#1f2937; padding:26px 24px; color:#ffffff; text-align:center;">
-                <div style="font-size:24px; font-weight:bold; margin:0;">
-                    Solicitud de permiso / descanso
+                <div style="font-size:24px; font-weight:bold;">
+                    Solicitud de permiso pendiente
                 </div>
                 <div style="font-size:14px; margin-top:8px; color:#d1d5db;">
-                    Revisión de solicitud del trabajador
+                    Referencia: <strong><t t-out="object.name"/></strong>
                 </div>
             </div>
 
-            <!-- Contenido -->
             <div style="padding:28px;">
 
-                <!-- Saludo humano -->
                 <p style="margin-top:0; font-size:15px;">
-                    Señora Teresa,
+                    Estimado(a) jefe de área,
                 </p>
 
                 <p style="font-size:15px;">
-                    Por medio del presente se informa que el trabajador
-                    <strong><t t-out="object.employee_id.name"/></strong>
+                    El trabajador <strong><t t-out="object.tecnico_id.name"/></strong>
                     ha solicitado
-                    <strong><t t-out="object.holiday_status_id.name"/></strong>.
+                    <strong><t t-out="dict(object._fields['tipo'].selection).get(object.tipo) or object.tipo"/></strong>
+                    y la solicitud se encuentra pendiente de revisión.
                 </p>
 
                 <p style="font-size:15px;">
-                    El motivo indicado por el trabajador es el siguiente:
+                    El motivo indicado por el trabajador es:
                 </p>
 
-                <!-- Motivo -->
                 <div style="background-color:#f9fafb; border-left:5px solid #2563eb; padding:15px 18px; margin:18px 0; border-radius:6px;">
-                    <div style="font-size:14px; color:#374151;">
-                        <strong>
-                            <t t-out="object.private_name or 'Sin descripción registrada'"/>
-                        </strong>
-                    </div>
-
-                    <t t-if="object.notes">
-                        <div style="margin-top:10px; font-size:14px; color:#4b5563;">
-                            <strong>Observación adicional:</strong>
-                            <t t-out="object.notes"/>
-                        </div>
-                    </t>
+                    <strong><t t-out="object.motivo or 'Sin motivo registrado'"/></strong>
                 </div>
 
-                <p style="font-size:15px;">
-                    Se detalla la información para su revisión correspondiente:
-                </p>
-
-                <!-- Datos del trabajador -->
                 <div style="margin:25px 0;">
                     <div style="font-size:18px; font-weight:bold; color:#111827; margin-bottom:12px; border-bottom:2px solid #2563eb; padding-bottom:8px;">
-                        Datos del trabajador
+                        Detalle de la solicitud
                     </div>
 
                     <table cellspacing="0" cellpadding="0" style="width:100%; border-collapse:collapse; border:1px solid #e5e7eb; font-size:14px;">
                         <tr>
-                            <td style="width:32%; padding:12px 14px; background-color:#f9fafb; border-bottom:1px solid #e5e7eb; font-weight:bold; color:#374151;">
-                                Trabajador
-                            </td>
+                            <td style="width:34%; padding:12px 14px; background-color:#f9fafb; border-bottom:1px solid #e5e7eb; font-weight:bold;">Trabajador</td>
                             <td style="padding:12px 14px; border-bottom:1px solid #e5e7eb;">
-                                <strong><t t-out="object.employee_id.name"/></strong>
+                                <strong><t t-out="object.tecnico_id.name"/></strong>
                             </td>
                         </tr>
 
                         <tr>
-                            <td style="padding:12px 14px; background-color:#f9fafb; border-bottom:1px solid #e5e7eb; font-weight:bold; color:#374151;">
-                                Código empleado
-                            </td>
+                            <td style="padding:12px 14px; background-color:#f9fafb; border-bottom:1px solid #e5e7eb; font-weight:bold;">Tipo</td>
                             <td style="padding:12px 14px; border-bottom:1px solid #e5e7eb;">
-                                <t t-out="object.employee_id.barcode or 'No asignado'"/>
+                                <strong><t t-out="dict(object._fields['tipo'].selection).get(object.tipo) or object.tipo"/></strong>
                             </td>
                         </tr>
 
                         <tr>
-                            <td style="padding:12px 14px; background-color:#f9fafb; border-bottom:1px solid #e5e7eb; font-weight:bold; color:#374151;">
-                                Departamento
-                            </td>
+                            <td style="padding:12px 14px; background-color:#f9fafb; border-bottom:1px solid #e5e7eb; font-weight:bold;">Fecha inicio</td>
                             <td style="padding:12px 14px; border-bottom:1px solid #e5e7eb;">
-                                <t t-out="object.employee_id.department_id.name or 'No asignado'"/>
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <td style="padding:12px 14px; background-color:#f9fafb; font-weight:bold; color:#374151;">
-                                Compañía
-                            </td>
-                            <td style="padding:12px 14px;">
-                                <t t-out="object.employee_id.company_id.name or 'No asignada'"/>
-                            </td>
-                        </tr>
-                    </table>
-                </div>
-
-                <!-- Detalle del permiso -->
-                <div style="margin:25px 0;">
-                    <div style="font-size:18px; font-weight:bold; color:#111827; margin-bottom:12px; border-bottom:2px solid #2563eb; padding-bottom:8px;">
-                        Detalle del permiso
-                    </div>
-
-                    <table cellspacing="0" cellpadding="0" style="width:100%; border-collapse:collapse; border:1px solid #e5e7eb; font-size:14px;">
-                        <tr>
-                            <td style="width:32%; padding:12px 14px; background-color:#f9fafb; border-bottom:1px solid #e5e7eb; font-weight:bold; color:#374151;">
-                                Tipo de permiso
-                            </td>
-                            <td style="padding:12px 14px; border-bottom:1px solid #e5e7eb;">
-                                <strong><t t-out="object.holiday_status_id.name"/></strong>
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <td style="padding:12px 14px; background-color:#f9fafb; border-bottom:1px solid #e5e7eb; font-weight:bold; color:#374151;">
-                                Fecha de inicio
-                            </td>
-                            <td style="padding:12px 14px; border-bottom:1px solid #e5e7eb;">
-                                <t t-if="object.request_date_from">
-                                    <t t-out="object.request_date_from.strftime('%d/%m/%Y')"/>
+                                <t t-if="object.fecha_inicio">
+                                    <t t-out="object.fecha_inicio.strftime('%d/%m/%Y')"/>
                                 </t>
                                 <t t-else="">No definida</t>
                             </td>
                         </tr>
 
                         <tr>
-                            <td style="padding:12px 14px; background-color:#f9fafb; border-bottom:1px solid #e5e7eb; font-weight:bold; color:#374151;">
-                                Fecha de fin
-                            </td>
+                            <td style="padding:12px 14px; background-color:#f9fafb; border-bottom:1px solid #e5e7eb; font-weight:bold;">Fecha fin</td>
                             <td style="padding:12px 14px; border-bottom:1px solid #e5e7eb;">
-                                <t t-if="object.request_date_to">
-                                    <t t-out="object.request_date_to.strftime('%d/%m/%Y')"/>
+                                <t t-if="object.fecha_fin">
+                                    <t t-out="object.fecha_fin.strftime('%d/%m/%Y')"/>
                                 </t>
-                                <t t-else="">No definida</t>
+                                <t t-else="">Por definir</t>
                             </td>
                         </tr>
 
                         <tr>
-                            <td style="padding:12px 14px; background-color:#f9fafb; border-bottom:1px solid #e5e7eb; font-weight:bold; color:#374151;">
-                                Jornada
-                            </td>
+                            <td style="padding:12px 14px; background-color:#f9fafb; border-bottom:1px solid #e5e7eb; font-weight:bold;">Jornada</td>
                             <td style="padding:12px 14px; border-bottom:1px solid #e5e7eb;">
-                                <t t-if="object.request_unit_half">
-                                    Medio día -
-                                    <t t-if="object.request_date_from_period == 'am'">Mañana</t>
-                                    <t t-else="">Tarde</t>
-                                </t>
-                                <t t-elif="object.request_unit_hours">
-                                    Por horas
-                                    <t t-if="object.request_hour_from or object.request_hour_to">
-                                        (
-                                        <t t-out="object.request_hour_from"/>
-                                        -
-                                        <t t-out="object.request_hour_to"/>
-                                        )
-                                    </t>
-                                </t>
-                                <t t-else="">
+                                <t t-if="object.dia_completo">
                                     Día completo
                                 </t>
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <td style="padding:12px 14px; background-color:#f9fafb; border-bottom:1px solid #e5e7eb; font-weight:bold; color:#374151;">
-                                Duración
-                            </td>
-                            <td style="padding:12px 14px; border-bottom:1px solid #e5e7eb;">
-                                <strong><t t-out="object.number_of_days"/> día(s)</strong>
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <td style="padding:12px 14px; background-color:#f9fafb; border-bottom:1px solid #e5e7eb; font-weight:bold; color:#374151;">
-                                Fecha de solicitud
-                            </td>
-                            <td style="padding:12px 14px; border-bottom:1px solid #e5e7eb;">
-                                <t t-if="object.create_date">
-                                    <t t-out="object.create_date.strftime('%d/%m/%Y %H:%M')"/>
+                                <t t-else="">
+                                    Por horas
+                                    (
+                                    <t t-out="'%.2f' % object.hora_inicio"/>
+                                    -
+                                    <t t-out="'%.2f' % object.hora_fin"/>
+                                    )
                                 </t>
-                                <t t-else="">No registrada</t>
                             </td>
                         </tr>
 
                         <tr>
-                            <td style="padding:12px 14px; background-color:#f9fafb; font-weight:bold; color:#374151;">
-                                Estado
-                            </td>
+                            <td style="padding:12px 14px; background-color:#f9fafb; font-weight:bold;">Estado</td>
                             <td style="padding:12px 14px;">
-                                <strong>
-                                    <t t-if="object.state == 'draft'">Borrador</t>
-                                    <t t-elif="object.state == 'confirm'">Por aprobar</t>
-                                    <t t-elif="object.state == 'validate1'">Primera aprobación</t>
-                                    <t t-elif="object.state == 'validate'">Aprobado</t>
-                                    <t t-elif="object.state == 'refuse'">Rechazado</t>
-                                    <t t-elif="object.state == 'cancel'">Cancelado</t>
-                                    <t t-else="">
-                                        <t t-out="object.state"/>
-                                    </t>
-                                </strong>
+                                <strong><t t-out="dict(object._fields['estado'].selection).get(object.estado) or object.estado"/></strong>
                             </td>
                         </tr>
                     </table>
                 </div>
 
-                <!-- Acción -->
-                <div style="margin:30px 0; padding:24px; background-color:#eef6ff; border-radius:10px; border:1px solid #bfdbfe; border-left:6px solid #2563eb;">
-                    <div style="color:#1e3a8a; margin:0 0 12px 0; font-size:18px; font-weight:bold;">
-                        Revisar solicitud
-                    </div>
-
-                    <div style="margin-bottom:20px; color:#374151; font-size:15px;">
-                        Para revisar, aprobar o rechazar esta solicitud, ingrese desde el siguiente botón:
-                    </div>
-
-                    <div style="text-align:center; margin:25px 0;">
-                        <a t-att-href="'https://andessolutioncopiers.com/web#id=%s&amp;model=hr.leave&amp;view_type=form' % object.id"
-                           style="display:inline-block; background-color:#2563eb; color:#ffffff; text-decoration:none; padding:15px 34px; border-radius:8px; font-size:16px; font-weight:bold; border:1px solid #1d4ed8; box-shadow:0 3px 8px rgba(37,99,235,0.35);">
-                            Ver solicitud de permiso
-                        </a>
-                    </div>
-
-                    <div style="font-size:13px; color:#4b5563; text-align:center; margin-top:12px;">
-                        Si el botón no abre correctamente, copie este enlace:<br/>
-                        <span style="color:#2563eb; word-break:break-all;">
-                            <t t-out="'https://andessolutioncopiers.com/web#id=%s&amp;model=hr.leave&amp;view_type=form' % object.id"/>
-                        </span>
-                    </div>
-                </div>
-
-                <!-- Adjuntos -->
-                <t t-set="attachments" t-value="object.message_main_attachment_id or object.attachment_ids"/>
-                <t t-if="attachments">
-                    <div style="margin:25px 0; padding:18px; background-color:#f8fafc; border:1px solid #e5e7eb; border-radius:8px;">
-                        <div style="font-size:16px; font-weight:bold; color:#111827; margin-bottom:8px;">
-                            Documentos adjuntos
-                        </div>
-                        <div style="font-size:14px; color:#4b5563;">
-                            Esta solicitud incluye documentos adjuntos para su revisión.
-                        </div>
+                <t t-if="object.adjunto">
+                    <div style="margin:20px 0; padding:16px; background-color:#f8fafc; border:1px solid #e5e7eb; border-radius:8px;">
+                        Esta solicitud incluye sustento adjunto:
+                        <strong><t t-out="object.adjunto_filename or 'Archivo adjunto'"/></strong>
                     </div>
                 </t>
 
-                <!-- Cierre -->
-                <p style="margin-top:26px; font-size:15px;">
-                    Favor considerar esta información para la revisión correspondiente.
-                </p>
+                <div style="margin:30px 0; padding:24px; background-color:#eef6ff; border-radius:10px; border:1px solid #bfdbfe; border-left:6px solid #2563eb;">
+                    <div style="font-size:18px; font-weight:bold; color:#1e3a8a; margin-bottom:12px;">
+                        Revisar solicitud
+                    </div>
+
+                    <p style="margin:0 0 20px 0; color:#374151;">
+                        Para aprobar o rechazar esta solicitud, ingrese desde el siguiente botón:
+                    </p>
+
+                    <div style="text-align:center;">
+                        <a t-att-href="'https://andessolutioncopiers.com/web#id=%s&amp;model=mantenimiento.tecnico.ausencia&amp;view_type=form' % object.id"
+                           style="display:inline-block; background-color:#2563eb; color:#ffffff; text-decoration:none; padding:15px 34px; border-radius:8px; font-size:16px; font-weight:bold; border:1px solid #1d4ed8;">
+                            Revisar solicitud
+                        </a>
+                    </div>
+                </div>
 
                 <p style="font-size:15px;">
                     Saludos cordiales,<br/>
@@ -282,143 +169,478 @@
             </div>
         </div>
 
-        <!-- Pie externo -->
         <div style="text-align:center; color:#6b7280; font-size:12px; margin-top:16px;">
             Contacto: soporte@andescopiers.com.pe
         </div>
 
     </div>
-
 </body>
 </html>
             ]]></field>
         </record>
 
-        <!-- Plantilla de confirmación para el empleado -->
-        <record id="email_template_leave_request_employee" model="mail.template">
-            <field name="name">Confirmación de Solicitud - Empleado</field>
-            <field name="model_id" ref="hr_holidays.model_hr_leave"/>
-            <field name="subject">✅ Confirmación: Tu solicitud de permiso ha sido recibida</field>
+
+        <!-- ============================================================
+             2) SOLICITUD APROBADA → GERENCIA / CONTABILIDAD
+             Se envía recién cuando el jefe aprueba.
+             XML ID usado por tu modelo: sat.mail_template_mantenimiento_ausencia_contabilidad
+        ============================================================= -->
+        <record id="mail_template_mantenimiento_ausencia_contabilidad" model="mail.template">
+            <field name="name">Permisos - Notificación aprobada para Gerencia / Contabilidad</field>
+            <field name="model_id" ref="sat.model_mantenimiento_tecnico_ausencia"/>
+            <field name="subject">Permiso aprobado - {{object.tecnico_id.name}} - {{object.name}}</field>
             <field name="email_from">soporte@andescopiers.com.pe</field>
-            <field name="email_to">{{object.employee_id.work_email or object.employee_id.user_id.email}}</field>
+            <field name="email_to">{{ctx.get('correo_contabilidad') or object.correo_contabilidad}}</field>
+            <field name="email_cc">comercial01@andescopiers.com.pe, comercial@andescopiers.com.pe</field>
             <field name="reply_to">soporte@andescopiers.com.pe</field>
             <field name="auto_delete" eval="True"/>
             <field name="use_default_to" eval="False"/>
+
             <field name="body_html"><![CDATA[
 <!DOCTYPE html>
 <html>
 <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Confirmación de Solicitud - CORAPSAC</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Permiso aprobado</title>
 </head>
-<body bgcolor="#f4f4f4" style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; line-height: 1.6; color: #2d3748;">
-    <!-- Contenedor Principal -->
-    <div style="max-width: 700px; margin: 20px auto; padding: 20px;">
-        
-        <!-- Encabezado -->
-        <div style="background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%); padding: 30px 20px; text-align: center; border-radius: 8px 8px 0 0;">
-            <div style="color: #ffffff; font-size: 26px; font-weight: bold; margin: 0;">
-                ✅ Solicitud Recibida
-            </div>
-            <div style="color: #ffffff; font-size: 16px; margin: 10px 0 0 0; opacity: 0.9;">
-                Tu solicitud de permiso ha sido enviada correctamente
-            </div>
-        </div>
-        
-        <!-- Contenido Principal -->
-        <div style="background-color: #ffffff; padding: 30px; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 8px 8px;">
-            
-            <!-- Mensaje de Éxito -->
-            <div style="background: #d4edda; border: 1px solid #c3e6cb; border-left: 4px solid #28a745; padding: 20px; margin: 0 0 25px 0; border-radius: 6px;">
-                <strong>🎉 ¡Éxito!</strong> 
-                Tu solicitud de permiso ha sido recibida y está siendo procesada. 
-                Recibirás una notificación cuando sea aprobada o rechazada.
-            </div>
-            
-            <!-- Resumen de la Solicitud -->
-            <div style="margin: 25px 0;">
-                <div style="color: #2c3e50; font-size: 18px; margin: 0 0 15px 0; border-bottom: 2px solid #27ae60; padding-bottom: 8px; font-weight: bold;">
-                    📋 Resumen de tu Solicitud
+
+<body style="margin:0; padding:0; background-color:#f4f6f8; font-family:Arial, Helvetica, sans-serif; color:#2d3748; line-height:1.6;">
+    <div style="max-width:820px; margin:20px auto; padding:20px;">
+
+        <div style="background-color:#ffffff; border:1px solid #e2e8f0; border-radius:10px; overflow:hidden;">
+
+            <div style="background-color:#166534; padding:26px 24px; color:#ffffff; text-align:center;">
+                <div style="font-size:24px; font-weight:bold;">
+                    Permiso aprobado
                 </div>
-                
-                <table cellspacing="0" cellpadding="0" style="width: 100%; border-collapse: collapse; margin: 20px 0; background: #ffffff; border-radius: 6px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border: 1px solid #e2e8f0;">
-                    <tr>
-                        <th style="background: #f8f9fa; color: #2c3e50; font-weight: 600; padding: 12px 15px; text-align: left; border-bottom: 2px solid #e9ecef; width: 35%;">
-                            📝 Tipo de Permiso
-                        </th>
-                        <td style="padding: 12px 15px; border-bottom: 1px solid #e9ecef; color: #555;">
-                            <t t-out="object.holiday_status_id.name"/>
-                        </td>
-                    </tr>
-                    <tr style="background-color: #f8f9fa;">
-                        <th style="background: #f8f9fa; color: #2c3e50; font-weight: 600; padding: 12px 15px; text-align: left; border-bottom: 2px solid #e9ecef;">
-                            📅 Desde
-                        </th>
-                        <td style="padding: 12px 15px; border-bottom: 1px solid #e9ecef; color: #555;">
-                            <t t-out="object.request_date_from" t-options="{'widget': 'date', 'format': 'dd/MM/yyyy'}"/>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th style="background: #f8f9fa; color: #2c3e50; font-weight: 600; padding: 12px 15px; text-align: left; border-bottom: 2px solid #e9ecef;">
-                            📅 Hasta
-                        </th>
-                        <td style="padding: 12px 15px; border-bottom: 1px solid #e9ecef; color: #555;">
-                            <t t-out="object.request_date_to" t-options="{'widget': 'date', 'format': 'dd/MM/yyyy'}"/>
-                        </td>
-                    </tr>
-                    <tr style="background-color: #f8f9fa;">
-                        <th style="background: #f8f9fa; color: #2c3e50; font-weight: 600; padding: 12px 15px; text-align: left; border-bottom: 2px solid #e9ecef;">
-                            📊 Duración
-                        </th>
-                        <td style="padding: 12px 15px; border-bottom: 1px solid #e9ecef; color: #555;">
-                            <t t-out="object.number_of_days"/> día(s)
-                        </td>
-                    </tr>
-                    <tr>
-                        <th style="background: #f8f9fa; color: #2c3e50; font-weight: 600; padding: 12px 15px; text-align: left; border-bottom: 2px solid #e9ecef;">
-                            🆔 Número de Solicitud
-                        </th>
-                        <td style="padding: 12px 15px; border-bottom: 1px solid #e9ecef; color: #555;">
-                            #<t t-out="object.id"/>
-                        </td>
-                    </tr>
-                </table>
-            </div>
-            
-            <!-- Próximos Pasos -->
-            <div style="margin: 25px 0; padding: 15px; background: #e8f4fd; border-radius: 6px; border: 1px solid #bee5eb;">
-                <div style="font-weight: bold; margin-bottom: 10px;">
-                    ℹ️ Próximos pasos:
-                </div>
-                <div style="margin: 5px 0;">1. Tu solicitud será revisada por tu supervisor</div>
-                <div style="margin: 5px 0;">2. Recibirás una notificación del resultado</div>
-                <div style="margin: 5px 0;">3. Una vez aprobada, aparecerá en tu calendario</div>
-            </div>
-            
-            <!-- Pie de mensaje -->
-            <div style="margin-top: 30px; text-align: center; padding-top: 20px; border-top: 1px solid #eee;">
-                <div style="margin: 0;">
-                    Atentamente,<br/>
-                    <strong>Sistema de Permisos</strong><br/>
-                    <span style="color: #4a5568;">CORAPSAC</span>
+                <div style="font-size:14px; margin-top:8px; color:#dcfce7;">
+                    Referencia: <strong><t t-out="object.name"/></strong>
                 </div>
             </div>
-        </div>
-        
-        <!-- Pie de página -->
-        <div style="background: #2c3e50; color: white; padding: 20px; text-align: center; font-size: 14px; border-radius: 0 0 8px 8px;">
-            <div style="margin: 5px 0; opacity: 0.8;">
-                <strong>CORAPSAC - Permisos</strong>
+
+            <div style="padding:28px;">
+
+                <p style="margin-top:0; font-size:15px;">
+                    Señora Teresa,
+                </p>
+
+                <p style="font-size:15px;">
+                    Se informa que la solicitud de
+                    <strong><t t-out="dict(object._fields['tipo'].selection).get(object.tipo) or object.tipo"/></strong>
+                    del trabajador <strong><t t-out="object.tecnico_id.name"/></strong>
+                    fue aprobada.
+                </p>
+
+                <p style="font-size:15px;">
+                    Favor considerar esta información para la revisión correspondiente en asistencia, control interno, gerencia o contabilidad.
+                </p>
+
+                <div style="background-color:#ecfdf5; border-left:5px solid #16a34a; padding:15px 18px; margin:18px 0; border-radius:6px;">
+                    <strong>Aprobado por:</strong>
+                    <t t-if="object.aprobado_por_id">
+                        <t t-out="object.aprobado_por_id.name"/>
+                    </t>
+                    <t t-else="">No registrado</t>
+                    <br/>
+                    <strong>Fecha de aprobación:</strong>
+                    <t t-if="object.fecha_aprobacion">
+                        <t t-out="object.fecha_aprobacion.strftime('%d/%m/%Y %H:%M')"/>
+                    </t>
+                    <t t-else="">No registrada</t>
+                </div>
+
+                <div style="margin:25px 0;">
+                    <div style="font-size:18px; font-weight:bold; color:#111827; margin-bottom:12px; border-bottom:2px solid #16a34a; padding-bottom:8px;">
+                        Detalle aprobado
+                    </div>
+
+                    <table cellspacing="0" cellpadding="0" style="width:100%; border-collapse:collapse; border:1px solid #e5e7eb; font-size:14px;">
+                        <tr>
+                            <td style="width:34%; padding:12px 14px; background-color:#f9fafb; border-bottom:1px solid #e5e7eb; font-weight:bold;">Trabajador</td>
+                            <td style="padding:12px 14px; border-bottom:1px solid #e5e7eb;">
+                                <strong><t t-out="object.tecnico_id.name"/></strong>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="padding:12px 14px; background-color:#f9fafb; border-bottom:1px solid #e5e7eb; font-weight:bold;">Tipo</td>
+                            <td style="padding:12px 14px; border-bottom:1px solid #e5e7eb;">
+                                <strong><t t-out="dict(object._fields['tipo'].selection).get(object.tipo) or object.tipo"/></strong>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="padding:12px 14px; background-color:#f9fafb; border-bottom:1px solid #e5e7eb; font-weight:bold;">Motivo</td>
+                            <td style="padding:12px 14px; border-bottom:1px solid #e5e7eb;">
+                                <t t-out="object.motivo or 'Sin motivo registrado'"/>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="padding:12px 14px; background-color:#f9fafb; border-bottom:1px solid #e5e7eb; font-weight:bold;">Fecha inicio</td>
+                            <td style="padding:12px 14px; border-bottom:1px solid #e5e7eb;">
+                                <t t-if="object.fecha_inicio">
+                                    <t t-out="object.fecha_inicio.strftime('%d/%m/%Y')"/>
+                                </t>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="padding:12px 14px; background-color:#f9fafb; border-bottom:1px solid #e5e7eb; font-weight:bold;">Fecha fin</td>
+                            <td style="padding:12px 14px; border-bottom:1px solid #e5e7eb;">
+                                <t t-if="object.fecha_fin">
+                                    <t t-out="object.fecha_fin.strftime('%d/%m/%Y')"/>
+                                </t>
+                                <t t-else="">Por definir</t>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="padding:12px 14px; background-color:#f9fafb; font-weight:bold;">Jornada</td>
+                            <td style="padding:12px 14px;">
+                                <t t-if="object.dia_completo">
+                                    Día completo
+                                </t>
+                                <t t-else="">
+                                    Por horas
+                                    (
+                                    <t t-out="'%.2f' % object.hora_inicio"/>
+                                    -
+                                    <t t-out="'%.2f' % object.hora_fin"/>
+                                    )
+                                </t>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
+                <t t-if="object.ticket_afectado_ids">
+                    <div style="margin:25px 0;">
+                        <div style="font-size:18px; font-weight:bold; color:#111827; margin-bottom:12px; border-bottom:2px solid #ef4444; padding-bottom:8px;">
+                            Tickets afectados o por revisar
+                        </div>
+
+                        <table cellspacing="0" cellpadding="0" style="width:100%; border-collapse:collapse; border:1px solid #e5e7eb; font-size:13px;">
+                            <thead>
+                                <tr style="background-color:#374151; color:#ffffff;">
+                                    <th style="padding:8px; text-align:left; border:1px solid #1f2937;">Ticket</th>
+                                    <th style="padding:8px; text-align:left; border:1px solid #1f2937;">Cliente</th>
+                                    <th style="padding:8px; text-align:left; border:1px solid #1f2937;">Fecha</th>
+                                    <th style="padding:8px; text-align:left; border:1px solid #1f2937;">Equipo</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-foreach="object.ticket_afectado_ids" t-as="tk">
+                                    <tr>
+                                        <td style="padding:8px; border:1px solid #e5e7eb;">
+                                            <strong><t t-out="tk.name"/></strong>
+                                        </td>
+                                        <td style="padding:8px; border:1px solid #e5e7eb;">
+                                            <t t-out="tk.partner_id.name or 'Sin cliente'"/>
+                                        </td>
+                                        <td style="padding:8px; border:1px solid #e5e7eb;">
+                                            <t t-if="tk.agenda">
+                                                <t t-out="tk.agenda.strftime('%d/%m/%Y %H:%M')"/>
+                                            </t>
+                                            <t t-else="">Sin agenda</t>
+                                        </td>
+                                        <td style="padding:8px; border:1px solid #e5e7eb;">
+                                            <t t-if="tk.product_alquiler">
+                                                <t t-out="tk.product_alquiler.name.name"/>
+                                                -
+                                                <t t-out="tk.product_alquiler.serie"/>
+                                            </t>
+                                            <t t-else="">Sin equipo</t>
+                                        </td>
+                                    </tr>
+                                </t>
+                            </tbody>
+                        </table>
+                    </div>
+                </t>
+
+                <t t-if="not object.ticket_afectado_ids">
+                    <div style="margin:20px 0; padding:16px; background-color:#f8fafc; border:1px solid #e5e7eb; border-radius:8px;">
+                        No se detectaron tickets afectados para este periodo.
+                    </div>
+                </t>
+
+                <t t-if="object.adjunto">
+                    <div style="margin:20px 0; padding:16px; background-color:#f8fafc; border:1px solid #e5e7eb; border-radius:8px;">
+                        Sustento adjunto:
+                        <strong><t t-out="object.adjunto_filename or 'Archivo adjunto'"/></strong>
+                    </div>
+                </t>
+
+                <div style="text-align:center; margin:28px 0;">
+                    <a t-att-href="'https://andessolutioncopiers.com/web#id=%s&amp;model=mantenimiento.tecnico.ausencia&amp;view_type=form' % object.id"
+                       style="display:inline-block; background-color:#166534; color:#ffffff; text-decoration:none; padding:14px 30px; border-radius:8px; font-size:15px; font-weight:bold;">
+                        Ver registro aprobado
+                    </a>
+                </div>
+
+                <p style="font-size:15px;">
+                    Saludos cordiales,<br/>
+                    <strong>Área de Soporte Técnico</strong><br/>
+                    <span style="color:#4b5563;">CORAPSAC</span>
+                </p>
+
             </div>
-            <div style="margin: 5px 0; opacity: 0.8;">
-                Para consultas, contacta a: soporte@andescopiers.com.pe
-            </div>
         </div>
+
+        <div style="text-align:center; color:#6b7280; font-size:12px; margin-top:16px;">
+            Contacto: soporte@andescopiers.com.pe
+        </div>
+
     </div>
 </body>
 </html>
             ]]></field>
         </record>
+
+
+        <!-- ============================================================
+             3) SOLICITUD APROBADA → TRABAJADOR / TÉCNICO
+        ============================================================= -->
+        <record id="email_template_mantenimiento_ausencia_empleado_aprobado" model="mail.template">
+            <field name="name">Permisos - Solicitud aprobada para Trabajador</field>
+            <field name="model_id" ref="sat.model_mantenimiento_tecnico_ausencia"/>
+            <field name="subject">Tu solicitud fue aprobada - {{object.name}}</field>
+            <field name="email_from">soporte@andescopiers.com.pe</field>
+            <field name="email_to">{{object.tecnico_id.email}}</field>
+            <field name="reply_to">soporte@andescopiers.com.pe</field>
+            <field name="auto_delete" eval="True"/>
+            <field name="use_default_to" eval="False"/>
+
+            <field name="body_html"><![CDATA[
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Solicitud aprobada</title>
+</head>
+
+<body style="margin:0; padding:0; background-color:#f4f6f8; font-family:Arial, Helvetica, sans-serif; color:#2d3748; line-height:1.6;">
+    <div style="max-width:700px; margin:20px auto; padding:20px;">
+
+        <div style="background-color:#ffffff; border:1px solid #e2e8f0; border-radius:10px; overflow:hidden;">
+
+            <div style="background-color:#166534; padding:26px 24px; color:#ffffff; text-align:center;">
+                <div style="font-size:24px; font-weight:bold;">
+                    Solicitud aprobada
+                </div>
+                <div style="font-size:14px; margin-top:8px; color:#dcfce7;">
+                    Referencia: <strong><t t-out="object.name"/></strong>
+                </div>
+            </div>
+
+            <div style="padding:28px;">
+
+                <p style="margin-top:0;">
+                    Hola <strong><t t-out="object.tecnico_id.name"/></strong>,
+                </p>
+
+                <p>
+                    Tu solicitud de
+                    <strong><t t-out="dict(object._fields['tipo'].selection).get(object.tipo) or object.tipo"/></strong>
+                    fue aprobada.
+                </p>
+
+                <div style="background-color:#ecfdf5; border-left:5px solid #16a34a; padding:15px 18px; margin:18px 0; border-radius:6px;">
+                    <strong>Aprobado por:</strong>
+                    <t t-if="object.aprobado_por_id">
+                        <t t-out="object.aprobado_por_id.name"/>
+                    </t>
+                    <t t-else="">No registrado</t>
+                    <br/>
+                    <strong>Fecha de aprobación:</strong>
+                    <t t-if="object.fecha_aprobacion">
+                        <t t-out="object.fecha_aprobacion.strftime('%d/%m/%Y %H:%M')"/>
+                    </t>
+                    <t t-else="">No registrada</t>
+                </div>
+
+                <table cellspacing="0" cellpadding="0" style="width:100%; border-collapse:collapse; border:1px solid #e5e7eb; font-size:14px; margin-top:20px;">
+                    <tr>
+                        <td style="width:35%; padding:12px 14px; background-color:#f9fafb; border-bottom:1px solid #e5e7eb; font-weight:bold;">Tipo</td>
+                        <td style="padding:12px 14px; border-bottom:1px solid #e5e7eb;">
+                            <t t-out="dict(object._fields['tipo'].selection).get(object.tipo) or object.tipo"/>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding:12px 14px; background-color:#f9fafb; border-bottom:1px solid #e5e7eb; font-weight:bold;">Desde</td>
+                        <td style="padding:12px 14px; border-bottom:1px solid #e5e7eb;">
+                            <t t-if="object.fecha_inicio">
+                                <t t-out="object.fecha_inicio.strftime('%d/%m/%Y')"/>
+                            </t>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding:12px 14px; background-color:#f9fafb; border-bottom:1px solid #e5e7eb; font-weight:bold;">Hasta</td>
+                        <td style="padding:12px 14px; border-bottom:1px solid #e5e7eb;">
+                            <t t-if="object.fecha_fin">
+                                <t t-out="object.fecha_fin.strftime('%d/%m/%Y')"/>
+                            </t>
+                            <t t-else="">Por definir</t>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding:12px 14px; background-color:#f9fafb; font-weight:bold;">Jornada</td>
+                        <td style="padding:12px 14px;">
+                            <t t-if="object.dia_completo">
+                                Día completo
+                            </t>
+                            <t t-else="">
+                                Por horas
+                                (
+                                <t t-out="'%.2f' % object.hora_inicio"/>
+                                -
+                                <t t-out="'%.2f' % object.hora_fin"/>
+                                )
+                            </t>
+                        </td>
+                    </tr>
+                </table>
+
+                <p style="margin-top:24px;">
+                    Por favor considera esta información para tu asistencia y programación del día indicado.
+                </p>
+
+                <p>
+                    Saludos cordiales,<br/>
+                    <strong>Área de Soporte Técnico</strong><br/>
+                    <span style="color:#4b5563;">CORAPSAC</span>
+                </p>
+
+            </div>
+        </div>
+
+        <div style="text-align:center; color:#6b7280; font-size:12px; margin-top:16px;">
+            Contacto: soporte@andescopiers.com.pe
+        </div>
+
+    </div>
+</body>
+</html>
+            ]]></field>
+        </record>
+
+
+        <!-- ============================================================
+             4) SOLICITUD RECHAZADA → TRABAJADOR / TÉCNICO
+        ============================================================= -->
+        <record id="email_template_mantenimiento_ausencia_empleado_rechazado" model="mail.template">
+            <field name="name">Permisos - Solicitud rechazada para Trabajador</field>
+            <field name="model_id" ref="sat.model_mantenimiento_tecnico_ausencia"/>
+            <field name="subject">Tu solicitud fue rechazada - {{object.name}}</field>
+            <field name="email_from">soporte@andescopiers.com.pe</field>
+            <field name="email_to">{{object.tecnico_id.email}}</field>
+            <field name="reply_to">soporte@andescopiers.com.pe</field>
+            <field name="auto_delete" eval="True"/>
+            <field name="use_default_to" eval="False"/>
+
+            <field name="body_html"><![CDATA[
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Solicitud rechazada</title>
+</head>
+
+<body style="margin:0; padding:0; background-color:#f4f6f8; font-family:Arial, Helvetica, sans-serif; color:#2d3748; line-height:1.6;">
+    <div style="max-width:700px; margin:20px auto; padding:20px;">
+
+        <div style="background-color:#ffffff; border:1px solid #e2e8f0; border-radius:10px; overflow:hidden;">
+
+            <div style="background-color:#991b1b; padding:26px 24px; color:#ffffff; text-align:center;">
+                <div style="font-size:24px; font-weight:bold;">
+                    Solicitud rechazada
+                </div>
+                <div style="font-size:14px; margin-top:8px; color:#fee2e2;">
+                    Referencia: <strong><t t-out="object.name"/></strong>
+                </div>
+            </div>
+
+            <div style="padding:28px;">
+
+                <p style="margin-top:0;">
+                    Hola <strong><t t-out="object.tecnico_id.name"/></strong>,
+                </p>
+
+                <p>
+                    Tu solicitud de
+                    <strong><t t-out="dict(object._fields['tipo'].selection).get(object.tipo) or object.tipo"/></strong>
+                    fue rechazada.
+                </p>
+
+                <div style="background-color:#fef2f2; border-left:5px solid #dc2626; padding:15px 18px; margin:18px 0; border-radius:6px;">
+                    <strong>Motivo del rechazo:</strong><br/>
+                    <t t-out="object.motivo_rechazo or 'No se registró un motivo de rechazo.'"/>
+                </div>
+
+                <table cellspacing="0" cellpadding="0" style="width:100%; border-collapse:collapse; border:1px solid #e5e7eb; font-size:14px; margin-top:20px;">
+                    <tr>
+                        <td style="width:35%; padding:12px 14px; background-color:#f9fafb; border-bottom:1px solid #e5e7eb; font-weight:bold;">Tipo solicitado</td>
+                        <td style="padding:12px 14px; border-bottom:1px solid #e5e7eb;">
+                            <t t-out="dict(object._fields['tipo'].selection).get(object.tipo) or object.tipo"/>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td style="padding:12px 14px; background-color:#f9fafb; border-bottom:1px solid #e5e7eb; font-weight:bold;">Desde</td>
+                        <td style="padding:12px 14px; border-bottom:1px solid #e5e7eb;">
+                            <t t-if="object.fecha_inicio">
+                                <t t-out="object.fecha_inicio.strftime('%d/%m/%Y')"/>
+                            </t>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td style="padding:12px 14px; background-color:#f9fafb; border-bottom:1px solid #e5e7eb; font-weight:bold;">Hasta</td>
+                        <td style="padding:12px 14px; border-bottom:1px solid #e5e7eb;">
+                            <t t-if="object.fecha_fin">
+                                <t t-out="object.fecha_fin.strftime('%d/%m/%Y')"/>
+                            </t>
+                            <t t-else="">Por definir</t>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td style="padding:12px 14px; background-color:#f9fafb; font-weight:bold;">Rechazado por</td>
+                        <td style="padding:12px 14px;">
+                            <t t-if="object.rechazado_por_id">
+                                <t t-out="object.rechazado_por_id.name"/>
+                            </t>
+                            <t t-else="">No registrado</t>
+                        </td>
+                    </tr>
+                </table>
+
+                <p style="margin-top:24px;">
+                    Para cualquier consulta, comunícate con tu jefe de área.
+                </p>
+
+                <p>
+                    Saludos cordiales,<br/>
+                    <strong>Área de Soporte Técnico</strong><br/>
+                    <span style="color:#4b5563;">CORAPSAC</span>
+                </p>
+
+            </div>
+        </div>
+
+        <div style="text-align:center; color:#6b7280; font-size:12px; margin-top:16px;">
+            Contacto: soporte@andescopiers.com.pe
+        </div>
+
+    </div>
+</body>
+</html>
+            ]]></field>
+        </record>
+
     </data>
 </odoo>
