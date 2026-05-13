@@ -251,8 +251,7 @@
             'sat/static/src/js/mobile_ticket_layout.js',
 
 
-            'sat/static/src/css/permisos.css',
-            'sat/static/src/js/permisos.js',
+            
                 
             # External Libraries existentes
             'https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js',
@@ -267,6 +266,8 @@
             'sat/static/src/js/searchFilter.js',
             'sat/static/src/js/evidencia_publicv1.js',
             'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
+            'sat/static/src/css/permisos.css',
+            'sat/static/src/js/permisos.js',
             
         ],
         
