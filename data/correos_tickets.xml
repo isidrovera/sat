@@ -680,9 +680,7 @@
 </record>
 <record id="mail_template_mantenimiento_ausencia_contabilidad" model="mail.template">
     <field name="name">Notificación humana de permiso / descanso técnico - Contabilidad</field>
-    <field name="subject">
-        Solicitud de <t t-out="dict(object._fields['tipo'].selection).get(object.tipo) or 'permiso'"/> - <t t-out="object.tecnico_id.name"/> - <t t-out="object.name"/>
-    </field>
+    <field name="subject">⚠️ {{object.tipo}} - {{object.tecnico_id.name}} - {{object.name}}</field>
     <field name="email_from">soporte@andescopiers.com.pe</field>
     <field name="email_to">{{ctx.get('correo_contabilidad') or object.correo_contabilidad}}</field>
     <field name="email_cc">comercial01@andescopiers.com.pe, comercial@andescopiers.com.pe</field>
