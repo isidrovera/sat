@@ -14,6 +14,10 @@ class MantenimientoTecnicoAusencia(models.Model):
     _inherit = ['mail.thread', 'mail.activity.mixin']
     _order = 'fecha_inicio desc, tecnico_id'
 
+    # ============================================================
+    # CAMPOS PRINCIPALES
+    # ============================================================
+
     name = fields.Char(
         string='Referencia',
         default='Nuevo',
@@ -61,7 +65,7 @@ class MantenimientoTecnicoAusencia(models.Model):
         string='Fecha fin',
         tracking=True,
         index=True,
-        help='Puede quedar vacío en enfermedad si aún no se conoce la fecha de retorno.'
+        help='Puede quedar vacío solo en enfermedad si aún no se conoce la fecha de retorno.'
     )
 
     fecha_retorno_real = fields.Date(
@@ -181,7 +185,7 @@ class MantenimientoTecnicoAusencia(models.Model):
         string='Ausencia sin fecha fin',
         compute='_compute_es_abierta',
         store=True,
-        help='Se activa cuando la ausencia no tiene fecha fin, normalmente por enfermedad.'
+        help='Se activa solo cuando es enfermedad y no tiene fecha fin.'
     )
 
     active = fields.Boolean(
@@ -196,12 +200,14 @@ class MantenimientoTecnicoAusencia(models.Model):
     @api.depends('tecnico_id')
     def _compute_perfil_id(self):
         Perfil = self.env['mantenimiento.tecnico.perfil']
+
         for rec in self:
             if rec.tecnico_id:
                 perfil = Perfil.search([
                     ('tecnico_id', '=', rec.tecnico_id.id),
                     ('active', '=', True),
                 ], limit=1)
+
                 rec.perfil_id = perfil.id if perfil else False
             else:
                 rec.perfil_id = False
@@ -213,6 +219,10 @@ class MantenimientoTecnicoAusencia(models.Model):
 
     @api.depends('tipo', 'fecha_fin')
     def _compute_es_abierta(self):
+        """
+        Solo una enfermedad sin fecha_fin debe considerarse abierta.
+        Si el formulario web manda fecha_fin, no debe marcarse como ausencia sin fecha fin.
+        """
         for rec in self:
             rec.es_abierta = bool(rec.tipo == 'enfermedad' and not rec.fecha_fin)
 
@@ -221,6 +231,7 @@ class MantenimientoTecnicoAusencia(models.Model):
             'mantenimiento.correo_contabilidad',
             ''
         )
+
         for rec in self:
             rec.correo_contabilidad = correo
 
@@ -230,34 +241,69 @@ class MantenimientoTecnicoAusencia(models.Model):
 
     @api.onchange('tipo')
     def _onchange_tipo(self):
+        """
+        No forzamos fecha_fin = fecha_inicio si ya existe fecha_fin.
+        Esto permite que el formulario web respete el campo "Hasta".
+        """
         for rec in self:
             if rec.tipo in ('permiso', 'falta'):
-                rec.fecha_fin = rec.fecha_inicio
                 rec.dia_completo = True
                 rec.hora_inicio = 0.0
                 rec.hora_fin = 24.0
+
+                if rec.fecha_inicio and not rec.fecha_fin:
+                    rec.fecha_fin = rec.fecha_inicio
 
             elif rec.tipo == 'vacaciones':
                 rec.dia_completo = True
                 rec.hora_inicio = 0.0
                 rec.hora_fin = 24.0
 
+                if rec.fecha_inicio and not rec.fecha_fin:
+                    rec.fecha_fin = rec.fecha_inicio
+
             elif rec.tipo == 'enfermedad':
                 rec.dia_completo = True
                 rec.hora_inicio = 0.0
                 rec.hora_fin = 24.0
-                # En enfermedad permitimos fecha_fin vacía
+                # Enfermedad puede quedar sin fecha_fin.
+
+            elif rec.tipo == 'descanso_medico':
+                rec.dia_completo = True
+                rec.hora_inicio = 0.0
+                rec.hora_fin = 24.0
+
+                if rec.fecha_inicio and not rec.fecha_fin:
+                    rec.fecha_fin = rec.fecha_inicio
 
             elif rec.tipo == 'capacitacion':
                 rec.dia_completo = False
-                rec.hora_inicio = 8.0
-                rec.hora_fin = 13.0
+                if not rec.hora_inicio:
+                    rec.hora_inicio = 8.0
+                if not rec.hora_fin or rec.hora_fin == 24.0:
+                    rec.hora_fin = 13.0
+
+                if rec.fecha_inicio and not rec.fecha_fin:
+                    rec.fecha_fin = rec.fecha_inicio
+
+            elif rec.tipo == 'bloqueo_admin':
+                if rec.fecha_inicio and not rec.fecha_fin:
+                    rec.fecha_fin = rec.fecha_inicio
 
     @api.onchange('fecha_inicio')
     def _onchange_fecha_inicio(self):
+        """
+        Si no hay fecha_fin, la completamos.
+        Si fecha_fin es menor, la corregimos.
+        No pisamos una fecha_fin válida enviada por el usuario.
+        """
         for rec in self:
-            if rec.tipo in ('permiso', 'falta') and rec.fecha_inicio:
-                rec.fecha_fin = rec.fecha_inicio
+            if rec.fecha_inicio:
+                if not rec.fecha_fin and rec.tipo != 'enfermedad':
+                    rec.fecha_fin = rec.fecha_inicio
+
+                if rec.fecha_fin and rec.fecha_fin < rec.fecha_inicio:
+                    rec.fecha_fin = rec.fecha_inicio
 
     @api.onchange('dia_completo')
     def _onchange_dia_completo(self):
@@ -265,6 +311,68 @@ class MantenimientoTecnicoAusencia(models.Model):
             if rec.dia_completo:
                 rec.hora_inicio = 0.0
                 rec.hora_fin = 24.0
+            else:
+                if not rec.hora_inicio:
+                    rec.hora_inicio = 8.0
+                if not rec.hora_fin or rec.hora_fin == 24.0:
+                    rec.hora_fin = 17.0
+
+    # ============================================================
+    # NORMALIZACIÓN
+    # ============================================================
+
+    @api.model
+    def _normalize_vals(self, vals):
+        """
+        Normaliza datos recibidos desde backend o formulario web.
+        Evita que fecha_fin quede vacía cuando no corresponde.
+        Respeta fecha_fin si el usuario marcó "hasta".
+        """
+        vals = dict(vals or {})
+
+        tipo = vals.get('tipo')
+        fecha_inicio = vals.get('fecha_inicio')
+        fecha_fin = vals.get('fecha_fin')
+
+        # Si no viene tipo en vals, no podemos inferir aquí.
+        # create/write completan usando el registro si corresponde.
+        if fecha_inicio and not fecha_fin and tipo != 'enfermedad':
+            vals['fecha_fin'] = fecha_inicio
+
+        if vals.get('dia_completo') in (True, 'true', '1', 1):
+            vals['hora_inicio'] = 0.0
+            vals['hora_fin'] = 24.0
+
+        return vals
+
+    def _normalize_record_dates(self):
+        """
+        Corrige registros ya creados o actualizados:
+        - Si no es enfermedad y no tiene fecha_fin, asigna fecha_inicio.
+        - Si fecha_fin < fecha_inicio, corrige a fecha_inicio.
+        - Si es día completo, normaliza horas.
+        """
+        for rec in self:
+            vals = {}
+
+            if rec.fecha_inicio:
+                if rec.tipo != 'enfermedad' and not rec.fecha_fin:
+                    vals['fecha_fin'] = rec.fecha_inicio
+
+                if rec.fecha_fin and rec.fecha_fin < rec.fecha_inicio:
+                    vals['fecha_fin'] = rec.fecha_inicio
+
+            if rec.dia_completo and (rec.hora_inicio != 0.0 or rec.hora_fin != 24.0):
+                vals['hora_inicio'] = 0.0
+                vals['hora_fin'] = 24.0
+
+            if vals:
+                _logger.info(
+                    "[Ausencias] Normalizando registro %s con valores: %s",
+                    rec.name,
+                    vals
+                )
+                super(MantenimientoTecnicoAusencia, rec).write(vals)
 
     # ============================================================
     # VALIDACIONES
@@ -326,11 +434,16 @@ class MantenimientoTecnicoAusencia(models.Model):
                 )
 
     # ============================================================
-    # CREATE
+    # CREATE / WRITE
     # ============================================================
 
     @api.model
     def create(self, vals):
+        _logger.info("[Ausencias] === CREANDO AUSENCIA ===")
+        _logger.info("[Ausencias] Valores recibidos: %s", vals)
+
+        vals = self._normalize_vals(vals)
+
         if vals.get('name', 'Nuevo') == 'Nuevo':
             vals['name'] = self.env['ir.sequence'].next_by_code(
                 'mantenimiento.tecnico.ausencia'
@@ -338,27 +451,50 @@ class MantenimientoTecnicoAusencia(models.Model):
 
         rec = super().create(vals)
 
-        # Enfermedad y falta deben bloquear inmediatamente
+        rec._normalize_record_dates()
+
+        _logger.info("[Ausencias] Ausencia creada: %s ID=%s", rec.name, rec.id)
+        _logger.info("[Ausencias] Técnico: %s", rec.tecnico_id.name)
+        _logger.info("[Ausencias] Tipo: %s", rec.tipo)
+        _logger.info("[Ausencias] Fechas: %s - %s", rec.fecha_inicio, rec.fecha_fin)
+        _logger.info("[Ausencias] Estado: %s", rec.estado)
+
+        # Enfermedad y falta pueden bloquear inmediatamente.
+        # Si quieres que falta también pase por aprobación, quita 'falta' de esta condición.
         if rec.tipo in ('enfermedad', 'falta') and rec.estado == 'borrador':
             rec.action_reportar_ausencia_inmediata()
 
         return rec
 
+    def write(self, vals):
+        _logger.info("[Ausencias] === ACTUALIZANDO AUSENCIA ===")
+        _logger.info("[Ausencias] Registros: %s", self.ids)
+        _logger.info("[Ausencias] Valores recibidos: %s", vals)
+
+        vals = self._normalize_vals(vals)
+
+        res = super().write(vals)
+
+        self._normalize_record_dates()
+
+        return res
+
     # ============================================================
-    # HELPERS
+    # HELPERS OPERATIVOS
     # ============================================================
 
     def _get_fecha_fin_operativa(self):
         self.ensure_one()
+
         if self.fecha_fin:
             return self.fecha_fin
 
-        # Si es enfermedad abierta, para efectos de búsqueda inicial bloqueamos
-        # una ventana amplia. Luego se cierra con fecha de retorno real.
+        # Si es enfermedad abierta, bloqueamos una ventana amplia.
         return self.fecha_inicio + timedelta(days=365)
 
     def _iter_fechas(self):
         self.ensure_one()
+
         fecha = self.fecha_inicio
         fecha_fin = self._get_fecha_fin_operativa()
 
@@ -389,10 +525,18 @@ class MantenimientoTecnicoAusencia(models.Model):
             ('estado', 'not in', ['finalizado']),
         ])
 
+        _logger.info(
+            "[Ausencias] Tickets afectados para %s: %s",
+            self.name,
+            tickets.ids
+        )
+
         return tickets
 
     def _crear_bloqueo_disponibilidad(self):
         self.ensure_one()
+
+        _logger.info("[Ausencias] Creando bloqueo de disponibilidad para %s", self.name)
 
         if not self.perfil_id:
             raise UserError(
@@ -423,14 +567,27 @@ class MantenimientoTecnicoAusencia(models.Model):
                 'estado': 'aprobado',
                 'motivo': _(
                     "Bloqueo generado por ausencia %s: %s"
-                ) % (self.name, dict(self._fields['tipo'].selection).get(self.tipo)),
+                ) % (
+                    self.name,
+                    dict(self._fields['tipo'].selection).get(self.tipo)
+                ),
             }
 
             if existente:
                 existente.write(vals)
                 bloqueo = existente
+                _logger.info(
+                    "[Ausencias] Bloqueo actualizado fecha=%s ID=%s",
+                    fecha,
+                    bloqueo.id
+                )
             else:
                 bloqueo = Disponibilidad.create(vals)
+                _logger.info(
+                    "[Ausencias] Bloqueo creado fecha=%s ID=%s",
+                    fecha,
+                    bloqueo.id
+                )
 
             if not primera_disponibilidad:
                 primera_disponibilidad = bloqueo
@@ -453,43 +610,193 @@ class MantenimientoTecnicoAusencia(models.Model):
                 self.fecha_inicio.strftime('%d/%m/%Y'),
                 self.fecha_fin.strftime('%d/%m/%Y') if self.fecha_fin else 'sin fecha fin',
             )
+
             ticket.message_post(body=body, message_type='notification')
 
         return tickets
+
+    # ============================================================
+    # CORREOS
+    # ============================================================
+
+    def _send_mail_template_safe(self, xmlid, context_values=None, log_name=None):
+        self.ensure_one()
+
+        context_values = context_values or {}
+        log_name = log_name or xmlid
+
+        _logger.info("[Ausencias] Preparando envío de correo: %s", log_name)
+        _logger.info("[Ausencias] Registro: %s ID=%s", self.name, self.id)
+
+        template = self.env.ref(xmlid, raise_if_not_found=False)
+
+        if not template:
+            _logger.warning("[Ausencias] No se encontró la plantilla: %s", xmlid)
+            self.message_post(
+                body=_("No se encontró la plantilla de correo: %s") % xmlid,
+                message_type='notification'
+            )
+            return False
+
+        try:
+            mail_id = template.with_context(**context_values).send_mail(
+                self.id,
+                force_send=True,
+                raise_exception=False
+            )
+
+            _logger.info(
+                "[Ausencias] Correo procesado correctamente. Template=%s MailID=%s",
+                xmlid,
+                mail_id
+            )
+
+            return True
+
+        except Exception as e:
+            _logger.error(
+                "[Ausencias] Error enviando correo %s para %s: %s",
+                xmlid,
+                self.name,
+                str(e),
+                exc_info=True
+            )
+
+            self.message_post(
+                body=_("No se pudo enviar el correo %s. Error: %s") % (xmlid, str(e)),
+                message_type='notification'
+            )
+
+            return False
+
+    def _get_correo_jefe_area(self):
+        self.ensure_one()
+
+        correo_param = self.env['ir.config_parameter'].sudo().get_param(
+            'mantenimiento.correo_jefe_area',
+            ''
+        )
+
+        if correo_param:
+            _logger.info("[Ausencias] Correo jefe desde parámetro: %s", correo_param)
+            return correo_param
+
+        grupo = self.env.ref('sat.sat_jefes_group_user', raise_if_not_found=False)
+
+        if grupo:
+            correos = []
+
+            for user in grupo.users:
+                email = user.email or user.partner_id.email
+                if email:
+                    correos.append(email)
+
+            if correos:
+                correos_str = ','.join(correos)
+                _logger.info("[Ausencias] Correos jefe desde grupo: %s", correos_str)
+                return correos_str
+
+        _logger.warning(
+            "[Ausencias] No se encontró correo de jefe de área. "
+            "Configure mantenimiento.correo_jefe_area o agregue usuarios al grupo Jefes de Área."
+        )
+
+        return False
+
+    def _notificar_jefe_area(self):
+        self.ensure_one()
+
+        correo_jefe = self._get_correo_jefe_area()
+
+        if not correo_jefe:
+            self.message_post(
+                body=_(
+                    "No se envió correo al jefe de área porque no hay correo configurado. "
+                    "Configure el parámetro mantenimiento.correo_jefe_area o agregue usuarios al grupo Jefes de Área."
+                ),
+                message_type='notification'
+            )
+            return False
+
+        return self._send_mail_template_safe(
+            'sat.email_template_leave_request',
+            context_values={
+                'correo_jefe_area': correo_jefe,
+            },
+            log_name='Solicitud pendiente para jefe de área'
+        )
 
     def _notificar_contabilidad(self):
         self.ensure_one()
 
         if not self.notificar_contabilidad:
+            _logger.info("[Ausencias] No se notifica contabilidad por configuración del registro.")
             return False
 
         correo = self.correo_contabilidad
+
         if not correo:
             _logger.warning(
                 "[Ausencias] No se configuró mantenimiento.correo_contabilidad"
             )
+            self.message_post(
+                body=_(
+                    "No se envió correo a contabilidad porque no está configurado "
+                    "el parámetro mantenimiento.correo_contabilidad."
+                ),
+                message_type='notification'
+            )
             return False
 
-        template = self.env.ref(
+        return self._send_mail_template_safe(
             'sat.mail_template_mantenimiento_ausencia_contabilidad',
-            raise_if_not_found=False
+            context_values={
+                'correo_contabilidad': correo,
+            },
+            log_name='Permiso aprobado para contabilidad / gerencia'
         )
 
-        if template:
-            template.with_context(
-                correo_contabilidad=correo
-            ).send_mail(self.id, force_send=True)
-            return True
+    def _notificar_trabajador_aprobado(self):
+        self.ensure_one()
 
-        # Si no existe plantilla aún, dejamos log y mensaje.
-        self.message_post(
-            body=_(
-                "No se encontró la plantilla de correo para contabilidad. "
-                "Configure sat.mail_template_mantenimiento_ausencia_contabilidad."
-            ),
-            message_type='notification'
+        email = self.tecnico_id.email or self.tecnico_id.partner_id.email
+
+        if not email:
+            _logger.warning(
+                "[Ausencias] Técnico %s no tiene correo configurado",
+                self.tecnico_id.name
+            )
+            self.message_post(
+                body=_("No se pudo notificar al trabajador porque no tiene correo configurado."),
+                message_type='notification'
+            )
+            return False
+
+        return self._send_mail_template_safe(
+            'sat.email_template_mantenimiento_ausencia_empleado_aprobado',
+            log_name='Solicitud aprobada para trabajador'
         )
-        return False
+
+    def _notificar_trabajador_rechazado(self):
+        self.ensure_one()
+
+        email = self.tecnico_id.email or self.tecnico_id.partner_id.email
+
+        if not email:
+            _logger.warning(
+                "[Ausencias] Técnico %s no tiene correo configurado",
+                self.tecnico_id.name
+            )
+            self.message_post(
+                body=_("No se pudo notificar al trabajador porque no tiene correo configurado."),
+                message_type='notification'
+            )
+            return False
+
+        return self._send_mail_template_safe(
+            'sat.email_template_mantenimiento_ausencia_empleado_rechazado',
+            log_name='Solicitud rechazada para trabajador'
+        )
 
     # ============================================================
     # ACCIONES DE FLUJO
@@ -500,16 +807,23 @@ class MantenimientoTecnicoAusencia(models.Model):
             if rec.estado not in ('borrador', 'rechazado'):
                 raise UserError(_("Solo se pueden enviar a aprobación solicitudes en borrador o rechazadas."))
 
+            rec._normalize_record_dates()
+
             rec.write({'estado': 'pendiente'})
+
             rec.message_post(
                 body=_("Solicitud enviada para aprobación."),
                 message_type='notification'
             )
 
+            rec._notificar_jefe_area()
+
     def action_aprobar(self):
         for rec in self:
             if rec.estado not in ('pendiente', 'borrador'):
                 raise UserError(_("Solo se pueden aprobar solicitudes pendientes o en borrador."))
+
+            rec._normalize_record_dates()
 
             rec.write({
                 'estado': 'aprobado',
@@ -519,7 +833,9 @@ class MantenimientoTecnicoAusencia(models.Model):
 
             rec._crear_bloqueo_disponibilidad()
             tickets = rec._marcar_tickets_afectados()
+
             rec._notificar_contabilidad()
+            rec._notificar_trabajador_aprobado()
 
             rec.message_post(
                 body=_(
@@ -538,6 +854,8 @@ class MantenimientoTecnicoAusencia(models.Model):
             if rec.tipo not in ('enfermedad', 'falta'):
                 raise UserError(_("Esta acción solo aplica para enfermedad o falta."))
 
+            rec._normalize_record_dates()
+
             nuevo_estado = 'ausente_activo' if rec.tipo == 'enfermedad' else 'aprobado'
 
             rec.write({
@@ -548,7 +866,9 @@ class MantenimientoTecnicoAusencia(models.Model):
 
             rec._crear_bloqueo_disponibilidad()
             tickets = rec._marcar_tickets_afectados()
+
             rec._notificar_contabilidad()
+            rec._notificar_trabajador_aprobado()
 
             rec.message_post(
                 body=_(
@@ -568,6 +888,8 @@ class MantenimientoTecnicoAusencia(models.Model):
                 'rechazado_por_id': self.env.user.id,
                 'fecha_rechazo': fields.Datetime.now(),
             })
+
+            rec._notificar_trabajador_rechazado()
 
             rec.message_post(
                 body=_("❌ Solicitud rechazada."),
@@ -604,6 +926,7 @@ class MantenimientoTecnicoAusencia(models.Model):
 
     def action_ver_tickets_afectados(self):
         self.ensure_one()
+
         return {
             'type': 'ir.actions.act_window',
             'name': _('Tickets afectados'),
