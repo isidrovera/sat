@@ -1,12 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <odoo>
-
     <record id="view_partner_form_whatsapp_extension" model="ir.ui.view">
         <field name="name">res.partner.form.whatsapp.extension</field>
         <field name="model">res.partner</field>
         <field name="inherit_id" ref="base.view_partner_form"/>
         <field name="arch" type="xml">
-
             <xpath expr="//notebook" position="inside">
                 <page string="WhatsApp">
                     <group>
@@ -16,14 +14,12 @@
                             <field name="whatsapp_verified"/>
                             <field name="whatsapp_access_level"/>
                         </group>
-
                         <group string="Bloqueo">
                             <field name="whatsapp_blocked"/>
                             <field name="whatsapp_block_reason"
                                    invisible="not whatsapp_blocked"/>
                         </group>
                     </group>
-
                     <group>
                         <group string="Permisos">
                             <field name="whatsapp_allow_auto_response"/>
@@ -32,7 +28,6 @@
                             <field name="whatsapp_allow_odoo_lookup"/>
                             <field name="whatsapp_allow_human_transfer"/>
                         </group>
-
                         <group string="Modo humano">
                             <field name="whatsapp_human_mode" readonly="1"/>
                             <field name="whatsapp_human_since" readonly="1"/>
@@ -49,29 +44,24 @@
                                     invisible="not whatsapp_human_mode"/>
                         </group>
                     </group>
-
                     <group string="Contexto de conversación">
                         <field name="whatsapp_last_message_at"/>
                         <field name="whatsapp_last_session_at"/>
                         <field name="whatsapp_last_intent"/>
                         <field name="whatsapp_session_timeout_minutes"/>
                     </group>
-
                     <group string="Multiempresa WhatsApp">
                         <field name="whatsapp_company_ids"
                                widget="many2many_tags"
-                               domain="[('company_type','=','company')]"/>
+                               domain="[('is_company','=',True)]"/>
                         <field name="whatsapp_active_company_id"
-                               domain="[('company_type','=','company')]"/>
+                               domain="[('is_company','=',True)]"/>
                     </group>
-
                     <group string="Notas internas">
                         <field name="whatsapp_notes" nolabel="1"/>
                     </group>
                 </page>
             </xpath>
-
         </field>
     </record>
-
 </odoo>
