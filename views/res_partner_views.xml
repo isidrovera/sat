@@ -16,17 +16,40 @@
                             <field name="whatsapp_number"/>
                             <field name="whatsapp_verified"/>
                             <field name="whatsapp_access_level"/>
+                            <field name="whatsapp_status_label" readonly="1"/>
                         </group>
 
                         <group string="Bloqueo">
                             <field name="whatsapp_blocked"/>
                             <field name="whatsapp_block_reason"
                                    invisible="not whatsapp_blocked"/>
+
+                            <button name="action_whatsapp_block"
+                                    type="object"
+                                    string="Bloquear WhatsApp"
+                                    class="btn-secondary"
+                                    invisible="whatsapp_blocked"/>
+
+                            <button name="action_whatsapp_unblock"
+                                    type="object"
+                                    string="Desbloquear WhatsApp"
+                                    class="btn-primary"
+                                    invisible="not whatsapp_blocked"/>
+                        </group>
+                    </group>
+
+                    <group string="Identificadores WhatsApp / Baileys">
+                        <group>
+                            <field name="whatsapp_jid"/>
+                            <field name="whatsapp_lid"/>
+                        </group>
+                        <group>
+                            <field name="whatsapp_last_raw_jid" readonly="1"/>
                         </group>
                     </group>
 
                     <group>
-                        <group string="Permisos">
+                        <group string="Permisos base">
                             <field name="whatsapp_allow_auto_response"/>
                             <field name="whatsapp_allow_ai"/>
                             <field name="whatsapp_allow_ticket"/>
@@ -34,10 +57,20 @@
                             <field name="whatsapp_allow_human_transfer"/>
                         </group>
 
+                        <group string="Permisos efectivos">
+                            <field name="whatsapp_can_bot_respond" readonly="1"/>
+                            <field name="whatsapp_can_auto_response_effective" readonly="1"/>
+                            <field name="whatsapp_can_use_ai_effective" readonly="1"/>
+                            <field name="whatsapp_can_create_ticket_effective" readonly="1"/>
+                        </group>
+                    </group>
+
+                    <group>
                         <group string="Modo humano">
                             <field name="whatsapp_human_mode" readonly="1"/>
                             <field name="whatsapp_human_since" readonly="1"/>
                             <field name="whatsapp_human_by_id" readonly="1"/>
+                            <field name="whatsapp_human_by_name" readonly="1"/>
 
                             <button name="action_whatsapp_enable_human_mode"
                                     type="object"
@@ -51,22 +84,29 @@
                                     class="btn-secondary"
                                     invisible="not whatsapp_human_mode"/>
                         </group>
-                    </group>
 
-                    <group string="Contexto de conversación">
-                        <field name="whatsapp_last_message_at"/>
-                        <field name="whatsapp_last_session_at"/>
-                        <field name="whatsapp_last_intent"/>
-                        <field name="whatsapp_session_timeout_minutes"/>
+                        <group string="Contexto de conversación">
+                            <field name="whatsapp_last_message_at" readonly="1"/>
+                            <field name="whatsapp_last_session_at" readonly="1"/>
+                            <field name="whatsapp_last_intent" readonly="1"/>
+                            <field name="whatsapp_session_timeout_minutes"/>
+                        </group>
                     </group>
 
                     <group string="Multiempresa WhatsApp">
-                        <field name="whatsapp_company_ids"
-                               widget="many2many_tags"
-                               domain="[('is_company','=',True)]"/>
+                        <group>
+                            <field name="whatsapp_company_ids"
+                                   widget="many2many_tags"
+                                   domain="[('is_company','=',True)]"/>
 
-                        <field name="whatsapp_active_company_id"
-                               domain="[('is_company','=',True)]"/>
+                            <field name="whatsapp_active_company_id"
+                                   domain="[('is_company','=',True)]"/>
+                        </group>
+
+                        <group string="Estado multiempresa">
+                            <field name="whatsapp_company_count" readonly="1"/>
+                            <field name="whatsapp_requires_company_selection" readonly="1"/>
+                        </group>
                     </group>
 
                     <group string="Notas internas">
