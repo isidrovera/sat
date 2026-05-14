@@ -164,7 +164,8 @@
         'views/ticket_alquiler_inherit_views.xml',
         'views/evidencia_page_template.xml',
         'views/ticket_alquiler_evidencia_view.xml',
-        'views/permisos_templates.xml',       
+        'views/permisos_templates.xml',
+        "views/res_partner_views.xml",      
         'views/acciones_menus.xml',
         
     ],
