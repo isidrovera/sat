@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+
+    <!-- =====================================================
+         Inicializar horarios semanales WhatsApp
+         Crea/actualiza:
+         Lunes a viernes, sábado y domingo
+    ====================================================== -->
+    <function model="whatsapp.business.hours" name="init_default_hours"/>
+
+    <!-- =====================================================
+         Cargar feriados Perú
+         Estos métodos son idempotentes:
+         si ya existen, los actualiza; si no existen, los crea.
+    ====================================================== -->
+    <function model="whatsapp.calendar.event" name="load_peru_holidays">
+        <value eval="2026"/>
+    </function>
+
+    <function model="whatsapp.calendar.event" name="load_peru_holidays">
+        <value eval="2027"/>
+    </function>
+
+</odoo>

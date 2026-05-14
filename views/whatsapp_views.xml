@@ -1,0 +1,1195 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <data>
+
+        <!-- ========================================================= -->
+        <!-- WHATSAPP SESSION                                         -->
+        <!-- ========================================================= -->
+
+        <record id="view_whatsapp_session_list" model="ir.ui.view">
+            <field name="name">whatsapp.session.list</field>
+            <field name="model">whatsapp.session</field>
+            <field name="arch" type="xml">
+                <list string="Sesiones WhatsApp">
+                    <field name="name"/>
+                    <field name="partner_id"/>
+                    <field name="active_company_id"/>
+                    <field name="phone"/>
+                    <field name="state"/>
+                    <field name="last_intent"/>
+                    <field name="started_at"/>
+                    <field name="last_message_at"/>
+                    <field name="message_count"/>
+                    <field name="is_active"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="view_whatsapp_session_form" model="ir.ui.view">
+            <field name="name">whatsapp.session.form</field>
+            <field name="model">whatsapp.session</field>
+            <field name="arch" type="xml">
+                <form string="Sesión WhatsApp">
+                    <header>
+                        <button name="action_reopen"
+                                type="object"
+                                string="Reabrir"
+                                class="btn-primary"
+                                invisible="state in ('open', 'human')"/>
+                        <button name="action_set_human"
+                                type="object"
+                                string="Modo humano"
+                                class="btn-secondary"
+                                invisible="state == 'human'"/>
+                        <button name="action_close"
+                                type="object"
+                                string="Cerrar"
+                                class="btn-secondary"
+                                invisible="state in ('closed', 'expired')"/>
+                        <button name="action_expire"
+                                type="object"
+                                string="Expirar"
+                                class="btn-secondary"
+                                invisible="state in ('closed', 'expired')"/>
+                        <field name="state" widget="statusbar" statusbar_visible="open,human,closed,expired"/>
+                    </header>
+
+                    <sheet>
+                        <group>
+                            <group string="Sesión">
+                                <field name="name" readonly="1"/>
+                                <field name="partner_id"/>
+                                <field name="active_company_id"/>
+                                <field name="source"/>
+                            </group>
+                            <group string="Identificadores">
+                                <field name="phone"/>
+                                <field name="jid"/>
+                                <field name="lid"/>
+                                <field name="raw_jid"/>
+                            </group>
+                        </group>
+
+                        <group>
+                            <group string="Fechas">
+                                <field name="started_at"/>
+                                <field name="last_message_at"/>
+                                <field name="closed_at"/>
+                            </group>
+                            <group string="Contexto">
+                                <field name="last_intent"/>
+                                <field name="message_count"/>
+                                <field name="is_active"/>
+                            </group>
+                        </group>
+
+                        <notebook>
+                            <page string="Mensajes">
+                                <field name="message_ids">
+                                    <list editable="bottom">
+                                        <field name="message_date"/>
+                                        <field name="direction"/>
+                                        <field name="role"/>
+                                        <field name="message_type"/>
+                                        <field name="intent"/>
+                                        <field name="content"/>
+                                    </list>
+                                </field>
+                            </page>
+                            <page string="Últimos mensajes">
+                                <group>
+                                    <field name="last_user_message"/>
+                                    <field name="last_bot_message"/>
+                                </group>
+                            </page>
+                            <page string="Notas">
+                                <field name="note" nolabel="1"/>
+                            </page>
+                        </notebook>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="view_whatsapp_session_search" model="ir.ui.view">
+            <field name="name">whatsapp.session.search</field>
+            <field name="model">whatsapp.session</field>
+            <field name="arch" type="xml">
+                <search string="Buscar sesiones WhatsApp">
+                    <field name="name"/>
+                    <field name="partner_id"/>
+                    <field name="active_company_id"/>
+                    <field name="phone"/>
+                    <field name="jid"/>
+                    <field name="lid"/>
+                    <field name="last_intent"/>
+                    <filter name="open" string="Abiertas" domain="[('state','=','open')]"/>
+                    <filter name="human" string="Modo humano" domain="[('state','=','human')]"/>
+                    <filter name="closed" string="Cerradas" domain="[('state','=','closed')]"/>
+                    <filter name="expired" string="Expiradas" domain="[('state','=','expired')]"/>
+                    <separator/>
+                    <filter name="group_partner" string="Contacto" context="{'group_by':'partner_id'}"/>
+                    <filter name="group_state" string="Estado" context="{'group_by':'state'}"/>
+                    <filter name="group_company" string="Empresa" context="{'group_by':'active_company_id'}"/>
+                </search>
+            </field>
+        </record>
+
+        <record id="action_whatsapp_session" model="ir.actions.act_window">
+            <field name="name">Sesiones WhatsApp</field>
+            <field name="res_model">whatsapp.session</field>
+            <field name="view_mode">list,form</field>
+            <field name="search_view_id" ref="view_whatsapp_session_search"/>
+            <field name="context">{'search_default_open': 1}</field>
+        </record>
+
+        <!-- ========================================================= -->
+        <!-- WHATSAPP MESSAGE                                         -->
+        <!-- ========================================================= -->
+
+        <record id="view_whatsapp_message_list" model="ir.ui.view">
+            <field name="name">whatsapp.message.list</field>
+            <field name="model">whatsapp.message</field>
+            <field name="arch" type="xml">
+                <list string="Mensajes WhatsApp">
+                    <field name="message_date"/>
+                    <field name="session_id"/>
+                    <field name="partner_id"/>
+                    <field name="company_id"/>
+                    <field name="direction"/>
+                    <field name="role"/>
+                    <field name="message_type"/>
+                    <field name="intent"/>
+                    <field name="content"/>
+                    <field name="is_error"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="view_whatsapp_message_form" model="ir.ui.view">
+            <field name="name">whatsapp.message.form</field>
+            <field name="model">whatsapp.message</field>
+            <field name="arch" type="xml">
+                <form string="Mensaje WhatsApp">
+                    <sheet>
+                        <group>
+                            <group string="Relación">
+                                <field name="session_id"/>
+                                <field name="partner_id"/>
+                                <field name="company_id"/>
+                                <field name="message_date"/>
+                            </group>
+                            <group string="Mensaje">
+                                <field name="direction"/>
+                                <field name="role"/>
+                                <field name="message_type"/>
+                                <field name="intent"/>
+                                <field name="external_message_id"/>
+                            </group>
+                        </group>
+
+                        <group string="Identificadores">
+                            <field name="phone"/>
+                            <field name="jid"/>
+                            <field name="lid"/>
+                            <field name="raw_jid"/>
+                        </group>
+
+                        <group string="Contenido">
+                            <field name="content" nolabel="1"/>
+                        </group>
+
+                        <group string="Media">
+                            <field name="media_url"/>
+                            <field name="media_mimetype"/>
+                        </group>
+
+                        <group string="Error">
+                            <field name="is_error"/>
+                            <field name="error_message"/>
+                        </group>
+
+                        <group string="Payload">
+                            <field name="raw_payload" nolabel="1"/>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="view_whatsapp_message_search" model="ir.ui.view">
+            <field name="name">whatsapp.message.search</field>
+            <field name="model">whatsapp.message</field>
+            <field name="arch" type="xml">
+                <search string="Buscar mensajes WhatsApp">
+                    <field name="session_id"/>
+                    <field name="partner_id"/>
+                    <field name="company_id"/>
+                    <field name="phone"/>
+                    <field name="jid"/>
+                    <field name="lid"/>
+                    <field name="content"/>
+                    <field name="intent"/>
+                    <filter name="incoming" string="Entrantes" domain="[('direction','=','in')]"/>
+                    <filter name="outgoing" string="Salientes" domain="[('direction','=','out')]"/>
+                    <filter name="errors" string="Con error" domain="[('is_error','=',True)]"/>
+                    <separator/>
+                    <filter name="group_session" string="Sesión" context="{'group_by':'session_id'}"/>
+                    <filter name="group_partner" string="Contacto" context="{'group_by':'partner_id'}"/>
+                    <filter name="group_direction" string="Dirección" context="{'group_by':'direction'}"/>
+                    <filter name="group_type" string="Tipo" context="{'group_by':'message_type'}"/>
+                </search>
+            </field>
+        </record>
+
+        <record id="action_whatsapp_message" model="ir.actions.act_window">
+            <field name="name">Mensajes WhatsApp</field>
+            <field name="res_model">whatsapp.message</field>
+            <field name="view_mode">list,form</field>
+            <field name="search_view_id" ref="view_whatsapp_message_search"/>
+        </record>
+
+        <!-- ========================================================= -->
+        <!-- WHATSAPP OUTBOX                                          -->
+        <!-- ========================================================= -->
+
+        <record id="view_whatsapp_outbox_list" model="ir.ui.view">
+            <field name="name">whatsapp.outbox.list</field>
+            <field name="model">whatsapp.outbox</field>
+            <field name="arch" type="xml">
+                <list string="Cola WhatsApp">
+                    <field name="scheduled_at"/>
+                    <field name="partner_id"/>
+                    <field name="company_id"/>
+                    <field name="phone"/>
+                    <field name="message_type"/>
+                    <field name="state"/>
+                    <field name="retry_count"/>
+                    <field name="sent_at"/>
+                    <field name="content"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="view_whatsapp_outbox_form" model="ir.ui.view">
+            <field name="name">whatsapp.outbox.form</field>
+            <field name="model">whatsapp.outbox</field>
+            <field name="arch" type="xml">
+                <form string="Mensaje en cola WhatsApp">
+                    <header>
+                        <button name="action_mark_sent"
+                                type="object"
+                                string="Marcar enviado"
+                                class="btn-primary"
+                                invisible="state == 'sent'"/>
+                        <button name="action_mark_failed"
+                                type="object"
+                                string="Marcar fallido"
+                                class="btn-secondary"
+                                invisible="state in ('sent', 'cancelled')"/>
+                        <button name="action_cancel"
+                                type="object"
+                                string="Cancelar"
+                                class="btn-secondary"
+                                invisible="state in ('sent', 'cancelled')"/>
+                        <field name="state" widget="statusbar" statusbar_visible="pending,sent,failed,cancelled"/>
+                    </header>
+                    <sheet>
+                        <group>
+                            <group string="Relación">
+                                <field name="session_id"/>
+                                <field name="message_id"/>
+                                <field name="partner_id"/>
+                                <field name="company_id"/>
+                            </group>
+                            <group string="Destino">
+                                <field name="phone"/>
+                                <field name="jid"/>
+                                <field name="lid"/>
+                                <field name="message_type"/>
+                            </group>
+                        </group>
+
+                        <group>
+                            <group string="Estado">
+                                <field name="scheduled_at"/>
+                                <field name="sent_at"/>
+                                <field name="external_message_id"/>
+                                <field name="retry_count"/>
+                                <field name="max_retries"/>
+                            </group>
+                            <group string="Media">
+                                <field name="media_id"/>
+                            </group>
+                        </group>
+
+                        <group string="Contenido">
+                            <field name="content" nolabel="1"/>
+                        </group>
+
+                        <group string="Error">
+                            <field name="error_message" nolabel="1"/>
+                        </group>
+
+                        <group string="Payload">
+                            <field name="raw_payload" nolabel="1"/>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="view_whatsapp_outbox_search" model="ir.ui.view">
+            <field name="name">whatsapp.outbox.search</field>
+            <field name="model">whatsapp.outbox</field>
+            <field name="arch" type="xml">
+                <search string="Buscar cola WhatsApp">
+                    <field name="partner_id"/>
+                    <field name="company_id"/>
+                    <field name="phone"/>
+                    <field name="jid"/>
+                    <field name="lid"/>
+                    <field name="content"/>
+                    <filter name="pending" string="Pendientes" domain="[('state','=','pending')]"/>
+                    <filter name="sent" string="Enviados" domain="[('state','=','sent')]"/>
+                    <filter name="failed" string="Fallidos" domain="[('state','=','failed')]"/>
+                    <separator/>
+                    <filter name="group_state" string="Estado" context="{'group_by':'state'}"/>
+                    <filter name="group_partner" string="Contacto" context="{'group_by':'partner_id'}"/>
+                </search>
+            </field>
+        </record>
+
+        <record id="action_whatsapp_outbox" model="ir.actions.act_window">
+            <field name="name">Cola de salida WhatsApp</field>
+            <field name="res_model">whatsapp.outbox</field>
+            <field name="view_mode">list,form</field>
+            <field name="search_view_id" ref="view_whatsapp_outbox_search"/>
+            <field name="context">{'search_default_pending': 1}</field>
+        </record>
+
+        <!-- ========================================================= -->
+        <!-- WHATSAPP MEDIA                                           -->
+        <!-- ========================================================= -->
+
+        <record id="view_whatsapp_media_list" model="ir.ui.view">
+            <field name="name">whatsapp.media.list</field>
+            <field name="model">whatsapp.media</field>
+            <field name="arch" type="xml">
+                <list string="Media WhatsApp">
+                    <field name="create_date"/>
+                    <field name="name"/>
+                    <field name="media_type"/>
+                    <field name="partner_id"/>
+                    <field name="session_id"/>
+                    <field name="filename"/>
+                    <field name="mimetype"/>
+                    <field name="is_processed"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="view_whatsapp_media_form" model="ir.ui.view">
+            <field name="name">whatsapp.media.form</field>
+            <field name="model">whatsapp.media</field>
+            <field name="arch" type="xml">
+                <form string="Media WhatsApp">
+                    <sheet>
+                        <group>
+                            <group string="Relación">
+                                <field name="message_id"/>
+                                <field name="session_id"/>
+                                <field name="partner_id"/>
+                                <field name="company_id"/>
+                            </group>
+                            <group string="Archivo">
+                                <field name="name"/>
+                                <field name="media_type"/>
+                                <field name="filename"/>
+                                <field name="mimetype"/>
+                                <field name="external_media_id"/>
+                                <field name="attachment_id"/>
+                            </group>
+                        </group>
+
+                        <group string="URL / descripción">
+                            <field name="url"/>
+                            <field name="caption"/>
+                        </group>
+
+                        <group string="IA / procesamiento">
+                            <field name="is_processed"/>
+                            <field name="ai_summary"/>
+                            <field name="process_error"/>
+                        </group>
+
+                        <group string="Payload">
+                            <field name="raw_payload" nolabel="1"/>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="view_whatsapp_media_search" model="ir.ui.view">
+            <field name="name">whatsapp.media.search</field>
+            <field name="model">whatsapp.media</field>
+            <field name="arch" type="xml">
+                <search string="Buscar media WhatsApp">
+                    <field name="name"/>
+                    <field name="partner_id"/>
+                    <field name="session_id"/>
+                    <field name="filename"/>
+                    <field name="external_media_id"/>
+                    <filter name="images" string="Imágenes" domain="[('media_type','=','image')]"/>
+                    <filter name="audio" string="Audios" domain="[('media_type','=','audio')]"/>
+                    <filter name="documents" string="Documentos" domain="[('media_type','=','document')]"/>
+                    <filter name="pending" string="No procesado" domain="[('is_processed','=',False)]"/>
+                    <separator/>
+                    <filter name="group_type" string="Tipo" context="{'group_by':'media_type'}"/>
+                    <filter name="group_partner" string="Contacto" context="{'group_by':'partner_id'}"/>
+                </search>
+            </field>
+        </record>
+
+        <record id="action_whatsapp_media" model="ir.actions.act_window">
+            <field name="name">Media WhatsApp</field>
+            <field name="res_model">whatsapp.media</field>
+            <field name="view_mode">list,form</field>
+            <field name="search_view_id" ref="view_whatsapp_media_search"/>
+        </record>
+
+        <!-- ========================================================= -->
+        <!-- WHATSAPP HANDOFF                                         -->
+        <!-- ========================================================= -->
+
+        <record id="view_whatsapp_handoff_list" model="ir.ui.view">
+            <field name="name">whatsapp.handoff.list</field>
+            <field name="model">whatsapp.handoff</field>
+            <field name="arch" type="xml">
+                <list string="Handoff WhatsApp">
+                    <field name="taken_at"/>
+                    <field name="partner_id"/>
+                    <field name="company_id"/>
+                    <field name="session_id"/>
+                    <field name="state"/>
+                    <field name="taken_by_id"/>
+                    <field name="taken_by_name"/>
+                    <field name="released_at"/>
+                    <field name="released_by_name"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="view_whatsapp_handoff_form" model="ir.ui.view">
+            <field name="name">whatsapp.handoff.form</field>
+            <field name="model">whatsapp.handoff</field>
+            <field name="arch" type="xml">
+                <form string="Derivación humana WhatsApp">
+                    <header>
+                        <button name="action_release"
+                                type="object"
+                                string="Liberar"
+                                class="btn-primary"
+                                invisible="state != 'open'"/>
+                        <button name="action_cancel"
+                                type="object"
+                                string="Cancelar"
+                                class="btn-secondary"
+                                invisible="state != 'open'"/>
+                        <field name="state" widget="statusbar" statusbar_visible="open,released,cancelled"/>
+                    </header>
+                    <sheet>
+                        <group>
+                            <group string="Relación">
+                                <field name="name"/>
+                                <field name="session_id"/>
+                                <field name="partner_id"/>
+                                <field name="company_id"/>
+                            </group>
+                            <group string="Tomado">
+                                <field name="taken_by_id"/>
+                                <field name="taken_by_name"/>
+                                <field name="taken_at"/>
+                            </group>
+                        </group>
+
+                        <group>
+                            <group string="Liberado">
+                                <field name="released_by_id"/>
+                                <field name="released_by_name"/>
+                                <field name="released_at"/>
+                            </group>
+                            <group string="Motivo">
+                                <field name="reason"/>
+                            </group>
+                        </group>
+
+                        <group string="Notas">
+                            <field name="note" nolabel="1"/>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="view_whatsapp_handoff_search" model="ir.ui.view">
+            <field name="name">whatsapp.handoff.search</field>
+            <field name="model">whatsapp.handoff</field>
+            <field name="arch" type="xml">
+                <search string="Buscar handoff WhatsApp">
+                    <field name="partner_id"/>
+                    <field name="company_id"/>
+                    <field name="session_id"/>
+                    <field name="taken_by_name"/>
+                    <filter name="open" string="Activos" domain="[('state','=','open')]"/>
+                    <filter name="released" string="Liberados" domain="[('state','=','released')]"/>
+                    <filter name="cancelled" string="Cancelados" domain="[('state','=','cancelled')]"/>
+                    <separator/>
+                    <filter name="group_state" string="Estado" context="{'group_by':'state'}"/>
+                    <filter name="group_partner" string="Contacto" context="{'group_by':'partner_id'}"/>
+                </search>
+            </field>
+        </record>
+
+        <record id="action_whatsapp_handoff" model="ir.actions.act_window">
+            <field name="name">Handoff humano WhatsApp</field>
+            <field name="res_model">whatsapp.handoff</field>
+            <field name="view_mode">list,form</field>
+            <field name="search_view_id" ref="view_whatsapp_handoff_search"/>
+            <field name="context">{'search_default_open': 1}</field>
+        </record>
+
+        <!-- ========================================================= -->
+        <!-- WHATSAPP AUTO RESPONSE                                   -->
+        <!-- ========================================================= -->
+
+        <record id="view_whatsapp_auto_response_list" model="ir.ui.view">
+            <field name="name">whatsapp.auto.response.list</field>
+            <field name="model">whatsapp.auto.response</field>
+            <field name="arch" type="xml">
+                <list string="Auto respuestas WhatsApp">
+                    <field name="active"/>
+                    <field name="priority"/>
+                    <field name="sequence"/>
+                    <field name="name"/>
+                    <field name="category"/>
+                    <field name="applies_to"/>
+                    <field name="match_type"/>
+                    <field name="trigger"/>
+                    <field name="stop_flow"/>
+                    <field name="allow_ai_after"/>
+                    <field name="use_count"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="view_whatsapp_auto_response_form" model="ir.ui.view">
+            <field name="name">whatsapp.auto.response.form</field>
+            <field name="model">whatsapp.auto.response</field>
+            <field name="arch" type="xml">
+                <form string="Auto respuesta WhatsApp">
+                    <sheet>
+                        <group>
+                            <group string="Regla">
+                                <field name="active"/>
+                                <field name="name"/>
+                                <field name="category"/>
+                                <field name="applies_to"/>
+                                <field name="priority"/>
+                                <field name="sequence"/>
+                            </group>
+                            <group string="Coincidencia">
+                                <field name="match_type"/>
+                                <field name="trigger"/>
+                                <field name="only_business_hours"/>
+                                <field name="only_after_hours"/>
+                            </group>
+                        </group>
+
+                        <group>
+                            <group string="Flujo">
+                                <field name="stop_flow"/>
+                                <field name="allow_ai_after"/>
+                                <field name="use_partner_name"/>
+                            </group>
+                            <group string="Uso">
+                                <field name="last_used_at"/>
+                                <field name="use_count"/>
+                            </group>
+                        </group>
+
+                        <group string="Respuesta">
+                            <field name="response" nolabel="1"/>
+                        </group>
+
+                        <group string="Notas">
+                            <field name="note" nolabel="1"/>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="view_whatsapp_auto_response_search" model="ir.ui.view">
+            <field name="name">whatsapp.auto.response.search</field>
+            <field name="model">whatsapp.auto.response</field>
+            <field name="arch" type="xml">
+                <search string="Buscar auto respuestas">
+                    <field name="name"/>
+                    <field name="trigger"/>
+                    <field name="response"/>
+                    <filter name="active" string="Activas" domain="[('active','=',True)]"/>
+                    <filter name="inactive" string="Inactivas" domain="[('active','=',False)]"/>
+                    <separator/>
+                    <filter name="group_category" string="Categoría" context="{'group_by':'category'}"/>
+                    <filter name="group_applies" string="Aplica a" context="{'group_by':'applies_to'}"/>
+                </search>
+            </field>
+        </record>
+
+        <record id="action_whatsapp_auto_response" model="ir.actions.act_window">
+            <field name="name">Auto respuestas WhatsApp</field>
+            <field name="res_model">whatsapp.auto.response</field>
+            <field name="view_mode">list,form</field>
+            <field name="search_view_id" ref="view_whatsapp_auto_response_search"/>
+            <field name="context">{'search_default_active': 1}</field>
+        </record>
+
+        <!-- ========================================================= -->
+        <!-- WHATSAPP INTENT RULE                                     -->
+        <!-- ========================================================= -->
+
+        <record id="view_whatsapp_intent_rule_list" model="ir.ui.view">
+            <field name="name">whatsapp.intent.rule.list</field>
+            <field name="model">whatsapp.intent.rule</field>
+            <field name="arch" type="xml">
+                <list string="Reglas de intención WhatsApp">
+                    <field name="active"/>
+                    <field name="priority"/>
+                    <field name="sequence"/>
+                    <field name="name"/>
+                    <field name="intent"/>
+                    <field name="action"/>
+                    <field name="applies_to"/>
+                    <field name="match_type"/>
+                    <field name="pattern"/>
+                    <field name="use_count"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="view_whatsapp_intent_rule_form" model="ir.ui.view">
+            <field name="name">whatsapp.intent.rule.form</field>
+            <field name="model">whatsapp.intent.rule</field>
+            <field name="arch" type="xml">
+                <form string="Regla de intención WhatsApp">
+                    <sheet>
+                        <group>
+                            <group string="Regla">
+                                <field name="active"/>
+                                <field name="name"/>
+                                <field name="intent"/>
+                                <field name="action"/>
+                                <field name="applies_to"/>
+                                <field name="priority"/>
+                                <field name="sequence"/>
+                            </group>
+                            <group string="Coincidencia">
+                                <field name="match_type"/>
+                                <field name="pattern"/>
+                                <field name="requires_registered"/>
+                                <field name="requires_company"/>
+                            </group>
+                        </group>
+
+                        <group>
+                            <group string="Flujo">
+                                <field name="stop_flow"/>
+                                <field name="allow_ai_after"/>
+                            </group>
+                            <group string="Uso">
+                                <field name="last_used_at"/>
+                                <field name="use_count"/>
+                            </group>
+                        </group>
+
+                        <group string="Notas">
+                            <field name="note" nolabel="1"/>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="view_whatsapp_intent_rule_search" model="ir.ui.view">
+            <field name="name">whatsapp.intent.rule.search</field>
+            <field name="model">whatsapp.intent.rule</field>
+            <field name="arch" type="xml">
+                <search string="Buscar reglas de intención">
+                    <field name="name"/>
+                    <field name="pattern"/>
+                    <field name="intent"/>
+                    <filter name="active" string="Activas" domain="[('active','=',True)]"/>
+                    <filter name="inactive" string="Inactivas" domain="[('active','=',False)]"/>
+                    <separator/>
+                    <filter name="group_intent" string="Intención" context="{'group_by':'intent'}"/>
+                    <filter name="group_action" string="Acción" context="{'group_by':'action'}"/>
+                </search>
+            </field>
+        </record>
+
+        <record id="action_whatsapp_intent_rule" model="ir.actions.act_window">
+            <field name="name">Reglas de intención WhatsApp</field>
+            <field name="res_model">whatsapp.intent.rule</field>
+            <field name="view_mode">list,form</field>
+            <field name="search_view_id" ref="view_whatsapp_intent_rule_search"/>
+            <field name="context">{'search_default_active': 1}</field>
+        </record>
+
+        <!-- ========================================================= -->
+        <!-- WHATSAPP TEMPLATE                                        -->
+        <!-- ========================================================= -->
+
+        <record id="view_whatsapp_template_list" model="ir.ui.view">
+            <field name="name">whatsapp.template.list</field>
+            <field name="model">whatsapp.template</field>
+            <field name="arch" type="xml">
+                <list string="Plantillas WhatsApp">
+                    <field name="active"/>
+                    <field name="name"/>
+                    <field name="title"/>
+                    <field name="category"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="view_whatsapp_template_form" model="ir.ui.view">
+            <field name="name">whatsapp.template.form</field>
+            <field name="model">whatsapp.template</field>
+            <field name="arch" type="xml">
+                <form string="Plantilla WhatsApp">
+                    <sheet>
+                        <group>
+                            <group>
+                                <field name="active"/>
+                                <field name="name"/>
+                                <field name="title"/>
+                                <field name="category"/>
+                            </group>
+                        </group>
+
+                        <group string="Mensaje">
+                            <field name="body" nolabel="1"/>
+                        </group>
+
+                        <group string="Variables disponibles">
+                            <div>
+                                <p><strong>{{partner_name}}</strong> Nombre del contacto</p>
+                                <p><strong>{{contact_name}}</strong> Nombre del contacto</p>
+                                <p><strong>{{company_name}}</strong> Empresa activa</p>
+                                <p><strong>{{company_vat}}</strong> RUC de empresa activa</p>
+                                <p><strong>{{session_name}}</strong> Referencia de sesión</p>
+                                <p><strong>{{business_message}}</strong> Mensaje de horario/calendario</p>
+                                <p><strong>{{display_hours}}</strong> Horario mostrado</p>
+                                <p><strong>{{reason}}</strong> Motivo de cierre</p>
+                            </div>
+                        </group>
+
+                        <group string="Notas">
+                            <field name="note" nolabel="1"/>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="view_whatsapp_template_search" model="ir.ui.view">
+            <field name="name">whatsapp.template.search</field>
+            <field name="model">whatsapp.template</field>
+            <field name="arch" type="xml">
+                <search string="Buscar plantillas WhatsApp">
+                    <field name="name"/>
+                    <field name="title"/>
+                    <field name="body"/>
+                    <filter name="active" string="Activas" domain="[('active','=',True)]"/>
+                    <filter name="inactive" string="Inactivas" domain="[('active','=',False)]"/>
+                    <separator/>
+                    <filter name="group_category" string="Categoría" context="{'group_by':'category'}"/>
+                </search>
+            </field>
+        </record>
+
+        <record id="action_whatsapp_template" model="ir.actions.act_window">
+            <field name="name">Plantillas WhatsApp</field>
+            <field name="res_model">whatsapp.template</field>
+            <field name="view_mode">list,form</field>
+            <field name="search_view_id" ref="view_whatsapp_template_search"/>
+            <field name="context">{'search_default_active': 1}</field>
+        </record>
+
+        <!-- ========================================================= -->
+        <!-- WHATSAPP BUSINESS HOURS                                  -->
+        <!-- ========================================================= -->
+
+        <record id="view_whatsapp_business_hours_list" model="ir.ui.view">
+            <field name="name">whatsapp.business.hours.list</field>
+            <field name="model">whatsapp.business.hours</field>
+            <field name="arch" type="xml">
+                <list string="Horarios WhatsApp">
+                    <field name="day_of_week"/>
+                    <field name="active"/>
+                    <field name="is_workday"/>
+                    <field name="open_time"/>
+                    <field name="close_time"/>
+                    <field name="has_break"/>
+                    <field name="break_start"/>
+                    <field name="break_end"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="view_whatsapp_business_hours_form" model="ir.ui.view">
+            <field name="name">whatsapp.business.hours.form</field>
+            <field name="model">whatsapp.business.hours</field>
+            <field name="arch" type="xml">
+                <form string="Horario WhatsApp">
+                    <sheet>
+                        <group>
+                            <group string="Día">
+                                <field name="name" readonly="1"/>
+                                <field name="day_of_week"/>
+                                <field name="active"/>
+                                <field name="is_workday"/>
+                            </group>
+                            <group string="Horario">
+                                <field name="open_time"/>
+                                <field name="close_time"/>
+                                <field name="has_break"/>
+                                <field name="break_start" invisible="not has_break"/>
+                                <field name="break_end" invisible="not has_break"/>
+                            </group>
+                        </group>
+
+                        <group string="Mensajes">
+                            <field name="after_hours_message"/>
+                            <field name="break_message"/>
+                        </group>
+
+                        <group string="Notas">
+                            <field name="note" nolabel="1"/>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="view_whatsapp_business_hours_search" model="ir.ui.view">
+            <field name="name">whatsapp.business.hours.search</field>
+            <field name="model">whatsapp.business.hours</field>
+            <field name="arch" type="xml">
+                <search string="Buscar horarios WhatsApp">
+                    <field name="day_of_week"/>
+                    <filter name="active" string="Activos" domain="[('active','=',True)]"/>
+                    <filter name="workdays" string="Laborales" domain="[('is_workday','=',True)]"/>
+                    <filter name="closed" string="Cerrados" domain="[('is_workday','=',False)]"/>
+                </search>
+            </field>
+        </record>
+
+        <record id="action_whatsapp_business_hours" model="ir.actions.act_window">
+            <field name="name">Horarios WhatsApp</field>
+            <field name="res_model">whatsapp.business.hours</field>
+            <field name="view_mode">list,form</field>
+            <field name="search_view_id" ref="view_whatsapp_business_hours_search"/>
+        </record>
+
+        <!-- ========================================================= -->
+        <!-- WHATSAPP CALENDAR EVENT                                  -->
+        <!-- ========================================================= -->
+
+        <record id="view_whatsapp_calendar_event_list" model="ir.ui.view">
+            <field name="name">whatsapp.calendar.event.list</field>
+            <field name="model">whatsapp.calendar.event</field>
+            <field name="arch" type="xml">
+                <list string="Calendario WhatsApp">
+                    <field name="event_date"/>
+                    <field name="name"/>
+                    <field name="active"/>
+                    <field name="event_type"/>
+                    <field name="source"/>
+                    <field name="is_closed"/>
+                    <field name="special_open_time"/>
+                    <field name="special_close_time"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="view_whatsapp_calendar_event_form" model="ir.ui.view">
+            <field name="name">whatsapp.calendar.event.form</field>
+            <field name="model">whatsapp.calendar.event</field>
+            <field name="arch" type="xml">
+                <form string="Evento calendario WhatsApp">
+                    <header>
+                        <button name="action_load_current_year_peru_holidays"
+                                type="object"
+                                string="Cargar feriados año actual"
+                                class="btn-secondary"/>
+                        <button name="action_load_next_year_peru_holidays"
+                                type="object"
+                                string="Cargar feriados próximo año"
+                                class="btn-secondary"/>
+                    </header>
+                    <sheet>
+                        <group>
+                            <group string="Evento">
+                                <field name="name"/>
+                                <field name="event_date"/>
+                                <field name="active"/>
+                                <field name="event_type"/>
+                                <field name="source"/>
+                                <field name="is_closed"/>
+                            </group>
+                            <group string="Horario especial">
+                                <field name="special_open_time" invisible="event_type != 'special_hours'"/>
+                                <field name="special_close_time" invisible="event_type != 'special_hours'"/>
+                                <field name="has_special_break" invisible="event_type != 'special_hours'"/>
+                                <field name="special_break_start" invisible="event_type != 'special_hours' or not has_special_break"/>
+                                <field name="special_break_end" invisible="event_type != 'special_hours' or not has_special_break"/>
+                            </group>
+                        </group>
+
+                        <group string="Mensaje">
+                            <field name="message" nolabel="1"/>
+                        </group>
+
+                        <group string="Notas">
+                            <field name="note" nolabel="1"/>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="view_whatsapp_calendar_event_search" model="ir.ui.view">
+            <field name="name">whatsapp.calendar.event.search</field>
+            <field name="model">whatsapp.calendar.event</field>
+            <field name="arch" type="xml">
+                <search string="Buscar calendario WhatsApp">
+                    <field name="name"/>
+                    <field name="event_date"/>
+                    <filter name="active" string="Activos" domain="[('active','=',True)]"/>
+                    <filter name="holidays" string="Feriados" domain="[('event_type','=','holiday')]"/>
+                    <filter name="manual_closed" string="Cierres manuales" domain="[('event_type','=','manual_closed')]"/>
+                    <filter name="special_hours" string="Horarios especiales" domain="[('event_type','=','special_hours')]"/>
+                    <separator/>
+                    <filter name="group_type" string="Tipo" context="{'group_by':'event_type'}"/>
+                    <filter name="group_source" string="Origen" context="{'group_by':'source'}"/>
+                </search>
+            </field>
+        </record>
+
+        <record id="action_whatsapp_calendar_event" model="ir.actions.act_window">
+            <field name="name">Calendario WhatsApp</field>
+            <field name="res_model">whatsapp.calendar.event</field>
+            <field name="view_mode">list,form</field>
+            <field name="search_view_id" ref="view_whatsapp_calendar_event_search"/>
+            <field name="context">{'search_default_active': 1}</field>
+        </record>
+
+        <!-- ========================================================= -->
+        <!-- WHATSAPP API LOG                                         -->
+        <!-- ========================================================= -->
+
+        <record id="view_whatsapp_api_log_list" model="ir.ui.view">
+            <field name="name">whatsapp.api.log.list</field>
+            <field name="model">whatsapp.api.log</field>
+            <field name="arch" type="xml">
+                <list string="Logs API WhatsApp">
+                    <field name="request_date"/>
+                    <field name="endpoint"/>
+                    <field name="status"/>
+                    <field name="phone"/>
+                    <field name="partner_id"/>
+                    <field name="session_id"/>
+                    <field name="error_code"/>
+                    <field name="duration_ms"/>
+                    <field name="source"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="view_whatsapp_api_log_form" model="ir.ui.view">
+            <field name="name">whatsapp.api.log.form</field>
+            <field name="model">whatsapp.api.log</field>
+            <field name="arch" type="xml">
+                <form string="Log API WhatsApp">
+                    <sheet>
+                        <group>
+                            <group string="Solicitud">
+                                <field name="name"/>
+                                <field name="endpoint"/>
+                                <field name="method"/>
+                                <field name="request_date"/>
+                                <field name="duration_ms"/>
+                                <field name="source"/>
+                            </group>
+                            <group string="Estado">
+                                <field name="status"/>
+                                <field name="error_code"/>
+                                <field name="error_message"/>
+                            </group>
+                        </group>
+
+                        <group>
+                            <group string="Identificadores">
+                                <field name="phone"/>
+                                <field name="jid"/>
+                                <field name="lid"/>
+                                <field name="raw_jid"/>
+                            </group>
+                            <group string="Relación">
+                                <field name="partner_id"/>
+                                <field name="session_id"/>
+                            </group>
+                        </group>
+
+                        <notebook>
+                            <page string="Payload recibido">
+                                <field name="request_payload" nolabel="1"/>
+                            </page>
+                            <page string="Respuesta enviada">
+                                <field name="response_payload" nolabel="1"/>
+                            </page>
+                        </notebook>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="view_whatsapp_api_log_search" model="ir.ui.view">
+            <field name="name">whatsapp.api.log.search</field>
+            <field name="model">whatsapp.api.log</field>
+            <field name="arch" type="xml">
+                <search string="Buscar logs API WhatsApp">
+                    <field name="endpoint"/>
+                    <field name="phone"/>
+                    <field name="jid"/>
+                    <field name="lid"/>
+                    <field name="partner_id"/>
+                    <field name="session_id"/>
+                    <field name="error_code"/>
+                    <filter name="success" string="Correctos" domain="[('status','=','success')]"/>
+                    <filter name="errors" string="Errores" domain="[('status','=','error')]"/>
+                    <filter name="unauthorized" string="No autorizado" domain="[('status','=','unauthorized')]"/>
+                    <separator/>
+                    <filter name="group_endpoint" string="Endpoint" context="{'group_by':'endpoint'}"/>
+                    <filter name="group_status" string="Estado" context="{'group_by':'status'}"/>
+                    <filter name="group_partner" string="Contacto" context="{'group_by':'partner_id'}"/>
+                </search>
+            </field>
+        </record>
+
+        <record id="action_whatsapp_api_log" model="ir.actions.act_window">
+            <field name="name">Logs API WhatsApp</field>
+            <field name="res_model">whatsapp.api.log</field>
+            <field name="view_mode">list,form</field>
+            <field name="search_view_id" ref="view_whatsapp_api_log_search"/>
+        </record>
+
+        <!-- ========================================================= -->
+        <!-- MENÚS WHATSAPP                                           -->
+        <!-- Respeta estructura existente: cuelga de sat.ajustes       -->
+        <!-- ========================================================= -->
+
+        <menuitem id="menu_whatsapp_root"
+                  name="WhatsApp"
+                  parent="sat.ajustes"
+                  sequence="300"/>
+
+        <menuitem id="menu_whatsapp_operations"
+                  name="Operación"
+                  parent="menu_whatsapp_root"
+                  sequence="10"/>
+
+        <menuitem id="menu_whatsapp_config"
+                  name="Configuración"
+                  parent="menu_whatsapp_root"
+                  sequence="20"/>
+
+        <menuitem id="menu_whatsapp_debug"
+                  name="Auditoría / Debug"
+                  parent="menu_whatsapp_root"
+                  sequence="30"/>
+
+        <!-- Operación -->
+        <menuitem id="menu_whatsapp_session"
+                  name="Sesiones"
+                  parent="menu_whatsapp_operations"
+                  action="action_whatsapp_session"
+                  sequence="10"/>
+
+        <menuitem id="menu_whatsapp_message"
+                  name="Mensajes"
+                  parent="menu_whatsapp_operations"
+                  action="action_whatsapp_message"
+                  sequence="20"/>
+
+        <menuitem id="menu_whatsapp_outbox"
+                  name="Cola de salida"
+                  parent="menu_whatsapp_operations"
+                  action="action_whatsapp_outbox"
+                  sequence="30"/>
+
+        <menuitem id="menu_whatsapp_media"
+                  name="Media"
+                  parent="menu_whatsapp_operations"
+                  action="action_whatsapp_media"
+                  sequence="40"/>
+
+        <menuitem id="menu_whatsapp_handoff"
+                  name="Handoff humano"
+                  parent="menu_whatsapp_operations"
+                  action="action_whatsapp_handoff"
+                  sequence="50"/>
+
+        <!-- Configuración -->
+        <menuitem id="menu_whatsapp_auto_response"
+                  name="Auto respuestas"
+                  parent="menu_whatsapp_config"
+                  action="action_whatsapp_auto_response"
+                  sequence="10"/>
+
+        <menuitem id="menu_whatsapp_intent_rule"
+                  name="Reglas de intención"
+                  parent="menu_whatsapp_config"
+                  action="action_whatsapp_intent_rule"
+                  sequence="20"/>
+
+        <menuitem id="menu_whatsapp_template"
+                  name="Plantillas"
+                  parent="menu_whatsapp_config"
+                  action="action_whatsapp_template"
+                  sequence="30"/>
+
+        <menuitem id="menu_whatsapp_business_hours"
+                  name="Horarios"
+                  parent="menu_whatsapp_config"
+                  action="action_whatsapp_business_hours"
+                  sequence="40"/>
+
+        <menuitem id="menu_whatsapp_calendar_event"
+                  name="Calendario / Feriados"
+                  parent="menu_whatsapp_config"
+                  action="action_whatsapp_calendar_event"
+                  sequence="50"/>
+
+        <!-- Auditoría -->
+        <menuitem id="menu_whatsapp_api_log"
+                  name="Logs API"
+                  parent="menu_whatsapp_debug"
+                  action="action_whatsapp_api_log"
+                  sequence="10"/>
+
+    </data>
+</odoo>

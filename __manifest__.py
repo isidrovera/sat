@@ -71,6 +71,7 @@
         'data/componente_subparte_data.xml',
         'data/componente_estado_data.xml',
         'data/accesorio_estado_data.xml',
+        "data/whatsapp_initial_data.xml",
         'data/ir_actions_server_migration.xml',
         'data/mantenimiento_zonas_lima.xml',       
         'views/ventas.xml',   
@@ -165,7 +166,8 @@
         'views/evidencia_page_template.xml',
         'views/ticket_alquiler_evidencia_view.xml',
         'views/permisos_templates.xml',
-        "views/res_partner_views.xml",      
+        "views/res_partner_views.xml",
+        "views/whatsapp_views.xml",     
         'views/acciones_menus.xml',
         
     ],
