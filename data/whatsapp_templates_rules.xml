@@ -1,0 +1,395 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <data noupdate="1">
+
+        <!-- ========================================================= -->
+        <!-- PLANTILLAS BASE WHATSAPP                                 -->
+        <!-- ========================================================= -->
+
+        <record id="whatsapp_template_ask_dni" model="whatsapp.template">
+            <field name="name">ask_dni</field>
+            <field name="title">Solicitar DNI</field>
+            <field name="category">dni</field>
+            <field name="body">Buenos días. Para poder ayudarte, por favor envíame tu DNI de 8 dígitos.</field>
+            <field name="active">True</field>
+        </record>
+
+        <record id="whatsapp_template_ask_ruc" model="whatsapp.template">
+            <field name="name">ask_ruc</field>
+            <field name="title">Solicitar RUC</field>
+            <field name="category">ruc</field>
+            <field name="body">Gracias {{partner_name}}. Ahora envíame el RUC de tu empresa para completar el registro.</field>
+            <field name="active">True</field>
+        </record>
+
+        <record id="whatsapp_template_dni_error" model="whatsapp.template">
+            <field name="name">dni_error</field>
+            <field name="title">Error validando DNI</field>
+            <field name="category">dni</field>
+            <field name="body">No pude validar el DNI automáticamente. Por favor verifica el número o espera atención de un asesor.</field>
+            <field name="active">True</field>
+        </record>
+
+        <record id="whatsapp_template_ruc_error" model="whatsapp.template">
+            <field name="name">ruc_error</field>
+            <field name="title">Error validando RUC</field>
+            <field name="category">ruc</field>
+            <field name="body">No pude validar el RUC automáticamente. Verifica el número e intenta nuevamente.</field>
+            <field name="active">True</field>
+        </record>
+
+        <record id="whatsapp_template_registration_completed" model="whatsapp.template">
+            <field name="name">registration_completed</field>
+            <field name="title">Registro completado</field>
+            <field name="category">registration</field>
+            <field name="body">Registro completado correctamente para {{company_name}}. ¿En qué podemos ayudarte?</field>
+            <field name="active">True</field>
+        </record>
+
+        <record id="whatsapp_template_blocked_contact" model="whatsapp.template">
+            <field name="name">blocked_contact</field>
+            <field name="title">Contacto bloqueado</field>
+            <field name="category">blocked</field>
+            <field name="body">Tu número no está habilitado para atención por este canal.</field>
+            <field name="active">True</field>
+        </record>
+
+        <record id="whatsapp_template_human_mode_active" model="whatsapp.template">
+            <field name="name">human_mode_active</field>
+            <field name="title">Modo humano activo</field>
+            <field name="category">human</field>
+            <field name="body">Tu conversación está siendo atendida por un asesor. Por favor espera su respuesta.</field>
+            <field name="active">True</field>
+        </record>
+
+        <record id="whatsapp_template_human_take" model="whatsapp.template">
+            <field name="name">human_take</field>
+            <field name="title">Chat tomado por humano</field>
+            <field name="category">human</field>
+            <field name="body">Un asesor continuará con la atención.</field>
+            <field name="active">True</field>
+        </record>
+
+        <record id="whatsapp_template_human_release" model="whatsapp.template">
+            <field name="name">human_release</field>
+            <field name="title">Bot liberado</field>
+            <field name="category">human</field>
+            <field name="body">El bot ha sido habilitado nuevamente para continuar la atención.</field>
+            <field name="active">True</field>
+        </record>
+
+        <record id="whatsapp_template_after_hours" model="whatsapp.template">
+            <field name="name">after_hours</field>
+            <field name="title">Fuera de horario</field>
+            <field name="category">after_hours</field>
+            <field name="body">{{business_message}}</field>
+            <field name="active">True</field>
+        </record>
+
+        <record id="whatsapp_template_business_open" model="whatsapp.template">
+            <field name="name">business_open</field>
+            <field name="title">Horario abierto</field>
+            <field name="category">fallback</field>
+            <field name="body">Estamos en horario de atención. {{display_hours}}</field>
+            <field name="active">True</field>
+        </record>
+
+        <record id="whatsapp_template_select_company" model="whatsapp.template">
+            <field name="name">select_company</field>
+            <field name="title">Seleccionar empresa</field>
+            <field name="category">company</field>
+            <field name="body">Tienes más de una empresa asociada. Indica con cuál deseas continuar.</field>
+            <field name="active">True</field>
+        </record>
+
+        <record id="whatsapp_template_company_selected" model="whatsapp.template">
+            <field name="name">company_selected</field>
+            <field name="title">Empresa seleccionada</field>
+            <field name="category">company</field>
+            <field name="body">Empresa seleccionada correctamente: {{company_name}}. ¿En qué podemos ayudarte?</field>
+            <field name="active">True</field>
+        </record>
+
+        <record id="whatsapp_template_greeting_registered" model="whatsapp.template">
+            <field name="name">greeting_registered</field>
+            <field name="title">Saludo registrado</field>
+            <field name="category">greeting</field>
+            <field name="body">Buenos días {{partner_name}}, ¿en qué podemos ayudarte?</field>
+            <field name="active">True</field>
+        </record>
+
+        <record id="whatsapp_template_service_link" model="whatsapp.template">
+            <field name="name">service_link</field>
+            <field name="title">Link de servicio</field>
+            <field name="category">service</field>
+            <field name="body">Para registrar tu solicitud de servicio, ingresa al siguiente enlace: {{service_link}}</field>
+            <field name="active">True</field>
+        </record>
+
+        <record id="whatsapp_template_fallback" model="whatsapp.template">
+            <field name="name">fallback</field>
+            <field name="title">Respuesta general</field>
+            <field name="category">fallback</field>
+            <field name="body">Gracias por escribirnos. Estamos revisando tu solicitud.</field>
+            <field name="active">True</field>
+        </record>
+
+
+        <!-- ========================================================= -->
+        <!-- AUTO RESPUESTAS BASE                                     -->
+        <!-- ========================================================= -->
+
+        <record id="whatsapp_auto_response_saludo_hola" model="whatsapp.auto.response">
+            <field name="name">Saludo - hola</field>
+            <field name="active">True</field>
+            <field name="sequence">10</field>
+            <field name="priority">50</field>
+            <field name="category">greeting</field>
+            <field name="trigger">hola</field>
+            <field name="match_type">contains</field>
+            <field name="applies_to">all</field>
+            <field name="response">Buenos días {{partner_name}}, ¿en qué podemos ayudarte?</field>
+            <field name="stop_flow">False</field>
+            <field name="allow_ai_after">True</field>
+        </record>
+
+        <record id="whatsapp_auto_response_buenos_dias" model="whatsapp.auto.response">
+            <field name="name">Saludo - buenos días</field>
+            <field name="active">True</field>
+            <field name="sequence">20</field>
+            <field name="priority">50</field>
+            <field name="category">greeting</field>
+            <field name="trigger">buenos dias</field>
+            <field name="match_type">contains</field>
+            <field name="applies_to">all</field>
+            <field name="response">Buenos días {{partner_name}}, ¿en qué podemos ayudarte?</field>
+            <field name="stop_flow">False</field>
+            <field name="allow_ai_after">True</field>
+        </record>
+
+        <record id="whatsapp_auto_response_buenas_tardes" model="whatsapp.auto.response">
+            <field name="name">Saludo - buenas tardes</field>
+            <field name="active">True</field>
+            <field name="sequence">30</field>
+            <field name="priority">50</field>
+            <field name="category">greeting</field>
+            <field name="trigger">buenas tardes</field>
+            <field name="match_type">contains</field>
+            <field name="applies_to">all</field>
+            <field name="response">Buenas tardes {{partner_name}}, ¿en qué podemos ayudarte?</field>
+            <field name="stop_flow">False</field>
+            <field name="allow_ai_after">True</field>
+        </record>
+
+        <record id="whatsapp_auto_response_blocked" model="whatsapp.auto.response">
+            <field name="name">Contacto bloqueado</field>
+            <field name="active">True</field>
+            <field name="sequence">10</field>
+            <field name="priority">100</field>
+            <field name="category">blocked</field>
+            <field name="trigger">.*</field>
+            <field name="match_type">regex</field>
+            <field name="applies_to">blocked</field>
+            <field name="response">Tu número no está habilitado para atención por este canal.</field>
+            <field name="stop_flow">True</field>
+            <field name="allow_ai_after">False</field>
+        </record>
+
+        <record id="whatsapp_auto_response_after_hours" model="whatsapp.auto.response">
+            <field name="name">Fuera de horario</field>
+            <field name="active">True</field>
+            <field name="sequence">10</field>
+            <field name="priority">90</field>
+            <field name="category">after_hours</field>
+            <field name="trigger">.*</field>
+            <field name="match_type">regex</field>
+            <field name="applies_to">after_hours</field>
+            <field name="response">{{business_message}}</field>
+            <field name="stop_flow">False</field>
+            <field name="allow_ai_after">True</field>
+            <field name="only_after_hours">True</field>
+        </record>
+
+        <record id="whatsapp_auto_response_human" model="whatsapp.auto.response">
+            <field name="name">Modo humano activo</field>
+            <field name="active">True</field>
+            <field name="sequence">10</field>
+            <field name="priority">95</field>
+            <field name="category">human</field>
+            <field name="trigger">.*</field>
+            <field name="match_type">regex</field>
+            <field name="applies_to">human</field>
+            <field name="response">Tu conversación está siendo atendida por un asesor.</field>
+            <field name="stop_flow">True</field>
+            <field name="allow_ai_after">False</field>
+        </record>
+
+        <record id="whatsapp_auto_response_gracias" model="whatsapp.auto.response">
+            <field name="name">Agradecimiento</field>
+            <field name="active">True</field>
+            <field name="sequence">80</field>
+            <field name="priority">30</field>
+            <field name="category">thanks</field>
+            <field name="trigger">gracias</field>
+            <field name="match_type">contains</field>
+            <field name="applies_to">all</field>
+            <field name="response">Con gusto {{partner_name}}.</field>
+            <field name="stop_flow">True</field>
+            <field name="allow_ai_after">False</field>
+        </record>
+
+
+        <!-- ========================================================= -->
+        <!-- REGLAS DE INTENCIÓN BASE                                 -->
+        <!-- ========================================================= -->
+
+        <record id="whatsapp_intent_rule_greeting_hola" model="whatsapp.intent.rule">
+            <field name="name">Saludo - hola</field>
+            <field name="active">True</field>
+            <field name="sequence">10</field>
+            <field name="priority">50</field>
+            <field name="intent">greeting</field>
+            <field name="action">reply</field>
+            <field name="match_type">contains</field>
+            <field name="pattern">hola</field>
+            <field name="applies_to">all</field>
+            <field name="stop_flow">False</field>
+            <field name="allow_ai_after">True</field>
+        </record>
+
+        <record id="whatsapp_intent_rule_greeting_buenos_dias" model="whatsapp.intent.rule">
+            <field name="name">Saludo - buenos días</field>
+            <field name="active">True</field>
+            <field name="sequence">20</field>
+            <field name="priority">50</field>
+            <field name="intent">greeting</field>
+            <field name="action">reply</field>
+            <field name="match_type">contains</field>
+            <field name="pattern">buenos dias</field>
+            <field name="applies_to">all</field>
+            <field name="stop_flow">False</field>
+            <field name="allow_ai_after">True</field>
+        </record>
+
+        <record id="whatsapp_intent_rule_toner" model="whatsapp.intent.rule">
+            <field name="name">Solicitud de tóner</field>
+            <field name="active">True</field>
+            <field name="sequence">10</field>
+            <field name="priority">80</field>
+            <field name="intent">toner</field>
+            <field name="action">ai</field>
+            <field name="match_type">regex</field>
+            <field name="pattern">toner|tóner|cartucho|suministro|tinta</field>
+            <field name="applies_to">all</field>
+            <field name="requires_registered">True</field>
+            <field name="requires_company">True</field>
+            <field name="stop_flow">False</field>
+            <field name="allow_ai_after">True</field>
+        </record>
+
+        <record id="whatsapp_intent_rule_service" model="whatsapp.intent.rule">
+            <field name="name">Servicio técnico</field>
+            <field name="active">True</field>
+            <field name="sequence">20</field>
+            <field name="priority">80</field>
+            <field name="intent">service</field>
+            <field name="action">send_service_link</field>
+            <field name="match_type">regex</field>
+            <field name="pattern">servicio|soporte|tecnico|técnico|averia|avería|falla|mantenimiento|reparacion|reparación</field>
+            <field name="applies_to">all</field>
+            <field name="requires_registered">True</field>
+            <field name="requires_company">True</field>
+            <field name="stop_flow">False</field>
+            <field name="allow_ai_after">True</field>
+        </record>
+
+        <record id="whatsapp_intent_rule_scanner" model="whatsapp.intent.rule">
+            <field name="name">Escáner / configuración</field>
+            <field name="active">True</field>
+            <field name="sequence">30</field>
+            <field name="priority">70</field>
+            <field name="intent">scanner</field>
+            <field name="action">ai</field>
+            <field name="match_type">regex</field>
+            <field name="pattern">scanner|escáner|escaner|scan|correo|carpeta|configuracion|configuración</field>
+            <field name="applies_to">all</field>
+            <field name="requires_registered">True</field>
+            <field name="requires_company">True</field>
+            <field name="stop_flow">False</field>
+            <field name="allow_ai_after">True</field>
+        </record>
+
+        <record id="whatsapp_intent_rule_billing" model="whatsapp.intent.rule">
+            <field name="name">Facturación</field>
+            <field name="active">True</field>
+            <field name="sequence">40</field>
+            <field name="priority">70</field>
+            <field name="intent">billing</field>
+            <field name="action">ai</field>
+            <field name="match_type">regex</field>
+            <field name="pattern">factura|facturación|facturacion|boleta|pago|deuda|recibo</field>
+            <field name="applies_to">all</field>
+            <field name="requires_registered">True</field>
+            <field name="requires_company">True</field>
+            <field name="stop_flow">False</field>
+            <field name="allow_ai_after">True</field>
+        </record>
+
+        <record id="whatsapp_intent_rule_sales" model="whatsapp.intent.rule">
+            <field name="name">Ventas</field>
+            <field name="active">True</field>
+            <field name="sequence">50</field>
+            <field name="priority">60</field>
+            <field name="intent">sales</field>
+            <field name="action">ai</field>
+            <field name="match_type">regex</field>
+            <field name="pattern">cotizacion|cotización|precio|comprar|venta|equipo nuevo|alquiler</field>
+            <field name="applies_to">all</field>
+            <field name="stop_flow">False</field>
+            <field name="allow_ai_after">True</field>
+        </record>
+
+        <record id="whatsapp_intent_rule_human" model="whatsapp.intent.rule">
+            <field name="name">Solicita humano</field>
+            <field name="active">True</field>
+            <field name="sequence">60</field>
+            <field name="priority">90</field>
+            <field name="intent">human</field>
+            <field name="action">handoff</field>
+            <field name="match_type">regex</field>
+            <field name="pattern">asesor|humano|persona|operador|agente</field>
+            <field name="applies_to">all</field>
+            <field name="stop_flow">True</field>
+            <field name="allow_ai_after">False</field>
+        </record>
+
+        <record id="whatsapp_intent_rule_dni" model="whatsapp.intent.rule">
+            <field name="name">Detectar DNI</field>
+            <field name="active">True</field>
+            <field name="sequence">70</field>
+            <field name="priority">85</field>
+            <field name="intent">dni</field>
+            <field name="action">ask_ruc</field>
+            <field name="match_type">regex</field>
+            <field name="pattern">^\s*\d{8}\s*$</field>
+            <field name="applies_to">new</field>
+            <field name="stop_flow">True</field>
+            <field name="allow_ai_after">False</field>
+        </record>
+
+        <record id="whatsapp_intent_rule_ruc" model="whatsapp.intent.rule">
+            <field name="name">Detectar RUC</field>
+            <field name="active">True</field>
+            <field name="sequence">80</field>
+            <field name="priority">85</field>
+            <field name="intent">ruc</field>
+            <field name="action">ai</field>
+            <field name="match_type">regex</field>
+            <field name="pattern">^\s*\d{11}\s*$</field>
+            <field name="applies_to">new</field>
+            <field name="stop_flow">True</field>
+            <field name="allow_ai_after">False</field>
+        </record>
+
+    </data>
+</odoo>
