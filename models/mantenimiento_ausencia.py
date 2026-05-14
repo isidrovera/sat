@@ -4,6 +4,9 @@ from odoo import models, fields, api, _
 from odoo.exceptions import ValidationError, UserError
 from datetime import datetime, timedelta
 import logging
+import requests
+import json
+import re
 
 _logger = logging.getLogger(__name__)
 
@@ -175,12 +178,6 @@ class MantenimientoTecnicoAusencia(models.Model):
         tracking=True,
     )
 
-    correo_contabilidad = fields.Char(
-        string='Correo contabilidad',
-        compute='_compute_correo_contabilidad',
-        store=False,
-    )
-
     es_abierta = fields.Boolean(
         string='Ausencia sin fecha fin',
         compute='_compute_es_abierta',
@@ -219,21 +216,8 @@ class MantenimientoTecnicoAusencia(models.Model):
 
     @api.depends('tipo', 'fecha_fin')
     def _compute_es_abierta(self):
-        """
-        Solo una enfermedad sin fecha_fin debe considerarse abierta.
-        Si el formulario web manda fecha_fin, no debe marcarse como ausencia sin fecha fin.
-        """
         for rec in self:
             rec.es_abierta = bool(rec.tipo == 'enfermedad' and not rec.fecha_fin)
-
-    def _compute_correo_contabilidad(self):
-        correo = self.env['ir.config_parameter'].sudo().get_param(
-            'mantenimiento.correo_contabilidad',
-            ''
-        )
-
-        for rec in self:
-            rec.correo_contabilidad = correo
 
     # ============================================================
     # ONCHANGE
@@ -241,10 +225,6 @@ class MantenimientoTecnicoAusencia(models.Model):
 
     @api.onchange('tipo')
     def _onchange_tipo(self):
-        """
-        No forzamos fecha_fin = fecha_inicio si ya existe fecha_fin.
-        Esto permite que el formulario web respete el campo "Hasta".
-        """
         for rec in self:
             if rec.tipo in ('permiso', 'falta'):
                 rec.dia_completo = True
@@ -266,7 +246,6 @@ class MantenimientoTecnicoAusencia(models.Model):
                 rec.dia_completo = True
                 rec.hora_inicio = 0.0
                 rec.hora_fin = 24.0
-                # Enfermedad puede quedar sin fecha_fin.
 
             elif rec.tipo == 'descanso_medico':
                 rec.dia_completo = True
@@ -278,8 +257,10 @@ class MantenimientoTecnicoAusencia(models.Model):
 
             elif rec.tipo == 'capacitacion':
                 rec.dia_completo = False
+
                 if not rec.hora_inicio:
                     rec.hora_inicio = 8.0
+
                 if not rec.hora_fin or rec.hora_fin == 24.0:
                     rec.hora_fin = 13.0
 
@@ -292,11 +273,6 @@ class MantenimientoTecnicoAusencia(models.Model):
 
     @api.onchange('fecha_inicio')
     def _onchange_fecha_inicio(self):
-        """
-        Si no hay fecha_fin, la completamos.
-        Si fecha_fin es menor, la corregimos.
-        No pisamos una fecha_fin válida enviada por el usuario.
-        """
         for rec in self:
             if rec.fecha_inicio:
                 if not rec.fecha_fin and rec.tipo != 'enfermedad':
@@ -314,6 +290,7 @@ class MantenimientoTecnicoAusencia(models.Model):
             else:
                 if not rec.hora_inicio:
                     rec.hora_inicio = 8.0
+
                 if not rec.hora_fin or rec.hora_fin == 24.0:
                     rec.hora_fin = 17.0
 
@@ -323,19 +300,12 @@ class MantenimientoTecnicoAusencia(models.Model):
 
     @api.model
     def _normalize_vals(self, vals):
-        """
-        Normaliza datos recibidos desde backend o formulario web.
-        Evita que fecha_fin quede vacía cuando no corresponde.
-        Respeta fecha_fin si el usuario marcó "hasta".
-        """
         vals = dict(vals or {})
 
         tipo = vals.get('tipo')
         fecha_inicio = vals.get('fecha_inicio')
         fecha_fin = vals.get('fecha_fin')
 
-        # Si no viene tipo en vals, no podemos inferir aquí.
-        # create/write completan usando el registro si corresponde.
         if fecha_inicio and not fecha_fin and tipo != 'enfermedad':
             vals['fecha_fin'] = fecha_inicio
 
@@ -346,12 +316,6 @@ class MantenimientoTecnicoAusencia(models.Model):
         return vals
 
     def _normalize_record_dates(self):
-        """
-        Corrige registros ya creados o actualizados:
-        - Si no es enfermedad y no tiene fecha_fin, asigna fecha_inicio.
-        - Si fecha_fin < fecha_inicio, corrige a fecha_inicio.
-        - Si es día completo, normaliza horas.
-        """
         for rec in self:
             vals = {}
 
@@ -459,8 +423,6 @@ class MantenimientoTecnicoAusencia(models.Model):
         _logger.info("[Ausencias] Fechas: %s - %s", rec.fecha_inicio, rec.fecha_fin)
         _logger.info("[Ausencias] Estado: %s", rec.estado)
 
-        # Enfermedad y falta pueden bloquear inmediatamente.
-        # Si quieres que falta también pase por aprobación, quita 'falta' de esta condición.
         if rec.tipo in ('enfermedad', 'falta') and rec.estado == 'borrador':
             rec.action_reportar_ausencia_inmediata()
 
@@ -489,7 +451,6 @@ class MantenimientoTecnicoAusencia(models.Model):
         if self.fecha_fin:
             return self.fecha_fin
 
-        # Si es enfermedad abierta, bloqueamos una ventana amplia.
         return self.fecha_inicio + timedelta(days=365)
 
     def _iter_fechas(self):
@@ -669,60 +630,12 @@ class MantenimientoTecnicoAusencia(models.Model):
 
             return False
 
-    def _get_correo_jefe_area(self):
-        self.ensure_one()
-
-        correo_param = self.env['ir.config_parameter'].sudo().get_param(
-            'mantenimiento.correo_jefe_area',
-            ''
-        )
-
-        if correo_param:
-            _logger.info("[Ausencias] Correo jefe desde parámetro: %s", correo_param)
-            return correo_param
-
-        grupo = self.env.ref('sat.sat_jefes_group_user', raise_if_not_found=False)
-
-        if grupo:
-            correos = []
-
-            for user in grupo.users:
-                email = user.email or user.partner_id.email
-                if email:
-                    correos.append(email)
-
-            if correos:
-                correos_str = ','.join(correos)
-                _logger.info("[Ausencias] Correos jefe desde grupo: %s", correos_str)
-                return correos_str
-
-        _logger.warning(
-            "[Ausencias] No se encontró correo de jefe de área. "
-            "Configure mantenimiento.correo_jefe_area o agregue usuarios al grupo Jefes de Área."
-        )
-
-        return False
-
     def _notificar_jefe_area(self):
         self.ensure_one()
 
-        correo_jefe = self._get_correo_jefe_area()
-
-        if not correo_jefe:
-            self.message_post(
-                body=_(
-                    "No se envió correo al jefe de área porque no hay correo configurado. "
-                    "Configure el parámetro mantenimiento.correo_jefe_area o agregue usuarios al grupo Jefes de Área."
-                ),
-                message_type='notification'
-            )
-            return False
-
         return self._send_mail_template_safe(
             'sat.email_template_leave_request',
-            context_values={
-                'correo_jefe_area': correo_jefe,
-            },
+            context_values={},
             log_name='Solicitud pendiente para jefe de área'
         )
 
@@ -733,70 +646,484 @@ class MantenimientoTecnicoAusencia(models.Model):
             _logger.info("[Ausencias] No se notifica contabilidad por configuración del registro.")
             return False
 
-        correo = self.correo_contabilidad
-
-        if not correo:
-            _logger.warning(
-                "[Ausencias] No se configuró mantenimiento.correo_contabilidad"
-            )
-            self.message_post(
-                body=_(
-                    "No se envió correo a contabilidad porque no está configurado "
-                    "el parámetro mantenimiento.correo_contabilidad."
-                ),
-                message_type='notification'
-            )
-            return False
-
         return self._send_mail_template_safe(
             'sat.mail_template_mantenimiento_ausencia_contabilidad',
-            context_values={
-                'correo_contabilidad': correo,
-            },
+            context_values={},
             log_name='Permiso aprobado para contabilidad / gerencia'
         )
 
     def _notificar_trabajador_aprobado(self):
         self.ensure_one()
 
-        email = self.tecnico_id.email or self.tecnico_id.partner_id.email
-
-        if not email:
-            _logger.warning(
-                "[Ausencias] Técnico %s no tiene correo configurado",
-                self.tecnico_id.name
-            )
-            self.message_post(
-                body=_("No se pudo notificar al trabajador porque no tiene correo configurado."),
-                message_type='notification'
-            )
-            return False
-
         return self._send_mail_template_safe(
             'sat.email_template_mantenimiento_ausencia_empleado_aprobado',
+            context_values={},
             log_name='Solicitud aprobada para trabajador'
         )
 
     def _notificar_trabajador_rechazado(self):
         self.ensure_one()
 
-        email = self.tecnico_id.email or self.tecnico_id.partner_id.email
+        return self._send_mail_template_safe(
+            'sat.email_template_mantenimiento_ausencia_empleado_rechazado',
+            context_values={},
+            log_name='Solicitud rechazada para trabajador'
+        )
 
-        if not email:
+    # ============================================================
+    # WHATSAPP - HELPERS
+    # ============================================================
+
+    def _whatsapp_get_api_key(self):
+        """
+        IMPORTANTE:
+        No se coloca la API KEY quemada en el modelo.
+        Configúrala en Parámetros del sistema:
+
+            whatsapp.api_key
+
+        Esto evita exponer la clave en el código.
+        """
+        return self.env['ir.config_parameter'].sudo().get_param('whatsapp.api_key', '').strip()
+
+    def _whatsapp_get_base_url(self):
+        """
+        Si no configuras nada, usa el endpoint actual que ya tienes funcionando.
+        Opcionalmente puedes crear:
+
+            whatsapp.base_url = https://boot.andessolutioncopiers.com
+        """
+        base_url = self.env['ir.config_parameter'].sudo().get_param(
+            'whatsapp.base_url',
+            'https://boot.andessolutioncopiers.com'
+        )
+        return (base_url or '').rstrip('/')
+
+    def _whatsapp_clean_phone(self, phone):
+        if not phone:
+            return False
+
+        phone = str(phone).strip()
+
+        if not phone or phone.upper() == 'NA':
+            return False
+
+        if '@g.us' in phone:
+            return phone
+
+        phone = re.sub(r'[^0-9]', '', phone)
+
+        if not phone:
+            return False
+
+        if len(phone) == 9:
+            phone = '51%s' % phone
+
+        return phone
+
+    def _whatsapp_get_user_phone(self, user):
+        if not user:
+            return False
+
+        partner = user.partner_id
+
+        possible_numbers = [
+            getattr(user, 'mobile', False),
+            getattr(user, 'phone', False),
+            partner.mobile if partner else False,
+            partner.phone if partner else False,
+        ]
+
+        for phone in possible_numbers:
+            phone_clean = self._whatsapp_clean_phone(phone)
+            if phone_clean:
+                return phone_clean
+
+        return False
+
+    def _whatsapp_get_jefes_area_users(self):
+        """
+        No usa parámetro.
+        Toma usuarios del grupo sat.sat_jefes_group_user.
+        Si ese grupo no existe o no tiene usuarios, no bloquea el flujo.
+        """
+        grupo = self.env.ref('sat.sat_jefes_group_user', raise_if_not_found=False)
+
+        if not grupo:
+            _logger.warning("[Ausencias][WhatsApp] No existe el grupo sat.sat_jefes_group_user")
+            return self.env['res.users']
+
+        users = grupo.users.filtered(lambda u: u.active and not u.share)
+
+        _logger.info(
+            "[Ausencias][WhatsApp] Usuarios jefes encontrados: %s",
+            users.mapped('name')
+        )
+
+        return users
+
+    def _send_whatsapp_message(self, phone, message, file_url=None):
+        self.ensure_one()
+
+        phone = self._whatsapp_clean_phone(phone)
+
+        if not phone:
+            _logger.warning("[Ausencias][WhatsApp] Teléfono vacío o inválido.")
+            return {
+                'success': False,
+                'error': 'Teléfono vacío o inválido',
+            }
+
+        api_key = self._whatsapp_get_api_key()
+
+        if not api_key:
             _logger.warning(
-                "[Ausencias] Técnico %s no tiene correo configurado",
-                self.tecnico_id.name
+                "[Ausencias][WhatsApp] No se envió mensaje porque falta whatsapp.api_key"
             )
             self.message_post(
-                body=_("No se pudo notificar al trabajador porque no tiene correo configurado."),
+                body=_(
+                    "No se pudo enviar WhatsApp porque no está configurado "
+                    "el parámetro whatsapp.api_key."
+                ),
+                message_type='notification'
+            )
+            return {
+                'success': False,
+                'error': 'Falta whatsapp.api_key',
+            }
+
+        base_url = self._whatsapp_get_base_url()
+
+        try:
+            if file_url:
+                url = '%s/api/send-media' % base_url
+                data = {
+                    'to': phone,
+                    'caption': message,
+                    'url': file_url,
+                }
+            else:
+                url = '%s/api/send-message' % base_url
+                data = {
+                    'to': phone,
+                    'message': message,
+                }
+
+            headers = {
+                'Content-Type': 'application/json',
+                'x-api-key': api_key,
+            }
+
+            _logger.info("[Ausencias][WhatsApp] Enviando WhatsApp a %s", phone)
+            _logger.debug("[Ausencias][WhatsApp] URL: %s", url)
+            _logger.debug("[Ausencias][WhatsApp] Payload: %s", data)
+
+            response = requests.post(
+                url,
+                headers=headers,
+                json=data,
+                timeout=30
+            )
+
+            _logger.info(
+                "[Ausencias][WhatsApp] Status=%s Response=%s",
+                response.status_code,
+                response.text
+            )
+
+            try:
+                response_json = response.json()
+            except json.JSONDecodeError:
+                response_json = {
+                    'success': False,
+                    'error': 'Respuesta no JSON',
+                    'raw': response.text,
+                }
+
+            if response.status_code == 200 and response_json.get('success'):
+                _logger.info("[Ausencias][WhatsApp] ✅ Mensaje enviado a %s", phone)
+                return response_json
+
+            error_msg = response_json.get('error') or response.text or 'Error desconocido'
+
+            _logger.error(
+                "[Ausencias][WhatsApp] ❌ Error API WhatsApp para %s: %s",
+                phone,
+                error_msg
+            )
+
+            return {
+                'success': False,
+                'error': error_msg,
+                'response': response_json,
+            }
+
+        except requests.exceptions.Timeout:
+            error_msg = _("Timeout al enviar WhatsApp a %s") % phone
+            _logger.error("[Ausencias][WhatsApp] %s", error_msg)
+            return {
+                'success': False,
+                'error': error_msg,
+            }
+
+        except Exception as e:
+            _logger.error(
+                "[Ausencias][WhatsApp] Error enviando WhatsApp a %s: %s",
+                phone,
+                str(e),
+                exc_info=True
+            )
+            return {
+                'success': False,
+                'error': str(e),
+            }
+
+    # ============================================================
+    # WHATSAPP - MENSAJES
+    # ============================================================
+
+    def _format_fecha_whatsapp(self, fecha):
+        if not fecha:
+            return 'No definida'
+
+        try:
+            return fecha.strftime('%d/%m/%Y')
+        except Exception:
+            return str(fecha)
+
+    def _format_horario_whatsapp(self):
+        self.ensure_one()
+
+        if self.dia_completo:
+            return 'Día completo'
+
+        return 'Por horas %.2f - %.2f' % (
+            self.hora_inicio or 0.0,
+            self.hora_fin or 0.0,
+        )
+
+    def _get_url_registro(self):
+        self.ensure_one()
+
+        base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url', '')
+        base_url = (base_url or '').rstrip('/')
+
+        if not base_url:
+            return ''
+
+        return '%s/web#id=%s&model=mantenimiento.tecnico.ausencia&view_type=form' % (
+            base_url,
+            self.id,
+        )
+
+    def _get_tipo_label(self):
+        self.ensure_one()
+        return dict(self._fields['tipo'].selection).get(self.tipo) or self.tipo or 'No definido'
+
+    def _get_estado_label(self):
+        self.ensure_one()
+        return dict(self._fields['estado'].selection).get(self.estado) or self.estado or 'No definido'
+
+    def _build_whatsapp_solicitud_recibida(self):
+        self.ensure_one()
+
+        url = self._get_url_registro()
+
+        mensaje = (
+            "📌 *NUEVA SOLICITUD DE PERMISO*\n\n"
+            "Se recibió una nueva solicitud pendiente de aprobación.\n\n"
+            "👤 *Trabajador:* %s\n"
+            "🧾 *Referencia:* %s\n"
+            "📋 *Tipo:* %s\n"
+            "📅 *Inicio:* %s\n"
+            "📅 *Fin:* %s\n"
+            "🕒 *Jornada:* %s\n"
+            "📝 *Motivo:* %s\n"
+            "📌 *Estado:* %s\n"
+        ) % (
+            self.tecnico_id.name or 'No definido',
+            self.name or 'No definido',
+            self._get_tipo_label(),
+            self._format_fecha_whatsapp(self.fecha_inicio),
+            self._format_fecha_whatsapp(self.fecha_fin),
+            self._format_horario_whatsapp(),
+            self.motivo or 'Sin motivo registrado',
+            self._get_estado_label(),
+        )
+
+        if url:
+            mensaje += "\n🔗 Revisar en Odoo:\n%s" % url
+
+        return mensaje
+
+    def _build_whatsapp_aprobado(self):
+        self.ensure_one()
+
+        mensaje = (
+            "✅ *SOLICITUD DE PERMISO APROBADA*\n\n"
+            "Hola *%s*, tu solicitud fue aprobada.\n\n"
+            "🧾 *Referencia:* %s\n"
+            "📋 *Tipo:* %s\n"
+            "📅 *Inicio:* %s\n"
+            "📅 *Fin:* %s\n"
+            "🕒 *Jornada:* %s\n"
+            "👤 *Aprobado por:* %s\n"
+        ) % (
+            self.tecnico_id.name or 'Trabajador',
+            self.name or 'No definido',
+            self._get_tipo_label(),
+            self._format_fecha_whatsapp(self.fecha_inicio),
+            self._format_fecha_whatsapp(self.fecha_fin),
+            self._format_horario_whatsapp(),
+            self.aprobado_por_id.name or self.env.user.name or 'No definido',
+        )
+
+        if self.motivo:
+            mensaje += "\n📝 *Motivo:* %s" % self.motivo
+
+        return mensaje
+
+    def _build_whatsapp_rechazado(self):
+        self.ensure_one()
+
+        mensaje = (
+            "❌ *SOLICITUD DE PERMISO RECHAZADA*\n\n"
+            "Hola *%s*, tu solicitud fue rechazada.\n\n"
+            "🧾 *Referencia:* %s\n"
+            "📋 *Tipo:* %s\n"
+            "📅 *Inicio:* %s\n"
+            "📅 *Fin:* %s\n"
+            "🕒 *Jornada:* %s\n"
+            "👤 *Rechazado por:* %s\n"
+        ) % (
+            self.tecnico_id.name or 'Trabajador',
+            self.name or 'No definido',
+            self._get_tipo_label(),
+            self._format_fecha_whatsapp(self.fecha_inicio),
+            self._format_fecha_whatsapp(self.fecha_fin),
+            self._format_horario_whatsapp(),
+            self.rechazado_por_id.name or self.env.user.name or 'No definido',
+        )
+
+        if self.motivo_rechazo:
+            mensaje += "\n📝 *Motivo de rechazo:* %s" % self.motivo_rechazo
+
+        return mensaje
+
+    def _whatsapp_notificar_jefes_solicitud(self):
+        self.ensure_one()
+
+        users = self._whatsapp_get_jefes_area_users()
+
+        if not users:
+            _logger.warning("[Ausencias][WhatsApp] No hay jefes para notificar.")
+            self.message_post(
+                body=_("No se envió WhatsApp de solicitud porque no hay usuarios en el grupo de jefes."),
                 message_type='notification'
             )
             return False
 
-        return self._send_mail_template_safe(
-            'sat.email_template_mantenimiento_ausencia_empleado_rechazado',
-            log_name='Solicitud rechazada para trabajador'
+        mensaje = self._build_whatsapp_solicitud_recibida()
+        enviados = 0
+        errores = []
+
+        for user in users:
+            phone = self._whatsapp_get_user_phone(user)
+
+            if not phone:
+                _logger.warning(
+                    "[Ausencias][WhatsApp] Jefe %s sin teléfono/móvil.",
+                    user.name
+                )
+                errores.append('%s sin teléfono' % user.name)
+                continue
+
+            result = self._send_whatsapp_message(phone, mensaje)
+
+            if result.get('success'):
+                enviados += 1
+            else:
+                errores.append('%s: %s' % (user.name, result.get('error')))
+
+        self.message_post(
+            body=_(
+                "WhatsApp de solicitud enviado a jefes. Enviados: %s. Errores: %s"
+            ) % (
+                enviados,
+                ', '.join(errores) if errores else 'Ninguno',
+            ),
+            message_type='notification'
         )
+
+        return bool(enviados)
+
+    def _whatsapp_notificar_trabajador_aprobado(self):
+        self.ensure_one()
+
+        phone = self._whatsapp_get_user_phone(self.tecnico_id)
+
+        if not phone:
+            _logger.warning(
+                "[Ausencias][WhatsApp] Técnico %s sin teléfono/móvil.",
+                self.tecnico_id.name
+            )
+            self.message_post(
+                body=_("No se envió WhatsApp de aprobación porque el trabajador no tiene teléfono/móvil."),
+                message_type='notification'
+            )
+            return False
+
+        result = self._send_whatsapp_message(
+            phone,
+            self._build_whatsapp_aprobado()
+        )
+
+        if result.get('success'):
+            self.message_post(
+                body=_("WhatsApp de aprobación enviado al trabajador."),
+                message_type='notification'
+            )
+            return True
+
+        self.message_post(
+            body=_("No se pudo enviar WhatsApp de aprobación. Error: %s") % result.get('error'),
+            message_type='notification'
+        )
+        return False
+
+    def _whatsapp_notificar_trabajador_rechazado(self):
+        self.ensure_one()
+
+        phone = self._whatsapp_get_user_phone(self.tecnico_id)
+
+        if not phone:
+            _logger.warning(
+                "[Ausencias][WhatsApp] Técnico %s sin teléfono/móvil.",
+                self.tecnico_id.name
+            )
+            self.message_post(
+                body=_("No se envió WhatsApp de rechazo porque el trabajador no tiene teléfono/móvil."),
+                message_type='notification'
+            )
+            return False
+
+        result = self._send_whatsapp_message(
+            phone,
+            self._build_whatsapp_rechazado()
+        )
+
+        if result.get('success'):
+            self.message_post(
+                body=_("WhatsApp de rechazo enviado al trabajador."),
+                message_type='notification'
+            )
+            return True
+
+        self.message_post(
+            body=_("No se pudo enviar WhatsApp de rechazo. Error: %s") % result.get('error'),
+            message_type='notification'
+        )
+        return False
 
     # ============================================================
     # ACCIONES DE FLUJO
@@ -809,7 +1136,9 @@ class MantenimientoTecnicoAusencia(models.Model):
 
             rec._normalize_record_dates()
 
-            rec.write({'estado': 'pendiente'})
+            rec.write({
+                'estado': 'pendiente',
+            })
 
             rec.message_post(
                 body=_("Solicitud enviada para aprobación."),
@@ -817,6 +1146,7 @@ class MantenimientoTecnicoAusencia(models.Model):
             )
 
             rec._notificar_jefe_area()
+            rec._whatsapp_notificar_jefes_solicitud()
 
     def action_aprobar(self):
         for rec in self:
@@ -836,6 +1166,7 @@ class MantenimientoTecnicoAusencia(models.Model):
 
             rec._notificar_contabilidad()
             rec._notificar_trabajador_aprobado()
+            rec._whatsapp_notificar_trabajador_aprobado()
 
             rec.message_post(
                 body=_(
@@ -846,13 +1177,12 @@ class MantenimientoTecnicoAusencia(models.Model):
             )
 
     def action_reportar_ausencia_inmediata(self):
-        """
-        Para enfermedad o falta.
-        Bloquea inmediatamente sin esperar aprobación porque el técnico no asistirá.
-        """
         for rec in self:
             if rec.tipo not in ('enfermedad', 'falta'):
                 raise UserError(_("Esta acción solo aplica para enfermedad o falta."))
+
+            if rec.estado not in ('borrador', 'pendiente'):
+                raise UserError(_("Esta ausencia ya fue procesada y no puede reportarse nuevamente."))
 
             rec._normalize_record_dates()
 
@@ -869,6 +1199,7 @@ class MantenimientoTecnicoAusencia(models.Model):
 
             rec._notificar_contabilidad()
             rec._notificar_trabajador_aprobado()
+            rec._whatsapp_notificar_trabajador_aprobado()
 
             rec.message_post(
                 body=_(
@@ -890,6 +1221,7 @@ class MantenimientoTecnicoAusencia(models.Model):
             })
 
             rec._notificar_trabajador_rechazado()
+            rec._whatsapp_notificar_trabajador_rechazado()
 
             rec.message_post(
                 body=_("❌ Solicitud rechazada."),
@@ -898,7 +1230,15 @@ class MantenimientoTecnicoAusencia(models.Model):
 
     def action_cancelar(self):
         for rec in self:
-            rec.write({'estado': 'cancelado'})
+            if rec.estado not in ('borrador', 'pendiente'):
+                raise UserError(
+                    _("Solo se pueden cancelar solicitudes en borrador o pendientes.")
+                )
+
+            rec.write({
+                'estado': 'cancelado',
+            })
+
             rec.message_post(
                 body=_("Solicitud cancelada."),
                 message_type='notification'
