@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+
 import logging
 import re
 
@@ -10,14 +11,18 @@ _logger = logging.getLogger(__name__)
 
 class WhatsAppPartnerApiController(http.Controller):
     """
-    API para que n8n / servicio WhatsApp consulte datos de res.partner.
+    API para que n8n / servicio WhatsApp consulte y actualice datos WhatsApp en Odoo.
 
-    Este controlador NO maneja Baileys.
-    Solo consulta y actualiza datos WhatsApp en Odoo.
+    Rutas:
+    - POST /sat/whatsapp/profile
+    - POST /sat/whatsapp/touch
+    - POST /sat/whatsapp/human/take
+    - POST /sat/whatsapp/human/release
+    - POST /sat/whatsapp/company/select
     """
 
     # ==========================================================
-    # Helpers
+    # Helpers base
     # ==========================================================
     def _get_json_payload(self):
         try:
@@ -30,21 +35,6 @@ class WhatsAppPartnerApiController(http.Controller):
             return request.jsonrequest or {}
         except Exception:
             return {}
-
-    def _clean_phone(self, value):
-        value = value or ""
-        digits = re.sub(r"\D+", "", str(value))
-
-        if not digits:
-            return ""
-
-        digits = digits.lstrip("0")
-
-        # Perú: si llega 9 dígitos, agregar 51
-        if len(digits) == 9:
-            digits = "51" + digits
-
-        return digits
 
     def _json_error(self, message, code="ERROR", status=200):
         return {
@@ -74,35 +64,201 @@ class WhatsAppPartnerApiController(http.Controller):
 
         return True
 
-    def _find_partner_by_phone(self, phone):
-        clean = self._clean_phone(phone)
+    # ==========================================================
+    # Helpers teléfono / JID / LID
+    # ==========================================================
+    def _clean_phone(self, value):
+        value = value or ""
+        value = str(value).strip()
+
+        if not value:
+            return ""
+
+        lowered = value.lower()
+
+        # Si es LID puro, no lo tratamos como teléfono.
+        if "@lid" in lowered:
+            return ""
+
+        # Si es JID normal, extraer parte antes de @.
+        if "@s.whatsapp.net" in lowered or "@c.us" in lowered:
+            value = value.split("@", 1)[0]
+
+        digits = re.sub(r"\D+", "", value)
+
+        if not digits:
+            return ""
+
+        digits = digits.lstrip("0")
+
+        # Perú: si llega 9 dígitos, agregar 51.
+        if len(digits) == 9:
+            digits = "51" + digits
+
+        return digits
+
+    def _normalize_jid(self, value):
+        value = (value or "").strip()
+        return value or ""
+
+    def _is_lid(self, value):
+        value = (value or "").lower().strip()
+        return "@lid" in value or value.endswith(".lid")
+
+    def _is_normal_whatsapp_jid(self, value):
+        value = (value or "").lower().strip()
+        return "@s.whatsapp.net" in value or "@c.us" in value
+
+    def _extract_identifiers(self, payload):
+        """
+        Acepta payloads como:
+        {
+            "phone": "51999999999",
+            "jid": "51999999999@s.whatsapp.net",
+            "lid": "123456789@lid",
+            "raw_jid": "..."
+        }
+
+        También soporta:
+        {
+            "from": "51999999999@s.whatsapp.net"
+        }
+
+        o:
+        {
+            "from": "123456789@lid"
+        }
+        """
+        phone = (
+            payload.get("phone")
+            or payload.get("whatsapp_number")
+            or payload.get("number")
+        )
+
+        incoming_from = payload.get("from") or payload.get("remoteJid") or payload.get("remote_jid")
+        jid = payload.get("jid") or payload.get("remote_jid")
+        lid = payload.get("lid") or payload.get("remote_lid")
+        raw_jid = payload.get("raw_jid") or incoming_from or jid or lid
+
+        # Si "from" viene como jid normal.
+        if incoming_from and self._is_normal_whatsapp_jid(incoming_from):
+            jid = jid or incoming_from
+            phone = phone or incoming_from
+
+        # Si "from" viene como lid.
+        if incoming_from and self._is_lid(incoming_from):
+            lid = lid or incoming_from
+
+        # Si jid en realidad es lid.
+        if jid and self._is_lid(jid):
+            lid = lid or jid
+            jid = False
+
+        clean_phone = self._clean_phone(phone)
+        clean_jid = self._normalize_jid(jid)
+        clean_lid = self._normalize_jid(lid)
+        clean_raw_jid = self._normalize_jid(raw_jid)
+
+        return {
+            "phone": clean_phone,
+            "jid": clean_jid,
+            "lid": clean_lid,
+            "raw_jid": clean_raw_jid,
+        }
+
+    # ==========================================================
+    # Buscar partner
+    # ==========================================================
+    def _find_partner_by_phone(self, clean_phone):
         Partner = request.env["res.partner"].sudo()
 
-        if not clean:
+        if not clean_phone:
             return Partner
 
-        last9 = clean[-9:]
+        last9 = clean_phone[-9:]
 
         candidates = Partner.search([
-            "|", "|",
+            "|", "|", "|",
             ("whatsapp_number", "ilike", last9),
             ("mobile", "ilike", last9),
             ("phone", "ilike", last9),
-        ], limit=30)
+            ("whatsapp_jid", "ilike", clean_phone),
+        ], limit=50)
 
         if not candidates:
             return Partner
 
-        # Priorizar coincidencia exacta por dígitos normalizados
+        # Prioridad 1: coincidencia exacta normalizada.
         for partner in candidates:
-            for number in [partner.whatsapp_number, partner.mobile, partner.phone]:
-                if self._clean_phone(number) == clean:
+            numbers = [
+                partner.whatsapp_number,
+                partner.mobile,
+                partner.phone,
+            ]
+
+            for number in numbers:
+                if self._clean_phone(number) == clean_phone:
                     return partner
+
+        # Prioridad 2: JID contiene teléfono exacto.
+        for partner in candidates:
+            if partner.whatsapp_jid and clean_phone in partner.whatsapp_jid:
+                return partner
 
         return candidates[:1]
 
+    def _find_partner_by_identifiers(self, identifiers):
+        Partner = request.env["res.partner"].sudo()
+
+        clean_phone = identifiers.get("phone")
+        clean_jid = identifiers.get("jid")
+        clean_lid = identifiers.get("lid")
+        raw_jid = identifiers.get("raw_jid")
+
+        # 1) Buscar por teléfono.
+        if clean_phone:
+            partner = self._find_partner_by_phone(clean_phone)
+            if partner:
+                return partner
+
+        # 2) Buscar por JID normal.
+        if clean_jid:
+            partner = Partner.search([("whatsapp_jid", "=", clean_jid)], limit=1)
+            if partner:
+                return partner
+
+        # 3) Buscar por LID.
+        if clean_lid:
+            partner = Partner.search([("whatsapp_lid", "=", clean_lid)], limit=1)
+            if partner:
+                return partner
+
+        # 4) Si raw_jid es lid, buscar por whatsapp_lid.
+        if raw_jid and self._is_lid(raw_jid):
+            partner = Partner.search([("whatsapp_lid", "=", raw_jid)], limit=1)
+            if partner:
+                return partner
+
+        # 5) Si raw_jid es jid normal, buscar por whatsapp_jid.
+        if raw_jid and self._is_normal_whatsapp_jid(raw_jid):
+            partner = Partner.search([("whatsapp_jid", "=", raw_jid)], limit=1)
+            if partner:
+                return partner
+
+        return Partner
+
+    def _update_partner_identifiers(self, partner, identifiers):
+        if not partner:
+            return
+
+        partner.whatsapp_update_identifiers(
+            jid=identifiers.get("jid"),
+            lid=identifiers.get("lid"),
+            raw_jid=identifiers.get("raw_jid"),
+        )
+
     # ==========================================================
-    # 1) Consultar perfil WhatsApp por número
+    # 1) Consultar perfil WhatsApp por número / JID / LID
     # ==========================================================
     @http.route(
         "/sat/whatsapp/profile",
@@ -116,36 +272,38 @@ class WhatsAppPartnerApiController(http.Controller):
             return self._json_error("No autorizado", "UNAUTHORIZED", 401)
 
         payload = self._get_json_payload()
-        phone = (
-            payload.get("phone")
-            or payload.get("whatsapp_number")
-            or payload.get("from")
-        )
+        identifiers = self._extract_identifiers(payload)
 
-        clean_phone = self._clean_phone(phone)
-
-        if not clean_phone:
+        if not identifiers.get("phone") and not identifiers.get("jid") and not identifiers.get("lid") and not identifiers.get("raw_jid"):
             return self._json_error(
-                "Número WhatsApp requerido",
-                "PHONE_REQUIRED",
+                "Número, JID o LID requerido",
+                "IDENTIFIER_REQUIRED",
                 400,
             )
 
-        partner = self._find_partner_by_phone(clean_phone)
+        partner = self._find_partner_by_identifiers(identifiers)
 
         if not partner:
             return {
                 "ok": True,
                 "found": False,
-                "phone": clean_phone,
+                "phone": identifiers.get("phone"),
+                "jid": identifiers.get("jid"),
+                "lid": identifiers.get("lid"),
+                "raw_jid": identifiers.get("raw_jid"),
                 "profile": None,
                 "message": "Contacto no encontrado",
             }
 
+        self._update_partner_identifiers(partner, identifiers)
+
         return {
             "ok": True,
             "found": True,
-            "phone": clean_phone,
+            "phone": identifiers.get("phone"),
+            "jid": identifiers.get("jid"),
+            "lid": identifiers.get("lid"),
+            "raw_jid": identifiers.get("raw_jid"),
             "partner_id": partner.id,
             "profile": partner.get_whatsapp_profile_payload(),
         }
@@ -165,32 +323,31 @@ class WhatsAppPartnerApiController(http.Controller):
             return self._json_error("No autorizado", "UNAUTHORIZED", 401)
 
         payload = self._get_json_payload()
-        phone = (
-            payload.get("phone")
-            or payload.get("whatsapp_number")
-            or payload.get("from")
-        )
+        identifiers = self._extract_identifiers(payload)
+
         intent = payload.get("intent") or False
         force_new_session = bool(payload.get("force_new_session"))
 
-        clean_phone = self._clean_phone(phone)
-
-        if not clean_phone:
+        if not identifiers.get("phone") and not identifiers.get("jid") and not identifiers.get("lid") and not identifiers.get("raw_jid"):
             return self._json_error(
-                "Número WhatsApp requerido",
-                "PHONE_REQUIRED",
+                "Número, JID o LID requerido",
+                "IDENTIFIER_REQUIRED",
                 400,
             )
 
-        partner = self._find_partner_by_phone(clean_phone)
+        partner = self._find_partner_by_identifiers(identifiers)
 
         if not partner:
             return {
                 "ok": True,
                 "found": False,
-                "phone": clean_phone,
+                "phone": identifiers.get("phone"),
+                "jid": identifiers.get("jid"),
+                "lid": identifiers.get("lid"),
                 "message": "Contacto no encontrado. No se actualizó sesión.",
             }
+
+        self._update_partner_identifiers(partner, identifiers)
 
         partner.whatsapp_touch_message(
             intent=intent,
@@ -200,7 +357,9 @@ class WhatsAppPartnerApiController(http.Controller):
         return {
             "ok": True,
             "found": True,
-            "phone": clean_phone,
+            "phone": identifiers.get("phone"),
+            "jid": identifiers.get("jid"),
+            "lid": identifiers.get("lid"),
             "partner_id": partner.id,
             "profile": partner.get_whatsapp_profile_payload(),
         }
@@ -220,37 +379,40 @@ class WhatsAppPartnerApiController(http.Controller):
             return self._json_error("No autorizado", "UNAUTHORIZED", 401)
 
         payload = self._get_json_payload()
-        phone = (
-            payload.get("phone")
-            or payload.get("whatsapp_number")
-            or payload.get("from")
-        )
+        identifiers = self._extract_identifiers(payload)
+        taken_by_name = payload.get("taken_by_name") or payload.get("agent_name") or "API / n8n"
 
-        clean_phone = self._clean_phone(phone)
-
-        if not clean_phone:
+        if not identifiers.get("phone") and not identifiers.get("jid") and not identifiers.get("lid") and not identifiers.get("raw_jid"):
             return self._json_error(
-                "Número WhatsApp requerido",
-                "PHONE_REQUIRED",
+                "Número, JID o LID requerido",
+                "IDENTIFIER_REQUIRED",
                 400,
             )
 
-        partner = self._find_partner_by_phone(clean_phone)
+        partner = self._find_partner_by_identifiers(identifiers)
 
         if not partner:
             return {
                 "ok": True,
                 "found": False,
-                "phone": clean_phone,
+                "phone": identifiers.get("phone"),
+                "jid": identifiers.get("jid"),
+                "lid": identifiers.get("lid"),
                 "message": "Contacto no encontrado. No se activó modo humano.",
             }
 
-        partner.action_whatsapp_enable_human_mode()
+        self._update_partner_identifiers(partner, identifiers)
+
+        partner.whatsapp_enable_human_mode_api(
+            taken_by_name=taken_by_name,
+        )
 
         return {
             "ok": True,
             "found": True,
-            "phone": clean_phone,
+            "phone": identifiers.get("phone"),
+            "jid": identifiers.get("jid"),
+            "lid": identifiers.get("lid"),
             "partner_id": partner.id,
             "profile": partner.get_whatsapp_profile_payload(),
         }
@@ -270,37 +432,37 @@ class WhatsAppPartnerApiController(http.Controller):
             return self._json_error("No autorizado", "UNAUTHORIZED", 401)
 
         payload = self._get_json_payload()
-        phone = (
-            payload.get("phone")
-            or payload.get("whatsapp_number")
-            or payload.get("from")
-        )
+        identifiers = self._extract_identifiers(payload)
 
-        clean_phone = self._clean_phone(phone)
-
-        if not clean_phone:
+        if not identifiers.get("phone") and not identifiers.get("jid") and not identifiers.get("lid") and not identifiers.get("raw_jid"):
             return self._json_error(
-                "Número WhatsApp requerido",
-                "PHONE_REQUIRED",
+                "Número, JID o LID requerido",
+                "IDENTIFIER_REQUIRED",
                 400,
             )
 
-        partner = self._find_partner_by_phone(clean_phone)
+        partner = self._find_partner_by_identifiers(identifiers)
 
         if not partner:
             return {
                 "ok": True,
                 "found": False,
-                "phone": clean_phone,
+                "phone": identifiers.get("phone"),
+                "jid": identifiers.get("jid"),
+                "lid": identifiers.get("lid"),
                 "message": "Contacto no encontrado. No se liberó modo humano.",
             }
 
-        partner.action_whatsapp_release_human_mode()
+        self._update_partner_identifiers(partner, identifiers)
+
+        partner.whatsapp_release_human_mode_api()
 
         return {
             "ok": True,
             "found": True,
-            "phone": clean_phone,
+            "phone": identifiers.get("phone"),
+            "jid": identifiers.get("jid"),
+            "lid": identifiers.get("lid"),
             "partner_id": partner.id,
             "profile": partner.get_whatsapp_profile_payload(),
         }
@@ -320,19 +482,14 @@ class WhatsAppPartnerApiController(http.Controller):
             return self._json_error("No autorizado", "UNAUTHORIZED", 401)
 
         payload = self._get_json_payload()
-        phone = (
-            payload.get("phone")
-            or payload.get("whatsapp_number")
-            or payload.get("from")
-        )
+        identifiers = self._extract_identifiers(payload)
+
         company_id = payload.get("company_id")
 
-        clean_phone = self._clean_phone(phone)
-
-        if not clean_phone:
+        if not identifiers.get("phone") and not identifiers.get("jid") and not identifiers.get("lid") and not identifiers.get("raw_jid"):
             return self._json_error(
-                "Número WhatsApp requerido",
-                "PHONE_REQUIRED",
+                "Número, JID o LID requerido",
+                "IDENTIFIER_REQUIRED",
                 400,
             )
 
@@ -343,17 +500,30 @@ class WhatsAppPartnerApiController(http.Controller):
                 400,
             )
 
-        partner = self._find_partner_by_phone(clean_phone)
+        partner = self._find_partner_by_identifiers(identifiers)
 
         if not partner:
             return {
                 "ok": True,
                 "found": False,
-                "phone": clean_phone,
+                "phone": identifiers.get("phone"),
+                "jid": identifiers.get("jid"),
+                "lid": identifiers.get("lid"),
                 "message": "Contacto no encontrado. No se seleccionó empresa.",
             }
 
-        company = request.env["res.partner"].sudo().browse(int(company_id)).exists()
+        self._update_partner_identifiers(partner, identifiers)
+
+        try:
+            company_id = int(company_id)
+        except Exception:
+            return self._json_error(
+                "company_id inválido",
+                "COMPANY_INVALID",
+                400,
+            )
+
+        company = request.env["res.partner"].sudo().browse(company_id).exists()
 
         if not company:
             return self._json_error(
@@ -362,12 +532,22 @@ class WhatsAppPartnerApiController(http.Controller):
                 404,
             )
 
-        partner.whatsapp_set_active_company(company)
+        try:
+            partner.whatsapp_set_active_company(company)
+        except Exception as e:
+            _logger.exception("[SAT-WHATSAPP-API] Error seleccionando empresa activa")
+            return self._json_error(
+                str(e),
+                "COMPANY_SELECTION_ERROR",
+                400,
+            )
 
         return {
             "ok": True,
             "found": True,
-            "phone": clean_phone,
+            "phone": identifiers.get("phone"),
+            "jid": identifiers.get("jid"),
+            "lid": identifiers.get("lid"),
             "partner_id": partner.id,
             "active_company_id": company.id,
             "active_company_name": company.name,

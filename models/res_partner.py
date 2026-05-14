@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 from odoo import api, fields, models, _
 from odoo.exceptions import ValidationError
 
@@ -31,6 +33,27 @@ class ResPartner(models.Model):
     )
 
     # ==========================================================
+    # WhatsApp / Baileys IDs
+    # ==========================================================
+    whatsapp_jid = fields.Char(
+        string="WhatsApp JID",
+        index=True,
+        help="JID normal de WhatsApp. Ejemplo: 51999999999@s.whatsapp.net",
+    )
+
+    whatsapp_lid = fields.Char(
+        string="WhatsApp LID",
+        index=True,
+        help="Identificador LID de WhatsApp/Baileys cuando no llega el número real.",
+    )
+
+    whatsapp_last_raw_jid = fields.Char(
+        string="Último JID recibido",
+        readonly=True,
+        help="Último identificador bruto recibido desde Baileys.",
+    )
+
+    # ==========================================================
     # Bloqueo / acceso
     # ==========================================================
     whatsapp_blocked = fields.Boolean(
@@ -57,7 +80,7 @@ class ResPartner(models.Model):
     )
 
     # ==========================================================
-    # Permisos
+    # Permisos base
     # ==========================================================
     whatsapp_allow_ai = fields.Boolean(
         string="Permitir IA",
@@ -102,6 +125,12 @@ class ResPartner(models.Model):
         comodel_name="res.users",
         string="Tomado por",
         readonly=True,
+    )
+
+    whatsapp_human_by_name = fields.Char(
+        string="Tomado por nombre",
+        readonly=True,
+        help="Nombre externo enviado por n8n/API cuando el modo humano se activa desde fuera de Odoo.",
     )
 
     # ==========================================================
@@ -288,6 +317,7 @@ class ResPartner(models.Model):
                 partner.whatsapp_allow_auto_response = True
             elif partner.whatsapp_access_level == "blocked":
                 partner.whatsapp_access_level = "standard"
+                partner.whatsapp_block_reason = False
                 partner.whatsapp_allow_ai = True
                 partner.whatsapp_allow_auto_response = True
                 partner.whatsapp_allow_ticket = True
@@ -307,6 +337,7 @@ class ResPartner(models.Model):
 
             elif partner.whatsapp_access_level == "restricted":
                 partner.whatsapp_blocked = False
+                partner.whatsapp_block_reason = False
                 partner.whatsapp_allow_ai = False
                 partner.whatsapp_allow_ticket = False
                 partner.whatsapp_allow_odoo_lookup = False
@@ -315,6 +346,7 @@ class ResPartner(models.Model):
 
             elif partner.whatsapp_access_level == "info_only":
                 partner.whatsapp_blocked = False
+                partner.whatsapp_block_reason = False
                 partner.whatsapp_allow_ai = True
                 partner.whatsapp_allow_ticket = False
                 partner.whatsapp_allow_odoo_lookup = True
@@ -323,6 +355,7 @@ class ResPartner(models.Model):
 
             elif partner.whatsapp_access_level == "standard":
                 partner.whatsapp_blocked = False
+                partner.whatsapp_block_reason = False
                 partner.whatsapp_allow_ai = True
                 partner.whatsapp_allow_auto_response = True
                 partner.whatsapp_allow_ticket = True
@@ -331,6 +364,7 @@ class ResPartner(models.Model):
 
             elif partner.whatsapp_access_level == "vip":
                 partner.whatsapp_blocked = False
+                partner.whatsapp_block_reason = False
                 partner.whatsapp_allow_ai = True
                 partner.whatsapp_allow_auto_response = True
                 partner.whatsapp_allow_ticket = True
@@ -340,13 +374,11 @@ class ResPartner(models.Model):
     @api.onchange("whatsapp_company_ids")
     def _onchange_whatsapp_company_ids(self):
         for partner in self:
-            if (
-                partner.whatsapp_active_company_id
-                and partner.whatsapp_active_company_id not in partner._get_whatsapp_available_companies()
-            ):
+            companies = partner._get_whatsapp_available_companies()
+
+            if partner.whatsapp_active_company_id and partner.whatsapp_active_company_id not in companies:
                 partner.whatsapp_active_company_id = False
 
-            companies = partner._get_whatsapp_available_companies()
             if not partner.whatsapp_active_company_id and len(companies) == 1:
                 partner.whatsapp_active_company_id = companies[0]
 
@@ -389,6 +421,10 @@ class ResPartner(models.Model):
 
     def write(self, vals):
         vals = dict(vals or {})
+
+        if self.env.context.get("skip_whatsapp_consistency"):
+            return super().write(vals)
+
         self._prepare_whatsapp_vals(vals)
 
         result = super().write(vals)
@@ -421,6 +457,9 @@ class ResPartner(models.Model):
             vals["whatsapp_allow_human_transfer"] = False
             vals.setdefault("whatsapp_allow_auto_response", True)
 
+        if vals.get("whatsapp_access_level") in ("restricted", "info_only", "standard", "vip"):
+            vals.setdefault("whatsapp_blocked", False)
+
         return vals
 
     def _ensure_whatsapp_consistency(self):
@@ -443,23 +482,20 @@ class ResPartner(models.Model):
                 if partner.whatsapp_allow_human_transfer:
                     patch["whatsapp_allow_human_transfer"] = False
 
+            if not partner.whatsapp_blocked and partner.whatsapp_access_level != "blocked":
+                if partner.whatsapp_block_reason:
+                    patch["whatsapp_block_reason"] = False
+
             companies = partner._get_whatsapp_available_companies()
 
-            if (
-                partner.whatsapp_active_company_id
-                and partner.whatsapp_active_company_id not in companies
-            ):
+            if partner.whatsapp_active_company_id and partner.whatsapp_active_company_id not in companies:
                 patch["whatsapp_active_company_id"] = False
 
-            if (
-                not partner.is_company
-                and not partner.whatsapp_active_company_id
-                and len(companies) == 1
-            ):
+            if not partner.is_company and not partner.whatsapp_active_company_id and len(companies) == 1:
                 patch["whatsapp_active_company_id"] = companies.id
 
             if patch:
-                super(ResPartner, partner).write(patch)
+                partner.with_context(skip_whatsapp_consistency=True).write(patch)
 
     # ==========================================================
     # Acciones
@@ -470,6 +506,7 @@ class ResPartner(models.Model):
                 "whatsapp_human_mode": True,
                 "whatsapp_human_since": fields.Datetime.now(),
                 "whatsapp_human_by_id": self.env.user.id,
+                "whatsapp_human_by_name": self.env.user.name,
             })
 
     def action_whatsapp_release_human_mode(self):
@@ -478,6 +515,7 @@ class ResPartner(models.Model):
                 "whatsapp_human_mode": False,
                 "whatsapp_human_since": False,
                 "whatsapp_human_by_id": False,
+                "whatsapp_human_by_name": False,
             })
 
     def action_whatsapp_block(self):
@@ -491,6 +529,7 @@ class ResPartner(models.Model):
         for partner in self:
             partner.write({
                 "whatsapp_blocked": False,
+                "whatsapp_block_reason": False,
                 "whatsapp_access_level": "standard",
                 "whatsapp_allow_ai": True,
                 "whatsapp_allow_auto_response": True,
@@ -498,6 +537,45 @@ class ResPartner(models.Model):
                 "whatsapp_allow_odoo_lookup": True,
                 "whatsapp_allow_human_transfer": True,
             })
+
+    def whatsapp_enable_human_mode_api(self, taken_by_name=False):
+        for partner in self:
+            partner.write({
+                "whatsapp_human_mode": True,
+                "whatsapp_human_since": fields.Datetime.now(),
+                "whatsapp_human_by_id": False,
+                "whatsapp_human_by_name": taken_by_name or "API / n8n",
+            })
+
+    def whatsapp_release_human_mode_api(self):
+        for partner in self:
+            partner.write({
+                "whatsapp_human_mode": False,
+                "whatsapp_human_since": False,
+                "whatsapp_human_by_id": False,
+                "whatsapp_human_by_name": False,
+            })
+
+    # ==========================================================
+    # Identificadores WhatsApp / Baileys
+    # ==========================================================
+    def whatsapp_update_identifiers(self, jid=False, lid=False, raw_jid=False):
+        for partner in self:
+            vals = {}
+
+            if jid and partner.whatsapp_jid != jid:
+                vals["whatsapp_jid"] = jid
+
+            if lid and partner.whatsapp_lid != lid:
+                vals["whatsapp_lid"] = lid
+
+            if raw_jid:
+                vals["whatsapp_last_raw_jid"] = raw_jid
+
+            if vals:
+                partner.write(vals)
+
+        return True
 
     # ==========================================================
     # Helpers empresas
@@ -589,6 +667,14 @@ class ResPartner(models.Model):
                 "is_company": company.is_company,
             })
 
+        human_user_name = False
+        if self.whatsapp_human_by_id:
+            human_user_name = self.whatsapp_human_by_id.name
+        elif self.whatsapp_human_by_name:
+            human_user_name = self.whatsapp_human_by_name
+
+        block_reason = self.whatsapp_block_reason if self.whatsapp_blocked else False
+
         return {
             "partner_id": self.id,
             "name": self.name,
@@ -601,10 +687,13 @@ class ResPartner(models.Model):
 
             "whatsapp": {
                 "number": self.whatsapp_number,
+                "jid": self.whatsapp_jid,
+                "lid": self.whatsapp_lid,
+                "last_raw_jid": self.whatsapp_last_raw_jid,
                 "enabled": self.whatsapp_enabled,
                 "verified": self.whatsapp_verified,
                 "blocked": self.whatsapp_blocked,
-                "block_reason": self.whatsapp_block_reason,
+                "block_reason": block_reason,
                 "access_level": self.whatsapp_access_level,
                 "status_label": self.whatsapp_status_label,
             },
@@ -625,7 +714,7 @@ class ResPartner(models.Model):
                 "active": self.whatsapp_human_mode,
                 "since": self.whatsapp_human_since,
                 "user_id": self.whatsapp_human_by_id.id if self.whatsapp_human_by_id else False,
-                "user_name": self.whatsapp_human_by_id.name if self.whatsapp_human_by_id else False,
+                "user_name": human_user_name,
             },
 
             "conversation": {
