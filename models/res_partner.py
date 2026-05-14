@@ -54,6 +54,22 @@ class ResPartner(models.Model):
     )
 
     # ==========================================================
+    # Registro WhatsApp
+    # ==========================================================
+    whatsapp_registration_state = fields.Selection(
+        selection=[
+            ("none", "Sin registro"),
+            ("waiting_dni", "Esperando DNI"),
+            ("waiting_ruc", "Esperando RUC"),
+            ("registered", "Registrado"),
+            ("manual_review", "Revisión manual"),
+        ],
+        string="Estado registro WhatsApp",
+        default="none",
+        help="Estado del flujo de registro por WhatsApp.",
+    )
+
+    # ==========================================================
     # Bloqueo / acceso
     # ==========================================================
     whatsapp_blocked = fields.Boolean(
@@ -723,6 +739,7 @@ class ResPartner(models.Model):
                 "last_intent": self.whatsapp_last_intent,
                 "session_timeout_minutes": self.whatsapp_session_timeout_minutes,
                 "is_new_session": self._whatsapp_is_session_expired(),
+                "registration_state": self.whatsapp_registration_state,
             },
 
             "companies": {
