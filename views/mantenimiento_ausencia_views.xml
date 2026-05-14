@@ -23,7 +23,7 @@
                     <field name="dia_completo"/>
                     <field name="estado"/>
                     <field name="ticket_afectado_count"/>
-                    <field name="notificar_contabilidad"/>
+                    
                     <field name="aprobado_por_id"/>
                 </list>
             </field>
@@ -145,9 +145,7 @@
                             </group>
 
                             <group string="Notificación">
-                                <field name="notificar_contabilidad"/>
-                                <field name="correo_contabilidad" readonly="1" invisible="not notificar_contabilidad"/>
-                                <field name="disponibilidad_id" readonly="1"/>
+                                
                             </group>
                         </group>
 
