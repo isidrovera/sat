@@ -19,7 +19,7 @@
                 template.with_context(correo_jefe_area='correo@dominio.com').send_mail(...)
                 Si no llega contexto, usa este correo de respaldo.
             -->
-            <field name="email_to">verapolo@icloud.com</field>
+            <field name="email_to">{{ctx.get('correo_jefe_area') or 'verapolo@icloud.com'}}</field>
 
             <field name="email_cc">soporte@andescopiers.com.pe</field>
             <field name="reply_to">soporte@andescopiers.com.pe</field>

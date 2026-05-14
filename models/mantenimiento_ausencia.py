@@ -599,7 +599,7 @@ class MantenimientoTecnicoAusencia(models.Model):
     # CORREOS
     # ============================================================
 
-    def _send_mail_template_safe(self, xmlid, context_values=None, log_name=None):
+    def _send_mail_template_safe(self, xmlid, context_values=None, log_name=None, include_adjunto=False):
         self.ensure_one()
 
         context_values = context_values or {}
@@ -619,10 +619,33 @@ class MantenimientoTecnicoAusencia(models.Model):
             return False
 
         try:
+            email_values = {}
+
+            if include_adjunto and self.adjunto:
+                filename = self.adjunto_filename or ("Sustento_%s" % (self.name or self.id))
+
+                attachment = self.env['ir.attachment'].sudo().create({
+                    'name': filename,
+                    'type': 'binary',
+                    'datas': self.adjunto,
+                    'res_model': self._name,
+                    'res_id': self.id,
+                    'mimetype': 'application/octet-stream',
+                })
+
+                email_values['attachment_ids'] = [(4, attachment.id)]
+
+                _logger.info(
+                    "[Ausencias] Adjunto agregado al correo. Attachment ID=%s Nombre=%s",
+                    attachment.id,
+                    filename
+                )
+
             mail_id = template.with_context(**context_values).send_mail(
                 self.id,
                 force_send=True,
-                raise_exception=False
+                raise_exception=False,
+                email_values=email_values
             )
 
             _logger.info(
@@ -655,8 +678,10 @@ class MantenimientoTecnicoAusencia(models.Model):
         return self._send_mail_template_safe(
             'sat.email_template_leave_request',
             context_values={},
-            log_name='Solicitud pendiente para jefe de área'
+            log_name='Solicitud pendiente para jefe de área',
+            include_adjunto=True
         )
+            
 
     def _notificar_contabilidad(self):
         self.ensure_one()
@@ -665,12 +690,11 @@ class MantenimientoTecnicoAusencia(models.Model):
             _logger.info("[Ausencias] No se notifica contabilidad por configuración del registro.")
             return False
 
-        # No usa parámetro.
-        # Los destinatarios deben estar en el template XML.
         return self._send_mail_template_safe(
             'sat.mail_template_mantenimiento_ausencia_contabilidad',
             context_values={},
-            log_name='Permiso aprobado para contabilidad / gerencia'
+            log_name='Permiso aprobado para contabilidad / gerencia',
+            include_adjunto=True
         )
 
     def _notificar_trabajador_aprobado(self):
@@ -679,7 +703,8 @@ class MantenimientoTecnicoAusencia(models.Model):
         return self._send_mail_template_safe(
             'sat.email_template_mantenimiento_ausencia_empleado_aprobado',
             context_values={},
-            log_name='Solicitud aprobada para solicitante'
+            log_name='Solicitud aprobada para solicitante',
+            include_adjunto=True
         )
 
     def _notificar_trabajador_rechazado(self):
