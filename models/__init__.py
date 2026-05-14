@@ -109,3 +109,14 @@ from . import ticket_evidencia_foto
 from . import ticket_alquiler_evidencia
 from . import ticket_alquiler_mobile_autosave
 from . import res_partner
+from . import whatsapp_session
+from . import whatsapp_message
+from . import whatsapp_api_log
+from . import whatsapp_auto_response
+from . import whatsapp_business_hours
+from . import whatsapp_calendar_event
+from . import whatsapp_intent_rule
+from . import whatsapp_template
+from . import whatsapp_media
+from . import whatsapp_handoff
+from . import whatsapp_outbox

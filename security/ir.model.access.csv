@@ -275,3 +275,14 @@ access_mantenimiento_planificador_linea_user,mantenimiento.planificador.linea us
 access_mantenimiento_planificador_linea_manager,mantenimiento.planificador.linea manager,model_mantenimiento_planificador_linea,base.group_system,1,1,1,1
 access_ticket_evidencia_foto_user,ticket.evidencia.foto.user,model_ticket_evidencia_foto,base.group_user,1,1,1,0
 access_ticket_evidencia_foto_manager,ticket.evidencia.foto.manager,model_ticket_evidencia_foto,base.group_system,1,1,1,1
+access_whatsapp_session_user,whatsapp.session.user,model_whatsapp_session,base.group_user,1,1,1,1
+access_whatsapp_message_user,whatsapp.message.user,model_whatsapp_message,base.group_user,1,1,1,1
+access_whatsapp_api_log_user,whatsapp.api.log.user,model_whatsapp_api_log,base.group_user,1,1,1,1
+access_whatsapp_auto_response_user,whatsapp.auto.response.user,model_whatsapp_auto_response,base.group_user,1,1,1,1
+access_whatsapp_business_hours_user,whatsapp.business.hours.user,model_whatsapp_business_hours,base.group_user,1,1,1,1
+access_whatsapp_calendar_event_user,whatsapp.calendar.event.user,model_whatsapp_calendar_event,base.group_user,1,1,1,1
+access_whatsapp_intent_rule_user,whatsapp.intent.rule.user,model_whatsapp_intent_rule,base.group_user,1,1,1,1
+access_whatsapp_template_user,whatsapp.template.user,model_whatsapp_template,base.group_user,1,1,1,1
+access_whatsapp_media_user,whatsapp.media.user,model_whatsapp_media,base.group_user,1,1,1,1
+access_whatsapp_handoff_user,whatsapp.handoff.user,model_whatsapp_handoff,base.group_user,1,1,1,1
+access_whatsapp_outbox_user,whatsapp.outbox.user,model_whatsapp_outbox,base.group_user,1,1,1,1

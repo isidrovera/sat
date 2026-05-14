@@ -46,6 +46,12 @@
             <field name="prefix">REM/%(range_year)s/%(range_month)s/</field>
             -->
          </record>
+          <record id="seq_whatsapp_session" model="ir.sequence">
+        <field name="name">WhatsApp Session</field>
+        <field name="code">whatsapp.session</field>
+        <field name="prefix">WA/%(year)s/</field>
+        <field name="padding">6</field>
+    </record>
 
     </data>
 </odoo>
