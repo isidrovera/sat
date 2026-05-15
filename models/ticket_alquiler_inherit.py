@@ -5,6 +5,7 @@ import logging
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError, ValidationError
 from datetime import timedelta
+from pytz import timezone, UTC
 
 
 _logger = logging.getLogger(__name__)
@@ -102,6 +103,30 @@ class TicketAlquilerMantenimientoPlanificador(models.Model):
     )
 
     # ============================================================
+    # HELPERS DE ZONA HORARIA
+    # ============================================================
+
+    def _agenda_to_local(self, agenda_value):
+        """
+        Convierte un valor de agenda (Datetime UTC naive) al timezone del usuario.
+
+        Odoo almacena los Datetime en UTC. Si extraemos .hour directamente
+        obtenemos hora UTC, no hora local. Este helper centraliza la conversión.
+
+        Devuelve un datetime naive en hora local lista para extraer .hour y .date().
+        """
+        if not agenda_value:
+            return False
+
+        user_tz = self.env.user.tz or 'America/Lima'
+        local_tz = timezone(user_tz)
+
+        agenda_utc = fields.Datetime.to_datetime(agenda_value)
+        agenda_local = UTC.localize(agenda_utc).astimezone(local_tz).replace(tzinfo=None)
+
+        return agenda_local
+
+    # ============================================================
     # COMPUTES
     # ============================================================
 
@@ -117,7 +142,7 @@ class TicketAlquilerMantenimientoPlanificador(models.Model):
     def _compute_fecha_programada_mantenimiento(self):
         for rec in self:
             if rec.agenda:
-                agenda_dt = fields.Datetime.to_datetime(rec.agenda)
+                agenda_dt = rec._agenda_to_local(rec.agenda)
                 rec.fecha_programada_mantenimiento = agenda_dt.date()
                 rec.hora_programada_mantenimiento = (
                     agenda_dt.hour + agenda_dt.minute / 60.0
@@ -251,6 +276,13 @@ class TicketAlquilerMantenimientoPlanificador(models.Model):
 
         Ahora se usa la duración real del ticket:
             mantenimiento_preventivo = 1 hora si no hay duración explícita.
+
+        Corrección de zona horaria:
+        El campo agenda se almacena en UTC. Antes se extraía .hour directo y
+        se comparaba contra ventanas horarias del perfil (que están en hora
+        local Lima). Eso causaba un desfase de 5 horas: 09:30 Lima = 14:30 UTC
+        y se rechazaba contra la ventana 9-13. Ahora se convierte primero a
+        la zona horaria del usuario.
         """
         Perfil = self.env['mantenimiento.tecnico.perfil']
 
@@ -296,7 +328,7 @@ class TicketAlquilerMantenimientoPlanificador(models.Model):
                 )
                 continue
 
-            agenda_dt = fields.Datetime.to_datetime(rec.agenda)
+            agenda_dt = rec._agenda_to_local(rec.agenda)
             fecha = agenda_dt.date()
             hora_inicio = agenda_dt.hour + agenda_dt.minute / 60.0
 
@@ -380,7 +412,7 @@ class TicketAlquilerMantenimientoPlanificador(models.Model):
                 cruces = []
 
                 for other in tickets_cruzados:
-                    other_inicio = fields.Datetime.to_datetime(other.agenda)
+                    other_inicio = other._agenda_to_local(other.agenda)
                     other_duracion = other._get_duracion_planificador_ticket()
                     other_fin = other_inicio + timedelta(hours=other_duracion)
 
@@ -481,7 +513,7 @@ class TicketAlquilerMantenimientoPlanificador(models.Model):
             vals = {}
 
             if rec.agenda:
-                agenda_dt = fields.Datetime.to_datetime(rec.agenda)
+                agenda_dt = rec._agenda_to_local(rec.agenda)
                 hora_inicio = agenda_dt.hour + agenda_dt.minute / 60.0
                 duracion = rec._get_duracion_planificador_ticket()
 
@@ -508,7 +540,7 @@ class TicketAlquilerMantenimientoPlanificador(models.Model):
                 linea.with_context(skip_ticket_sync=True).write(vals)
 
             if rec.product_alquiler and rec.agenda:
-                agenda_dt = fields.Datetime.to_datetime(rec.agenda)
+                agenda_dt = rec._agenda_to_local(rec.agenda)
                 rec.product_alquiler.write({
                     'fecha_programada_mantenimiento': agenda_dt.date(),
                     'hora_programada_mantenimiento': agenda_dt.hour + agenda_dt.minute / 60.0,
@@ -522,7 +554,7 @@ class TicketAlquilerMantenimientoPlanificador(models.Model):
         fecha_base = False
 
         if self.agenda:
-            fecha_base = fields.Datetime.to_datetime(self.agenda).date()
+            fecha_base = self._agenda_to_local(self.agenda).date()
         elif self.product_alquiler and self.product_alquiler.fecha_recurrente:
             fecha_base = self.product_alquiler.fecha_recurrente
 
@@ -563,7 +595,7 @@ class TicketAlquilerMantenimientoPlanificador(models.Model):
         hora_inicio = 0.0
 
         if self.agenda:
-            agenda_dt = fields.Datetime.to_datetime(self.agenda)
+            agenda_dt = self._agenda_to_local(self.agenda)
             fecha_programada = agenda_dt.date()
             hora_inicio = agenda_dt.hour + agenda_dt.minute / 60.0
 

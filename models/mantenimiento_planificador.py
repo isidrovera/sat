@@ -4,6 +4,7 @@ from odoo import models, fields, api, _
 from odoo.exceptions import UserError, ValidationError
 from datetime import datetime, date, time, timedelta
 from dateutil.relativedelta import relativedelta
+from pytz import timezone, UTC
 import calendar
 import logging
 
@@ -224,6 +225,27 @@ class MantenimientoPlanificador(models.Model):
                 raise ValidationError(_("La fecha fin no puede ser menor que la fecha inicio."))
 
     # ============================================================
+    # HELPERS DE ZONA HORARIA
+    # ============================================================
+
+    def _agenda_to_local_dt(self, agenda_value):
+        """
+        Convierte un Datetime UTC (como se almacena en la BD) al timezone del usuario.
+
+        Devuelve un datetime naive en hora local, listo para comparar con
+        horas locales (hora_inicio, hora_fin del perfil del técnico) y para
+        cálculos con timedelta.
+        """
+        if not agenda_value:
+            return False
+
+        user_tz = self.env.user.tz or 'America/Lima'
+        local_tz = timezone(user_tz)
+
+        agenda_utc = fields.Datetime.to_datetime(agenda_value)
+        return UTC.localize(agenda_utc).astimezone(local_tz).replace(tzinfo=None)
+
+    # ============================================================
     # HELPERS GENERALES
     # ============================================================
 
@@ -287,9 +309,23 @@ class MantenimientoPlanificador(models.Model):
         return time(hour=hours, minute=minutes)
 
     def _make_datetime(self, fecha, hora_float):
+        """
+        Construye un datetime local (naive) a partir de una fecha y una hora float.
+
+        El resultado se compara contra los datetimes locales devueltos por
+        _agenda_to_local_dt, por lo que ambos deben estar en la misma escala
+        (hora local naive).
+        """
         return datetime.combine(fecha, self._float_to_time(hora_float))
 
     def _ticket_ocupa_tecnico(self, tecnico_id, inicio_dt, fin_dt, excluir_ticket_id=False):
+        """
+        Verifica si el técnico tiene tickets que se cruzan con el rango dado.
+
+        inicio_dt y fin_dt deben venir en hora local naive. Los tickets en BD
+        tienen agenda en UTC, así que se convierten a hora local antes de
+        comparar.
+        """
         domain = [
             ('responsable', '=', tecnico_id),
             ('agenda', '!=', False),
@@ -302,7 +338,9 @@ class MantenimientoPlanificador(models.Model):
         tickets = self.env['ticket.alquiler'].search(domain)
 
         for ticket in tickets:
-            ticket_inicio = fields.Datetime.to_datetime(ticket.agenda)
+            ticket_inicio = self._agenda_to_local_dt(ticket.agenda)
+            if not ticket_inicio:
+                continue
             ticket_fin = ticket_inicio + timedelta(hours=2)
 
             if ticket_inicio < fin_dt and ticket_fin > inicio_dt:
@@ -311,13 +349,27 @@ class MantenimientoPlanificador(models.Model):
         return False
 
     def _contar_tickets_tecnico_fecha(self, tecnico_id, fecha):
-        inicio = datetime.combine(fecha, time.min)
-        fin = datetime.combine(fecha + timedelta(days=1), time.min)
+        """
+        Cuenta tickets del técnico en una fecha local específica.
+
+        Como agenda se almacena en UTC, hay que considerar la conversión:
+        un ticket a las 23:00 hora Lima (= 04:00 UTC del día siguiente) debe
+        contarse en el día Lima correcto. Se construye el rango UTC equivalente
+        al día local.
+        """
+        user_tz = self.env.user.tz or 'America/Lima'
+        local_tz = timezone(user_tz)
+
+        inicio_local = local_tz.localize(datetime.combine(fecha, time.min))
+        fin_local = local_tz.localize(datetime.combine(fecha + timedelta(days=1), time.min))
+
+        inicio_utc = inicio_local.astimezone(UTC).replace(tzinfo=None)
+        fin_utc = fin_local.astimezone(UTC).replace(tzinfo=None)
 
         return self.env['ticket.alquiler'].search_count([
             ('responsable', '=', tecnico_id),
-            ('agenda', '>=', inicio),
-            ('agenda', '<', fin),
+            ('agenda', '>=', inicio_utc),
+            ('agenda', '<', fin_utc),
             ('estado', 'not in', ['finalizado']),
         ])
 
@@ -876,6 +928,14 @@ class MantenimientoPlanificadorLinea(models.Model):
         return True
 
     def _get_agenda_datetime(self):
+        """
+        Construye el valor Datetime (UTC) para asignar al campo agenda del ticket.
+
+        La línea guarda hora_inicio en hora local. Para que Odoo almacene
+        correctamente en UTC, primero localizamos el datetime en el tz del
+        usuario y luego convertimos a UTC naive (que es lo que espera Odoo
+        al escribir en un Datetime).
+        """
         self.ensure_one()
 
         if not self.fecha_programada:
@@ -885,10 +945,18 @@ class MantenimientoPlanificadorLinea(models.Model):
         hours = int(hora)
         minutes = int(round((hora - hours) * 60))
 
-        return datetime.combine(
+        dt_local_naive = datetime.combine(
             self.fecha_programada,
             time(hour=hours, minute=minutes)
         )
+
+        user_tz = self.env.user.tz or 'America/Lima'
+        local_tz = timezone(user_tz)
+
+        dt_local = local_tz.localize(dt_local_naive)
+        dt_utc = dt_local.astimezone(UTC).replace(tzinfo=None)
+
+        return dt_utc
 
     def action_crear_ticket(self):
         for rec in self:
