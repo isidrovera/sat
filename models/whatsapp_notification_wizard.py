@@ -66,7 +66,7 @@ class WhatsappNotificationWizard(models.TransientModel):
         try:
             url = 'https://boot.andessolutioncopiers.com/api/groups'
             headers = {
-                'x-api-key': 'sk_2312cac15276b4a3ca124e66a78fdde6428c626eb7184f26d3fa62037aaae816'
+                'x-api-key': 'wg_fc215093f007df7ff4a32c04c7d8170d11960583e3a1b43a695037f5a627d3e3'
             }
             
             response = requests.get(url, headers=headers, timeout=10)
@@ -177,7 +177,7 @@ class WhatsappNotificationWizard(models.TransientModel):
             }
             headers = {
                 'Content-Type': 'application/json',
-                'x-api-key': 'sk_2312cac15276b4a3ca124e66a78fdde6428c626eb7184f26d3fa62037aaae816'
+                'x-api-key': 'wg_fc215093f007df7ff4a32c04c7d8170d11960583e3a1b43a695037f5a627d3e3'
             }
             
             _logger.info(f"Enviando notificación WhatsApp al grupo: {self.grupo_seleccionado}")

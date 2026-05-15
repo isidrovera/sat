@@ -426,7 +426,7 @@ Para finalizar rápidamente un ticket, ingresa a Odoo y usa la opción "Finaliza
             
             headers = {
                 'Content-Type': 'application/json',
-                'x-api-key': 'sk_2312cac15276b4a3ca124e66a78fdde6428c626eb7184f26d3fa62037aaae816'
+                'x-api-key': 'wg_fc215093f007df7ff4a32c04c7d8170d11960583e3a1b43a695037f5a627d3e3'
             }
             
             response = requests.post(url, headers=headers, json=data, timeout=30)
