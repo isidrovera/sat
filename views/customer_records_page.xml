@@ -28,9 +28,9 @@
                             <span class="input-group-text bg-white">
                                 <i class="fa fa-search text-muted"/>
                             </span>
-                            <input type="text" 
-                                   id="searchInput" 
-                                   class="form-control" 
+                            <input type="text"
+                                   id="searchInput"
+                                   class="form-control"
                                    placeholder="Buscar por modelo, serie o área..."/>
                             <button class="btn btn-outline-secondary" type="button" id="clearSearchBtn">
                                 <i class="fa fa-times"/>
@@ -68,28 +68,30 @@
                                                     <div class="icon-circle bg-primary bg-opacity-10 rounded-circle p-2 me-3">
                                                         <i class="fa fa-print text-primary"/>
                                                     </div>
-                                                    <span class="fw-semibold"><t t-esc="registro.name.name"/></span>
+                                                    <span class="fw-semibold">
+                                                        <t t-esc="registro.name.name if registro.name else ''"/>
+                                                    </span>
                                                 </div>
                                             </td>
                                             <td class="py-3">
                                                 <span class="badge bg-light text-dark px-3 py-2">
-                                                    <t t-esc="registro.serie"/>
+                                                    <t t-esc="registro.serie or ''"/>
                                                 </span>
                                             </td>
                                             <td class="py-3">
                                                 <i class="fa fa-map-marker-alt text-muted me-2"/>
-                                                <t t-esc="registro.ubicacion_instalacion"/>
+                                                <t t-esc="registro.ubicacion_instalacion or ''"/>
                                             </td>
                                             <td class="py-3">
                                                 <div class="d-flex gap-2 justify-content-center">
-                                                    <a t-attf-href="/ticket/reportar_incidencia?id_registro={{registro.id}}&amp;user_name={{user_name or ''}}&amp;phone_number={{phone_number or ''}}" 
+                                                    <a t-att-href="'/ticket/reportar_incidencia?id_registro=%s&amp;user_name=%s&amp;phone_number=%s' % (registro.id, user_name or '', phone_number or '')"
                                                        class="btn btn-danger btn-sm px-3 shadow-sm">
-                                                        <i class="fa fa-exclamation-circle me-1"/> 
+                                                        <i class="fa fa-exclamation-circle me-1"/>
                                                         <span class="d-none d-lg-inline">Incidencia</span>
                                                     </a>
-                                                    <a t-attf-href="/toner/solicitar_toner?id_registro={{registro.id}}&amp;user_name={{user_name or ''}}&amp;phone_number={{phone_number or ''}}" 
+                                                    <a t-att-href="'/toner/solicitar_toner?id_registro=%s&amp;user_name=%s&amp;phone_number=%s' % (registro.id, user_name or '', phone_number or '')"
                                                        class="btn btn-primary btn-sm px-3 shadow-sm">
-                                                        <i class="fa fa-print me-1"/> 
+                                                        <i class="fa fa-print me-1"/>
                                                         <span class="d-none d-lg-inline">Tóner</span>
                                                     </a>
                                                 </div>
@@ -100,7 +102,7 @@
                             </table>
                         </div>
                     </div>
-                    
+
                     <!-- Mensaje cuando no hay resultados -->
                     <div id="noResults" class="text-center py-5 d-none">
                         <i class="fa fa-search fa-3x text-muted mb-3"/>
@@ -121,15 +123,15 @@
                                     </div>
                                     <div class="flex-grow-1">
                                         <h5 class="card-title mb-1 fw-bold">
-                                            <t t-esc="registro.name.name"/>
+                                            <t t-esc="registro.name.name if registro.name else ''"/>
                                         </h5>
                                         <span class="badge bg-light text-dark">
                                             <i class="fa fa-barcode me-1"/>
-                                            <t t-esc="registro.serie"/>
+                                            <t t-esc="registro.serie or ''"/>
                                         </span>
                                     </div>
                                 </div>
-                                
+
                                 <!-- Ubicación -->
                                 <div class="mb-3 pb-3 border-bottom">
                                     <p class="mb-0 text-muted">
@@ -137,18 +139,18 @@
                                         <small>Ubicación:</small>
                                     </p>
                                     <p class="mb-0 fw-semibold">
-                                        <t t-esc="registro.ubicacion_instalacion"/>
+                                        <t t-esc="registro.ubicacion_instalacion or ''"/>
                                     </p>
                                 </div>
-                                
+
                                 <!-- Botones de acción -->
                                 <div class="d-grid gap-2">
-                                    <a t-attf-href="/ticket/reportar_incidencia?id_registro={{registro.id}}&amp;user_name={{user_name or ''}}&amp;phone_number={{phone_number or ''}}" 
+                                    <a t-att-href="'/ticket/reportar_incidencia?id_registro=%s&amp;user_name=%s&amp;phone_number=%s' % (registro.id, user_name or '', phone_number or '')"
                                        class="btn btn-danger shadow-sm">
                                         <i class="fa fa-exclamation-circle me-2"/>
                                         Reportar Incidencia
                                     </a>
-                                    <a t-attf-href="/toner/solicitar_toner?id_registro={{registro.id}}&amp;user_name={{user_name or ''}}&amp;phone_number={{phone_number or ''}}" 
+                                    <a t-att-href="'/toner/solicitar_toner?id_registro=%s&amp;user_name=%s&amp;phone_number=%s' % (registro.id, user_name or '', phone_number or '')"
                                        class="btn btn-primary shadow-sm">
                                         <i class="fa fa-print me-2"/>
                                         Solicitar Tóner
@@ -157,7 +159,7 @@
                             </div>
                         </div>
                     </t>
-                    
+
                     <!-- Mensaje cuando no hay resultados en móvil -->
                     <div id="noResultsMobile" class="text-center py-5 d-none">
                         <i class="fa fa-search fa-3x text-muted mb-3"/>
@@ -236,20 +238,20 @@
                 function filterRecords() {
                     var input = document.getElementById('searchInput');
                     var filter = input.value.toLowerCase().trim();
-                    
+
                     // Filtrar tabla desktop
                     var table = document.getElementById('recordsTable');
                     var noResults = document.getElementById('noResults');
                     var visibleCount = 0;
-                    
+
                     if (table) {
                         var tbody = table.getElementsByTagName('tbody')[0];
                         var rows = tbody.getElementsByTagName('tr');
-                        
+
                         for (var i = 0; i !== rows.length; i++) {
                             var row = rows[i];
                             var text = row.textContent || row.innerText;
-                            
+
                             if (filter === '' || text.toLowerCase().indexOf(filter) !== -1) {
                                 row.style.display = '';
                                 visibleCount++;
@@ -257,7 +259,7 @@
                                 row.style.display = 'none';
                             }
                         }
-                        
+
                         if (noResults) {
                             if (visibleCount === 0 &amp;&amp; filter !== '') {
                                 noResults.classList.remove('d-none');
@@ -268,15 +270,15 @@
                             }
                         }
                     }
-                    
+
                     // Filtrar cards móvil
                     var cards = document.querySelectorAll('.record-card');
                     var noResultsMobile = document.getElementById('noResultsMobile');
                     var visibleCardCount = 0;
-                    
+
                     cards.forEach(function(card) {
                         var text = card.textContent || card.innerText;
-                        
+
                         if (filter === '' || text.toLowerCase().indexOf(filter) !== -1) {
                             card.style.display = '';
                             visibleCardCount++;
@@ -284,7 +286,7 @@
                             card.style.display = 'none';
                         }
                     });
-                    
+
                     if (noResultsMobile) {
                         if (visibleCardCount === 0 &amp;&amp; filter !== '') {
                             noResultsMobile.classList.remove('d-none');
@@ -293,7 +295,7 @@
                         }
                     }
                 }
-                
+
                 function clearSearch() {
                     document.getElementById('searchInput').value = '';
                     filterRecords();
@@ -303,12 +305,12 @@
                 document.addEventListener('DOMContentLoaded', function() {
                     var searchInput = document.getElementById('searchInput');
                     var clearBtn = document.getElementById('clearSearchBtn');
-                    
+
                     if (searchInput) {
                         searchInput.addEventListener('keyup', filterRecords);
                         searchInput.addEventListener('input', filterRecords);
                     }
-                    
+
                     if (clearBtn) {
                         clearBtn.addEventListener('click', clearSearch);
                     }
@@ -330,7 +332,7 @@
                                 </div>
                                 <h3 class="mb-3 fw-bold">No se encontraron registros</h3>
                                 <p class="text-muted mb-4">
-                                    No hay registros de alquiler disponibles para el cliente: 
+                                    No hay registros de alquiler disponibles para el cliente:
                                     <strong class="text-primary"><t t-esc="cliente"/></strong>
                                 </p>
                                 <t t-if="user_name">
