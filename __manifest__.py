@@ -233,10 +233,23 @@
             'sat/static/src/xml/geo_map_widget.xml',
             'sat/static/src/xml/pedido_dashboard.xml',
             
-            # JS Files existentes
+            # JS Files existentes (listado explícito en lugar del glob)
             'sat/static/src/js/selection_subparts.js',
             'sat/static/src/js/gallery_widget.js',
-            'sat/static/src/js/**/*',
+            'sat/static/src/js/alquiler_dashboard.js',
+            'sat/static/src/js/dashboard.js',
+            'sat/static/src/js/equipment_visit_report.js',
+            'sat/static/src/js/estilo_dashboard.js',
+            'sat/static/src/js/gallery_widget_v18.js',
+            'sat/static/src/js/geo_map_widget.js',
+            'sat/static/src/js/image-viewer_v1.js',
+            'sat/static/src/js/inspeccion_form.js',
+            'sat/static/src/js/list_dashboard.js',
+            'sat/static/src/js/parts_request_message.js',
+            'sat/static/src/js/pedido_dashboard.js',
+            'sat/static/src/js/sat_dashboard.js',
+            'sat/static/src/js/sat_table_enhancements.js',
+            
             'sat/static/src/js/subpartes_selector.js',
             'sat/static/src/xml/subpartes_selector.xml',
             'sat/static/src/scss/subpartes_selector.scss',
@@ -268,7 +281,7 @@
         
         'web.assets_frontend': [
             #'sat/static/src/js/searchFilter.js',
-            'sat/static/src/js/evidencia_publicv1.js',
+            #'sat/static/src/js/evidencia_publicv1.js',
             'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
             'sat/static/src/css/permisos.css',
             'sat/static/src/js/permisos.js',
