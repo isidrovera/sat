@@ -39,9 +39,9 @@
                     </div>
                 </div>
 
-                <!-- Tabla responsive mejorada para pantallas medianas/grandes -->
-                <div class="d-none d-md-block">
-                    <div class="card border-0 shadow-sm">
+                <!-- Tabla responsive para pantallas medianas/grandes -->
+                <div class="d-none d-md-block records-desktop-wrapper">
+                    <div class="records-desktop-card border-0 shadow-sm">
                         <div class="table-responsive">
                             <table class="table table-hover align-middle mb-0" id="recordsTable">
                                 <thead class="bg-light">
@@ -111,11 +111,11 @@
                     </div>
                 </div>
 
-                <!-- Vista tipo tarjetas mejorada para móviles -->
+                <!-- Vista tipo tarjetas para móviles -->
                 <div class="d-block d-md-none">
                     <t t-foreach="registros" t-as="registro">
-                        <div class="card border-0 shadow-sm mb-3 record-card">
-                            <div class="card-body p-4">
+                        <div class="record-card shadow-sm mb-3">
+                            <div class="record-card-body p-4">
                                 <!-- Header de la tarjeta -->
                                 <div class="d-flex align-items-start mb-3">
                                     <div class="icon-circle-mobile bg-primary bg-opacity-10 rounded-3 p-3 me-3">
@@ -169,31 +169,52 @@
                 </div>
             </div>
 
-            <!-- Estilos CSS -->
+            <!-- Estilos CSS scopeados a este template -->
             <style>
-                /* Hover effects */
+                /* Card que envuelve la tabla desktop: NO flex, NO overflow hidden */
+                .records-desktop-card {
+                    display: block !important;
+                    background-color: #fff;
+                    border-radius: 12px;
+                    overflow: visible !important;
+                }
+
+                .records-desktop-card .table-responsive {
+                    border-radius: 12px;
+                    overflow-x: auto;
+                }
+
+                /* Filas de la tabla */
                 .record-row {
-                    transition: all 0.3s ease;
+                    transition: background-color 0.2s ease;
                 }
 
                 .record-row:hover {
                     background-color: #f8f9fa;
-                    transform: scale(1.01);
                 }
 
+                /* Tarjetas móviles (con su propio nombre, no .card) */
                 .record-card {
-                    transition: all 0.3s ease;
+                    background-color: #fff;
+                    border: 0;
+                    border-radius: 12px;
+                    overflow: hidden;
                     border-left: 4px solid transparent;
+                    transition: all 0.3s ease;
                 }
 
                 .record-card:hover {
-                    border-left-color: var(--primary);
+                    border-left-color: #0d6efd;
                     transform: translateX(5px);
+                }
+
+                .record-card-body {
+                    background-color: #fff;
                 }
 
                 /* Input de búsqueda */
                 #searchInput {
-                    transition: all 0.3s ease;
+                    transition: all 0.2s ease;
                 }
 
                 /* Iconos circulares */
@@ -211,110 +232,113 @@
                     justify-content: center;
                 }
 
-                /* Cards en móvil */
-                .card {
-                    border-radius: 12px;
-                    overflow: hidden;
-                }
-
                 /* Botones */
-                .btn {
+                .records-desktop-wrapper .btn,
+                .record-card .btn {
                     border-radius: 8px;
                     font-weight: 500;
-                    transition: all 0.3s ease;
+                    transition: all 0.2s ease;
                 }
 
-                .btn:hover {
-                    transform: translateY(-2px);
-                }
-
-                .shadow-sm {
-                    box-shadow: 0 .125rem .25rem rgba(0,0,0,.075)!important;
+                .records-desktop-wrapper .btn:hover,
+                .record-card .btn:hover {
+                    transform: translateY(-1px);
                 }
             </style>
 
-            <!-- JavaScript mejorado SIN usar < o > -->
+            <!-- JavaScript de filtrado scopeado al template -->
             <script type="text/javascript">
-                function filterRecords() {
-                    var input = document.getElementById('searchInput');
-                    var filter = input.value.toLowerCase().trim();
+                (function () {
+                    function filterRecords() {
+                        var input = document.getElementById('searchInput');
+                        if (!input) return;
 
-                    // Filtrar tabla desktop
-                    var table = document.getElementById('recordsTable');
-                    var noResults = document.getElementById('noResults');
-                    var visibleCount = 0;
+                        var filter = input.value.toLowerCase().trim();
 
-                    if (table) {
-                        var tbody = table.getElementsByTagName('tbody')[0];
-                        var rows = tbody.getElementsByTagName('tr');
+                        // Filtrar tabla desktop
+                        var table = document.getElementById('recordsTable');
+                        var noResults = document.getElementById('noResults');
+                        var visibleCount = 0;
 
-                        for (var i = 0; i !== rows.length; i++) {
-                            var row = rows[i];
-                            var text = row.textContent || row.innerText;
+                        if (table) {
+                            var tbody = table.getElementsByTagName('tbody')[0];
+                            if (tbody) {
+                                var rows = tbody.getElementsByTagName('tr');
+
+                                for (var i = 0; i !== rows.length; i++) {
+                                    var row = rows[i];
+                                    var text = row.textContent || row.innerText;
+
+                                    if (filter === '' || text.toLowerCase().indexOf(filter) !== -1) {
+                                        row.style.display = '';
+                                        visibleCount++;
+                                    } else {
+                                        row.style.display = 'none';
+                                    }
+                                }
+
+                                if (noResults) {
+                                    if (visibleCount === 0 &amp;&amp; filter !== '') {
+                                        noResults.classList.remove('d-none');
+                                    } else {
+                                        noResults.classList.add('d-none');
+                                    }
+                                }
+                            }
+                        }
+
+                        // Filtrar cards móvil (solo .record-card)
+                        var cards = document.querySelectorAll('.record-card');
+                        var noResultsMobile = document.getElementById('noResultsMobile');
+                        var visibleCardCount = 0;
+
+                        cards.forEach(function (card) {
+                            var text = card.textContent || card.innerText;
 
                             if (filter === '' || text.toLowerCase().indexOf(filter) !== -1) {
-                                row.style.display = '';
-                                visibleCount++;
+                                card.style.display = '';
+                                visibleCardCount++;
                             } else {
-                                row.style.display = 'none';
+                                card.style.display = 'none';
+                            }
+                        });
+
+                        if (noResultsMobile) {
+                            if (visibleCardCount === 0 &amp;&amp; filter !== '') {
+                                noResultsMobile.classList.remove('d-none');
+                            } else {
+                                noResultsMobile.classList.add('d-none');
                             }
                         }
+                    }
 
-                        if (noResults) {
-                            if (visibleCount === 0 &amp;&amp; filter !== '') {
-                                noResults.classList.remove('d-none');
-                                table.parentElement.parentElement.classList.add('d-none');
-                            } else {
-                                noResults.classList.add('d-none');
-                                table.parentElement.parentElement.classList.remove('d-none');
-                            }
+                    function clearSearch() {
+                        var input = document.getElementById('searchInput');
+                        if (input) {
+                            input.value = '';
+                            filterRecords();
                         }
                     }
 
-                    // Filtrar cards móvil
-                    var cards = document.querySelectorAll('.record-card');
-                    var noResultsMobile = document.getElementById('noResultsMobile');
-                    var visibleCardCount = 0;
+                    function init() {
+                        var searchInput = document.getElementById('searchInput');
+                        var clearBtn = document.getElementById('clearSearchBtn');
 
-                    cards.forEach(function(card) {
-                        var text = card.textContent || card.innerText;
-
-                        if (filter === '' || text.toLowerCase().indexOf(filter) !== -1) {
-                            card.style.display = '';
-                            visibleCardCount++;
-                        } else {
-                            card.style.display = 'none';
+                        if (searchInput) {
+                            searchInput.addEventListener('input', filterRecords);
                         }
-                    });
 
-                    if (noResultsMobile) {
-                        if (visibleCardCount === 0 &amp;&amp; filter !== '') {
-                            noResultsMobile.classList.remove('d-none');
-                        } else {
-                            noResultsMobile.classList.add('d-none');
+                        if (clearBtn) {
+                            clearBtn.addEventListener('click', clearSearch);
                         }
                     }
-                }
 
-                function clearSearch() {
-                    document.getElementById('searchInput').value = '';
-                    filterRecords();
-                }
-
-                // Event listeners
-                document.addEventListener('DOMContentLoaded', function() {
-                    var searchInput = document.getElementById('searchInput');
-                    var clearBtn = document.getElementById('clearSearchBtn');
-
-                    if (searchInput) {
-                        searchInput.addEventListener('keyup', filterRecords);
-                        searchInput.addEventListener('input', filterRecords);
+                    if (document.readyState === 'loading') {
+                        document.addEventListener('DOMContentLoaded', init);
+                    } else {
+                        init();
                     }
-
-                    if (clearBtn) {
-                        clearBtn.addEventListener('click', clearSearch);
-                    }
-                });
+                })();
             </script>
 
         </t>
