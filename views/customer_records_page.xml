@@ -2,26 +2,24 @@
 <odoo>
     <template id="customer_records_page" name="Lista de maquinas">
         <t t-call="website.layout">
-            <div class="container py-5">
-                <!-- Encabezado mejorado -->
+            <div class="container py-5 cust-records">
+                <!-- Encabezado -->
                 <div class="row mb-4">
                     <div class="col-12">
-                        <div class="d-flex align-items-center justify-content-between flex-wrap">
-                            <div>
-                                <h1 class="mb-1 fw-bold text-primary">
-                                    <i class="fa fa-building me-2"/>
-                                    <t t-esc="cliente"/>
-                                </h1>
-                                <p class="text-muted mb-0">
-                                    <i class="fa fa-desktop me-1"/>
-                                    <span id="totalRecords"><t t-esc="len(registros)"/></span> equipos registrados
-                                </p>
-                            </div>
+                        <div>
+                            <h1 class="mb-1 fw-bold text-primary">
+                                <i class="fa fa-building me-2"/>
+                                <t t-esc="cliente"/>
+                            </h1>
+                            <p class="text-muted mb-0">
+                                <i class="fa fa-desktop me-1"/>
+                                <span id="totalRecords"><t t-esc="len(registros)"/></span> equipos registrados
+                            </p>
                         </div>
                     </div>
                 </div>
 
-                <!-- Barra de búsqueda mejorada -->
+                <!-- Barra de búsqueda -->
                 <div class="row mb-4">
                     <div class="col-12">
                         <div class="input-group input-group-lg shadow-sm">
@@ -39,33 +37,25 @@
                     </div>
                 </div>
 
-                <!-- Tabla responsive para pantallas medianas/grandes -->
-                <div class="d-none d-md-block records-desktop-wrapper">
-                    <div class="records-desktop-card border-0 shadow-sm">
-                        <div class="table-responsive">
-                            <table class="table table-hover align-middle mb-0" id="recordsTable">
-                                <thead class="bg-light">
+                <!-- Vista DESKTOP: tabla -->
+                <div class="cust-records-desktop">
+                    <div class="cust-records-desktop-card">
+                        <div class="cust-table-wrapper">
+                            <table class="cust-table" id="recordsTable">
+                                <thead>
                                     <tr>
-                                        <th class="border-0 text-uppercase text-muted fw-semibold px-4 py-3">
-                                            <i class="fa fa-tag me-2"/>Modelo
-                                        </th>
-                                        <th class="border-0 text-uppercase text-muted fw-semibold py-3">
-                                            <i class="fa fa-barcode me-2"/>Serie
-                                        </th>
-                                        <th class="border-0 text-uppercase text-muted fw-semibold py-3">
-                                            <i class="fa fa-map-marker me-2"/>Área
-                                        </th>
-                                        <th class="border-0 text-uppercase text-muted fw-semibold py-3 text-center">
-                                            <i class="fa fa-cog me-2"/>Acciones
-                                        </th>
+                                        <th><i class="fa fa-tag me-2"/>Modelo</th>
+                                        <th><i class="fa fa-barcode me-2"/>Serie</th>
+                                        <th><i class="fa fa-map-marker me-2"/>Área</th>
+                                        <th class="text-center"><i class="fa fa-cog me-2"/>Acciones</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <t t-foreach="registros" t-as="registro">
                                         <tr class="record-row">
-                                            <td class="px-4 py-3">
+                                            <td>
                                                 <div class="d-flex align-items-center">
-                                                    <div class="icon-circle bg-primary bg-opacity-10 rounded-circle p-2 me-3">
+                                                    <div class="cust-icon-circle me-3">
                                                         <i class="fa fa-print text-primary"/>
                                                     </div>
                                                     <span class="fw-semibold">
@@ -73,26 +63,26 @@
                                                     </span>
                                                 </div>
                                             </td>
-                                            <td class="py-3">
-                                                <span class="badge bg-light text-dark px-3 py-2">
+                                            <td>
+                                                <span class="cust-badge">
                                                     <t t-esc="registro.serie or ''"/>
                                                 </span>
                                             </td>
-                                            <td class="py-3">
+                                            <td>
                                                 <i class="fa fa-map-marker-alt text-muted me-2"/>
                                                 <t t-esc="registro.ubicacion_instalacion or ''"/>
                                             </td>
-                                            <td class="py-3">
-                                                <div class="d-flex gap-2 justify-content-center">
+                                            <td class="text-center">
+                                                <div class="cust-actions">
                                                     <a t-att-href="'/ticket/reportar_incidencia?id_registro=%s&amp;user_name=%s&amp;phone_number=%s' % (registro.id, user_name or '', phone_number or '')"
-                                                       class="btn btn-danger btn-sm px-3 shadow-sm">
+                                                       class="cust-btn cust-btn-danger">
                                                         <i class="fa fa-exclamation-circle me-1"/>
-                                                        <span class="d-none d-lg-inline">Incidencia</span>
+                                                        <span>Incidencia</span>
                                                     </a>
                                                     <a t-att-href="'/toner/solicitar_toner?id_registro=%s&amp;user_name=%s&amp;phone_number=%s' % (registro.id, user_name or '', phone_number or '')"
-                                                       class="btn btn-primary btn-sm px-3 shadow-sm">
+                                                       class="cust-btn cust-btn-primary">
                                                         <i class="fa fa-print me-1"/>
-                                                        <span class="d-none d-lg-inline">Tóner</span>
+                                                        <span>Tóner</span>
                                                     </a>
                                                 </div>
                                             </td>
@@ -103,37 +93,34 @@
                         </div>
                     </div>
 
-                    <!-- Mensaje cuando no hay resultados -->
-                    <div id="noResults" class="text-center py-5 d-none">
+                    <div id="noResults" class="cust-empty">
                         <i class="fa fa-search fa-3x text-muted mb-3"/>
                         <h5 class="text-muted">No se encontraron resultados</h5>
                         <p class="text-muted">Intenta con otros términos de búsqueda</p>
                     </div>
                 </div>
 
-                <!-- Vista tipo tarjetas para móviles -->
-                <div class="d-block d-md-none">
+                <!-- Vista MÓVIL: cards -->
+                <div class="cust-records-mobile">
                     <t t-foreach="registros" t-as="registro">
-                        <div class="record-card shadow-sm mb-3">
-                            <div class="record-card-body p-4">
-                                <!-- Header de la tarjeta -->
+                        <div class="record-card">
+                            <div class="record-card-body">
                                 <div class="d-flex align-items-start mb-3">
-                                    <div class="icon-circle-mobile bg-primary bg-opacity-10 rounded-3 p-3 me-3">
+                                    <div class="cust-icon-square me-3">
                                         <i class="fa fa-print fa-lg text-primary"/>
                                     </div>
                                     <div class="flex-grow-1">
-                                        <h5 class="card-title mb-1 fw-bold">
+                                        <h5 class="fw-bold mb-1">
                                             <t t-esc="registro.name.name if registro.name else ''"/>
                                         </h5>
-                                        <span class="badge bg-light text-dark">
+                                        <span class="cust-badge">
                                             <i class="fa fa-barcode me-1"/>
                                             <t t-esc="registro.serie or ''"/>
                                         </span>
                                     </div>
                                 </div>
 
-                                <!-- Ubicación -->
-                                <div class="mb-3 pb-3 border-bottom">
+                                <div class="cust-card-section">
                                     <p class="mb-0 text-muted">
                                         <i class="fa fa-map-marker-alt me-2"/>
                                         <small>Ubicación:</small>
@@ -143,15 +130,14 @@
                                     </p>
                                 </div>
 
-                                <!-- Botones de acción -->
-                                <div class="d-grid gap-2">
+                                <div class="cust-actions cust-actions-vertical">
                                     <a t-att-href="'/ticket/reportar_incidencia?id_registro=%s&amp;user_name=%s&amp;phone_number=%s' % (registro.id, user_name or '', phone_number or '')"
-                                       class="btn btn-danger shadow-sm">
+                                       class="cust-btn cust-btn-danger">
                                         <i class="fa fa-exclamation-circle me-2"/>
                                         Reportar Incidencia
                                     </a>
                                     <a t-att-href="'/toner/solicitar_toner?id_registro=%s&amp;user_name=%s&amp;phone_number=%s' % (registro.id, user_name or '', phone_number or '')"
-                                       class="btn btn-primary shadow-sm">
+                                       class="cust-btn cust-btn-primary">
                                         <i class="fa fa-print me-2"/>
                                         Solicitar Tóner
                                     </a>
@@ -160,8 +146,7 @@
                         </div>
                     </t>
 
-                    <!-- Mensaje cuando no hay resultados en móvil -->
-                    <div id="noResultsMobile" class="text-center py-5 d-none">
+                    <div id="noResultsMobile" class="cust-empty">
                         <i class="fa fa-search fa-3x text-muted mb-3"/>
                         <h5 class="text-muted">No se encontraron resultados</h5>
                         <p class="text-muted">Intenta con otros términos de búsqueda</p>
@@ -169,35 +154,162 @@
                 </div>
             </div>
 
-            <!-- Estilos CSS scopeados a este template -->
+            <!-- Estilos CSS auto-contenidos (no dependen de Bootstrap responsive) -->
             <style>
-                /* Card que envuelve la tabla desktop: NO flex, NO overflow hidden */
-                .records-desktop-card {
-                    display: block !important;
-                    background-color: #fff;
-                    border-radius: 12px;
-                    overflow: visible !important;
+                /* Mostrar desktop por defecto, ocultar móvil */
+                .cust-records .cust-records-desktop { display: block; }
+                .cust-records .cust-records-mobile  { display: none; }
+
+                /* Cambio a móvil bajo 768px */
+                @media (max-width: 767.98px) {
+                    .cust-records .cust-records-desktop { display: none; }
+                    .cust-records .cust-records-mobile  { display: block; }
                 }
 
-                .records-desktop-card .table-responsive {
+                /* Card que envuelve la tabla */
+                .cust-records-desktop-card {
+                    background: #fff;
                     border-radius: 12px;
+                    box-shadow: 0 .125rem .25rem rgba(0,0,0,.075);
+                    overflow: visible;
+                    margin-bottom: 1rem;
+                }
+
+                .cust-table-wrapper {
+                    width: 100%;
                     overflow-x: auto;
+                    border-radius: 12px;
                 }
 
-                /* Filas de la tabla */
-                .record-row {
+                /* Tabla */
+                .cust-table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin: 0;
+                    background: #fff;
+                }
+
+                .cust-table thead tr {
+                    background: #f8f9fa;
+                }
+
+                .cust-table thead th {
+                    text-transform: uppercase;
+                    font-size: 0.75rem;
+                    font-weight: 600;
+                    color: #6c757d;
+                    padding: 1rem;
+                    border: 0;
+                    text-align: left;
+                }
+
+                .cust-table tbody tr {
+                    border-top: 1px solid #dee2e6;
                     transition: background-color 0.2s ease;
                 }
 
-                .record-row:hover {
+                .cust-table tbody tr:hover {
                     background-color: #f8f9fa;
                 }
 
-                /* Tarjetas móviles (con su propio nombre, no .card) */
-                .record-card {
-                    background-color: #fff;
+                .cust-table tbody td {
+                    padding: 1rem;
+                    vertical-align: middle;
+                }
+
+                /* Icono circular */
+                .cust-icon-circle {
+                    width: 40px;
+                    height: 40px;
+                    border-radius: 50%;
+                    background: rgba(13, 110, 253, 0.1);
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    flex-shrink: 0;
+                }
+
+                .cust-icon-square {
+                    width: 50px;
+                    height: 50px;
+                    border-radius: 8px;
+                    background: rgba(13, 110, 253, 0.1);
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    flex-shrink: 0;
+                }
+
+                /* Badge */
+                .cust-badge {
+                    display: inline-block;
+                    background: #f1f3f5;
+                    color: #212529;
+                    padding: 0.4rem 0.75rem;
+                    border-radius: 6px;
+                    font-size: 0.85rem;
+                    font-weight: 500;
+                }
+
+                /* Acciones */
+                .cust-actions {
+                    display: flex;
+                    gap: 0.5rem;
+                    justify-content: center;
+                    flex-wrap: wrap;
+                }
+
+                .cust-actions-vertical {
+                    flex-direction: column;
+                    align-items: stretch;
+                }
+
+                .cust-btn {
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    padding: 0.5rem 1rem;
+                    border-radius: 8px;
+                    font-size: 0.875rem;
+                    font-weight: 500;
+                    text-decoration: none;
                     border: 0;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    box-shadow: 0 .125rem .25rem rgba(0,0,0,.075);
+                }
+
+                .cust-btn:hover {
+                    transform: translateY(-1px);
+                    text-decoration: none;
+                }
+
+                .cust-btn-danger {
+                    background: #dc3545;
+                    color: #fff;
+                }
+
+                .cust-btn-danger:hover {
+                    background: #bb2d3b;
+                    color: #fff;
+                }
+
+                .cust-btn-primary {
+                    background: #0d6efd;
+                    color: #fff;
+                }
+
+                .cust-btn-primary:hover {
+                    background: #0b5ed7;
+                    color: #fff;
+                }
+
+                /* Tarjetas móvil */
+                .record-card {
+                    background: #fff;
                     border-radius: 12px;
+                    box-shadow: 0 .125rem .25rem rgba(0,0,0,.075);
+                    margin-bottom: 1rem;
                     overflow: hidden;
                     border-left: 4px solid transparent;
                     transition: all 0.3s ease;
@@ -205,48 +317,47 @@
 
                 .record-card:hover {
                     border-left-color: #0d6efd;
-                    transform: translateX(5px);
                 }
 
                 .record-card-body {
-                    background-color: #fff;
+                    padding: 1.25rem;
                 }
 
-                /* Input de búsqueda */
-                #searchInput {
-                    transition: all 0.2s ease;
+                .cust-card-section {
+                    margin-bottom: 1rem;
+                    padding-bottom: 1rem;
+                    border-bottom: 1px solid #dee2e6;
                 }
 
-                /* Iconos circulares */
-                .icon-circle {
-                    width: 40px;
-                    height: 40px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
+                /* Estado vacío */
+                .cust-empty {
+                    text-align: center;
+                    padding: 3rem 1rem;
+                    display: none;
                 }
 
-                .icon-circle-mobile {
-                    display: inline-flex;
-                    align-items: center;
-                    justify-content: center;
+                .cust-empty.show {
+                    display: block;
                 }
 
-                /* Botones */
-                .records-desktop-wrapper .btn,
-                .record-card .btn {
-                    border-radius: 8px;
-                    font-weight: 500;
-                    transition: all 0.2s ease;
+                /* Ajustes para botones pequeños en tabla desktop */
+                @media (min-width: 992px) {
+                    .cust-records-desktop .cust-btn {
+                        padding: 0.5rem 1rem;
+                    }
                 }
 
-                .records-desktop-wrapper .btn:hover,
-                .record-card .btn:hover {
-                    transform: translateY(-1px);
+                @media (max-width: 991.98px) and (min-width: 768px) {
+                    .cust-records-desktop .cust-btn span {
+                        display: none;
+                    }
+                    .cust-records-desktop .cust-btn i {
+                        margin: 0 !important;
+                    }
                 }
             </style>
 
-            <!-- JavaScript de filtrado scopeado al template -->
+            <!-- JS de filtrado -->
             <script type="text/javascript">
                 (function () {
                     function filterRecords() {
@@ -255,59 +366,47 @@
 
                         var filter = input.value.toLowerCase().trim();
 
-                        // Filtrar tabla desktop
-                        var table = document.getElementById('recordsTable');
+                        // Tabla desktop
+                        var rows = document.querySelectorAll('#recordsTable tbody tr');
+                        var visibleRows = 0;
+                        rows.forEach(function (row) {
+                            var text = (row.textContent || '').toLowerCase();
+                            if (filter === '' || text.indexOf(filter) !== -1) {
+                                row.style.display = '';
+                                visibleRows++;
+                            } else {
+                                row.style.display = 'none';
+                            }
+                        });
+
                         var noResults = document.getElementById('noResults');
-                        var visibleCount = 0;
-
-                        if (table) {
-                            var tbody = table.getElementsByTagName('tbody')[0];
-                            if (tbody) {
-                                var rows = tbody.getElementsByTagName('tr');
-
-                                for (var i = 0; i !== rows.length; i++) {
-                                    var row = rows[i];
-                                    var text = row.textContent || row.innerText;
-
-                                    if (filter === '' || text.toLowerCase().indexOf(filter) !== -1) {
-                                        row.style.display = '';
-                                        visibleCount++;
-                                    } else {
-                                        row.style.display = 'none';
-                                    }
-                                }
-
-                                if (noResults) {
-                                    if (visibleCount === 0 &amp;&amp; filter !== '') {
-                                        noResults.classList.remove('d-none');
-                                    } else {
-                                        noResults.classList.add('d-none');
-                                    }
-                                }
+                        if (noResults) {
+                            if (visibleRows === 0 &amp;&amp; filter !== '') {
+                                noResults.classList.add('show');
+                            } else {
+                                noResults.classList.remove('show');
                             }
                         }
 
-                        // Filtrar cards móvil (solo .record-card)
+                        // Cards móvil
                         var cards = document.querySelectorAll('.record-card');
-                        var noResultsMobile = document.getElementById('noResultsMobile');
-                        var visibleCardCount = 0;
-
+                        var visibleCards = 0;
                         cards.forEach(function (card) {
-                            var text = card.textContent || card.innerText;
-
-                            if (filter === '' || text.toLowerCase().indexOf(filter) !== -1) {
+                            var text = (card.textContent || '').toLowerCase();
+                            if (filter === '' || text.indexOf(filter) !== -1) {
                                 card.style.display = '';
-                                visibleCardCount++;
+                                visibleCards++;
                             } else {
                                 card.style.display = 'none';
                             }
                         });
 
+                        var noResultsMobile = document.getElementById('noResultsMobile');
                         if (noResultsMobile) {
-                            if (visibleCardCount === 0 &amp;&amp; filter !== '') {
-                                noResultsMobile.classList.remove('d-none');
+                            if (visibleCards === 0 &amp;&amp; filter !== '') {
+                                noResultsMobile.classList.add('show');
                             } else {
-                                noResultsMobile.classList.add('d-none');
+                                noResultsMobile.classList.remove('show');
                             }
                         }
                     }
@@ -327,7 +426,6 @@
                         if (searchInput) {
                             searchInput.addEventListener('input', filterRecords);
                         }
-
                         if (clearBtn) {
                             clearBtn.addEventListener('click', clearSearch);
                         }
