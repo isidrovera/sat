@@ -1181,18 +1181,30 @@ class WhatsAppPartnerApiController(http.Controller):
 
         preferred_vals = {
             "name": "Servicio presencial WhatsApp",
-            "partner_id": partner.id if partner else False,
+            "partner_id": company.id if company else partner.id if partner else False,
             "cliente_id": partner.id if partner else False,
             "company_id": company.id if company else False,
             "empresa_id": company.id if company else False,
+
+            # Campo real de ticket.alquiler
+            "product_alquiler": machine.id if machine else False,
+
+            # Fallbacks por si otros modelos/herencias los usan
             "alquiler_id": machine.id if machine else False,
             "machine_id": machine.id if machine else False,
             "equipo_id": machine.id if machine else False,
-            "descripcion": description,
+
             "description": description,
+            "descripcion": description,
             "problema": description,
             "falla_reportada": description,
             "observaciones": description,
+            "informe_id": description,
+
+            "reporter_name": partner.name if partner else False,
+            "reporter_phone": partner.whatsapp_number or partner.mobile or partner.phone or "",
+
+            "tipo_servicio_id": "mantenimiento_correctivo",
             "origen": "whatsapp",
             "source": "whatsapp",
             "whatsapp_session_id": session.id if session else False,
