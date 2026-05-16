@@ -108,6 +108,16 @@ class WhatsAppPartnerApiController(http.Controller):
             if "whatsapp.api.log" not in request.env:
                 return
 
+            try:
+                safe_payload = json.loads(json.dumps(payload or {}, default=str))
+            except Exception:
+                safe_payload = {}
+
+            try:
+                safe_response = json.loads(json.dumps(response or {}, default=str))
+            except Exception:
+                safe_response = {}
+
             request.env["whatsapp.api.log"].sudo().create({
                 "name": endpoint,
                 "endpoint": endpoint,
@@ -118,8 +128,8 @@ class WhatsAppPartnerApiController(http.Controller):
                 "raw_jid": identifiers.get("raw_jid") or False,
                 "partner_id": partner.id if partner else False,
                 "session_id": session.id if session else False,
-                "request_payload": payload or {},
-                "response_payload": response or {},
+                "request_payload": safe_payload,
+                "response_payload": safe_response,
                 "status": status,
                 "error_code": error_code or False,
                 "error_message": error_message or False,
@@ -128,7 +138,6 @@ class WhatsAppPartnerApiController(http.Controller):
             })
         except Exception:
             _logger.exception("[SAT-WHATSAPP-API] No se pudo guardar whatsapp.api.log")
-
     # ==========================================================
     # Teléfono / JID / LID
     # ==========================================================
