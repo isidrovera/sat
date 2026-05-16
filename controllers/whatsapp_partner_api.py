@@ -1402,10 +1402,13 @@ class WhatsAppPartnerApiController(http.Controller):
             )
             return "Puedes registrar tu solicitud de tóner aquí:\n%s" % link
 
-        if self._is_no(text_clean):
+        if self._is_no(text_clean) and session.conversation_state not in [
+            "awaiting_toner_counter_bn",
+            "awaiting_toner_counter_color",
+            "awaiting_toner_observations",
+        ]:
             session.reset_conversation(reason="abandoned")
             return "Listo, cancelé la solicitud de tóner. Si necesitas algo más, escríbenos."
-
         state = session.conversation_state
 
         if state == "awaiting_machine_selection_toner":
