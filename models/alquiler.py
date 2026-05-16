@@ -796,3 +796,507 @@ class UnidadAlquiler(models.Model):
                 "Error al enviar notificación de cambio de estado para equipo %s: %s",
                 self.serie or self.id, str(e),
             )
+
+    # ═══════════════════════════════════════════════════════════════════
+    #  INTEGRACIÓN WHATSAPP - Selección de equipos en flujos conversacionales
+    # ═══════════════════════════════════════════════════════════════════
+
+    @api.model
+    def whatsapp_get_machines_for_partner(self, partner, include_states=None,
+                                          include_company_machines=True, limit=20):
+        """
+        Devuelve los equipos alquilados disponibles para un contacto WhatsApp.
+
+        Busca por:
+        - Equipos donde el partner es cliente directo.
+        - Equipos donde el cliente es la empresa activa del partner.
+        - Equipos donde el cliente es alguna de las empresas asociadas en whatsapp_company_ids.
+
+        :param partner: recordset res.partner
+        :param include_states: lista de estados de equipo a incluir.
+                               Por defecto: ('alquilada', 'por_instalar').
+        :param include_company_machines: si True, también busca por empresa activa.
+        :param limit: máximo de equipos a devolver.
+        :return: recordset de alquiler
+        """
+        if not partner:
+            _logger.warning("[ALQUILER-WA] whatsapp_get_machines_for_partner sin partner")
+            return self.browse()
+
+        if include_states is None:
+            include_states = ('alquilada', 'por_instalar')
+
+        partner_ids = [partner.id]
+
+        if include_company_machines:
+            if partner.whatsapp_active_company_id:
+                partner_ids.append(partner.whatsapp_active_company_id.id)
+
+            if hasattr(partner, 'whatsapp_company_ids'):
+                for company in partner.whatsapp_company_ids:
+                    if company.id not in partner_ids:
+                        partner_ids.append(company.id)
+
+            if partner.parent_id and partner.parent_id.is_company:
+                if partner.parent_id.id not in partner_ids:
+                    partner_ids.append(partner.parent_id.id)
+
+        domain = [
+            ('cliente_id', 'in', partner_ids),
+            ('estado_alquiler_id', 'in', list(include_states)),
+        ]
+
+        machines = self.search(domain, order='serie asc', limit=limit)
+
+        _logger.info(
+            "[ALQUILER-WA] Equipos encontrados partner=%s partner_ids=%s states=%s count=%s",
+            partner.id, partner_ids, include_states, len(machines),
+        )
+
+        return machines
+
+    @api.model
+    def whatsapp_get_machines_for_company(self, company, include_states=None, limit=20):
+        """
+        Devuelve los equipos alquilados de una empresa específica.
+
+        :param company: recordset res.partner (empresa)
+        :param include_states: estados a incluir
+        :param limit: máximo de equipos
+        """
+        if not company:
+            _logger.warning("[ALQUILER-WA] whatsapp_get_machines_for_company sin company")
+            return self.browse()
+
+        if include_states is None:
+            include_states = ('alquilada', 'por_instalar')
+
+        domain = [
+            ('cliente_id', '=', company.id),
+            ('estado_alquiler_id', 'in', list(include_states)),
+        ]
+
+        machines = self.search(domain, order='serie asc', limit=limit)
+
+        _logger.info(
+            "[ALQUILER-WA] Equipos de empresa id=%s name=%s states=%s count=%s",
+            company.id, company.name, include_states, len(machines),
+        )
+
+        return machines
+
+    def whatsapp_to_menu_payload(self, position=None):
+        """
+        Convierte este equipo a un dict listo para mostrarse en un menú numerado
+        del flujo conversacional WhatsApp.
+
+        :param position: número de la opción en el menú (1, 2, 3...).
+        :return: dict
+        """
+        self.ensure_one()
+
+        modelo_name = ""
+        if self.name:
+            modelo_name = self.name.name if hasattr(self.name, 'name') else str(self.name)
+
+        return {
+            "machine_id": self.id,
+            "position": position,
+            "label": modelo_name or "Modelo desconocido",
+            "serie": self.serie or "",
+            "marca": self.marca or "",
+            "tipo_maquina": self.tipo_maquina_id or "",
+            "is_color": self.tipo_maquina_id == 'color',
+            "ubicacion": self.ubicacion_instalacion or "",
+            "direccion": self.direccion or "",
+            "piso": dict(self._fields['ubicacion_id'].selection).get(
+                self.ubicacion_id, self.ubicacion_id or ""
+            ),
+            "estado": self.estado_alquiler_id,
+            "estado_label": dict(self._fields['estado_alquiler_id'].selection).get(
+                self.estado_alquiler_id, self.estado_alquiler_id or ""
+            ),
+            "has_auto_counters": self.has_auto_counters,
+            "contador_bn": self.contador_bn or 0,
+            "contador_color": self.contador_color or 0,
+            "cliente_id": self.cliente_id.id if self.cliente_id else False,
+            "cliente_name": self.cliente_id.name if self.cliente_id else "",
+        }
+
+    @api.model
+    def whatsapp_build_machine_menu(self, partner, intent="toner",
+                                    include_states=None, limit=20):
+        """
+        Construye el menú de selección de equipos para el flujo conversacional.
+
+        :param partner: contacto WhatsApp
+        :param intent: 'toner', 'onsite' o 'remote' (afecta estados incluidos por defecto)
+        :param include_states: si se provee, sobreescribe estados por defecto
+        :param limit: máximo equipos
+        :return: dict con menu_text, options, count
+        """
+        if not partner:
+            _logger.warning("[ALQUILER-WA] whatsapp_build_machine_menu sin partner")
+            return {
+                "found": False,
+                "count": 0,
+                "options": [],
+                "menu_text": "",
+            }
+
+        # Estados por defecto según intent
+        if include_states is None:
+            if intent == "remote":
+                # Para remoto pueden ser cualquier equipo con el cliente
+                include_states = ('alquilada', 'por_instalar')
+            else:
+                # Tóner y presencial solo en equipos en uso
+                include_states = ('alquilada',)
+
+        machines = self.whatsapp_get_machines_for_partner(
+            partner=partner,
+            include_states=include_states,
+            limit=limit,
+        )
+
+        if not machines:
+            _logger.info(
+                "[ALQUILER-WA] Sin equipos para partner=%s intent=%s",
+                partner.id, intent,
+            )
+            return {
+                "found": False,
+                "count": 0,
+                "options": [],
+                "menu_text": "",
+            }
+
+        options = []
+        lines = []
+
+        for index, machine in enumerate(machines, start=1):
+            payload = machine.whatsapp_to_menu_payload(position=index)
+            options.append(payload)
+
+            label_parts = [payload["label"]]
+            if payload["serie"]:
+                label_parts.append("S/N: %s" % payload["serie"])
+            if payload["ubicacion"]:
+                label_parts.append(payload["ubicacion"])
+
+            lines.append("%s. %s" % (index, " · ".join(label_parts)))
+
+        menu_text = "\n".join(lines)
+
+        _logger.info(
+            "[ALQUILER-WA] Menú construido partner=%s intent=%s count=%s",
+            partner.id, intent, len(options),
+        )
+
+        return {
+            "found": True,
+            "count": len(options),
+            "options": options,
+            "menu_text": menu_text,
+        }
+
+    @api.model
+    def whatsapp_resolve_menu_selection(self, partner, selection_input, options):
+        """
+        Resuelve la respuesta del cliente ante un menú de equipos.
+
+        :param partner: contacto WhatsApp
+        :param selection_input: texto enviado por el cliente ("1", "2", etc.)
+        :param options: lista de opciones tal como devolvió whatsapp_build_machine_menu
+        :return: dict con machine_id o error
+        """
+        if not options:
+            _logger.warning(
+                "[ALQUILER-WA] resolve_menu_selection sin opciones partner=%s",
+                partner.id if partner else False,
+            )
+            return {
+                "valid": False,
+                "error": "no_options",
+                "message": "No hay opciones de equipos disponibles.",
+            }
+
+        raw = (selection_input or "").strip()
+
+        if not raw:
+            return {
+                "valid": False,
+                "error": "empty_input",
+                "message": "No se recibió respuesta. Responde con el número de la opción.",
+            }
+
+        # Intentar como número
+        try:
+            position = int(re.sub(r"\D+", "", raw))
+        except Exception:
+            position = 0
+
+        if position <= 0 or position > len(options):
+            _logger.info(
+                "[ALQUILER-WA] Selección inválida partner=%s input=%r max=%s",
+                partner.id if partner else False, raw, len(options),
+            )
+            return {
+                "valid": False,
+                "error": "out_of_range",
+                "message": "Opción no válida. Responde con un número entre 1 y %s." % len(options),
+            }
+
+        selected = options[position - 1]
+        machine_id = selected.get("machine_id")
+
+        machine = self.browse(machine_id).exists()
+        if not machine:
+            _logger.error(
+                "[ALQUILER-WA] Equipo no existe id=%s partner=%s",
+                machine_id, partner.id if partner else False,
+            )
+            return {
+                "valid": False,
+                "error": "machine_not_found",
+                "message": "El equipo seleccionado ya no está disponible.",
+            }
+
+        _logger.info(
+            "[ALQUILER-WA] Selección válida partner=%s position=%s machine_id=%s serie=%s",
+            partner.id if partner else False, position, machine.id, machine.serie,
+        )
+
+        return {
+            "valid": True,
+            "machine_id": machine.id,
+            "position": position,
+            "payload": selected,
+        }
+
+    def whatsapp_get_toner_stock_info(self):
+        """
+        Devuelve el estado de stock de tóner del equipo para el flujo de solicitud.
+        Equivalente al método _get_equipment_stock_info del controlador antiguo,
+        pero en el modelo para que sea reutilizable.
+        """
+        self.ensure_one()
+
+        try:
+            stock_info = {
+                "machine_id": self.id,
+                "serie": self.serie,
+                "is_color": self.tipo_maquina_id == 'color',
+                "has_auto_counters": self.has_auto_counters,
+                "contador_bn": self.contador_bn or 0,
+                "contador_color": self.contador_color or 0,
+                "gestion_automatica": self.name.gestionar_toner_automatico if self.name else True,
+                "estado_stock": getattr(self, 'estado_stock_toner', False),
+                "colors": {
+                    "black": {
+                        "stock_total": getattr(self, 'stock_total_toner_black', 0),
+                        "stock_cliente": getattr(self, 'stock_cliente_toner_black', 0),
+                        "instalado": getattr(self, 'toner_black_instalado', False),
+                        "stock_minimo": self.name.stock_minimo_black if self.name else 1,
+                    },
+                },
+            }
+
+            if self.tipo_maquina_id == 'color':
+                stock_info["colors"].update({
+                    "cyan": {
+                        "stock_total": getattr(self, 'stock_total_toner_cyan', 0),
+                        "stock_cliente": getattr(self, 'stock_cliente_toner_cyan', 0),
+                        "instalado": getattr(self, 'toner_cyan_instalado', False),
+                        "stock_minimo": self.name.stock_minimo_cyan if self.name else 1,
+                    },
+                    "magenta": {
+                        "stock_total": getattr(self, 'stock_total_toner_magenta', 0),
+                        "stock_cliente": getattr(self, 'stock_cliente_toner_magenta', 0),
+                        "instalado": getattr(self, 'toner_magenta_instalado', False),
+                        "stock_minimo": self.name.stock_minimo_magenta if self.name else 1,
+                    },
+                    "yellow": {
+                        "stock_total": getattr(self, 'stock_total_toner_yellow', 0),
+                        "stock_cliente": getattr(self, 'stock_cliente_toner_yellow', 0),
+                        "instalado": getattr(self, 'toner_yellow_instalado', False),
+                        "stock_minimo": self.name.stock_minimo_yellow if self.name else 1,
+                    },
+                })
+
+            _logger.debug(
+                "[ALQUILER-WA] Stock info equipo id=%s is_color=%s",
+                self.id, stock_info["is_color"],
+            )
+
+            return stock_info
+
+        except Exception as e:
+            _logger.exception(
+                "[ALQUILER-WA] Error obteniendo stock info equipo id=%s error=%s",
+                self.id, str(e),
+            )
+            return {
+                "machine_id": self.id,
+                "error": str(e),
+                "colors": {},
+            }
+
+    def whatsapp_get_available_colors(self):
+        """
+        Devuelve los colores que el equipo puede usar.
+        - Monocromática: solo black.
+        - Color: black, cyan, magenta, yellow.
+        """
+        self.ensure_one()
+        if self.tipo_maquina_id == 'color':
+            return ['black', 'cyan', 'magenta', 'yellow']
+        return ['black']
+
+    def whatsapp_build_color_menu(self):
+        """
+        Construye el menú de selección de color de tóner.
+        Para monocromáticas, devuelve auto-select de black.
+        """
+        self.ensure_one()
+
+        labels = {
+            'black': 'Negro',
+            'cyan': 'Cyan',
+            'magenta': 'Magenta',
+            'yellow': 'Amarillo',
+        }
+
+        colors = self.whatsapp_get_available_colors()
+
+        if len(colors) == 1:
+            _logger.info(
+                "[ALQUILER-WA] Equipo monocromático id=%s, auto-selección color=black",
+                self.id,
+            )
+            return {
+                "auto_select": True,
+                "color": "black",
+                "options": [{"position": 1, "color": "black", "label": "Negro"}],
+                "menu_text": "",
+            }
+
+        options = []
+        lines = []
+        for index, color in enumerate(colors, start=1):
+            options.append({
+                "position": index,
+                "color": color,
+                "label": labels.get(color, color),
+            })
+            lines.append("%s. %s" % (index, labels.get(color, color)))
+
+        return {
+            "auto_select": False,
+            "options": options,
+            "menu_text": "\n".join(lines),
+        }
+
+    @api.model
+    def whatsapp_resolve_color_selection(self, selection_input, options):
+        """
+        Resuelve la respuesta del cliente al menú de color de tóner.
+        Acepta tanto número ("1") como nombre ("negro", "black").
+        """
+        if not options:
+            return {
+                "valid": False,
+                "error": "no_options",
+                "message": "No hay colores disponibles.",
+            }
+
+        raw = (selection_input or "").strip().lower()
+
+        if not raw:
+            return {
+                "valid": False,
+                "error": "empty_input",
+                "message": "Responde con el número del color o su nombre.",
+            }
+
+        # Por número
+        try:
+            position = int(re.sub(r"\D+", "", raw))
+            if 0 < position <= len(options):
+                selected = options[position - 1]
+                _logger.info(
+                    "[ALQUILER-WA] Color seleccionado por número position=%s color=%s",
+                    position, selected["color"],
+                )
+                return {
+                    "valid": True,
+                    "color": selected["color"],
+                    "label": selected["label"],
+                    "position": position,
+                }
+        except Exception:
+            pass
+
+        # Por nombre
+        synonyms = {
+            "negro": "black", "black": "black", "k": "black", "bn": "black", "b/n": "black",
+            "cyan": "cyan", "cian": "cyan", "c": "cyan", "celeste": "cyan",
+            "magenta": "magenta", "m": "magenta", "rosado": "magenta", "rosa": "magenta",
+            "amarillo": "yellow", "yellow": "yellow", "y": "yellow",
+        }
+
+        for option in options:
+            if raw == option["color"].lower() or raw == option["label"].lower():
+                _logger.info(
+                    "[ALQUILER-WA] Color seleccionado por nombre input=%r color=%s",
+                    raw, option["color"],
+                )
+                return {
+                    "valid": True,
+                    "color": option["color"],
+                    "label": option["label"],
+                    "position": option["position"],
+                }
+
+        if raw in synonyms:
+            target_color = synonyms[raw]
+            for option in options:
+                if option["color"] == target_color:
+                    _logger.info(
+                        "[ALQUILER-WA] Color seleccionado por sinónimo input=%r color=%s",
+                        raw, option["color"],
+                    )
+                    return {
+                        "valid": True,
+                        "color": option["color"],
+                        "label": option["label"],
+                        "position": option["position"],
+                    }
+
+        _logger.info(
+            "[ALQUILER-WA] Color no reconocido input=%r", raw,
+        )
+        return {
+            "valid": False,
+            "error": "color_not_found",
+            "message": "No reconozco ese color. Responde con el número de la opción.",
+        }
+
+    def whatsapp_get_summary_text(self):
+        """
+        Devuelve un texto descriptivo breve del equipo, para usar en confirmaciones.
+        Ejemplo: "Ricoh MP 4054 · S/N: ABC123 · Oficina Central"
+        """
+        self.ensure_one()
+
+        modelo_name = ""
+        if self.name:
+            modelo_name = self.name.name if hasattr(self.name, 'name') else str(self.name)
+
+        parts = [modelo_name or "Modelo desconocido"]
+        if self.serie:
+            parts.append("S/N: %s" % self.serie)
+        if self.ubicacion_instalacion:
+            parts.append(self.ubicacion_instalacion)
+
+        return " · ".join(parts)

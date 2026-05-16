@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import json
 import logging
 import re
 import time
@@ -21,20 +22,21 @@ class WhatsAppPartnerApiController(http.Controller):
     """
     API central WhatsApp para n8n / Baileys.
 
-    Maneja:
-    - Perfil por número / JID / LID
-    - Registro DNI / RUC
-    - Sesiones
-    - Mensajes entrantes y salientes
-    - Logs API
-    - Auto respuestas
-    - Reglas de intención
-    - Horario semanal
-    - Calendario / feriados / cierres manuales
-    - Plantillas
-    - Media
-    - Handoff humano
-    - Outbox
+    Este controlador conserva los endpoints antiguos y agrega un endpoint
+    orquestador:
+
+        /sat/whatsapp/process
+
+    Ese endpoint procesa una conversación completa:
+    - Identifica contacto por teléfono/JID/LID.
+    - Registra DNI/RUC si corresponde.
+    - Evalúa horario, refrigerio y calendario.
+    - Registra mensaje entrante.
+    - Si hay flujo activo, continúa el estado.
+    - Si no hay flujo activo, detecta intención.
+    - Ejecuta acciones: tóner, servicio presencial, remoto/AnyDesk, humano.
+    - Crea mensaje saliente y outbox.
+    - Devuelve el mensaje listo para que n8n/Baileys lo envíe.
     """
 
     # ==========================================================
@@ -103,6 +105,9 @@ class WhatsAppPartnerApiController(http.Controller):
             if start_ts:
                 duration_ms = int((time.time() - start_ts) * 1000)
 
+            if "whatsapp.api.log" not in request.env:
+                return
+
             request.env["whatsapp.api.log"].sudo().create({
                 "name": endpoint,
                 "endpoint": endpoint,
@@ -152,7 +157,6 @@ class WhatsAppPartnerApiController(http.Controller):
 
         digits = digits.lstrip("0")
 
-        # Perú: si viene 9 dígitos, asumimos prefijo 51
         if len(digits) == 9:
             digits = "51" + digits
 
@@ -198,16 +202,11 @@ class WhatsAppPartnerApiController(http.Controller):
             lid = lid or jid
             jid = False
 
-        clean_phone = self._clean_phone(phone)
-        clean_jid = self._normalize_jid(jid)
-        clean_lid = self._normalize_jid(lid)
-        clean_raw_jid = self._normalize_jid(raw_jid)
-
         return {
-            "phone": clean_phone,
-            "jid": clean_jid,
-            "lid": clean_lid,
-            "raw_jid": clean_raw_jid,
+            "phone": self._clean_phone(phone),
+            "jid": self._normalize_jid(jid),
+            "lid": self._normalize_jid(lid),
+            "raw_jid": self._normalize_jid(raw_jid),
         }
 
     def _has_any_identifier(self, identifiers):
@@ -243,13 +242,6 @@ class WhatsAppPartnerApiController(http.Controller):
         return self._get_latam_doc_type(code="6", name="RUC")
 
     def _run_partner_document_autoload(self, partner):
-        """
-        Usa tu lógica ya existente en res.partner:
-        - _doc_number_change()
-        - ConsultarDNI()
-        - ValidarRUC()
-        - ConsultarRUC()
-        """
         if hasattr(partner, "_doc_number_change"):
             partner._doc_number_change()
             return True
@@ -350,14 +342,15 @@ class WhatsAppPartnerApiController(http.Controller):
         if not partner:
             return
 
-        partner.whatsapp_update_identifiers(
-            jid=identifiers.get("jid"),
-            lid=identifiers.get("lid"),
-            raw_jid=identifiers.get("raw_jid"),
-        )
+        if hasattr(partner, "whatsapp_update_identifiers"):
+            partner.whatsapp_update_identifiers(
+                jid=identifiers.get("jid"),
+                lid=identifiers.get("lid"),
+                raw_jid=identifiers.get("raw_jid"),
+            )
 
     # ==========================================================
-    # Templates
+    # Templates / textos
     # ==========================================================
     def _render_template(
         self,
@@ -392,6 +385,8 @@ class WhatsAppPartnerApiController(http.Controller):
             return "human_mode_active"
 
         if business_status and not business_status.get("is_open"):
+            if business_status.get("reason") == "break":
+                return "in_break"
             return "after_hours"
 
         registration_state = getattr(partner, "whatsapp_registration_state", "none")
@@ -414,13 +409,14 @@ class WhatsAppPartnerApiController(http.Controller):
         )
 
         fallback_map = {
-            "ask_dni": "Buenos días. Para poder ayudarte, por favor envíame tu DNI de 8 dígitos.",
+            "ask_dni": "Para poder ayudarte, por favor envíame tu DNI de 8 dígitos.",
             "ask_ruc": "Gracias. Ahora envíame el RUC de tu empresa para completar el registro.",
             "blocked_contact": "Tu número no está habilitado para atención por este canal.",
             "human_mode_active": "Tu conversación está siendo atendida por un asesor.",
             "after_hours": business_status.get("message") if business_status else "Estamos fuera de horario de atención.",
+            "in_break": business_status.get("message") if business_status else "Estamos en horario de refrigerio.",
             "select_company": "Tienes más de una empresa asociada. Indica con cuál deseas continuar.",
-            "greeting_registered": "Buenos días, ¿en qué podemos ayudarte?",
+            "greeting_registered": "¿En qué podemos ayudarte?",
         }
 
         company = partner.whatsapp_active_company_id if partner and partner.whatsapp_active_company_id else False
@@ -436,6 +432,36 @@ class WhatsAppPartnerApiController(http.Controller):
                 fallback=fallback_map.get(template_name, ""),
             ),
         }
+
+    def _get_greeting_message(self, partner=False, session=False, business_status=False):
+        now_lima = self._now_lima()
+        hour = now_lima.hour + (now_lima.minute / 60.0)
+
+        template_name = "greeting_morning"
+        fallback = "Buenos días"
+
+        if hour >= 12 and hour < 19:
+            template_name = "greeting_afternoon"
+            fallback = "Buenas tardes"
+        elif hour >= 19 or hour < 5:
+            template_name = "greeting_evening"
+            fallback = "Buenas noches"
+
+        name = ""
+        if partner and partner.name:
+            name = ", %s" % partner.name.split()[0]
+
+        fallback = "%s%s. ¿En qué podemos ayudarte?" % (fallback, name)
+
+        company = partner.whatsapp_active_company_id if partner and partner.whatsapp_active_company_id else False
+
+        return self._render_template(
+            template_name,
+            partner=partner,
+            session=session,
+            company=company,
+            fallback=fallback,
+        )
 
     # ==========================================================
     # Horario / calendario
@@ -705,6 +731,8 @@ class WhatsAppPartnerApiController(http.Controller):
             "intent": intent or False,
             "media_url": payload.get("media_url") or payload.get("url") or False,
             "media_mimetype": payload.get("media_mimetype") or payload.get("mimetype") or False,
+            "current_flow": session.current_flow if session else "none",
+            "flow_step": session.conversation_state if session else False,
             "raw_payload": payload,
             "message_date": fields.Datetime.now(),
         })
@@ -737,9 +765,1584 @@ class WhatsAppPartnerApiController(http.Controller):
             "message_type": message_type or "text",
             "content": content or "",
             "media_id": media.id if media else False,
+            "current_flow": session.current_flow if session else "none",
+            "flow_step": session.conversation_state if session else False,
             "state": "pending",
             "raw_payload": payload or {},
         })
+
+    def _emit_bot_reply(
+        self,
+        session,
+        partner,
+        identifiers,
+        content,
+        intent=False,
+        payload=False,
+        template=False,
+        message_type="text",
+        media=False,
+        create_outbox=True,
+    ):
+        payload = payload or {}
+        if template:
+            payload = dict(payload)
+            payload["template_used"] = template
+
+        message = self._record_whatsapp_message(
+            session=session,
+            partner=partner,
+            identifiers=identifiers,
+            role="assistant",
+            direction="out",
+            message_type=message_type,
+            content=content,
+            intent=intent,
+            payload=payload,
+        )
+
+        outbox = False
+        if create_outbox:
+            outbox = self._create_outbox(
+                session=session,
+                partner=partner,
+                identifiers=identifiers,
+                content=content,
+                message_type=message_type,
+                media=media,
+                payload=payload,
+            )
+            if outbox and message:
+                outbox.write({"message_id": message.id})
+
+        return {
+            "message_id": message.id if message else False,
+            "outbox_id": outbox.id if outbox else False,
+            "message": content,
+        }
+
+    # ==========================================================
+    # Enlaces configurables
+    # ==========================================================
+    def _get_base_url(self):
+        return request.env["ir.config_parameter"].sudo().get_param("web.base.url", "").rstrip("/")
+
+    def _get_toner_url(self, partner=False, company=False, machine=False):
+        ICP = request.env["ir.config_parameter"].sudo()
+        base = self._get_base_url()
+        url = ICP.get_param("sat.whatsapp_toner_url") or "%s/solicitud-toner" % base
+
+        params = []
+        if partner:
+            params.append("partner_id=%s" % partner.id)
+        if company:
+            params.append("company_id=%s" % company.id)
+        if machine:
+            params.append("machine_id=%s" % machine.id)
+
+        if params:
+            joiner = "&" if "?" in url else "?"
+            url = "%s%s%s" % (url, joiner, "&".join(params))
+
+        return url
+
+    def _get_service_url(self, partner=False, company=False, machine=False):
+        ICP = request.env["ir.config_parameter"].sudo()
+        base = self._get_base_url()
+        url = ICP.get_param("sat.whatsapp_service_url") or "%s/solicitud-servicio" % base
+
+        params = []
+        if partner:
+            params.append("partner_id=%s" % partner.id)
+        if company:
+            params.append("company_id=%s" % company.id)
+        if machine:
+            params.append("machine_id=%s" % machine.id)
+
+        if params:
+            joiner = "&" if "?" in url else "?"
+            url = "%s%s%s" % (url, joiner, "&".join(params))
+
+        return url
+
+    # ==========================================================
+    # Máquinas alquiladas
+    # ==========================================================
+    def _field_exists(self, model, field_name):
+        return field_name in model._fields
+
+    def _get_machine_label(self, machine):
+        name = machine.display_name or machine.name or "Equipo"
+
+        model_name = ""
+        for field in ["modelo_id", "model_id", "modelo", "model", "equipo_modelo_id"]:
+            if field in machine._fields:
+                value = machine[field]
+                if value:
+                    model_name = value.display_name if hasattr(value, "display_name") else str(value)
+                    break
+
+        serie = ""
+        for field in ["serie", "serial", "serial_number", "numero_serie", "nro_serie", "codigo_serie"]:
+            if field in machine._fields and machine[field]:
+                serie = machine[field]
+                break
+
+        ubicacion = ""
+        for field in ["ubicacion", "location", "direccion", "address", "oficina", "area"]:
+            if field in machine._fields and machine[field]:
+                value = machine[field]
+                ubicacion = value.display_name if hasattr(value, "display_name") else str(value)
+                break
+
+        parts = []
+        if model_name:
+            parts.append(model_name)
+        else:
+            parts.append(name)
+        if serie:
+            parts.append("Serie: %s" % serie)
+        if ubicacion:
+            parts.append("Ubicación: %s" % ubicacion)
+
+        return " | ".join(parts)
+
+    def _record_matches_partner_company(self, rec, partner=False, company=False):
+        partner_ids = set()
+        if partner:
+            partner_ids.add(partner.id)
+        if company:
+            partner_ids.add(company.id)
+
+        if not partner_ids:
+            return False
+
+        candidate_fields = [
+            "partner_id",
+            "cliente_id",
+            "customer_id",
+            "empresa_id",
+            "company_partner_id",
+            "res_partner_id",
+            "contacto_id",
+            "titular_id",
+        ]
+
+        for field in candidate_fields:
+            if field in rec._fields:
+                value = rec[field]
+                if value and value.id in partner_ids:
+                    return True
+
+        if "cliente" in rec._fields:
+            value = rec["cliente"]
+            try:
+                if value and value.id in partner_ids:
+                    return True
+            except Exception:
+                pass
+
+        return False
+
+    def _get_partner_machines(self, partner, limit=20):
+        if "alquiler" not in request.env or not partner:
+            return request.env["ir.model"].sudo().browse()
+
+        Machine = request.env["alquiler"].sudo()
+        company = partner.whatsapp_active_company_id if partner.whatsapp_active_company_id else False
+
+        domain = []
+        fields_map = Machine._fields
+
+        state_field = False
+        for candidate in ["state", "estado", "status"]:
+            if candidate in fields_map:
+                state_field = candidate
+                break
+
+        if state_field:
+            domain = [
+                (state_field, "not in", ["cancel", "cancelado", "baja", "retirado", "finalizado", "closed"])
+            ]
+
+        records = Machine.search(domain, limit=200, order="id desc")
+
+        matched = request.env["alquiler"].sudo()
+        for rec in records:
+            if self._record_matches_partner_company(rec, partner=partner, company=company):
+                matched |= rec
+            if len(matched) >= limit:
+                break
+
+        if not matched and company:
+            records = Machine.search([], limit=200, order="id desc")
+            for rec in records:
+                if self._record_matches_partner_company(rec, partner=company, company=company):
+                    matched |= rec
+                if len(matched) >= limit:
+                    break
+
+        return matched[:limit]
+
+    def _build_machine_menu(self, machines, title, footer=None, include_link=False, link=False):
+        lines = [title, ""]
+        index = 1
+        for machine in machines:
+            lines.append("%s. %s" % (index, self._get_machine_label(machine)))
+            index += 1
+
+        if include_link and link:
+            lines.append("")
+            lines.append("También puedes usar este formulario:")
+            lines.append(link)
+
+        if footer:
+            lines.append("")
+            lines.append(footer)
+
+        return "\n".join(lines)
+
+    def _get_context_machine(self, context):
+        machine_id = context.get("machine_id")
+        if not machine_id or "alquiler" not in request.env:
+            return False
+        return request.env["alquiler"].sudo().browse(int(machine_id)).exists()
+
+    # ==========================================================
+    # Conversación: lectura básica
+    # ==========================================================
+    def _parse_menu_index(self, text):
+        digits = self._only_digits(text)
+        if not digits:
+            return False
+        try:
+            return int(digits)
+        except Exception:
+            return False
+
+    def _is_yes(self, text):
+        text = (text or "").strip().lower()
+        return text in ["si", "sí", "ok", "okay", "confirmo", "confirmar", "correcto", "dale", "ya"]
+
+    def _is_no(self, text):
+        text = (text or "").strip().lower()
+        return text in ["no", "cancelar", "cancela", "anular", "salir"]
+
+    def _looks_like_dni(self, text):
+        digits = self._only_digits(text)
+        return len(digits) == 8
+
+    def _looks_like_ruc(self, text):
+        digits = self._only_digits(text)
+        return len(digits) == 11 and digits.startswith(("10", "20"))
+
+    def _looks_like_anydesk(self, text):
+        digits = self._only_digits(text)
+        return len(digits) >= 6 and len(digits) <= 12
+
+    # ==========================================================
+    # Creación genérica de documentos
+    # ==========================================================
+    def _safe_model_create(self, model_name, preferred_vals):
+        if model_name not in request.env:
+            return False, "Modelo no encontrado: %s" % model_name
+
+        Model = request.env[model_name].sudo()
+        vals = {}
+
+        for key, value in preferred_vals.items():
+            if key in Model._fields:
+                vals[key] = value
+
+        try:
+            rec = Model.create(vals)
+            return rec, False
+        except Exception as e:
+            _logger.exception("[SAT-WHATSAPP-API] Error creando %s vals=%s", model_name, vals)
+            return False, str(e)
+
+    def _create_toner_request(self, partner, session, context):
+        company = partner.whatsapp_active_company_id if partner and partner.whatsapp_active_company_id else False
+        machine = self._get_context_machine(context)
+
+        description = (
+            "Solicitud de tóner vía WhatsApp\n"
+            "Equipo: %s\n"
+            "Color: %s\n"
+            "Cantidad: %s\n"
+            "Contador B/N: %s\n"
+            "Contador color: %s\n"
+            "Observaciones: %s"
+        ) % (
+            self._get_machine_label(machine) if machine else "",
+            context.get("toner_color") or "",
+            context.get("toner_quantity") or "",
+            context.get("counter_bn") or "",
+            context.get("counter_color") or "",
+            context.get("observations") or "",
+        )
+
+        possible_models = [
+            "toner.solicitud",
+            "toner.solicitudes",
+            "toner.delivery",
+            "toner.request",
+        ]
+
+        preferred_vals = {
+            "name": "Solicitud de tóner WhatsApp",
+            "partner_id": partner.id if partner else False,
+            "cliente_id": partner.id if partner else False,
+            "company_id": company.id if company else False,
+            "empresa_id": company.id if company else False,
+            "alquiler_id": machine.id if machine else False,
+            "machine_id": machine.id if machine else False,
+            "equipo_id": machine.id if machine else False,
+            "color": context.get("toner_color") or False,
+            "cantidad": context.get("toner_quantity") or False,
+            "quantity": context.get("toner_quantity") or False,
+            "contador_bn": context.get("counter_bn") or False,
+            "contador_color": context.get("counter_color") or False,
+            "observaciones": context.get("observations") or False,
+            "description": description,
+            "descripcion": description,
+            "origen": "whatsapp",
+            "source": "whatsapp",
+            "whatsapp_session_id": session.id if session else False,
+        }
+
+        for model_name in possible_models:
+            if model_name in request.env:
+                rec, error = self._safe_model_create(model_name, preferred_vals)
+                if rec:
+                    return rec, False
+                return False, error
+
+        return False, "No se encontró modelo de solicitud de tóner."
+
+    def _create_service_ticket(self, partner, session, context, payload=False):
+        company = partner.whatsapp_active_company_id if partner and partner.whatsapp_active_company_id else False
+        machine = self._get_context_machine(context)
+        payload = payload or {}
+
+        description = context.get("service_description") or payload.get("message") or payload.get("text") or ""
+
+        preferred_vals = {
+            "name": "Servicio presencial WhatsApp",
+            "partner_id": partner.id if partner else False,
+            "cliente_id": partner.id if partner else False,
+            "company_id": company.id if company else False,
+            "empresa_id": company.id if company else False,
+            "alquiler_id": machine.id if machine else False,
+            "machine_id": machine.id if machine else False,
+            "equipo_id": machine.id if machine else False,
+            "descripcion": description,
+            "description": description,
+            "problema": description,
+            "falla_reportada": description,
+            "observaciones": description,
+            "origen": "whatsapp",
+            "source": "whatsapp",
+            "whatsapp_session_id": session.id if session else False,
+        }
+
+        rec, error = self._safe_model_create("ticket.alquiler", preferred_vals)
+        return rec, error
+
+    # ==========================================================
+    # Registro inline para /process
+    # ==========================================================
+    def _register_dni_inline(self, identifiers, dni, payload=False):
+        Partner = request.env["res.partner"].sudo()
+        partner = self._find_partner_by_identifiers(identifiers)
+
+        vals = self._prepare_partner_whatsapp_values(identifiers)
+        vals["vat"] = dni
+        vals["whatsapp_registration_state"] = "waiting_ruc"
+
+        dni_type = self._get_dni_type()
+        if dni_type and "l10n_latam_identification_type_id" in Partner._fields:
+            vals["l10n_latam_identification_type_id"] = dni_type.id
+
+        if not partner:
+            vals.setdefault("name", "DNI %s" % dni)
+            partner = Partner.create(vals)
+        else:
+            partner.write(vals)
+
+        self._update_partner_identifiers(partner, identifiers)
+
+        try:
+            self._run_partner_document_autoload(partner)
+        except Exception:
+            _logger.exception("[SAT-WHATSAPP-API] Error cargando datos DNI")
+            partner.write({"whatsapp_registration_state": "manual_review"})
+
+        session = self._get_or_create_session(partner, identifiers, intent="dni")
+
+        message = self._render_template(
+            "ask_ruc",
+            partner=partner,
+            session=session,
+            fallback="Gracias. Ahora envíame el RUC de tu empresa para completar el registro.",
+        )
+
+        return partner, session, message
+
+    def _register_ruc_inline(self, contact, identifiers, ruc, payload=False):
+        Partner = request.env["res.partner"].sudo()
+
+        company = Partner.search([("vat", "=", ruc), ("is_company", "=", True)], limit=1)
+        company_created = False
+
+        if not company:
+            vals = {
+                "name": "RUC %s" % ruc,
+                "vat": ruc,
+                "is_company": True,
+                "company_type": "company",
+                "whatsapp_registration_state": "registered",
+            }
+
+            ruc_type = self._get_ruc_type()
+            if ruc_type and "l10n_latam_identification_type_id" in Partner._fields:
+                vals["l10n_latam_identification_type_id"] = ruc_type.id
+
+            company = Partner.create(vals)
+            company_created = True
+
+            try:
+                self._run_partner_document_autoload(company)
+            except Exception:
+                _logger.exception("[SAT-WHATSAPP-API] Error cargando datos RUC")
+
+        contact.write({
+            "whatsapp_company_ids": [(4, company.id)],
+            "whatsapp_active_company_id": company.id,
+            "whatsapp_registration_state": "registered",
+        })
+
+        company.write({
+            "whatsapp_registration_state": "registered",
+        })
+
+        session = self._get_or_create_session(contact, identifiers, intent="ruc")
+        session.write({"active_company_id": company.id})
+
+        message = self._render_template(
+            "registration_completed",
+            partner=contact,
+            session=session,
+            company=company,
+            fallback="Registro completado correctamente. ¿En qué podemos ayudarte?",
+        )
+
+        return company, session, message, company_created
+
+    # ==========================================================
+    # Flujos: iniciar
+    # ==========================================================
+    def _start_toner_flow(self, partner, session, identifiers, payload=False):
+        company = partner.whatsapp_active_company_id if partner and partner.whatsapp_active_company_id else False
+        machines = self._get_partner_machines(partner)
+
+        if not machines:
+            handoff = request.env["whatsapp.handoff"].sudo().create_unknown_intent_handoff(
+                partner,
+                session=session,
+                initial_message=(payload or {}).get("message") or (payload or {}).get("text") or "",
+                context={"reason": "No se encontraron equipos alquilados para tóner."},
+            )
+            partner.whatsapp_enable_human_mode_api(taken_by_name="Bot WhatsApp")
+            session.action_set_human()
+            return (
+                "No encontré equipos alquilados asociados a tu empresa. "
+                "Voy a derivarte con un asesor para ayudarte con la solicitud de tóner."
+            )
+
+        link = self._get_toner_url(partner=partner, company=company)
+
+        options = []
+        for machine in machines:
+            options.append({
+                "id": machine.id,
+                "label": self._get_machine_label(machine),
+            })
+
+        session.start_flow(
+            "toner",
+            "awaiting_machine_selection_toner",
+            context={
+                "intent": "toner",
+                "machine_options": options,
+                "form_url": link,
+            },
+        )
+
+        return self._build_machine_menu(
+            machines,
+            "Claro. Estos son tus equipos alquilados. Responde con el número del equipo para solicitar tóner:",
+            footer="También puedes escribir LINK si prefieres llenar el formulario.",
+            include_link=True,
+            link=link,
+        )
+
+    def _start_onsite_flow(self, partner, session, identifiers, payload=False):
+        company = partner.whatsapp_active_company_id if partner and partner.whatsapp_active_company_id else False
+        machines = self._get_partner_machines(partner)
+
+        if not machines:
+            request.env["whatsapp.handoff"].sudo().create_onsite_handoff(
+                partner,
+                session=session,
+                initial_message=(payload or {}).get("message") or (payload or {}).get("text") or "",
+                context={"reason": "No se encontraron equipos alquilados para servicio presencial."},
+            )
+            partner.whatsapp_enable_human_mode_api(taken_by_name="Bot WhatsApp")
+            session.action_set_human()
+            return (
+                "No encontré equipos alquilados asociados a tu empresa. "
+                "Voy a derivarte con un asesor para registrar tu servicio."
+            )
+
+        link = self._get_service_url(partner=partner, company=company)
+
+        options = []
+        for machine in machines:
+            options.append({
+                "id": machine.id,
+                "label": self._get_machine_label(machine),
+            })
+
+        session.start_flow(
+            "onsite",
+            "awaiting_machine_selection_onsite",
+            context={
+                "intent": "onsite_service",
+                "machine_options": options,
+                "form_url": link,
+            },
+        )
+
+        return self._build_machine_menu(
+            machines,
+            "De acuerdo. Selecciona el equipo para el servicio presencial:",
+            footer="También puedes escribir LINK si prefieres llenar el formulario.",
+            include_link=True,
+            link=link,
+        )
+
+    def _start_remote_flow(self, partner, session, identifiers, payload=False):
+        session.start_flow(
+            "remote",
+            "awaiting_anydesk_code",
+            context={
+                "intent": "remote_service",
+                "initial_message": (payload or {}).get("message") or (payload or {}).get("text") or "",
+            },
+        )
+
+        return self._render_template(
+            "ask_anydesk_code",
+            partner=partner,
+            session=session,
+            fallback=(
+                "Claro. Para soporte remoto, envíanos tu código AnyDesk. "
+                "También puedes enviar una foto de la pantalla donde aparece el código."
+            ),
+        )
+
+    # ==========================================================
+    # Flujos: continuación
+    # ==========================================================
+    def _continue_toner_flow(self, partner, session, identifiers, text, payload=False):
+        context = session.get_context()
+        text_clean = (text or "").strip()
+
+        if text_clean.lower() in ["link", "enlace", "url", "formulario"]:
+            link = context.get("form_url") or self._get_toner_url(
+                partner=partner,
+                company=partner.whatsapp_active_company_id if partner else False,
+            )
+            return "Puedes registrar tu solicitud de tóner aquí:\n%s" % link
+
+        if self._is_no(text_clean):
+            session.reset_conversation(reason="abandoned")
+            return "Listo, cancelé la solicitud de tóner. Si necesitas algo más, escríbenos."
+
+        state = session.conversation_state
+
+        if state == "awaiting_machine_selection_toner":
+            index = self._parse_menu_index(text_clean)
+            options = context.get("machine_options") or []
+
+            if not index or index < 1 or index > len(options):
+                return "Por favor responde con el número del equipo de la lista."
+
+            selected = options[index - 1]
+            machine_id = selected.get("id")
+
+            session.advance_state(
+                "awaiting_toner_color",
+                {
+                    "machine_id": machine_id,
+                    "machine_label": selected.get("label"),
+                },
+            )
+
+            return (
+                "Equipo seleccionado:\n%s\n\n"
+                "¿Qué color de tóner necesitas?\n"
+                "1. Negro\n"
+                "2. Cyan\n"
+                "3. Magenta\n"
+                "4. Yellow\n"
+                "5. Otro / no estoy seguro"
+            ) % selected.get("label")
+
+        if state == "awaiting_toner_color":
+            color_map = {
+                "1": "Negro",
+                "2": "Cyan",
+                "3": "Magenta",
+                "4": "Yellow",
+                "5": "Otro / no estoy seguro",
+            }
+
+            key = self._only_digits(text_clean)
+            color = color_map.get(key)
+
+            if not color:
+                color_lower = text_clean.lower()
+                if "negro" in color_lower or "black" in color_lower:
+                    color = "Negro"
+                elif "cyan" in color_lower or "cian" in color_lower:
+                    color = "Cyan"
+                elif "magenta" in color_lower:
+                    color = "Magenta"
+                elif "yellow" in color_lower or "amarillo" in color_lower:
+                    color = "Yellow"
+                else:
+                    color = text_clean
+
+            session.advance_state(
+                "awaiting_toner_quantity",
+                {"toner_color": color},
+            )
+
+            return "Perfecto. ¿Qué cantidad necesitas?"
+
+        if state == "awaiting_toner_quantity":
+            qty = self._only_digits(text_clean)
+            if not qty:
+                return "Por favor indica la cantidad en número. Ejemplo: 1"
+
+            session.advance_state(
+                "awaiting_toner_counter_bn",
+                {"toner_quantity": qty},
+            )
+
+            return "Indícame el contador B/N actual del equipo. Si no lo tienes, escribe NO."
+
+        if state == "awaiting_toner_counter_bn":
+            value = self._only_digits(text_clean)
+            if not value and not self._is_no(text_clean):
+                return "Por favor envía el contador B/N en número o escribe NO."
+
+            session.advance_state(
+                "awaiting_toner_counter_color",
+                {"counter_bn": value or "NO"},
+            )
+
+            return "Indícame el contador color actual. Si no aplica o no lo tienes, escribe NO."
+
+        if state == "awaiting_toner_counter_color":
+            value = self._only_digits(text_clean)
+            if not value and not self._is_no(text_clean):
+                return "Por favor envía el contador color en número o escribe NO."
+
+            session.advance_state(
+                "awaiting_toner_observations",
+                {"counter_color": value or "NO"},
+            )
+
+            return "¿Deseas agregar alguna observación? Si no, escribe NO."
+
+        if state == "awaiting_toner_observations":
+            observations = "" if self._is_no(text_clean) else text_clean
+
+            context = session.update_context({"observations": observations})
+
+            summary = (
+                "Confirma tu solicitud de tóner:\n\n"
+                "Equipo: {machine}\n"
+                "Color: {color}\n"
+                "Cantidad: {qty}\n"
+                "Contador B/N: {bn}\n"
+                "Contador color: {color_counter}\n"
+                "Observaciones: {obs}\n\n"
+                "Responde SI para confirmar o NO para cancelar."
+            ).format(
+                machine=context.get("machine_label") or "",
+                color=context.get("toner_color") or "",
+                qty=context.get("toner_quantity") or "",
+                bn=context.get("counter_bn") or "",
+                color_counter=context.get("counter_color") or "",
+                obs=context.get("observations") or "Sin observaciones",
+            )
+
+            session.advance_state("awaiting_toner_confirmation")
+
+            return summary
+
+        if state == "awaiting_toner_confirmation":
+            if not self._is_yes(text_clean):
+                if self._is_no(text_clean):
+                    session.reset_conversation(reason="abandoned")
+                    return "Listo, cancelé la solicitud de tóner."
+                return "Por favor responde SI para confirmar o NO para cancelar."
+
+            context = session.get_context()
+            rec, error = self._create_toner_request(partner, session, context)
+
+            if rec:
+                session.complete_flow(close_reason="completed_toner")
+                return (
+                    "Solicitud de tóner registrada correctamente.\n"
+                    "Número de referencia: %s"
+                ) % (rec.display_name or rec.id)
+
+            request.env["whatsapp.handoff"].sudo().create_unknown_intent_handoff(
+                partner,
+                session=session,
+                initial_message=text_clean,
+                context={
+                    "reason": "No se pudo crear solicitud de tóner automáticamente.",
+                    "error": error,
+                    "flow_context": context,
+                },
+            )
+            partner.whatsapp_enable_human_mode_api(taken_by_name="Bot WhatsApp")
+            session.action_set_human()
+
+            return (
+                "Recibí la información, pero no pude registrar la solicitud automáticamente. "
+                "Te estoy derivando con un asesor para completarla."
+            )
+
+        return "Estoy procesando tu solicitud de tóner. Por favor continúa con la información solicitada."
+
+    def _continue_onsite_flow(self, partner, session, identifiers, text, payload=False):
+        context = session.get_context()
+        text_clean = (text or "").strip()
+
+        if text_clean.lower() in ["link", "enlace", "url", "formulario"]:
+            link = context.get("form_url") or self._get_service_url(
+                partner=partner,
+                company=partner.whatsapp_active_company_id if partner else False,
+            )
+            return "Puedes registrar tu servicio presencial aquí:\n%s" % link
+
+        if self._is_no(text_clean) and session.conversation_state != "awaiting_service_photo":
+            session.reset_conversation(reason="abandoned")
+            return "Listo, cancelé la solicitud de servicio. Si necesitas algo más, escríbenos."
+
+        state = session.conversation_state
+
+        if state == "awaiting_machine_selection_onsite":
+            index = self._parse_menu_index(text_clean)
+            options = context.get("machine_options") or []
+
+            if not index or index < 1 or index > len(options):
+                return "Por favor responde con el número del equipo de la lista."
+
+            selected = options[index - 1]
+            session.advance_state(
+                "awaiting_service_description",
+                {
+                    "machine_id": selected.get("id"),
+                    "machine_label": selected.get("label"),
+                },
+            )
+
+            return (
+                "Equipo seleccionado:\n%s\n\n"
+                "Por favor detállame el problema que presenta el equipo."
+            ) % selected.get("label")
+
+        if state == "awaiting_service_description":
+            if len(text_clean) < 4:
+                return "Por favor detalla un poco más el problema del equipo."
+
+            session.advance_state(
+                "awaiting_service_photo",
+                {"service_description": text_clean},
+            )
+
+            return (
+                "Gracias. Si tienes una foto del problema, envíala ahora. "
+                "Si no tienes foto, escribe NO para registrar el servicio."
+            )
+
+        if state == "awaiting_service_photo":
+            media = self._create_media_from_payload(
+                session=session,
+                partner=partner,
+                message=False,
+                payload=payload or {},
+            )
+
+            context_update = {}
+            if media:
+                context_update["media_id"] = media.id
+                try:
+                    media.mark_for_human_review(reason="Foto enviada para servicio presencial.")
+                except Exception:
+                    pass
+
+            context = session.update_context(context_update)
+
+            ticket, error = self._create_service_ticket(partner, session, context, payload=payload)
+
+            if ticket:
+                if media:
+                    try:
+                        media.attach_to_record("ticket.alquiler", ticket.id, purpose="service_issue")
+                    except Exception:
+                        pass
+
+                session.complete_flow(close_reason="completed_onsite")
+                return (
+                    "Servicio presencial registrado correctamente.\n"
+                    "Referencia: %s"
+                ) % (ticket.display_name or ticket.id)
+
+            request.env["whatsapp.handoff"].sudo().create_onsite_handoff(
+                partner,
+                session=session,
+                machine=self._get_context_machine(context),
+                initial_message=context.get("service_description") or text_clean,
+                media=media if media else False,
+                context={
+                    "reason": "No se pudo crear ticket.alquiler automáticamente.",
+                    "error": error,
+                    "flow_context": context,
+                },
+            )
+            partner.whatsapp_enable_human_mode_api(taken_by_name="Bot WhatsApp")
+            session.action_set_human()
+
+            return (
+                "Recibí la información del servicio, pero no pude crear el ticket automáticamente. "
+                "Te estoy derivando con un asesor."
+            )
+
+        return "Estoy procesando tu solicitud de servicio. Por favor continúa con la información solicitada."
+
+    def _continue_remote_flow(self, partner, session, identifiers, text, payload=False):
+        text_clean = (text or "").strip()
+        state = session.conversation_state
+
+        if self._is_no(text_clean):
+            session.reset_conversation(reason="abandoned")
+            return "Listo, cancelé la solicitud de soporte remoto."
+
+        if state == "awaiting_anydesk_code":
+            media = self._create_media_from_payload(
+                session=session,
+                partner=partner,
+                message=False,
+                payload=payload or {},
+            )
+
+            anydesk_code = False
+            if self._looks_like_anydesk(text_clean):
+                anydesk_code = self._only_digits(text_clean)
+
+            if not anydesk_code and not media:
+                return (
+                    "Por favor envíanos tu código AnyDesk. "
+                    "También puedes enviar una foto de la pantalla donde aparece el código."
+                )
+
+            context = session.update_context({
+                "anydesk_code": anydesk_code or False,
+                "remote_problem": (payload or {}).get("message") or (payload or {}).get("text") or "",
+                "media_id": media.id if media else False,
+            })
+
+            if media:
+                try:
+                    media.mark_for_human_review(reason="Foto de AnyDesk enviada por cliente.")
+                except Exception:
+                    pass
+
+            handoff = request.env["whatsapp.handoff"].sudo().create_remote_support_handoff(
+                partner,
+                session=session,
+                machine=False,
+                anydesk_code=anydesk_code,
+                initial_message=text_clean,
+                media=media if media else False,
+                context=context,
+            )
+
+            partner.whatsapp_enable_human_mode_api(taken_by_name="Bot WhatsApp")
+            session.action_set_human()
+
+            return (
+                "Gracias. Ya derivé tu solicitud a un técnico para soporte remoto. "
+                "Un asesor continuará la atención."
+            )
+
+        return (
+            "Para soporte remoto, envíanos tu código AnyDesk "
+            "o una foto de la pantalla donde aparece el código."
+        )
+
+    def _continue_active_flow(self, partner, session, identifiers, text, payload=False):
+        if session.is_conversation_expired():
+            session.reset_conversation(reason="expired")
+            return "El flujo anterior expiró por inactividad. Por favor vuelve a escribir tu solicitud."
+
+        if session.current_flow == "toner":
+            return self._continue_toner_flow(partner, session, identifiers, text, payload=payload)
+
+        if session.current_flow == "onsite":
+            return self._continue_onsite_flow(partner, session, identifiers, text, payload=payload)
+
+        if session.current_flow == "remote":
+            return self._continue_remote_flow(partner, session, identifiers, text, payload=payload)
+
+        return False
+
+    # ==========================================================
+    # Intención y acciones
+    # ==========================================================
+    def _detect_intent(self, message_text, partner=False, business_status=False, session=False):
+        applies_to = self._get_applies_to(partner, business_status=business_status) if partner else "new"
+
+        try:
+            result = request.env["whatsapp.intent.rule"].sudo().detect_intent(
+                message=message_text,
+                partner=partner if partner else False,
+                applies_to=applies_to,
+                is_after_hours=not business_status.get("is_open"),
+                current_flow=session.current_flow if session else False,
+            )
+            result = result or {"found": False}
+        except TypeError:
+            result = request.env["whatsapp.intent.rule"].sudo().detect_intent(
+                message=message_text,
+                partner=partner if partner else False,
+                applies_to=applies_to,
+                is_after_hours=not business_status.get("is_open"),
+            )
+            result = result or {"found": False}
+        except Exception:
+            _logger.exception("[SAT-WHATSAPP-API] Error detectando intención")
+            result = {"found": False}
+
+        return result, applies_to
+
+    def _execute_intent_action(self, partner, session, identifiers, message_text, intent_result, business_status, payload=False):
+        intent_result = intent_result or {}
+        intent = intent_result.get("intent") or "unknown"
+        action = intent_result.get("action") or False
+
+        text_lower = (message_text or "").strip().lower()
+
+        if text_lower in ["cancelar", "cancela", "salir", "terminar"]:
+            session.reset_conversation(reason="abandoned")
+            return "Listo, cancelé el flujo activo. ¿En qué más podemos ayudarte?"
+
+        if action == "ignore":
+            return False
+
+        if action == "cancel_flow":
+            session.reset_conversation(reason="abandoned")
+            return "Listo, cancelé el flujo activo. ¿En qué más podemos ayudarte?"
+
+        if action == "reply":
+            template = intent_result.get("response_template")
+            if template:
+                rendered = self._render_template(
+                    template,
+                    partner=partner,
+                    session=session,
+                    company=partner.whatsapp_active_company_id if partner and partner.whatsapp_active_company_id else False,
+                    fallback=False,
+                )
+                if rendered:
+                    return rendered
+
+        if action == "ask_dni":
+            return self._render_template(
+                "ask_dni",
+                partner=partner,
+                session=session,
+                fallback="Para poder ayudarte, por favor envíame tu DNI de 8 dígitos.",
+            )
+
+        if action == "ask_ruc":
+            return self._render_template(
+                "ask_ruc",
+                partner=partner,
+                session=session,
+                fallback="Por favor envíame el RUC de tu empresa.",
+            )
+
+        if action == "select_company":
+            return self._company_selection_message(partner, session)
+
+        if action == "start_flow_toner" or intent == "toner":
+            return self._start_toner_flow(partner, session, identifiers, payload=payload)
+
+        if action == "start_flow_onsite" or intent in ["onsite_service", "service", "printer_issue"]:
+            return self._start_onsite_flow(partner, session, identifiers, payload=payload)
+
+        if action == "start_flow_remote" or intent in ["remote_service", "anydesk", "scanner"]:
+            return self._start_remote_flow(partner, session, identifiers, payload=payload)
+
+        if action == "send_service_link":
+            link = self._get_service_url(
+                partner=partner,
+                company=partner.whatsapp_active_company_id if partner else False,
+            )
+            return "Puedes registrar tu solicitud aquí:\n%s" % link
+
+        if action == "handoff" or intent == "human":
+            request.env["whatsapp.handoff"].sudo().create_unknown_intent_handoff(
+                partner,
+                session=session,
+                initial_message=message_text,
+                context={"intent": intent, "action": action},
+            )
+            partner.whatsapp_enable_human_mode_api(taken_by_name="Bot WhatsApp")
+            session.action_set_human()
+            return "De acuerdo. Voy a derivarte con un asesor para continuar la atención."
+
+        if intent == "greeting":
+            return self._get_greeting_message(partner=partner, session=session, business_status=business_status)
+
+        if intent == "thanks":
+            return "Gracias a ti. ¿Necesitas algo más?"
+
+        if intent == "goodbye":
+            return "Gracias por comunicarte con nosotros. Que tengas buen día."
+
+        request.env["whatsapp.handoff"].sudo().create_unknown_intent_handoff(
+            partner,
+            session=session,
+            initial_message=message_text,
+            context={"intent_result": intent_result},
+        )
+        partner.whatsapp_enable_human_mode_api(taken_by_name="Bot WhatsApp")
+        session.action_set_human()
+
+        return (
+            "No pude identificar con seguridad tu solicitud. "
+            "Te estoy derivando con un asesor para que pueda ayudarte."
+        )
+
+    # ==========================================================
+    # Empresas
+    # ==========================================================
+    def _company_selection_message(self, partner, session=False):
+        if not partner:
+            return "No pude identificar el contacto."
+
+        companies = partner._get_whatsapp_available_companies()
+        if not companies:
+            return "No tienes empresas asociadas todavía. Por favor envíame el RUC de tu empresa."
+
+        if len(companies) == 1:
+            partner.whatsapp_set_active_company(companies[0])
+            return "Empresa seleccionada: %s. ¿En qué podemos ayudarte?" % companies[0].name
+
+        options = []
+        lines = [
+            "Tienes más de una empresa asociada. Responde con el número de la empresa:",
+            "",
+        ]
+
+        idx = 1
+        for company in companies:
+            options.append({
+                "id": company.id,
+                "name": company.name,
+                "vat": company.vat,
+            })
+            lines.append("%s. %s%s" % (
+                idx,
+                company.name,
+                " | RUC: %s" % company.vat if company.vat else "",
+            ))
+            idx += 1
+
+        if session:
+            session.start_flow(
+                "registration",
+                "awaiting_company_selection",
+                context={
+                    "company_options": options,
+                },
+            )
+
+        return "\n".join(lines)
+
+    def _continue_company_selection(self, partner, session, text):
+        context = session.get_context()
+        options = context.get("company_options") or []
+        index = self._parse_menu_index(text)
+
+        if not index or index < 1 or index > len(options):
+            return "Por favor responde con el número de la empresa de la lista."
+
+        selected = options[index - 1]
+        company = request.env["res.partner"].sudo().browse(selected.get("id")).exists()
+        if not company:
+            return "No pude encontrar la empresa seleccionada. Intenta nuevamente."
+
+        partner.whatsapp_set_active_company(company)
+        session.complete_flow(close_reason="completed_registration")
+
+        return "Empresa seleccionada: %s. ¿En qué podemos ayudarte?" % company.name
+
+    # ==========================================================
+    # Endpoint central: procesar conversación completa
+    # ==========================================================
+    @http.route("/sat/whatsapp/process", type="json", auth="public", methods=["POST"], csrf=False)
+    def whatsapp_process(self, **kwargs):
+        start_ts = time.time()
+        endpoint = "/sat/whatsapp/process"
+        payload = self._get_json_payload()
+        identifiers = self._extract_identifiers(payload)
+
+        if not self._check_token():
+            response = self._json_error("No autorizado", "UNAUTHORIZED", 401)
+            self._safe_log_api(endpoint, payload, response, identifiers, status="unauthorized", start_ts=start_ts)
+            return response
+
+        if not self._has_any_identifier(identifiers):
+            response = self._json_error("Número, JID o LID requerido", "IDENTIFIER_REQUIRED", 400)
+            self._safe_log_api(endpoint, payload, response, identifiers, status="error", error_code="IDENTIFIER_REQUIRED", start_ts=start_ts)
+            return response
+
+        message_text = payload.get("message") or payload.get("text") or payload.get("content") or ""
+        message_type = payload.get("message_type") or "text"
+        external_message_id = payload.get("message_id") or payload.get("external_message_id") or False
+        force_new_session = bool(payload.get("force_new_session"))
+
+        business_status = self._compute_business_status()
+        partner = self._find_partner_by_identifiers(identifiers)
+
+        try:
+            # ==================================================
+            # 1) Contacto no existe: pedir DNI o registrar DNI
+            # ==================================================
+            if not partner:
+                if self._looks_like_dni(message_text):
+                    partner, session, reply = self._register_dni_inline(
+                        identifiers,
+                        self._only_digits(message_text),
+                        payload=payload,
+                    )
+
+                    self._record_whatsapp_message(
+                        session=session,
+                        partner=partner,
+                        identifiers=identifiers,
+                        role="user",
+                        direction="in",
+                        message_type=message_type,
+                        content=message_text,
+                        intent="dni",
+                        payload=payload,
+                        external_message_id=external_message_id,
+                    )
+
+                    emitted = self._emit_bot_reply(
+                        session=session,
+                        partner=partner,
+                        identifiers=identifiers,
+                        content=reply,
+                        intent="ask_ruc",
+                        payload=payload,
+                    )
+
+                    response = {
+                        "ok": True,
+                        "found": True,
+                        "registered_dni": True,
+                        "next_step": "waiting_ruc",
+                        "partner_id": partner.id,
+                        "session_id": session.id,
+                        "message": reply,
+                        "outbox_id": emitted.get("outbox_id"),
+                        "profile": partner.get_whatsapp_profile_payload(),
+                    }
+                    self._safe_log_api(endpoint, payload, response, identifiers, partner=partner, session=session, start_ts=start_ts)
+                    return response
+
+                response_message = self._render_template(
+                    "ask_dni",
+                    fallback="Para poder ayudarte, por favor envíame tu DNI de 8 dígitos.",
+                )
+
+                response = {
+                    "ok": True,
+                    "found": False,
+                    "next_step": "waiting_dni",
+                    "message": response_message,
+                    "suggested": {
+                        "template": "ask_dni",
+                        "message": response_message,
+                    },
+                    "business": business_status,
+                }
+                self._safe_log_api(endpoint, payload, response, identifiers, status="not_found", start_ts=start_ts)
+                return response
+
+            self._update_partner_identifiers(partner, identifiers)
+            session = self._get_or_create_session(
+                partner,
+                identifiers,
+                force_new_session=force_new_session,
+            )
+
+            try:
+                partner.whatsapp_touch_message(force_new_session=force_new_session)
+            except Exception:
+                _logger.exception("[SAT-WHATSAPP-API] No se pudo actualizar touch partner")
+
+            # ==================================================
+            # 2) Registrar mensaje entrante
+            # ==================================================
+            incoming = self._record_whatsapp_message(
+                session=session,
+                partner=partner,
+                identifiers=identifiers,
+                role="user",
+                direction="in",
+                message_type=message_type,
+                content=message_text,
+                intent=False,
+                payload=payload,
+                external_message_id=external_message_id,
+            )
+
+            # ==================================================
+            # 3) Bloqueado / modo humano
+            # ==================================================
+            if partner.whatsapp_blocked or partner.whatsapp_access_level == "blocked":
+                reply = self._render_template(
+                    "blocked_contact",
+                    partner=partner,
+                    session=session,
+                    fallback="Tu número no está habilitado para atención por este canal.",
+                )
+
+                emitted = self._emit_bot_reply(
+                    session=session,
+                    partner=partner,
+                    identifiers=identifiers,
+                    content=reply,
+                    intent="blocked",
+                    payload=payload,
+                )
+
+                response = {
+                    "ok": True,
+                    "found": True,
+                    "blocked": True,
+                    "partner_id": partner.id,
+                    "session_id": session.id,
+                    "message": reply,
+                    "outbox_id": emitted.get("outbox_id"),
+                    "business": business_status,
+                    "profile": partner.get_whatsapp_profile_payload(),
+                }
+                self._safe_log_api(endpoint, payload, response, identifiers, partner=partner, session=session, start_ts=start_ts)
+                return response
+
+            if partner.whatsapp_human_mode or session.state == "human":
+                response = {
+                    "ok": True,
+                    "found": True,
+                    "human_mode": True,
+                    "partner_id": partner.id,
+                    "session_id": session.id,
+                    "message": False,
+                    "business": business_status,
+                    "profile": partner.get_whatsapp_profile_payload(),
+                }
+                self._safe_log_api(endpoint, payload, response, identifiers, partner=partner, session=session, start_ts=start_ts)
+                return response
+
+            # ==================================================
+            # 4) Registro DNI/RUC
+            # ==================================================
+            registration_state = getattr(partner, "whatsapp_registration_state", "none")
+
+            if registration_state in ("none", "waiting_dni"):
+                if self._looks_like_dni(message_text):
+                    partner, session, reply = self._register_dni_inline(
+                        identifiers,
+                        self._only_digits(message_text),
+                        payload=payload,
+                    )
+                else:
+                    reply = self._render_template(
+                        "ask_dni",
+                        partner=partner,
+                        session=session,
+                        fallback="Para poder ayudarte, por favor envíame tu DNI de 8 dígitos.",
+                    )
+
+                emitted = self._emit_bot_reply(
+                    session=session,
+                    partner=partner,
+                    identifiers=identifiers,
+                    content=reply,
+                    intent="ask_dni",
+                    payload=payload,
+                )
+
+                response = {
+                    "ok": True,
+                    "found": True,
+                    "next_step": "waiting_ruc" if self._looks_like_dni(message_text) else "waiting_dni",
+                    "partner_id": partner.id,
+                    "session_id": session.id,
+                    "message": reply,
+                    "outbox_id": emitted.get("outbox_id"),
+                    "business": business_status,
+                    "profile": partner.get_whatsapp_profile_payload(),
+                }
+                self._safe_log_api(endpoint, payload, response, identifiers, partner=partner, session=session, start_ts=start_ts)
+                return response
+
+            if registration_state == "waiting_ruc":
+                if self._looks_like_ruc(message_text):
+                    company, session, reply, company_created = self._register_ruc_inline(
+                        partner,
+                        identifiers,
+                        self._only_digits(message_text),
+                        payload=payload,
+                    )
+                else:
+                    reply = self._render_template(
+                        "ask_ruc",
+                        partner=partner,
+                        session=session,
+                        fallback="Gracias. Ahora envíame el RUC de tu empresa para completar el registro.",
+                    )
+                    company_created = False
+
+                emitted = self._emit_bot_reply(
+                    session=session,
+                    partner=partner,
+                    identifiers=identifiers,
+                    content=reply,
+                    intent="ask_ruc",
+                    payload=payload,
+                )
+
+                response = {
+                    "ok": True,
+                    "found": True,
+                    "registered_ruc": self._looks_like_ruc(message_text),
+                    "company_created": company_created,
+                    "next_step": "registered" if self._looks_like_ruc(message_text) else "waiting_ruc",
+                    "partner_id": partner.id,
+                    "session_id": session.id,
+                    "message": reply,
+                    "outbox_id": emitted.get("outbox_id"),
+                    "business": business_status,
+                    "profile": partner.get_whatsapp_profile_payload(),
+                }
+                self._safe_log_api(endpoint, payload, response, identifiers, partner=partner, session=session, start_ts=start_ts)
+                return response
+
+            # ==================================================
+            # 5) Selección de empresa pendiente
+            # ==================================================
+            if session.current_flow == "registration" and session.conversation_state == "awaiting_company_selection":
+                reply = self._continue_company_selection(partner, session, message_text)
+                emitted = self._emit_bot_reply(
+                    session=session,
+                    partner=partner,
+                    identifiers=identifiers,
+                    content=reply,
+                    intent="company_selection",
+                    payload=payload,
+                )
+
+                response = {
+                    "ok": True,
+                    "found": True,
+                    "partner_id": partner.id,
+                    "session_id": session.id,
+                    "message": reply,
+                    "outbox_id": emitted.get("outbox_id"),
+                    "business": business_status,
+                    "profile": partner.get_whatsapp_profile_payload(),
+                }
+                self._safe_log_api(endpoint, payload, response, identifiers, partner=partner, session=session, start_ts=start_ts)
+                return response
+
+            if partner.whatsapp_requires_company_selection:
+                reply = self._company_selection_message(partner, session=session)
+                emitted = self._emit_bot_reply(
+                    session=session,
+                    partner=partner,
+                    identifiers=identifiers,
+                    content=reply,
+                    intent="select_company",
+                    payload=payload,
+                )
+
+                response = {
+                    "ok": True,
+                    "found": True,
+                    "next_step": "select_company",
+                    "partner_id": partner.id,
+                    "session_id": session.id,
+                    "message": reply,
+                    "outbox_id": emitted.get("outbox_id"),
+                    "business": business_status,
+                    "profile": partner.get_whatsapp_profile_payload(),
+                }
+                self._safe_log_api(endpoint, payload, response, identifiers, partner=partner, session=session, start_ts=start_ts)
+                return response
+
+            # ==================================================
+            # 6) Horario/refrigerio: informa, pero permite registrar
+            # ==================================================
+            outside_hours_note = False
+            if business_status and not business_status.get("is_open"):
+                outside_hours_note = business_status.get("message") or ""
+
+            # ==================================================
+            # 7) Continuar flujo activo
+            # ==================================================
+            if session.current_flow != "none" and session.conversation_state != "idle":
+                reply = self._continue_active_flow(
+                    partner,
+                    session,
+                    identifiers,
+                    message_text,
+                    payload=payload,
+                )
+
+                if outside_hours_note and reply:
+                    reply = "%s\n\n%s" % (outside_hours_note, reply)
+
+                emitted = self._emit_bot_reply(
+                    session=session,
+                    partner=partner,
+                    identifiers=identifiers,
+                    content=reply,
+                    intent=session.current_flow,
+                    payload=payload,
+                )
+
+                response = {
+                    "ok": True,
+                    "found": True,
+                    "continued_flow": True,
+                    "flow": session.current_flow,
+                    "step": session.conversation_state,
+                    "partner_id": partner.id,
+                    "session_id": session.id,
+                    "message": reply,
+                    "outbox_id": emitted.get("outbox_id"),
+                    "business": business_status,
+                    "profile": partner.get_whatsapp_profile_payload(),
+                }
+                self._safe_log_api(endpoint, payload, response, identifiers, partner=partner, session=session, start_ts=start_ts)
+                return response
+
+            # ==================================================
+            # 8) Detectar intención y ejecutar acción
+            # ==================================================
+            intent_result, applies_to = self._detect_intent(
+                message_text,
+                partner=partner,
+                business_status=business_status,
+                session=session,
+            )
+
+            reply = self._execute_intent_action(
+                partner,
+                session,
+                identifiers,
+                message_text,
+                intent_result,
+                business_status,
+                payload=payload,
+            )
+
+            if outside_hours_note and reply:
+                reply = "%s\n\n%s" % (outside_hours_note, reply)
+
+            if not reply:
+                response = {
+                    "ok": True,
+                    "found": True,
+                    "ignored": True,
+                    "partner_id": partner.id,
+                    "session_id": session.id,
+                    "message": False,
+                    "intent": intent_result,
+                    "business": business_status,
+                    "profile": partner.get_whatsapp_profile_payload(),
+                }
+                self._safe_log_api(endpoint, payload, response, identifiers, partner=partner, session=session, start_ts=start_ts)
+                return response
+
+            emitted = self._emit_bot_reply(
+                session=session,
+                partner=partner,
+                identifiers=identifiers,
+                content=reply,
+                intent=intent_result.get("intent") if intent_result else False,
+                payload=payload,
+            )
+
+            response = {
+                "ok": True,
+                "found": True,
+                "applies_to": applies_to,
+                "partner_id": partner.id,
+                "session_id": session.id,
+                "message": reply,
+                "outbox_id": emitted.get("outbox_id"),
+                "message_id": emitted.get("message_id"),
+                "intent": intent_result,
+                "business": business_status,
+                "profile": partner.get_whatsapp_profile_payload(),
+            }
+            self._safe_log_api(endpoint, payload, response, identifiers, partner=partner, session=session, start_ts=start_ts)
+            return response
+
+        except Exception as e:
+            _logger.exception("[SAT-WHATSAPP-API] Error procesando conversación")
+            response = self._json_error(str(e), "PROCESS_ERROR", 500)
+            self._safe_log_api(
+                endpoint,
+                payload,
+                response,
+                identifiers,
+                partner=partner if partner else False,
+                session=session if "session" in locals() and session else False,
+                status="error",
+                error_code="PROCESS_ERROR",
+                error_message=str(e),
+                start_ts=start_ts,
+            )
+            return response
 
     # ==========================================================
     # Endpoint: perfil
@@ -758,15 +2361,7 @@ class WhatsAppPartnerApiController(http.Controller):
 
         if not self._has_any_identifier(identifiers):
             response = self._json_error("Número, JID o LID requerido", "IDENTIFIER_REQUIRED", 400)
-            self._safe_log_api(
-                endpoint,
-                payload,
-                response,
-                identifiers,
-                status="error",
-                error_code="IDENTIFIER_REQUIRED",
-                start_ts=start_ts,
-            )
+            self._safe_log_api(endpoint, payload, response, identifiers, status="error", error_code="IDENTIFIER_REQUIRED", start_ts=start_ts)
             return response
 
         partner = self._find_partner_by_identifiers(identifiers)
@@ -825,15 +2420,7 @@ class WhatsAppPartnerApiController(http.Controller):
             "suggested": suggested,
             "profile": partner.get_whatsapp_profile_payload(),
         }
-        self._safe_log_api(
-            endpoint,
-            payload,
-            response,
-            identifiers,
-            partner=partner,
-            session=session,
-            start_ts=start_ts,
-        )
+        self._safe_log_api(endpoint, payload, response, identifiers, partner=partner, session=session, start_ts=start_ts)
         return response
 
     # ==========================================================
@@ -853,15 +2440,7 @@ class WhatsAppPartnerApiController(http.Controller):
 
         if not self._has_any_identifier(identifiers):
             response = self._json_error("Número, JID o LID requerido", "IDENTIFIER_REQUIRED", 400)
-            self._safe_log_api(
-                endpoint,
-                payload,
-                response,
-                identifiers,
-                status="error",
-                error_code="IDENTIFIER_REQUIRED",
-                start_ts=start_ts,
-            )
+            self._safe_log_api(endpoint, payload, response, identifiers, status="error", error_code="IDENTIFIER_REQUIRED", start_ts=start_ts)
             return response
 
         partner = self._find_partner_by_identifiers(identifiers)
@@ -924,15 +2503,7 @@ class WhatsAppPartnerApiController(http.Controller):
             "message_id": message.id if message else False,
             "profile": partner.get_whatsapp_profile_payload(),
         }
-        self._safe_log_api(
-            endpoint,
-            payload,
-            response,
-            identifiers,
-            partner=partner,
-            session=session,
-            start_ts=start_ts,
-        )
+        self._safe_log_api(endpoint, payload, response, identifiers, partner=partner, session=session, start_ts=start_ts)
         return response
 
     # ==========================================================
@@ -1007,6 +2578,7 @@ class WhatsAppPartnerApiController(http.Controller):
             extra={
                 "business_message": business_status.get("message") or "",
             },
+            current_flow=False,
         )
 
         response = {
@@ -1016,14 +2588,7 @@ class WhatsAppPartnerApiController(http.Controller):
             "business": business_status,
             "auto_response": result,
         }
-        self._safe_log_api(
-            endpoint,
-            payload,
-            response,
-            identifiers,
-            partner=partner if partner else False,
-            start_ts=start_ts,
-        )
+        self._safe_log_api(endpoint, payload, response, identifiers, partner=partner if partner else False, start_ts=start_ts)
         return response
 
     # ==========================================================
@@ -1049,13 +2614,15 @@ class WhatsAppPartnerApiController(http.Controller):
         )
 
         business_status = self._compute_business_status()
-        applies_to = self._get_applies_to(partner, business_status=business_status) if partner else "new"
+        session = False
+        if partner:
+            session = self._get_or_create_session(partner, identifiers)
 
-        result = request.env["whatsapp.intent.rule"].sudo().detect_intent(
-            message=message_text,
+        result, applies_to = self._detect_intent(
+            message_text,
             partner=partner if partner else False,
-            applies_to=applies_to,
-            is_after_hours=not business_status.get("is_open"),
+            business_status=business_status,
+            session=session if session else False,
         )
 
         response = {
@@ -1065,14 +2632,7 @@ class WhatsAppPartnerApiController(http.Controller):
             "business": business_status,
             "intent": result,
         }
-        self._safe_log_api(
-            endpoint,
-            payload,
-            response,
-            identifiers,
-            partner=partner if partner else False,
-            start_ts=start_ts,
-        )
+        self._safe_log_api(endpoint, payload, response, identifiers, partner=partner if partner else False, session=session if session else False, start_ts=start_ts)
         return response
 
     # ==========================================================
@@ -1094,15 +2654,7 @@ class WhatsAppPartnerApiController(http.Controller):
 
         if not template_name:
             response = self._json_error("Nombre de plantilla requerido.", "TEMPLATE_REQUIRED", 400)
-            self._safe_log_api(
-                endpoint,
-                payload,
-                response,
-                identifiers,
-                status="error",
-                error_code="TEMPLATE_REQUIRED",
-                start_ts=start_ts,
-            )
+            self._safe_log_api(endpoint, payload, response, identifiers, status="error", error_code="TEMPLATE_REQUIRED", start_ts=start_ts)
             return response
 
         partner = False
@@ -1133,15 +2685,213 @@ class WhatsAppPartnerApiController(http.Controller):
             "session_id": session.id if session else False,
         }
 
-        self._safe_log_api(
-            endpoint,
-            payload,
-            response,
-            identifiers,
-            partner=partner if partner else False,
-            session=session if session else False,
-            start_ts=start_ts,
+        self._safe_log_api(endpoint, payload, response, identifiers, partner=partner if partner else False, session=session if session else False, start_ts=start_ts)
+        return response
+
+    # ==========================================================
+    # Endpoint: mensaje saliente / outbox
+    # ==========================================================
+    @http.route("/sat/whatsapp/message/out", type="json", auth="public", methods=["POST"], csrf=False)
+    def whatsapp_message_out(self, **kwargs):
+        start_ts = time.time()
+        endpoint = "/sat/whatsapp/message/out"
+        payload = self._get_json_payload()
+        identifiers = self._extract_identifiers(payload)
+
+        if not self._check_token():
+            response = self._json_error("No autorizado", "UNAUTHORIZED", 401)
+            self._safe_log_api(endpoint, payload, response, identifiers, status="unauthorized", start_ts=start_ts)
+            return response
+
+        content = payload.get("message") or payload.get("text") or payload.get("content") or ""
+        message_type = payload.get("message_type") or "text"
+        template_name = payload.get("template") or payload.get("template_name")
+
+        if not self._has_any_identifier(identifiers):
+            response = self._json_error("Número, JID o LID requerido", "IDENTIFIER_REQUIRED", 400)
+            self._safe_log_api(endpoint, payload, response, identifiers, status="error", error_code="IDENTIFIER_REQUIRED", start_ts=start_ts)
+            return response
+
+        partner = self._find_partner_by_identifiers(identifiers)
+
+        if not partner:
+            response = self._json_error("Contacto no encontrado.", "CONTACT_NOT_FOUND", 404)
+            self._safe_log_api(endpoint, payload, response, identifiers, status="not_found", start_ts=start_ts)
+            return response
+
+        session = self._get_or_create_session(partner, identifiers)
+
+        if template_name and not content:
+            content = self._render_template(
+                template_name,
+                partner=partner,
+                session=session,
+                company=partner.whatsapp_active_company_id if partner.whatsapp_active_company_id else False,
+                extra=payload.get("extra") or {},
+                fallback="",
+            )
+
+        emitted = self._emit_bot_reply(
+            session=session,
+            partner=partner,
+            identifiers=identifiers,
+            content=content,
+            intent=payload.get("intent") or False,
+            payload=payload,
+            message_type=message_type,
+            create_outbox=True,
         )
+
+        response = {
+            "ok": True,
+            "partner_id": partner.id,
+            "session_id": session.id,
+            "message_id": emitted.get("message_id"),
+            "outbox_id": emitted.get("outbox_id"),
+            "state": "pending",
+            "message": content,
+        }
+        self._safe_log_api(endpoint, payload, response, identifiers, partner=partner, session=session, start_ts=start_ts)
+        return response
+
+    # ==========================================================
+    # Endpoint: outbox pendientes
+    # ==========================================================
+    @http.route("/sat/whatsapp/outbox/pending", type="json", auth="public", methods=["POST"], csrf=False)
+    def whatsapp_outbox_pending(self, **kwargs):
+        start_ts = time.time()
+        endpoint = "/sat/whatsapp/outbox/pending"
+        payload = self._get_json_payload()
+        identifiers = self._extract_identifiers(payload)
+
+        if not self._check_token():
+            response = self._json_error("No autorizado", "UNAUTHORIZED", 401)
+            self._safe_log_api(endpoint, payload, response, identifiers, status="unauthorized", start_ts=start_ts)
+            return response
+
+        limit = int(payload.get("limit") or 20)
+        Outbox = request.env["whatsapp.outbox"].sudo()
+
+        records = Outbox.search([
+            ("state", "in", ["pending", "queued"]),
+            "|",
+            ("next_retry_at", "<=", fields.Datetime.now()),
+            "&",
+            ("next_retry_at", "=", False),
+            ("scheduled_at", "<=", fields.Datetime.now()),
+        ], order="priority desc, scheduled_at asc, id asc", limit=limit)
+
+        items = []
+        for rec in records:
+            try:
+                rec.action_mark_queued()
+            except Exception:
+                _logger.exception("[SAT-WHATSAPP-API] No se pudo marcar queued outbox=%s", rec.id)
+
+            items.append({
+                "id": rec.id,
+                "outbox_id": rec.id,
+                "phone": rec.phone,
+                "jid": rec.jid,
+                "lid": rec.lid,
+                "message_type": rec.message_type,
+                "content": rec.content,
+                "partner_id": rec.partner_id.id if rec.partner_id else False,
+                "session_id": rec.session_id.id if rec.session_id else False,
+                "media_id": rec.media_id.id if rec.media_id else False,
+                "current_flow": rec.current_flow,
+                "flow_step": rec.flow_step,
+            })
+
+        response = {
+            "ok": True,
+            "count": len(items),
+            "items": items,
+        }
+        self._safe_log_api(endpoint, payload, response, identifiers, start_ts=start_ts)
+        return response
+
+    # ==========================================================
+    # Endpoint: marcar outbox enviado
+    # ==========================================================
+    @http.route("/sat/whatsapp/outbox/mark-sent", type="json", auth="public", methods=["POST"], csrf=False)
+    def whatsapp_outbox_mark_sent(self, **kwargs):
+        start_ts = time.time()
+        endpoint = "/sat/whatsapp/outbox/mark-sent"
+        payload = self._get_json_payload()
+        identifiers = self._extract_identifiers(payload)
+
+        if not self._check_token():
+            response = self._json_error("No autorizado", "UNAUTHORIZED", 401)
+            self._safe_log_api(endpoint, payload, response, identifiers, status="unauthorized", start_ts=start_ts)
+            return response
+
+        outbox_id = payload.get("outbox_id")
+        external_message_id = payload.get("external_message_id") or payload.get("message_id") or False
+
+        if not outbox_id:
+            response = self._json_error("outbox_id requerido", "OUTBOX_ID_REQUIRED", 400)
+            self._safe_log_api(endpoint, payload, response, identifiers, status="error", error_code="OUTBOX_ID_REQUIRED", start_ts=start_ts)
+            return response
+
+        outbox = request.env["whatsapp.outbox"].sudo().browse(int(outbox_id)).exists()
+        if not outbox:
+            response = self._json_error("Outbox no encontrado", "OUTBOX_NOT_FOUND", 404)
+            self._safe_log_api(endpoint, payload, response, identifiers, status="not_found", error_code="OUTBOX_NOT_FOUND", start_ts=start_ts)
+            return response
+
+        outbox.action_mark_sent(external_message_id=external_message_id)
+
+        response = {
+            "ok": True,
+            "outbox_id": outbox.id,
+            "state": outbox.state,
+            "external_message_id": outbox.external_message_id,
+        }
+        self._safe_log_api(endpoint, payload, response, identifiers, partner=outbox.partner_id, session=outbox.session_id, start_ts=start_ts)
+        return response
+
+    # ==========================================================
+    # Endpoint: marcar outbox fallido
+    # ==========================================================
+    @http.route("/sat/whatsapp/outbox/mark-failed", type="json", auth="public", methods=["POST"], csrf=False)
+    def whatsapp_outbox_mark_failed(self, **kwargs):
+        start_ts = time.time()
+        endpoint = "/sat/whatsapp/outbox/mark-failed"
+        payload = self._get_json_payload()
+        identifiers = self._extract_identifiers(payload)
+
+        if not self._check_token():
+            response = self._json_error("No autorizado", "UNAUTHORIZED", 401)
+            self._safe_log_api(endpoint, payload, response, identifiers, status="unauthorized", start_ts=start_ts)
+            return response
+
+        outbox_id = payload.get("outbox_id")
+        if not outbox_id:
+            response = self._json_error("outbox_id requerido", "OUTBOX_ID_REQUIRED", 400)
+            self._safe_log_api(endpoint, payload, response, identifiers, status="error", error_code="OUTBOX_ID_REQUIRED", start_ts=start_ts)
+            return response
+
+        outbox = request.env["whatsapp.outbox"].sudo().browse(int(outbox_id)).exists()
+        if not outbox:
+            response = self._json_error("Outbox no encontrado", "OUTBOX_NOT_FOUND", 404)
+            self._safe_log_api(endpoint, payload, response, identifiers, status="not_found", error_code="OUTBOX_NOT_FOUND", start_ts=start_ts)
+            return response
+
+        outbox.action_mark_failed(
+            error_message=payload.get("error_message") or "Error reportado por n8n/Baileys",
+            error_code=payload.get("error_code") or False,
+            schedule_retry=payload.get("schedule_retry", True),
+        )
+
+        response = {
+            "ok": True,
+            "outbox_id": outbox.id,
+            "state": outbox.state,
+            "retry_count": outbox.retry_count,
+            "next_retry_at": outbox.next_retry_at,
+        }
+        self._safe_log_api(endpoint, payload, response, identifiers, partner=outbox.partner_id, session=outbox.session_id, start_ts=start_ts)
         return response
 
     # ==========================================================
@@ -1164,15 +2914,7 @@ class WhatsAppPartnerApiController(http.Controller):
 
         if not self._has_any_identifier(identifiers):
             response = self._json_error("Número, JID o LID requerido", "IDENTIFIER_REQUIRED", 400)
-            self._safe_log_api(
-                endpoint,
-                payload,
-                response,
-                identifiers,
-                status="error",
-                error_code="IDENTIFIER_REQUIRED",
-                start_ts=start_ts,
-            )
+            self._safe_log_api(endpoint, payload, response, identifiers, status="error", error_code="IDENTIFIER_REQUIRED", start_ts=start_ts)
             return response
 
         partner = self._find_partner_by_identifiers(identifiers)
@@ -1240,15 +2982,7 @@ class WhatsAppPartnerApiController(http.Controller):
 
         if not self._has_any_identifier(identifiers):
             response = self._json_error("Número, JID o LID requerido", "IDENTIFIER_REQUIRED", 400)
-            self._safe_log_api(
-                endpoint,
-                payload,
-                response,
-                identifiers,
-                status="error",
-                error_code="IDENTIFIER_REQUIRED",
-                start_ts=start_ts,
-            )
+            self._safe_log_api(endpoint, payload, response, identifiers, status="error", error_code="IDENTIFIER_REQUIRED", start_ts=start_ts)
             return response
 
         partner = self._find_partner_by_identifiers(identifiers)
@@ -1269,15 +3003,11 @@ class WhatsAppPartnerApiController(http.Controller):
 
         handoff = request.env["whatsapp.handoff"].sudo().search([
             ("partner_id", "=", partner.id),
-            ("state", "=", "open"),
+            ("state", "in", ["open", "assigned", "pending"]),
         ], order="taken_at desc, id desc", limit=1)
 
         if handoff:
-            handoff.write({
-                "state": "released",
-                "released_at": fields.Datetime.now(),
-                "released_by_name": released_by_name,
-            })
+            handoff.action_release()
 
         suggested = {
             "template": "human_release",
@@ -1285,583 +3015,18 @@ class WhatsAppPartnerApiController(http.Controller):
                 "human_release",
                 partner=partner,
                 session=session,
-                fallback="El bot ha sido habilitado nuevamente para continuar la atención.",
+                fallback="El modo humano fue liberado. El bot puede continuar la atención.",
             ),
         }
 
         response = {
             "ok": True,
             "found": True,
+            "released_by_name": released_by_name,
             "partner_id": partner.id,
             "session_id": session.id,
             "suggested": suggested,
             "profile": partner.get_whatsapp_profile_payload(),
         }
         self._safe_log_api(endpoint, payload, response, identifiers, partner=partner, session=session, start_ts=start_ts)
-        return response
-
-    # ==========================================================
-    # Endpoint: seleccionar empresa
-    # ==========================================================
-    @http.route("/sat/whatsapp/company/select", type="json", auth="public", methods=["POST"], csrf=False)
-    def whatsapp_company_select(self, **kwargs):
-        start_ts = time.time()
-        endpoint = "/sat/whatsapp/company/select"
-        payload = self._get_json_payload()
-        identifiers = self._extract_identifiers(payload)
-
-        if not self._check_token():
-            response = self._json_error("No autorizado", "UNAUTHORIZED", 401)
-            self._safe_log_api(endpoint, payload, response, identifiers, status="unauthorized", start_ts=start_ts)
-            return response
-
-        company_id = payload.get("company_id")
-
-        if not self._has_any_identifier(identifiers):
-            response = self._json_error("Número, JID o LID requerido", "IDENTIFIER_REQUIRED", 400)
-            self._safe_log_api(
-                endpoint,
-                payload,
-                response,
-                identifiers,
-                status="error",
-                error_code="IDENTIFIER_REQUIRED",
-                start_ts=start_ts,
-            )
-            return response
-
-        if not company_id:
-            response = self._json_error("company_id requerido", "COMPANY_REQUIRED", 400)
-            self._safe_log_api(
-                endpoint,
-                payload,
-                response,
-                identifiers,
-                status="error",
-                error_code="COMPANY_REQUIRED",
-                start_ts=start_ts,
-            )
-            return response
-
-        partner = self._find_partner_by_identifiers(identifiers)
-
-        if not partner:
-            response = {
-                "ok": True,
-                "found": False,
-                "message": "Contacto no encontrado. No se seleccionó empresa.",
-            }
-            self._safe_log_api(endpoint, payload, response, identifiers, status="not_found", start_ts=start_ts)
-            return response
-
-        self._update_partner_identifiers(partner, identifiers)
-
-        try:
-            company_id = int(company_id)
-            company = request.env["res.partner"].sudo().browse(company_id).exists()
-
-            if not company:
-                response = self._json_error("Empresa no encontrada", "COMPANY_NOT_FOUND", 404)
-                self._safe_log_api(
-                    endpoint,
-                    payload,
-                    response,
-                    identifiers,
-                    partner=partner,
-                    status="error",
-                    error_code="COMPANY_NOT_FOUND",
-                    start_ts=start_ts,
-                )
-                return response
-
-            partner.whatsapp_set_active_company(company)
-
-            session = self._get_or_create_session(partner, identifiers)
-            session.write({"active_company_id": company.id})
-
-            suggested = {
-                "template": "company_selected",
-                "message": self._render_template(
-                    "company_selected",
-                    partner=partner,
-                    session=session,
-                    company=company,
-                    fallback="Empresa seleccionada correctamente. ¿En qué podemos ayudarte?",
-                ),
-            }
-
-            response = {
-                "ok": True,
-                "found": True,
-                "partner_id": partner.id,
-                "active_company_id": company.id,
-                "active_company_name": company.name,
-                "session_id": session.id,
-                "suggested": suggested,
-                "profile": partner.get_whatsapp_profile_payload(),
-            }
-            self._safe_log_api(endpoint, payload, response, identifiers, partner=partner, session=session, start_ts=start_ts)
-            return response
-
-        except Exception as e:
-            _logger.exception("[SAT-WHATSAPP-API] Error seleccionando empresa activa")
-            response = self._json_error(str(e), "COMPANY_SELECTION_ERROR", 400)
-            self._safe_log_api(
-                endpoint,
-                payload,
-                response,
-                identifiers,
-                partner=partner,
-                status="error",
-                error_code="COMPANY_SELECTION_ERROR",
-                error_message=str(e),
-                start_ts=start_ts,
-            )
-            return response
-
-    # ==========================================================
-    # Endpoint: registrar DNI
-    # ==========================================================
-    @http.route("/sat/whatsapp/register/dni", type="json", auth="public", methods=["POST"], csrf=False)
-    def whatsapp_register_dni(self, **kwargs):
-        start_ts = time.time()
-        endpoint = "/sat/whatsapp/register/dni"
-        payload = self._get_json_payload()
-        identifiers = self._extract_identifiers(payload)
-
-        if not self._check_token():
-            response = self._json_error("No autorizado", "UNAUTHORIZED", 401)
-            self._safe_log_api(endpoint, payload, response, identifiers, status="unauthorized", start_ts=start_ts)
-            return response
-
-        dni = self._only_digits(
-            payload.get("dni")
-            or payload.get("vat")
-            or payload.get("document_number")
-        )
-
-        if len(dni) != 8:
-            response = self._json_error("DNI inválido. Debe tener 8 dígitos.", "INVALID_DNI", 400)
-            self._safe_log_api(endpoint, payload, response, identifiers, status="error", error_code="INVALID_DNI", start_ts=start_ts)
-            return response
-
-        if not self._has_any_identifier(identifiers):
-            response = self._json_error("Número, JID o LID requerido", "IDENTIFIER_REQUIRED", 400)
-            self._safe_log_api(endpoint, payload, response, identifiers, status="error", error_code="IDENTIFIER_REQUIRED", start_ts=start_ts)
-            return response
-
-        Partner = request.env["res.partner"].sudo()
-        dni_type = self._get_dni_type()
-
-        if not dni_type:
-            response = self._json_error("No se encontró tipo de documento DNI en Odoo.", "DNI_TYPE_NOT_FOUND", 500)
-            self._safe_log_api(endpoint, payload, response, identifiers, status="error", error_code="DNI_TYPE_NOT_FOUND", start_ts=start_ts)
-            return response
-
-        partner_by_identifier = self._find_partner_by_identifiers(identifiers)
-
-        partner_by_dni = Partner.search([
-            ("vat", "=", dni),
-            ("l10n_latam_identification_type_id", "=", dni_type.id),
-        ], limit=1)
-
-        if partner_by_identifier and partner_by_dni and partner_by_identifier.id != partner_by_dni.id:
-            response = self._json_error(
-                "El DNI ya está asociado a otro contacto.",
-                "DNI_ALREADY_LINKED",
-                409,
-                extra={
-                    "existing_partner_id": partner_by_dni.id,
-                    "identifier_partner_id": partner_by_identifier.id,
-                },
-            )
-            self._safe_log_api(endpoint, payload, response, identifiers, partner=partner_by_identifier, status="error", error_code="DNI_ALREADY_LINKED", start_ts=start_ts)
-            return response
-
-        partner = partner_by_identifier or partner_by_dni
-
-        if partner and partner.vat and partner.vat != dni:
-            response = self._json_error(
-                "El contacto encontrado ya tiene otro documento registrado.",
-                "DOCUMENT_CONFLICT",
-                409,
-                extra={
-                    "partner_id": partner.id,
-                    "current_vat": partner.vat,
-                    "received_dni": dni,
-                },
-            )
-            self._safe_log_api(endpoint, payload, response, identifiers, partner=partner, status="error", error_code="DOCUMENT_CONFLICT", start_ts=start_ts)
-            return response
-
-        vals = self._prepare_partner_whatsapp_values(identifiers)
-        vals.update({
-            "company_type": "person",
-            "is_company": False,
-            "l10n_latam_identification_type_id": dni_type.id,
-            "vat": dni,
-            "whatsapp_enabled": True,
-            "whatsapp_registration_state": "waiting_ruc",
-        })
-
-        try:
-            if not partner:
-                vals.setdefault("name", "DNI %s" % dni)
-                partner = Partner.create(vals)
-            else:
-                partner.write(vals)
-
-            self._update_partner_identifiers(partner, identifiers)
-
-            try:
-                self._run_partner_document_autoload(partner)
-            except Exception as e:
-                _logger.exception("[SAT-WHATSAPP-API] Error cargando datos DNI")
-                partner.write({"whatsapp_registration_state": "manual_review"})
-
-                suggested = {
-                    "template": "dni_error",
-                    "message": self._render_template(
-                        "dni_error",
-                        partner=partner,
-                        fallback="No pude validar el DNI automáticamente. Por favor verifica el número o espera atención de un asesor.",
-                    ),
-                }
-
-                response = self._json_error(
-                    "No se pudo consultar o cargar el DNI automáticamente.",
-                    "DNI_AUTOLOAD_ERROR",
-                    400,
-                    extra={
-                        "detail": str(e),
-                        "partner_id": partner.id,
-                        "suggested": suggested,
-                        "profile": partner.get_whatsapp_profile_payload(),
-                    },
-                )
-                self._safe_log_api(endpoint, payload, response, identifiers, partner=partner, status="error", error_code="DNI_AUTOLOAD_ERROR", error_message=str(e), start_ts=start_ts)
-                return response
-
-            partner.write({"whatsapp_registration_state": "waiting_ruc"})
-            session = self._get_or_create_session(partner, identifiers, intent="dni")
-
-            suggested = {
-                "template": "ask_ruc",
-                "message": self._render_template(
-                    "ask_ruc",
-                    partner=partner,
-                    session=session,
-                    fallback="Gracias. Ahora envíame el RUC de tu empresa para completar el registro.",
-                ),
-            }
-
-            response = {
-                "ok": True,
-                "found": True,
-                "registered_dni": True,
-                "next_step": "waiting_ruc",
-                "message": suggested["message"],
-                "suggested": suggested,
-                "partner_id": partner.id,
-                "session_id": session.id if session else False,
-                "profile": partner.get_whatsapp_profile_payload(),
-            }
-            self._safe_log_api(endpoint, payload, response, identifiers, partner=partner, session=session, start_ts=start_ts)
-            return response
-
-        except Exception as e:
-            _logger.exception("[SAT-WHATSAPP-API] Error registrando DNI")
-            response = self._json_error(str(e), "DNI_REGISTER_ERROR", 500)
-            self._safe_log_api(endpoint, payload, response, identifiers, status="error", error_code="DNI_REGISTER_ERROR", error_message=str(e), start_ts=start_ts)
-            return response
-
-    # ==========================================================
-    # Endpoint: registrar RUC
-    # ==========================================================
-    @http.route("/sat/whatsapp/register/ruc", type="json", auth="public", methods=["POST"], csrf=False)
-    def whatsapp_register_ruc(self, **kwargs):
-        start_ts = time.time()
-        endpoint = "/sat/whatsapp/register/ruc"
-        payload = self._get_json_payload()
-        identifiers = self._extract_identifiers(payload)
-
-        if not self._check_token():
-            response = self._json_error("No autorizado", "UNAUTHORIZED", 401)
-            self._safe_log_api(endpoint, payload, response, identifiers, status="unauthorized", start_ts=start_ts)
-            return response
-
-        ruc = self._only_digits(
-            payload.get("ruc")
-            or payload.get("vat")
-            or payload.get("document_number")
-        )
-
-        if len(ruc) != 11:
-            response = self._json_error("RUC inválido. Debe tener 11 dígitos.", "INVALID_RUC", 400)
-            self._safe_log_api(endpoint, payload, response, identifiers, status="error", error_code="INVALID_RUC", start_ts=start_ts)
-            return response
-
-        if not self._has_any_identifier(identifiers):
-            response = self._json_error("Número, JID o LID requerido", "IDENTIFIER_REQUIRED", 400)
-            self._safe_log_api(endpoint, payload, response, identifiers, status="error", error_code="IDENTIFIER_REQUIRED", start_ts=start_ts)
-            return response
-
-        Partner = request.env["res.partner"].sudo()
-        ruc_type = self._get_ruc_type()
-
-        if not ruc_type:
-            response = self._json_error("No se encontró tipo de documento RUC en Odoo.", "RUC_TYPE_NOT_FOUND", 500)
-            self._safe_log_api(endpoint, payload, response, identifiers, status="error", error_code="RUC_TYPE_NOT_FOUND", start_ts=start_ts)
-            return response
-
-        contact = self._find_partner_by_identifiers(identifiers)
-
-        if not contact:
-            response = self._json_error("Primero debe registrarse el contacto con DNI.", "CONTACT_NOT_FOUND", 404)
-            self._safe_log_api(endpoint, payload, response, identifiers, status="not_found", start_ts=start_ts)
-            return response
-
-        self._update_partner_identifiers(contact, identifiers)
-
-        company = Partner.search([
-            ("vat", "=", ruc),
-            ("l10n_latam_identification_type_id", "=", ruc_type.id),
-            ("is_company", "=", True),
-        ], limit=1)
-
-        company_created = False
-
-        try:
-            if not company:
-                company = Partner.create({
-                    "name": "RUC %s" % ruc,
-                    "is_company": True,
-                    "company_type": "company",
-                    "l10n_latam_identification_type_id": ruc_type.id,
-                    "vat": ruc,
-                    "whatsapp_enabled": True,
-                    "whatsapp_registration_state": "registered",
-                })
-                company_created = True
-            else:
-                company.write({
-                    "is_company": True,
-                    "company_type": "company",
-                    "l10n_latam_identification_type_id": ruc_type.id,
-                    "vat": ruc,
-                    "whatsapp_enabled": True,
-                })
-
-            try:
-                self._run_partner_document_autoload(company)
-            except Exception as e:
-                _logger.exception("[SAT-WHATSAPP-API] Error cargando datos RUC")
-
-                if company_created and company.exists():
-                    company.unlink()
-
-                suggested = {
-                    "template": "ruc_error",
-                    "message": self._render_template(
-                        "ruc_error",
-                        partner=contact,
-                        fallback="No pude validar el RUC automáticamente. Verifica el número e intenta nuevamente.",
-                    ),
-                }
-
-                response = self._json_error(
-                    "No se pudo consultar o cargar el RUC automáticamente.",
-                    "RUC_AUTOLOAD_ERROR",
-                    400,
-                    extra={
-                        "detail": str(e),
-                        "contact_id": contact.id,
-                        "company_created": company_created,
-                        "suggested": suggested,
-                        "profile": contact.get_whatsapp_profile_payload(),
-                    },
-                )
-                self._safe_log_api(endpoint, payload, response, identifiers, partner=contact, status="error", error_code="RUC_AUTOLOAD_ERROR", error_message=str(e), start_ts=start_ts)
-                return response
-
-            contact.write({
-                "whatsapp_company_ids": [(4, company.id)],
-                "whatsapp_active_company_id": company.id,
-                "whatsapp_registration_state": "registered",
-            })
-
-            company.write({
-                "whatsapp_registration_state": "registered",
-            })
-
-            session = self._get_or_create_session(contact, identifiers, intent="ruc")
-            session.write({"active_company_id": company.id})
-
-            suggested = {
-                "template": "registration_completed",
-                "message": self._render_template(
-                    "registration_completed",
-                    partner=contact,
-                    session=session,
-                    company=company,
-                    fallback="Registro completado correctamente. ¿En qué podemos ayudarte?",
-                ),
-            }
-
-            response = {
-                "ok": True,
-                "found": True,
-                "registered_ruc": True,
-                "company_created": company_created,
-                "next_step": "registered",
-                "message": suggested["message"],
-                "suggested": suggested,
-                "partner_id": contact.id,
-                "company_id": company.id,
-                "company_name": company.name,
-                "session_id": session.id if session else False,
-                "profile": contact.get_whatsapp_profile_payload(),
-            }
-            self._safe_log_api(endpoint, payload, response, identifiers, partner=contact, session=session, start_ts=start_ts)
-            return response
-
-        except Exception as e:
-            _logger.exception("[SAT-WHATSAPP-API] Error registrando RUC")
-            response = self._json_error(str(e), "RUC_REGISTER_ERROR", 500)
-            self._safe_log_api(endpoint, payload, response, identifiers, partner=contact, status="error", error_code="RUC_REGISTER_ERROR", error_message=str(e), start_ts=start_ts)
-            return response
-
-    # ==========================================================
-    # Endpoint: mensaje saliente / outbox
-    # ==========================================================
-    @http.route("/sat/whatsapp/message/out", type="json", auth="public", methods=["POST"], csrf=False)
-    def whatsapp_message_out(self, **kwargs):
-        start_ts = time.time()
-        endpoint = "/sat/whatsapp/message/out"
-        payload = self._get_json_payload()
-        identifiers = self._extract_identifiers(payload)
-
-        if not self._check_token():
-            response = self._json_error("No autorizado", "UNAUTHORIZED", 401)
-            self._safe_log_api(endpoint, payload, response, identifiers, status="unauthorized", start_ts=start_ts)
-            return response
-
-        content = payload.get("message") or payload.get("text") or payload.get("content") or ""
-        message_type = payload.get("message_type") or "text"
-        template_name = payload.get("template") or payload.get("template_name")
-
-        if not self._has_any_identifier(identifiers):
-            response = self._json_error("Número, JID o LID requerido", "IDENTIFIER_REQUIRED", 400)
-            self._safe_log_api(endpoint, payload, response, identifiers, status="error", error_code="IDENTIFIER_REQUIRED", start_ts=start_ts)
-            return response
-
-        partner = self._find_partner_by_identifiers(identifiers)
-
-        if not partner:
-            response = self._json_error("Contacto no encontrado.", "CONTACT_NOT_FOUND", 404)
-            self._safe_log_api(endpoint, payload, response, identifiers, status="not_found", start_ts=start_ts)
-            return response
-
-        session = self._get_or_create_session(partner, identifiers)
-
-        if template_name and not content:
-            content = self._render_template(
-                template_name,
-                partner=partner,
-                session=session,
-                company=partner.whatsapp_active_company_id if partner.whatsapp_active_company_id else False,
-                extra=payload.get("extra") or {},
-                fallback="",
-            )
-
-        message = self._record_whatsapp_message(
-            session=session,
-            partner=partner,
-            identifiers=identifiers,
-            role=payload.get("role") or "assistant",
-            direction="out",
-            message_type=message_type,
-            content=content,
-            intent=payload.get("intent") or False,
-            payload=payload,
-            external_message_id=payload.get("external_message_id") or payload.get("message_id") or False,
-        )
-
-        media = self._create_media_from_payload(
-            session=session,
-            partner=partner,
-            message=message,
-            payload=payload,
-        )
-
-        outbox = self._create_outbox(
-            session,
-            partner,
-            identifiers,
-            content,
-            message_type=message_type,
-            media=media if media else False,
-            payload=payload,
-        )
-        outbox.write({"message_id": message.id})
-
-        response = {
-            "ok": True,
-            "partner_id": partner.id,
-            "session_id": session.id,
-            "message_id": message.id,
-            "outbox_id": outbox.id,
-            "state": outbox.state,
-            "message": content,
-        }
-        self._safe_log_api(endpoint, payload, response, identifiers, partner=partner, session=session, start_ts=start_ts)
-        return response
-
-    # ==========================================================
-    # Endpoint: marcar outbox enviado
-    # ==========================================================
-    @http.route("/sat/whatsapp/outbox/mark-sent", type="json", auth="public", methods=["POST"], csrf=False)
-    def whatsapp_outbox_mark_sent(self, **kwargs):
-        start_ts = time.time()
-        endpoint = "/sat/whatsapp/outbox/mark-sent"
-        payload = self._get_json_payload()
-        identifiers = self._extract_identifiers(payload)
-
-        if not self._check_token():
-            response = self._json_error("No autorizado", "UNAUTHORIZED", 401)
-            self._safe_log_api(endpoint, payload, response, identifiers, status="unauthorized", start_ts=start_ts)
-            return response
-
-        outbox_id = payload.get("outbox_id")
-        external_message_id = payload.get("external_message_id") or payload.get("message_id") or False
-
-        try:
-            outbox_id = int(outbox_id or 0)
-        except Exception:
-            outbox_id = 0
-
-        outbox = request.env["whatsapp.outbox"].sudo().browse(outbox_id).exists()
-
-        if not outbox:
-            response = self._json_error("Outbox no encontrado.", "OUTBOX_NOT_FOUND", 404)
-            self._safe_log_api(endpoint, payload, response, identifiers, status="not_found", start_ts=start_ts)
-            return response
-
-        outbox.action_mark_sent(external_message_id=external_message_id)
-
-        response = {
-            "ok": True,
-            "outbox_id": outbox.id,
-            "state": outbox.state,
-            "external_message_id": outbox.external_message_id,
-        }
-        self._safe_log_api(
-            endpoint,
-            payload,
-            response,
-            identifiers,
-            partner=outbox.partner_id,
-            session=outbox.session_id,
-            start_ts=start_ts,
-        )
         return response
