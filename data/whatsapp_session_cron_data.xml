@@ -32,8 +32,7 @@
             <field name="code">model.cron_retry_failed()</field>
             <field name="user_id" ref="base.user_root"/>
             <field name="interval_number">2</field>
-            <field name="interval_type">minutes</field>
-            <field name="numbercall">-1</field>
+            <field name="interval_type">minutes</field>      
             <field name="doall" eval="False"/>
             <field name="active" eval="True"/>
             <field name="priority">10</field>
@@ -52,8 +51,7 @@
             <field name="code">model.cron_cleanup_old(days=30)</field>
             <field name="user_id" ref="base.user_root"/>
             <field name="interval_number">1</field>
-            <field name="interval_type">days</field>
-            <field name="numbercall">-1</field>
+            <field name="interval_type">days</field>            
             <field name="doall" eval="False"/>
             <field name="active" eval="True"/>
             <field name="priority">20</field>
