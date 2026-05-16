@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+
+        <!--
+            Cron que cada 5 minutos resetea los flujos conversacionales
+            cuya fecha conversation_state_expires_at ya venció.
+            Mantiene la sesión abierta pero limpia el contexto del flujo.
+        -->
+        <record id="ir_cron_whatsapp_expire_conversations" model="ir.cron">
+            <field name="name">WhatsApp: Expirar conversaciones abandonadas</field>
+            <field name="model_id" ref="model_whatsapp_session"/>
+            <field name="state">code</field>
+            <field name="code">model.cron_expire_conversations()</field>
+            <field name="user_id" ref="base.user_root"/>
+            <field name="interval_number">5</field>
+            <field name="interval_type">minutes</field>
+            <field name="numbercall">-1</field>
+            <field name="doall" eval="False"/>
+            <field name="active" eval="True"/>
+            <field name="priority">10</field>
+        </record>
+        <!--
+            Cron que cada 2 minutos busca outbox en estado 'failed'
+            con next_retry_at vencido y los pasa a 'pending' para
+            que n8n los recoja en el siguiente polling.
+        -->
+        <record id="ir_cron_whatsapp_outbox_retry_failed" model="ir.cron">
+            <field name="name">WhatsApp: Reintentar mensajes salientes fallidos</field>
+            <field name="model_id" ref="model_whatsapp_outbox"/>
+            <field name="state">code</field>
+            <field name="code">model.cron_retry_failed()</field>
+            <field name="user_id" ref="base.user_root"/>
+            <field name="interval_number">2</field>
+            <field name="interval_type">minutes</field>
+            <field name="numbercall">-1</field>
+            <field name="doall" eval="False"/>
+            <field name="active" eval="True"/>
+            <field name="priority">10</field>
+        </record>
+
+        <!--
+            Cron diario de limpieza: elimina outbox enviados,
+            entregados, leídos o cancelados con más de 30 días.
+            Si quieres conservar histórico más tiempo, ajusta el
+            parámetro days en la llamada al método.
+        -->
+        <record id="ir_cron_whatsapp_outbox_cleanup_old" model="ir.cron">
+            <field name="name">WhatsApp: Limpiar outbox antiguos</field>
+            <field name="model_id" ref="model_whatsapp_outbox"/>
+            <field name="state">code</field>
+            <field name="code">model.cron_cleanup_old(days=30)</field>
+            <field name="user_id" ref="base.user_root"/>
+            <field name="interval_number">1</field>
+            <field name="interval_type">days</field>
+            <field name="numbercall">-1</field>
+            <field name="doall" eval="False"/>
+            <field name="active" eval="True"/>
+            <field name="priority">20</field>
+            <field name="nextcall" eval="(DateTime.now() + timedelta(hours=3)).strftime('%Y-%m-%d 03:00:00')"/>
+        </record>
+
+
+    </data>
+</odoo>

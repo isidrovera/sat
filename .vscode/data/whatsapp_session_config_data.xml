@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+
+        <!--
+            Timeout en minutos de un flujo conversacional WhatsApp.
+            Si el cliente no responde antes de este tiempo, el flujo se resetea a idle.
+            El admin puede cambiarlo en Ajustes > Técnico > Parámetros del sistema
+            sin que se sobrescriba al actualizar el módulo.
+        -->
+        <record id="ir_config_whatsapp_conversation_timeout" model="ir.config_parameter">
+            <field name="key">sat.whatsapp_conversation_state_timeout_minutes</field>
+            <field name="value">15</field>
+        </record>
+
+    </data>
+</odoo>
