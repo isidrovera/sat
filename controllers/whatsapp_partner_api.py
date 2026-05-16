@@ -1101,60 +1101,67 @@ class WhatsAppPartnerApiController(http.Controller):
         company = partner.whatsapp_active_company_id if partner and partner.whatsapp_active_company_id else False
         machine = self._get_context_machine(context)
 
-        description = (
-            "Solicitud de tóner vía WhatsApp\n"
-            "Equipo: %s\n"
-            "Color: %s\n"
-            "Cantidad: %s\n"
-            "Contador B/N: %s\n"
-            "Contador color: %s\n"
-            "Observaciones: %s"
-        ) % (
-            self._get_machine_label(machine) if machine else "",
-            context.get("toner_color") or "",
-            context.get("toner_quantity") or "",
-            context.get("counter_bn") or "",
-            context.get("counter_color") or "",
-            context.get("observations") or "",
-        )
+        if not machine:
+            return False, "No se encontró equipo seleccionado en el contexto."
 
-        possible_models = [
-            "toner.solicitud",
-            "toner.solicitudes",
-            "toner.delivery",
-            "toner.request",
-        ]
+        color = (context.get("toner_color") or "").strip().lower()
+        quantity = int(context.get("toner_quantity") or 1)
 
-        preferred_vals = {
-            "name": "Solicitud de tóner WhatsApp",
-            "partner_id": partner.id if partner else False,
-            "cliente_id": partner.id if partner else False,
-            "company_id": company.id if company else False,
-            "empresa_id": company.id if company else False,
-            "alquiler_id": machine.id if machine else False,
-            "machine_id": machine.id if machine else False,
-            "equipo_id": machine.id if machine else False,
-            "color": context.get("toner_color") or False,
-            "cantidad": context.get("toner_quantity") or False,
-            "quantity": context.get("toner_quantity") or False,
-            "contador_bn": context.get("counter_bn") or False,
-            "contador_color": context.get("counter_color") or False,
-            "observaciones": context.get("observations") or False,
-            "description": description,
-            "descripcion": description,
-            "origen": "whatsapp",
-            "source": "whatsapp",
-            "whatsapp_session_id": session.id if session else False,
+        counter_bn_raw = context.get("counter_bn")
+        counter_color_raw = context.get("counter_color")
+
+        counter_bn = 0
+        counter_color = 0
+
+        if counter_bn_raw and str(counter_bn_raw).upper() != "NO":
+            counter_bn = int(self._only_digits(counter_bn_raw) or 0)
+
+        if counter_color_raw and str(counter_color_raw).upper() != "NO":
+            counter_color = int(self._only_digits(counter_color_raw) or 0)
+
+        vals = {
+            "equipment_id": machine.id,
+            "client_name": partner.name or "Cliente WhatsApp",
+            "client_email": partner.email or "sin-correo@whatsapp.local",
+            "client_phone": partner.whatsapp_number or partner.mobile or partner.phone or "",
+            "counter_bn": counter_bn,
+            "counter_color": counter_color,
+            "notes": context.get("observations") or "Solicitud generada desde WhatsApp",
+            "urgente": True,
         }
 
-        for model_name in possible_models:
-            if model_name in request.env:
-                rec, error = self._safe_model_create(model_name, preferred_vals)
-                if rec:
-                    return rec, False
-                return False, error
+        if "negro" in color or "black" in color:
+            vals["requiere_toner_black"] = True
+            vals["stock_reportado_black"] = 0
 
-        return False, "No se encontró modelo de solicitud de tóner."
+        elif "cyan" in color or "cian" in color:
+            vals["requiere_toner_cyan"] = True
+            vals["stock_reportado_cyan"] = 0
+
+        elif "magenta" in color:
+            vals["requiere_toner_magenta"] = True
+            vals["stock_reportado_magenta"] = 0
+
+        elif "yellow" in color or "amarillo" in color:
+            vals["requiere_toner_yellow"] = True
+            vals["stock_reportado_yellow"] = 0
+
+        else:
+            vals["notes"] = "%s\nColor solicitado: %s\nCantidad: %s" % (
+                vals["notes"],
+                context.get("toner_color") or "",
+                quantity,
+            )
+
+        try:
+            rec = request.env["toner.counter.submission"].sudo().create(vals)
+            return rec, False
+        except Exception as e:
+            _logger.exception(
+                "[SAT-WHATSAPP-API] Error creando toner.counter.submission vals=%s",
+                vals,
+            )
+            return False, str(e)
 
     def _create_service_ticket(self, partner, session, context, payload=False):
         company = partner.whatsapp_active_company_id if partner and partner.whatsapp_active_company_id else False
