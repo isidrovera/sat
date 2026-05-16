@@ -1179,21 +1179,101 @@ class WhatsAppPartnerApiController(http.Controller):
 
         description = context.get("service_description") or payload.get("message") or payload.get("text") or ""
 
+        def _get_machine_value(field_names):
+            if not machine:
+                return False
+            for field_name in field_names:
+                if field_name in machine._fields:
+                    value = machine[field_name]
+                    if not value:
+                        continue
+                    if hasattr(value, "display_name"):
+                        return value.display_name
+                    return str(value)
+            return False
+
+        direccion = _get_machine_value([
+            "direccion",
+            "direccion_id",
+            "address",
+            "ubicacion",
+            "location",
+        ])
+
+        contacto = _get_machine_value([
+            "contacto_id",
+            "contacto",
+            "contact_name",
+            "responsable_cliente",
+        ])
+
+        celular = _get_machine_value([
+            "celular",
+            "telefono",
+            "phone",
+            "mobile",
+            "contact_phone",
+        ])
+
+        correo = _get_machine_value([
+            "correo_",
+            "correo",
+            "email",
+            "contact_email",
+        ])
+
+        piso = _get_machine_value([
+            "piso",
+            "piso_id",
+            "floor",
+        ])
+
+        oficina = _get_machine_value([
+            "oficina",
+            "oficina_id",
+            "office",
+            "area_oficina",
+        ])
+
+        area = _get_machine_value([
+            "area",
+            "area_id",
+            "department",
+        ])
+
         preferred_vals = {
             "name": "Servicio presencial WhatsApp",
+
+            # En ticket.alquiler partner_id es Empresa
             "partner_id": company.id if company else partner.id if partner else False,
+
+            # Contacto que reporta
             "cliente_id": partner.id if partner else False,
+            "reporter_name": partner.name if partner else False,
+            "reporter_phone": partner.whatsapp_number or partner.mobile or partner.phone or "",
+
+            # Empresa / compatibilidad
             "company_id": company.id if company else False,
             "empresa_id": company.id if company else False,
 
-            # Campo real de ticket.alquiler
+            # Campo real de equipo en ticket.alquiler
             "product_alquiler": machine.id if machine else False,
 
-            # Fallbacks por si otros modelos/herencias los usan
+            # Fallbacks por si alguna herencia los usa
             "alquiler_id": machine.id if machine else False,
             "machine_id": machine.id if machine else False,
             "equipo_id": machine.id if machine else False,
 
+            # Datos de ubicación/contacto copiados desde alquiler
+            "direccion_id_r": direccion or "",
+            "contacto_id_r": contacto or "",
+            "celular_id_r": celular or "",
+            "corre_id_r": correo or "",
+            "piso_id_r": piso or "",
+            "oficina_id_r": oficina or "",
+            "area_id_r": area or "",
+
+            # Descripción del problema
             "description": description,
             "descripcion": description,
             "problema": description,
@@ -1201,10 +1281,10 @@ class WhatsAppPartnerApiController(http.Controller):
             "observaciones": description,
             "informe_id": description,
 
-            "reporter_name": partner.name if partner else False,
-            "reporter_phone": partner.whatsapp_number or partner.mobile or partner.phone or "",
-
+            # Tipo de servicio
             "tipo_servicio_id": "mantenimiento_correctivo",
+
+            # Trazabilidad
             "origen": "whatsapp",
             "source": "whatsapp",
             "whatsapp_session_id": session.id if session else False,
