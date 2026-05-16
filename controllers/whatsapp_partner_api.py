@@ -909,12 +909,24 @@ class WhatsAppPartnerApiController(http.Controller):
 
     def _record_matches_partner_company(self, rec, partner=False, company=False):
         partner_ids = set()
+        partner_names = set()
+        partner_vats = set()
+
         if partner:
             partner_ids.add(partner.id)
+            if partner.name:
+                partner_names.add(partner.name.strip().lower())
+            if partner.vat:
+                partner_vats.add(str(partner.vat).strip())
+
         if company:
             partner_ids.add(company.id)
+            if company.name:
+                partner_names.add(company.name.strip().lower())
+            if company.vat:
+                partner_vats.add(str(company.vat).strip())
 
-        if not partner_ids:
+        if not partner_ids and not partner_names and not partner_vats:
             return False
 
         candidate_fields = [
@@ -926,24 +938,48 @@ class WhatsAppPartnerApiController(http.Controller):
             "res_partner_id",
             "contacto_id",
             "titular_id",
+            "cliente",
+            "empresa",
+            "razon_social",
+            "ruc",
+            "vat",
         ]
 
         for field in candidate_fields:
-            if field in rec._fields:
-                value = rec[field]
-                if value and value.id in partner_ids:
+            if field not in rec._fields:
+                continue
+
+            value = rec[field]
+
+            if not value:
+                continue
+
+            # Many2one / recordset
+            if hasattr(value, "id"):
+                if value.id in partner_ids:
                     return True
 
-        if "cliente" in rec._fields:
-            value = rec["cliente"]
-            try:
-                if value and value.id in partner_ids:
-                    return True
-            except Exception:
-                pass
+                if getattr(value, "name", False):
+                    if value.name.strip().lower() in partner_names:
+                        return True
+
+                if getattr(value, "vat", False):
+                    if str(value.vat).strip() in partner_vats:
+                        return True
+
+                continue
+
+            # Char / Text / Selection / cualquier valor simple
+            value_text = str(value).strip()
+            value_lower = value_text.lower()
+
+            if value_lower in partner_names:
+                return True
+
+            if value_text in partner_vats:
+                return True
 
         return False
-
     def _get_partner_machines(self, partner, limit=20):
         if "alquiler" not in request.env or not partner:
             return request.env["ir.model"].sudo().browse()
