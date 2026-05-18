@@ -1854,119 +1854,123 @@ class WhatsAppPartnerApiController(http.Controller):
         description = context.get("service_description") or payload.get("message") or payload.get("text") or ""
 
         def _get_machine_value(field_names):
-                if not machine:
-                    return False
-                for field_name in field_names:
-                    if field_name in machine._fields:
-                        value = machine[field_name]
-                        if not value:
-                            continue
-                        if hasattr(value, "display_name"):
-                            return value.display_name
-                        return str(value)
+            if not machine:
                 return False
 
-            direccion = _get_machine_value([
-                "direccion",
-                "direccion_id",
-                "address",
-                "ubicacion",
-                "location",
-            ])
+            for field_name in field_names:
+                if field_name in machine._fields:
+                    value = machine[field_name]
 
-            contacto = _get_machine_value([
-                "contacto_id",
-                "contacto",
-                "contact_name",
-                "responsable_cliente",
-            ])
+                    if not value:
+                        continue
 
-            celular = _get_machine_value([
-                "celular",
-                "telefono",
-                "phone",
-                "mobile",
-                "contact_phone",
-            ])
+                    if hasattr(value, "display_name"):
+                        return value.display_name
 
-            correo = _get_machine_value([
-                "correo_",
-                "correo",
-                "email",
-                "contact_email",
-            ])
+                    return str(value)
 
-            piso = _get_machine_value([
-                "piso",
-                "piso_id",
-                "floor",
-            ])
+            return False
 
-            oficina = _get_machine_value([
-                "oficina",
-                "oficina_id",
-                "office",
-                "area_oficina",
-            ])
+        direccion = _get_machine_value([
+            "direccion",
+            "direccion_id",
+            "address",
+            "ubicacion",
+            "location",
+        ])
 
-            area = _get_machine_value([
-                "area",
-                "area_id",
-                "department",
-            ])
+        contacto = _get_machine_value([
+            "contacto_id",
+            "contacto",
+            "contact_name",
+            "responsable_cliente",
+        ])
 
-            preferred_vals = {
-                "name": "Servicio presencial WhatsApp",
+        celular = _get_machine_value([
+            "celular",
+            "telefono",
+            "phone",
+            "mobile",
+            "contact_phone",
+        ])
 
-                # En ticket.alquiler partner_id es Empresa
-                "partner_id": company.id if company else partner.id if partner else False,
+        correo = _get_machine_value([
+            "correo_",
+            "correo",
+            "email",
+            "contact_email",
+        ])
 
-                # Contacto que reporta
-                "cliente_id": partner.id if partner else False,
-                "reporter_name": partner.name if partner else False,
-                "reporter_phone": partner.whatsapp_number or partner.mobile or partner.phone or "",
+        piso = _get_machine_value([
+            "piso",
+            "piso_id",
+            "floor",
+        ])
 
-                # Empresa / compatibilidad
-                "company_id": company.id if company else False,
-                "empresa_id": company.id if company else False,
+        oficina = _get_machine_value([
+            "oficina",
+            "oficina_id",
+            "office",
+            "area_oficina",
+        ])
 
-                # Campo real de equipo en ticket.alquiler
-                "product_alquiler": machine.id if machine else False,
+        area = _get_machine_value([
+            "area",
+            "area_id",
+            "department",
+        ])
 
-                # Fallbacks por si alguna herencia los usa
-                "alquiler_id": machine.id if machine else False,
-                "machine_id": machine.id if machine else False,
-                "equipo_id": machine.id if machine else False,
+        preferred_vals = {
+            "name": "Servicio presencial WhatsApp",
 
-                # Datos de ubicación/contacto copiados desde alquiler
-                "direccion_id_r": direccion or "",
-                "contacto_id_r": contacto or "",
-                "celular_id_r": celular or "",
-                "corre_id_r": correo or "",
-                "piso_id_r": piso or "",
-                "oficina_id_r": oficina or "",
-                "area_id_r": area or "",
+            # En ticket.alquiler partner_id es Empresa
+            "partner_id": company.id if company else partner.id if partner else False,
 
-                # Descripción del problema
-                "description": description,
-                "descripcion": description,
-                "problema": description,
-                "falla_reportada": description,
-                "observaciones": description,
-                "informe_id": description,
+            # Contacto que reporta
+            "cliente_id": partner.id if partner else False,
+            "reporter_name": partner.name if partner else False,
+            "reporter_phone": partner.whatsapp_number or partner.mobile or partner.phone or "",
 
-                # Tipo de servicio
-                "tipo_servicio_id": "mantenimiento_correctivo",
+            # Empresa / compatibilidad
+            "company_id": company.id if company else False,
+            "empresa_id": company.id if company else False,
 
-                # Trazabilidad
-                "origen": "whatsapp",
-                "source": "whatsapp",
-                "whatsapp_session_id": session.id if session else False,
-            }
+            # Campo real de equipo en ticket.alquiler
+            "product_alquiler": machine.id if machine else False,
 
-            rec, error = self._safe_model_create("ticket.alquiler", preferred_vals)
-            return rec, error
+            # Fallbacks por si alguna herencia los usa
+            "alquiler_id": machine.id if machine else False,
+            "machine_id": machine.id if machine else False,
+            "equipo_id": machine.id if machine else False,
 
+            # Datos de ubicación/contacto copiados desde alquiler
+            "direccion_id_r": direccion or "",
+            "contacto_id_r": contacto or "",
+            "celular_id_r": celular or "",
+            "corre_id_r": correo or "",
+            "piso_id_r": piso or "",
+            "oficina_id_r": oficina or "",
+            "area_id_r": area or "",
+
+            # Descripción del problema
+            "description": description,
+            "descripcion": description,
+            "problema": description,
+            "falla_reportada": description,
+            "observaciones": description,
+            "informe_id": description,
+
+            # Tipo de servicio
+            "tipo_servicio_id": "mantenimiento_correctivo",
+
+            # Trazabilidad
+            "origen": "whatsapp",
+            "source": "whatsapp",
+            "whatsapp_session_id": session.id if session else False,
+        }
+
+        rec, error = self._safe_model_create("ticket.alquiler", preferred_vals)
+        return rec, error
     # ==========================================================
     # Registro inline para /process
     # ==========================================================
