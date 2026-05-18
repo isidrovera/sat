@@ -996,38 +996,84 @@ class WhatsAppPartnerApiController(http.Controller):
         Machine = request.env["alquiler"].sudo()
         company = partner.whatsapp_active_company_id if partner.whatsapp_active_company_id else False
 
-        domain = []
-        fields_map = Machine._fields
+        partner_ids = []
+        if partner:
+            partner_ids.append(partner.id)
+        if company:
+            partner_ids.append(company.id)
 
-        state_field = False
-        for candidate in ["state", "estado", "status"]:
-            if candidate in fields_map:
-                state_field = candidate
+        # También considerar commercial_partner_id por si hay contactos hijos
+        if partner.commercial_partner_id:
+            partner_ids.append(partner.commercial_partner_id.id)
+        if company and company.commercial_partner_id:
+            partner_ids.append(company.commercial_partner_id.id)
+
+        partner_ids = list(set([pid for pid in partner_ids if pid]))
+
+        if not partner_ids:
+            return Machine.browse()
+
+        # Estados que NO deben aparecer
+        excluded_states = [
+            "cancel",
+            "cancelado",
+            "baja",
+            "retirado",
+            "finalizado",
+            "closed",
+        ]
+
+        # Campo real confirmado en alquiler
+        direct_domains = []
+
+        if "cliente_id" in Machine._fields:
+            direct_domains.append([("cliente_id", "in", partner_ids)])
+
+        # Fallbacks por si en otra base/herencia usan otro campo
+        for field_name in [
+            "partner_id",
+            "customer_id",
+            "empresa_id",
+            "company_partner_id",
+            "res_partner_id",
+            "contacto_id",
+            "titular_id",
+        ]:
+            if field_name in Machine._fields:
+                direct_domains.append([(field_name, "in", partner_ids)])
+
+        result = Machine.browse()
+
+        for domain in direct_domains:
+            search_domain = list(domain)
+
+            # Si existe estado_alquiler_id, excluir estados no operativos,
+            # pero permitir "alquilada".
+            if "estado_alquiler_id" in Machine._fields:
+                search_domain.append(("estado_alquiler_id", "not in", excluded_states))
+            elif "state" in Machine._fields:
+                search_domain.append(("state", "not in", excluded_states))
+            elif "estado" in Machine._fields:
+                search_domain.append(("estado", "not in", excluded_states))
+            elif "status" in Machine._fields:
+                search_domain.append(("status", "not in", excluded_states))
+
+            records = Machine.search(search_domain, order="id desc", limit=limit)
+            result |= records
+
+            if len(result) >= limit:
                 break
 
-        if state_field:
-            domain = [
-                (state_field, "not in", ["cancel", "cancelado", "baja", "retirado", "finalizado", "closed"])
-            ]
-
-        records = Machine.search(domain, limit=200, order="id desc")
-
-        matched = request.env["alquiler"].sudo()
-        for rec in records:
-            if self._record_matches_partner_company(rec, partner=partner, company=company):
-                matched |= rec
-            if len(matched) >= limit:
-                break
-
-        if not matched and company:
-            records = Machine.search([], limit=200, order="id desc")
+        # Fallback final por nombre/RUC si algún registro usa campos texto
+        if not result:
+            records = Machine.search([], order="id desc", limit=2000)
             for rec in records:
-                if self._record_matches_partner_company(rec, partner=company, company=company):
-                    matched |= rec
-                if len(matched) >= limit:
+                if self._record_matches_partner_company(rec, partner=partner, company=company):
+                    result |= rec
+                if len(result) >= limit:
                     break
 
-        return matched[:limit]
+        return result[:limit]
 
     def _build_machine_menu(self, machines, title, footer=None, include_link=False, link=False):
         lines = [title, ""]
