@@ -190,8 +190,8 @@
             <field name="model_id" ref="sat.model_mantenimiento_tecnico_ausencia"/>
             <field name="subject">Permiso aprobado - {{object.tecnico_id.name}} - {{object.name}}</field>
             <field name="email_from">soporte@andescopiers.com.pe</field>
-            <field name="email_to">verapolo@icloud.com</field>
-            <field name="email_cc"></field>
+            <field name="email_to">t.escalante@corapsac.com.pe</field>
+            <field name="email_cc">lincoln@corapsac.com, campuero@corapsac.com.pe</field>
             <field name="reply_to">soporte@andescopiers.com.pe</field>
             <field name="auto_delete" eval="True"/>
             <field name="use_default_to" eval="False"/>
