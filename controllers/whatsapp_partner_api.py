@@ -183,7 +183,114 @@ class WhatsAppPartnerApiController(http.Controller):
         value = (value or "").lower().strip()
         return "@s.whatsapp.net" in value or "@c.us" in value
 
+    def _phone_from_jid(self, value):
+        value = (value or "").strip()
+        if not value:
+            return ""
+
+        lowered = value.lower()
+
+        if "@lid" in lowered:
+            return ""
+
+        if "@s.whatsapp.net" in lowered or "@c.us" in lowered:
+            value = value.split("@", 1)[0]
+
+        return self._clean_phone(value)
+
+
+    def _resolve_identifier_phone(self, identifiers, partner=False):
+        identifiers = identifiers or {}
+
+        phone = self._clean_phone(identifiers.get("phone"))
+        if phone:
+            return phone
+
+        phone = self._phone_from_jid(identifiers.get("jid"))
+        if phone:
+            return phone
+
+        phone = self._phone_from_jid(identifiers.get("raw_jid"))
+        if phone:
+            return phone
+
+        if partner:
+            phone = self._clean_phone(getattr(partner, "whatsapp_number", False))
+            if phone:
+                return phone
+
+            phone = self._phone_from_jid(getattr(partner, "whatsapp_jid", False))
+            if phone:
+                return phone
+
+            phone = self._clean_phone(getattr(partner, "mobile", False))
+            if phone:
+                return phone
+
+            phone = self._clean_phone(getattr(partner, "phone", False))
+            if phone:
+                return phone
+
+        return ""
+
+
+    def _resolve_identifier_jid(self, identifiers, partner=False):
+        identifiers = identifiers or {}
+
+        jid = identifiers.get("jid")
+        if jid and self._is_normal_whatsapp_jid(jid):
+            return self._normalize_jid(jid)
+
+        raw_jid = identifiers.get("raw_jid")
+        if raw_jid and self._is_normal_whatsapp_jid(raw_jid):
+            return self._normalize_jid(raw_jid)
+
+        if partner and getattr(partner, "whatsapp_jid", False):
+            return self._normalize_jid(partner.whatsapp_jid)
+
+        return ""
+
+
+    def _resolve_identifier_lid(self, identifiers, partner=False):
+        identifiers = identifiers or {}
+
+        lid = identifiers.get("lid")
+        if lid and self._is_lid(lid):
+            return self._normalize_jid(lid)
+
+        raw_jid = identifiers.get("raw_jid")
+        if raw_jid and self._is_lid(raw_jid):
+            return self._normalize_jid(raw_jid)
+
+        if partner and getattr(partner, "whatsapp_lid", False):
+            return self._normalize_jid(partner.whatsapp_lid)
+
+        return ""
+
+
+    def _resolve_identifier_raw_jid(self, identifiers, partner=False):
+        identifiers = identifiers or {}
+
+        raw_jid = identifiers.get("raw_jid")
+        if raw_jid:
+            return self._normalize_jid(raw_jid)
+
+        jid = self._resolve_identifier_jid(identifiers, partner=partner)
+        if jid:
+            return jid
+
+        lid = self._resolve_identifier_lid(identifiers, partner=partner)
+        if lid:
+            return lid
+
+        if partner and getattr(partner, "whatsapp_last_raw_jid", False):
+            return self._normalize_jid(partner.whatsapp_last_raw_jid)
+
+        return ""
+
     def _extract_identifiers(self, payload):
+        payload = payload or {}
+
         phone = (
             payload.get("phone")
             or payload.get("whatsapp_number")
@@ -194,6 +301,7 @@ class WhatsAppPartnerApiController(http.Controller):
             payload.get("from")
             or payload.get("remoteJid")
             or payload.get("remote_jid")
+            or payload.get("raw_jid")
         )
 
         jid = payload.get("jid") or payload.get("remote_jid")
@@ -211,13 +319,24 @@ class WhatsAppPartnerApiController(http.Controller):
             lid = lid or jid
             jid = False
 
-        return {
-            "phone": self._clean_phone(phone),
-            "jid": self._normalize_jid(jid),
-            "lid": self._normalize_jid(lid),
-            "raw_jid": self._normalize_jid(raw_jid),
-        }
+        if raw_jid and self._is_normal_whatsapp_jid(raw_jid):
+            jid = jid or raw_jid
+            phone = phone or raw_jid
 
+        if raw_jid and self._is_lid(raw_jid):
+            lid = lid or raw_jid
+
+        clean_phone = self._clean_phone(phone)
+        clean_jid = self._normalize_jid(jid)
+        clean_lid = self._normalize_jid(lid)
+        clean_raw_jid = self._normalize_jid(raw_jid)
+
+        return {
+            "phone": clean_phone,
+            "jid": clean_jid,
+            "lid": clean_lid,
+            "raw_jid": clean_raw_jid,
+        }
     def _has_any_identifier(self, identifiers):
         return bool(
             identifiers.get("phone")
@@ -256,17 +375,29 @@ class WhatsAppPartnerApiController(http.Controller):
             return True
         return False
 
-    def _prepare_partner_whatsapp_values(self, identifiers):
+    def _prepare_partner_whatsapp_values(self, identifiers, partner=False):
+        identifiers = identifiers or {}
         vals = {}
 
-        phone = identifiers.get("phone")
-        jid = identifiers.get("jid")
-        lid = identifiers.get("lid")
-        raw_jid = identifiers.get("raw_jid")
+        phone = self._resolve_identifier_phone(identifiers, partner=partner)
+        jid = self._resolve_identifier_jid(identifiers, partner=partner)
+        lid = self._resolve_identifier_lid(identifiers, partner=partner)
+        raw_jid = self._resolve_identifier_raw_jid(identifiers, partner=partner)
 
         if phone:
-            vals["mobile"] = "+%s" % phone if not str(phone).startswith("+") else phone
             vals["whatsapp_number"] = phone
+
+            formatted_phone = "+%s" % phone if not str(phone).startswith("+") else phone
+
+            # Mostrar también en el campo Teléfono normal de Odoo.
+            if "phone" in request.env["res.partner"]._fields:
+                if not partner or not getattr(partner, "phone", False):
+                    vals["phone"] = formatted_phone
+
+            # Mantener mobile también, pero sin borrar si ya existe.
+            if "mobile" in request.env["res.partner"]._fields:
+                if not partner or not getattr(partner, "mobile", False):
+                    vals["mobile"] = formatted_phone
 
         if jid:
             vals["whatsapp_jid"] = jid
@@ -351,13 +482,45 @@ class WhatsAppPartnerApiController(http.Controller):
         if not partner:
             return
 
-        if hasattr(partner, "whatsapp_update_identifiers"):
-            partner.whatsapp_update_identifiers(
-                jid=identifiers.get("jid"),
-                lid=identifiers.get("lid"),
-                raw_jid=identifiers.get("raw_jid"),
-            )
+        identifiers = identifiers or {}
 
+        vals = self._prepare_partner_whatsapp_values(
+            identifiers,
+            partner=partner,
+        )
+
+        # Nunca borrar datos existentes si el mensaje llegó solo por LID.
+        safe_vals = {}
+        for key, value in vals.items():
+            if value:
+                safe_vals[key] = value
+
+        if safe_vals:
+            try:
+                partner.sudo().write(safe_vals)
+            except Exception:
+                _logger.exception(
+                    "[SAT-WHATSAPP-API] No se pudo actualizar identificadores WhatsApp partner=%s vals=%s",
+                    partner.id,
+                    safe_vals,
+                )
+
+        # Compatibilidad con método del modelo, si existe.
+        if hasattr(partner, "whatsapp_update_identifiers"):
+            try:
+                partner.whatsapp_update_identifiers(
+                    phone=self._resolve_identifier_phone(identifiers, partner=partner),
+                    jid=self._resolve_identifier_jid(identifiers, partner=partner),
+                    lid=self._resolve_identifier_lid(identifiers, partner=partner),
+                    raw_jid=self._resolve_identifier_raw_jid(identifiers, partner=partner),
+                )
+            except TypeError:
+                # Versión antigua del método sin parámetro phone.
+                partner.whatsapp_update_identifiers(
+                    jid=self._resolve_identifier_jid(identifiers, partner=partner),
+                    lid=self._resolve_identifier_lid(identifiers, partner=partner),
+                    raw_jid=self._resolve_identifier_raw_jid(identifiers, partner=partner),
+                )
     # ==========================================================
     # Templates / textos
     # ==========================================================
@@ -631,10 +794,10 @@ class WhatsAppPartnerApiController(http.Controller):
             active_session = Session.create({
                 "partner_id": partner.id,
                 "active_company_id": partner.whatsapp_active_company_id.id if partner.whatsapp_active_company_id else False,
-                "phone": identifiers.get("phone") or partner.whatsapp_number or self._clean_phone(partner.mobile),
-                "jid": identifiers.get("jid") or partner.whatsapp_jid,
-                "lid": identifiers.get("lid") or partner.whatsapp_lid,
-                "raw_jid": identifiers.get("raw_jid") or partner.whatsapp_last_raw_jid,
+                "phone": self._resolve_identifier_phone(identifiers, partner=partner),
+                "jid": self._resolve_identifier_jid(identifiers, partner=partner),
+                "lid": self._resolve_identifier_lid(identifiers, partner=partner),
+                "raw_jid": self._resolve_identifier_raw_jid(identifiers, partner=partner),
                 "state": "human" if partner.whatsapp_human_mode else "open",
                 "source": "whatsapp",
                 "last_intent": intent or False,
@@ -644,14 +807,19 @@ class WhatsAppPartnerApiController(http.Controller):
                 "last_message_at": fields.Datetime.now(),
                 "active_company_id": partner.whatsapp_active_company_id.id if partner.whatsapp_active_company_id else False,
             }
-            if identifiers.get("phone"):
-                vals["phone"] = identifiers.get("phone")
-            if identifiers.get("jid"):
-                vals["jid"] = identifiers.get("jid")
-            if identifiers.get("lid"):
-                vals["lid"] = identifiers.get("lid")
-            if identifiers.get("raw_jid"):
-                vals["raw_jid"] = identifiers.get("raw_jid")
+            resolved_phone = self._resolve_identifier_phone(identifiers, partner=partner)
+            resolved_jid = self._resolve_identifier_jid(identifiers, partner=partner)
+            resolved_lid = self._resolve_identifier_lid(identifiers, partner=partner)
+            resolved_raw_jid = self._resolve_identifier_raw_jid(identifiers, partner=partner)
+
+            if resolved_phone:
+                vals["phone"] = resolved_phone
+            if resolved_jid:
+                vals["jid"] = resolved_jid
+            if resolved_lid:
+                vals["lid"] = resolved_lid
+            if resolved_raw_jid:
+                vals["raw_jid"] = resolved_raw_jid
             if intent:
                 vals["last_intent"] = intent
             if partner.whatsapp_human_mode:
@@ -732,10 +900,10 @@ class WhatsAppPartnerApiController(http.Controller):
             "direction": direction,
             "message_type": message_type or "text",
             "content": content or "",
-            "phone": identifiers.get("phone") or False,
-            "jid": identifiers.get("jid") or False,
-            "lid": identifiers.get("lid") or False,
-            "raw_jid": identifiers.get("raw_jid") or False,
+            "phone": self._resolve_identifier_phone(identifiers, partner=partner) or False,
+            "jid": self._resolve_identifier_jid(identifiers, partner=partner) or False,
+            "lid": self._resolve_identifier_lid(identifiers, partner=partner) or False,
+            "raw_jid": self._resolve_identifier_raw_jid(identifiers, partner=partner) or False,
             "external_message_id": external_message_id or False,
             "intent": intent or False,
             "media_url": payload.get("media_url") or payload.get("url") or False,
@@ -768,9 +936,9 @@ class WhatsAppPartnerApiController(http.Controller):
             "session_id": session.id if session else False,
             "partner_id": partner.id if partner else False,
             "company_id": company.id if company else False,
-            "phone": identifiers.get("phone") or False,
-            "jid": identifiers.get("jid") or False,
-            "lid": identifiers.get("lid") or False,
+            "phone": self._resolve_identifier_phone(identifiers, partner=partner) or False,
+            "jid": self._resolve_identifier_jid(identifiers, partner=partner) or False,
+            "lid": self._resolve_identifier_lid(identifiers, partner=partner) or False,
             "message_type": message_type or "text",
             "content": content or "",
             "media_id": media.id if media else False,
@@ -1346,7 +1514,7 @@ class WhatsAppPartnerApiController(http.Controller):
         Partner = request.env["res.partner"].sudo()
         partner = self._find_partner_by_identifiers(identifiers)
 
-        vals = self._prepare_partner_whatsapp_values(identifiers)
+        vals = self._prepare_partner_whatsapp_values(identifiers, partner=partner)
         vals["vat"] = dni
         vals["whatsapp_registration_state"] = "waiting_ruc"
 
