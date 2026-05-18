@@ -1731,7 +1731,7 @@ class WhatsAppPartnerApiController(http.Controller):
 
         return "\n".join(lines)
 
-        def _create_toner_request(self, partner, session, context):
+    def _create_toner_request(self, partner, session, context):
         company = partner.whatsapp_active_company_id if partner and partner.whatsapp_active_company_id else False
         machine = self._get_context_machine(context)
 
@@ -1853,7 +1853,7 @@ class WhatsAppPartnerApiController(http.Controller):
 
         description = context.get("service_description") or payload.get("message") or payload.get("text") or ""
 
-        def _get_machine_value(field_names):
+    def _get_machine_value(field_names):
             if not machine:
                 return False
             for field_name in field_names:
