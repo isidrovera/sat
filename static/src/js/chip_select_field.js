@@ -20,8 +20,33 @@ const ODOO_COLOR_MAP = {
     11: { bg: "#a8587b", border: "#a8587b", text: "#ffffff" },
 };
 
+function toBool(value, defaultValue = false) {
+    if (value === undefined || value === null || value === "") {
+        return defaultValue;
+    }
+
+    if (value === true || value === "true" || value === "1" || value === 1) {
+        return true;
+    }
+
+    if (value === false || value === "false" || value === "0" || value === 0) {
+        return false;
+    }
+
+    return Boolean(value);
+}
+
 export class ChipSelectField extends Many2OneField {
     static template = "sat.ChipSelectField";
+
+    static props = {
+        ...Many2OneField.props,
+
+        filterByField: { type: String, optional: true },
+        filterRelation: { type: String, optional: true },
+        shortenLabels: { type: Boolean, optional: true },
+        autoSave: { type: Boolean, optional: true },
+    };
 
     setup() {
         super.setup();
@@ -58,10 +83,13 @@ export class ChipSelectField extends Many2OneField {
 
         this._lastTypeId = this.filterTypeId;
 
-        console.log("[ChipSelect][setup VERSION AUTOSAVE 2026-05-07]", {
+        console.log("[ChipSelect][setup VERSION AUTOSAVE 2026-05-18 FIX PROPS]", {
             fieldName: this.props.name,
             relation: this.relation,
             readonly: this.props.readonly,
+            filterByField: this.props.filterByField,
+            filterRelation: this.props.filterRelation,
+            shortenLabels: this.props.shortenLabels,
             autoSave: this.props.autoSave,
             recordModel: this.recordModel,
             recordResId: this.recordResId,
@@ -462,21 +490,38 @@ export const chipSelectField = {
         const props = many2OneField.extractProps(...arguments);
 
         const rawAutoSave =
-            (attrs && attrs.auto_save) ||
-            (options && options.auto_save);
-
-        let autoSave = true;
-
-        if (rawAutoSave === false || rawAutoSave === "false" || rawAutoSave === "0") {
-            autoSave = false;
-        }
+            attrs?.auto_save ??
+            attrs?.autoSave ??
+            options?.auto_save ??
+            options?.autoSave ??
+            true;
 
         const finalProps = {
             ...props,
-            filterByField: (attrs && attrs.filter_by_field) || (options && options.filter_by_field) || null,
-            filterRelation: (attrs && attrs.filter_relation) || (options && options.filter_relation) || null,
-            shortenLabels: !!((attrs && attrs.shorten_labels) || (options && options.shorten_labels)),
-            autoSave: autoSave,
+
+            filterByField:
+                attrs?.filter_by_field ??
+                attrs?.filterByField ??
+                options?.filter_by_field ??
+                options?.filterByField ??
+                null,
+
+            filterRelation:
+                attrs?.filter_relation ??
+                attrs?.filterRelation ??
+                options?.filter_relation ??
+                options?.filterRelation ??
+                null,
+
+            shortenLabels: toBool(
+                attrs?.shorten_labels ??
+                attrs?.shortenLabels ??
+                options?.shorten_labels ??
+                options?.shortenLabels,
+                false
+            ),
+
+            autoSave: toBool(rawAutoSave, true),
         };
 
         console.log("[ChipSelect][extractProps]", finalProps);
