@@ -1031,23 +1031,21 @@ asesor|humano|persona|operador|agente|tecnico humano|técnico humano|hablar con 
         <!-- ========================================================= -->
 
         <record id="whatsapp_intent_rule_unknown_menu" model="whatsapp.intent.rule">
-            <field name="name">No entendido - mostrar menú técnico</field>
-            <field name="active">True</field>
-            <field name="sequence">999</field>
-            <field name="priority">10</field>
-            <field name="intent">fallback</field>
-            <field name="action">reply</field>
-            <field name="target_flow">none</field>
-            <field name="response_template">unknown_with_menu</field>
-            <field name="match_type">regex</field>
-            <field name="pattern"><![CDATA[
-.*
-]]></field>
-            <field name="applies_to">all</field>
-            <field name="only_during_idle">True</field>
-            <field name="stop_flow">False</field>
-            <field name="allow_ai_after">False</field>
-        </record>
+    <field name="name">No entendido - mostrar menú técnico</field>
+    <field name="active">True</field>
+    <field name="sequence">999</field>
+    <field name="priority">10</field>
+    <field name="intent">unknown</field>
+    <field name="action">reply</field>
+    <field name="target_flow">none</field>
+    <field name="response_template">unknown_with_menu</field>
+    <field name="match_type">regex</field>
+    <field name="pattern">.*</field>
+    <field name="applies_to">all</field>
+    <field name="only_during_idle">True</field>
+    <field name="stop_flow">False</field>
+    <field name="allow_ai_after">False</field>
+</record>
 
     </data>
 </odoo>
