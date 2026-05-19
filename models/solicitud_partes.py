@@ -281,7 +281,7 @@ class SolicitudPartes(models.Model):
         action_id = self.env.ref('sat.action_solicitud_partes').id
         return f"{base_url}/web#id={self.id}&view_type=form&model=solicitud.partes&action={action_id}"
 
-        def _get_estado_maquina_label(self, estado):
+    def _get_estado_maquina_label(self, estado):
         """Devuelve la etiqueta legible de un estado de alquiler."""
         estados = dict(self.env['alquiler']._fields['estado_alquiler_id'].selection)
         return estados.get(estado, estado or 'Sin estado')
