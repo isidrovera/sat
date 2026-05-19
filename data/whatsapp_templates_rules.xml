@@ -1,101 +1,102 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <odoo>
     <data noupdate="0">
-
-        <!-- ========================================================= -->
-        <!-- PLANTILLAS BASE WHATSAPP                                  -->
-        <!-- ========================================================= -->
-
+        <!--
+ ========================================================= 
+-->
+        <!--
+ PLANTILLAS BASE WHATSAPP                                 
+-->
+        <!--
+-->
         <record id="whatsapp_template_ask_dni" model="whatsapp.template">
             <field name="name">ask_dni</field>
             <field name="title">Solicitar DNI</field>
             <field name="category">dni</field>
-            <field name="body"><![CDATA[
-Buenos días. Para poder ayudarte, por favor envíame tu DNI de 8 dígitos.
-]]></field>
+            <field name="body">
+                Buenos días. Para poder ayudarte, por favor envíame tu DNI de 8 dígitos.
+</field>
             <field name="active">True</field>
         </record>
-
+        <record id="whatsapp_template_thanks_reply" model="whatsapp.template">
+            <field name="name">thanks_reply</field>
+            <field name="title">Respuesta agradecimiento</field>
+            <field name="category">fallback</field>
+            <field name="body">Con gusto {{partner_name}}. Estamos para ayudarte.</field>
+            <field name="active">True</field>
+        </record>
         <record id="whatsapp_template_ask_ruc" model="whatsapp.template">
             <field name="name">ask_ruc</field>
             <field name="title">Solicitar RUC</field>
             <field name="category">ruc</field>
-            <field name="body"><![CDATA[
-Gracias {{partner_name}}. Ahora envíame el RUC de tu empresa para completar el registro.
-]]></field>
+            <field name="body">
+                Gracias {{partner_name}}. Ahora envíame el RUC de tu empresa para completar el
+                registro.
+</field>
             <field name="active">True</field>
         </record>
-
         <record id="whatsapp_template_dni_error" model="whatsapp.template">
             <field name="name">dni_error</field>
             <field name="title">Error validando DNI</field>
             <field name="category">dni</field>
-            <field name="body"><![CDATA[
-No pude validar el DNI automáticamente. Por favor verifica el número o espera atención de un asesor.
-]]></field>
+            <field name="body">
+                No pude validar el DNI automáticamente. Por favor verifica el número o espera
+                atención de un asesor.
+</field>
             <field name="active">True</field>
         </record>
-
         <record id="whatsapp_template_ruc_error" model="whatsapp.template">
             <field name="name">ruc_error</field>
             <field name="title">Error validando RUC</field>
             <field name="category">ruc</field>
-            <field name="body"><![CDATA[
-No pude validar el RUC automáticamente. Verifica el número e intenta nuevamente.
-]]></field>
+            <field name="body">
+                No pude validar el RUC automáticamente. Verifica el número e intenta nuevamente.
+</field>
             <field name="active">True</field>
         </record>
-
         <record id="whatsapp_template_registration_completed" model="whatsapp.template">
             <field name="name">registration_completed</field>
             <field name="title">Registro completado</field>
             <field name="category">registration</field>
-            <field name="body"><![CDATA[
-Registro completado correctamente para {{company_name}}. ¿En qué podemos ayudarte?
-]]></field>
+            <field name="body">
+                Registro completado correctamente para {{company_name}}. ¿En qué podemos ayudarte?
+</field>
             <field name="active">True</field>
         </record>
-
         <record id="whatsapp_template_blocked_contact" model="whatsapp.template">
             <field name="name">blocked_contact</field>
             <field name="title">Contacto bloqueado</field>
             <field name="category">blocked</field>
-            <field name="body"><![CDATA[
-Tu número no está habilitado para atención por este canal.
-]]></field>
+            <field name="body">
+                Tu número no está habilitado para atención por este canal.
+</field>
             <field name="active">True</field>
         </record>
-
         <record id="whatsapp_template_human_mode_active" model="whatsapp.template">
             <field name="name">human_mode_active</field>
             <field name="title">Modo humano activo</field>
             <field name="category">human</field>
-            <field name="body"><![CDATA[
-Tu conversación está siendo atendida por un asesor. Por favor espera su respuesta.
-]]></field>
+            <field name="body">
+                Tu conversación está siendo atendida por un asesor. Por favor espera su respuesta.
+</field>
             <field name="active">True</field>
         </record>
-
         <record id="whatsapp_template_human_take" model="whatsapp.template">
             <field name="name">human_take</field>
             <field name="title">Chat tomado por humano</field>
             <field name="category">human</field>
-            <field name="body"><![CDATA[
-Un asesor continuará con la atención.
-]]></field>
+            <field name="body">Un asesor continuará con la atención.</field>
             <field name="active">True</field>
         </record>
-
         <record id="whatsapp_template_human_release" model="whatsapp.template">
             <field name="name">human_release</field>
             <field name="title">Bot liberado</field>
             <field name="category">human</field>
-            <field name="body"><![CDATA[
-El bot ha sido habilitado nuevamente para continuar la atención.
-]]></field>
+            <field name="body">
+                El bot ha sido habilitado nuevamente para continuar la atención.
+</field>
             <field name="active">True</field>
         </record>
-
         <record id="whatsapp_template_after_hours" model="whatsapp.template">
             <field name="name">after_hours</field>
             <field name="title">Fuera de horario</field>
@@ -103,275 +104,171 @@ El bot ha sido habilitado nuevamente para continuar la atención.
             <field name="body">{{business_message}}</field>
             <field name="active">True</field>
         </record>
-
         <record id="whatsapp_template_business_open" model="whatsapp.template">
             <field name="name">business_open</field>
             <field name="title">Horario abierto</field>
             <field name="category">fallback</field>
-            <field name="body"><![CDATA[
-Estamos en horario de atención. {{display_hours}}
-]]></field>
+            <field name="body">Estamos en horario de atención. {{display_hours}}</field>
             <field name="active">True</field>
         </record>
-
         <record id="whatsapp_template_select_company" model="whatsapp.template">
             <field name="name">select_company</field>
             <field name="title">Seleccionar empresa</field>
             <field name="category">company</field>
-            <field name="body"><![CDATA[
-Tienes más de una empresa asociada. Indica con cuál deseas continuar.
-]]></field>
+            <field name="body">
+                Tienes más de una empresa asociada. Indica con cuál deseas continuar.
+</field>
             <field name="active">True</field>
         </record>
-
         <record id="whatsapp_template_company_selected" model="whatsapp.template">
             <field name="name">company_selected</field>
             <field name="title">Empresa seleccionada</field>
             <field name="category">company</field>
-            <field name="body"><![CDATA[
-Empresa seleccionada correctamente: {{company_name}}. ¿En qué podemos ayudarte?
-]]></field>
+            <field name="body">
+                Empresa seleccionada correctamente: {{company_name}}. ¿En qué podemos ayudarte?
+</field>
             <field name="active">True</field>
         </record>
-
-        <record id="whatsapp_template_thanks_reply" model="whatsapp.template">
-            <field name="name">thanks_reply</field>
-            <field name="title">Respuesta agradecimiento</field>
-            <field name="category">fallback</field>
-            <field name="body"><![CDATA[
-Con gusto {{partner_name}}. Estamos para ayudarte.
-]]></field>
-            <field name="active">True</field>
-        </record>
-
-        <record id="whatsapp_template_goodbye_reply" model="whatsapp.template">
-            <field name="name">goodbye_reply</field>
-            <field name="title">Respuesta despedida</field>
-            <field name="category">fallback</field>
-            <field name="body"><![CDATA[
-Gracias por comunicarte con nosotros {{partner_name}}. Que tengas un buen día.
-]]></field>
-            <field name="active">True</field>
-        </record>
-
-        <!-- ========================================================= -->
-        <!-- PLANTILLAS TÉCNICAS                                      -->
-        <!-- ========================================================= -->
-
         <record id="whatsapp_template_greeting_registered" model="whatsapp.template">
             <field name="name">greeting_registered</field>
             <field name="title">Saludo registrado</field>
             <field name="category">greeting</field>
-            <field name="body"><![CDATA[
-Hola {{partner_name}}, ¿en qué podemos ayudarte?
-
-Puedes escribir directamente tu consulta, por ejemplo:
-• necesito tóner
-• mi máquina se traba
-• no puedo imprimir
-• no imprime
-• sale código de error
-• no escanea al correo
-• no puedo sacar copias
-• quiero comprar o alquilar una máquina
-• quiero hablar con un técnico
-
-También puedes elegir una opción:
-*1* Solicitar tóner
-*2* Registrar servicio técnico
-*3* Asistencia remota
-*4* Hablar con un técnico
-
-Si deseas atención directa, escribe *ASESOR*.
-]]></field>
+            <field name="body">
+                Hola {{partner_name}}, ¿en qué podemos ayudarte? Puedes escribir directamente tu
+                consulta, por ejemplo: • necesito tóner • mi máquina se traba • sale código de error
+                • no imprime • no escanea al correo • quiero comprar una máquina • quiero hablar con
+                un técnico También puedes elegir una opción: *1* Solicitar tóner *2* Registrar
+                servicio técnico *3* Asistencia remota *4* Hablar con un técnico Si deseas atención
+                directa, escribe *ASESOR*.
+</field>
             <field name="active">True</field>
         </record>
-
-        <record id="whatsapp_template_main_menu_technical" model="whatsapp.template">
-            <field name="name">main_menu_technical</field>
-            <field name="title">Menú principal técnico</field>
-            <field name="category">fallback</field>
-            <field name="body"><![CDATA[
-Hola {{partner_name}}, ¿en qué podemos ayudarte?
-
-Puedes escribir directamente tu consulta, por ejemplo:
-• necesito tóner
-• mi máquina se traba
-• no puedo imprimir
-• no imprime
-• sale código de error
-• no escanea al correo
-• no puedo sacar copias
-• imprime con rayas o manchas
-• quiero comprar o alquilar una máquina
-• quiero hablar con un técnico
-
-También puedes elegir una opción:
-*1* Solicitar tóner
-*2* Registrar servicio técnico
-*3* Asistencia remota
-*4* Hablar con un técnico
-
-Si deseas atención directa, escribe *ASESOR*.
-]]></field>
-            <field name="active">True</field>
-        </record>
-
         <record id="whatsapp_template_service_link" model="whatsapp.template">
             <field name="name">service_link</field>
             <field name="title">Link de servicio</field>
             <field name="category">service</field>
-            <field name="body"><![CDATA[
-Para registrar tu solicitud de servicio, ingresa al siguiente enlace:
-{{service_link}}
-
-Si prefieres atención directa, escribe *ASESOR* para derivarte con un técnico.
-]]></field>
+            <field name="body">
+                Para registrar tu solicitud de servicio, ingresa al siguiente enlace:
+                {{service_link}} Si prefieres atención directa, escribe *ASESOR* para derivarte con
+                un técnico.
+</field>
             <field name="active">True</field>
         </record>
-
         <record id="whatsapp_template_fallback" model="whatsapp.template">
             <field name="name">fallback</field>
             <field name="title">Respuesta general</field>
             <field name="category">fallback</field>
-            <field name="body"><![CDATA[
-No pude identificar con seguridad tu solicitud.
-
-Puedes escribir, por ejemplo:
-• necesito tóner
-• mi máquina se traba
-• no puedo imprimir
-• no imprime
-• no puedo escanear
-• sale código de error
-• imprime con manchas o rayas
-• quiero comprar una máquina
-• quiero hablar con un técnico
-
-También puedes elegir:
-*1* Solicitar tóner
-*2* Registrar servicio técnico
-*3* Asistencia remota
-*4* Hablar con un técnico
-]]></field>
+            <field name="body">
+                No pude identificar con seguridad tu solicitud. Puedes escribir, por ejemplo: •
+                necesito tóner • mi máquina se traba • sale código de error • no imprime • no
+                escanea al correo • quiero comprar una máquina • quiero hablar con un técnico
+                También puedes elegir: *1* Solicitar tóner *2* Registrar servicio técnico *3*
+                Asistencia remota *4* Hablar con un técnico
+</field>
             <field name="active">True</field>
         </record>
-
-        <record id="whatsapp_template_unknown_with_menu" model="whatsapp.template">
-            <field name="name">unknown_with_menu</field>
-            <field name="title">No entendido con menú técnico</field>
+        <!--
+ ========================================================= 
+-->
+        <!--
+ PLANTILLAS TÉCNICAS / ÁREAS / CONTACTOS                  
+-->
+        <!--
+ Se usan categorías originales válidas: fallback/service.  
+-->
+        <!--
+ ========================================================= 
+-->
+        <record id="whatsapp_template_main_menu_technical" model="whatsapp.template">
+            <field name="name">main_menu_technical</field>
+            <field name="title">Menú principal técnico</field>
             <field name="category">fallback</field>
-            <field name="body"><![CDATA[
-No pude identificar con seguridad tu solicitud.
-
-Puedes escribir, por ejemplo:
-• necesito tóner
-• no puedo imprimir
-• no imprime
-• no puedo escanear
-• se traba el papel
-• sale código de error
-• quiero asistencia remota
-• quiero hablar con un técnico
-
-También puedes elegir:
-*1* Solicitar tóner
-*2* Registrar servicio técnico
-*3* Asistencia remota
-*4* Hablar con un técnico
-]]></field>
+            <field name="body">
+                Hola {{partner_name}}, ¿en qué podemos ayudarte? Puedes escribir directamente tu
+                consulta, por ejemplo: • necesito tóner • mi máquina se traba • sale código de error
+                • no imprime • no escanea al correo • quiero comprar una máquina • quiero hablar con
+                un técnico También puedes elegir una opción: *1* Solicitar tóner *2* Registrar
+                servicio técnico *3* Asistencia remota *4* Hablar con un técnico Si deseas atención
+                directa, escribe *ASESOR*.
+</field>
             <field name="active">True</field>
         </record>
-
         <record id="whatsapp_template_toner_contact_help" model="whatsapp.template">
             <field name="name">toner_contact_help</field>
             <field name="title">Ayuda tóner / contacto</field>
             <field name="category">service</field>
-            <field name="body"><![CDATA[
-Para solicitar tóner puedes continuar por este chat.
-
-Si no deseas llenar el formulario o necesitas ayuda, puedes contactar al área correspondiente:
-
-*Área de suministros / tóner*
-Teléfono: REEMPLAZAR_NUMERO_TONER
-Correo: REEMPLAZAR_CORREO_TONER
-
-También puedes escribir *ASESOR* para que un encargado continúe la atención.
-]]></field>
+            <field name="body">
+                Para solicitar tóner puedes continuar por este chat. Si no deseas llenar el
+                formulario o necesitas ayuda, puedes contactar al área correspondiente: *Área de
+                suministros / tóner* Teléfono: REEMPLAZAR_NUMERO_TONER Correo:
+                REEMPLAZAR_CORREO_TONER También puedes escribir *ASESOR* para que un encargado
+                continúe la atención.
+</field>
             <field name="active">True</field>
         </record>
-
-        <record id="whatsapp_template_remote_contact_help" model="whatsapp.template">
-            <field name="name">remote_contact_help</field>
-            <field name="title">Ayuda soporte remoto</field>
-            <field name="category">service</field>
-            <field name="body"><![CDATA[
-Para asistencia remota podemos ayudarte con:
-• configuración de escáner
-• escaneo a correo
-• carpeta compartida
-• instalación de drivers
-• configuración de impresora en PC
-• conexión por AnyDesk o TeamViewer
-
-Por favor envíanos tu código AnyDesk o una foto de la pantalla donde aparece el código.
-
-*Soporte remoto*
-Teléfono: REEMPLAZAR_NUMERO_SOPORTE_REMOTO
-Correo: REEMPLAZAR_CORREO_SOPORTE_REMOTO
-]]></field>
-            <field name="active">True</field>
-        </record>
-
         <record id="whatsapp_template_sales_contact" model="whatsapp.template">
             <field name="name">sales_contact</field>
             <field name="title">Contacto ventas / alquiler</field>
             <field name="category">fallback</field>
-            <field name="body"><![CDATA[
-Gracias por contactarnos.
-
-Para ventas, alquiler o cotización de equipos, puedes comunicarte con:
-
-*Área comercial*
-Teléfono: REEMPLAZAR_NUMERO_VENTAS
-Correo: REEMPLAZAR_CORREO_VENTAS
-
-Para ayudarte mejor, indícanos:
-• si buscas compra o alquiler
-• cantidad aproximada de copias/impresiones al mes
-• si necesitas color o blanco y negro
-• distrito o sede de instalación
-
-También puedes escribir *ASESOR* para que te deriven con el área comercial.
-]]></field>
+            <field name="body">
+                Gracias por contactarnos. Para ventas, alquiler o cotización de equipos, puedes
+                comunicarte con: *Área comercial* Teléfono: REEMPLAZAR_NUMERO_VENTAS Correo:
+                REEMPLAZAR_CORREO_VENTAS Para ayudarte mejor, indícanos: • si buscas compra o
+                alquiler • cantidad aproximada de copias/impresiones al mes • si necesitas color o
+                blanco y negro • distrito o sede de instalación También puedes escribir *ASESOR*
+                para que te deriven con el área comercial.
+</field>
             <field name="active">True</field>
         </record>
-
         <record id="whatsapp_template_billing_contact" model="whatsapp.template">
             <field name="name">billing_contact</field>
             <field name="title">Contacto facturación / pagos</field>
             <field name="category">fallback</field>
-            <field name="body"><![CDATA[
-Para consultas de facturación, pagos, recibos, guías o comprobantes, puedes comunicarte con:
-
-*Área administrativa / facturación*
-Teléfono: REEMPLAZAR_NUMERO_FACTURACION
-Correo: REEMPLAZAR_CORREO_FACTURACION
-
-Por favor indícanos:
-• RUC de la empresa
-• número de factura, guía u orden si lo tienes
-• motivo de la consulta
-
-También puedes escribir *ASESOR* para continuar con un encargado.
-]]></field>
+            <field name="body">
+                Para consultas de facturación, pagos, recibos, guías o comprobantes, puedes
+                comunicarte con: *Área administrativa / facturación* Teléfono:
+                REEMPLAZAR_NUMERO_FACTURACION Correo: REEMPLAZAR_CORREO_FACTURACION Por favor
+                indícanos: • RUC de la empresa • número de factura, guía u orden si lo tienes •
+                motivo de la consulta También puedes escribir *ASESOR* para continuar con un
+                encargado.
+</field>
             <field name="active">True</field>
         </record>
-
-        <!-- ========================================================= -->
-        <!-- AUTO RESPUESTAS BASE                                     -->
-        <!-- ========================================================= -->
-
+        <record id="whatsapp_template_remote_contact_help" model="whatsapp.template">
+            <field name="name">remote_contact_help</field>
+            <field name="title">Ayuda soporte remoto</field>
+            <field name="category">service</field>
+            <field name="body">
+                Para asistencia remota podemos ayudarte con configuración de escáner, correo,
+                carpeta compartida, drivers o AnyDesk. Por favor envíanos tu código AnyDesk o una
+                foto de la pantalla donde aparece el código. También puedes contactar: *Soporte
+                remoto* Teléfono: REEMPLAZAR_NUMERO_SOPORTE_REMOTO Correo:
+                REEMPLAZAR_CORREO_SOPORTE_REMOTO
+</field>
+            <field name="active">True</field>
+        </record>
+        <record id="whatsapp_template_unknown_with_menu" model="whatsapp.template">
+            <field name="name">unknown_with_menu</field>
+            <field name="title">No entendido con menú técnico</field>
+            <field name="category">fallback</field>
+            <field name="body">
+                No pude identificar con seguridad tu solicitud. Puedes escribir, por ejemplo: •
+                necesito tóner • mi máquina se traba • sale código de error • no imprime • no
+                escanea al correo • quiero comprar una máquina • quiero hablar con un técnico
+                También puedes elegir: *1* Solicitar tóner *2* Registrar servicio técnico *3*
+                Asistencia remota *4* Hablar con un técnico
+</field>
+            <field name="active">True</field>
+        </record>
+        <!--
+ ========================================================= 
+-->
+        <!--
+ AUTO RESPUESTAS BASE                                     
+-->
+        <!--
+ ========================================================= 
+-->
         <record id="whatsapp_auto_response_saludo_hola" model="whatsapp.auto.response">
             <field name="name">Saludo - hola</field>
             <field name="active">True</field>
@@ -381,18 +278,13 @@ También puedes escribir *ASESOR* para continuar con un encargado.
             <field name="trigger">hola</field>
             <field name="match_type">contains</field>
             <field name="applies_to">all</field>
-            <field name="response"><![CDATA[
-Hola {{partner_name}}, ¿en qué podemos ayudarte?
-
-*1* Solicitar tóner
-*2* Registrar servicio técnico
-*3* Asistencia remota
-*4* Hablar con un técnico
-]]></field>
+            <field name="response">
+                Hola {{partner_name}}, ¿en qué podemos ayudarte? *1* Solicitar tóner *2* Registrar
+                servicio técnico *3* Asistencia remota *4* Hablar con un técnico
+</field>
             <field name="stop_flow">False</field>
             <field name="allow_ai_after">True</field>
         </record>
-
         <record id="whatsapp_auto_response_buenos_dias" model="whatsapp.auto.response">
             <field name="name">Saludo - buenos días</field>
             <field name="active">True</field>
@@ -402,18 +294,13 @@ Hola {{partner_name}}, ¿en qué podemos ayudarte?
             <field name="trigger">buenos dias</field>
             <field name="match_type">contains</field>
             <field name="applies_to">all</field>
-            <field name="response"><![CDATA[
-Buenos días {{partner_name}}, ¿en qué podemos ayudarte?
-
-*1* Solicitar tóner
-*2* Registrar servicio técnico
-*3* Asistencia remota
-*4* Hablar con un técnico
-]]></field>
+            <field name="response">
+                Buenos días {{partner_name}}, ¿en qué podemos ayudarte? *1* Solicitar tóner *2*
+                Registrar servicio técnico *3* Asistencia remota *4* Hablar con un técnico
+</field>
             <field name="stop_flow">False</field>
             <field name="allow_ai_after">True</field>
         </record>
-
         <record id="whatsapp_auto_response_buenas_tardes" model="whatsapp.auto.response">
             <field name="name">Saludo - buenas tardes</field>
             <field name="active">True</field>
@@ -423,18 +310,13 @@ Buenos días {{partner_name}}, ¿en qué podemos ayudarte?
             <field name="trigger">buenas tardes</field>
             <field name="match_type">contains</field>
             <field name="applies_to">all</field>
-            <field name="response"><![CDATA[
-Buenas tardes {{partner_name}}, ¿en qué podemos ayudarte?
-
-*1* Solicitar tóner
-*2* Registrar servicio técnico
-*3* Asistencia remota
-*4* Hablar con un técnico
-]]></field>
+            <field name="response">
+                Buenas tardes {{partner_name}}, ¿en qué podemos ayudarte? *1* Solicitar tóner *2*
+                Registrar servicio técnico *3* Asistencia remota *4* Hablar con un técnico
+</field>
             <field name="stop_flow">False</field>
             <field name="allow_ai_after">True</field>
         </record>
-
         <record id="whatsapp_auto_response_blocked" model="whatsapp.auto.response">
             <field name="name">Contacto bloqueado</field>
             <field name="active">True</field>
@@ -444,13 +326,12 @@ Buenas tardes {{partner_name}}, ¿en qué podemos ayudarte?
             <field name="trigger">.*</field>
             <field name="match_type">regex</field>
             <field name="applies_to">blocked</field>
-            <field name="response"><![CDATA[
-Tu número no está habilitado para atención por este canal.
-]]></field>
+            <field name="response">
+                Tu número no está habilitado para atención por este canal.
+</field>
             <field name="stop_flow">True</field>
             <field name="allow_ai_after">False</field>
         </record>
-
         <record id="whatsapp_auto_response_after_hours" model="whatsapp.auto.response">
             <field name="name">Fuera de horario</field>
             <field name="active">True</field>
@@ -465,7 +346,6 @@ Tu número no está habilitado para atención por este canal.
             <field name="allow_ai_after">True</field>
             <field name="only_after_hours">True</field>
         </record>
-
         <record id="whatsapp_auto_response_human" model="whatsapp.auto.response">
             <field name="name">Modo humano activo</field>
             <field name="active">True</field>
@@ -475,13 +355,12 @@ Tu número no está habilitado para atención por este canal.
             <field name="trigger">.*</field>
             <field name="match_type">regex</field>
             <field name="applies_to">human</field>
-            <field name="response"><![CDATA[
-Tu conversación está siendo atendida por un asesor.
-]]></field>
+            <field name="response">
+                Tu conversación está siendo atendida por un asesor.
+</field>
             <field name="stop_flow">True</field>
             <field name="allow_ai_after">False</field>
         </record>
-
         <record id="whatsapp_auto_response_gracias" model="whatsapp.auto.response">
             <field name="name">Agradecimiento</field>
             <field name="active">True</field>
@@ -491,17 +370,19 @@ Tu conversación está siendo atendida por un asesor.
             <field name="trigger">gracias</field>
             <field name="match_type">contains</field>
             <field name="applies_to">all</field>
-            <field name="response"><![CDATA[
-Con gusto {{partner_name}}.
-]]></field>
+            <field name="response">Con gusto {{partner_name}}.</field>
             <field name="stop_flow">True</field>
             <field name="allow_ai_after">False</field>
         </record>
-
-        <!-- ========================================================= -->
-        <!-- REGLAS DE INTENCIÓN: SALUDOS / DESPEDIDAS                -->
-        <!-- ========================================================= -->
-
+        <!--
+ ========================================================= 
+-->
+        <!--
+ REGLAS DE INTENCIÓN BASE / ACTUALIZADAS                  
+-->
+        <!--
+ ========================================================= 
+-->
         <record id="whatsapp_intent_rule_greeting_hola" model="whatsapp.intent.rule">
             <field name="name">Saludo - hola / menú técnico</field>
             <field name="active">True</field>
@@ -512,15 +393,15 @@ Con gusto {{partner_name}}.
             <field name="target_flow">none</field>
             <field name="response_template">main_menu_technical</field>
             <field name="match_type">regex</field>
-            <field name="pattern"><![CDATA[
-^\s*(hola|ola|buenas|buenos dias|buenos días|buen dia|buen día|buenas tardes|buenas noches|menu|menú|ayuda|opciones|inicio|informes)\s*$
-]]></field>
+            <field name="pattern">
+                ^\s*(hola|buenas|buenos dias|buenos días|buenas tardes|buenas
+                noches|menu|menú|ayuda|opciones|inicio)\s*$
+</field>
             <field name="applies_to">all</field>
             <field name="only_during_idle">True</field>
             <field name="stop_flow">False</field>
             <field name="allow_ai_after">False</field>
         </record>
-
         <record id="whatsapp_intent_rule_greeting_buenos_dias" model="whatsapp.intent.rule">
             <field name="name">Saludo - buenos días / menú técnico</field>
             <field name="active">True</field>
@@ -531,15 +412,14 @@ Con gusto {{partner_name}}.
             <field name="target_flow">none</field>
             <field name="response_template">main_menu_technical</field>
             <field name="match_type">regex</field>
-            <field name="pattern"><![CDATA[
-^\s*(buenos dias|buenos días|buen dia|buen día|buenas tardes|buenas noches)\s*$
-]]></field>
+            <field name="pattern">
+                ^\s*(buenos dias|buenos días|buen dia|buen día)\s*$
+</field>
             <field name="applies_to">all</field>
             <field name="only_during_idle">True</field>
             <field name="stop_flow">False</field>
             <field name="allow_ai_after">False</field>
         </record>
-
         <record id="whatsapp_intent_rule_thanks" model="whatsapp.intent.rule">
             <field name="name">Agradecimiento / gracias</field>
             <field name="active">True</field>
@@ -550,38 +430,176 @@ Con gusto {{partner_name}}.
             <field name="target_flow">none</field>
             <field name="response_template">thanks_reply</field>
             <field name="match_type">regex</field>
-            <field name="pattern"><![CDATA[
-^\s*(gracias|muchas gracias|ok gracias|listo gracias|perfecto gracias|ya gracias|agradecido|te agradezco|muy amable|ok|listo|perfecto)\s*$
-]]></field>
+            <field name="pattern">^\s*(gracias|muchas gracias|ok gracias|listo gracias|perfecto
+                gracias|ya gracias|agradecido|te agradezco)\s*$</field>
             <field name="applies_to">all</field>
             <field name="only_during_idle">True</field>
             <field name="stop_flow">True</field>
             <field name="allow_ai_after">False</field>
         </record>
-
-        <record id="whatsapp_intent_rule_goodbye" model="whatsapp.intent.rule">
-            <field name="name">Despedida / cerrar conversación</field>
+        <record id="whatsapp_intent_rule_toner" model="whatsapp.intent.rule">
+            <field name="name">Solicitud de tóner / suministros</field>
             <field name="active">True</field>
-            <field name="sequence">56</field>
-            <field name="priority">95</field>
-            <field name="intent">goodbye</field>
+            <field name="sequence">10</field>
+            <field name="priority">96</field>
+            <field name="intent">toner</field>
+            <field name="action">start_flow_toner</field>
+            <field name="target_flow">toner</field>
+            <field name="match_type">regex</field>
+            <field name="pattern">
+                toner|tóner|cartucho|suministro|tinta|cilindro|drum|revelador|developer|tambor|unidad
+                de imagen|me falta toner|necesito toner|solicitar toner|pedir toner|quiero
+                toner|toner negro|toner cyan|toner cian|toner magenta|toner amarillo|cmyk
+</field>
+            <field name="applies_to">all</field>
+            <field name="requires_registered">True</field>
+            <field name="requires_company">True</field>
+            <field name="only_during_idle">True</field>
+            <field name="stop_flow">False</field>
+            <field name="allow_ai_after">False</field>
+        </record>
+        <record id="whatsapp_intent_rule_service" model="whatsapp.intent.rule">
+            <field name="name">Servicio técnico general</field>
+            <field name="active">True</field>
+            <field name="sequence">20</field>
+            <field name="priority">88</field>
+            <field name="intent">onsite_service</field>
+            <field name="action">start_flow_onsite</field>
+            <field name="target_flow">onsite</field>
+            <field name="match_type">regex</field>
+            <field name="pattern">
+                servicio|soporte tecnico|soporte
+                técnico|tecnico|técnico|averia|avería|falla|mantenimiento|reparacion|reparación|visita
+                tecnica|visita técnica|revision|revisión
+</field>
+            <field name="applies_to">all</field>
+            <field name="requires_registered">True</field>
+            <field name="requires_company">True</field>
+            <field name="only_during_idle">True</field>
+            <field name="stop_flow">False</field>
+            <field name="allow_ai_after">False</field>
+        </record>
+        <record id="whatsapp_intent_rule_scanner" model="whatsapp.intent.rule">
+            <field name="name">Escáner / configuración remota</field>
+            <field name="active">True</field>
+            <field name="sequence">30</field>
+            <field name="priority">92</field>
+            <field name="intent">remote_service</field>
+            <field name="action">start_flow_remote</field>
+            <field name="target_flow">remote</field>
+            <field name="match_type">regex</field>
+            <field name="pattern">
+                scanner|escáner|escaner|scan|correo|carpeta|configuracion|configuración|no
+                escanea|no llega al correo|carpeta compartida|scan to folder|scan to
+                email|smb|driver|instalar driver|configurar impresora|anydesk|remoto|conexion
+                remota|conexión remota|teamviewer|ip impresora|ip de impresora|no conecta|no puedo
+                imprimir desde mi pc|no imprime desde pc|windows|mac|red|wifi|wi-fi
+</field>
+            <field name="applies_to">all</field>
+            <field name="requires_registered">True</field>
+            <field name="requires_company">True</field>
+            <field name="only_during_idle">True</field>
+            <field name="stop_flow">False</field>
+            <field name="allow_ai_after">False</field>
+        </record>
+        <record id="whatsapp_intent_rule_billing" model="whatsapp.intent.rule">
+            <field name="name">Facturación / pagos / administración</field>
+            <field name="active">True</field>
+            <field name="sequence">40</field>
+            <field name="priority">84</field>
+            <field name="intent">billing</field>
             <field name="action">reply</field>
             <field name="target_flow">none</field>
-            <field name="response_template">goodbye_reply</field>
+            <field name="response_template">billing_contact</field>
             <field name="match_type">regex</field>
-            <field name="pattern"><![CDATA[
-^\s*(chau|chao|adios|adiós|hasta luego|nos vemos|bye|buen dia|buen día|que tenga buen dia|que tenga buen día|eso es todo|nada mas|nada más)\s*$
-]]></field>
+            <field name="pattern">
+                factura|facturación|facturacion|boleta|recibo|comprobante|pago|deuda|deposito|depósito|transferencia|estado
+                de cuenta|detraccion|detracción|guia|guía|orden de
+                compra|oc|retencion|retención|credito|crédito|cobranza
+</field>
+            <field name="applies_to">all</field>
+            <field name="requires_registered">False</field>
+            <field name="requires_company">False</field>
+            <field name="only_during_idle">True</field>
+            <field name="stop_flow">False</field>
+            <field name="allow_ai_after">False</field>
+        </record>
+        <record id="whatsapp_intent_rule_sales" model="whatsapp.intent.rule">
+            <field name="name">Ventas / compra / alquiler de equipos</field>
+            <field name="active">True</field>
+            <field name="sequence">50</field>
+            <field name="priority">86</field>
+            <field name="intent">sales</field>
+            <field name="action">reply</field>
+            <field name="target_flow">none</field>
+            <field name="response_template">sales_contact</field>
+            <field name="match_type">regex</field>
+            <field name="pattern">
+                comprar|compra|venta|vender|cotizar|cotizacion|cotización|precio|proforma|alquiler|alquilar|rentar|renta|maquina|máquina|fotocopiadora|copiadora|impresora|multifuncional|equipo
+                nuevo|equipo color|equipo blanco y negro|contrato|renovar
+                contrato|renovacion|renovación
+</field>
+            <field name="applies_to">all</field>
+            <field name="requires_registered">False</field>
+            <field name="requires_company">False</field>
+            <field name="only_during_idle">True</field>
+            <field name="stop_flow">False</field>
+            <field name="allow_ai_after">False</field>
+        </record>
+        <record id="whatsapp_intent_rule_human" model="whatsapp.intent.rule">
+            <field name="name">Solicita técnico / asesor humano</field>
+            <field name="active">True</field>
+            <field name="sequence">60</field>
+            <field name="priority">97</field>
+            <field name="intent">human</field>
+            <field name="action">handoff</field>
+            <field name="target_flow">none</field>
+            <field name="match_type">regex</field>
+            <field name="pattern">
+                asesor|humano|persona|operador|agente|tecnico humano|técnico humano|hablar con
+                tecnico|hablar con técnico|quiero un tecnico|quiero un
+                técnico|llamenme|llámenme|contactenme|contáctenme|atiendeme|atiéndeme|urgente|emergencia
+</field>
             <field name="applies_to">all</field>
             <field name="only_during_idle">True</field>
             <field name="stop_flow">True</field>
             <field name="allow_ai_after">False</field>
         </record>
-
-        <!-- ========================================================= -->
-        <!-- REGLAS DE INTENCIÓN: OPCIONES NUMÉRICAS                  -->
-        <!-- ========================================================= -->
-
+        <record id="whatsapp_intent_rule_dni" model="whatsapp.intent.rule">
+            <field name="name">Detectar DNI</field>
+            <field name="active">True</field>
+            <field name="sequence">70</field>
+            <field name="priority">85</field>
+            <field name="intent">dni</field>
+            <field name="action">ask_ruc</field>
+            <field name="match_type">regex</field>
+            <field name="pattern">^\s*\d{8}\s*$</field>
+            <field name="applies_to">new</field>
+            <field name="stop_flow">True</field>
+            <field name="allow_ai_after">False</field>
+        </record>
+        <record id="whatsapp_intent_rule_ruc" model="whatsapp.intent.rule">
+            <field name="name">Detectar RUC</field>
+            <field name="active">True</field>
+            <field name="sequence">80</field>
+            <field name="priority">85</field>
+            <field name="intent">ruc</field>
+            <field name="action">ai</field>
+            <field name="match_type">regex</field>
+            <field name="pattern">^\s*\d{11}\s*$</field>
+            <field name="applies_to">new</field>
+            <field name="stop_flow">True</field>
+            <field name="allow_ai_after">False</field>
+        </record>
+        <!--
+ ========================================================= 
+-->
+        <!--
+ REGLAS NUEVAS COMPLEMENTARIAS                            
+-->
+        <!--
+ ========================================================= 
+-->
         <record id="whatsapp_intent_rule_menu_option_1_toner" model="whatsapp.intent.rule">
             <field name="name">Menú opción 1 - Tóner</field>
             <field name="active">True</field>
@@ -591,9 +609,7 @@ Con gusto {{partner_name}}.
             <field name="action">start_flow_toner</field>
             <field name="target_flow">toner</field>
             <field name="match_type">regex</field>
-            <field name="pattern"><![CDATA[
-^\s*(1|uno|opcion 1|opción 1|numero 1|número 1)\s*$
-]]></field>
+            <field name="pattern">^\s*(1|uno|opcion 1|opción 1)\s*$</field>
             <field name="applies_to">registered</field>
             <field name="requires_registered">True</field>
             <field name="requires_company">True</field>
@@ -601,7 +617,6 @@ Con gusto {{partner_name}}.
             <field name="stop_flow">False</field>
             <field name="allow_ai_after">False</field>
         </record>
-
         <record id="whatsapp_intent_rule_menu_option_2_onsite" model="whatsapp.intent.rule">
             <field name="name">Menú opción 2 - Servicio técnico</field>
             <field name="active">True</field>
@@ -611,9 +626,7 @@ Con gusto {{partner_name}}.
             <field name="action">start_flow_onsite</field>
             <field name="target_flow">onsite</field>
             <field name="match_type">regex</field>
-            <field name="pattern"><![CDATA[
-^\s*(2|dos|opcion 2|opción 2|numero 2|número 2)\s*$
-]]></field>
+            <field name="pattern">^\s*(2|dos|opcion 2|opción 2)\s*$</field>
             <field name="applies_to">registered</field>
             <field name="requires_registered">True</field>
             <field name="requires_company">True</field>
@@ -621,7 +634,6 @@ Con gusto {{partner_name}}.
             <field name="stop_flow">False</field>
             <field name="allow_ai_after">False</field>
         </record>
-
         <record id="whatsapp_intent_rule_menu_option_3_remote" model="whatsapp.intent.rule">
             <field name="name">Menú opción 3 - Asistencia remota</field>
             <field name="active">True</field>
@@ -631,9 +643,7 @@ Con gusto {{partner_name}}.
             <field name="action">start_flow_remote</field>
             <field name="target_flow">remote</field>
             <field name="match_type">regex</field>
-            <field name="pattern"><![CDATA[
-^\s*(3|tres|opcion 3|opción 3|numero 3|número 3)\s*$
-]]></field>
+            <field name="pattern">^\s*(3|tres|opcion 3|opción 3)\s*$</field>
             <field name="applies_to">registered</field>
             <field name="requires_registered">True</field>
             <field name="requires_company">True</field>
@@ -641,7 +651,6 @@ Con gusto {{partner_name}}.
             <field name="stop_flow">False</field>
             <field name="allow_ai_after">False</field>
         </record>
-
         <record id="whatsapp_intent_rule_menu_option_4_human" model="whatsapp.intent.rule">
             <field name="name">Menú opción 4 - Hablar con técnico</field>
             <field name="active">True</field>
@@ -651,138 +660,48 @@ Con gusto {{partner_name}}.
             <field name="action">handoff</field>
             <field name="target_flow">none</field>
             <field name="match_type">regex</field>
-            <field name="pattern"><![CDATA[
-^\s*(4|cuatro|opcion 4|opción 4|numero 4|número 4)\s*$
-]]></field>
+            <field name="pattern">^\s*(4|cuatro|opcion 4|opción 4)\s*$</field>
             <field name="applies_to">all</field>
             <field name="only_during_idle">True</field>
             <field name="stop_flow">True</field>
             <field name="allow_ai_after">False</field>
         </record>
-
-        <!-- ========================================================= -->
-        <!-- REGLAS DE INTENCIÓN: TÓNER / SUMINISTROS                 -->
-        <!-- ========================================================= -->
-
-        <record id="whatsapp_intent_rule_toner" model="whatsapp.intent.rule">
-            <field name="name">Solicitud de tóner / suministros</field>
-            <field name="active">True</field>
-            <field name="sequence">110</field>
-            <field name="priority">96</field>
-            <field name="intent">toner</field>
-            <field name="action">start_flow_toner</field>
-            <field name="target_flow">toner</field>
-            <field name="match_type">regex</field>
-            <field name="pattern"><![CDATA[
-toner|tóner|tonners|cartucho|cartuchos|suministro|suministros|tinta|cilindro|drum|revelador|developer|tambor|unidad de imagen|unidad imagen|me falta toner|me falta tóner|necesito toner|necesito tóner|solicitar toner|solicitar tóner|pedir toner|pedir tóner|quiero toner|quiero tóner|toner negro|tóner negro|toner cyan|toner cian|toner magenta|toner amarillo|cmyk|cambio de toner|cambio de tóner|reponer toner|reponer tóner|sin toner|sin tóner|bajo toner|bajo tóner
-]]></field>
-            <field name="applies_to">all</field>
-            <field name="requires_registered">True</field>
-            <field name="requires_company">True</field>
-            <field name="only_during_idle">True</field>
-            <field name="stop_flow">False</field>
-            <field name="allow_ai_after">False</field>
-        </record>
-
         <record id="whatsapp_intent_rule_toner_contact_help" model="whatsapp.intent.rule">
             <field name="name">Tóner - contacto / no quiere formulario</field>
             <field name="active">True</field>
-            <field name="sequence">111</field>
+            <field name="sequence">110</field>
             <field name="priority">94</field>
             <field name="intent">toner</field>
             <field name="action">reply</field>
             <field name="target_flow">none</field>
             <field name="response_template">toner_contact_help</field>
             <field name="match_type">regex</field>
-            <field name="pattern"><![CDATA[
-no quiero formulario|no puedo llenar|no puedo completar|no deseo llenar|sin formulario|contacto toner|contacto tóner|numero toner|número tóner|telefono toner|teléfono tóner|area toner|área tóner|con quien veo toner|con quién veo tóner|a quien pido toner|a quién pido tóner
-]]></field>
+            <field name="pattern">
+                no quiero formulario|no puedo llenar|no puedo completar|no deseo llenar|sin
+                formulario|contacto toner|contacto tóner|numero toner|número tóner|telefono
+                toner|teléfono tóner|area toner|área tóner|con quien veo toner|con quién veo tóner
+</field>
             <field name="applies_to">all</field>
             <field name="only_during_idle">True</field>
             <field name="stop_flow">False</field>
             <field name="allow_ai_after">False</field>
         </record>
-
-        <!-- ========================================================= -->
-        <!-- REGLAS DE INTENCIÓN: FALLAS DE IMPRESIÓN / COPIA         -->
-        <!-- ========================================================= -->
-
-        <record id="whatsapp_intent_rule_print_not_printing" model="whatsapp.intent.rule">
-            <field name="name">No imprime / no puedo imprimir</field>
-            <field name="active">True</field>
-            <field name="sequence">120</field>
-            <field name="priority">97</field>
-            <field name="intent">onsite_service</field>
-            <field name="action">start_flow_onsite</field>
-            <field name="target_flow">onsite</field>
-            <field name="match_type">regex</field>
-            <field name="pattern"><![CDATA[
-no imprime|no puedo imprimir|no me imprime|no sale impresion|no sale impresión|no imprime nada|no sale nada|manda a imprimir y no sale|envio a imprimir y no sale|envío a imprimir y no sale|la impresora no imprime|la copiadora no imprime|la maquina no imprime|la máquina no imprime|no imprime desde mi pc|no imprime desde pc|no imprime desde computadora|queda en cola|cola de impresion|cola de impresión|documento en cola|trabajo detenido|impresion detenida|impresión detenida|error al imprimir|no responde al imprimir
-]]></field>
-            <field name="applies_to">all</field>
-            <field name="requires_registered">True</field>
-            <field name="requires_company">True</field>
-            <field name="only_during_idle">True</field>
-            <field name="stop_flow">False</field>
-            <field name="allow_ai_after">False</field>
-        </record>
-
-        <record id="whatsapp_intent_rule_copy_not_copying" model="whatsapp.intent.rule">
-            <field name="name">No copia / no puedo sacar copias</field>
-            <field name="active">True</field>
-            <field name="sequence">121</field>
-            <field name="priority">96</field>
-            <field name="intent">onsite_service</field>
-            <field name="action">start_flow_onsite</field>
-            <field name="target_flow">onsite</field>
-            <field name="match_type">regex</field>
-            <field name="pattern"><![CDATA[
-no copia|no puedo copiar|no puedo sacar copia|no puedo sacar copias|no fotocopia|no puedo fotocopiar|la copiadora no copia|la maquina no copia|la máquina no copia|no sale copia|no salen copias|copia en blanco|sale hoja en blanco|sale blanco|copia mal|fotocopia mal
-]]></field>
-            <field name="applies_to">all</field>
-            <field name="requires_registered">True</field>
-            <field name="requires_company">True</field>
-            <field name="only_during_idle">True</field>
-            <field name="stop_flow">False</field>
-            <field name="allow_ai_after">False</field>
-        </record>
-
-        <record id="whatsapp_intent_rule_print_quality_issue" model="whatsapp.intent.rule">
-            <field name="name">Calidad de impresión / rayas / manchas</field>
-            <field name="active">True</field>
-            <field name="sequence">122</field>
-            <field name="priority">95</field>
-            <field name="intent">onsite_service</field>
-            <field name="action">start_flow_onsite</field>
-            <field name="target_flow">onsite</field>
-            <field name="match_type">regex</field>
-            <field name="pattern"><![CDATA[
-imprime mal|copia mal|sale borroso|borroso|sale con rayas|imprime con rayas|rayas|lineas|líneas|manchas|manchado|sale manchado|sale sucio|imprime sucio|copia sucia|fondo gris|sale gris|sale muy claro|sale claro|impresion clara|impresión clara|copia clara|sale oscuro|sale muy oscuro|impresion oscura|impresión oscura|copia oscura|doble imagen|imagen doble|fantasma|baja calidad|mala calidad|no fija toner|no fija tóner|se borra la impresion|se borra la impresión|sale corrido|colores mal|color mal|no sale color|no imprime color|descuadrado|desalineado
-]]></field>
-            <field name="applies_to">all</field>
-            <field name="requires_registered">True</field>
-            <field name="requires_company">True</field>
-            <field name="only_during_idle">True</field>
-            <field name="stop_flow">False</field>
-            <field name="allow_ai_after">False</field>
-        </record>
-
-        <!-- ========================================================= -->
-        <!-- REGLAS DE INTENCIÓN: ATASCOS / PAPEL / BANDEJAS          -->
-        <!-- ========================================================= -->
-
         <record id="whatsapp_intent_rule_onsite_machine_fault" model="whatsapp.intent.rule">
             <field name="name">Falla máquina - servicio presencial</field>
             <field name="active">True</field>
-            <field name="sequence">130</field>
+            <field name="sequence">120</field>
             <field name="priority">95</field>
             <field name="intent">onsite_service</field>
             <field name="action">start_flow_onsite</field>
             <field name="target_flow">onsite</field>
             <field name="match_type">regex</field>
-            <field name="pattern"><![CDATA[
-no enciende|no prende|no arranca|apagada|pantalla negra|sin energia|sin energía|sin corriente|se apaga|se reinicia|reinicia|se cuelga|colgada|bloqueada|no responde|pantalla congelada|sale codigo|sale código|codigo de error|código de error|marca error|mensaje de error|error sc|sc[0-9]+|e[0-9]+|llamar tecnico|llamar técnico|mantenimiento correctivo|requiere tecnico|requiere técnico
-]]></field>
+            <field name="pattern">
+                no enciende|no prende|no arranca|apagada|pantalla negra|sin energia|sin energía|se
+                traba|traba papel|se atasca|atasco|atascado|papel atascado|atasco de papel|sale
+                codigo|sale código|codigo de error|código de error|marca error|error
+                sc|sc[0-9]+|llamar tecnico|llamar técnico|mantenimiento correctivo|requiere
+                tecnico|requiere técnico
+</field>
             <field name="applies_to">all</field>
             <field name="requires_registered">True</field>
             <field name="requires_company">True</field>
@@ -790,19 +709,43 @@ no enciende|no prende|no arranca|apagada|pantalla negra|sin energia|sin energía
             <field name="stop_flow">False</field>
             <field name="allow_ai_after">False</field>
         </record>
-
+        <record id="whatsapp_intent_rule_print_quality_issue" model="whatsapp.intent.rule">
+            <field name="name">Problema de impresión / calidad</field>
+            <field name="active">True</field>
+            <field name="sequence">130</field>
+            <field name="priority">93</field>
+            <field name="intent">printer_issue</field>
+            <field name="action">start_flow_onsite</field>
+            <field name="target_flow">onsite</field>
+            <field name="match_type">regex</field>
+            <field name="pattern">
+                no imprime|no sale impresion|no sale impresión|imprime mal|sale
+                borroso|borroso|rayas|lineas|líneas|manchas|manchado|fondo gris|sale blanco|hoja en
+                blanco|impresion clara|impresión clara|impresion oscura|impresión oscura|doble
+                imagen|arruga papel|papel arrugado|imprime sucio|sale sucio|copia sucia|copia
+                clara|copia oscura|baja calidad|mala calidad|no copia|no fotocopia
+</field>
+            <field name="applies_to">all</field>
+            <field name="requires_registered">True</field>
+            <field name="requires_company">True</field>
+            <field name="only_during_idle">True</field>
+            <field name="stop_flow">False</field>
+            <field name="allow_ai_after">False</field>
+        </record>
         <record id="whatsapp_intent_rule_paper_tray_issue" model="whatsapp.intent.rule">
             <field name="name">Problema papel / bandejas / alimentador</field>
             <field name="active">True</field>
             <field name="sequence">131</field>
-            <field name="priority">95</field>
-            <field name="intent">onsite_service</field>
+            <field name="priority">93</field>
+            <field name="intent">printer_issue</field>
             <field name="action">start_flow_onsite</field>
             <field name="target_flow">onsite</field>
             <field name="match_type">regex</field>
-            <field name="pattern"><![CDATA[
-se traba|traba papel|se atasca|atasco|atascado|papel atascado|atasco de papel|papel trabado|papel atorado|papel se queda|se queda el papel|no jala papel|no toma papel|no agarra papel|no alimenta papel|bandeja|cassette|casete|alimentador|adf|duplex|dúplex|atasco duplex|atasco dúplex|papel arrugado|arruga papel|papel se rompe|rompe papel|sensor de papel|sin papel aunque tiene papel|marca papel|marca bandeja|no reconoce bandeja
-]]></field>
+            <field name="pattern">
+                no jala papel|no toma papel|no agarra
+                papel|bandeja|cassette|casete|alimentador|adf|duplex|dúplex|se queda el papel|papel
+                se rompe|papel arrugado|papel trabado|atasco duplex|atasco dúplex
+</field>
             <field name="applies_to">all</field>
             <field name="requires_registered">True</field>
             <field name="requires_company">True</field>
@@ -810,86 +753,19 @@ se traba|traba papel|se atasca|atasco|atascado|papel atascado|atasco de papel|pa
             <field name="stop_flow">False</field>
             <field name="allow_ai_after">False</field>
         </record>
-
-        <!-- ========================================================= -->
-        <!-- REGLAS DE INTENCIÓN: ESCÁNER / RED / REMOTO              -->
-        <!-- ========================================================= -->
-
-        <record id="whatsapp_intent_rule_scanner" model="whatsapp.intent.rule">
-            <field name="name">Escáner / configuración remota</field>
-            <field name="active">True</field>
-            <field name="sequence">140</field>
-            <field name="priority">96</field>
-            <field name="intent">remote_service</field>
-            <field name="action">start_flow_remote</field>
-            <field name="target_flow">remote</field>
-            <field name="match_type">regex</field>
-            <field name="pattern"><![CDATA[
-scanner|escáner|escaner|scan|escanear|no escanea|no puedo escanear|no manda escaneo|no envia escaneo|no envía escaneo|no llega al correo|no llega correo|correo|email|mail|smtp|carpeta|carpeta compartida|scan to folder|scan to email|smb|ftp|configuracion|configuración|configurar escaner|configurar escáner|libreta de direcciones|direccion de correo|dirección de correo|destino de escaneo
-]]></field>
-            <field name="applies_to">all</field>
-            <field name="requires_registered">True</field>
-            <field name="requires_company">True</field>
-            <field name="only_during_idle">True</field>
-            <field name="stop_flow">False</field>
-            <field name="allow_ai_after">False</field>
-        </record>
-
-        <record id="whatsapp_intent_rule_remote_pc_driver" model="whatsapp.intent.rule">
-            <field name="name">PC / driver / instalación remota</field>
-            <field name="active">True</field>
-            <field name="sequence">141</field>
-            <field name="priority">95</field>
-            <field name="intent">remote_service</field>
-            <field name="action">start_flow_remote</field>
-            <field name="target_flow">remote</field>
-            <field name="match_type">regex</field>
-            <field name="pattern"><![CDATA[
-driver|drivers|instalar driver|instalar impresora|configurar impresora|agregar impresora|instalar copiadora|configurar copiadora|mi pc no imprime|mi computadora no imprime|laptop no imprime|windows|mac|macbook|red|wifi|wi-fi|ip impresora|ip de impresora|no conecta|sin conexion|sin conexión|no reconoce impresora|impresora offline|impresora fuera de linea|fuera de línea|offline|puerto tcp|puerto ip|spooler|cola bloqueada|anydesk|teamviewer|remoto|conexion remota|conexión remota|asistencia remota
-]]></field>
-            <field name="applies_to">all</field>
-            <field name="requires_registered">True</field>
-            <field name="requires_company">True</field>
-            <field name="only_during_idle">True</field>
-            <field name="stop_flow">False</field>
-            <field name="allow_ai_after">False</field>
-        </record>
-
-        <record id="whatsapp_intent_rule_remote_contact_help" model="whatsapp.intent.rule">
-            <field name="name">Asistencia remota - contacto / AnyDesk</field>
-            <field name="active">True</field>
-            <field name="sequence">142</field>
-            <field name="priority">94</field>
-            <field name="intent">remote_service</field>
-            <field name="action">reply</field>
-            <field name="target_flow">none</field>
-            <field name="response_template">remote_contact_help</field>
-            <field name="match_type">regex</field>
-            <field name="pattern"><![CDATA[
-contacto soporte remoto|numero soporte remoto|número soporte remoto|telefono soporte remoto|teléfono soporte remoto|anydesk|teamviewer|codigo anydesk|código anydesk|id anydesk|id de anydesk|asistencia remota urgente
-]]></field>
-            <field name="applies_to">all</field>
-            <field name="only_during_idle">True</field>
-            <field name="stop_flow">False</field>
-            <field name="allow_ai_after">False</field>
-        </record>
-
-        <!-- ========================================================= -->
-        <!-- REGLAS DE INTENCIÓN: CONTADORES / LECTURAS               -->
-        <!-- ========================================================= -->
-
         <record id="whatsapp_intent_rule_counters_reading" model="whatsapp.intent.rule">
             <field name="name">Contadores / lectura de equipo</field>
             <field name="active">True</field>
-            <field name="sequence">150</field>
+            <field name="sequence">145</field>
             <field name="priority">88</field>
-            <field name="intent">onsite_service</field>
+            <field name="intent">service</field>
             <field name="action">start_flow_onsite</field>
             <field name="target_flow">onsite</field>
             <field name="match_type">regex</field>
-            <field name="pattern"><![CDATA[
-contador|contadores|lectura|lecturas|counter|meter|meter reading|reporte de contador|contador bn|contador blanco y negro|contador color|contador full color|lectura mensual|enviar contador|registrar contador|tomar contador|contador de maquina|contador de máquina
-]]></field>
+            <field name="pattern">
+                contador|contadores|lectura|lecturas|counter|meter|meter reading|reporte de
+                contador|contador bn|contador color
+</field>
             <field name="applies_to">all</field>
             <field name="requires_registered">True</field>
             <field name="requires_company">True</field>
@@ -897,155 +773,5 @@ contador|contadores|lectura|lecturas|counter|meter|meter reading|reporte de cont
             <field name="stop_flow">False</field>
             <field name="allow_ai_after">False</field>
         </record>
-
-        <!-- ========================================================= -->
-        <!-- REGLAS DE INTENCIÓN: SERVICIO TÉCNICO GENERAL            -->
-        <!-- ========================================================= -->
-
-        <record id="whatsapp_intent_rule_service" model="whatsapp.intent.rule">
-            <field name="name">Servicio técnico general</field>
-            <field name="active">True</field>
-            <field name="sequence">160</field>
-            <field name="priority">88</field>
-            <field name="intent">onsite_service</field>
-            <field name="action">start_flow_onsite</field>
-            <field name="target_flow">onsite</field>
-            <field name="match_type">regex</field>
-            <field name="pattern"><![CDATA[
-servicio|servicio tecnico|servicio técnico|soporte tecnico|soporte técnico|tecnico|técnico|averia|avería|falla|fallando|problema|mantenimiento|reparacion|reparación|visita tecnica|visita técnica|revision|revisión|diagnostico|diagnóstico|atencion tecnica|atención técnica|maquina malograda|máquina malograda|copiadora malograda|impresora malograda|equipo malogrado|equipo fallando
-]]></field>
-            <field name="applies_to">all</field>
-            <field name="requires_registered">True</field>
-            <field name="requires_company">True</field>
-            <field name="only_during_idle">True</field>
-            <field name="stop_flow">False</field>
-            <field name="allow_ai_after">False</field>
-        </record>
-
-        <!-- ========================================================= -->
-        <!-- REGLAS DE INTENCIÓN: FACTURACIÓN / VENTAS                -->
-        <!-- ========================================================= -->
-
-        <record id="whatsapp_intent_rule_billing" model="whatsapp.intent.rule">
-            <field name="name">Facturación / pagos / administración</field>
-            <field name="active">True</field>
-            <field name="sequence">170</field>
-            <field name="priority">84</field>
-            <field name="intent">billing</field>
-            <field name="action">reply</field>
-            <field name="target_flow">none</field>
-            <field name="response_template">billing_contact</field>
-            <field name="match_type">regex</field>
-            <field name="pattern"><![CDATA[
-factura|facturación|facturacion|boleta|recibo|comprobante|pago|deuda|deposito|depósito|transferencia|estado de cuenta|detraccion|detracción|guia|guía|guia de remision|guía de remisión|orden de compra|oc|retencion|retención|credito|crédito|cobranza|nota de credito|nota de crédito|nota de debito|nota de débito|constancia|voucher
-]]></field>
-            <field name="applies_to">all</field>
-            <field name="requires_registered">False</field>
-            <field name="requires_company">False</field>
-            <field name="only_during_idle">True</field>
-            <field name="stop_flow">False</field>
-            <field name="allow_ai_after">False</field>
-        </record>
-
-        <record id="whatsapp_intent_rule_sales" model="whatsapp.intent.rule">
-            <field name="name">Ventas / compra / alquiler de equipos</field>
-            <field name="active">True</field>
-            <field name="sequence">180</field>
-            <field name="priority">86</field>
-            <field name="intent">sales</field>
-            <field name="action">reply</field>
-            <field name="target_flow">none</field>
-            <field name="response_template">sales_contact</field>
-            <field name="match_type">regex</field>
-            <field name="pattern"><![CDATA[
-comprar|compra|venta|vender|cotizar|cotizacion|cotización|precio|precios|proforma|alquiler|alquilar|rentar|renta|maquina|máquina|fotocopiadora|copiadora|impresora|multifuncional|equipo nuevo|equipo color|equipo blanco y negro|contrato|renovar contrato|renovacion|renovación|leasing|alquilo|alquilan|venden equipos|venta de equipos|alquiler de equipos
-]]></field>
-            <field name="applies_to">all</field>
-            <field name="requires_registered">False</field>
-            <field name="requires_company">False</field>
-            <field name="only_during_idle">True</field>
-            <field name="stop_flow">False</field>
-            <field name="allow_ai_after">False</field>
-        </record>
-
-        <!-- ========================================================= -->
-        <!-- REGLAS DE INTENCIÓN: HUMANO / ASESOR                     -->
-        <!-- ========================================================= -->
-
-        <record id="whatsapp_intent_rule_human" model="whatsapp.intent.rule">
-            <field name="name">Solicita técnico / asesor humano</field>
-            <field name="active">True</field>
-            <field name="sequence">190</field>
-            <field name="priority">97</field>
-            <field name="intent">human</field>
-            <field name="action">handoff</field>
-            <field name="target_flow">none</field>
-            <field name="match_type">regex</field>
-            <field name="pattern"><![CDATA[
-asesor|humano|persona|operador|agente|tecnico humano|técnico humano|hablar con tecnico|hablar con técnico|quiero un tecnico|quiero un técnico|llamenme|llámenme|contactenme|contáctenme|atiendeme|atiéndeme|urgente|emergencia|necesito ayuda urgente|quiero hablar con alguien|quiero hablar con una persona|pasame con alguien|pásame con alguien|derivar asesor|derivar con asesor|supervisor
-]]></field>
-            <field name="applies_to">all</field>
-            <field name="only_during_idle">True</field>
-            <field name="stop_flow">True</field>
-            <field name="allow_ai_after">False</field>
-        </record>
-
-        <!-- ========================================================= -->
-        <!-- REGLAS DE INTENCIÓN: DNI / RUC                           -->
-        <!-- ========================================================= -->
-
-        <record id="whatsapp_intent_rule_dni" model="whatsapp.intent.rule">
-            <field name="name">Detectar DNI</field>
-            <field name="active">True</field>
-            <field name="sequence">200</field>
-            <field name="priority">85</field>
-            <field name="intent">dni</field>
-            <field name="action">ask_ruc</field>
-            <field name="match_type">regex</field>
-            <field name="pattern"><![CDATA[
-^\s*\d{8}\s*$
-]]></field>
-            <field name="applies_to">new</field>
-            <field name="stop_flow">True</field>
-            <field name="allow_ai_after">False</field>
-        </record>
-
-        <record id="whatsapp_intent_rule_ruc" model="whatsapp.intent.rule">
-            <field name="name">Detectar RUC</field>
-            <field name="active">True</field>
-            <field name="sequence">210</field>
-            <field name="priority">85</field>
-            <field name="intent">ruc</field>
-            <field name="action">ai</field>
-            <field name="match_type">regex</field>
-            <field name="pattern"><![CDATA[
-^\s*\d{11}\s*$
-]]></field>
-            <field name="applies_to">new</field>
-            <field name="stop_flow">True</field>
-            <field name="allow_ai_after">False</field>
-        </record>
-
-        <!-- ========================================================= -->
-        <!-- REGLA FINAL: MENÚ SI NO ENTIENDE                         -->
-        <!-- ========================================================= -->
-
-        <record id="whatsapp_intent_rule_unknown_menu" model="whatsapp.intent.rule">
-    <field name="name">No entendido - mostrar menú técnico</field>
-    <field name="active">True</field>
-    <field name="sequence">999</field>
-    <field name="priority">10</field>
-    <field name="intent">unknown</field>
-    <field name="action">reply</field>
-    <field name="target_flow">none</field>
-    <field name="response_template">unknown_with_menu</field>
-    <field name="match_type">regex</field>
-    <field name="pattern">.*</field>
-    <field name="applies_to">all</field>
-    <field name="only_during_idle">True</field>
-    <field name="stop_flow">False</field>
-    <field name="allow_ai_after">False</field>
-</record>
-
     </data>
 </odoo>

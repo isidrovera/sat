@@ -2,7 +2,7 @@
 
 import logging
 import re
-import unicodedata
+
 from odoo import api, fields, models, _
 from odoo.exceptions import ValidationError
 
@@ -298,73 +298,12 @@ class WhatsappIntentRule(models.Model):
                 raise ValidationError(_(
                     "El largo mínimo no puede ser mayor al largo máximo (regla: %s)."
                 ) % rule.name)
-    @api.constrains("action", "response_template")
-    def _check_response_template_exists(self):
-        for rule in self:
-            if rule.action != "reply":
-                continue
 
-            if not rule.response_template:
-                raise ValidationError(_(
-                    "La regla '%s' tiene acción Responder, pero no tiene plantilla de respuesta."
-                ) % rule.name)
-
-            template = self.env["whatsapp.template"].search([
-                ("name", "=", rule.response_template),
-                ("active", "=", True),
-            ], limit=1)
-
-            if not template:
-                raise ValidationError(_(
-                    "La regla '%s' usa la plantilla '%s', pero esa plantilla no existe o está inactiva."
-                ) % (rule.name, rule.response_template))
-    @api.constrains("action", "target_flow")
-    def _check_action_target_flow(self):
-        expected_flow_by_action = {
-            "start_flow_toner": "toner",
-            "start_flow_onsite": "onsite",
-            "start_flow_remote": "remote",
-        }
-
-        for rule in self:
-            expected_flow = expected_flow_by_action.get(rule.action)
-            if expected_flow and rule.target_flow != expected_flow:
-                raise ValidationError(_(
-                    "La regla '%s' tiene acción '%s', pero el flujo destino debe ser '%s'."
-                ) % (rule.name, rule.action, expected_flow))
-
-            if rule.action in ("reply", "handoff", "ai", "ignore", "cancel_flow") and rule.target_flow not in ("none", False):
-                raise ValidationError(_(
-                    "La regla '%s' tiene acción '%s', por eso el flujo destino debe ser 'none'."
-                ) % (rule.name, rule.action))
     # ==========================================================
     # Helpers
     # ==========================================================
     def _normalize_text(self, text):
-        """
-        Normaliza mensajes de WhatsApp para mejorar la detección:
-        - Convierte a minúsculas.
-        - Elimina tildes.
-        - Limpia signos repetidos.
-        - Normaliza espacios.
-        - Mantiene números para DNI/RUC/opciones.
-        """
-        text = (text or "").strip().lower()
-
-        if not text:
-            return ""
-
-        # Quitar tildes: técnico -> tecnico, impresión -> impresion
-        text = unicodedata.normalize("NFD", text)
-        text = "".join(ch for ch in text if unicodedata.category(ch) != "Mn")
-
-        # Reemplazar signos por espacios, pero conservar letras, números y algunos símbolos útiles
-        text = re.sub(r"[^\w\s@./:-]", " ", text, flags=re.UNICODE)
-
-        # Normalizar espacios dobles
-        text = re.sub(r"\s+", " ", text).strip()
-
-        return text
+        return (text or "").strip().lower()
 
     def _get_applies_to_flows_list(self):
         self.ensure_one()
@@ -378,7 +317,7 @@ class WhatsappIntentRule(models.Model):
         if not message:
             return False
 
-        # Validar longitud del mensaje original
+        # Validar longitud del mensaje
         msg_len = len(message)
         if self.min_message_length > 0 and msg_len < self.min_message_length:
             return False
@@ -411,6 +350,7 @@ class WhatsappIntentRule(models.Model):
                 return message_cmp.endswith(pattern_cmp)
 
             if self.match_type == "word":
+                # Palabra completa con límites
                 pattern_escaped = re.escape(pattern_cmp)
                 return bool(re.search(
                     r"\b" + pattern_escaped + r"\b",
@@ -419,17 +359,12 @@ class WhatsappIntentRule(models.Model):
                 ))
 
             if self.match_type == "regex":
-                if self.case_sensitive:
-                    return bool(re.search(self.pattern, message or "", flags=regex_flags))
-
-                # Para regex sin sensibilidad a mayúsculas, también normalizamos el patrón.
-                # Así técnico/tecnico, impresión/impresion funcionan mejor.
-                return bool(re.search(pattern_cmp, message_cmp, flags=regex_flags))
+                return bool(re.search(self.pattern, message or "", flags=regex_flags))
 
         except Exception as e:
             _logger.exception(
-                "[WA-INTENT] Error matcheando regla id=%s name=%s pattern=%r message=%r error=%s",
-                self.id, self.name, self.pattern, message, str(e),
+                "[WA-INTENT] Error matcheando regla id=%s name=%s error=%s",
+                self.id, self.name, str(e),
             )
             return False
 
