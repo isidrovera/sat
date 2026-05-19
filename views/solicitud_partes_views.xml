@@ -125,6 +125,7 @@
                                    string="Teléfono"
                                    readonly="1"
                                    invisible="not tecnico_asignado_id"/>
+                            <field name="estado_origen_al_retirar" required="1"/>
                         </group>
 
                         <!-- Responsable de reposición: se define al crear -->

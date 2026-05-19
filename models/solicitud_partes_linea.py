@@ -106,22 +106,75 @@ class SolicitudPartesLinea(models.Model):
     def _confirmar_retiro(self):
         """
         Confirma el retiro de esta línea.
-        Solo puede llamarse si la solicitud está en estado 'approved'.
+
+        Al confirmar el primer retiro real, aplica el estado seleccionado
+        en la solicitud sobre la máquina origen:
+        - con_problemas
+        - partes
+
+        Si el estado ya fue aplicado por otra línea retirada anteriormente,
+        no vuelve a cambiarlo.
         """
         self.ensure_one()
 
+        solicitud = self.solicitud_id
+
+        _logger.info(
+            "[SolicitudPartesLinea][ConfirmarRetiro] Inicio linea=%s parte=%s estado=%s solicitud=%s solicitud_state=%s",
+            self.id,
+            self.parte,
+            self.estado,
+            solicitud.name if solicitud else False,
+            solicitud.state if solicitud else False,
+        )
+
         if self.estado != 'pendiente':
-            # Ya fue procesada, no hacer nada (idempotente)
+            _logger.info(
+                "[SolicitudPartesLinea][ConfirmarRetiro] Línea=%s ya procesada estado=%s. No se modifica.",
+                self.id,
+                self.estado,
+            )
             return
 
+        if not solicitud:
+            raise UserError(_('La línea no tiene solicitud asociada.'))
+
+        if solicitud.state != 'approved':
+            raise UserError(_(
+                'Solo se puede confirmar retiro cuando la solicitud está aprobada.'
+            ))
+
         self.write({
-            'estado':          'retirado',
-            'fecha_retiro_real': fields.Datetime.now(),
+            'estado':             'retirado',
+            'fecha_retiro_real':  fields.Datetime.now(),
         })
 
         _logger.info(
-            "Línea %s (%s) marcada como retirada — solicitud %s.",
-            self.id, self.parte, self.solicitud_id.name
+            "[SolicitudPartesLinea][ConfirmarRetiro] Línea=%s parte=%s marcada como retirada. Solicitud=%s",
+            self.id,
+            self.parte,
+            solicitud.name,
+        )
+
+        # Aplicar estado de máquina al primer retiro real.
+        solicitud._aplicar_estado_maquina_al_confirmar_retiro()
+
+        solicitud.message_post(
+            body=_(
+                "🔧 Parte retirada: <strong>%s</strong><br/>"
+                "Fecha de retiro: <strong>%s</strong>"
+            ) % (
+                self.parte,
+                fields.Datetime.now().strftime('%d/%m/%Y %H:%M'),
+            )
+        )
+
+        _logger.info(
+            "[SolicitudPartesLinea][ConfirmarRetiro] Fin linea=%s solicitud=%s estado_maquina=%s estado_aplicado=%s",
+            self.id,
+            solicitud.name,
+            solicitud.maquina_origen_id.estado_alquiler_id if solicitud.maquina_origen_id else False,
+            solicitud.estado_origen_aplicado_al_retirar,
         )
 
     # -------------------------------------------------------------------------

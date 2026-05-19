@@ -71,7 +71,41 @@ class SolicitudPartes(models.Model):
         ('replaced',  'Reemplazado'),
         ('rejected',  'Rechazado'),
     ], string='Estado', default='draft', tracking=True)
+        estado_origen_al_retirar = fields.Selection([
+        ('con_problemas', 'Pasar a Con Problemas'),
+        ('partes', 'Pasar a De Partes'),
+    ],
+        string='Estado de máquina al confirmar retiro',
+        required=True,
+        default='con_problemas',
+        tracking=True,
+        help=(
+            'Define a qué estado pasará la máquina origen cuando se confirme '
+            'el primer retiro real de partes.'
+        )
+    )
 
+    estado_origen_aplicado_al_retirar = fields.Boolean(
+        string='Estado aplicado por retiro',
+        readonly=True,
+        copy=False,
+        tracking=True,
+        help='Indica si ya se aplicó el cambio de estado de la máquina origen por retiro.'
+    )
+
+    fecha_estado_origen_aplicado = fields.Datetime(
+        string='Fecha aplicación estado por retiro',
+        readonly=True,
+        copy=False,
+        tracking=True
+    )
+
+    estado_origen_anterior_al_retirar = fields.Char(
+        string='Estado anterior al retiro',
+        readonly=True,
+        copy=False,
+        tracking=True
+    )
     # -------------------------------------------------------------------------
     # Tokens — uso único
     # -------------------------------------------------------------------------
@@ -246,6 +280,123 @@ class SolicitudPartes(models.Model):
         base_url = self._get_base_url()
         action_id = self.env.ref('sat.action_solicitud_partes').id
         return f"{base_url}/web#id={self.id}&view_type=form&model=solicitud.partes&action={action_id}"
+
+        def _get_estado_maquina_label(self, estado):
+        """Devuelve la etiqueta legible de un estado de alquiler."""
+        estados = dict(self.env['alquiler']._fields['estado_alquiler_id'].selection)
+        return estados.get(estado, estado or 'Sin estado')
+
+    def _aplicar_estado_maquina_al_confirmar_retiro(self):
+        """
+        Aplica el estado seleccionado a la máquina origen cuando se confirma
+        el primer retiro real de partes.
+
+        Esta función es idempotente:
+        - Si ya se aplicó una vez, no vuelve a cambiar la máquina.
+        - Evita mensajes duplicados en chatter.
+        - Deja trazabilidad del estado anterior y la fecha.
+        """
+        for record in self:
+            maquina = record.maquina_origen_id
+
+            if not maquina:
+                _logger.warning(
+                    "[SolicitudPartes][EstadoRetiro] Solicitud=%s sin máquina origen.",
+                    record.name
+                )
+                continue
+
+            if record.estado_origen_aplicado_al_retirar:
+                _logger.info(
+                    "[SolicitudPartes][EstadoRetiro] Estado ya aplicado. "
+                    "Solicitud=%s Maquina=%s EstadoActual=%s",
+                    record.name,
+                    maquina.display_name,
+                    maquina.estado_alquiler_id,
+                )
+                continue
+
+            estado_objetivo = record.estado_origen_al_retirar
+
+            if estado_objetivo not in ('con_problemas', 'partes'):
+                raise UserError(_(
+                    "Debe seleccionar un estado válido para la máquina origen "
+                    "al confirmar el retiro."
+                ))
+
+            estado_actual = maquina.estado_alquiler_id
+
+            _logger.info(
+                "[SolicitudPartes][EstadoRetiro] Aplicando estado por retiro. "
+                "Solicitud=%s Maquina=%s Serie=%s EstadoActual=%s EstadoObjetivo=%s",
+                record.name,
+                maquina.display_name,
+                maquina.serie,
+                estado_actual,
+                estado_objetivo,
+            )
+
+            if estado_actual == 'vendida':
+                raise UserError(_(
+                    "No se puede cambiar automáticamente el estado de una máquina vendida."
+                ))
+
+            estado_actual_label = record._get_estado_maquina_label(estado_actual)
+            estado_objetivo_label = record._get_estado_maquina_label(estado_objetivo)
+
+            if estado_actual != estado_objetivo:
+                maquina.write({
+                    'estado_alquiler_id': estado_objetivo,
+                })
+
+                mensaje = _(
+                    "🔄 Estado de máquina origen actualizado al confirmar retiro.<br/>"
+                    "Máquina: <strong>%s</strong><br/>"
+                    "Serie: <strong>%s</strong><br/>"
+                    "Estado anterior: <strong>%s</strong><br/>"
+                    "Estado nuevo: <strong>%s</strong>"
+                ) % (
+                    maquina.display_name,
+                    maquina.serie or '',
+                    estado_actual_label,
+                    estado_objetivo_label,
+                )
+
+                _logger.info(
+                    "[SolicitudPartes][EstadoRetiro] Máquina=%s Serie=%s cambió de %s a %s por solicitud=%s",
+                    maquina.id,
+                    maquina.serie,
+                    estado_actual,
+                    estado_objetivo,
+                    record.name,
+                )
+            else:
+                mensaje = _(
+                    "ℹ️ Retiro confirmado. La máquina origen ya estaba en el estado seleccionado.<br/>"
+                    "Máquina: <strong>%s</strong><br/>"
+                    "Serie: <strong>%s</strong><br/>"
+                    "Estado: <strong>%s</strong>"
+                ) % (
+                    maquina.display_name,
+                    maquina.serie or '',
+                    estado_objetivo_label,
+                )
+
+                _logger.info(
+                    "[SolicitudPartes][EstadoRetiro] Máquina=%s Serie=%s ya estaba en %s. Solicitud=%s",
+                    maquina.id,
+                    maquina.serie,
+                    estado_objetivo,
+                    record.name,
+                )
+
+            record.write({
+                'estado_origen_aplicado_al_retirar': True,
+                'fecha_estado_origen_aplicado': fields.Datetime.now(),
+                'estado_origen_anterior_al_retirar': estado_actual_label,
+            })
+
+            record.message_post(body=mensaje)
 
     def _enviar_email(self, template_xmlid, ctx=None):
         """
@@ -503,19 +654,90 @@ class SolicitudPartes(models.Model):
         _logger.info("Solicitud %s completada — retiro total.", self.name)
 
     def _completar_reposicion(self):
-        """Marca la solicitud como reemplazada (todas las partes repuestas)."""
+        """
+        Marca la solicitud como reemplazada cuando todas las partes fueron repuestas.
+
+        Regla:
+        - Si todas las partes están repuestas y en condición 'bueno',
+          la máquina vuelve a 'alquilada'.
+        - Si alguna parte quedó defectuosa, la máquina mantiene su estado actual
+          ('con_problemas' o 'partes').
+        """
         self.ensure_one()
+
+        _logger.info(
+            "[SolicitudPartes][CompletarReposicion] Inicio solicitud=%s state=%s todas_repuestas=%s maquina=%s estado_maquina=%s",
+            self.name,
+            self.state,
+            self.todas_repuestas,
+            self.maquina_origen_id.display_name if self.maquina_origen_id else False,
+            self.maquina_origen_id.estado_alquiler_id if self.maquina_origen_id else False,
+        )
+
+        if not self.todas_repuestas:
+            raise UserError(_('Todas las partes deben estar reemplazadas.'))
+
         self.write({
             'state':           'replaced',
             'reemplazado_por': self.env.user.id,
             'fecha_reemplazo': fields.Datetime.now(),
         })
-        if all(l.condicion == 'bueno' for l in self.parte_ids):
+
+        todas_buenas = all(l.condicion == 'bueno' for l in self.parte_ids)
+
+        _logger.info(
+            "[SolicitudPartes][CompletarReposicion] solicitud=%s todas_buenas=%s condiciones=%s",
+            self.name,
+            todas_buenas,
+            [(l.id, l.parte, l.condicion) for l in self.parte_ids],
+        )
+
+        if todas_buenas:
+            estado_anterior = self.maquina_origen_id.estado_alquiler_id
             self.maquina_origen_id.write({'estado_alquiler_id': 'alquilada'})
 
-        self.message_post(body="✅ Todas las partes repuestas.")
-        _logger.info("Solicitud %s — reposición completa.", self.name)
+            self.message_post(
+                body=_(
+                    "✅ Todas las partes fueron repuestas en buen estado.<br/>"
+                    "La máquina origen volvió a estado <strong>Alquilada</strong>.<br/>"
+                    "Estado anterior: <strong>%s</strong>"
+                ) % self._get_estado_maquina_label(estado_anterior)
+            )
 
+            _logger.info(
+                "[SolicitudPartes][CompletarReposicion] Máquina=%s Serie=%s volvió de %s a alquilada por solicitud=%s",
+                self.maquina_origen_id.id,
+                self.maquina_origen_id.serie,
+                estado_anterior,
+                self.name,
+            )
+        else:
+            self.message_post(
+                body=_(
+                    "⚠️ Todas las partes fueron repuestas, pero una o más quedaron "
+                    "en condición defectuosa. La máquina mantiene su estado actual: "
+                    "<strong>%s</strong>."
+                ) % self._get_estado_maquina_label(
+                    self.maquina_origen_id.estado_alquiler_id
+                )
+            )
+
+            _logger.info(
+                "[SolicitudPartes][CompletarReposicion] Máquina=%s Serie=%s mantiene estado=%s porque hay partes defectuosas. Solicitud=%s",
+                self.maquina_origen_id.id,
+                self.maquina_origen_id.serie,
+                self.maquina_origen_id.estado_alquiler_id,
+                self.name,
+            )
+
+        self.message_post(body="✅ Todas las partes repuestas.")
+
+        _logger.info(
+            "[SolicitudPartes][CompletarReposicion] Fin solicitud=%s state=%s estado_maquina=%s",
+            self.name,
+            self.state,
+            self.maquina_origen_id.estado_alquiler_id if self.maquina_origen_id else False,
+        )
     # -------------------------------------------------------------------------
     # Notificaciones WhatsApp
     # -------------------------------------------------------------------------
