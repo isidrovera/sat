@@ -71,7 +71,7 @@ class SolicitudPartes(models.Model):
         ('replaced',  'Reemplazado'),
         ('rejected',  'Rechazado'),
     ], string='Estado', default='draft', tracking=True)
-        estado_origen_al_retirar = fields.Selection([
+    estado_origen_al_retirar = fields.Selection([
         ('con_problemas', 'Pasar a Con Problemas'),
         ('partes', 'Pasar a De Partes'),
     ],
