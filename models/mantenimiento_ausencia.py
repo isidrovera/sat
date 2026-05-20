@@ -189,7 +189,13 @@ class MantenimientoTecnicoAusencia(models.Model):
         store=True,
         help='Se activa solo cuando es enfermedad y no tiene fecha fin.'
     )
-
+    evaluacion_administrativa = fields.Selection([
+        ('pendiente', 'Evaluar descuento o vacaciones'),
+        ('descuento', 'Corresponde descuento'),
+        ('cuenta_vacaciones', 'A cuenta de vacaciones'),
+        ('no_aplica', 'No aplica'),
+    ], string='Evaluación administrativa', default='pendiente', tracking=True,
+       help='Define si el permiso corresponde a descuento o si será tomado a cuenta de vacaciones. No aplica para salud.')
     active = fields.Boolean(
         string='Activo',
         default=True,
@@ -250,6 +256,9 @@ class MantenimientoTecnicoAusencia(models.Model):
                 rec.hora_inicio = 0.0
                 rec.hora_fin = 24.0
 
+                if not rec.evaluacion_administrativa or rec.evaluacion_administrativa == 'no_aplica':
+                    rec.evaluacion_administrativa = 'pendiente'
+
                 if rec.fecha_inicio and not rec.fecha_fin:
                     rec.fecha_fin = rec.fecha_inicio
 
@@ -257,6 +266,7 @@ class MantenimientoTecnicoAusencia(models.Model):
                 rec.dia_completo = True
                 rec.hora_inicio = 0.0
                 rec.hora_fin = 24.0
+                rec.evaluacion_administrativa = 'no_aplica'
 
                 if rec.fecha_inicio and not rec.fecha_fin:
                     rec.fecha_fin = rec.fecha_inicio
@@ -265,17 +275,20 @@ class MantenimientoTecnicoAusencia(models.Model):
                 rec.dia_completo = True
                 rec.hora_inicio = 0.0
                 rec.hora_fin = 24.0
+                rec.evaluacion_administrativa = 'no_aplica'
 
             elif rec.tipo == 'descanso_medico':
                 rec.dia_completo = True
                 rec.hora_inicio = 0.0
                 rec.hora_fin = 24.0
+                rec.evaluacion_administrativa = 'no_aplica'
 
                 if rec.fecha_inicio and not rec.fecha_fin:
                     rec.fecha_fin = rec.fecha_inicio
 
             elif rec.tipo == 'capacitacion':
                 rec.dia_completo = False
+                rec.evaluacion_administrativa = 'no_aplica'
 
                 if not rec.hora_inicio:
                     rec.hora_inicio = 8.0
@@ -287,9 +300,10 @@ class MantenimientoTecnicoAusencia(models.Model):
                     rec.fecha_fin = rec.fecha_inicio
 
             elif rec.tipo == 'bloqueo_admin':
+                rec.evaluacion_administrativa = 'no_aplica'
+
                 if rec.fecha_inicio and not rec.fecha_fin:
                     rec.fecha_fin = rec.fecha_inicio
-
     @api.onchange('fecha_inicio')
     def _onchange_fecha_inicio(self):
         for rec in self:
@@ -332,7 +346,57 @@ class MantenimientoTecnicoAusencia(models.Model):
             vals['hora_inicio'] = 0.0
             vals['hora_fin'] = 24.0
 
+        if tipo:
+            if tipo in ('enfermedad', 'descanso_medico', 'vacaciones', 'capacitacion', 'bloqueo_admin'):
+                vals['evaluacion_administrativa'] = 'no_aplica'
+
+            elif tipo in ('permiso', 'falta'):
+                if not vals.get('evaluacion_administrativa'):
+                    vals['evaluacion_administrativa'] = 'pendiente'
+
         return vals
+        def _requiere_evaluacion_administrativa(self):
+        """
+        Define si la ausencia requiere decisión administrativa.
+
+        Requiere evaluación:
+        - Permiso personal
+        - Falta / inasistencia
+
+        No requiere evaluación:
+        - Enfermedad
+        - Descanso médico
+        - Vacaciones
+        - Capacitación
+        - Bloqueo administrativo
+        """
+        self.ensure_one()
+        return self.tipo in ('permiso', 'falta')
+
+    def _validar_evaluacion_administrativa_para_aprobar(self):
+        """
+        Antes de aprobar, gerencia debe decidir si el permiso/falta será:
+        - descuento
+        - a cuenta de vacaciones
+
+        Si es enfermedad o descanso médico, no aplica.
+        """
+        for rec in self:
+            if not rec._requiere_evaluacion_administrativa():
+                continue
+
+            if rec.evaluacion_administrativa in (False, 'pendiente', 'no_aplica'):
+                raise UserError(_(
+                    "Antes de aprobar la solicitud %s, gerencia debe indicar la evaluación administrativa:\n\n"
+                    "- Corresponde descuento\n"
+                    "- A cuenta de vacaciones"
+                ) % (rec.name or ''))
+
+    def _get_evaluacion_administrativa_label(self):
+        self.ensure_one()
+        return dict(self._fields['evaluacion_administrativa'].selection).get(
+            self.evaluacion_administrativa
+        ) or 'No definido'
 
     def _normalize_record_dates(self):
         for rec in self:
@@ -918,6 +982,7 @@ class MantenimientoTecnicoAusencia(models.Model):
             "📅 *Inicio:* %s\n"
             "📅 *Fin:* %s\n"
             "🕒 *Jornada:* %s\n"
+            "🏢 *Evaluación administrativa:* %s\n"
             "👤 *Aprobado por:* %s\n"
         ) % (
             self.tecnico_id.name or 'Solicitante',
@@ -926,6 +991,7 @@ class MantenimientoTecnicoAusencia(models.Model):
             self._format_fecha_whatsapp(self.fecha_inicio),
             self._format_fecha_whatsapp(self.fecha_fin),
             self._format_horario_whatsapp(),
+            self._get_evaluacion_administrativa_label(),
             self.aprobado_por_id.name or self.env.user.name or 'No definido',
         )
 
@@ -1092,6 +1158,8 @@ class MantenimientoTecnicoAusencia(models.Model):
 
             rec._normalize_record_dates()
 
+            rec._validar_evaluacion_administrativa_para_aprobar()
+
             rec.write({
                 'estado': 'aprobado',
                 'aprobado_por_id': self.env.user.id,
@@ -1108,8 +1176,11 @@ class MantenimientoTecnicoAusencia(models.Model):
             rec.message_post(
                 body=_(
                     "✅ Ausencia aprobada. Técnico bloqueado en agenda. "
-                    "Tickets afectados: %s."
-                ) % len(tickets),
+                    "Tickets afectados: %s. Evaluación administrativa: %s."
+                ) % (
+                    len(tickets),
+                    rec._get_evaluacion_administrativa_label(),
+                ),
                 message_type='notification'
             )
 
@@ -1117,6 +1188,14 @@ class MantenimientoTecnicoAusencia(models.Model):
         """
         Acción manual para casos especiales.
         No se ejecuta automáticamente desde create().
+
+        Enfermedad:
+        - No requiere evaluación administrativa.
+        - Se marca como ausente activo.
+
+        Falta:
+        - Sí requiere evaluación administrativa.
+        - Gerencia debe decidir si corresponde descuento o cuenta de vacaciones.
         """
         for rec in self:
             if rec.tipo not in ('enfermedad', 'falta'):
@@ -1128,6 +1207,8 @@ class MantenimientoTecnicoAusencia(models.Model):
                 )
 
             rec._normalize_record_dates()
+
+            rec._validar_evaluacion_administrativa_para_aprobar()
 
             nuevo_estado = 'ausente_activo' if rec.tipo == 'enfermedad' else 'aprobado'
 
@@ -1147,8 +1228,11 @@ class MantenimientoTecnicoAusencia(models.Model):
             rec.message_post(
                 body=_(
                     "🚫 Ausencia reportada y técnico bloqueado automáticamente. "
-                    "Tickets afectados: %s."
-                ) % len(tickets),
+                    "Tickets afectados: %s. Evaluación administrativa: %s."
+                ) % (
+                    len(tickets),
+                    rec._get_evaluacion_administrativa_label(),
+                ),
                 message_type='notification'
             )
 

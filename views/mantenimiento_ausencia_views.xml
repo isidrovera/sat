@@ -142,6 +142,9 @@
                                 <field name="hora_fin"
                                        widget="float_time"
                                        invisible="dia_completo"/>
+                                <field name="evaluacion_administrativa"
+                                        invisible="tipo not in ['permiso', 'falta']"
+                                        required="tipo in ['permiso', 'falta']"/>
                             </group>
 
                             <group string="Notificación">
