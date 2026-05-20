@@ -673,50 +673,35 @@ class SatSat(models.Model):
 
     def write(self, vals):
         """
-        WRITE PROTEGIDO CON LÓGICA CORREGIDA:
-        - Protege campos de ingreso scanner para que NO se pierdan
-        - Agrega logs para rastrear qué llega y qué queda guardado
-        - Mantiene tu lógica actual (notificaciones + anomalías SNMP/modelo/contador)
-        - SNMP + Proveedor:
-            * ALERTA Proveedor vs SNMP (WhatsApp + Correo) SOLO 1 VEZ
-            * Anomalías técnicas old->new SOLO INCREMENTOS para reclamar:
-                - Más dígitos (aunque sea +1)
-                - Mismos dígitos pero incremento ≥ 20,000
-            * NO notifica decrementos ni menos dígitos (no tiene sentido reclamar)
+        WRITE PROTEGIDO / REFACTORIZADO:
+        - Mantiene la lógica actual.
+        - Separa la lógica pesada en métodos privados del mismo modelo.
+        - Corrige el caso:
+            con_problemas -> de_partes
+          para que NO mande correo de disponibilidad.
+        - No requiere modificar otros archivos.
         """
+
         # ---------------------------
         # 0) ANTI-RECURSIÓN / ANTI-SPAM
         # ---------------------------
-        INTERNAL_ONLY_FIELDS = {
-            'alerta_proveedor_snmp_enviada',
-            'last_snmp_counter_whatsapp',
-            'last_snmp_whatsapp_at',
-            'location_change_token',  # ← FIX: evita re-entrada desde generate_location_change_token
-        }
-        if vals and set(vals.keys()).issubset(INTERNAL_ONLY_FIELDS):
+        if self._sat_is_internal_write(vals):
             return super(SatSat, self).write(vals)
 
         # ---------------------------
-        # 1) Clonar vals (NO mutar original)
+        # 1) Preparar vals
         # ---------------------------
         vals = dict(vals or {})
-
-        INGRESO_FIELDS = {
-            "check_ingreso",
-            "ingreso_estado",
-            "ingreso_fecha",
-            "ingreso_fuente",
-        }
-
-        # Guardar cualquier update de ingreso que venga desde API/scanner
-        vals_ingreso_in = {k: vals.get(k) for k in INGRESO_FIELDS if k in vals}
+        vals_ingreso_in = self._sat_get_ingreso_vals(vals)
 
         _logger.error(
             "SAT.WRITE → ENTRANDO | IDS=%s | VALS=%s | INGRESO_IN=%s",
-            self.ids, vals, vals_ingreso_in
+            self.ids,
+            vals,
+            vals_ingreso_in,
         )
 
-        # ✅ Si corrigen el contador del proveedor, permitir alertar de nuevo
+        # Si corrigen el contador del proveedor, permitir alertar de nuevo
         if 'contometro_proveedor' in vals:
             vals.setdefault('alerta_proveedor_snmp_enviada', False)
             vals.setdefault('last_snmp_counter_whatsapp', False)
@@ -726,68 +711,47 @@ class SatSat(models.Model):
         estado_final_no_notificar = 'entregada'
 
         # ---------------------------
-        # 2) Snapshot ANTES (para anomalías de modelo/contador)
+        # 2) Snapshot antes del super()
         # ---------------------------
-        cambios_previos = {}
-        for record in self:
-            cambios_previos[record.id] = {
-                'modelo_anterior': record.name.name if record.name else '',
-                'tipo_anterior': record.tipo_id,
-                'contometro_anterior': record.contometro or '0',
-                'fuente_anterior': record.ultima_fuente_actualizacion or '',
-                # ingreso antes
-                'check_ingreso': bool(record.check_ingreso),
-                'ingreso_estado': record.ingreso_estado,
-                'ingreso_fecha': record.ingreso_fecha,
-                'ingreso_fuente': record.ingreso_fuente,
-            }
+        cambios_previos = self._sat_get_write_snapshot()
 
         # ---------------------------
-        # 3) Flags de notificación (tu lógica)
+        # 3) Plan de notificaciones por cambio de estado
         # ---------------------------
-        need_problem_notification = False
-        need_availability_notification = False
+        estado_plan = self._sat_get_estado_notification_plan(
+            vals=vals,
+            estados_problema=estados_problema,
+            estado_final_no_notificar=estado_final_no_notificar,
+        )
 
-        for record in self:
-            if 'estado_ventas_id' in vals:
-                estado_actual = record.estado_ventas_id
-                nuevo_estado = vals['estado_ventas_id']
+        problem_notification_ids = estado_plan.get('problem_notification_ids', set())
+        availability_notification_ids = estado_plan.get('availability_notification_ids', set())
+        clean_description_ids = estado_plan.get('clean_description_ids', set())
 
-                # Si cambia a estado de problema
-                if nuevo_estado in estados_problema:
-                    _logger.debug(f"Cambiando a estado de problema para ID {record.id}.")
-                    need_problem_notification = True
-
-                # Si sale de estados de problema → limpiar descripción
-                elif estado_actual in estados_problema and nuevo_estado not in estados_problema:
-                    _logger.debug(
-                        f"Saliendo de estado de problema para ID {record.id}. "
-                        f"Limpiando descripción."
-                    )
-                    vals['descripcion'] = False
-                    vals['activador'] = 'no'
-
-                # Notificación de disponibilidad
-                if estado_actual in estados_problema and nuevo_estado != estado_final_no_notificar:
-                    need_availability_notification = True
+        # Si sale de problema/partes hacia estado operativo, limpiar descripción.
+        # En formulario normal Odoo escribe un solo registro.
+        if clean_description_ids:
+            vals['descripcion'] = False
+            vals['activador'] = 'no'
 
         # ---------------------------
-        # 4) PROTECCIÓN FINAL: reinyectar ingreso justo antes del super()
+        # 4) Protección final ingreso scanner
         # ---------------------------
         if vals_ingreso_in:
             vals.update(vals_ingreso_in)
 
         _logger.error(
             "SAT.WRITE → ANTES SUPER | IDS=%s | VALS=%s | INGRESO_REAPPLY=%s",
-            self.ids, vals, vals_ingreso_in
+            self.ids,
+            vals,
+            vals_ingreso_in,
         )
 
         # ---------------------------
-        # 5) Ejecutar escritura real
+        # 5) Escritura real
         # ---------------------------
         result = super(SatSat, self).write(vals)
 
-        # Asegurar cache actualizado
         try:
             self.invalidate_cache()
         except Exception:
@@ -803,319 +767,591 @@ class SatSat(models.Model):
         )
 
         # ---------------------------
-        # 6) Post-procesos (tu lógica actual)
+        # 6) Post-procesos por registro
         # ---------------------------
         for record in self:
-            # ---------------------------
-            # 🚚 NOTIFICACIÓN TRANSPORTISTAS
-            # ---------------------------
-            try:
-                campos_relevantes = {'ubicacion_id', 'cliente_id', 'estado_ventas_id'}
-                if campos_relevantes.intersection(vals.keys()):
-                    if record.disponibilidad_id == 'separada' and record.ubicacion_id in ['segundo_local', 'covida']:
-                        record.enviar_mensaje_transportistas()
-                        _logger.info(f"[TRANSPORTE] Notificación enviada para ID {record.id}")
-                    else:
-                        _logger.info(
-                            f"[TRANSPORTE] Sin notificación para ID {record.id} "
-                            f"(disp={record.disponibilidad_id}, ubic={record.ubicacion_id})"
-                        )
-                else:
-                    _logger.info(f"[TRANSPORTE] Sin campos relevantes en vals, omitiendo notificación para ID {record.id}")
-            except Exception as e:
-                _logger.error(f"[TRANSPORTE] Error enviando mensaje: {e}")
+            record._sat_post_write_transportistas(vals)
 
-            if need_problem_notification:
-                try:
-                    record.enviar_mensaje_problema_asesora()
-                    _logger.info(f"Notificación de problema enviada para ID {record.id}.")
-                except Exception as e:
-                    _logger.error(f"Error al enviar notificaciones para ID {record.id}: {e}")
-
-            if need_availability_notification:
-                try:
-                    record.enviar_notificacion_disponibilidad()
-                    _logger.info(f"Notificación de disponibilidad enviada para ID {record.id}.")
-                except Exception as e:
-                    _logger.error(f"Error al enviar notificación de disponibilidad para ID {record.id}: {e}")
-
-            # Mensaje de limpieza de descripción si aplica
-            if 'descripcion' in vals and vals.get('descripcion') is False:
-                estado_actual = record.estado_ventas_id
-                nuevo_estado = vals.get('estado_ventas_id', estado_actual)
-                if estado_actual in estados_problema and nuevo_estado not in estados_problema:
-                    message = _(
-                        "Se limpió la descripción al cambiar el estado de '%s' a '%s'"
-                    ) % (estado_actual, nuevo_estado)
-                    record.message_post(body=message)
-
-            # Revisar anomalías de modelo y contómetro
-            prev = cambios_previos.get(record.id) or {}
-            modelo_anterior = prev.get('modelo_anterior', '')
-            tipo_anterior = prev.get('tipo_anterior')
-            contometro_anterior = prev.get('contometro_anterior', '0')
-            fuente_anterior = prev.get('fuente_anterior', '')
-
-            modelo_nuevo = record.name.name if record.name else ''
-            tipo_nuevo = record.tipo_id
-            contometro_nuevo = record.contometro or '0'
-            fuente_actual = record.ultima_fuente_actualizacion or ''
-
-            # 1) Cambios raros de modelo
-            record._check_model_anomalies(
-                record,
-                modelo_anterior,
-                modelo_nuevo,
-                tipo_anterior,
-                tipo_nuevo,
+            record._sat_post_write_estado_notifications(
+                vals=vals,
+                cambios_previos=cambios_previos,
+                problem_notification_ids=problem_notification_ids,
+                availability_notification_ids=availability_notification_ids,
+                clean_description_ids=clean_description_ids,
             )
 
-            # 2) Saltos raros de contómetro (SOLO INCREMENTOS para reclamar)
-            record._check_counter_anomalies(
-                record,
-                contometro_anterior,
-                contometro_nuevo,
+            record._sat_post_write_model_counter_checks(
+                cambios_previos=cambios_previos,
             )
 
-            # 3) Notificaciones específicas SNMP si la fuente fue SNMP
-            if fuente_actual == 'snmp':
-                # 3A) Si cambió el modelo
-                if modelo_anterior and modelo_nuevo and modelo_anterior != modelo_nuevo:
-                    try:
-                        record.notify_snmp_model_change(
-                            previous_model=modelo_anterior,
-                            new_model=modelo_nuevo
-                        )
-                    except Exception as e:
-                        _logger.error(f"Error notificando cambio de modelo SNMP: {e}")
+            record._sat_post_write_snmp_notifications(
+                cambios_previos=cambios_previos,
+            )
 
-                # 3B) Alertas / análisis cuando cambió el contometro por SNMP
-                if contometro_anterior != contometro_nuevo:
-                    try:
-                        old_digits = re.sub(r'[^\d]', '', contometro_anterior or '0')
-                        new_digits = re.sub(r'[^\d]', '', contometro_nuevo or '0')
+            record._sat_post_write_ingreso_check(
+                vals_ingreso_in=vals_ingreso_in,
+            )
 
-                        old_val = int(old_digits) if old_digits else 0
-                        new_val = int(new_digits) if new_digits else 0
-
-                        _logger.error(
-                            "[SNMP DEBUG] ID=%s | old_val=%s new_val=%s | fuente=%s",
-                            record.id, old_val, new_val, fuente_actual
-                        )
-
-                        # =====================================================
-                        # ✅ CASO 1: ALERTA Proveedor vs SNMP (WhatsApp + Correo)
-                        #     SOLO 1 VEZ aunque SNMP llegue cada 5 min
-                        # =====================================================
-                        prov_val = 0
-                        try:
-                            prov_val = record._to_int_digits(record.contometro_proveedor)
-                        except Exception as e:
-                            _logger.error("[SNMP DEBUG] Error obteniendo prov_val: %s", e)
-                            prov_val = 0
-
-                        ya_alertado = bool(record.alerta_proveedor_snmp_enviada)
-                        prov_alert_sent_this_cycle = False
-
-                        _logger.error(
-                            "[SNMP DEBUG] prov_val=%s | ya_alertado=%s | contometro_proveedor='%s'",
-                            prov_val, ya_alertado, record.contometro_proveedor
-                        )
-
-                        if prov_val and record._is_proveedor_vs_snmp_alert(prov_val, new_val):
-                            if not ya_alertado:
-                                _logger.error(
-                                    "[SNMP ALERT] ✅ ENVIANDO alerta Proveedor vs SNMP. prov=%s snmp=%s | ID=%s",
-                                    prov_val, new_val, record.id
-                                )
-
-                                # 1) WhatsApp técnico (guardar hoja/sustento)
-                                try:
-                                    record._notify_tecnico_guardar_hoja_contometro_snmp(prov_val, new_val)
-                                except Exception as e:
-                                    _logger.error("[SNMP->WA] Error alertando al técnico: %s", e)
-
-                                # 2) Correo (ES ANOMALÍA - proveedor vs SNMP)
-                                try:
-                                    record.notify_snmp_counter_update(
-                                        previous_counter=prov_val,
-                                        new_counter=new_val,
-                                        is_anomaly=True
-                                    )
-                                except Exception as e:
-                                    _logger.error("[SNMP->MAIL] Error enviando correo proveedor vs SNMP: %s", e)
-
-                                prov_alert_sent_this_cycle = True
-
-                                # 3) Marcar como alertado
-                                try:
-                                    record.sudo().write({'alerta_proveedor_snmp_enviada': True})
-                                except Exception as e:
-                                    _logger.error("[SNMP ALERT] Error marcando alerta_proveedor_snmp_enviada: %s", e)
-                            else:
-                                _logger.error(
-                                    "[SNMP ALERT] ❌ Ya alertado antes. NO repetir | ID=%s",
-                                    record.id
-                                )
-                        else:
-                            _logger.error(
-                                "[SNMP] ℹ️ Proveedor vs SNMP normal o sin proveedor. prov=%s snmp=%s | ID=%s",
-                                prov_val, new_val, record.id
-                            )
-
-                        # =====================================================
-                        # ✅ CASO 2: Anomalías técnicas old->new
-                        # SOLO si NO se envió alerta Proveedor->SNMP en este ciclo
-                        # Y SOLO si es un INCREMENTO anómalo (para reclamar)
-                        # =====================================================
-                        _logger.error(
-                            "[SNMP DEBUG] Evaluando CASO 2 | prov_alert_sent=%s",
-                            prov_alert_sent_this_cycle
-                        )
-
-                        if not prov_alert_sent_this_cycle:
-                            is_anomaly = record._is_counter_anomaly(old_val, new_val)
-
-                            _logger.error(
-                                "[SNMP DEBUG] _is_counter_anomaly(%s, %s) = %s",
-                                old_val, new_val, is_anomaly
-                            )
-
-                            if is_anomaly:
-                                _logger.error(
-                                    "[SNMP ANOMALY] ✅ ENVIANDO correo técnico old->new: %s → %s | ID=%s",
-                                    old_val, new_val, record.id
-                                )
-
-                                try:
-                                    record.notify_snmp_counter_update(
-                                        previous_counter=old_val,
-                                        new_counter=new_val,
-                                        is_anomaly=True
-                                    )
-                                    _logger.error("[SNMP ANOMALY] ✅ Correo enviado exitosamente")
-                                except Exception as e:
-                                    _logger.error("[SNMP ANOMALY] ❌ Error enviando correo: %s", e)
-                            else:
-                                _logger.error(
-                                    "[SNMP] ℹ️ Cambio normal %s → %s, sin correo | ID=%s",
-                                    old_val, new_val, record.id
-                                )
-                        else:
-                            _logger.error(
-                                "[SNMP] ℹ️ Omitiendo CASO 2 porque ya se envió alerta Proveedor | ID=%s",
-                                record.id
-                            )
-
-                    except Exception as e:
-                        _logger.error(f"[SNMP ERROR] Error procesando contador: {e}", exc_info=True)
-
-            # ---------------------------
-            # 7) LOG EXTRA: verificar si ingreso se perdió en algún punto
-            # ---------------------------
-            if vals_ingreso_in:
-                try:
-                    record.invalidate_cache()
-                except Exception:
-                    pass
-
-                _logger.error(
-                    "SAT.WRITE → CHECK INGRESO POST | ID=%s | IN=%s | NOW=(check=%s estado=%s fecha=%s fuente=%s)",
-                    record.id,
-                    vals_ingreso_in,
-                    bool(record.check_ingreso),
-                    record.ingreso_estado,
-                    record.ingreso_fecha,
-                    record.ingreso_fuente,
-                )
-
-            # =========================================
-            # ACTUALIZAR PRUEBA TÉCNICA DESDE SNMP
-            # =========================================
-            try:
-                Prueba = self.env['sat.prueba.maquina']
-
-                prueba = Prueba.search([
-                    ('maquina_id', '=', record.id),
-                ], order='id desc', limit=1)
-
-                if prueba:
-                    def to_int(value):
-                        digits = re.sub(r'[^\d]', '', str(value or '0'))
-                        return int(digits) if digits else 0
-
-                    snmp_counters = self.env.context.get('snmp_counters') or {}
-                    snmp_toner    = self.env.context.get('snmp_toner') or {}
-
-                    prueba_vals = {
-                        'contador_actual_total': to_int(record.contometro),
-                        'fecha_ultima_actualizacion': fields.Datetime.now(),
-                    }
-
-                    if snmp_counters:
-                        bw = (snmp_counters.get('bw')
-                            or snmp_counters.get('print_bw')
-                            or snmp_counters.get('copy_bw'))
-                        if bw is not None:
-                            prueba_vals['contador_actual_bn'] = to_int(bw)
-
-                        color = (snmp_counters.get('color')
-                                or snmp_counters.get('print_full_color'))
-                        if color is not None:
-                            prueba_vals['contador_actual_color'] = to_int(color)
-
-                        impresiones = (snmp_counters.get('print')
-                                    or snmp_counters.get('print_total'))
-                        if impresiones is not None:
-                            prueba_vals['contador_impresiones'] = to_int(impresiones)
-
-                        copias = (snmp_counters.get('copy')
-                                or snmp_counters.get('copy_total'))
-                        if copias is not None:
-                            prueba_vals['contador_copias'] = to_int(copias)
-
-                        scanner = snmp_counters.get('scan')
-                        if scanner is not None:
-                            prueba_vals['contador_scanner'] = to_int(scanner)
-
-                        duplex = snmp_counters.get('duplex')
-                        if duplex is not None:
-                            prueba_vals['contador_duplex'] = to_int(duplex)
-
-                    if snmp_toner:
-                        negro = snmp_toner.get('black')
-                        if negro is not None:
-                            prueba_vals['toner_negro'] = float(negro)
-
-                        cyan = snmp_toner.get('cyan')
-                        if cyan is not None:
-                            prueba_vals['toner_cyan'] = float(cyan)
-
-                        magenta = snmp_toner.get('magenta')
-                        if magenta is not None:
-                            prueba_vals['toner_magenta'] = float(magenta)
-
-                        amarillo = snmp_toner.get('yellow')
-                        if amarillo is not None:
-                            prueba_vals['toner_amarillo'] = float(amarillo)
-
-                    prueba.write(prueba_vals)
-
-                    _logger.info(
-                        "[PRUEBA] SNMP actualizado en prueba ID %s | campos=%s",
-                        prueba.id, list(prueba_vals.keys())
-                    )
-
-                else:
-                    _logger.warning(
-                        "[PRUEBA] No se encontró prueba activa para máquina %s",
-                        record.id
-                    )
-
-            except Exception as e:
-                _logger.error("[PRUEBA] Error actualizando desde SNMP: %s", e)
+            record._sat_post_write_update_prueba_from_snmp()
 
         return result
+
+    # ==========================================================
+    # HELPERS WRITE
+    # ==========================================================
+
+    def _sat_is_internal_write(self, vals):
+        """
+        Evita reentrada cuando el propio write interno solo actualiza campos técnicos.
+        """
+        INTERNAL_ONLY_FIELDS = {
+            'alerta_proveedor_snmp_enviada',
+            'last_snmp_counter_whatsapp',
+            'last_snmp_whatsapp_at',
+            'location_change_token',
+        }
+
+        vals = vals or {}
+        return bool(vals) and set(vals.keys()).issubset(INTERNAL_ONLY_FIELDS)
+
+    def _sat_get_ingreso_vals(self, vals):
+        """
+        Guarda los campos de ingreso scanner que llegaron al write,
+        para reinyectarlos antes del super().
+        """
+        INGRESO_FIELDS = {
+            "check_ingreso",
+            "ingreso_estado",
+            "ingreso_fecha",
+            "ingreso_fuente",
+        }
+
+        vals = vals or {}
+        return {k: vals.get(k) for k in INGRESO_FIELDS if k in vals}
+
+    def _sat_get_write_snapshot(self):
+        """
+        Snapshot de valores ANTES del super().
+        Sirve para comparar cambios después del write.
+        """
+        cambios_previos = {}
+
+        for record in self:
+            cambios_previos[record.id] = {
+                'estado_anterior': record.estado_ventas_id,
+                'modelo_anterior': record.name.name if record.name else '',
+                'tipo_anterior': record.tipo_id,
+                'contometro_anterior': record.contometro or '0',
+                'fuente_anterior': record.ultima_fuente_actualizacion or '',
+
+                # ingreso antes
+                'check_ingreso': bool(record.check_ingreso),
+                'ingreso_estado': record.ingreso_estado,
+                'ingreso_fecha': record.ingreso_fecha,
+                'ingreso_fuente': record.ingreso_fuente,
+            }
+
+        return cambios_previos
+
+    def _sat_get_estado_notification_plan(self, vals, estados_problema, estado_final_no_notificar):
+        """
+        Define qué correos/notificaciones se deben enviar por cambio de estado.
+
+        Reglas:
+        - Estado normal -> con_problemas/de_partes:
+            enviar problema.
+        - con_problemas -> de_partes:
+            enviar problema, NO disponibilidad.
+        - de_partes -> con_problemas:
+            enviar problema, NO disponibilidad.
+        - con_problemas/de_partes -> estado normal:
+            limpiar descripción y enviar disponibilidad.
+        - con_problemas/de_partes -> entregada:
+            limpiar descripción, NO enviar disponibilidad.
+        """
+        problem_notification_ids = set()
+        availability_notification_ids = set()
+        clean_description_ids = set()
+
+        if 'estado_ventas_id' not in vals:
+            return {
+                'problem_notification_ids': problem_notification_ids,
+                'availability_notification_ids': availability_notification_ids,
+                'clean_description_ids': clean_description_ids,
+            }
+
+        nuevo_estado = vals.get('estado_ventas_id')
+
+        for record in self:
+            estado_anterior = record.estado_ventas_id
+
+            _logger.info(
+                "[SAT ESTADO] Evaluando cambio | ID=%s | %s → %s",
+                record.id,
+                estado_anterior,
+                nuevo_estado,
+            )
+
+            # A) Entra a problema/partes desde estado normal
+            if nuevo_estado in estados_problema and estado_anterior not in estados_problema:
+                problem_notification_ids.add(record.id)
+                _logger.info(
+                    "[SAT ESTADO] Notificar PROBLEMA | ID=%s | %s → %s",
+                    record.id,
+                    estado_anterior,
+                    nuevo_estado,
+                )
+
+            # B) Cambio interno problema/partes
+            elif estado_anterior in estados_problema and nuevo_estado in estados_problema:
+                problem_notification_ids.add(record.id)
+                _logger.info(
+                    "[SAT ESTADO] Cambio interno problema/partes. "
+                    "Notificar PROBLEMA, NO disponibilidad | ID=%s | %s → %s",
+                    record.id,
+                    estado_anterior,
+                    nuevo_estado,
+                )
+
+            # C) Sale de problema/partes hacia estado normal
+            elif estado_anterior in estados_problema and nuevo_estado not in estados_problema:
+                clean_description_ids.add(record.id)
+
+                if nuevo_estado != estado_final_no_notificar:
+                    availability_notification_ids.add(record.id)
+                    _logger.info(
+                        "[SAT ESTADO] Notificar DISPONIBILIDAD | ID=%s | %s → %s",
+                        record.id,
+                        estado_anterior,
+                        nuevo_estado,
+                    )
+                else:
+                    _logger.info(
+                        "[SAT ESTADO] Sale de problema hacia ENTREGADA. "
+                        "No se notifica disponibilidad | ID=%s | %s → %s",
+                        record.id,
+                        estado_anterior,
+                        nuevo_estado,
+                    )
+
+        return {
+            'problem_notification_ids': problem_notification_ids,
+            'availability_notification_ids': availability_notification_ids,
+            'clean_description_ids': clean_description_ids,
+        }
+
+    def _sat_post_write_transportistas(self, vals):
+        """
+        Lógica existente de transporte después del write().
+        """
+        self.ensure_one()
+
+        try:
+            campos_relevantes = {'ubicacion_id', 'cliente_id', 'estado_ventas_id'}
+
+            if campos_relevantes.intersection(vals.keys()):
+                if self.disponibilidad_id == 'separada' and self.ubicacion_id in ['segundo_local', 'covida']:
+                    self.enviar_mensaje_transportistas()
+                    _logger.info("[TRANSPORTE] Notificación enviada para ID %s", self.id)
+                else:
+                    _logger.info(
+                        "[TRANSPORTE] Sin notificación para ID %s "
+                        "(disp=%s, ubic=%s)",
+                        self.id,
+                        self.disponibilidad_id,
+                        self.ubicacion_id,
+                    )
+            else:
+                _logger.info(
+                    "[TRANSPORTE] Sin campos relevantes en vals, omitiendo notificación para ID %s",
+                    self.id,
+                )
+
+        except Exception as e:
+            _logger.error("[TRANSPORTE] Error enviando mensaje: %s", e)
+
+    def _sat_post_write_estado_notifications(
+        self,
+        vals,
+        cambios_previos,
+        problem_notification_ids,
+        availability_notification_ids,
+        clean_description_ids,
+    ):
+        """
+        Envía las notificaciones de estado después del write().
+        """
+        self.ensure_one()
+
+        if self.id in problem_notification_ids:
+            try:
+                self.enviar_mensaje_problema_asesora()
+                _logger.info(
+                    "[SAT ESTADO] Notificación de problema enviada | ID=%s | estado=%s",
+                    self.id,
+                    self.estado_ventas_id,
+                )
+            except Exception as e:
+                _logger.error(
+                    "[SAT ESTADO] Error enviando notificación de problema | ID=%s | error=%s",
+                    self.id,
+                    e,
+                )
+
+        if self.id in availability_notification_ids:
+            try:
+                self.enviar_notificacion_disponibilidad()
+                _logger.info(
+                    "[SAT ESTADO] Notificación de disponibilidad enviada | ID=%s | estado=%s",
+                    self.id,
+                    self.estado_ventas_id,
+                )
+            except Exception as e:
+                _logger.error(
+                    "[SAT ESTADO] Error enviando notificación de disponibilidad | ID=%s | error=%s",
+                    self.id,
+                    e,
+                )
+
+        if self.id in clean_description_ids:
+            prev = cambios_previos.get(self.id) or {}
+            estado_anterior = prev.get('estado_anterior') or ''
+            nuevo_estado = self.estado_ventas_id
+
+            try:
+                message = _(
+                    "Se limpió la descripción al cambiar el estado de '%s' a '%s'"
+                ) % (estado_anterior, nuevo_estado)
+
+                self.message_post(body=message)
+
+            except Exception as e:
+                _logger.error(
+                    "[SAT ESTADO] Error publicando mensaje de limpieza | ID=%s | error=%s",
+                    self.id,
+                    e,
+                )
+
+    def _sat_post_write_model_counter_checks(self, cambios_previos):
+        """
+        Mantiene la revisión de anomalías de modelo y contómetro.
+        """
+        self.ensure_one()
+
+        prev = cambios_previos.get(self.id) or {}
+
+        modelo_anterior = prev.get('modelo_anterior', '')
+        tipo_anterior = prev.get('tipo_anterior')
+        contometro_anterior = prev.get('contometro_anterior', '0')
+
+        modelo_nuevo = self.name.name if self.name else ''
+        tipo_nuevo = self.tipo_id
+        contometro_nuevo = self.contometro or '0'
+
+        # 1) Cambios raros de modelo
+        self._check_model_anomalies(
+            self,
+            modelo_anterior,
+            modelo_nuevo,
+            tipo_anterior,
+            tipo_nuevo,
+        )
+
+        # 2) Saltos raros de contómetro
+        self._check_counter_anomalies(
+            self,
+            contometro_anterior,
+            contometro_nuevo,
+        )
+
+    def _sat_post_write_snmp_notifications(self, cambios_previos):
+        """
+        Mantiene toda la lógica SNMP existente después del write().
+        """
+        self.ensure_one()
+
+        prev = cambios_previos.get(self.id) or {}
+
+        modelo_anterior = prev.get('modelo_anterior', '')
+        contometro_anterior = prev.get('contometro_anterior', '0')
+
+        modelo_nuevo = self.name.name if self.name else ''
+        contometro_nuevo = self.contometro or '0'
+        fuente_actual = self.ultima_fuente_actualizacion or ''
+
+        if fuente_actual != 'snmp':
+            return
+
+        # 1) Si cambió el modelo
+        if modelo_anterior and modelo_nuevo and modelo_anterior != modelo_nuevo:
+            try:
+                self.notify_snmp_model_change(
+                    previous_model=modelo_anterior,
+                    new_model=modelo_nuevo,
+                )
+            except Exception as e:
+                _logger.error("Error notificando cambio de modelo SNMP: %s", e)
+
+        # 2) Si cambió el contómetro
+        if contometro_anterior == contometro_nuevo:
+            return
+
+        try:
+            old_digits = re.sub(r'[^\d]', '', contometro_anterior or '0')
+            new_digits = re.sub(r'[^\d]', '', contometro_nuevo or '0')
+
+            old_val = int(old_digits) if old_digits else 0
+            new_val = int(new_digits) if new_digits else 0
+
+            _logger.error(
+                "[SNMP DEBUG] ID=%s | old_val=%s new_val=%s | fuente=%s",
+                self.id,
+                old_val,
+                new_val,
+                fuente_actual,
+            )
+
+            # =====================================================
+            # CASO 1: ALERTA Proveedor vs SNMP
+            # WhatsApp + Correo, solo una vez
+            # =====================================================
+            prov_val = 0
+            try:
+                prov_val = self._to_int_digits(self.contometro_proveedor)
+            except Exception as e:
+                _logger.error("[SNMP DEBUG] Error obteniendo prov_val: %s", e)
+                prov_val = 0
+
+            ya_alertado = bool(self.alerta_proveedor_snmp_enviada)
+            prov_alert_sent_this_cycle = False
+
+            _logger.error(
+                "[SNMP DEBUG] prov_val=%s | ya_alertado=%s | contometro_proveedor='%s'",
+                prov_val,
+                ya_alertado,
+                self.contometro_proveedor,
+            )
+
+            if prov_val and self._is_proveedor_vs_snmp_alert(prov_val, new_val):
+                if not ya_alertado:
+                    _logger.error(
+                        "[SNMP ALERT] ✅ ENVIANDO alerta Proveedor vs SNMP. prov=%s snmp=%s | ID=%s",
+                        prov_val,
+                        new_val,
+                        self.id,
+                    )
+
+                    # WhatsApp técnico
+                    try:
+                        self._notify_tecnico_guardar_hoja_contometro_snmp(prov_val, new_val)
+                    except Exception as e:
+                        _logger.error("[SNMP->WA] Error alertando al técnico: %s", e)
+
+                    # Correo anomalía
+                    try:
+                        self.notify_snmp_counter_update(
+                            previous_counter=prov_val,
+                            new_counter=new_val,
+                            is_anomaly=True,
+                        )
+                    except Exception as e:
+                        _logger.error("[SNMP->MAIL] Error enviando correo proveedor vs SNMP: %s", e)
+
+                    prov_alert_sent_this_cycle = True
+
+                    # Marcar como alertado
+                    try:
+                        self.sudo().write({'alerta_proveedor_snmp_enviada': True})
+                    except Exception as e:
+                        _logger.error("[SNMP ALERT] Error marcando alerta_proveedor_snmp_enviada: %s", e)
+
+                else:
+                    _logger.error(
+                        "[SNMP ALERT] ❌ Ya alertado antes. NO repetir | ID=%s",
+                        self.id,
+                    )
+            else:
+                _logger.error(
+                    "[SNMP] ℹ️ Proveedor vs SNMP normal o sin proveedor. prov=%s snmp=%s | ID=%s",
+                    prov_val,
+                    new_val,
+                    self.id,
+                )
+
+            # =====================================================
+            # CASO 2: Anomalía técnica old -> new
+            # Solo si no se envió alerta proveedor en este ciclo
+            # =====================================================
+            _logger.error(
+                "[SNMP DEBUG] Evaluando CASO 2 | prov_alert_sent=%s",
+                prov_alert_sent_this_cycle,
+            )
+
+            if not prov_alert_sent_this_cycle:
+                is_anomaly = self._is_counter_anomaly(old_val, new_val)
+
+                _logger.error(
+                    "[SNMP DEBUG] _is_counter_anomaly(%s, %s) = %s",
+                    old_val,
+                    new_val,
+                    is_anomaly,
+                )
+
+                if is_anomaly:
+                    _logger.error(
+                        "[SNMP ANOMALY] ✅ ENVIANDO correo técnico old->new: %s → %s | ID=%s",
+                        old_val,
+                        new_val,
+                        self.id,
+                    )
+
+                    try:
+                        self.notify_snmp_counter_update(
+                            previous_counter=old_val,
+                            new_counter=new_val,
+                            is_anomaly=True,
+                        )
+                        _logger.error("[SNMP ANOMALY] ✅ Correo enviado exitosamente")
+                    except Exception as e:
+                        _logger.error("[SNMP ANOMALY] ❌ Error enviando correo: %s", e)
+                else:
+                    _logger.error(
+                        "[SNMP] ℹ️ Cambio normal %s → %s, sin correo | ID=%s",
+                        old_val,
+                        new_val,
+                        self.id,
+                    )
+            else:
+                _logger.error(
+                    "[SNMP] ℹ️ Omitiendo CASO 2 porque ya se envió alerta Proveedor | ID=%s",
+                    self.id,
+                )
+
+        except Exception as e:
+            _logger.error("[SNMP ERROR] Error procesando contador: %s", e, exc_info=True)
+
+    def _sat_post_write_ingreso_check(self, vals_ingreso_in):
+        """
+        Log extra para verificar que los campos de ingreso scanner no se pierdan.
+        """
+        self.ensure_one()
+
+        if not vals_ingreso_in:
+            return
+
+        try:
+            self.invalidate_cache()
+        except Exception:
+            pass
+
+        _logger.error(
+            "SAT.WRITE → CHECK INGRESO POST | ID=%s | IN=%s | NOW=(check=%s estado=%s fecha=%s fuente=%s)",
+            self.id,
+            vals_ingreso_in,
+            bool(self.check_ingreso),
+            self.ingreso_estado,
+            self.ingreso_fecha,
+            self.ingreso_fuente,
+        )
+
+    def _sat_post_write_update_prueba_from_snmp(self):
+        """
+        Mantiene la actualización de prueba técnica desde SNMP.
+        """
+        self.ensure_one()
+
+        try:
+            Prueba = self.env['sat.prueba.maquina']
+
+            prueba = Prueba.search([
+                ('maquina_id', '=', self.id),
+            ], order='id desc', limit=1)
+
+            if not prueba:
+                _logger.warning(
+                    "[PRUEBA] No se encontró prueba activa para máquina %s",
+                    self.id,
+                )
+                return
+
+            def to_int(value):
+                digits = re.sub(r'[^\d]', '', str(value or '0'))
+                return int(digits) if digits else 0
+
+            snmp_counters = self.env.context.get('snmp_counters') or {}
+            snmp_toner = self.env.context.get('snmp_toner') or {}
+
+            prueba_vals = {
+                'contador_actual_total': to_int(self.contometro),
+                'fecha_ultima_actualizacion': fields.Datetime.now(),
+            }
+
+            if snmp_counters:
+                bw = (
+                    snmp_counters.get('bw')
+                    or snmp_counters.get('print_bw')
+                    or snmp_counters.get('copy_bw')
+                )
+                if bw is not None:
+                    prueba_vals['contador_actual_bn'] = to_int(bw)
+
+                color = (
+                    snmp_counters.get('color')
+                    or snmp_counters.get('print_full_color')
+                )
+                if color is not None:
+                    prueba_vals['contador_actual_color'] = to_int(color)
+
+                impresiones = (
+                    snmp_counters.get('print')
+                    or snmp_counters.get('print_total')
+                )
+                if impresiones is not None:
+                    prueba_vals['contador_impresiones'] = to_int(impresiones)
+
+                copias = (
+                    snmp_counters.get('copy')
+                    or snmp_counters.get('copy_total')
+                )
+                if copias is not None:
+                    prueba_vals['contador_copias'] = to_int(copias)
+
+                scanner = snmp_counters.get('scan')
+                if scanner is not None:
+                    prueba_vals['contador_scanner'] = to_int(scanner)
+
+                duplex = snmp_counters.get('duplex')
+                if duplex is not None:
+                    prueba_vals['contador_duplex'] = to_int(duplex)
+
+            if snmp_toner:
+                negro = snmp_toner.get('black')
+                if negro is not None:
+                    prueba_vals['toner_negro'] = float(negro)
+
+                cyan = snmp_toner.get('cyan')
+                if cyan is not None:
+                    prueba_vals['toner_cyan'] = float(cyan)
+
+                magenta = snmp_toner.get('magenta')
+                if magenta is not None:
+                    prueba_vals['toner_magenta'] = float(magenta)
+
+                amarillo = snmp_toner.get('yellow')
+                if amarillo is not None:
+                    prueba_vals['toner_amarillo'] = float(amarillo)
+
+            prueba.write(prueba_vals)
+
+            _logger.info(
+                "[PRUEBA] SNMP actualizado en prueba ID %s | campos=%s",
+                prueba.id,
+                list(prueba_vals.keys()),
+            )
+
+        except Exception as e:
+            _logger.error("[PRUEBA] Error actualizando desde SNMP: %s", e)
+    
     prueba_ids = fields.One2many(
         'sat.prueba.maquina',
         'maquina_id',
