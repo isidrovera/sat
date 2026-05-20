@@ -170,7 +170,8 @@
         'views/ticket_alquiler_evidencia_view.xml',
         'views/permisos_templates.xml',
         "views/res_partner_views.xml",
-        "views/whatsapp_views.xml",     
+        "views/whatsapp_views.xml",
+        'views/whatsapp_inbox_app_views.xml',   
         'views/acciones_menus.xml',
         
     ],
@@ -269,8 +270,10 @@
             'sat/static/src/xml/mobile_ticket_layout.xml',
             'sat/static/src/js/mobile_ticket_layout.js',
 
-
-            
+            'sat/static/src/whatsapp_inbox/whatsapp_inbox_app.js',
+            'sat/static/src/whatsapp_inbox/whatsapp_inbox_app.xml',
+            'sat/static/src/whatsapp_inbox/whatsapp_inbox_app.scss',
+                
                 
             # External Libraries existentes
             'https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js',

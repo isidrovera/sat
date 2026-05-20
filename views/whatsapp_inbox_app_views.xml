@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <data>
+
+        <!-- ========================================================= -->
+        <!-- WHATSAPP INBOX APP - CLIENT ACTION                        -->
+        <!-- Nueva interfaz moderna, no reemplaza vistas existentes     -->
+        <!-- ========================================================= -->
+
+        <record id="action_whatsapp_inbox_app" model="ir.actions.client">
+            <field name="name">Bandeja de atención WhatsApp</field>
+            <field name="tag">sat_whatsapp_inbox_app</field>
+        </record>
+
+        <menuitem id="menu_whatsapp_inbox_app"
+                  name="Bandeja de atención"
+                  parent="menu_whatsapp_root"
+                  action="action_whatsapp_inbox_app"
+                  sequence="1"/>
+
+    </data>
+</odoo>

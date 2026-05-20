@@ -1,0 +1,785 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <!-- ========================================================= -->
+    <!-- BANDEJA MODERNA WHATSAPP - ODOO 18                        -->
+    <!-- No reemplaza las vistas existentes.                       -->
+    <!-- Usa los modelos actuales de WhatsApp ya definidos.         -->
+    <!-- ========================================================= -->
+
+    <t t-name="sat.WhatsappInboxApp">
+        <div class="o_wia_root">
+
+            <!-- ===================================================== -->
+            <!-- TOP BAR                                               -->
+            <!-- ===================================================== -->
+
+            <div class="o_wia_topbar">
+                <div class="o_wia_brand">
+                    <div class="o_wia_logo">
+                        WA
+                    </div>
+                    <div>
+                        <h2>Bandeja WhatsApp</h2>
+                        <span>
+                            Atención, configuración y auditoría desde una sola pantalla
+                        </span>
+                    </div>
+                </div>
+
+                <div class="o_wia_top_actions">
+                    <button type="button"
+                            class="btn btn-light"
+                            t-on-click="refresh">
+                        Actualizar
+                    </button>
+
+                    <button type="button"
+                            class="btn btn-outline-primary"
+                            t-on-click="createSession">
+                        Nueva sesión
+                    </button>
+
+                    <button type="button"
+                            class="btn btn-primary"
+                            t-on-click="openCurrentSessionForm"
+                            t-att-disabled="!state.selectedSession">
+                        Abrir sesión
+                    </button>
+                </div>
+            </div>
+
+            <!-- ===================================================== -->
+            <!-- KPI CARDS                                             -->
+            <!-- ===================================================== -->
+
+            <div class="o_wia_kpis">
+
+                <button type="button"
+                        class="o_wia_kpi"
+                        t-on-click="() => this.setFilter('open')">
+                    <span class="o_wia_kpi_value" t-esc="state.counters.open"/>
+                    <span class="o_wia_kpi_label">Sesiones abiertas</span>
+                </button>
+
+                <button type="button"
+                        class="o_wia_kpi"
+                        t-on-click="() => this.setFilter('human')">
+                    <span class="o_wia_kpi_value" t-esc="state.counters.human"/>
+                    <span class="o_wia_kpi_label">Modo humano</span>
+                </button>
+
+                <button type="button"
+                        class="o_wia_kpi"
+                        t-on-click="openOutboxPending">
+                    <span class="o_wia_kpi_value" t-esc="state.counters.pending"/>
+                    <span class="o_wia_kpi_label">Cola pendiente</span>
+                </button>
+
+                <button type="button"
+                        class="o_wia_kpi o_wia_kpi_warning"
+                        t-on-click="openOutboxFailed">
+                    <span class="o_wia_kpi_value" t-esc="state.counters.failedOutbox"/>
+                    <span class="o_wia_kpi_label">Cola fallida</span>
+                </button>
+
+                <button type="button"
+                        class="o_wia_kpi"
+                        t-on-click="openMediaPending">
+                    <span class="o_wia_kpi_value" t-esc="state.counters.mediaPending"/>
+                    <span class="o_wia_kpi_label">Media sin procesar</span>
+                </button>
+
+                <button type="button"
+                        class="o_wia_kpi o_wia_kpi_error"
+                        t-on-click="openErrorLogs">
+                    <span class="o_wia_kpi_value" t-esc="state.counters.errors"/>
+                    <span class="o_wia_kpi_label">Errores API</span>
+                </button>
+
+            </div>
+
+            <!-- ===================================================== -->
+            <!-- MAIN LAYOUT                                           -->
+            <!-- ===================================================== -->
+
+            <div class="o_wia_layout">
+
+                <!-- ================================================= -->
+                <!-- LEFT SIDEBAR                                      -->
+                <!-- ================================================= -->
+
+                <aside class="o_wia_sidebar">
+
+                    <div class="o_wia_sidebar_header">
+                        <div class="o_wia_sidebar_title_row">
+                            <h3>Conversaciones</h3>
+
+                            <button type="button"
+                                    class="btn btn-sm btn-light"
+                                    t-on-click="openSessions">
+                                Ver todo
+                            </button>
+                        </div>
+
+                        <div class="o_wia_search_box">
+                            <input type="text"
+                                   class="form-control"
+                                   placeholder="Buscar cliente, teléfono, intención o mensaje..."
+                                   t-att-value="state.query"
+                                   t-on-input="onSearchInput"/>
+
+                            <button type="button"
+                                    class="btn btn-sm btn-light"
+                                    t-on-click="clearSearch"
+                                    t-if="state.query">
+                                Limpiar
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="o_wia_filters">
+                        <button type="button"
+                                t-att-class="state.activeFilter === 'open' ? 'active' : ''"
+                                t-on-click="() => this.setFilter('open')">
+                            Abiertas
+                        </button>
+
+                        <button type="button"
+                                t-att-class="state.activeFilter === 'human' ? 'active' : ''"
+                                t-on-click="() => this.setFilter('human')">
+                            Humano
+                        </button>
+
+                        <button type="button"
+                                t-att-class="state.activeFilter === 'active' ? 'active' : ''"
+                                t-on-click="() => this.setFilter('active')">
+                            Activas
+                        </button>
+
+                        <button type="button"
+                                t-att-class="state.activeFilter === 'closed' ? 'active' : ''"
+                                t-on-click="() => this.setFilter('closed')">
+                            Cerradas
+                        </button>
+
+                        <button type="button"
+                                t-att-class="state.activeFilter === 'expired' ? 'active' : ''"
+                                t-on-click="() => this.setFilter('expired')">
+                            Expiradas
+                        </button>
+
+                        <button type="button"
+                                t-att-class="state.activeFilter === 'all' ? 'active' : ''"
+                                t-on-click="() => this.setFilter('all')">
+                            Todas
+                        </button>
+                    </div>
+
+                    <div class="o_wia_sessions">
+
+                        <t t-if="state.loadingSessions || state.loading">
+                            <div class="o_wia_empty">
+                                Cargando conversaciones...
+                            </div>
+                        </t>
+
+                        <t t-elif="!state.sessions.length">
+                            <div class="o_wia_empty">
+                                No hay conversaciones para este filtro.
+                            </div>
+                        </t>
+
+                        <t t-else="">
+                            <t t-foreach="state.sessions" t-as="session" t-key="session.id">
+
+                                <button type="button"
+                                        t-att-class="'o_wia_session_item ' + (isSelectedSession(session) ? 'active' : '')"
+                                        t-on-click="() => this.selectSession(session)">
+
+                                    <div class="o_wia_avatar">
+                                        <t t-esc="getInitials(session)"/>
+                                    </div>
+
+                                    <div class="o_wia_session_content">
+
+                                        <div class="o_wia_session_line">
+                                            <strong t-esc="getPartnerName(session)"/>
+                                            <span t-esc="formatDate(session.last_message_at)"/>
+                                        </div>
+
+                                        <div class="o_wia_session_subline">
+                                            <span t-esc="getSessionSubtitle(session)"/>
+                                            <span t-att-class="'o_wia_badge ' + getStateClass(session.state)"
+                                                  t-esc="getStateLabel(session.state)"/>
+                                        </div>
+
+                                        <p t-esc="getShortText(session.last_user_message || session.last_bot_message || 'Sin mensajes recientes', 90)"/>
+
+                                        <div class="o_wia_session_meta">
+                                            <span>
+                                                Intent:
+                                                <strong t-esc="session.last_intent || '-'"/>
+                                            </span>
+
+                                            <span>
+                                                Msg:
+                                                <strong t-esc="session.message_count || 0"/>
+                                            </span>
+                                        </div>
+
+                                    </div>
+                                </button>
+
+                            </t>
+                        </t>
+
+                    </div>
+                </aside>
+
+                <!-- ================================================= -->
+                <!-- CENTER CHAT                                       -->
+                <!-- ================================================= -->
+
+                <main class="o_wia_chat">
+
+                    <t t-if="!state.selectedSession">
+
+                        <div class="o_wia_no_chat">
+                            <div class="o_wia_no_chat_icon">
+                                💬
+                            </div>
+                            <h3>Selecciona una conversación</h3>
+                            <p>
+                                Desde aquí podrás revisar mensajes, responder, pasar a modo humano,
+                                cerrar sesiones y acceder a toda la configuración.
+                            </p>
+
+                            <div class="o_wia_no_chat_actions">
+                                <button type="button"
+                                        class="btn btn-primary"
+                                        t-on-click="createSession">
+                                    Crear sesión
+                                </button>
+
+                                <button type="button"
+                                        class="btn btn-outline-secondary"
+                                        t-on-click="openSessions">
+                                    Ver sesiones
+                                </button>
+                            </div>
+                        </div>
+
+                    </t>
+
+                    <t t-else="">
+
+                        <!-- CHAT HEADER -->
+
+                        <div class="o_wia_chat_header">
+
+                            <div class="o_wia_chat_identity">
+                                <div class="o_wia_avatar large">
+                                    <t t-esc="getInitials(state.selectedSession)"/>
+                                </div>
+
+                                <div>
+                                    <h3 t-esc="getPartnerName(state.selectedSession)"/>
+                                    <span>
+                                        <t t-esc="getSessionSubtitle(state.selectedSession)"/>
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div class="o_wia_chat_actions">
+
+                                <button type="button"
+                                        class="btn btn-outline-secondary btn-sm"
+                                        t-on-click="openCurrentPartner">
+                                    Contacto
+                                </button>
+
+                                <button type="button"
+                                        class="btn btn-outline-secondary btn-sm"
+                                        t-on-click="openCurrentCompany">
+                                    Empresa
+                                </button>
+
+                                <button type="button"
+                                        class="btn btn-outline-secondary btn-sm"
+                                        t-on-click="openMessages">
+                                    Mensajes
+                                </button>
+
+                                <button type="button"
+                                        class="btn btn-outline-secondary btn-sm"
+                                        t-on-click="openMedia">
+                                    Media
+                                </button>
+
+                                <button type="button"
+                                        class="btn btn-outline-secondary btn-sm"
+                                        t-on-click="openHandoff">
+                                    Handoff
+                                </button>
+
+                            </div>
+                        </div>
+
+                        <!-- CHAT STATUS STRIP -->
+
+                        <div class="o_wia_chat_strip">
+
+                            <div>
+                                Estado:
+                                <span t-att-class="'o_wia_badge ' + getStateClass(state.selectedSession.state)"
+                                      t-esc="getStateLabel(state.selectedSession.state)"/>
+                            </div>
+
+                            <div>
+                                Intención:
+                                <strong t-esc="state.selectedSession.last_intent || '-'"/>
+                            </div>
+
+                            <div>
+                                Mensajes:
+                                <strong t-esc="state.selectedSession.message_count || 0"/>
+                            </div>
+
+                            <div>
+                                Inicio:
+                                <strong t-esc="formatDate(state.selectedSession.started_at) || '-'"/>
+                            </div>
+
+                        </div>
+
+                        <!-- MESSAGES -->
+
+                        <div class="o_wia_messages">
+
+                            <t t-if="state.loadingMessages">
+                                <div class="o_wia_empty">
+                                    Cargando mensajes...
+                                </div>
+                            </t>
+
+                            <t t-elif="!state.messages.length">
+                                <div class="o_wia_empty">
+                                    Esta conversación aún no tiene mensajes.
+                                </div>
+                            </t>
+
+                            <t t-else="">
+                                <t t-foreach="state.messages" t-as="message" t-key="message.id">
+
+                                    <div t-att-class="'o_wia_message_row ' + (isOutgoing(message) ? 'out' : 'in')">
+
+                                        <div t-att-class="'o_wia_bubble ' + (isOutgoing(message) ? 'out' : 'in')"
+                                             t-on-click="() => this.selectMessage(message)">
+
+                                            <div class="o_wia_message_meta">
+                                                <span>
+                                                    <t t-esc="getDirectionLabel(message.direction)"/>
+                                                    ·
+                                                    <t t-esc="getMessageTypeLabel(message.message_type)"/>
+                                                </span>
+
+                                                <span t-esc="formatDate(message.message_date)"/>
+                                            </div>
+
+                                            <div class="o_wia_message_text">
+                                                <t t-esc="message.content || ''"/>
+                                            </div>
+
+                                            <t t-if="message.media_url">
+                                                <div class="o_wia_media_preview">
+                                                    <span>Archivo / media:</span>
+                                                    <a t-att-href="message.media_url"
+                                                       target="_blank">
+                                                        Abrir media
+                                                    </a>
+                                                </div>
+                                            </t>
+
+                                            <t t-if="message.intent">
+                                                <div class="o_wia_intent">
+                                                    Intención:
+                                                    <strong t-esc="message.intent"/>
+                                                </div>
+                                            </t>
+
+                                            <t t-if="message.is_error">
+                                                <div class="o_wia_error_text">
+                                                    Error:
+                                                    <t t-esc="message.error_message || 'Sin detalle'"/>
+                                                </div>
+                                            </t>
+
+                                            <div class="o_wia_message_tools">
+                                                <button type="button"
+                                                        t-on-click.stop="() => this.openMessageForm(message)">
+                                                    Abrir
+                                                </button>
+
+                                                <button type="button"
+                                                        class="danger"
+                                                        t-on-click.stop="() => this.deleteSelectedMessage(message)">
+                                                    Eliminar
+                                                </button>
+                                            </div>
+
+                                        </div>
+                                    </div>
+
+                                </t>
+                            </t>
+
+                        </div>
+
+                        <!-- COMPOSER -->
+
+                        <div class="o_wia_composer">
+
+                            <textarea class="form-control"
+                                      placeholder="Escribe una respuesta. Enter envía, Shift + Enter salta línea..."
+                                      t-att-value="state.draftMessage"
+                                      t-on-input="onDraftInput"
+                                      t-on-keydown="onDraftKeydown"/>
+
+                            <div class="o_wia_composer_actions">
+
+                                <button type="button"
+                                        class="btn btn-light"
+                                        t-on-click="clearDraft">
+                                    Limpiar
+                                </button>
+
+                                <button type="button"
+                                        class="btn btn-outline-secondary"
+                                        t-on-click="createOutbox">
+                                    Crear cola
+                                </button>
+
+                                <button type="button"
+                                        class="btn btn-primary"
+                                        t-on-click="sendMessage">
+                                    Enviar a cola
+                                </button>
+
+                            </div>
+                        </div>
+
+                    </t>
+                </main>
+
+                <!-- ================================================= -->
+                <!-- RIGHT PANEL                                       -->
+                <!-- ================================================= -->
+
+                <aside class="o_wia_right_panel">
+
+                    <!-- SELECTED SESSION INFO -->
+
+                    <t t-if="state.selectedSession">
+
+                        <div class="o_wia_card">
+                            <div class="o_wia_card_title_row">
+                                <h3>Cliente</h3>
+                                <span>Sesión activa</span>
+                            </div>
+
+                            <div class="o_wia_info_line">
+                                <span>Nombre</span>
+                                <strong t-esc="getPartnerName(state.selectedSession)"/>
+                            </div>
+
+                            <div class="o_wia_info_line">
+                                <span>Empresa</span>
+                                <strong t-esc="getCompanyName(state.selectedSession)"/>
+                            </div>
+
+                            <div class="o_wia_info_line">
+                                <span>Teléfono</span>
+                                <strong t-esc="state.selectedSession.phone || '-'"/>
+                            </div>
+
+                            <div class="o_wia_info_line">
+                                <span>JID</span>
+                                <strong t-esc="state.selectedSession.jid || '-'"/>
+                            </div>
+
+                            <div class="o_wia_info_line">
+                                <span>LID</span>
+                                <strong t-esc="state.selectedSession.lid || '-'"/>
+                            </div>
+
+                            <div class="o_wia_info_line">
+                                <span>Origen</span>
+                                <strong t-esc="state.selectedSession.source || '-'"/>
+                            </div>
+
+                            <div class="o_wia_info_line">
+                                <span>Estado</span>
+                                <strong t-esc="getStateLabel(state.selectedSession.state)"/>
+                            </div>
+
+                            <div class="o_wia_info_line">
+                                <span>Intención</span>
+                                <strong t-esc="state.selectedSession.last_intent || '-'"/>
+                            </div>
+
+                            <div class="o_wia_info_line">
+                                <span>Mensajes</span>
+                                <strong t-esc="state.selectedSession.message_count || 0"/>
+                            </div>
+
+                            <div class="o_wia_info_line">
+                                <span>Último mensaje</span>
+                                <strong t-esc="formatDate(state.selectedSession.last_message_at) || '-'"/>
+                            </div>
+
+                            <div class="o_wia_info_actions">
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-primary"
+                                        t-on-click="openCurrentSessionForm">
+                                    Editar sesión
+                                </button>
+
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-secondary"
+                                        t-on-click="openCurrentPartner">
+                                    Contacto
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- SESSION ACTIONS -->
+
+                        <div class="o_wia_card">
+                            <div class="o_wia_card_title_row">
+                                <h3>Acciones de sesión</h3>
+                                <span>Control</span>
+                            </div>
+
+                            <button type="button"
+                                    class="btn btn-outline-primary w-100 mb-2"
+                                    t-on-click="actionSetHuman"
+                                    t-att-disabled="!canSetHumanSelectedSession()">
+                                Pasar a modo humano
+                            </button>
+
+                            <button type="button"
+                                    class="btn btn-outline-secondary w-100 mb-2"
+                                    t-on-click="actionReopen"
+                                    t-att-disabled="!canReopenSelectedSession()">
+                                Reabrir
+                            </button>
+
+                            <button type="button"
+                                    class="btn btn-outline-secondary w-100 mb-2"
+                                    t-on-click="actionClose"
+                                    t-att-disabled="!canCloseSelectedSession()">
+                                Cerrar
+                            </button>
+
+                            <button type="button"
+                                    class="btn btn-outline-danger w-100 mb-2"
+                                    t-on-click="actionExpire"
+                                    t-att-disabled="!canExpireSelectedSession()">
+                                Expirar
+                            </button>
+
+                            <button type="button"
+                                    class="btn btn-danger w-100"
+                                    t-on-click="deleteCurrentSession">
+                                Eliminar sesión
+                            </button>
+                        </div>
+
+                    </t>
+
+                    <!-- OPERATION -->
+
+                    <div class="o_wia_card">
+                        <div class="o_wia_card_title_row">
+                            <h3>Operación</h3>
+                            <span>Ver / crear</span>
+                        </div>
+
+                        <div class="o_wia_action_grid">
+
+                            <button type="button"
+                                    class="o_wia_link_button"
+                                    t-on-click="openSessions">
+                                Ver sesiones
+                            </button>
+
+                            <button type="button"
+                                    class="o_wia_link_button add"
+                                    t-on-click="createSession">
+                                Nueva sesión
+                            </button>
+
+                            <button type="button"
+                                    class="o_wia_link_button"
+                                    t-on-click="openMessages">
+                                Ver mensajes
+                            </button>
+
+                            <button type="button"
+                                    class="o_wia_link_button add"
+                                    t-on-click="createMessage">
+                                Nuevo mensaje
+                            </button>
+
+                            <button type="button"
+                                    class="o_wia_link_button"
+                                    t-on-click="openOutbox">
+                                Ver cola
+                            </button>
+
+                            <button type="button"
+                                    class="o_wia_link_button add"
+                                    t-on-click="createOutbox">
+                                Nueva cola
+                            </button>
+
+                            <button type="button"
+                                    class="o_wia_link_button"
+                                    t-on-click="openMedia">
+                                Ver media
+                            </button>
+
+                            <button type="button"
+                                    class="o_wia_link_button add"
+                                    t-on-click="createMedia">
+                                Nueva media
+                            </button>
+
+                            <button type="button"
+                                    class="o_wia_link_button"
+                                    t-on-click="openHandoff">
+                                Ver handoff
+                            </button>
+
+                            <button type="button"
+                                    class="o_wia_link_button add"
+                                    t-on-click="createHandoff">
+                                Nuevo handoff
+                            </button>
+
+                        </div>
+                    </div>
+
+                    <!-- CONFIGURATION -->
+
+                    <div class="o_wia_card">
+                        <div class="o_wia_card_title_row">
+                            <h3>Configuración</h3>
+                            <span>Editar / crear</span>
+                        </div>
+
+                        <div class="o_wia_action_grid">
+
+                            <button type="button"
+                                    class="o_wia_link_button"
+                                    t-on-click="openAutoResponses">
+                                Auto respuestas
+                            </button>
+
+                            <button type="button"
+                                    class="o_wia_link_button add"
+                                    t-on-click="createAutoResponse">
+                                Nueva
+                            </button>
+
+                            <button type="button"
+                                    class="o_wia_link_button"
+                                    t-on-click="openIntentRules">
+                                Reglas intención
+                            </button>
+
+                            <button type="button"
+                                    class="o_wia_link_button add"
+                                    t-on-click="createIntentRule">
+                                Nueva
+                            </button>
+
+                            <button type="button"
+                                    class="o_wia_link_button"
+                                    t-on-click="openTemplates">
+                                Plantillas
+                            </button>
+
+                            <button type="button"
+                                    class="o_wia_link_button add"
+                                    t-on-click="createTemplate">
+                                Nueva
+                            </button>
+
+                            <button type="button"
+                                    class="o_wia_link_button"
+                                    t-on-click="openBusinessHours">
+                                Horarios
+                            </button>
+
+                            <button type="button"
+                                    class="o_wia_link_button add"
+                                    t-on-click="createBusinessHours">
+                                Nuevo
+                            </button>
+
+                            <button type="button"
+                                    class="o_wia_link_button"
+                                    t-on-click="openCalendar">
+                                Calendario
+                            </button>
+
+                            <button type="button"
+                                    class="o_wia_link_button add"
+                                    t-on-click="createCalendarEvent">
+                                Nuevo
+                            </button>
+
+                        </div>
+                    </div>
+
+                    <!-- AUDIT -->
+
+                    <div class="o_wia_card">
+                        <div class="o_wia_card_title_row">
+                            <h3>Auditoría</h3>
+                            <span>Debug</span>
+                        </div>
+
+                        <div class="o_wia_action_grid">
+
+                            <button type="button"
+                                    class="o_wia_link_button"
+                                    t-on-click="openLogs">
+                                Todos los logs
+                            </button>
+
+                            <button type="button"
+                                    class="o_wia_link_button danger"
+                                    t-on-click="openErrorLogs">
+                                Errores API
+                            </button>
+
+                            <button type="button"
+                                    class="o_wia_link_button warning"
+                                    t-on-click="openUnauthorizedLogs">
+                                No autorizados
+                            </button>
+
+                        </div>
+                    </div>
+
+                </aside>
+
+            </div>
+
+        </div>
+    </t>
+
+</templates>
