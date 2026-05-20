@@ -43,36 +43,17 @@ class WhatsappIntentRule(models.Model):
     # ==========================================================
     # Intención y acción
     # ==========================================================
-    intent = fields.Selection(
-        selection=[
-            ("greeting", "Saludo"),
-            ("service", "Servicio técnico general"),
-            ("onsite_service", "Servicio presencial"),
-            ("remote_service", "Soporte remoto"),
-            ("anydesk", "AnyDesk / conexión remota"),
-            ("toner", "Tóner / suministros"),
-            ("scanner", "Escáner / configuración"),
-            ("printer_issue", "Problema impresión"),
-            ("billing", "Facturación"),
-            ("sales", "Ventas"),
-            ("rental", "Alquiler"),
-            ("human", "Solicita humano"),
-            ("thanks", "Agradecimiento"),
-            ("goodbye", "Despedida"),
-            ("confirmation", "Confirmación (sí/ok)"),
-            ("negation", "Negación (no)"),
-            ("cancel", "Cancelar flujo"),
-            ("menu_option", "Opción de menú"),
-            ("dni", "DNI"),
-            ("ruc", "RUC"),
-            ("company_selection", "Selección de empresa"),
-            ("urgent", "Urgente"),
-            ("unknown", "Desconocido"),
-        ],
+    intent = fields.Char(
         string="Intención",
         required=True,
         default="unknown",
         index=True,
+        help=(
+            "Nombre técnico de la intención. "
+            "Es dinámico para poder agregar nuevas intenciones desde XML "
+            "sin modificar Python. Ejemplos: greeting, toner, onsite_service, "
+            "remote_service, billing, sales, human, counter_reading."
+        ),
     )
 
     action = fields.Selection(
@@ -162,7 +143,7 @@ class WhatsappIntentRule(models.Model):
         string="Score de confianza",
         default=1.0,
         digits=(3, 2),
-        help="Confianza asignada cuando esta regla matchea (0.00 a 1.00).",
+        help="Confianza asignada cuando esta regla matchea, de 0.00 a 1.00.",
     )
 
     # ==========================================================
@@ -206,7 +187,7 @@ class WhatsappIntentRule(models.Model):
 
     applies_to_flows = fields.Char(
         string="Aplica a flujos",
-        help="Lista de flujos separados por coma donde esta regla aplica (toner,onsite,remote). Vacío = todos.",
+        help="Lista de flujos separados por coma donde esta regla aplica. Ejemplo: toner,onsite,remote. Vacío = todos.",
     )
 
     # ==========================================================
@@ -235,7 +216,7 @@ class WhatsappIntentRule(models.Model):
 
     description = fields.Text(
         string="Descripción",
-        help="Para qué sirve esta regla (visible para administradores).",
+        help="Para qué sirve esta regla, visible para administradores.",
     )
 
     last_used_at = fields.Datetime(
@@ -268,16 +249,39 @@ class WhatsappIntentRule(models.Model):
     # ==========================================================
     # Constraints
     # ==========================================================
+    @api.constrains("intent")
+    def _check_intent(self):
+        for rule in self:
+            intent = (rule.intent or "").strip()
+            if not intent:
+                raise ValidationError(_("La intención no puede estar vacía."))
+
+            if not re.match(r"^[a-zA-Z0-9_\.:-]+$", intent):
+                raise ValidationError(_(
+                    "La intención '%s' no es válida. Usa solo letras, números, guion bajo, punto, dos puntos o guion."
+                ) % intent)
+
     @api.constrains("match_type", "pattern")
     def _check_pattern_validity(self):
         for rule in self:
+            pattern = rule._clean_pattern(rule.pattern)
+
+            if not pattern:
+                raise ValidationError(_(
+                    "El patrón no puede estar vacío en la regla '%s'."
+                ) % rule.name)
+
             if rule.match_type == "regex":
                 try:
-                    re.compile(rule.pattern or "")
+                    re.compile(pattern)
                 except re.error as e:
                     _logger.error(
-                        "[WA-INTENT] Regex inválido en regla id=%s pattern=%r error=%s",
-                        rule.id, rule.pattern, str(e),
+                        "[WA-INTENT] Regex inválido en regla id=%s name=%s pattern_raw=%r pattern_clean=%r error=%s",
+                        rule.id,
+                        rule.name,
+                        rule.pattern,
+                        pattern,
+                        str(e),
                     )
                     raise ValidationError(_(
                         "El patrón regex no es válido en la regla '%s': %s"
@@ -288,93 +292,202 @@ class WhatsappIntentRule(models.Model):
         for rule in self:
             if rule.confidence_score < 0 or rule.confidence_score > 1:
                 raise ValidationError(_(
-                    "El score de confianza debe estar entre 0.00 y 1.00 (regla: %s)."
+                    "El score de confianza debe estar entre 0.00 y 1.00. Regla: %s."
                 ) % rule.name)
 
     @api.constrains("min_message_length", "max_message_length")
     def _check_message_length_bounds(self):
         for rule in self:
+            if rule.min_message_length < 0:
+                raise ValidationError(_(
+                    "El largo mínimo no puede ser negativo. Regla: %s."
+                ) % rule.name)
+
+            if rule.max_message_length < 0:
+                raise ValidationError(_(
+                    "El largo máximo no puede ser negativo. Regla: %s."
+                ) % rule.name)
+
             if rule.max_message_length > 0 and rule.min_message_length > rule.max_message_length:
                 raise ValidationError(_(
-                    "El largo mínimo no puede ser mayor al largo máximo (regla: %s)."
+                    "El largo mínimo no puede ser mayor al largo máximo. Regla: %s."
                 ) % rule.name)
 
     # ==========================================================
-    # Helpers
+    # Helpers de normalización
     # ==========================================================
+    def _clean_pattern(self, pattern):
+        """
+        Limpia patrones cargados desde XML.
+
+        Importante:
+        Cuando el XML tiene:
+            <field name="pattern">
+                ^\\s*(hola)\\s*$
+            </field>
+
+        Odoo puede guardar saltos de línea antes y después.
+        Esta función evita que esos saltos rompan los regex.
+        """
+        return (pattern or "").strip()
+
     def _normalize_text(self, text):
-        return (text or "").strip().lower()
+        """
+        Normaliza texto para comparación no sensible a mayúsculas.
+
+        No elimina tildes porque tus reglas pueden incluir ambas formas:
+        tecnico|técnico, toner|tóner, etc.
+        """
+        text = (text or "").strip().lower()
+        text = re.sub(r"\s+", " ", text)
+        return text
+
+    def _normalize_regex_pattern(self, pattern):
+        """
+        Normaliza regex para evitar errores causados por formato XML.
+
+        - Quita espacios/saltos al inicio y final.
+        - Colapsa saltos de línea internos a espacios.
+        - No altera escapes regex como \\s, \\d, \\b.
+        """
+        pattern = self._clean_pattern(pattern)
+        pattern = re.sub(r"[\r\n\t]+", " ", pattern)
+        pattern = re.sub(r" {2,}", " ", pattern)
+        return pattern.strip()
 
     def _get_applies_to_flows_list(self):
         self.ensure_one()
         if not self.applies_to_flows:
             return []
-        return [f.strip().lower() for f in self.applies_to_flows.split(",") if f.strip()]
 
+        return [
+            flow.strip().lower()
+            for flow in self.applies_to_flows.split(",")
+            if flow and flow.strip()
+        ]
+
+    # ==========================================================
+    # Match
+    # ==========================================================
     def _match_text(self, message):
         self.ensure_one()
 
-        if not message:
+        raw_message = message or ""
+        raw_pattern = self.pattern or ""
+
+        message_clean = raw_message.strip()
+        pattern_clean = self._clean_pattern(raw_pattern)
+
+        if not message_clean or not pattern_clean:
             return False
 
-        # Validar longitud del mensaje
-        msg_len = len(message)
+        # Validar longitud usando mensaje limpio
+        msg_len = len(message_clean)
+
         if self.min_message_length > 0 and msg_len < self.min_message_length:
+            _logger.debug(
+                "[WA-INTENT] Regla descartada por largo mínimo id=%s name=%s len=%s min=%s",
+                self.id,
+                self.name,
+                msg_len,
+                self.min_message_length,
+            )
             return False
+
         if self.max_message_length > 0 and msg_len > self.max_message_length:
+            _logger.debug(
+                "[WA-INTENT] Regla descartada por largo máximo id=%s name=%s len=%s max=%s",
+                self.id,
+                self.name,
+                msg_len,
+                self.max_message_length,
+            )
             return False
 
         if self.case_sensitive:
-            message_cmp = (message or "").strip()
-            pattern_cmp = (self.pattern or "").strip()
+            message_cmp = message_clean
+            pattern_cmp = pattern_clean
             regex_flags = 0
         else:
-            message_cmp = self._normalize_text(message)
-            pattern_cmp = self._normalize_text(self.pattern)
+            message_cmp = self._normalize_text(message_clean)
+            pattern_cmp = self._normalize_text(pattern_clean)
             regex_flags = re.IGNORECASE
 
         if not message_cmp or not pattern_cmp:
             return False
 
         try:
+            result = False
+
             if self.match_type == "exact":
-                return message_cmp == pattern_cmp
+                result = message_cmp == pattern_cmp
 
-            if self.match_type == "contains":
-                return pattern_cmp in message_cmp
+            elif self.match_type == "contains":
+                result = pattern_cmp in message_cmp
 
-            if self.match_type == "starts_with":
-                return message_cmp.startswith(pattern_cmp)
+            elif self.match_type == "starts_with":
+                result = message_cmp.startswith(pattern_cmp)
 
-            if self.match_type == "ends_with":
-                return message_cmp.endswith(pattern_cmp)
+            elif self.match_type == "ends_with":
+                result = message_cmp.endswith(pattern_cmp)
 
-            if self.match_type == "word":
-                # Palabra completa con límites
+            elif self.match_type == "word":
                 pattern_escaped = re.escape(pattern_cmp)
-                return bool(re.search(
+                result = bool(re.search(
                     r"\b" + pattern_escaped + r"\b",
                     message_cmp,
                     flags=regex_flags,
                 ))
 
-            if self.match_type == "regex":
-                return bool(re.search(self.pattern, message or "", flags=regex_flags))
+            elif self.match_type == "regex":
+                regex_pattern = self._normalize_regex_pattern(pattern_clean)
+
+                if not self.case_sensitive:
+                    regex_pattern = self._normalize_text(regex_pattern)
+
+                result = bool(re.search(
+                    regex_pattern,
+                    message_cmp,
+                    flags=regex_flags,
+                ))
+
+            _logger.debug(
+                "[WA-INTENT] Match test id=%s name=%s type=%s intent=%s action=%s message=%r pattern_raw=%r pattern_cmp=%r result=%s",
+                self.id,
+                self.name,
+                self.match_type,
+                self.intent,
+                self.action,
+                message_cmp,
+                raw_pattern,
+                pattern_cmp,
+                result,
+            )
+
+            return result
 
         except Exception as e:
             _logger.exception(
-                "[WA-INTENT] Error matcheando regla id=%s name=%s error=%s",
-                self.id, self.name, str(e),
+                "[WA-INTENT] Error matcheando regla id=%s name=%s type=%s message=%r pattern_raw=%r error=%s",
+                self.id,
+                self.name,
+                self.match_type,
+                message_cmp,
+                raw_pattern,
+                str(e),
             )
             return False
 
-        return False
-
     def _is_applicable(self, applies_to=False, is_after_hours=False, current_flow=False):
-        """Verifica si la regla aplica al contexto actual."""
+        """
+        Verifica si la regla aplica al contexto actual.
+        """
         self.ensure_one()
 
-        # Filtro por applies_to
+        applies_to = applies_to or False
+        current_flow = current_flow or "none"
+
+        # Filtro por tipo de contacto/contexto
         if applies_to and self.applies_to not in ("all", applies_to):
             return False
 
@@ -382,7 +495,7 @@ class WhatsappIntentRule(models.Model):
         if self.only_during_business_hours and is_after_hours:
             return False
 
-        # Solo en idle
+        # Solo cuando no hay flujo activo
         if self.only_during_idle and current_flow and current_flow != "none":
             return False
 
@@ -399,22 +512,52 @@ class WhatsappIntentRule(models.Model):
     # ==========================================================
     @api.model_create_multi
     def create(self, vals_list):
+        for vals in vals_list:
+            if vals.get("intent"):
+                vals["intent"] = vals["intent"].strip()
+
+            if vals.get("pattern"):
+                vals["pattern"] = vals["pattern"].strip()
+
         rules = super().create(vals_list)
+
         for rule in rules:
             _logger.info(
-                "[WA-INTENT] Regla creada id=%s name=%s intent=%s action=%s pattern=%r",
-                rule.id, rule.name, rule.intent, rule.action, rule.pattern,
+                "[WA-INTENT] Regla creada id=%s name=%s intent=%s action=%s match_type=%s pattern=%r",
+                rule.id,
+                rule.name,
+                rule.intent,
+                rule.action,
+                rule.match_type,
+                rule.pattern,
             )
+
         return rules
 
     def write(self, vals):
+        vals = dict(vals or {})
+
+        if vals.get("intent"):
+            vals["intent"] = vals["intent"].strip()
+
+        if vals.get("pattern"):
+            vals["pattern"] = vals["pattern"].strip()
+
         result = super().write(vals)
-        if any(k in vals for k in ("pattern", "match_type", "intent", "action", "active")):
+
+        if any(k in vals for k in ("pattern", "match_type", "intent", "action", "active", "applies_to")):
             for rule in self:
                 _logger.info(
-                    "[WA-INTENT] Regla modificada id=%s name=%s intent=%s action=%s active=%s",
-                    rule.id, rule.name, rule.intent, rule.action, rule.active,
+                    "[WA-INTENT] Regla modificada id=%s name=%s intent=%s action=%s active=%s applies_to=%s match_type=%s",
+                    rule.id,
+                    rule.name,
+                    rule.intent,
+                    rule.action,
+                    rule.active,
+                    rule.applies_to,
+                    rule.match_type,
                 )
+
         return result
 
     # ==========================================================
@@ -422,7 +565,9 @@ class WhatsappIntentRule(models.Model):
     # ==========================================================
     @api.model
     def detect_intent(self, message, partner=False, applies_to=False, is_after_hours=False, current_flow=False):
-        if not message:
+        message_clean = (message or "").strip()
+
+        if not message_clean:
             _logger.debug("[WA-INTENT] detect_intent sin mensaje")
             return {
                 "found": False,
@@ -431,14 +576,16 @@ class WhatsappIntentRule(models.Model):
                 "confidence_score": 0.0,
             }
 
-        _logger.debug(
-            "[WA-INTENT] detect_intent message=%r applies_to=%s after_hours=%s flow=%s",
-            (message[:80] + "...") if len(message) > 80 else message,
-            applies_to, is_after_hours, current_flow,
+        _logger.info(
+            "[WA-INTENT] detect_intent message=%r applies_to=%s after_hours=%s flow=%s partner=%s",
+            (message_clean[:80] + "...") if len(message_clean) > 80 else message_clean,
+            applies_to,
+            is_after_hours,
+            current_flow,
+            partner.id if partner else False,
         )
 
         domain = [("active", "=", True)]
-
         rules = self.search(domain, order="priority desc, sequence asc, name asc")
 
         _logger.debug("[WA-INTENT] Evaluando %s reglas activas", len(rules))
@@ -452,25 +599,31 @@ class WhatsappIntentRule(models.Model):
                 ):
                     continue
 
-                if not rule._match_text(message):
+                if not rule._match_text(message_clean):
                     continue
 
-                # Match encontrado
                 try:
                     rule.sudo().write({
                         "last_used_at": fields.Datetime.now(),
                         "use_count": rule.use_count + 1,
-                        "last_matched_message": (message[:500] if message else False),
+                        "last_matched_message": message_clean[:500],
                     })
                 except Exception as e:
                     _logger.warning(
                         "[WA-INTENT] No se pudo actualizar métricas regla id=%s error=%s",
-                        rule.id, str(e),
+                        rule.id,
+                        str(e),
                     )
 
                 _logger.info(
-                    "[WA-INTENT] Match: regla=%s intent=%s action=%s score=%s",
-                    rule.name, rule.intent, rule.action, rule.confidence_score,
+                    "[WA-INTENT] Match: regla=%s id=%s intent=%s action=%s score=%s template=%s flow=%s",
+                    rule.name,
+                    rule.id,
+                    rule.intent,
+                    rule.action,
+                    rule.confidence_score,
+                    rule.response_template or False,
+                    rule.target_flow,
                 )
 
                 return {
@@ -492,13 +645,18 @@ class WhatsappIntentRule(models.Model):
             except Exception as e:
                 _logger.exception(
                     "[WA-INTENT] Error evaluando regla id=%s name=%s error=%s",
-                    rule.id, rule.name, str(e),
+                    rule.id,
+                    rule.name,
+                    str(e),
                 )
                 continue
 
         _logger.info(
-            "[WA-INTENT] Sin match para message=%r",
-            (message[:80] + "...") if len(message) > 80 else message,
+            "[WA-INTENT] Sin match para message=%r applies_to=%s flow=%s reglas=%s",
+            (message_clean[:80] + "...") if len(message_clean) > 80 else message_clean,
+            applies_to,
+            current_flow,
+            len(rules),
         )
 
         return {
@@ -509,13 +667,28 @@ class WhatsappIntentRule(models.Model):
         }
 
     @api.model
-    def detect_intent_with_alternatives(self, message, partner=False, applies_to=False,
-                                        is_after_hours=False, current_flow=False, max_alternatives=3):
+    def detect_intent_with_alternatives(
+        self,
+        message,
+        partner=False,
+        applies_to=False,
+        is_after_hours=False,
+        current_flow=False,
+        max_alternatives=3,
+    ):
         """
-        Devuelve la mejor match y alternativas (útil para Gemini como árbitro).
+        Devuelve la mejor coincidencia y alternativas.
+
+        Se mantiene separado de detect_intent para que otro motor,
+        por ejemplo IA/Gemini, pueda usar las alternativas como referencia.
         """
-        if not message:
-            return {"found": False, "matches": []}
+        message_clean = (message or "").strip()
+
+        if not message_clean:
+            return {
+                "found": False,
+                "matches": [],
+            }
 
         domain = [("active", "=", True)]
         rules = self.search(domain, order="priority desc, sequence asc, name asc")
@@ -531,7 +704,7 @@ class WhatsappIntentRule(models.Model):
                 ):
                     continue
 
-                if not rule._match_text(message):
+                if not rule._match_text(message_clean):
                     continue
 
                 matches.append({
@@ -540,8 +713,15 @@ class WhatsappIntentRule(models.Model):
                     "intent": rule.intent,
                     "action": rule.action,
                     "target_flow": rule.target_flow,
+                    "response_template": rule.response_template or False,
+                    "requires_registered": rule.requires_registered,
+                    "requires_company": rule.requires_company,
+                    "stop_flow": rule.stop_flow,
+                    "allow_ai_after": rule.allow_ai_after,
+                    "cancels_active_flow": rule.cancels_active_flow,
                     "confidence_score": rule.confidence_score,
                     "priority": rule.priority,
+                    "sequence": rule.sequence,
                 })
 
                 if len(matches) >= max_alternatives:
@@ -549,12 +729,15 @@ class WhatsappIntentRule(models.Model):
 
             except Exception as e:
                 _logger.exception(
-                    "[WA-INTENT] Error en alternatives regla id=%s error=%s",
-                    rule.id, str(e),
+                    "[WA-INTENT] Error en alternatives regla id=%s name=%s error=%s",
+                    rule.id,
+                    rule.name,
+                    str(e),
                 )
 
         _logger.info(
-            "[WA-INTENT] detect_intent_with_alternatives: %s matches",
+            "[WA-INTENT] detect_intent_with_alternatives message=%r matches=%s",
+            (message_clean[:80] + "...") if len(message_clean) > 80 else message_clean,
             len(matches),
         )
 
@@ -567,21 +750,34 @@ class WhatsappIntentRule(models.Model):
     # Acciones backend
     # ==========================================================
     def action_test_pattern(self):
-        """Acción manual para probar el patrón contra un texto de ejemplo."""
+        """
+        Acción manual para ver configuración de la regla.
+        """
         self.ensure_one()
+
         _logger.info(
             "[WA-INTENT] Test manual de regla id=%s name=%s",
-            self.id, self.name,
+            self.id,
+            self.name,
         )
+
         return {
             "type": "ir.actions.client",
             "tag": "display_notification",
             "params": {
                 "title": _("Regla: %s") % self.name,
                 "message": _(
-                    "Patrón: %s\nTipo: %s\nIntent: %s\nAcción: %s\n\n"
+                    "Patrón: %s\n"
+                    "Tipo: %s\n"
+                    "Intent: %s\n"
+                    "Acción: %s\n\n"
                     "Para probar contra un texto, usa el método detect_intent desde la API."
-                ) % (self.pattern, self.match_type, self.intent, self.action),
+                ) % (
+                    self.pattern,
+                    self.match_type,
+                    self.intent,
+                    self.action,
+                ),
                 "type": "info",
                 "sticky": True,
             },
@@ -591,13 +787,15 @@ class WhatsappIntentRule(models.Model):
         for rule in self:
             _logger.info(
                 "[WA-INTENT] Reset use_count regla id=%s previo=%s",
-                rule.id, rule.use_count,
+                rule.id,
+                rule.use_count,
             )
             rule.write({
                 "use_count": 0,
                 "last_used_at": False,
                 "last_matched_message": False,
             })
+
         return True
 
     def action_toggle_active(self):
@@ -605,6 +803,9 @@ class WhatsappIntentRule(models.Model):
             rule.active = not rule.active
             _logger.info(
                 "[WA-INTENT] Toggle active regla id=%s name=%s active=%s",
-                rule.id, rule.name, rule.active,
+                rule.id,
+                rule.name,
+                rule.active,
             )
+
         return True
