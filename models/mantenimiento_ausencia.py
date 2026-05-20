@@ -355,7 +355,7 @@ class MantenimientoTecnicoAusencia(models.Model):
                     vals['evaluacion_administrativa'] = 'pendiente'
 
         return vals
-        def _requiere_evaluacion_administrativa(self):
+    def _requiere_evaluacion_administrativa(self):
         """
         Define si la ausencia requiere decisión administrativa.
 
