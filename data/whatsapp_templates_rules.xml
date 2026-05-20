@@ -285,65 +285,66 @@ Para solicitar tóner puedes continuar por este chat.
 Si no deseas llenar el formulario o necesitas ayuda, puedes contactar al área correspondiente:
 
 *Área de suministros / tóner*
-Teléfono: REEMPLAZAR_NUMERO_TONER
-Correo: REEMPLAZAR_CORREO_TONER
+👤 *Jennifer Allpes*  
+📞 Teléfono: 51999332772  
+📧 Correo: alquiler@andescopiers.com.pe
 
-También puedes escribir *ASESOR* para que un encargado continúe la atención.
+👤 *Lizeth Acuña*  
+📞 Teléfono: 51999332772  
+📧 Correo: comercial01@andescopiers.com.pe
+
+Si deseas regresar al menú principal, escribe *MENU*.
             ]]></field>
             <field name="active">True</field>
         </record>
 
-        <record id="whatsapp_template_sales_contact" model="whatsapp.template">
-            <field name="name">sales_contact</field>
-            <field name="title">Contacto ventas / alquiler</field>
-            <field name="category">fallback</field>
-            <field name="body"><![CDATA[
+      <record id="whatsapp_template_sales_contact" model="whatsapp.template">
+    <field name="name">sales_contact</field>
+    <field name="title">Contacto ventas / alquiler</field>
+    <field name="category">fallback</field>
+    <field name="body"><![CDATA[
 💼 *Ventas / alquiler de equipos*
 
 Gracias por contactarnos.
 
-Para ventas, alquiler o cotización de equipos, puedes comunicarte con:
+Para consultas sobre *venta, alquiler o cotización de fotocopiadoras*, puedes comunicarte directamente con nuestra área comercial:
 
-*Área comercial*
-Teléfono: REEMPLAZAR_NUMERO_VENTAS
-Correo: REEMPLAZAR_CORREO_VENTAS
+👤 *Jennifer Allpes*  
+📞 Teléfono: 51999332772  
+📧 Correo: alquiler@andescopiers.com.pe
 
-Para ayudarte mejor, indícanos:
+👤 *Lizeth Acuña*  
+📞 Teléfono: 51999332772  
+📧 Correo: comercial01@andescopiers.com.pe
 
-• Si buscas compra o alquiler
-• Cantidad aproximada de copias/impresiones al mes
-• Si necesitas color o blanco y negro
-• Distrito o sede de instalación
-
-También puedes escribir *ASESOR* para que te deriven con el área comercial.
-            ]]></field>
-            <field name="active">True</field>
-        </record>
+Si deseas regresar al menú principal, escribe *MENU*.
+    ]]></field>
+    <field name="active">True</field>
+</record>
 
         <record id="whatsapp_template_billing_contact" model="whatsapp.template">
-            <field name="name">billing_contact</field>
-            <field name="title">Contacto facturación / pagos</field>
-            <field name="category">fallback</field>
-            <field name="body"><![CDATA[
+    <field name="name">billing_contact</field>
+    <field name="title">Contacto facturación / pagos</field>
+    <field name="category">fallback</field>
+    <field name="body"><![CDATA[
 🧾 *Facturación / pagos / administración*
 
-Para consultas de facturación, pagos, recibos, guías o comprobantes, puedes comunicarte con:
+Gracias por contactarnos.
 
-*Área administrativa / facturación*
-Teléfono: REEMPLAZAR_NUMERO_FACTURACION
-Correo: REEMPLAZAR_CORREO_FACTURACION
+Para consultas sobre *facturación, pagos, recibos, guías, comprobantes o temas administrativos*, puedes comunicarte directamente con nuestra área comercial / administrativa:
 
-Por favor indícanos:
+👤 *Jennifer Allpes*  
+📞 Teléfono: 51999332772  
+📧 Correo: alquiler@andescopiers.com.pe
 
-• RUC de la empresa
-• Número de factura, guía u orden si lo tienes
-• Motivo de la consulta
+👤 *Lizeth Acuña*  
+📞 Teléfono: 51999332772  
+📧 Correo: comercial01@andescopiers.com.pe
 
-También puedes escribir *ASESOR* para continuar con un encargado.
-            ]]></field>
-            <field name="active">True</field>
-        </record>
-
+Si deseas regresar al menú principal, escribe *MENU*.
+    ]]></field>
+    <field name="active">True</field>
+</record>
         <record id="whatsapp_template_remote_contact_help" model="whatsapp.template">
             <field name="name">remote_contact_help</field>
             <field name="title">Ayuda soporte remoto</field>
@@ -362,11 +363,9 @@ Podemos ayudarte con:
 
 Por favor envíanos tu código *AnyDesk* o una foto de la pantalla donde aparece el código.
 
-También puedes contactar:
 
-*Soporte remoto*
-Teléfono: REEMPLAZAR_NUMERO_SOPORTE_REMOTO
-Correo: REEMPLAZAR_CORREO_SOPORTE_REMOTO
+
+
             ]]></field>
             <field name="active">True</field>
         </record>
