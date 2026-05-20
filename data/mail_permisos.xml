@@ -185,7 +185,7 @@
              Se envía recién cuando el jefe aprueba.
              XML ID usado por tu modelo: sat.mail_template_mantenimiento_ausencia_contabilidad
         ============================================================= -->
-        <record id="mail_template_mantenimiento_ausencia_contabilidad" model="mail.template">
+       <record id="mail_template_mantenimiento_ausencia_contabilidad" model="mail.template">
     <field name="name">Permisos - Notificación aprobada para Gerencia / Contabilidad</field>
     <field name="model_id" ref="sat.model_mantenimiento_tecnico_ausencia"/>
     <field name="subject">Permiso aprobado - {{object.tecnico_id.name}} - {{object.name}}</field>
@@ -245,7 +245,7 @@
                     <br/>
                     <strong>Fecha de aprobación:</strong>
                     <t t-if="object.fecha_aprobacion">
-                        <t t-out="object.fecha_aprobacion.strftime('%d/%m/%Y %H:%M')"/>
+                        <t t-out="object._format_datetime_lima(object.fecha_aprobacion)"/>
                     </t>
                     <t t-else="">No registrada</t>
                 </div>
@@ -266,10 +266,6 @@
                         <t t-else="">
                             <strong>Pendiente de evaluación</strong>
                         </t>
-                    </div>
-
-                    <div style="font-size:13px; color:#7c2d12; margin-top:8px;">
-                        Esta información indica si el permiso corresponde a descuento, si será tomado a cuenta de vacaciones o si no aplica por tratarse de salud u otro motivo exceptuado.
                     </div>
                 </div>
 
@@ -320,6 +316,7 @@
                                 <t t-if="object.fecha_inicio">
                                     <t t-out="object.fecha_inicio.strftime('%d/%m/%Y')"/>
                                 </t>
+                                <t t-else="">No registrada</t>
                             </td>
                         </tr>
 
@@ -378,7 +375,7 @@
                                         </td>
                                         <td style="padding:8px; border:1px solid #e5e7eb;">
                                             <t t-if="tk.agenda">
-                                                <t t-out="tk.agenda.strftime('%d/%m/%Y %H:%M')"/>
+                                                <t t-out="object._format_datetime_lima(tk.agenda)"/>
                                             </t>
                                             <t t-else="">Sin agenda</t>
                                         </td>

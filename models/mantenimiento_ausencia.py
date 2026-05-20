@@ -424,7 +424,29 @@ class MantenimientoTecnicoAusencia(models.Model):
     # ============================================================
     # VALIDACIONES
     # ============================================================
+    def _format_datetime_lima(self, value):
+        """
+        Formatea una fecha/hora Datetime en zona horaria Lima / Perú.
 
+        Se usa principalmente en plantillas de correo porque strftime()
+        directo puede mostrar la hora fuera de la zona local.
+        """
+        if not value:
+            return 'No registrada'
+
+        try:
+            value_lima = fields.Datetime.context_timestamp(
+                self.with_context(tz='America/Lima'),
+                value
+            )
+            return value_lima.strftime('%d/%m/%Y %H:%M')
+        except Exception:
+            _logger.warning(
+                "[Ausencias] No se pudo convertir fecha/hora a Lima: %s",
+                value,
+                exc_info=True
+            )
+            return str(value)
     @api.constrains('fecha_inicio', 'fecha_fin', 'tipo')
     def _check_fechas(self):
         for rec in self:
