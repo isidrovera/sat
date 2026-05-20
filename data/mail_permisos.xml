@@ -186,17 +186,17 @@
              XML ID usado por tu modelo: sat.mail_template_mantenimiento_ausencia_contabilidad
         ============================================================= -->
         <record id="mail_template_mantenimiento_ausencia_contabilidad" model="mail.template">
-            <field name="name">Permisos - Notificación aprobada para Gerencia / Contabilidad</field>
-            <field name="model_id" ref="sat.model_mantenimiento_tecnico_ausencia"/>
-            <field name="subject">Permiso aprobado - {{object.tecnico_id.name}} - {{object.name}}</field>
-            <field name="email_from">soporte@andescopiers.com.pe</field>
-            <field name="email_to">t.escalante@corapsac.com.pe</field>
-            <field name="email_cc">lincoln@corapsac.com, campuero@corapsac.com.pe</field>
-            <field name="reply_to">soporte@andescopiers.com.pe</field>
-            <field name="auto_delete" eval="True"/>
-            <field name="use_default_to" eval="False"/>
+    <field name="name">Permisos - Notificación aprobada para Gerencia / Contabilidad</field>
+    <field name="model_id" ref="sat.model_mantenimiento_tecnico_ausencia"/>
+    <field name="subject">Permiso aprobado - {{object.tecnico_id.name}} - {{object.name}}</field>
+    <field name="email_from">soporte@andescopiers.com.pe</field>
+    <field name="email_to">t.escalante@corapsac.com.pe</field>
+    <field name="email_cc">lincoln@corapsac.com, campuero@corapsac.com.pe</field>
+    <field name="reply_to">soporte@andescopiers.com.pe</field>
+    <field name="auto_delete" eval="True"/>
+    <field name="use_default_to" eval="False"/>
 
-            <field name="body_html"><![CDATA[
+    <field name="body_html"><![CDATA[
 <!DOCTYPE html>
 <html>
 <head>
@@ -250,6 +250,29 @@
                     <t t-else="">No registrada</t>
                 </div>
 
+                <div style="background-color:#fff7ed; border-left:5px solid #f97316; padding:16px 18px; margin:20px 0; border-radius:6px;">
+                    <div style="font-size:16px; font-weight:bold; color:#9a3412; margin-bottom:8px;">
+                        Evaluación administrativa
+                    </div>
+
+                    <div style="font-size:15px;">
+                        <strong>Decisión:</strong>
+
+                        <t t-if="object.evaluacion_administrativa">
+                            <strong>
+                                <t t-out="dict(object._fields['evaluacion_administrativa'].selection).get(object.evaluacion_administrativa) or object.evaluacion_administrativa"/>
+                            </strong>
+                        </t>
+                        <t t-else="">
+                            <strong>Pendiente de evaluación</strong>
+                        </t>
+                    </div>
+
+                    <div style="font-size:13px; color:#7c2d12; margin-top:8px;">
+                        Esta información indica si el permiso corresponde a descuento, si será tomado a cuenta de vacaciones o si no aplica por tratarse de salud u otro motivo exceptuado.
+                    </div>
+                </div>
+
                 <div style="margin:25px 0;">
                     <div style="font-size:18px; font-weight:bold; color:#111827; margin-bottom:12px; border-bottom:2px solid #16a34a; padding-bottom:8px;">
                         Detalle aprobado
@@ -267,6 +290,20 @@
                             <td style="padding:12px 14px; background-color:#f9fafb; border-bottom:1px solid #e5e7eb; font-weight:bold;">Tipo</td>
                             <td style="padding:12px 14px; border-bottom:1px solid #e5e7eb;">
                                 <strong><t t-out="dict(object._fields['tipo'].selection).get(object.tipo) or object.tipo"/></strong>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="padding:12px 14px; background-color:#f9fafb; border-bottom:1px solid #e5e7eb; font-weight:bold;">Evaluación administrativa</td>
+                            <td style="padding:12px 14px; border-bottom:1px solid #e5e7eb;">
+                                <strong>
+                                    <t t-if="object.evaluacion_administrativa">
+                                        <t t-out="dict(object._fields['evaluacion_administrativa'].selection).get(object.evaluacion_administrativa) or object.evaluacion_administrativa"/>
+                                    </t>
+                                    <t t-else="">
+                                        Pendiente de evaluación
+                                    </t>
+                                </strong>
                             </td>
                         </tr>
 
@@ -396,8 +433,8 @@
     </div>
 </body>
 </html>
-            ]]></field>
-        </record>
+    ]]></field>
+</record>
 
 
         <!-- ============================================================
