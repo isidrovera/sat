@@ -178,9 +178,7 @@ class TicketAlquiler(models.Model):
     piso_id_r = fields.Char(string="Piso")
     oficina_id_r = fields.Char(string="Oficina")
     area_id_r = fields.Char(string="Área")
-    estern_id_r = fields.Boolean(string="Cliente externo", tracking=True)
-    
-    
+    estern_id_r = fields.Boolean(string="Cliente externo", tracking=True)    
     codigo_id = fields.Char(string='Referencia id')
     contometros_id = fields.Char(string="Contometro Scanner", tracking=True)
     contometrok_id = fields.Char(string="Contometro K", tracking=True)
