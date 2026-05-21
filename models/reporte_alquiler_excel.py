@@ -360,17 +360,17 @@ class ReporteEstadoMaquinaExcelExporter(models.TransientModel):
         styles = self._crear_estilos()
 
         headers = [
-            'Fecha',
+            'Fecha Reporte',
             'Serie',
             'Modelo',
             'Marca',
             'Tipo',
             'Estado',
             'Ubicación',
-            'Cont. B/N',
-            'Cont. Color',
-            'Cont. Total',
-            'Cont. Scanner',
+            'Contador B/N',
+            'Contador Color',
+            'Contador Total',
+            'Contador Scanner',
             'Último Ticket',
             'Fecha Ticket',
             'Tipo Servicio',

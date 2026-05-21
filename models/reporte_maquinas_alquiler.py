@@ -814,14 +814,12 @@ class ReporteEstadoMaquina(models.Model):
 
     def _exportar_excel(self, reportes):
         """
-        Exporta el reporte en una sola hoja.
+        Exporta el reporte Excel con:
+        - Hoja 1: Dashboard ejecutivo.
+        - Hoja 2: Estado detallado por máquina.
 
-        Correcciones:
-        - No usa self.fecha_desde ni self.fecha_hasta.
-        - Las fechas vienen por contexto desde reporte.estado.maquina.wizard.
-        - Se genera una sola hoja llamada Estado.
-        - Se muestran componentes/accesorios/intervenciones dinámicas.
-        - Se muestran partes retiradas detalladas en la misma fila.
+        No usa campos antiguos.
+        No usa self.fecha_desde/self.fecha_hasta.
         """
         reportes = reportes.exists()
 
@@ -830,6 +828,7 @@ class ReporteEstadoMaquina(models.Model):
 
         workbook = xlwt.Workbook(encoding='utf-8')
 
+        self._crear_hoja_dashboard(workbook, reportes)
         self._crear_hoja_estado_unica(workbook, reportes)
 
         output = BytesIO()
@@ -871,7 +870,7 @@ class ReporteEstadoMaquina(models.Model):
         url = f"/web/content/{attachment.id}/{quoted_filename}?download=1&access_token={token}"
 
         _logger.info(
-            "[ReporteEstadoMaquina] Excel generado una sola hoja -> id=%s name=%s url=%s reportes=%s",
+            "[ReporteEstadoMaquina] Excel generado -> id=%s name=%s url=%s reportes=%s",
             attachment.id,
             safe_filename,
             url,
@@ -952,21 +951,22 @@ class ReporteEstadoMaquina(models.Model):
 
     def _excel_crear_estilos(self):
         """
-        Estilos simples para una sola hoja.
+        Estilos para Dashboard y hoja Estado.
 
-        IMPORTANTE:
         xlwt no soporta:
             borders: all thin
 
-        Debe usarse:
+        Se usa:
             borders: left thin, right thin, top thin, bottom thin
         """
         border = 'borders: left thin, right thin, top thin, bottom thin;'
 
         return {
             'title': xlwt.easyxf(
-                'font: bold 1, height 360;'
+                'font: bold 1, height 420;'
                 'align: horiz center, vert center;'
+                'pattern: pattern solid, fore_colour dark_blue;'
+                'font: colour white, bold 1, height 420;'
                 + border
             ),
             'subtitle': xlwt.easyxf(
@@ -977,6 +977,7 @@ class ReporteEstadoMaquina(models.Model):
             'header': xlwt.easyxf(
                 'font: bold 1;'
                 'align: horiz center, vert center, wrap 1;'
+                'pattern: pattern solid, fore_colour gray25;'
                 + border
             ),
             'data': xlwt.easyxf(
@@ -992,8 +993,88 @@ class ReporteEstadoMaquina(models.Model):
                 + border,
                 num_format_str='#,##0'
             ),
-        }
 
+            # Estados
+            'estado_lista': xlwt.easyxf(
+                'align: vert top;'
+                'pattern: pattern solid, fore_colour light_green;'
+                + border
+            ),
+            'estado_revisada': xlwt.easyxf(
+                'align: vert top;'
+                'pattern: pattern solid, fore_colour light_green;'
+                + border
+            ),
+            'estado_alquilada': xlwt.easyxf(
+                'align: vert top;'
+                'pattern: pattern solid, fore_colour light_turquoise;'
+                + border
+            ),
+            'estado_sin_revisar': xlwt.easyxf(
+                'align: vert top;'
+                'pattern: pattern solid, fore_colour gray25;'
+                + border
+            ),
+            'estado_con_problemas': xlwt.easyxf(
+                'align: vert top;'
+                'pattern: pattern solid, fore_colour light_yellow;'
+                + border
+            ),
+            'estado_partes': xlwt.easyxf(
+                'align: vert top;'
+                'pattern: pattern solid, fore_colour rose;'
+                + border
+            ),
+
+            # Cards dashboard
+            'card_green': xlwt.easyxf(
+                'font: bold 1, height 300;'
+                'align: horiz center, vert center;'
+                'pattern: pattern solid, fore_colour light_green;'
+                + border
+            ),
+            'card_yellow': xlwt.easyxf(
+                'font: bold 1, height 300;'
+                'align: horiz center, vert center;'
+                'pattern: pattern solid, fore_colour light_yellow;'
+                + border
+            ),
+            'card_red': xlwt.easyxf(
+                'font: bold 1, height 300;'
+                'align: horiz center, vert center;'
+                'pattern: pattern solid, fore_colour rose;'
+                + border
+            ),
+            'card_blue': xlwt.easyxf(
+                'font: bold 1, height 300;'
+                'align: horiz center, vert center;'
+                'pattern: pattern solid, fore_colour light_turquoise;'
+                + border
+            ),
+        }
+    def _excel_get_estado_style(self, estado, styles):
+        """
+        Retorna estilo según estado de máquina.
+        """
+        if estado == 'lista':
+            return styles['estado_lista']
+
+        if estado == 'revisada':
+            return styles['estado_revisada']
+
+        if estado == 'alquilada':
+            return styles['estado_alquilada']
+
+        if estado == 'sin_revisar':
+            return styles['estado_sin_revisar']
+
+        if estado == 'con_problemas':
+            return styles['estado_con_problemas']
+
+        if estado == 'partes':
+            return styles['estado_partes']
+
+        return styles['data']
     def _excel_build_partes_detalle_texto(self, reporte):
         """
         Devuelve las partes retiradas como texto detallado en una sola celda.
@@ -1068,7 +1149,159 @@ class ReporteEstadoMaquina(models.Model):
             )
 
         return "\n\n".join(bloques)
+    def _crear_hoja_dashboard(self, workbook, reportes):
+        """
+        Crea dashboard ejecutivo para gerencia.
+        """
+        worksheet = workbook.add_sheet('Dashboard')
+        styles = self._excel_crear_estilos()
 
+        total = len(reportes)
+
+        estados = {
+            'sin_revisar': 0,
+            'revisada': 0,
+            'lista': 0,
+            'alquilada': 0,
+            'con_problemas': 0,
+            'partes': 0,
+        }
+
+        contador_total = 0
+        partes_total = 0
+        partes_bodega = 0
+        partes_sat = 0
+
+        for reporte in reportes:
+            if reporte.estado_maquina in estados:
+                estados[reporte.estado_maquina] += 1
+
+            contador_total += reporte.contador_total or 0
+
+            for parte in reporte.partes_retiradas_ids:
+                partes_total += 1
+
+                if parte.solicitud_partes_id:
+                    partes_bodega += 1
+                else:
+                    partes_sat += 1
+
+        operativos = estados['lista'] + estados['revisada'] + estados['alquilada']
+        problemas = estados['con_problemas'] + estados['partes']
+        sin_revisar = estados['sin_revisar']
+
+        pct_operativo = round((operativos / total) * 100, 2) if total else 0
+
+        worksheet.write_merge(
+            0, 1, 0, 7,
+            'DASHBOARD EJECUTIVO - ESTADO DE MÁQUINAS',
+            styles['title']
+        )
+
+        fecha_desde = self.env.context.get('reporte_fecha_desde')
+        fecha_hasta = self.env.context.get('reporte_fecha_hasta')
+
+        fecha_desde_txt = self._excel_fecha_txt(fields.Date.to_date(fecha_desde)) if fecha_desde else ''
+        fecha_hasta_txt = self._excel_fecha_txt(fields.Date.to_date(fecha_hasta)) if fecha_hasta else ''
+
+        worksheet.write_merge(
+            2, 2, 0, 7,
+            f"Rango: {fecha_desde_txt} - {fecha_hasta_txt}",
+            styles['subtitle']
+        )
+
+        row = 4
+
+        worksheet.write_merge(row, row, 0, 1, 'TOTAL EQUIPOS', styles['header'])
+        worksheet.write_merge(row + 1, row + 1, 0, 1, total, styles['card_blue'])
+
+        worksheet.write_merge(row, row, 2, 3, 'OPERATIVOS', styles['header'])
+        worksheet.write_merge(row + 1, row + 1, 2, 3, operativos, styles['card_green'])
+
+        worksheet.write_merge(row, row, 4, 5, 'CON PROBLEMAS', styles['header'])
+        worksheet.write_merge(row + 1, row + 1, 4, 5, problemas, styles['card_yellow'])
+
+        worksheet.write_merge(row, row, 6, 7, 'DE PARTES', styles['header'])
+        worksheet.write_merge(row + 1, row + 1, 6, 7, estados['partes'], styles['card_red'])
+
+        row += 4
+
+        worksheet.write_merge(row, row, 0, 7, 'INDICADOR GENERAL', styles['header'])
+        row += 1
+
+        if pct_operativo >= 80:
+            indicador_style = styles['card_green']
+            indicador = 'BUENO'
+        elif pct_operativo >= 50:
+            indicador_style = styles['card_yellow']
+            indicador = 'REGULAR'
+        else:
+            indicador_style = styles['card_red']
+            indicador = 'CRÍTICO'
+
+        worksheet.write_merge(
+            row,
+            row + 1,
+            0,
+            7,
+            f'{indicador} - {pct_operativo}% operativo',
+            indicador_style
+        )
+
+        row += 4
+
+        worksheet.write_merge(row, row, 0, 7, 'DISTRIBUCIÓN POR ESTADO', styles['header'])
+        row += 1
+
+        headers = ['Estado', 'Cantidad', '%', 'Acción sugerida']
+        for col, header in enumerate(headers):
+            worksheet.write(row, col, header, styles['header'])
+
+        row += 1
+
+        acciones = {
+            'sin_revisar': 'Programar revisión técnica',
+            'revisada': 'Preparar para disponibilidad',
+            'lista': 'Disponible para alquiler',
+            'alquilada': 'Equipo en servicio',
+            'con_problemas': 'Revisar reparación pendiente',
+            'partes': 'Validar partes retiradas',
+        }
+
+        for estado, cantidad in estados.items():
+            estado_label = dict(reportes._fields['estado_maquina'].selection).get(estado, estado)
+            porcentaje = round((cantidad / total) * 100, 2) if total else 0
+            estado_style = self._excel_get_estado_style(estado, styles)
+
+            worksheet.write(row, 0, estado_label, estado_style)
+            worksheet.write(row, 1, cantidad, styles['number'])
+            worksheet.write(row, 2, f"{porcentaje}%", styles['data'])
+            worksheet.write(row, 3, acciones.get(estado, ''), styles['data'])
+
+            row += 1
+
+        row += 2
+
+        worksheet.write_merge(row, row, 0, 7, 'RESUMEN DE PARTES RETIRADAS', styles['header'])
+        row += 1
+
+        worksheet.write(row, 0, 'Total partes retiradas', styles['header'])
+        worksheet.write(row, 1, partes_total, styles['number'])
+
+        worksheet.write(row + 1, 0, 'Para otras máquinas', styles['header'])
+        worksheet.write(row + 1, 1, partes_bodega, styles['number'])
+
+        worksheet.write(row + 2, 0, 'Para reparación / SAT', styles['header'])
+        worksheet.write(row + 2, 1, partes_sat, styles['number'])
+
+        worksheet.write(row + 3, 0, 'Contador total acumulado', styles['header'])
+        worksheet.write(row + 3, 1, contador_total, styles['number'])
+
+        for col in range(0, 8):
+            worksheet.col(col).width = 4500
+
+        worksheet.row(0).height = 550
+        worksheet.row(1).height = 550
     def _crear_hoja_estado_unica(self, workbook, reportes):
         """
         Crea una sola hoja para gerencia.
@@ -1180,7 +1413,8 @@ class ReporteEstadoMaquina(models.Model):
             worksheet.write(row, col, tipo_maquina, styles['data'])
             col += 1
 
-            worksheet.write(row, col, estado_maquina, styles['data'])
+            estado_style = self._excel_get_estado_style(reporte.estado_maquina, styles)
+            worksheet.write(row, col, estado_maquina, estado_style)
             col += 1
 
             worksheet.write(row, col, ubicacion, styles['data'])
