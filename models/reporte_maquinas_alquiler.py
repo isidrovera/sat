@@ -6,7 +6,6 @@ import base64
 import uuid
 from datetime import datetime, timedelta
 from io import BytesIO
-from unicodedata import normalize
 from urllib.parse import quote
 
 import xlwt
@@ -100,7 +99,7 @@ class ReporteEstadoMaquina(models.Model):
     ultimo_ticket_id = fields.Many2one(
         'ticket.alquiler',
         string='Último Ticket',
-        help='Último ticket de servicio registrado para esta máquina'
+        help='Último ticket finalizado registrado para esta máquina'
     )
 
     ultimo_ticket_fecha = fields.Datetime(
@@ -178,303 +177,6 @@ class ReporteEstadoMaquina(models.Model):
     )
 
     # ==========================================================
-    # Campos antiguos de accesorios
-    # Se mantienen para compatibilidad con reportes existentes.
-    # ==========================================================
-
-    transformador = fields.Selection([
-        ('si', 'Sí lo tiene'),
-        ('no', 'No lo tiene'),
-        ('no_aplica', 'No aplica')
-    ], string='Transformador')
-
-    estabilizador = fields.Selection([
-        ('si', 'Sí lo tiene'),
-        ('no', 'No lo tiene'),
-        ('no_aplica', 'No aplica')
-    ], string='Estabilizador')
-
-    adf_simple = fields.Selection([
-        ('si', 'Sí lo tiene'),
-        ('no', 'No lo tiene'),
-        ('no_aplica', 'No aplica')
-    ], string='ADF Simple')
-
-    adf_dual = fields.Selection([
-        ('si', 'Sí lo tiene'),
-        ('no', 'No lo tiene'),
-        ('no_aplica', 'No aplica')
-    ], string='ADF Dual Scan')
-
-    finalizador_interno = fields.Selection([
-        ('si', 'Sí lo tiene'),
-        ('no', 'No lo tiene'),
-        ('no_aplica', 'No aplica')
-    ], string='Finalizador Interno')
-
-    finalizador_externo = fields.Selection([
-        ('si', 'Sí lo tiene'),
-        ('no', 'No lo tiene'),
-        ('no_aplica', 'No aplica')
-    ], string='Finalizador Externo')
-
-    mueble = fields.Selection([
-        ('si', 'Sí lo tiene'),
-        ('no', 'No lo tiene'),
-        ('no_aplica', 'No aplica')
-    ], string='Mueble')
-
-    panel_smart = fields.Selection([
-        ('si', 'Sí lo tiene'),
-        ('no', 'No lo tiene'),
-        ('no_aplica', 'No aplica')
-    ], string='Panel Smart')
-
-    panel_normal = fields.Selection([
-        ('si', 'Sí lo tiene'),
-        ('no', 'No lo tiene'),
-        ('no_aplica', 'No aplica')
-    ], string='Panel Normal')
-
-    wifi = fields.Selection([
-        ('si', 'Sí lo tiene'),
-        ('no', 'No lo tiene'),
-        ('no_aplica', 'No aplica')
-    ], string='Wi-Fi')
-
-    bluetooth = fields.Selection([
-        ('si', 'Sí lo tiene'),
-        ('no', 'No lo tiene'),
-        ('no_aplica', 'No aplica')
-    ], string='Bluetooth')
-
-    cable_usb = fields.Selection([
-        ('si', 'Sí lo tiene'),
-        ('no', 'No lo tiene'),
-        ('no_aplica', 'No aplica')
-    ], string='Cable USB de Impresión')
-
-    cable_red = fields.Selection([
-        ('si', 'Sí lo tiene'),
-        ('no', 'No lo tiene'),
-        ('no_aplica', 'No aplica')
-    ], string='Cable de Red')
-
-    numero_caseteras = fields.Char(
-        string='Número de Caseteras'
-    )
-
-    # ==========================================================
-    # Check List - Funciones antiguas
-    # ==========================================================
-
-    copia_estado = fields.Selection([
-        ('si', 'Funciona Correctamente'),
-        ('no', 'No Funciona'),
-        ('no_aplica', 'No Aplica')
-    ], string='Función Copia')
-
-    impresion_estado = fields.Selection([
-        ('si', 'Funciona Correctamente'),
-        ('no', 'No Funciona'),
-        ('no_aplica', 'No Aplica')
-    ], string='Función Impresión')
-
-    impresion_usb_estado = fields.Selection([
-        ('si', 'Funciona Correctamente'),
-        ('no', 'No Funciona'),
-        ('no_aplica', 'No Aplica')
-    ], string='Impresión USB')
-
-    scanner_smb_estado = fields.Selection([
-        ('si', 'Funciona Correctamente'),
-        ('no', 'No Funciona'),
-        ('no_aplica', 'No Aplica')
-    ], string='Scanner SMB')
-
-    scanner_usb_estado = fields.Selection([
-        ('si', 'Funciona Correctamente'),
-        ('no', 'No Funciona'),
-        ('no_aplica', 'No Aplica')
-    ], string='Scanner USB')
-
-    scanner_ftp_estado = fields.Selection([
-        ('si', 'Funciona Correctamente'),
-        ('no', 'No Funciona'),
-        ('no_aplica', 'No Aplica')
-    ], string='Scanner FTP')
-
-    scanner_mail_estado = fields.Selection([
-        ('si', 'Funciona Correctamente'),
-        ('no', 'No Funciona'),
-        ('no_aplica', 'No Aplica')
-    ], string='Scanner Mail')
-
-    # ==========================================================
-    # Check List - Componentes antiguos
-    # ==========================================================
-
-    adf_estado = fields.Selection([
-        ('si', 'Funciona Correctamente'),
-        ('no', 'No Funciona'),
-        ('desgaste', 'Con Desgaste'),
-        ('cambio', 'Requiere Cambio'),
-        ('no_aplica', 'No Aplica')
-    ], string='Estado ADF')
-
-    tray1_estado = fields.Selection([
-        ('si', 'Funciona Correctamente'),
-        ('no', 'No Funciona'),
-        ('desgaste', 'Con Desgaste'),
-        ('cambio', 'Requiere Cambio'),
-        ('no_aplica', 'No Aplica')
-    ], string='Estado Tray 1')
-
-    tray2_estado = fields.Selection([
-        ('si', 'Funciona Correctamente'),
-        ('no', 'No Funciona'),
-        ('desgaste', 'Con Desgaste'),
-        ('cambio', 'Requiere Cambio'),
-        ('no_aplica', 'No Aplica')
-    ], string='Estado Tray 2')
-
-    tray3_estado = fields.Selection([
-        ('si', 'Funciona Correctamente'),
-        ('no', 'No Funciona'),
-        ('desgaste', 'Con Desgaste'),
-        ('cambio', 'Requiere Cambio'),
-        ('no_aplica', 'No Aplica')
-    ], string='Estado Tray 3')
-
-    tray4_estado = fields.Selection([
-        ('si', 'Funciona Correctamente'),
-        ('no', 'No Funciona'),
-        ('desgaste', 'Con Desgaste'),
-        ('cambio', 'Requiere Cambio'),
-        ('no_aplica', 'No Aplica')
-    ], string='Estado Tray 4')
-
-    bypass_estado = fields.Selection([
-        ('si', 'Funciona Correctamente'),
-        ('no', 'No Funciona'),
-        ('desgaste', 'Con Desgaste'),
-        ('cambio', 'Requiere Cambio'),
-        ('no_aplica', 'No Aplica')
-    ], string='Estado Bypass')
-
-    finalizador_estado = fields.Selection([
-        ('si', 'Funciona Correctamente'),
-        ('no', 'No Funciona'),
-        ('desgaste', 'Con Desgaste'),
-        ('cambio', 'Requiere Cambio'),
-        ('no_aplica', 'No Aplica')
-    ], string='Estado Finalizador')
-
-    # ==========================================================
-    # Check List - Partes Críticas antiguas
-    # ==========================================================
-
-    tacho_estado = fields.Selection([
-        ('si', 'Funciona Correctamente'),
-        ('no', 'No Funciona'),
-        ('desgaste', 'Con Desgaste'),
-        ('cambio', 'Requiere Cambio'),
-        ('no_aplica', 'No Aplica')
-    ], string='Estado Tacho Residual')
-
-    fusora_estado = fields.Selection([
-        ('si', 'Funciona Correctamente'),
-        ('no', 'No Funciona'),
-        ('desgaste', 'Con Desgaste'),
-        ('cambio', 'Requiere Cambio'),
-        ('no_aplica', 'No Aplica')
-    ], string='Estado Unidad Fusora')
-
-    transfer_estado = fields.Selection([
-        ('si', 'Funciona Correctamente'),
-        ('no', 'No Funciona'),
-        ('desgaste', 'Con Desgaste'),
-        ('cambio', 'Requiere Cambio'),
-        ('no_aplica', 'No Aplica')
-    ], string='Estado Faja Transfer')
-
-    optico_estado = fields.Selection([
-        ('si', 'Funciona Correctamente'),
-        ('no', 'No Funciona'),
-        ('desgaste', 'Con Desgaste'),
-        ('cambio', 'Requiere Cambio'),
-        ('no_aplica', 'No Aplica')
-    ], string='Estado Unidad Óptica')
-
-    unidad_imagen_black_estado = fields.Selection([
-        ('si', 'Funciona Correctamente'),
-        ('no', 'No Funciona'),
-        ('desgaste', 'Con Desgaste'),
-        ('cambio', 'Requiere Cambio'),
-        ('no_aplica', 'No Aplica')
-    ], string='Estado Unidad Imagen Black')
-
-    unidad_imagen_magenta_estado = fields.Selection([
-        ('si', 'Funciona Correctamente'),
-        ('no', 'No Funciona'),
-        ('desgaste', 'Con Desgaste'),
-        ('cambio', 'Requiere Cambio'),
-        ('no_aplica', 'No Aplica')
-    ], string='Estado Unidad Imagen Magenta')
-
-    unidad_imagen_cyan_estado = fields.Selection([
-        ('si', 'Funciona Correctamente'),
-        ('no', 'No Funciona'),
-        ('desgaste', 'Con Desgaste'),
-        ('cambio', 'Requiere Cambio'),
-        ('no_aplica', 'No Aplica')
-    ], string='Estado Unidad Imagen Cyan')
-
-    unidad_imagen_yellow_estado = fields.Selection([
-        ('si', 'Funciona Correctamente'),
-        ('no', 'No Funciona'),
-        ('desgaste', 'Con Desgaste'),
-        ('cambio', 'Requiere Cambio'),
-        ('no_aplica', 'No Aplica')
-    ], string='Estado Unidad Imagen Yellow')
-
-    # ==========================================================
-    # Toners antiguos
-    # ==========================================================
-
-    toner_black_nivel = fields.Selection([
-        ('lleno', 'Lleno'),
-        ('medio', 'Medio'),
-        ('vacio', 'Vacío'),
-        ('sin_botella', 'Sin Botella'),
-        ('no_aplica', 'No Aplica')
-    ], string='Nivel Toner Black')
-
-    toner_magenta_nivel = fields.Selection([
-        ('lleno', 'Lleno'),
-        ('medio', 'Medio'),
-        ('vacio', 'Vacío'),
-        ('sin_botella', 'Sin Botella'),
-        ('no_aplica', 'No Aplica')
-    ], string='Nivel Toner Magenta')
-
-    toner_cyan_nivel = fields.Selection([
-        ('lleno', 'Lleno'),
-        ('medio', 'Medio'),
-        ('vacio', 'Vacío'),
-        ('sin_botella', 'Sin Botella'),
-        ('no_aplica', 'No Aplica')
-    ], string='Nivel Toner Cyan')
-
-    toner_yellow_nivel = fields.Selection([
-        ('lleno', 'Lleno'),
-        ('medio', 'Medio'),
-        ('vacio', 'Vacío'),
-        ('sin_botella', 'Sin Botella'),
-        ('no_aplica', 'No Aplica')
-    ], string='Nivel Toner Yellow')
-
-    # ==========================================================
     # Partes retiradas / historial
     # ==========================================================
 
@@ -518,8 +220,8 @@ class ReporteEstadoMaquina(models.Model):
     def _compute_display_name(self):
         for record in self:
             record.display_name = (
-                f"{record.serie} - {record.modelo} "
-                f"({record.estado_maquina}) - {record.fecha_generacion}"
+                f"{record.serie or ''} - {record.modelo or ''} "
+                f"({record.estado_maquina or ''}) - {record.fecha_generacion or ''}"
             )
 
     # ==========================================================
@@ -538,6 +240,7 @@ class ReporteEstadoMaquina(models.Model):
         reportes_existentes = self.search([
             ('fecha_generacion', '=', fecha_reporte)
         ])
+
         if reportes_existentes:
             cantidad = len(reportes_existentes)
             reportes_existentes.unlink()
@@ -596,9 +299,9 @@ class ReporteEstadoMaquina(models.Model):
         valores_reporte = {
             'fecha_generacion': fecha_reporte,
             'maquina_id': maquina.id,
-            'serie': maquina.serie,
+            'serie': maquina.serie or '',
             'modelo': maquina.name.name if maquina.name else '',
-            'marca': maquina.marca,
+            'marca': maquina.marca or '',
             'tipo_maquina': maquina.tipo_maquina_id,
             'estado_maquina': maquina.estado_alquiler_id,
             'ubicacion_fisica': maquina.ubicacion_id,
@@ -646,18 +349,26 @@ class ReporteEstadoMaquina(models.Model):
 
     def _extraer_datos_ticket(self, ticket):
         """
-        Extrae todos los datos relevantes del último ticket.
+        Extrae datos relevantes del último ticket finalizado.
 
-        Mejora aplicada:
-        - Mantiene datos generales, contómetros e informe técnico.
-        - Mantiene compatibilidad con campos antiguos.
-        - Agrega resumen de componentes, accesorios e intervenciones dinámicas.
+        Ya no lee campos antiguos fijos como:
+        - tray4_estado
+        - bypass_estado
+        - finalizador_estado
+        - toner_black_nivel
+        - transformador
+        - estabilizador
+
+        Ahora usa únicamente:
+        - ticket_componente_eval_ids
+        - ticket_accesorio_eval_ids
+        - ticket_intervencion_ids
         """
         contador_bn = self._limpiar_contador(ticket.contometrok_id)
         contador_color = self._limpiar_contador(ticket.contometroc_id)
         contador_scanner = self._limpiar_contador(ticket.contometros_id)
 
-        datos = {
+        return {
             'ultimo_ticket_id': ticket.id,
             'ultimo_ticket_fecha': ticket.agenda,
             'ultimo_ticket_tipo': self._get_tipo_servicio_label(ticket),
@@ -671,16 +382,13 @@ class ReporteEstadoMaquina(models.Model):
             'intervenciones_resumen': self._build_intervenciones_resumen_html(ticket),
         }
 
-        datos.update(self._extraer_campos_antiguos_ticket(ticket))
-
-        return datos
-
     def _get_tipo_servicio_label(self, ticket):
         """
         Devuelve la etiqueta legible del tipo de servicio.
         Soporta Selection y Many2one por seguridad.
         """
         field = ticket._fields.get('tipo_servicio_id')
+
         if not field:
             return ''
 
@@ -730,6 +438,7 @@ class ReporteEstadoMaquina(models.Model):
             observaciones = ev.observaciones or ''
 
             nombre = componente
+
             if color:
                 nombre = "%s (%s)" % (nombre, color)
 
@@ -832,66 +541,6 @@ class ReporteEstadoMaquina(models.Model):
 
         return "<ul>%s</ul>" % "".join(bloques)
 
-    def _extraer_campos_antiguos_ticket(self, ticket):
-        """
-        Mantiene compatibilidad con campos antiguos del ticket.
-        Usa getattr() para no romper si algún campo ya no existe.
-        """
-        def val(field_name, default=False):
-            return getattr(ticket, field_name, default)
-
-        return {
-            # Accesorios antiguos
-            'transformador': val('transformador_id'),
-            'estabilizador': val('estabilizador'),
-            'adf_simple': val('adf_simple_id'),
-            'adf_dual': val('adf_dual_id'),
-            'finalizador_interno': val('finalizador_interno_id'),
-            'finalizador_externo': val('finalizador_externo_id'),
-            'mueble': val('mueble_id'),
-            'panel_smart': val('panel_smart_id'),
-            'panel_normal': val('panel_normal_id'),
-            'wifi': val('wi_fi_id'),
-            'bluetooth': val('bluetooth_id'),
-            'cable_usb': val('cable_usb_id'),
-            'cable_red': val('cable_red_id'),
-            'numero_caseteras': val('tray_id'),
-
-            # Check List - Funciones antiguas
-            'copia_estado': val('copia_id'),
-            'impresion_estado': val('impresion_id'),
-            'impresion_usb_estado': val('impresion_usb_id'),
-            'scanner_smb_estado': val('scaner_smb_id'),
-            'scanner_usb_estado': val('scaner_usb_id'),
-            'scanner_ftp_estado': val('scaner_ftp_id'),
-            'scanner_mail_estado': val('scaner_mail_id'),
-
-            # Check List - Componentes antiguos
-            'adf_estado': val('adf_id'),
-            'tray1_estado': val('tray1_id'),
-            'tray2_estado': val('tray2_id'),
-            'tray3_estado': val('tray3_id'),
-            'tray4_estado': val('tray4_id'),
-            'bypass_estado': val('bypass_id'),
-            'finalizador_estado': val('finalizador_id'),
-
-            # Partes Críticas antiguas
-            'tacho_estado': val('tacho_id'),
-            'fusora_estado': val('fusora_id'),
-            'transfer_estado': val('transfer_id'),
-            'optico_estado': val('optico_id'),
-            'unidad_imagen_black_estado': val('black_id'),
-            'unidad_imagen_magenta_estado': val('magenta_id'),
-            'unidad_imagen_cyan_estado': val('cyan_id'),
-            'unidad_imagen_yellow_estado': val('yellow_id'),
-
-            # Toners antiguos
-            'toner_black_nivel': val('toner_black_id'),
-            'toner_magenta_nivel': val('toner_magenta_id'),
-            'toner_cyan_nivel': val('toner_cyan_id'),
-            'toner_yellow_nivel': val('toner_yellow_id'),
-        }
-
     def _limpiar_contador(self, contador_str):
         """
         Limpia y convierte el valor del contador a entero.
@@ -916,6 +565,7 @@ class ReporteEstadoMaquina(models.Model):
 
         text = re.sub(r'<br\s*/?>', '\n', text, flags=re.I)
         text = re.sub(r'</p>', '\n', text, flags=re.I)
+        text = re.sub(r'</div>', '\n', text, flags=re.I)
         text = re.sub(r'</li>', '\n', text, flags=re.I)
         text = re.sub(r'<li[^>]*>', '• ', text, flags=re.I)
         text = re.sub(r'<[^>]+>', '', text)
@@ -945,6 +595,13 @@ class ReporteEstadoMaquina(models.Model):
         ], order='agenda asc, id asc')
 
         for ticket in tickets_instalacion:
+            if not ticket.partner_id:
+                _logger.warning(
+                    "[ReporteEstadoMaquina][Historial] Ticket=%s sin cliente, se omite historial.",
+                    ticket.name
+                )
+                continue
+
             ticket_retiro = self.env['ticket.alquiler'].search([
                 ('product_alquiler', '=', maquina.id),
                 ('tipo_servicio_id', '=', 'retiro'),
@@ -954,7 +611,7 @@ class ReporteEstadoMaquina(models.Model):
 
             self.env['reporte.estado.maquina.alquiler'].create({
                 'reporte_id': reporte.id,
-                'cliente_id': ticket.partner_id.id if ticket.partner_id else False,
+                'cliente_id': ticket.partner_id.id,
                 'direccion': ticket.direccion_id_r,
                 'fecha_instalacion': ticket.agenda.date() if ticket.agenda else False,
                 'fecha_retiro': (
@@ -975,26 +632,20 @@ class ReporteEstadoMaquina(models.Model):
 
     # ==========================================================
     # Partes retiradas
-    # Se mantiene la lógica existente porque está funcionando.
     # ==========================================================
 
     def _crear_registro_partes_retiradas(self, reporte, maquina):
         """
         Crea registros de partes retiradas para el reporte de una máquina de alquiler.
 
-        IMPORTANTE:
-        No se debe depender solo del estado de la cabecera de solicitud.partes,
-        porque una solicitud puede tener algunas líneas pendientes y otras ya
-        retiradas/reemplazadas.
-
         Fuentes:
         1) solicitud.partes.linea
-        - Flujo alquiler -> alquiler.
-        - Toma líneas reales retiradas o reemplazadas.
+           - Flujo alquiler -> alquiler.
+           - Toma líneas reales retiradas o reemplazadas.
 
         2) solicitud.parte.tecnico.linea
-        - Flujo reparación / SAT.
-        - Toma líneas entregadas cuyo origen fue una máquina de alquiler.
+           - Flujo reparación / SAT.
+           - Toma líneas entregadas cuyo origen fue una máquina de alquiler.
         """
         CONDICION_MAP = {
             'bueno': 'bueno',
@@ -1005,14 +656,6 @@ class ReporteEstadoMaquina(models.Model):
 
         # ==========================================================
         # FUENTE 1: solicitud.partes.linea
-        # Partes retiradas desde una máquina de alquiler hacia otra
-        # máquina de alquiler.
-        #
-        # Antes se buscaba por cabecera:
-        # solicitud.partes state in ['completed', 'replaced']
-        #
-        # Ahora se busca por línea, porque el retiro real está en:
-        # solicitud.partes.linea.estado
         # ==========================================================
         lineas_partes = self.env['solicitud.partes.linea'].search([
             ('maquina_origen_id', '=', maquina.id),
@@ -1036,6 +679,7 @@ class ReporteEstadoMaquina(models.Model):
             )
 
             maquina_destino = ''
+
             if solicitud and solicitud.maquina_destino_id:
                 maquina_destino = solicitud.maquina_destino_id.serie or ''
 
@@ -1061,16 +705,6 @@ class ReporteEstadoMaquina(models.Model):
 
         # ==========================================================
         # FUENTE 2: solicitud.parte.tecnico.linea
-        # Partes retiradas desde una máquina de alquiler para una
-        # reparación/SAT.
-        #
-        # Solo debe entrar cuando:
-        # - tipo_origen = alquiler
-        # - maquina_origen_alquiler_id = máquina del reporte
-        # - state = entregada
-        #
-        # No se incluye en_stock_logistica porque eso representa stock
-        # de logística, no retiro desde la máquina de alquiler.
         # ==========================================================
         lineas_tecnico = self.env['solicitud.parte.tecnico.linea'].search([
             ('tipo_origen', '=', 'alquiler'),
@@ -1175,55 +809,28 @@ class ReporteEstadoMaquina(models.Model):
         return True
 
     # ==========================================================
-    # Excel
+    # Excel - Una sola hoja para gerencia
     # ==========================================================
 
-    def _setup_palette(self, workbook):
-        """
-        Define colores personalizados para xlwt.
-        """
-        xlwt.add_palette_colour("dark_header", 0x21)
-        workbook.set_colour_RGB(0x21, 47, 79, 79)
-
-        xlwt.add_palette_colour("light_header", 0x22)
-        workbook.set_colour_RGB(0x22, 240, 248, 255)
-
-        xlwt.add_palette_colour("lista_color", 0x23)
-        workbook.set_colour_RGB(0x23, 212, 237, 218)
-
-        xlwt.add_palette_colour("revisada_color", 0x24)
-        workbook.set_colour_RGB(0x24, 217, 237, 247)
-
-        xlwt.add_palette_colour("sin_revisar_color", 0x25)
-        workbook.set_colour_RGB(0x25, 248, 249, 250)
-
-        xlwt.add_palette_colour("con_problemas_color", 0x26)
-        workbook.set_colour_RGB(0x26, 255, 243, 205)
-
-        xlwt.add_palette_colour("partes_color", 0x27)
-        workbook.set_colour_RGB(0x27, 248, 215, 218)
-
-        xlwt.add_palette_colour("alquilada_color", 0x28)
-        workbook.set_colour_RGB(0x28, 230, 247, 255)
-
     def _exportar_excel(self, reportes):
-        def _mes_es(dt):
-            return [
-                'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
-                'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
-            ][dt.month - 1]
+        """
+        Exporta el reporte en una sola hoja.
 
-        def _slug_filename(text):
-            text = normalize('NFKD', text).encode('ascii', 'ignore').decode('ascii')
-            text = re.sub(r'[^A-Za-z0-9._-]+', '_', text)
-            text = re.sub(r'_{2,}', '_', text).strip('_')
-            return text
+        Correcciones:
+        - No usa self.fecha_desde ni self.fecha_hasta.
+        - Las fechas vienen por contexto desde reporte.estado.maquina.wizard.
+        - Se genera una sola hoja llamada Estado.
+        - Se muestran componentes/accesorios/intervenciones dinámicas.
+        - Se muestran partes retiradas detalladas en la misma fila.
+        """
+        reportes = reportes.exists()
+
+        if not reportes:
+            raise UserError(_('No hay reportes válidos para exportar.'))
 
         workbook = xlwt.Workbook(encoding='utf-8')
 
-        self._setup_palette(workbook)
-        self._crear_hoja_resumen(workbook, reportes)
-        self._crear_hoja_detalle(workbook, reportes)
+        self._crear_hoja_estado_unica(workbook, reportes)
 
         output = BytesIO()
         workbook.save(output)
@@ -1231,21 +838,14 @@ class ReporteEstadoMaquina(models.Model):
 
         excel_data = base64.b64encode(output.read()).decode('utf-8')
 
-        fecha_desde = self.fecha_desde or fields.Date.context_today(self)
-        fecha_hasta = self.fecha_hasta or fields.Date.context_today(self)
+        fecha_hasta = self.env.context.get('reporte_fecha_hasta')
 
-        mes_texto = _mes_es(fecha_hasta).capitalize()
-        anio = fecha_hasta.year
+        if not fecha_hasta:
+            fechas = reportes.mapped('fecha_generacion')
+            fecha_hasta = max(fechas) if fechas else fields.Date.context_today(self)
 
-        seq_raw = self.env['ir.sequence'].next_by_code('sat.reporte_estado_excel') or '0001'
-        seq_safe = _slug_filename(seq_raw)
-
-        human_name = (
-            f"{seq_safe}_Reporte_Estado_Maquinas_"
-            f"{mes_texto}-{anio}_{fecha_desde.strftime('%Y%m%d')}_a_{fecha_hasta.strftime('%Y%m%d')}.xls"
-        )
-
-        safe_filename = _slug_filename(human_name)
+        fecha_hasta_date = fields.Date.to_date(fecha_hasta)
+        safe_filename = f"Estado_Maq_{fecha_hasta_date.strftime('%Y%m%d')}.xls"
         quoted_filename = quote(safe_filename)
 
         attachment = self.env['ir.attachment'].create({
@@ -1254,7 +854,7 @@ class ReporteEstadoMaquina(models.Model):
             'datas': excel_data,
             'mimetype': 'application/octet-stream',
             'res_model': self._name,
-            'res_id': self.id,
+            'res_id': reportes[:1].id if reportes else False,
         })
 
         token = getattr(attachment, 'access_token', False)
@@ -1271,10 +871,11 @@ class ReporteEstadoMaquina(models.Model):
         url = f"/web/content/{attachment.id}/{quoted_filename}?download=1&access_token={token}"
 
         _logger.info(
-            "[ReporteEstadoMaquina] Descarga Excel -> id=%s name=%s url=%s",
+            "[ReporteEstadoMaquina] Excel generado una sola hoja -> id=%s name=%s url=%s reportes=%s",
             attachment.id,
             safe_filename,
-            url
+            url,
+            len(reportes),
         )
 
         return {
@@ -1283,639 +884,403 @@ class ReporteEstadoMaquina(models.Model):
             'target': 'self',
         }
 
-    def _crear_hoja_resumen(self, workbook, reportes):
+    def _excel_selection_label(self, record, field_name):
         """
-        Crea dashboard ejecutivo con métricas y KPIs.
+        Devuelve etiqueta legible de un campo selection.
         """
-        worksheet = workbook.add_sheet('Dashboard Ejecutivo')
+        if not record or field_name not in record._fields:
+            return ''
 
-        title_style = xlwt.easyxf(
-            'pattern: pattern solid, fore_colour dark_header;'
-            'font: bold 1, height 500, colour white, name Arial;'
-            'align: horiz center, vert center'
-        )
+        value = getattr(record, field_name, False)
 
-        subtitle_style = xlwt.easyxf(
-            'font: bold 1, height 320, colour dark_header, name Arial;'
-            'align: horiz center, vert center'
-        )
+        if not value:
+            return ''
 
-        card_header = xlwt.easyxf(
-            'pattern: pattern solid, fore_colour light_header;'
-            'font: bold 1, height 280, name Arial;'
-            'align: horiz center, vert center;'
-            'borders: left medium, right medium, top medium, bottom thin'
-        )
+        field = record._fields[field_name]
 
-        card_value = xlwt.easyxf(
-            'pattern: pattern solid, fore_colour light_header;'
-            'font: bold 1, height 400, colour dark_header, name Arial;'
-            'align: horiz center, vert center;'
-            'borders: left medium, right medium, top thin, bottom medium',
-            num_format_str='#,##0'
-        )
+        if field.type == 'selection':
+            selection = field.selection
+            if callable(selection):
+                selection = selection(record)
+            return dict(selection).get(value, value)
 
-        status_excellent = xlwt.easyxf(
-            'pattern: pattern solid, fore_colour lista_color;'
-            'font: bold 1, height 240, name Arial;'
-            'align: horiz center, vert center;'
-            'borders: left thin, right thin, top thin, bottom thin'
-        )
+        return str(value or '')
 
-        status_good = xlwt.easyxf(
-            'pattern: pattern solid, fore_colour revisada_color;'
-            'font: bold 1, height 240, name Arial;'
-            'align: horiz center, vert center;'
-            'borders: left thin, right thin, top thin, bottom thin'
-        )
+    def _excel_html_to_text(self, html):
+        """
+        Convierte HTML simple a texto plano para Excel.
+        """
+        return self._html_to_text(html)
 
-        status_warning = xlwt.easyxf(
-            'pattern: pattern solid, fore_colour con_problemas_color;'
-            'font: bold 1, height 240, name Arial;'
-            'align: horiz center, vert center;'
-            'borders: left thin, right thin, top thin, bottom thin'
-        )
+    def _excel_clip_text(self, value, limit=30000):
+        """
+        Evita errores por textos demasiado largos en una celda XLS.
+        """
+        if not value:
+            return ''
 
-        status_critical = xlwt.easyxf(
-            'pattern: pattern solid, fore_colour partes_color;'
-            'font: bold 1, height 240, name Arial;'
-            'align: horiz center, vert center;'
-            'borders: left thin, right thin, top thin, bottom thin'
-        )
+        value = str(value)
 
-        fecha_actual = datetime.now().strftime("%d/%m/%Y %H:%M")
+        if len(value) > limit:
+            return value[:limit - 3] + '...'
 
-        worksheet.write_merge(
-            0, 1, 0, 8,
-            'DASHBOARD EJECUTIVO - INVENTARIO DE EQUIPOS',
-            title_style
-        )
-        worksheet.write_merge(
-            2, 2, 0, 8,
-            f'Actualizado: {fecha_actual}',
-            subtitle_style
-        )
+        return value
 
-        worksheet.row(0).height = 800
-        worksheet.row(1).height = 400
-        worksheet.row(2).height = 400
+    def _excel_fecha_txt(self, value):
+        """
+        Devuelve fecha como texto dd/mm/yyyy.
+        """
+        if not value:
+            return ''
 
-        total_maquinas = len(reportes)
-        estados_data = {}
+        try:
+            return value.strftime('%d/%m/%Y')
+        except Exception:
+            return str(value)
 
-        for reporte in reportes:
-            estado = reporte.estado_maquina
+    def _excel_datetime_txt(self, value):
+        """
+        Devuelve fecha/hora como texto dd/mm/yyyy hh:mm.
+        """
+        if not value:
+            return ''
 
-            if estado not in estados_data:
-                estados_data[estado] = {
-                    'cantidad': 0,
-                    'contador_total': 0,
-                }
+        try:
+            return value.strftime('%d/%m/%Y %H:%M')
+        except Exception:
+            return str(value)
 
-            estados_data[estado]['cantidad'] += 1
-            estados_data[estado]['contador_total'] += reporte.contador_total or 0
-
-        row = 4
-        worksheet.write_merge(row, row, 0, 8, 'MÉTRICAS CLAVE', subtitle_style)
-        row += 2
-
-        equipos_operativos = (
-            estados_data.get('lista', {}).get('cantidad', 0) +
-            estados_data.get('alquilada', {}).get('cantidad', 0)
-        )
-
-        equipos_problema = (
-            estados_data.get('con_problemas', {}).get('cantidad', 0) +
-            estados_data.get('partes', {}).get('cantidad', 0)
-        )
-
-        sin_revisar = estados_data.get('sin_revisar', {}).get('cantidad', 0)
-
-        worksheet.write_merge(row, row, 0, 1, 'TOTAL EQUIPOS', card_header)
-        worksheet.write_merge(row + 1, row + 1, 0, 1, total_maquinas, card_value)
-
-        worksheet.write_merge(row, row, 2, 3, 'OPERATIVOS', card_header)
-        worksheet.write_merge(row + 1, row + 1, 2, 3, equipos_operativos, card_value)
-
-        worksheet.write_merge(row, row, 4, 5, 'CON PROBLEMAS', card_header)
-        worksheet.write_merge(row + 1, row + 1, 4, 5, equipos_problema, card_value)
-
-        worksheet.write_merge(row, row, 6, 7, 'SIN REVISAR', card_header)
-        worksheet.write_merge(row + 1, row + 1, 6, 7, sin_revisar, card_value)
-
-        row += 4
-
-        worksheet.write_merge(row, row, 0, 8, 'INDICADOR DE SALUD', subtitle_style)
-        row += 2
-
-        pct_operativos = (
-            equipos_operativos / total_maquinas * 100
-            if total_maquinas > 0 else 0
-        )
-
-        if pct_operativos >= 80:
-            estado_general = "EXCELENTE"
-            semaforo_style = status_excellent
-        elif pct_operativos >= 60:
-            estado_general = "BUENO"
-            semaforo_style = status_good
-        elif pct_operativos >= 40:
-            estado_general = "REGULAR"
-            semaforo_style = status_warning
-        else:
-            estado_general = "CRÍTICO"
-            semaforo_style = status_critical
-
-        worksheet.write_merge(
-            row,
-            row + 1,
-            0,
-            8,
-            f'{estado_general} ({pct_operativos:.1f}% Operativo)',
-            semaforo_style
-        )
-
-        worksheet.row(row).height = 600
-        worksheet.row(row + 1).height = 400
-
-        row += 3
-
-        worksheet.write_merge(row, row, 0, 8, 'DISTRIBUCIÓN POR ESTADOS', subtitle_style)
-        row += 2
-
-        modern_header = xlwt.easyxf(
-            'pattern: pattern solid, fore_colour dark_header;'
-            'font: bold 1, colour white, height 260, name Arial;'
-            'align: horiz center, vert center;'
-            'borders: left thin, right thin, top thin, bottom thin'
-        )
-
-        headers_modernos = [
-            'ESTADO',
-            'CANTIDAD',
-            '%',
-            'CONTÓMETRO TOTAL',
-            'ESTADO VISUAL',
-            'ACCIÓN REQUERIDA'
-        ]
-
-        for col, header in enumerate(headers_modernos):
-            worksheet.write(row, col, header, modern_header)
-
-        row += 1
-
-        estado_configs = {
-            'lista': {
-                'style': status_excellent,
-                'visual': 'LISTO',
-                'accion': 'Disponible para alquiler'
-            },
-            'revisada': {
-                'style': status_good,
-                'visual': 'REVISADO',
-                'accion': 'Preparar para inventario'
-            },
-            'sin_revisar': {
-                'style': status_warning,
-                'visual': 'PENDIENTE',
-                'accion': 'Revisar técnicamente'
-            },
-            'con_problemas': {
-                'style': status_warning,
-                'visual': 'ATENCIÓN',
-                'accion': 'Reparación requerida'
-            },
-            'partes': {
-                'style': status_critical,
-                'visual': 'CRÍTICO',
-                'accion': 'Solo para repuestos'
-            },
-            'alquilada': {
-                'style': status_good,
-                'visual': 'ACTIVO',
-                'accion': 'En servicio'
-            }
+    def _excel_crear_estilos(self):
+        """
+        Estilos simples para una sola hoja.
+        """
+        return {
+            'title': xlwt.easyxf(
+                'font: bold 1, height 360;'
+                'align: horiz center, vert center;'
+                'borders: all thin'
+            ),
+            'subtitle': xlwt.easyxf(
+                'font: bold 1;'
+                'align: horiz left, vert center;'
+                'borders: all thin'
+            ),
+            'header': xlwt.easyxf(
+                'font: bold 1;'
+                'align: horiz center, vert center, wrap 1;'
+                'borders: all thin'
+            ),
+            'data': xlwt.easyxf(
+                'borders: all thin;'
+                'align: vert top'
+            ),
+            'wrap': xlwt.easyxf(
+                'borders: all thin;'
+                'align: vert top, wrap 1'
+            ),
+            'number': xlwt.easyxf(
+                'borders: all thin;'
+                'align: horiz right, vert top',
+                num_format_str='#,##0'
+            ),
         }
 
-        for estado, data in estados_data.items():
-            config = estado_configs.get(estado, estado_configs['sin_revisar'])
-            estado_label = dict(reportes._fields['estado_maquina'].selection).get(estado, estado)
-            porcentaje = round((data['cantidad'] / total_maquinas) * 100, 1) if total_maquinas else 0
-
-            worksheet.write(row, 0, estado_label, config['style'])
-            worksheet.write(row, 1, data['cantidad'], config['style'])
-            worksheet.write(row, 2, f"{porcentaje}%", config['style'])
-            worksheet.write(row, 3, data['contador_total'], config['style'])
-            worksheet.write(row, 4, config['visual'], config['style'])
-            worksheet.write(row, 5, config['accion'], config['style'])
-
-            row += 1
-
-        row += 2
-        worksheet.write_merge(row, row, 0, 8, 'RECOMENDACIONES', subtitle_style)
-        row += 1
-
-        recomendaciones = []
-
-        if sin_revisar > total_maquinas * 0.3:
-            recomendaciones.append("Priorizar revisión técnica de equipos pendientes")
-
-        if equipos_problema > 0:
-            recomendaciones.append("Programar mantenimiento para equipos con problemas")
-
-        if pct_operativos < 50:
-            recomendaciones.append("Nivel crítico: aumentar equipos operativos")
-
-        if not recomendaciones:
-            recomendaciones.append("Inventario en buen estado general")
-
-        for recomendacion in recomendaciones:
-            worksheet.write_merge(row, row, 0, 8, recomendacion, status_good)
-            row += 1
-
-        for col in range(0, 9):
-            worksheet.col(col).width = 4500
-
-    def _crear_hoja_detalle(self, workbook, reportes):
+    def _excel_build_partes_detalle_texto(self, reporte):
         """
-        Crea hoja con detalles completos, incluyendo:
-        - Informe técnico
-        - Componentes dinámicos
-        - Accesorios dinámicos
-        - Intervenciones / subpartes
-        - Partes retiradas
+        Devuelve las partes retiradas como texto detallado en una sola celda.
+
+        Se separa por:
+        - Partes retiradas para otras máquinas.
+        - Partes retiradas para reparación / SAT.
         """
-        worksheet = workbook.add_sheet('Detalles Completos')
+        partes = reporte.partes_retiradas_ids
 
-        def _build_partes_texto(reporte):
-            partes = reporte.partes_retiradas_ids
+        if not partes:
+            return ''
 
-            if not partes:
-                return '', '', '', ''
+        lineas_bodega = []
+        lineas_sat = []
 
-            nombres = []
-            fechas = []
-            destinos = []
-            fuentes = []
-
-            for p in partes:
-                nombres.append(p.nombre_parte or '-')
-                fechas.append(
-                    p.fecha_solicitud.strftime('%d/%m/%Y')
-                    if p.fecha_solicitud else '-'
-                )
-                destinos.append(p.maquina_destino or '-')
-                fuentes.append(
-                    'Técnico'
-                    if not p.solicitud_partes_id
-                    else 'Bodega'
-                )
-
-            sep = '\n'
-
-            return (
-                sep.join(nombres),
-                sep.join(fechas),
-                sep.join(destinos),
-                sep.join(fuentes),
+        partes_ordenadas = partes.sorted(
+            key=lambda p: (
+                p.fecha_solicitud or fields.Date.context_today(self),
+                p.solicitud_partes_id.name if p.solicitud_partes_id else '',
+                p.nombre_parte or '',
             )
-
-        header_main = xlwt.easyxf(
-            'pattern: pattern solid, fore_colour dark_header;'
-            'font: bold 1, colour white, height 240;'
-            'align: horiz center;'
-            'borders: left thin, right thin, top thin, bottom thin'
         )
 
-        def get_row_style(estado_maquina):
-            estado_styles = {
-                'lista': xlwt.easyxf(
-                    'pattern: pattern solid, fore_colour lista_color;'
-                    'borders: left thin, right thin, top thin, bottom thin;'
-                    'align: vert top'
-                ),
-                'revisada': xlwt.easyxf(
-                    'pattern: pattern solid, fore_colour revisada_color;'
-                    'borders: left thin, right thin, top thin, bottom thin;'
-                    'align: vert top'
-                ),
-                'sin_revisar': xlwt.easyxf(
-                    'pattern: pattern solid, fore_colour sin_revisar_color;'
-                    'borders: left thin, right thin, top thin, bottom thin;'
-                    'align: vert top'
-                ),
-                'con_problemas': xlwt.easyxf(
-                    'pattern: pattern solid, fore_colour con_problemas_color;'
-                    'borders: left thin, right thin, top thin, bottom thin;'
-                    'align: vert top'
-                ),
-                'partes': xlwt.easyxf(
-                    'pattern: pattern solid, fore_colour partes_color;'
-                    'borders: left thin, right thin, top thin, bottom thin;'
-                    'align: vert top'
-                ),
-                'alquilada': xlwt.easyxf(
-                    'pattern: pattern solid, fore_colour alquilada_color;'
-                    'borders: left thin, right thin, top thin, bottom thin;'
-                    'align: vert top'
-                ),
-            }
+        for parte in partes_ordenadas:
+            fecha = self._excel_fecha_txt(parte.fecha_solicitud)
+            estado = self._excel_selection_label(parte, 'estado_parte') or parte.estado_parte or ''
+            condicion = self._excel_selection_label(parte, 'condicion') or parte.condicion or ''
+            destino = parte.maquina_destino or ''
+            solicitud = parte.solicitud_partes_id.name if parte.solicitud_partes_id else ''
+            descripcion = parte.descripcion or ''
 
-            return estado_styles.get(
-                estado_maquina,
-                xlwt.easyxf(
-                    'borders: left thin, right thin, top thin, bottom thin;'
-                    'align: vert top'
-                )
+            linea = ''
+
+            if fecha:
+                linea += f"{fecha} | "
+
+            if solicitud:
+                linea += f"{solicitud} | "
+
+            linea += parte.nombre_parte or ''
+
+            if estado:
+                linea += f" | Estado: {estado}"
+
+            if condicion:
+                linea += f" | Condición: {condicion}"
+
+            if destino:
+                linea += f" | Destino: {destino}"
+
+            if descripcion:
+                linea += f" | Obs: {descripcion}"
+
+            if parte.solicitud_partes_id:
+                lineas_bodega.append(linea)
+            else:
+                lineas_sat.append(linea)
+
+        bloques = []
+
+        if lineas_bodega:
+            bloques.append(
+                "PARTES RETIRADAS PARA OTRAS MÁQUINAS:\n" +
+                "\n".join([f"• {linea}" for linea in lineas_bodega])
             )
 
-        def get_number_style(estado_maquina):
-            estado_styles = {
-                'lista': xlwt.easyxf(
-                    'pattern: pattern solid, fore_colour lista_color;'
-                    'borders: left thin, right thin, top thin, bottom thin;'
-                    'align: horiz right, vert top',
-                    num_format_str='#,##0'
-                ),
-                'revisada': xlwt.easyxf(
-                    'pattern: pattern solid, fore_colour revisada_color;'
-                    'borders: left thin, right thin, top thin, bottom thin;'
-                    'align: horiz right, vert top',
-                    num_format_str='#,##0'
-                ),
-                'sin_revisar': xlwt.easyxf(
-                    'pattern: pattern solid, fore_colour sin_revisar_color;'
-                    'borders: left thin, right thin, top thin, bottom thin;'
-                    'align: horiz right, vert top',
-                    num_format_str='#,##0'
-                ),
-                'con_problemas': xlwt.easyxf(
-                    'pattern: pattern solid, fore_colour con_problemas_color;'
-                    'borders: left thin, right thin, top thin, bottom thin;'
-                    'align: horiz right, vert top',
-                    num_format_str='#,##0'
-                ),
-                'partes': xlwt.easyxf(
-                    'pattern: pattern solid, fore_colour partes_color;'
-                    'borders: left thin, right thin, top thin, bottom thin;'
-                    'align: horiz right, vert top',
-                    num_format_str='#,##0'
-                ),
-                'alquilada': xlwt.easyxf(
-                    'pattern: pattern solid, fore_colour alquilada_color;'
-                    'borders: left thin, right thin, top thin, bottom thin;'
-                    'align: horiz right, vert top',
-                    num_format_str='#,##0'
-                ),
-            }
-
-            return estado_styles.get(
-                estado_maquina,
-                xlwt.easyxf(
-                    'borders: left thin, right thin, top thin, bottom thin;'
-                    'align: horiz right, vert top',
-                    num_format_str='#,##0'
-                )
+        if lineas_sat:
+            bloques.append(
+                "PARTES RETIRADAS PARA REPARACIÓN / SAT:\n" +
+                "\n".join([f"• {linea}" for linea in lineas_sat])
             )
 
-        def get_date_style(estado_maquina):
-            estado_styles = {
-                'lista': xlwt.easyxf(
-                    'pattern: pattern solid, fore_colour lista_color;'
-                    'borders: left thin, right thin, top thin, bottom thin;'
-                    'align: vert top',
-                    num_format_str='DD/MM/YYYY'
-                ),
-                'revisada': xlwt.easyxf(
-                    'pattern: pattern solid, fore_colour revisada_color;'
-                    'borders: left thin, right thin, top thin, bottom thin;'
-                    'align: vert top',
-                    num_format_str='DD/MM/YYYY'
-                ),
-                'sin_revisar': xlwt.easyxf(
-                    'pattern: pattern solid, fore_colour sin_revisar_color;'
-                    'borders: left thin, right thin, top thin, bottom thin;'
-                    'align: vert top',
-                    num_format_str='DD/MM/YYYY'
-                ),
-                'con_problemas': xlwt.easyxf(
-                    'pattern: pattern solid, fore_colour con_problemas_color;'
-                    'borders: left thin, right thin, top thin, bottom thin;'
-                    'align: vert top',
-                    num_format_str='DD/MM/YYYY'
-                ),
-                'partes': xlwt.easyxf(
-                    'pattern: pattern solid, fore_colour partes_color;'
-                    'borders: left thin, right thin, top thin, bottom thin;'
-                    'align: vert top',
-                    num_format_str='DD/MM/YYYY'
-                ),
-                'alquilada': xlwt.easyxf(
-                    'pattern: pattern solid, fore_colour alquilada_color;'
-                    'borders: left thin, right thin, top thin, bottom thin;'
-                    'align: vert top',
-                    num_format_str='DD/MM/YYYY'
-                ),
-            }
+        return "\n\n".join(bloques)
 
-            return estado_styles.get(
-                estado_maquina,
-                xlwt.easyxf(
-                    'borders: left thin, right thin, top thin, bottom thin;'
-                    'align: vert top',
-                    num_format_str='DD/MM/YYYY'
-                )
-            )
+    def _crear_hoja_estado_unica(self, workbook, reportes):
+        """
+        Crea una sola hoja para gerencia.
 
-        def get_wrap_style(estado_maquina):
-            estado_styles = {
-                'lista': xlwt.easyxf(
-                    'pattern: pattern solid, fore_colour lista_color;'
-                    'borders: left thin, right thin, top thin, bottom thin;'
-                    'align: vert top, wrap 1'
-                ),
-                'revisada': xlwt.easyxf(
-                    'pattern: pattern solid, fore_colour revisada_color;'
-                    'borders: left thin, right thin, top thin, bottom thin;'
-                    'align: vert top, wrap 1'
-                ),
-                'sin_revisar': xlwt.easyxf(
-                    'pattern: pattern solid, fore_colour sin_revisar_color;'
-                    'borders: left thin, right thin, top thin, bottom thin;'
-                    'align: vert top, wrap 1'
-                ),
-                'con_problemas': xlwt.easyxf(
-                    'pattern: pattern solid, fore_colour con_problemas_color;'
-                    'borders: left thin, right thin, top thin, bottom thin;'
-                    'align: vert top, wrap 1'
-                ),
-                'partes': xlwt.easyxf(
-                    'pattern: pattern solid, fore_colour partes_color;'
-                    'borders: left thin, right thin, top thin, bottom thin;'
-                    'align: vert top, wrap 1'
-                ),
-                'alquilada': xlwt.easyxf(
-                    'pattern: pattern solid, fore_colour alquilada_color;'
-                    'borders: left thin, right thin, top thin, bottom thin;'
-                    'align: vert top, wrap 1'
-                ),
-            }
-
-            return estado_styles.get(
-                estado_maquina,
-                xlwt.easyxf(
-                    'borders: left thin, right thin, top thin, bottom thin;'
-                    'align: vert top, wrap 1'
-                )
-            )
+        Cada fila representa una máquina y contiene todo el detalle.
+        """
+        worksheet = workbook.add_sheet('Estado')
+        styles = self._excel_crear_estilos()
 
         headers = [
-            'Fecha',
-            'Marca',
-            'Modelo',
+            'Fecha Reporte',
             'Serie',
+            'Modelo',
+            'Marca',
+            'Tipo',
             'Estado',
-            'Total Contómetro',
+            'Ubicación',
+            'Contador B/N',
+            'Contador Color',
+            'Contador Total',
+            'Contador Scanner',
+            'Último Ticket',
+            'Fecha Ticket',
+            'Tipo Servicio',
+            'Técnico',
+            'Cliente Anterior',
+            'Fecha Último Retiro',
             'Informe Técnico',
             'Componentes Evaluados',
             'Accesorios Evaluados',
             'Intervenciones / Subpartes',
             'Partes Retiradas',
-            'Fechas Solicitud',
-            'Máquinas Destino',
-            'Fuente',
         ]
 
+        worksheet.write_merge(
+            0,
+            0,
+            0,
+            len(headers) - 1,
+            'REPORTE DE ESTADO DE MÁQUINAS',
+            styles['title']
+        )
+
+        fecha_desde = self.env.context.get('reporte_fecha_desde')
+        fecha_hasta = self.env.context.get('reporte_fecha_hasta')
+
+        fecha_desde_txt = self._excel_fecha_txt(fields.Date.to_date(fecha_desde)) if fecha_desde else ''
+        fecha_hasta_txt = self._excel_fecha_txt(fields.Date.to_date(fecha_hasta)) if fecha_hasta else ''
+
+        if fecha_desde_txt or fecha_hasta_txt:
+            rango_txt = f"Rango: {fecha_desde_txt} - {fecha_hasta_txt}"
+        else:
+            rango_txt = f"Generado: {self._excel_fecha_txt(fields.Date.context_today(self))}"
+
+        worksheet.write_merge(
+            1,
+            1,
+            0,
+            len(headers) - 1,
+            rango_txt,
+            styles['subtitle']
+        )
+
+        header_row = 3
+
         for col, header in enumerate(headers):
-            worksheet.write(0, col, header, header_main)
+            worksheet.write(header_row, col, header, styles['header'])
 
-        row = 1
+        row = header_row + 1
 
-        for reporte in reportes:
-            estado = reporte.estado_maquina
+        reportes_ordenados = reportes.sorted(
+            key=lambda r: (
+                r.estado_maquina or '',
+                r.serie or '',
+            )
+        )
 
-            row_style = get_row_style(estado)
-            number_style = get_number_style(estado)
-            date_style = get_date_style(estado)
-            wrap_style = get_wrap_style(estado)
+        for reporte in reportes_ordenados:
+            tipo_maquina = self._excel_selection_label(reporte, 'tipo_maquina')
+            estado_maquina = self._excel_selection_label(reporte, 'estado_maquina')
+            ubicacion = self._excel_selection_label(reporte, 'ubicacion_fisica')
+
+            informe_txt = self._excel_html_to_text(reporte.informe_tecnico or '')
+            componentes_txt = self._excel_html_to_text(reporte.componentes_resumen or '')
+            accesorios_txt = self._excel_html_to_text(reporte.accesorios_resumen or '')
+            intervenciones_txt = self._excel_html_to_text(reporte.intervenciones_resumen or '')
+            partes_txt = self._excel_build_partes_detalle_texto(reporte)
+
+            informe_txt = self._excel_clip_text(informe_txt)
+            componentes_txt = self._excel_clip_text(componentes_txt)
+            accesorios_txt = self._excel_clip_text(accesorios_txt)
+            intervenciones_txt = self._excel_clip_text(intervenciones_txt)
+            partes_txt = self._excel_clip_text(partes_txt)
 
             col = 0
 
-            worksheet.write(row, col, reporte.fecha_generacion or '', date_style)
+            worksheet.write(row, col, self._excel_fecha_txt(reporte.fecha_generacion), styles['data'])
             col += 1
 
-            worksheet.write(row, col, reporte.marca or '', row_style)
+            worksheet.write(row, col, reporte.serie or '', styles['data'])
             col += 1
 
-            worksheet.write(row, col, reporte.modelo or '', row_style)
+            worksheet.write(row, col, reporte.modelo or '', styles['data'])
             col += 1
 
-            worksheet.write(row, col, reporte.serie or '', row_style)
+            worksheet.write(row, col, reporte.marca or '', styles['data'])
             col += 1
 
-            estado_display = dict(reporte._fields['estado_maquina'].selection).get(
-                estado,
-                ''
+            worksheet.write(row, col, tipo_maquina, styles['data'])
+            col += 1
+
+            worksheet.write(row, col, estado_maquina, styles['data'])
+            col += 1
+
+            worksheet.write(row, col, ubicacion, styles['data'])
+            col += 1
+
+            worksheet.write(row, col, reporte.contador_bn or 0, styles['number'])
+            col += 1
+
+            worksheet.write(row, col, reporte.contador_color or 0, styles['number'])
+            col += 1
+
+            worksheet.write(row, col, reporte.contador_total or 0, styles['number'])
+            col += 1
+
+            worksheet.write(row, col, reporte.contador_scanner or 0, styles['number'])
+            col += 1
+
+            worksheet.write(
+                row,
+                col,
+                reporte.ultimo_ticket_id.name if reporte.ultimo_ticket_id else '',
+                styles['data']
             )
-            worksheet.write(row, col, estado_display, row_style)
             col += 1
 
-            worksheet.write(row, col, reporte.contador_total or 0, number_style)
+            worksheet.write(row, col, self._excel_datetime_txt(reporte.ultimo_ticket_fecha), styles['data'])
             col += 1
 
-            informe_txt = self._html_to_text(reporte.informe_tecnico or '')
-            if len(informe_txt) > 1000:
-                informe_txt = informe_txt[:997] + '...'
-
-            worksheet.write(row, col, informe_txt, wrap_style)
+            worksheet.write(row, col, reporte.ultimo_ticket_tipo or '', styles['data'])
             col += 1
 
-            componentes_txt = self._html_to_text(reporte.componentes_resumen or '')
-            accesorios_txt = self._html_to_text(reporte.accesorios_resumen or '')
-            intervenciones_txt = self._html_to_text(reporte.intervenciones_resumen or '')
-
-            worksheet.write(row, col, componentes_txt, wrap_style)
+            worksheet.write(row, col, reporte.tecnico_responsable or '', styles['data'])
             col += 1
 
-            worksheet.write(row, col, accesorios_txt, wrap_style)
+            worksheet.write(
+                row,
+                col,
+                reporte.cliente_anterior_id.name if reporte.cliente_anterior_id else '',
+                styles['data']
+            )
             col += 1
 
-            worksheet.write(row, col, intervenciones_txt, wrap_style)
+            worksheet.write(row, col, self._excel_fecha_txt(reporte.fecha_ultimo_retiro), styles['data'])
             col += 1
 
-            nombres_txt, fechas_txt, destinos_txt, fuentes_txt = _build_partes_texto(reporte)
-
-            worksheet.write(row, col, nombres_txt, wrap_style)
+            worksheet.write(row, col, informe_txt, styles['wrap'])
             col += 1
 
-            worksheet.write(row, col, fechas_txt, wrap_style)
+            worksheet.write(row, col, componentes_txt, styles['wrap'])
             col += 1
 
-            worksheet.write(row, col, destinos_txt, wrap_style)
+            worksheet.write(row, col, accesorios_txt, styles['wrap'])
             col += 1
 
-            worksheet.write(row, col, fuentes_txt, wrap_style)
+            worksheet.write(row, col, intervenciones_txt, styles['wrap'])
+            col += 1
 
-            num_lineas = max(
-                len(nombres_txt.splitlines()) if nombres_txt else 1,
+            worksheet.write(row, col, partes_txt, styles['wrap'])
+            col += 1
+
+            max_lines = max(
+                1,
+                len(informe_txt.splitlines()) if informe_txt else 1,
                 len(componentes_txt.splitlines()) if componentes_txt else 1,
                 len(accesorios_txt.splitlines()) if accesorios_txt else 1,
                 len(intervenciones_txt.splitlines()) if intervenciones_txt else 1,
+                len(partes_txt.splitlines()) if partes_txt else 1,
             )
 
-            worksheet.row(row).height = max(400, min(num_lineas * 320, 5000))
+            worksheet.row(row).height = max(400, min(max_lines * 320, 7000))
 
             row += 1
 
-        column_data = [[] for _ in range(len(headers))]
+        widths = [
+            2800,
+            4000,
+            5200,
+            3500,
+            3000,
+            3500,
+            3500,
+            3000,
+            3000,
+            3000,
+            3000,
+            3500,
+            4200,
+            4000,
+            4500,
+            5200,
+            4200,
+            9000,
+            10000,
+            10000,
+            10000,
+            12000,
+        ]
 
-        for reporte in reportes:
-            estado = reporte.estado_maquina
-
-            nombres_txt, fechas_txt, destinos_txt, fuentes_txt = _build_partes_texto(reporte)
-
-            column_data[0].append(str(reporte.fecha_generacion or ''))
-            column_data[1].append(reporte.marca or '')
-            column_data[2].append(reporte.modelo or '')
-            column_data[3].append(reporte.serie or '')
-            column_data[4].append(dict(reporte._fields['estado_maquina'].selection).get(estado, ''))
-            column_data[5].append(str(reporte.contador_total or 0))
-            column_data[6].append(self._html_to_text(reporte.informe_tecnico or ''))
-            column_data[7].append(self._html_to_text(reporte.componentes_resumen or ''))
-            column_data[8].append(self._html_to_text(reporte.accesorios_resumen or ''))
-            column_data[9].append(self._html_to_text(reporte.intervenciones_resumen or ''))
-            column_data[10].append(nombres_txt)
-            column_data[11].append(fechas_txt)
-            column_data[12].append(destinos_txt)
-            column_data[13].append(fuentes_txt)
-
-        def auto_adjust_column_width(header_text, data_values):
-            header_width = len(header_text) * 256 + 500
-            max_content_width = 0
-
-            for value in data_values:
-                if value:
-                    if isinstance(value, str) and '\n' in value:
-                        lines = value.split('\n')
-                        content_width = max(len(line) for line in lines) * 256
-                    else:
-                        content_width = len(str(value)) * 256
-
-                    max_content_width = max(max_content_width, content_width)
-
-            optimal_width = max(header_width, max_content_width)
-
-            return max(2000, min(optimal_width, 20000))
-
-        for col_index, header in enumerate(headers):
-            worksheet.col(col_index).width = auto_adjust_column_width(
-                header,
-                column_data[col_index]
-            )
+        for col, width in enumerate(widths):
+            worksheet.col(col).width = width
 
         worksheet.set_panes_frozen(True)
-        worksheet.set_horz_split_pos(1)
+        worksheet.set_horz_split_pos(header_row + 1)
         worksheet.set_vert_split_pos(4)
+
+        _logger.info(
+            "[ReporteEstadoMaquina] Hoja única Excel creada | filas=%s",
+            row - header_row - 1,
+        )
 
 
 class ReporteEstadoMaquinaParte(models.Model):
@@ -2053,10 +1418,12 @@ class ReporteEstadoMaquinaAlquiler(models.Model):
                 0,
                 record.contador_bn_retiro - record.contador_bn_instalacion
             )
+
             record.copias_color_periodo = max(
                 0,
                 record.contador_color_retiro - record.contador_color_instalacion
             )
+
             record.copias_total_periodo = (
                 record.copias_bn_periodo + record.copias_color_periodo
             )
@@ -2128,6 +1495,8 @@ class ReporteEstadoMaquinaWizard(models.TransientModel):
         """
         Acción para generar el reporte según los filtros seleccionados.
         """
+        self.ensure_one()
+
         domain = [
             ('fecha_generacion', '>=', self.fecha_desde),
             ('fecha_generacion', '<=', self.fecha_hasta),
@@ -2200,12 +1569,22 @@ class ReporteEstadoMaquinaWizard(models.TransientModel):
             ))
 
     def _exportar_excel(self, reportes):
-        return self.env['reporte.estado.maquina']._exportar_excel(reportes)
+        """
+        Exporta el Excel pasando el rango de fechas del wizard por contexto.
+        """
+        self.ensure_one()
+
+        return self.env['reporte.estado.maquina'].with_context(
+            reporte_fecha_desde=self.fecha_desde,
+            reporte_fecha_hasta=self.fecha_hasta,
+        )._exportar_excel(reportes)
 
     def action_generar_reporte_ahora(self):
         """
         Genera el reporte semanal inmediatamente.
         """
+        self.ensure_one()
+
         try:
             self.env['reporte.estado.maquina'].generar_reporte_semanal()
 
@@ -2282,18 +1661,19 @@ class ReporteGestionPartesTecnico(models.Model):
         """
         Genera reporte auxiliar de gestión de partes técnicos.
 
-        Nota:
-        Este método pertenece a este modelo, no a reporte.estado.maquina,
-        para evitar borrar reportes de estado de máquinas por error.
+        Este método pertenece a este modelo para no borrar registros de
+        reporte.estado.maquina por error.
         """
         self.search([]).unlink()
 
         lineas = self.env['solicitud.parte.tecnico.linea'].search([])
 
         for linea in lineas:
-            origen = linea._get_origen_display() if hasattr(linea, '_get_origen_display') else ''
-
             solicitud = linea.solicitud_id
+            origen = ''
+
+            if hasattr(linea, '_get_origen_display'):
+                origen = linea._get_origen_display()
 
             self.create({
                 'fecha': solicitud.fecha_solicitud if solicitud else False,
