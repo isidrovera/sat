@@ -953,34 +953,43 @@ class ReporteEstadoMaquina(models.Model):
     def _excel_crear_estilos(self):
         """
         Estilos simples para una sola hoja.
+
+        IMPORTANTE:
+        xlwt no soporta:
+            borders: all thin
+
+        Debe usarse:
+            borders: left thin, right thin, top thin, bottom thin
         """
+        border = 'borders: left thin, right thin, top thin, bottom thin;'
+
         return {
             'title': xlwt.easyxf(
                 'font: bold 1, height 360;'
                 'align: horiz center, vert center;'
-                'borders: all thin'
+                + border
             ),
             'subtitle': xlwt.easyxf(
                 'font: bold 1;'
                 'align: horiz left, vert center;'
-                'borders: all thin'
+                + border
             ),
             'header': xlwt.easyxf(
                 'font: bold 1;'
                 'align: horiz center, vert center, wrap 1;'
-                'borders: all thin'
+                + border
             ),
             'data': xlwt.easyxf(
-                'borders: all thin;'
-                'align: vert top'
+                'align: vert top;'
+                + border
             ),
             'wrap': xlwt.easyxf(
-                'borders: all thin;'
-                'align: vert top, wrap 1'
+                'align: vert top, wrap 1;'
+                + border
             ),
             'number': xlwt.easyxf(
-                'borders: all thin;'
-                'align: horiz right, vert top',
+                'align: horiz right, vert top;'
+                + border,
                 num_format_str='#,##0'
             ),
         }
