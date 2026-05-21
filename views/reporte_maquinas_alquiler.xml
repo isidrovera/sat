@@ -117,70 +117,8 @@
                                     </group>
                                 </group>
                             </page>
-                         
 
-                                <group>
-                                    <group name="conectividad" string="Conectividad">
-                                        <field name="wifi"/>
-                                        <field name="bluetooth"/>
-                                        <field name="cable_usb"/>
-                                        <field name="cable_red"/>
-                                    </group>
-                                </group>
-                            </page>
-
-                            <page string="Check List Técnico Antiguo" name="checklist">
-                                <group>
-                                    <group name="funciones" string="Funciones">
-                                        <field name="copia_estado"/>
-                                        <field name="impresion_estado"/>
-                                        <field name="impresion_usb_estado"/>
-                                        <field name="scanner_smb_estado"/>
-                                        <field name="scanner_usb_estado"/>
-                                        <field name="scanner_ftp_estado"/>
-                                        <field name="scanner_mail_estado"/>
-                                    </group>
-
-                                    <group name="componentes" string="Componentes">
-                                        <field name="adf_estado"/>
-                                        <field name="tray1_estado"/>
-                                        <field name="tray2_estado"/>
-                                        <field name="tray3_estado"/>
-                                        <field name="tray4_estado"/>
-                                        <field name="bypass_estado"/>
-                                        <field name="finalizador_estado"/>
-                                    </group>
-                                </group>
-
-                                <group name="partes_criticas" string="Partes Críticas">
-                                    <group>
-                                        <field name="tacho_estado"/>
-                                        <field name="fusora_estado"/>
-                                        <field name="transfer_estado"/>
-                                        <field name="optico_estado"/>
-                                    </group>
-
-                                    <group>
-                                        <field name="unidad_imagen_black_estado"/>
-                                        <field name="unidad_imagen_magenta_estado" invisible="tipo_maquina == 'monocromatica'"/>
-                                        <field name="unidad_imagen_cyan_estado" invisible="tipo_maquina == 'monocromatica'"/>
-                                        <field name="unidad_imagen_yellow_estado" invisible="tipo_maquina == 'monocromatica'"/>
-                                    </group>
-                                </group>
-
-                                <group name="toners" string="Nivel de Toners">
-                                    <group>
-                                        <field name="toner_black_nivel"/>
-                                        <field name="toner_magenta_nivel" invisible="tipo_maquina == 'monocromatica'"/>
-                                    </group>
-
-                                    <group>
-                                        <field name="toner_cyan_nivel" invisible="tipo_maquina == 'monocromatica'"/>
-                                        <field name="toner_yellow_nivel" invisible="tipo_maquina == 'monocromatica'"/>
-                                    </group>
-                                </group>
-                            </page>
-
+                           
                             <page string="Informe Técnico" name="informe_tecnico">
                                 <field name="informe_tecnico" widget="html" nolabel="1"/>
                             </page>
