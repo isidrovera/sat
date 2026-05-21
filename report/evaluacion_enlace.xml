@@ -84,18 +84,16 @@
         <field name="dpi">96</field>
     </record>
 
-    <record id="action_reporte_estado_maquinas_pdf" model="ir.actions.report">
-        <field name="name">Estado Máquinas</field>
-        <field name="model">reporte.estado.maquina</field>
-        <field name="report_type">qweb-pdf</field>
-        <field name="report_name">sat.reporte_estado_maquinas_pdf</field>
-        <field name="report_file">sat.reporte_estado_maquinas_pdf</field>
-        <field name="paperformat_id" ref="paperformat_landscape_reporte_maquinas"/>
-        <field name="print_report_name">
-            time.strftime('Estado_Maq_%Y%m%d')
-        </field>
-        <field name="binding_type">report</field>
-    </record>
+   <record id="action_reporte_estado_maquinas_pdf" model="ir.actions.report">
+    <field name="name">Estado_Maq</field>
+    <field name="model">reporte.estado.maquina</field>
+    <field name="report_type">qweb-pdf</field>
+    <field name="report_name">sat.reporte_estado_maquinas_pdf</field>
+    <field name="report_file">sat.reporte_estado_maquinas_pdf</field>
+    <field name="paperformat_id" ref="paperformat_landscape_reporte_maquinas"/>
+    <field name="print_report_name"></field>
+    <field name="binding_type">report</field>
+</record>
     <record id="report_alquiler_qr" model="ir.actions.report">
             <field name="name">QR Codes alquiler</field>
             <field name="model">alquiler</field>
