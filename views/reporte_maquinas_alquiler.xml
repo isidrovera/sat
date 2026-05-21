@@ -117,28 +117,7 @@
                                     </group>
                                 </group>
                             </page>
-
-                            <!-- ============================================ -->
-                            <!-- Campos antiguos: se mantienen por compatibilidad -->
-                            <!-- ============================================ -->
-                            <page string="Accesorios Antiguos" name="accesorios">
-                                <group>
-                                    <group name="accesorios_principales" string="Accesorios Principales">
-                                        <field name="transformador"/>
-                                        <field name="estabilizador"/>
-                                        <field name="adf_simple"/>
-                                        <field name="adf_dual"/>
-                                        <field name="numero_caseteras"/>
-                                    </group>
-
-                                    <group name="accesorios_finalizadores" string="Finalizadores y Muebles">
-                                        <field name="finalizador_interno"/>
-                                        <field name="finalizador_externo"/>
-                                        <field name="mueble"/>
-                                        <field name="panel_smart"/>
-                                        <field name="panel_normal"/>
-                                    </group>
-                                </group>
+                         
 
                                 <group>
                                     <group name="conectividad" string="Conectividad">

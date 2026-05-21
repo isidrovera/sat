@@ -980,13 +980,21 @@ class ReporteEstadoMaquina(models.Model):
 
     def _crear_registro_partes_retiradas(self, reporte, maquina):
         """
-        Crea registros de partes retiradas.
+        Crea registros de partes retiradas para el reporte de una máquina de alquiler.
 
-        Fuente 1:
-            solicitud.partes
+        IMPORTANTE:
+        No se debe depender solo del estado de la cabecera de solicitud.partes,
+        porque una solicitud puede tener algunas líneas pendientes y otras ya
+        retiradas/reemplazadas.
 
-        Fuente 2:
-            solicitud.parte.tecnico.linea
+        Fuentes:
+        1) solicitud.partes.linea
+        - Flujo alquiler -> alquiler.
+        - Toma líneas reales retiradas o reemplazadas.
+
+        2) solicitud.parte.tecnico.linea
+        - Flujo reparación / SAT.
+        - Toma líneas entregadas cuyo origen fue una máquina de alquiler.
         """
         CONDICION_MAP = {
             'bueno': 'bueno',
@@ -995,74 +1003,133 @@ class ReporteEstadoMaquina(models.Model):
             'defectuoso': 'malo',
         }
 
-        # ------------------------------------------------------
-        # Fuente 1: solicitud.partes
-        # ------------------------------------------------------
-        solicitudes_partes = self.env['solicitud.partes'].search([
+        # ==========================================================
+        # FUENTE 1: solicitud.partes.linea
+        # Partes retiradas desde una máquina de alquiler hacia otra
+        # máquina de alquiler.
+        #
+        # Antes se buscaba por cabecera:
+        # solicitud.partes state in ['completed', 'replaced']
+        #
+        # Ahora se busca por línea, porque el retiro real está en:
+        # solicitud.partes.linea.estado
+        # ==========================================================
+        lineas_partes = self.env['solicitud.partes.linea'].search([
             ('maquina_origen_id', '=', maquina.id),
-            ('state', 'in', ['completed', 'replaced'])
+            ('estado', 'in', ['retirado', 'reemplazado']),
         ])
 
-        for solicitud in solicitudes_partes:
-            for linea in solicitud.parte_ids:
-                if linea.estado not in ['retirado', 'reemplazado']:
-                    continue
+        _logger.info(
+            "[ReporteEstadoMaquina][Partes] Máquina=%s Serie=%s | líneas solicitud.partes.linea encontradas=%s",
+            maquina.id,
+            maquina.serie,
+            len(lineas_partes),
+        )
 
-                condicion_raw = linea.condicion or ''
+        for linea in lineas_partes:
+            solicitud = linea.solicitud_id
 
-                self.env['reporte.estado.maquina.parte'].create({
-                    'reporte_id': reporte.id,
-                    'solicitud_partes_id': solicitud.id,
-                    'nombre_parte': linea.parte,
-                    'descripcion': linea.descripcion,
-                    'estado_parte': linea.estado,
-                    'condicion': CONDICION_MAP.get(condicion_raw, False),
-                    'fecha_solicitud': (
-                        solicitud.fecha_solicitud.date()
-                        if solicitud.fecha_solicitud
-                        else fields.Date.context_today(self)
-                    ),
-                    'maquina_destino': (
-                        solicitud.maquina_destino_id.serie
-                        if solicitud.maquina_destino_id
-                        else ''
-                    )
-                })
+            fecha_solicitud = (
+                solicitud.fecha_solicitud.date()
+                if solicitud and solicitud.fecha_solicitud
+                else fields.Date.context_today(self)
+            )
 
-        # ------------------------------------------------------
-        # Fuente 2: solicitud.parte.tecnico.linea
-        # ------------------------------------------------------
+            maquina_destino = ''
+            if solicitud and solicitud.maquina_destino_id:
+                maquina_destino = solicitud.maquina_destino_id.serie or ''
+
+            self.env['reporte.estado.maquina.parte'].create({
+                'reporte_id': reporte.id,
+                'solicitud_partes_id': solicitud.id if solicitud else False,
+                'nombre_parte': linea.parte,
+                'descripcion': linea.descripcion,
+                'estado_parte': linea.estado,
+                'condicion': CONDICION_MAP.get(linea.condicion or '', False),
+                'fecha_solicitud': fecha_solicitud,
+                'maquina_destino': maquina_destino,
+            })
+
+            _logger.info(
+                "[ReporteEstadoMaquina][Partes] Agregada línea alquiler->alquiler | reporte=%s solicitud=%s parte=%s estado=%s destino=%s",
+                reporte.id,
+                solicitud.name if solicitud else '',
+                linea.parte,
+                linea.estado,
+                maquina_destino,
+            )
+
+        # ==========================================================
+        # FUENTE 2: solicitud.parte.tecnico.linea
+        # Partes retiradas desde una máquina de alquiler para una
+        # reparación/SAT.
+        #
+        # Solo debe entrar cuando:
+        # - tipo_origen = alquiler
+        # - maquina_origen_alquiler_id = máquina del reporte
+        # - state = entregada
+        #
+        # No se incluye en_stock_logistica porque eso representa stock
+        # de logística, no retiro desde la máquina de alquiler.
+        # ==========================================================
         lineas_tecnico = self.env['solicitud.parte.tecnico.linea'].search([
+            ('tipo_origen', '=', 'alquiler'),
             ('maquina_origen_alquiler_id', '=', maquina.id),
-            ('state', 'in', ['entregada', 'en_stock_logistica']),
+            ('state', '=', 'entregada'),
         ])
+
+        _logger.info(
+            "[ReporteEstadoMaquina][PartesSAT] Máquina=%s Serie=%s | líneas solicitud.parte.tecnico.linea encontradas=%s",
+            maquina.id,
+            maquina.serie,
+            len(lineas_tecnico),
+        )
 
         for linea in lineas_tecnico:
             solicitud = linea.solicitud_id
+
+            fecha_solicitud = (
+                solicitud.fecha_solicitud.date()
+                if solicitud and solicitud.fecha_solicitud
+                else fields.Date.context_today(self)
+            )
 
             maquina_destino_serie = ''
 
             if solicitud and solicitud.maquina_id:
                 maquina_destino_serie = (
-                    getattr(solicitud.maquina_id, 'serie_id', None)
-                    or getattr(solicitud.maquina_id, 'serie', None)
+                    getattr(solicitud.maquina_id, 'serie_id', False)
+                    or getattr(solicitud.maquina_id, 'serie', False)
                     or ''
                 )
+
+            descripcion = linea.descripcion or ''
+
+            if solicitud and solicitud.reparacion_id:
+                reparacion_name = solicitud.reparacion_id.name or ''
+                if reparacion_name:
+                    descripcion = (
+                        "%s\nReparación: %s" % (descripcion, reparacion_name)
+                    ).strip()
 
             self.env['reporte.estado.maquina.parte'].create({
                 'reporte_id': reporte.id,
                 'solicitud_partes_id': False,
                 'nombre_parte': linea.parte,
-                'descripcion': linea.descripcion,
+                'descripcion': descripcion,
                 'estado_parte': 'retirado',
                 'condicion': False,
-                'fecha_solicitud': (
-                    solicitud.fecha_solicitud.date()
-                    if solicitud and solicitud.fecha_solicitud
-                    else fields.Date.context_today(self)
-                ),
+                'fecha_solicitud': fecha_solicitud,
                 'maquina_destino': str(maquina_destino_serie),
             })
+
+            _logger.info(
+                "[ReporteEstadoMaquina][PartesSAT] Agregada línea alquiler->SAT | reporte=%s solicitud=%s parte=%s destino=%s",
+                reporte.id,
+                solicitud.name if solicitud else '',
+                linea.parte,
+                maquina_destino_serie,
+            )
 
     # ==========================================================
     # PDF / limpieza
