@@ -92,7 +92,7 @@
         <field name="report_file">sat.reporte_estado_maquinas_pdf</field>
         <field name="paperformat_id" ref="paperformat_landscape_reporte_maquinas"/>
         <field name="print_report_name">
-            'Estado_Maq_%s' % (object.fecha_generacion.strftime('%Y%m%d') if object.fecha_generacion else '')
+            time.strftime('Estado_Maq_%Y%m%d')
         </field>
         <field name="binding_type">report</field>
     </record>
