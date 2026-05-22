@@ -86,7 +86,7 @@ from . import mdm_device
 from . import mdm_command_log
 from . import ticket_notificaciones_tracking
 from . import tracking_diagnostico
-from . import solicitud_partes_tecnico
+from . import solicitud_partes_tecnico_reparaciones_corapsac
 from . import sat_entrega_wizard
 from . import sat_pruebas_maquina
 from . import copier_parts_request

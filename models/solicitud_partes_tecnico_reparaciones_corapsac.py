@@ -565,6 +565,7 @@ class SolicitudParteTecnicoLinea(models.Model):
 
     def _registrar_en_maquina_origen(self):
         self.ensure_one()
+
         msg = (
             f"🔧 <b>Parte retirada:</b> {self.parte}<br/>"
             f"Solicitud: {self.solicitud_id.name}<br/>"
@@ -572,9 +573,18 @@ class SolicitudParteTecnicoLinea(models.Model):
             f"Técnico: {self.solicitud_id.tecnico_id.name}"
             + (f"<br/>Descripción: {self.descripcion}" if self.descripcion else "")
         )
+
         if self.tipo_origen == 'alquiler' and self.maquina_origen_alquiler_id:
-            self.maquina_origen_alquiler_id.write({'estado_alquiler_id': 'con_problemas'})
-            self.maquina_origen_alquiler_id.message_post(body=msg)
+            maquina = self.maquina_origen_alquiler_id
+            estado_actual = maquina.estado_alquiler_id
+
+            # Si ya está en Con Problemas o De Partes, se mantiene igual.
+            # Solo cambia a Con Problemas si estaba en otro estado.
+            if estado_actual not in ('con_problemas', 'partes'):
+                maquina.write({'estado_alquiler_id': 'con_problemas'})
+
+            maquina.message_post(body=msg)
+
         elif self.tipo_origen == 'sat' and self.maquina_origen_sat_id:
             self.maquina_origen_sat_id.message_post(body=msg)
 
