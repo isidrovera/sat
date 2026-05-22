@@ -22,3 +22,4 @@ from . import retiro_controller
 from . import ticket_alquiler_changes
 from . import evidencia
 from . import whatsapp_partner_api
+from . import controller
