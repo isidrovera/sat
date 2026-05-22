@@ -3374,14 +3374,58 @@ class WhatsAppPartnerApiController(http.Controller):
         payload = self._get_json_payload()
         identifiers = self._extract_identifiers(payload)
 
+        _logger.info(
+            "[WA-PROCESS] INICIO | endpoint=%s phone=%s jid=%s lid=%s raw_jid=%s message=%s ai_provider=%s ai_intent=%s ai_confidence=%s",
+            endpoint,
+            identifiers.get("phone") or False,
+            identifiers.get("jid") or False,
+            identifiers.get("lid") or False,
+            identifiers.get("raw_jid") or False,
+            (payload.get("message") or payload.get("text") or payload.get("content") or "")[:300],
+            payload.get("ai_provider") or False,
+            payload.get("ai_intent") or False,
+            payload.get("ai_confidence") or 0,
+        )
+
         if not self._check_token():
             response = self._json_error("No autorizado", "UNAUTHORIZED", 401)
-            self._safe_log_api(endpoint, payload, response, identifiers, status="unauthorized", start_ts=start_ts)
+
+            _logger.warning(
+                "[WA-PROCESS] Token inválido | phone=%s jid=%s lid=%s raw_jid=%s",
+                identifiers.get("phone") or False,
+                identifiers.get("jid") or False,
+                identifiers.get("lid") or False,
+                identifiers.get("raw_jid") or False,
+            )
+
+            self._safe_log_api(
+                endpoint,
+                payload,
+                response,
+                identifiers,
+                status="unauthorized",
+                start_ts=start_ts,
+            )
             return response
 
         if not self._has_any_identifier(identifiers):
             response = self._json_error("Número, JID o LID requerido", "IDENTIFIER_REQUIRED", 400)
-            self._safe_log_api(endpoint, payload, response, identifiers, status="error", error_code="IDENTIFIER_REQUIRED", start_ts=start_ts)
+
+            _logger.warning(
+                "[WA-PROCESS] Sin identificador válido | identifiers=%s payload_keys=%s",
+                identifiers,
+                list((payload or {}).keys()),
+            )
+
+            self._safe_log_api(
+                endpoint,
+                payload,
+                response,
+                identifiers,
+                status="error",
+                error_code="IDENTIFIER_REQUIRED",
+                start_ts=start_ts,
+            )
             return response
 
         message_text = payload.get("message") or payload.get("text") or payload.get("content") or ""
@@ -3392,16 +3436,38 @@ class WhatsAppPartnerApiController(http.Controller):
         business_status = self._compute_business_status()
         partner = self._find_partner_by_identifiers(identifiers)
 
+        _logger.info(
+            "[WA-PROCESS] Datos base | partner_id=%s message_type=%s external_message_id=%s force_new_session=%s business_open=%s business_reason=%s",
+            partner.id if partner else False,
+            message_type,
+            external_message_id or False,
+            force_new_session,
+            business_status.get("is_open") if business_status else False,
+            business_status.get("reason") if business_status else False,
+        )
+
         try:
             # ==================================================
             # 1) Contacto no existe: pedir DNI o registrar DNI
             # ==================================================
             if not partner:
+                _logger.info(
+                    "[WA-PROCESS] Paso 1: Contacto no encontrado | message=%s looks_dni=%s",
+                    message_text[:300] if message_text else "",
+                    self._looks_like_dni(message_text),
+                )
+
                 if self._looks_like_dni(message_text):
                     partner, session, reply = self._register_dni_inline(
                         identifiers,
                         self._only_digits(message_text),
                         payload=payload,
+                    )
+
+                    _logger.info(
+                        "[WA-PROCESS] DNI registrado inline | partner_id=%s session_id=%s",
+                        partner.id if partner else False,
+                        session.id if session else False,
                     )
 
                     self._record_whatsapp_message(
@@ -3437,7 +3503,23 @@ class WhatsAppPartnerApiController(http.Controller):
                         "outbox_id": emitted.get("outbox_id"),
                         "profile": partner.get_whatsapp_profile_payload(),
                     }
-                    self._safe_log_api(endpoint, payload, response, identifiers, partner=partner, session=session, start_ts=start_ts)
+
+                    _logger.info(
+                        "[WA-PROCESS] Respuesta DNI registrada | partner_id=%s session_id=%s outbox_id=%s",
+                        partner.id if partner else False,
+                        session.id if session else False,
+                        emitted.get("outbox_id"),
+                    )
+
+                    self._safe_log_api(
+                        endpoint,
+                        payload,
+                        response,
+                        identifiers,
+                        partner=partner,
+                        session=session,
+                        start_ts=start_ts,
+                    )
                     return response
 
                 response_message = self._render_template(
@@ -3456,7 +3538,22 @@ class WhatsAppPartnerApiController(http.Controller):
                     },
                     "business": business_status,
                 }
-                self._safe_log_api(endpoint, payload, response, identifiers, status="not_found", start_ts=start_ts)
+
+                _logger.info(
+                    "[WA-PROCESS] Contacto no encontrado, solicitando DNI | phone=%s jid=%s lid=%s",
+                    identifiers.get("phone") or False,
+                    identifiers.get("jid") or False,
+                    identifiers.get("lid") or False,
+                )
+
+                self._safe_log_api(
+                    endpoint,
+                    payload,
+                    response,
+                    identifiers,
+                    status="not_found",
+                    start_ts=start_ts,
+                )
                 return response
 
             self._update_partner_identifiers(partner, identifiers)
@@ -3464,6 +3561,15 @@ class WhatsAppPartnerApiController(http.Controller):
                 partner,
                 identifiers,
                 force_new_session=force_new_session,
+            )
+
+            _logger.info(
+                "[WA-PROCESS] Partner/session resueltos | partner_id=%s session_id=%s session_state=%s flow=%s step=%s",
+                partner.id if partner else False,
+                session.id if session else False,
+                session.state if session else False,
+                session.current_flow if session else False,
+                session.conversation_state if session else False,
             )
 
             try:
@@ -3487,10 +3593,24 @@ class WhatsAppPartnerApiController(http.Controller):
                 external_message_id=external_message_id,
             )
 
+            _logger.info(
+                "[WA-PROCESS] Mensaje entrante registrado | message_id=%s partner_id=%s session_id=%s",
+                incoming.id if incoming else False,
+                partner.id if partner else False,
+                session.id if session else False,
+            )
+
             # ==================================================
             # 3) Bloqueado / modo humano
             # ==================================================
             if partner.whatsapp_blocked or partner.whatsapp_access_level == "blocked":
+                _logger.info(
+                    "[WA-PROCESS] Contacto bloqueado | partner_id=%s access_level=%s blocked=%s",
+                    partner.id if partner else False,
+                    partner.whatsapp_access_level,
+                    partner.whatsapp_blocked,
+                )
+
                 reply = self._render_template(
                     "blocked_contact",
                     partner=partner,
@@ -3518,7 +3638,16 @@ class WhatsAppPartnerApiController(http.Controller):
                     "business": business_status,
                     "profile": partner.get_whatsapp_profile_payload(),
                 }
-                self._safe_log_api(endpoint, payload, response, identifiers, partner=partner, session=session, start_ts=start_ts)
+
+                self._safe_log_api(
+                    endpoint,
+                    payload,
+                    response,
+                    identifiers,
+                    partner=partner,
+                    session=session,
+                    start_ts=start_ts,
+                )
                 return response
 
             if partner.whatsapp_human_mode or session.state == "human":
@@ -3532,13 +3661,35 @@ class WhatsAppPartnerApiController(http.Controller):
                     "business": business_status,
                     "profile": partner.get_whatsapp_profile_payload(),
                 }
-                self._safe_log_api(endpoint, payload, response, identifiers, partner=partner, session=session, start_ts=start_ts)
+
+                _logger.info(
+                    "[WA-PROCESS] Modo humano activo, no responde bot | partner_id=%s session_id=%s session_state=%s",
+                    partner.id if partner else False,
+                    session.id if session else False,
+                    session.state if session else False,
+                )
+
+                self._safe_log_api(
+                    endpoint,
+                    payload,
+                    response,
+                    identifiers,
+                    partner=partner,
+                    session=session,
+                    start_ts=start_ts,
+                )
                 return response
 
             # ==================================================
             # 4) Registro DNI/RUC
             # ==================================================
             registration_state = getattr(partner, "whatsapp_registration_state", "none")
+
+            _logger.info(
+                "[WA-PROCESS] Estado registro | partner_id=%s registration_state=%s",
+                partner.id if partner else False,
+                registration_state,
+            )
 
             if registration_state in ("none", "waiting_dni"):
                 if self._looks_like_dni(message_text):
@@ -3547,12 +3698,23 @@ class WhatsAppPartnerApiController(http.Controller):
                         self._only_digits(message_text),
                         payload=payload,
                     )
+
+                    _logger.info(
+                        "[WA-PROCESS] Registro DNI completado para partner existente | partner_id=%s session_id=%s",
+                        partner.id if partner else False,
+                        session.id if session else False,
+                    )
                 else:
                     reply = self._render_template(
                         "ask_dni",
                         partner=partner,
                         session=session,
                         fallback="Para poder ayudarte, por favor envíame tu DNI de 8 dígitos.",
+                    )
+
+                    _logger.info(
+                        "[WA-PROCESS] Solicitando DNI | partner_id=%s",
+                        partner.id if partner else False,
                     )
 
                 emitted = self._emit_bot_reply(
@@ -3575,7 +3737,16 @@ class WhatsAppPartnerApiController(http.Controller):
                     "business": business_status,
                     "profile": partner.get_whatsapp_profile_payload(),
                 }
-                self._safe_log_api(endpoint, payload, response, identifiers, partner=partner, session=session, start_ts=start_ts)
+
+                self._safe_log_api(
+                    endpoint,
+                    payload,
+                    response,
+                    identifiers,
+                    partner=partner,
+                    session=session,
+                    start_ts=start_ts,
+                )
                 return response
 
             if registration_state == "waiting_ruc":
@@ -3586,6 +3757,13 @@ class WhatsAppPartnerApiController(http.Controller):
                         self._only_digits(message_text),
                         payload=payload,
                     )
+
+                    _logger.info(
+                        "[WA-PROCESS] Registro RUC completado | partner_id=%s company_id=%s company_created=%s",
+                        partner.id if partner else False,
+                        company.id if company else False,
+                        company_created,
+                    )
                 else:
                     reply = self._render_template(
                         "ask_ruc",
@@ -3594,6 +3772,11 @@ class WhatsAppPartnerApiController(http.Controller):
                         fallback="Gracias. Ahora envíame el RUC de tu empresa para completar el registro.",
                     )
                     company_created = False
+
+                    _logger.info(
+                        "[WA-PROCESS] Solicitando RUC | partner_id=%s",
+                        partner.id if partner else False,
+                    )
 
                 emitted = self._emit_bot_reply(
                     session=session,
@@ -3617,13 +3800,29 @@ class WhatsAppPartnerApiController(http.Controller):
                     "business": business_status,
                     "profile": partner.get_whatsapp_profile_payload(),
                 }
-                self._safe_log_api(endpoint, payload, response, identifiers, partner=partner, session=session, start_ts=start_ts)
+
+                self._safe_log_api(
+                    endpoint,
+                    payload,
+                    response,
+                    identifiers,
+                    partner=partner,
+                    session=session,
+                    start_ts=start_ts,
+                )
                 return response
 
             # ==================================================
             # 5) Selección de empresa pendiente
             # ==================================================
             if session.current_flow == "registration" and session.conversation_state == "awaiting_company_selection":
+                _logger.info(
+                    "[WA-PROCESS] Continuando selección de empresa | partner_id=%s session_id=%s message=%s",
+                    partner.id if partner else False,
+                    session.id if session else False,
+                    message_text[:300] if message_text else "",
+                )
+
                 reply = self._continue_company_selection(partner, session, message_text)
                 emitted = self._emit_bot_reply(
                     session=session,
@@ -3644,10 +3843,25 @@ class WhatsAppPartnerApiController(http.Controller):
                     "business": business_status,
                     "profile": partner.get_whatsapp_profile_payload(),
                 }
-                self._safe_log_api(endpoint, payload, response, identifiers, partner=partner, session=session, start_ts=start_ts)
+
+                self._safe_log_api(
+                    endpoint,
+                    payload,
+                    response,
+                    identifiers,
+                    partner=partner,
+                    session=session,
+                    start_ts=start_ts,
+                )
                 return response
 
             if partner.whatsapp_requires_company_selection:
+                _logger.info(
+                    "[WA-PROCESS] Requiere selección de empresa | partner_id=%s session_id=%s",
+                    partner.id if partner else False,
+                    session.id if session else False,
+                )
+
                 reply = self._company_selection_message(partner, session=session)
                 emitted = self._emit_bot_reply(
                     session=session,
@@ -3669,7 +3883,16 @@ class WhatsAppPartnerApiController(http.Controller):
                     "business": business_status,
                     "profile": partner.get_whatsapp_profile_payload(),
                 }
-                self._safe_log_api(endpoint, payload, response, identifiers, partner=partner, session=session, start_ts=start_ts)
+
+                self._safe_log_api(
+                    endpoint,
+                    payload,
+                    response,
+                    identifiers,
+                    partner=partner,
+                    session=session,
+                    start_ts=start_ts,
+                )
                 return response
 
             # ==================================================
@@ -3679,10 +3902,25 @@ class WhatsAppPartnerApiController(http.Controller):
             if business_status and not business_status.get("is_open"):
                 outside_hours_note = business_status.get("message") or ""
 
+                _logger.info(
+                    "[WA-PROCESS] Fuera de horario/refrigerio | reason=%s message=%s",
+                    business_status.get("reason") or False,
+                    outside_hours_note[:300] if outside_hours_note else False,
+                )
+
             # ==================================================
             # 7) Continuar flujo activo
             # ==================================================
             if session.current_flow != "none" and session.conversation_state != "idle":
+                _logger.info(
+                    "[WA-PROCESS] Continuando flujo activo | partner_id=%s session_id=%s flow=%s step=%s message=%s",
+                    partner.id if partner else False,
+                    session.id if session else False,
+                    session.current_flow,
+                    session.conversation_state,
+                    message_text[:300] if message_text else "",
+                )
+
                 reply = self._continue_active_flow(
                     partner,
                     session,
@@ -3716,19 +3954,65 @@ class WhatsAppPartnerApiController(http.Controller):
                     "business": business_status,
                     "profile": partner.get_whatsapp_profile_payload(),
                 }
-                self._safe_log_api(endpoint, payload, response, identifiers, partner=partner, session=session, start_ts=start_ts)
+
+                _logger.info(
+                    "[WA-PROCESS] Flujo activo respondido | partner_id=%s session_id=%s flow=%s step=%s outbox_id=%s",
+                    partner.id if partner else False,
+                    session.id if session else False,
+                    session.current_flow,
+                    session.conversation_state,
+                    emitted.get("outbox_id"),
+                )
+
+                self._safe_log_api(
+                    endpoint,
+                    payload,
+                    response,
+                    identifiers,
+                    partner=partner,
+                    session=session,
+                    start_ts=start_ts,
+                )
                 return response
 
             # ==================================================
             # 8) Detectar intención y ejecutar acción
             # ==================================================
-            result, applies_to = self._detect_intent(
+            _logger.info(
+                "[WA-PROCESS] Paso 8: Detectar intención | partner_id=%s session_id=%s message=%s ai_provider=%s ai_intent=%s ai_sub_intent=%s ai_confidence=%s ai_reason=%s",
+                partner.id if partner else False,
+                session.id if session else False,
+                message_text[:300] if message_text else "",
+                payload.get("ai_provider") or False,
+                payload.get("ai_intent") or False,
+                payload.get("ai_sub_intent") or False,
+                payload.get("ai_confidence") or 0,
+                payload.get("ai_reason") or False,
+            )
+
+            intent_result, applies_to = self._detect_intent(
                 message_text,
                 partner=partner if partner else False,
                 business_status=business_status,
                 session=session if session else False,
                 payload=payload,
             )
+
+            intent_result = intent_result or {"found": False}
+
+            _logger.info(
+                "[WA-PROCESS] Intención detectada | found=%s source=%s provider=%s intent=%s action=%s template=%s target_flow=%s applies_to=%s confidence=%s",
+                bool(intent_result.get("found")),
+                intent_result.get("source") or "odoo_rules",
+                intent_result.get("provider") or False,
+                intent_result.get("intent") or False,
+                intent_result.get("action") or False,
+                intent_result.get("response_template") or False,
+                intent_result.get("target_flow") or False,
+                applies_to,
+                intent_result.get("confidence") or False,
+            )
+
             reply = self._execute_intent_action(
                 partner,
                 session,
@@ -3737,6 +4021,15 @@ class WhatsAppPartnerApiController(http.Controller):
                 intent_result,
                 business_status,
                 payload=payload,
+            )
+
+            _logger.info(
+                "[WA-PROCESS] Resultado ejecutar intención | partner_id=%s session_id=%s intent=%s action=%s has_reply=%s",
+                partner.id if partner else False,
+                session.id if session else False,
+                intent_result.get("intent") or False,
+                intent_result.get("action") or False,
+                bool(reply),
             )
 
             if outside_hours_note and reply:
@@ -3754,7 +4047,24 @@ class WhatsAppPartnerApiController(http.Controller):
                     "business": business_status,
                     "profile": partner.get_whatsapp_profile_payload(),
                 }
-                self._safe_log_api(endpoint, payload, response, identifiers, partner=partner, session=session, start_ts=start_ts)
+
+                _logger.info(
+                    "[WA-PROCESS] Sin respuesta para enviar | partner_id=%s session_id=%s intent=%s action=%s",
+                    partner.id if partner else False,
+                    session.id if session else False,
+                    intent_result.get("intent") or False,
+                    intent_result.get("action") or False,
+                )
+
+                self._safe_log_api(
+                    endpoint,
+                    payload,
+                    response,
+                    identifiers,
+                    partner=partner,
+                    session=session,
+                    start_ts=start_ts,
+                )
                 return response
 
             emitted = self._emit_bot_reply(
@@ -3779,12 +4089,46 @@ class WhatsAppPartnerApiController(http.Controller):
                 "business": business_status,
                 "profile": partner.get_whatsapp_profile_payload(),
             }
-            self._safe_log_api(endpoint, payload, response, identifiers, partner=partner, session=session, start_ts=start_ts)
+
+            _logger.info(
+                "[WA-PROCESS] Respuesta lista | partner_id=%s session_id=%s outbox_id=%s message_id=%s intent=%s action=%s flow=%s step=%s",
+                partner.id if partner else False,
+                session.id if session else False,
+                emitted.get("outbox_id"),
+                emitted.get("message_id"),
+                intent_result.get("intent") or False,
+                intent_result.get("action") or False,
+                session.current_flow if session else False,
+                session.conversation_state if session else False,
+            )
+
+            self._safe_log_api(
+                endpoint,
+                payload,
+                response,
+                identifiers,
+                partner=partner,
+                session=session,
+                start_ts=start_ts,
+            )
             return response
 
         except Exception as e:
             _logger.exception("[SAT-WHATSAPP-API] Error procesando conversación")
+
             response = self._json_error(str(e), "PROCESS_ERROR", 500)
+
+            _logger.error(
+                "[WA-PROCESS] ERROR FINAL | error=%s partner_id=%s session_id=%s message=%s ai_provider=%s ai_intent=%s ai_confidence=%s",
+                str(e),
+                partner.id if partner else False,
+                session.id if "session" in locals() and session else False,
+                message_text[:300] if message_text else "",
+                payload.get("ai_provider") or False,
+                payload.get("ai_intent") or False,
+                payload.get("ai_confidence") or 0,
+            )
+
             self._safe_log_api(
                 endpoint,
                 payload,
