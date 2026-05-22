@@ -1053,26 +1053,27 @@ class WhatsAppPartnerApiController(http.Controller):
 
     def _get_service_url(self, partner=False, company=False, machine=False):
         """
-        Genera el enlace para registrar solicitud de servicio presencial.
+        Genera el enlace correcto para el formulario web de servicio presencial.
 
-        Si existe un formulario web público de servicio, debe recibir el equipo
-        seleccionado. Por eso el link más útil se genera después de seleccionar
-        la máquina.
+        El formulario real existente usa:
+            /ticket/reportar_incidencia?id_registro=...&user_name=...&phone_number=...
+
+        No usa:
+            /solicitud-servicio
         """
         ICP = request.env["ir.config_parameter"].sudo()
         base = self._get_base_url()
 
-        url = ICP.get_param("sat.whatsapp_service_url") or "%s/solicitud-servicio" % base
+        # Ruta real del controlador PublicTicketController
+        url = ICP.get_param("sat.whatsapp_service_url") or "%s/ticket/reportar_incidencia" % base
 
         params = []
 
+        # El formulario de servicio necesita id_registro
         if machine:
-            params.append("machine_id=%s" % machine.id)
             params.append("id_registro=%s" % machine.id)
 
         if partner:
-            params.append("partner_id=%s" % partner.id)
-
             user_name = str(partner.name or "").strip().replace(" ", "%20")
             if user_name:
                 params.append("user_name=%s" % user_name)
@@ -1083,19 +1084,15 @@ class WhatsAppPartnerApiController(http.Controller):
                 or getattr(partner, "phone", False)
                 or ""
             )
-            phone = str(phone or "").replace("+", "").replace(" ", "").strip()
+            phone = str(phone or "").replace("+", "").replace(" ", "").replace("@c.us", "").strip()
             if phone:
                 params.append("phone_number=%s" % phone)
-
-        if company:
-            params.append("company_id=%s" % company.id)
 
         if params:
             joiner = "&" if "?" in url else "?"
             url = "%s%s%s" % (url, joiner, "&".join(params))
 
         return url
-
     # ==========================================================
     # Máquinas alquiladas
     # ==========================================================
