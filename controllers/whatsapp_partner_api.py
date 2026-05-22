@@ -2892,10 +2892,254 @@ class WhatsAppPartnerApiController(http.Controller):
     # ==========================================================
     # Intención y acciones
     # ==========================================================
-    def _detect_intent(self, message_text, partner=False, business_status=False, session=False):
-        applies_to = self._get_applies_to(partner, business_status=business_status) if partner else "new"
+    def _detect_intent(self, message_text, partner=False, business_status=False, session=False, payload=False):
+        """
+        Detecta intención del mensaje.
+
+        Orden de prioridad:
+        1) Si n8n/Gemini envía ai_intent con confianza alta, usar esa intención.
+        Gemini NO responde, solo clasifica.
+        2) Si no hay ai_intent válido, usar la lógica existente de whatsapp.intent.rule.
+        3) Si ocurre error, devolver found=False.
+
+        IMPORTANTE:
+        - No altera la respuesta final.
+        - No crea mensajes.
+        - No ejecuta acciones.
+        - Solo devuelve el intent_result para que _execute_intent_action haga lo de siempre.
+        """
+
+        payload = payload or {}
+        business_status = business_status or {}
+
+        applies_to = self._get_applies_to(
+            partner,
+            business_status=business_status,
+        ) if partner else "new"
+
+        text_debug = (message_text or "").strip()
+
+        _logger.info(
+            "[WA-INTENT] INICIO detectar intención | partner_id=%s session_id=%s applies_to=%s flow=%s text=%s",
+            partner.id if partner else False,
+            session.id if session else False,
+            applies_to,
+            session.current_flow if session else False,
+            text_debug[:300],
+        )
+
+        # ==========================================================
+        # 1) Leer clasificación AI / Gemini enviada desde n8n
+        # ==========================================================
+        ai_provider = (payload.get("ai_provider") or "").strip()
+        ai_intent_raw = (payload.get("ai_intent") or "").strip()
+        ai_sub_intent = (payload.get("ai_sub_intent") or "").strip()
+        ai_summary = (payload.get("ai_summary") or "").strip()
+        ai_reason = (payload.get("ai_reason") or "").strip()
+        ai_needs_human = bool(payload.get("ai_needs_human"))
 
         try:
+            ai_confidence = float(payload.get("ai_confidence") or 0.0)
+        except Exception:
+            ai_confidence = 0.0
+
+        _logger.info(
+            "[WA-INTENT-AI] Datos recibidos | provider=%s intent=%s sub_intent=%s confidence=%s needs_human=%s reason=%s summary=%s",
+            ai_provider or False,
+            ai_intent_raw or False,
+            ai_sub_intent or False,
+            ai_confidence,
+            ai_needs_human,
+            ai_reason or False,
+            ai_summary[:300] if ai_summary else False,
+        )
+
+        # ==========================================================
+        # 2) Mapear intenciones de n8n/Gemini a acciones reales de Odoo
+        # ==========================================================
+        ai_intent_map = {
+            # Tóner
+            "toner": {
+                "intent": "toner",
+                "action": "start_flow_toner",
+                "target_flow": "toner",
+                "response_template": False,
+            },
+
+            # Servicio presencial / técnico
+            "onsite_service": {
+                "intent": "onsite_service",
+                "action": "start_flow_onsite",
+                "target_flow": "onsite",
+                "response_template": False,
+            },
+            "service": {
+                "intent": "onsite_service",
+                "action": "start_flow_onsite",
+                "target_flow": "onsite",
+                "response_template": False,
+            },
+            "printer_issue": {
+                "intent": "printer_issue",
+                "action": "start_flow_onsite",
+                "target_flow": "onsite",
+                "response_template": False,
+            },
+
+            # Soporte remoto
+            "remote_support": {
+                "intent": "remote_service",
+                "action": "start_flow_remote",
+                "target_flow": "remote",
+                "response_template": False,
+            },
+            "remote_service": {
+                "intent": "remote_service",
+                "action": "start_flow_remote",
+                "target_flow": "remote",
+                "response_template": False,
+            },
+            "anydesk": {
+                "intent": "remote_service",
+                "action": "start_flow_remote",
+                "target_flow": "remote",
+                "response_template": False,
+            },
+            "scanner": {
+                "intent": "remote_service",
+                "action": "start_flow_remote",
+                "target_flow": "remote",
+                "response_template": False,
+            },
+
+            # Respuestas por plantilla
+            "greeting": {
+                "intent": "greeting",
+                "action": "reply",
+                "target_flow": "none",
+                "response_template": "main_menu_technical",
+            },
+            "thanks": {
+                "intent": "thanks",
+                "action": "reply",
+                "target_flow": "none",
+                "response_template": "thanks_reply",
+            },
+            "goodbye": {
+                "intent": "goodbye",
+                "action": "reply",
+                "target_flow": "none",
+                "response_template": "goodbye_reply",
+            },
+            "sales": {
+                "intent": "sales",
+                "action": "reply",
+                "target_flow": "none",
+                "response_template": "sales_contact",
+            },
+            "billing": {
+                "intent": "billing",
+                "action": "reply",
+                "target_flow": "none",
+                "response_template": "billing_contact",
+            },
+
+            # Humano
+            "human": {
+                "intent": "human",
+                "action": "reply",
+                "target_flow": "none",
+                "response_template": "human_take",
+            },
+        }
+
+        # Umbral configurable, por defecto 0.75
+        try:
+            threshold_param = request.env["ir.config_parameter"].sudo().get_param(
+                "sat.whatsapp_ai_intent_threshold",
+                "0.75",
+            )
+            ai_threshold = float(threshold_param or 0.75)
+        except Exception:
+            ai_threshold = 0.75
+
+        # ==========================================================
+        # 3) Usar AI si viene con confianza alta y es una intención conocida
+        # ==========================================================
+        if ai_intent_raw and ai_confidence >= ai_threshold:
+            ai_key = ai_intent_raw.strip().lower()
+
+            if ai_key in ai_intent_map:
+                mapped = ai_intent_map[ai_key]
+
+                result = {
+                    "found": True,
+                    "source": "ai_intent",
+                    "provider": ai_provider or "ai",
+                    "intent": mapped.get("intent"),
+                    "action": mapped.get("action"),
+                    "target_flow": mapped.get("target_flow") or "none",
+                    "response_template": mapped.get("response_template") or False,
+                    "confidence": ai_confidence,
+                    "ai_intent": ai_intent_raw,
+                    "ai_sub_intent": ai_sub_intent or False,
+                    "ai_summary": ai_summary or False,
+                    "ai_reason": ai_reason or False,
+                    "ai_needs_human": ai_needs_human,
+                    "applies_to": applies_to,
+                    "rule_id": False,
+                    "rule_name": "AI / Gemini / n8n",
+                    "stop_flow": False,
+                    "allow_ai_after": False,
+                }
+
+                _logger.warning(
+                    "[WA-INTENT-AI] USANDO intención AI | original_ai=%s mapped_intent=%s action=%s target_flow=%s confidence=%s threshold=%s sub_intent=%s text=%s",
+                    ai_intent_raw,
+                    result.get("intent"),
+                    result.get("action"),
+                    result.get("target_flow"),
+                    ai_confidence,
+                    ai_threshold,
+                    ai_sub_intent or False,
+                    text_debug[:300],
+                )
+
+                return result, applies_to
+
+            _logger.warning(
+                "[WA-INTENT-AI] AI intent no reconocido, se usará detector Odoo | ai_intent=%s confidence=%s text=%s",
+                ai_intent_raw,
+                ai_confidence,
+                text_debug[:300],
+            )
+
+        elif ai_intent_raw:
+            _logger.info(
+                "[WA-INTENT-AI] AI intent ignorado por baja confianza | ai_intent=%s confidence=%s threshold=%s text=%s",
+                ai_intent_raw,
+                ai_confidence,
+                ai_threshold,
+                text_debug[:300],
+            )
+        else:
+            _logger.info(
+                "[WA-INTENT-AI] No llegó ai_intent desde n8n | text=%s",
+                text_debug[:300],
+            )
+
+        # ==========================================================
+        # 4) Lógica original de Odoo: reglas whatsapp.intent.rule
+        # ==========================================================
+        try:
+            _logger.info(
+                "[WA-INTENT-ODOO] Ejecutando detector por reglas | applies_to=%s after_hours=%s current_flow=%s text=%s",
+                applies_to,
+                not business_status.get("is_open"),
+                session.current_flow if session else False,
+                text_debug[:300],
+            )
+
             result = request.env["whatsapp.intent.rule"].sudo().detect_intent(
                 message=message_text,
                 partner=partner if partner else False,
@@ -2904,17 +3148,55 @@ class WhatsAppPartnerApiController(http.Controller):
                 current_flow=session.current_flow if session else False,
             )
             result = result or {"found": False}
-        except TypeError:
-            result = request.env["whatsapp.intent.rule"].sudo().detect_intent(
-                message=message_text,
-                partner=partner if partner else False,
-                applies_to=applies_to,
-                is_after_hours=not business_status.get("is_open"),
+
+            _logger.info(
+                "[WA-INTENT-ODOO] Resultado reglas | found=%s intent=%s action=%s template=%s target_flow=%s",
+                bool(result.get("found")),
+                result.get("intent"),
+                result.get("action"),
+                result.get("response_template"),
+                result.get("target_flow"),
             )
-            result = result or {"found": False}
+
+        except TypeError:
+            _logger.warning(
+                "[WA-INTENT-ODOO] detect_intent no acepta current_flow, usando compatibilidad antigua"
+            )
+
+            try:
+                result = request.env["whatsapp.intent.rule"].sudo().detect_intent(
+                    message=message_text,
+                    partner=partner if partner else False,
+                    applies_to=applies_to,
+                    is_after_hours=not business_status.get("is_open"),
+                )
+                result = result or {"found": False}
+
+                _logger.info(
+                    "[WA-INTENT-ODOO] Resultado reglas compatibilidad | found=%s intent=%s action=%s template=%s target_flow=%s",
+                    bool(result.get("found")),
+                    result.get("intent"),
+                    result.get("action"),
+                    result.get("response_template"),
+                    result.get("target_flow"),
+                )
+
+            except Exception:
+                _logger.exception("[SAT-WHATSAPP-API] Error detectando intención por reglas compatibilidad")
+                result = {"found": False}
+
         except Exception:
             _logger.exception("[SAT-WHATSAPP-API] Error detectando intención")
             result = {"found": False}
+
+        _logger.info(
+            "[WA-INTENT] FIN detectar intención | found=%s intent=%s action=%s source=%s applies_to=%s",
+            bool(result.get("found")),
+            result.get("intent"),
+            result.get("action"),
+            result.get("source") or "odoo_rules",
+            applies_to,
+        )
 
         return result, applies_to
 
@@ -3440,13 +3722,13 @@ class WhatsAppPartnerApiController(http.Controller):
             # ==================================================
             # 8) Detectar intención y ejecutar acción
             # ==================================================
-            intent_result, applies_to = self._detect_intent(
+            result, applies_to = self._detect_intent(
                 message_text,
-                partner=partner,
+                partner=partner if partner else False,
                 business_status=business_status,
-                session=session,
+                session=session if session else False,
+                payload=payload,
             )
-
             reply = self._execute_intent_action(
                 partner,
                 session,
