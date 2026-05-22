@@ -1005,17 +1005,45 @@ class WhatsAppPartnerApiController(http.Controller):
         return request.env["ir.config_parameter"].sudo().get_param("web.base.url", "").rstrip("/")
 
     def _get_toner_url(self, partner=False, company=False, machine=False):
+        """
+        Genera el enlace correcto para el formulario web de tóner.
+
+        El formulario existente NO usa:
+            /solicitud-toner?partner_id=...&company_id=...
+
+        El formulario real usa:
+            /toner/solicitar_toner?id_registro=...&user_name=...&phone_number=...
+
+        Por eso, si todavía no hay máquina seleccionada, no se debe generar
+        un link directo al formulario porque faltaría id_registro.
+        """
         ICP = request.env["ir.config_parameter"].sudo()
         base = self._get_base_url()
-        url = ICP.get_param("sat.whatsapp_toner_url") or "%s/solicitud-toner" % base
+
+        # Ruta real del otro controlador TonerRequestController
+        url = ICP.get_param("sat.whatsapp_toner_url") or "%s/toner/solicitar_toner" % base
 
         params = []
-        if partner:
-            params.append("partner_id=%s" % partner.id)
-        if company:
-            params.append("company_id=%s" % company.id)
+
+        # El formulario existente necesita id_registro.
         if machine:
-            params.append("machine_id=%s" % machine.id)
+            params.append("id_registro=%s" % machine.id)
+
+        if partner:
+            user_name = partner.name or ""
+            user_name = str(user_name).strip().replace(" ", "%20")
+            if user_name:
+                params.append("user_name=%s" % user_name)
+
+            phone = (
+                getattr(partner, "whatsapp_number", False)
+                or getattr(partner, "mobile", False)
+                or getattr(partner, "phone", False)
+                or ""
+            )
+            phone = str(phone or "").replace("+", "").replace(" ", "").strip()
+            if phone:
+                params.append("phone_number=%s" % phone)
 
         if params:
             joiner = "&" if "?" in url else "?"
@@ -1024,17 +1052,43 @@ class WhatsAppPartnerApiController(http.Controller):
         return url
 
     def _get_service_url(self, partner=False, company=False, machine=False):
+        """
+        Genera el enlace para registrar solicitud de servicio presencial.
+
+        Si existe un formulario web público de servicio, debe recibir el equipo
+        seleccionado. Por eso el link más útil se genera después de seleccionar
+        la máquina.
+        """
         ICP = request.env["ir.config_parameter"].sudo()
         base = self._get_base_url()
+
         url = ICP.get_param("sat.whatsapp_service_url") or "%s/solicitud-servicio" % base
 
         params = []
-        if partner:
-            params.append("partner_id=%s" % partner.id)
-        if company:
-            params.append("company_id=%s" % company.id)
+
         if machine:
             params.append("machine_id=%s" % machine.id)
+            params.append("id_registro=%s" % machine.id)
+
+        if partner:
+            params.append("partner_id=%s" % partner.id)
+
+            user_name = str(partner.name or "").strip().replace(" ", "%20")
+            if user_name:
+                params.append("user_name=%s" % user_name)
+
+            phone = (
+                getattr(partner, "whatsapp_number", False)
+                or getattr(partner, "mobile", False)
+                or getattr(partner, "phone", False)
+                or ""
+            )
+            phone = str(phone or "").replace("+", "").replace(" ", "").strip()
+            if phone:
+                params.append("phone_number=%s" % phone)
+
+        if company:
+            params.append("company_id=%s" % company.id)
 
         if params:
             joiner = "&" if "?" in url else "?"
@@ -2096,12 +2150,19 @@ class WhatsAppPartnerApiController(http.Controller):
                 "Voy a derivarte con un asesor para ayudarte con la solicitud de tóner."
             )
 
-        link = self._get_toner_url(partner=partner, company=company, machine=machine)
-
         options = []
+
         for machine in machines:
             counters = self._toner_get_machine_counters(machine)
             recent, reason = self._toner_has_recent_counters(machine)
+
+            # Aquí sí existe machine, pero solo para armar la lista.
+            # No se genera link general todavía porque el formulario necesita id_registro.
+            machine_link = self._get_toner_url(
+                partner=partner,
+                company=company,
+                machine=machine,
+            )
 
             options.append({
                 "id": machine.id,
@@ -2113,10 +2174,11 @@ class WhatsAppPartnerApiController(http.Controller):
                 "counter_bn": counters.get("counter_bn") or 0,
                 "counter_color": counters.get("counter_color") or 0,
                 "counter_date_text": counters.get("counter_date_text") or "",
+                "form_url": machine_link,
             })
 
             _logger.info(
-                "[WA-TONER] Opción máquina id=%s serie=%s is_color=%s counter_recent=%s reason=%s bn=%s color=%s date=%s",
+                "[WA-TONER] Opción máquina id=%s serie=%s is_color=%s counter_recent=%s reason=%s bn=%s color=%s date=%s link=%s",
                 machine.id,
                 machine.serie or "",
                 self._toner_is_color_machine(machine),
@@ -2125,6 +2187,7 @@ class WhatsAppPartnerApiController(http.Controller):
                 counters.get("counter_bn"),
                 counters.get("counter_color"),
                 counters.get("counter_date_text"),
+                machine_link,
             )
 
         session.start_flow(
@@ -2133,16 +2196,17 @@ class WhatsAppPartnerApiController(http.Controller):
             context={
                 "intent": "toner",
                 "machine_options": options,
-                "form_url": link,
+                # No guardar link general porque todavía no hay una máquina seleccionada.
+                "form_url": False,
             },
         )
 
         return self._build_machine_menu(
             machines,
             "Claro. Estos son tus equipos alquilados. Responde con el número del equipo para solicitar tóner:",
-            footer="También puedes escribir LINK si prefieres llenar el formulario.",
-            include_link=True,
-            link=link,
+            footer="Luego de seleccionar el equipo podré continuar la solicitud. También puedes escribir LINK después de elegir el equipo si prefieres llenar el formulario.",
+            include_link=False,
+            link=False,
         )
 
     def _start_onsite_flow(self, partner, session, identifiers, payload=False):
@@ -2163,14 +2227,27 @@ class WhatsAppPartnerApiController(http.Controller):
                 "Voy a derivarte con un asesor para registrar tu servicio."
             )
 
-        link = self._get_service_url(partner=partner, company=company)
-
         options = []
+
         for machine in machines:
+            machine_link = self._get_service_url(
+                partner=partner,
+                company=company,
+                machine=machine,
+            )
+
             options.append({
                 "id": machine.id,
                 "label": self._get_machine_label(machine),
+                "form_url": machine_link,
             })
+
+            _logger.info(
+                "[WA-ONSITE] Opción máquina id=%s serie=%s link=%s",
+                machine.id,
+                machine.serie or "",
+                machine_link,
+            )
 
         session.start_flow(
             "onsite",
@@ -2178,18 +2255,17 @@ class WhatsAppPartnerApiController(http.Controller):
             context={
                 "intent": "onsite_service",
                 "machine_options": options,
-                "form_url": link,
+                "form_url": False,
             },
         )
 
         return self._build_machine_menu(
             machines,
             "De acuerdo. Selecciona el equipo para el servicio presencial:",
-            footer="También puedes escribir LINK si prefieres llenar el formulario.",
-            include_link=True,
-            link=link,
+            footer="Luego de seleccionar el equipo podré enviarte el enlace del formulario si lo necesitas.",
+            include_link=False,
+            link=False,
         )
-
     def _start_remote_flow(self, partner, session, identifiers, payload=False):
         session.start_flow(
             "remote",
@@ -2257,8 +2333,11 @@ class WhatsAppPartnerApiController(http.Controller):
                 return "Por favor responde con el número del equipo de la lista."
 
             selected = options[index - 1]
-            machine_id = selected.get("id")
-            machine = request.env["alquiler"].sudo().browse(machine_id).exists()
+            link = selected.get("form_url") or self._get_service_url(
+                partner=partner,
+                company=partner.whatsapp_active_company_id if partner else False,
+                machine=machine,
+            )
 
             if not machine:
                 _logger.error("[WA-TONER] Máquina seleccionada no existe machine_id=%s", machine_id)
@@ -2540,12 +2619,15 @@ class WhatsAppPartnerApiController(http.Controller):
         text_clean = (text or "").strip()
 
         if text_clean.lower() in ["link", "enlace", "url", "formulario"]:
-            link = context.get("form_url") or self._get_service_url(
-                partner=partner,
-                company=partner.whatsapp_active_company_id if partner else False,
-            )
-            return "Puedes registrar tu servicio presencial aquí:\n%s" % link
+            link = context.get("form_url")
 
+            if not link:
+                return (
+                    "Primero selecciona el equipo de la lista. "
+                    "Luego podré enviarte el enlace del formulario de servicio."
+                )
+
+            return "Puedes registrar tu servicio presencial aquí:\n%s" % link
         if self._is_no(text_clean) and session.conversation_state != "awaiting_service_photo":
             session.reset_conversation(reason="abandoned")
             return "Listo, cancelé la solicitud de servicio. Si necesitas algo más, escríbenos."
