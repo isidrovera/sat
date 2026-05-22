@@ -2096,7 +2096,7 @@ class WhatsAppPartnerApiController(http.Controller):
                 "Voy a derivarte con un asesor para ayudarte con la solicitud de tóner."
             )
 
-        link = self._get_toner_url(partner=partner, company=company)
+        link = self._get_toner_url(partner=partner, company=company, machine=machine)
 
         options = []
         for machine in machines:
