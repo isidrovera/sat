@@ -2303,23 +2303,44 @@ class WhatsAppPartnerApiController(http.Controller):
             context,
         )
 
+        # ==========================================================
+        # LINK / FORMULARIO
+        # ==========================================================
         if text_clean.lower() in ["link", "enlace", "url", "formulario"]:
-            link = context.get("form_url") or self._get_toner_url(
-                partner=partner,
-                company=partner.whatsapp_active_company_id if partner else False,
+            link = context.get("form_url")
+
+            if not link:
+                return (
+                    "Primero selecciona el equipo de la lista. "
+                    "Luego podré enviarte el enlace correcto del formulario de tóner."
+                )
+
+            _logger.info(
+                "[WA-TONER] Cliente pidió link session=%s link=%s",
+                session.id,
+                link,
             )
-            _logger.info("[WA-TONER] Cliente pidió link session=%s link=%s", session.id, link)
             return "Puedes registrar tu solicitud de tóner aquí:\n%s" % link
 
+        # ==========================================================
+        # CANCELAR FLUJO
+        # ==========================================================
         if self._is_no(text_clean) and state not in [
             "awaiting_toner_counter_bn",
             "awaiting_toner_counter_color",
             "awaiting_toner_observations",
         ]:
             session.reset_conversation(reason="abandoned")
-            _logger.info("[WA-TONER] Flujo cancelado por cliente session=%s state=%s", session.id, state)
+            _logger.info(
+                "[WA-TONER] Flujo cancelado por cliente session=%s state=%s",
+                session.id,
+                state,
+            )
             return "Listo, cancelé la solicitud de tóner. Si necesitas algo más, escríbenos."
 
+        # ==========================================================
+        # 1) SELECCIÓN DE EQUIPO
+        # ==========================================================
         if state == "awaiting_machine_selection_toner":
             index = self._parse_menu_index(text_clean)
             options = context.get("machine_options") or []
@@ -2333,91 +2354,110 @@ class WhatsAppPartnerApiController(http.Controller):
                 return "Por favor responde con el número del equipo de la lista."
 
             selected = options[index - 1]
-            link = selected.get("form_url") or self._get_service_url(
+            machine_id = selected.get("id")
+
+            machine = False
+            if machine_id and "alquiler" in request.env:
+                try:
+                    machine = request.env["alquiler"].sudo().browse(int(machine_id)).exists()
+                except Exception:
+                    machine = False
+
+            if not machine:
+                _logger.error(
+                    "[WA-TONER] Máquina seleccionada no existe machine_id=%s selected=%s",
+                    machine_id,
+                    selected,
+                )
+                return "El equipo seleccionado ya no está disponible. Por favor inicia nuevamente la solicitud."
+
+            link = selected.get("form_url") or self._get_toner_url(
                 partner=partner,
                 company=partner.whatsapp_active_company_id if partner else False,
                 machine=machine,
             )
 
-            if not machine:
-                _logger.error("[WA-TONER] Máquina seleccionada no existe machine_id=%s", machine_id)
-                return "El equipo seleccionado ya no está disponible. Por favor inicia nuevamente la solicitud."
-
-            is_color = self._toner_is_color_machine(machine)
-            counters = self._toner_get_machine_counters(machine)
-            recent, reason = self._toner_has_recent_counters(machine)
             color_menu = self._toner_build_color_menu(machine)
 
             base_context = {
                 "machine_id": machine.id,
-                "machine_label": selected.get("label") or self._get_machine_label(machine),
-                "machine_is_color": is_color,
-                "machine_tipo": machine.tipo_maquina_id or "",
-                "counter_recent": recent,
-                "counter_recent_reason": reason,
-                "machine_counter_bn": counters.get("counter_bn") or 0,
-                "machine_counter_color": counters.get("counter_color") or 0,
-                "counter_date_text": counters.get("counter_date_text") or "",
+                "machine_label": self._get_machine_label(machine),
+                "machine_is_color": self._toner_is_color_machine(machine),
+                "form_url": link,
+                "selected_machine_option": selected,
             }
 
             _logger.info(
-                "[WA-TONER] Máquina seleccionada id=%s serie=%s is_color=%s recent=%s reason=%s counters=%s",
+                "[WA-TONER] Máquina seleccionada machine=%s is_color=%s link=%s session=%s",
                 machine.id,
-                machine.serie or "",
-                is_color,
-                recent,
-                reason,
-                counters,
+                self._toner_is_color_machine(machine),
+                link,
+                session.id,
             )
 
+            # Equipo monocromático: seleccionar Negro automáticamente
             if color_menu.get("auto_select"):
+                option = (color_menu.get("options") or [{}])[0]
+                colors = option.get("colors") or ["black"]
+                label = option.get("label") or "Negro"
+
                 base_context.update({
-                    "toner_color": "Negro",
-                    "toner_color_code": "black",
-                    "toner_color_label": "Negro",
-                    "toner_colors": ["black"],
-                    "color_options": color_menu.get("options") or [],
+                    "toner_color": label,
+                    "toner_color_code": option.get("code") or "black",
+                    "toner_color_label": label,
+                    "toner_colors": colors,
                 })
 
-                session.advance_state("awaiting_toner_quantity", base_context)
+                session.advance_state(
+                    "awaiting_toner_quantity",
+                    base_context,
+                )
 
-                lines = [
-                    "Equipo seleccionado:",
-                    base_context["machine_label"],
-                    "",
-                    "Este equipo es monocromático, solicitaré tóner Negro.",
-                    "",
-                    self._toner_counter_reference_text(machine),
-                    "",
-                    "¿Qué cantidad necesitas?",
-                ]
+                return (
+                    "Equipo seleccionado:\n%s\n\n"
+                    "Formulario opcional:\n%s\n\n"
+                    "Este equipo es monocromático, usaré tóner Negro.\n"
+                    "¿Qué cantidad necesitas?"
+                ) % (
+                    self._get_machine_label(machine),
+                    link,
+                )
 
-                return "\n".join(lines)
-
-            base_context.update({
-                "color_options": color_menu.get("options") or [],
-            })
-
-            session.advance_state("awaiting_toner_color", base_context)
-
-            return (
-                "Equipo seleccionado:\n%s\n\n%s\n\n%s"
-            ) % (
-                base_context["machine_label"],
-                self._toner_counter_reference_text(machine),
-                color_menu.get("menu_text") or "",
+            # Equipo color: pedir color
+            session.advance_state(
+                "awaiting_toner_color",
+                base_context,
             )
 
+            return (
+                "Equipo seleccionado:\n%s\n\n"
+                "Formulario opcional:\n%s\n\n"
+                "%s"
+            ) % (
+                self._get_machine_label(machine),
+                link,
+                color_menu.get("menu_text") or "¿Qué color de tóner necesitas?",
+            )
+
+        # ==========================================================
+        # 2) SELECCIÓN DE COLOR
+        # ==========================================================
         if state == "awaiting_toner_color":
             machine = self._toner_get_selected_machine_from_context(context)
-            options = context.get("color_options") or self._toner_build_color_menu(machine).get("options") or []
+            if not machine:
+                session.reset_conversation(reason="machine_not_found")
+                return "No pude recuperar el equipo seleccionado. Por favor inicia nuevamente la solicitud."
+
+            color_menu = self._toner_build_color_menu(machine)
+            options = color_menu.get("options") or []
 
             result = self._toner_resolve_color_selection(text_clean, options)
+
             if not result.get("valid"):
                 _logger.info(
-                    "[WA-TONER] Color inválido input=%r options=%s",
+                    "[WA-TONER] Color inválido input=%r session=%s",
                     text_clean,
-                    options,
+                    session.id,
                 )
                 return result.get("message") or "No reconozco ese color. Responde con el número de la opción."
 
@@ -2445,13 +2485,22 @@ class WhatsAppPartnerApiController(http.Controller):
 
             return "Perfecto. Tóner seleccionado: %s.\n¿Qué cantidad necesitas?" % label
 
+        # ==========================================================
+        # 3) CANTIDAD
+        # ==========================================================
         if state == "awaiting_toner_quantity":
             qty = self._only_digits(text_clean)
+
             if not qty:
-                _logger.info("[WA-TONER] Cantidad inválida input=%r session=%s", text_clean, session.id)
+                _logger.info(
+                    "[WA-TONER] Cantidad inválida input=%r session=%s",
+                    text_clean,
+                    session.id,
+                )
                 return "Por favor indica la cantidad en número. Ejemplo: 1"
 
             machine = self._toner_get_selected_machine_from_context(context)
+
             if not machine:
                 session.reset_conversation(reason="machine_not_found")
                 return "No pude recuperar el equipo seleccionado. Por favor inicia nuevamente la solicitud."
@@ -2466,14 +2515,23 @@ class WhatsAppPartnerApiController(http.Controller):
             return self._toner_next_counter_or_observation(
                 session,
                 machine,
-                context_update={"toner_quantity": qty},
+                context_update={
+                    "toner_quantity": qty,
+                },
             )
 
+        # ==========================================================
+        # 4) CONTADOR B/N
+        # ==========================================================
         if state == "awaiting_toner_counter_bn":
             value = self._only_digits(text_clean)
 
             if not value:
-                _logger.info("[WA-TONER] Contador BN inválido input=%r session=%s", text_clean, session.id)
+                _logger.info(
+                    "[WA-TONER] Contador BN inválido input=%r session=%s",
+                    text_clean,
+                    session.id,
+                )
                 return "Por favor envía el contador B/N actual en número. Este dato es obligatorio para registrar la solicitud."
 
             machine = self._toner_get_selected_machine_from_context(context)
@@ -2513,11 +2571,18 @@ class WhatsAppPartnerApiController(http.Controller):
 
             return "¿Deseas agregar alguna observación? Si no, escribe NO."
 
+        # ==========================================================
+        # 5) CONTADOR COLOR
+        # ==========================================================
         if state == "awaiting_toner_counter_color":
             value = self._only_digits(text_clean)
 
             if not value:
-                _logger.info("[WA-TONER] Contador color inválido input=%r session=%s", text_clean, session.id)
+                _logger.info(
+                    "[WA-TONER] Contador color inválido input=%r session=%s",
+                    text_clean,
+                    session.id,
+                )
                 return "Por favor envía el contador color actual en número. Este dato es obligatorio para equipos color."
 
             session.advance_state(
@@ -2536,6 +2601,9 @@ class WhatsAppPartnerApiController(http.Controller):
 
             return "¿Deseas agregar alguna observación? Si no, escribe NO."
 
+        # ==========================================================
+        # 6) OBSERVACIONES
+        # ==========================================================
         if state == "awaiting_toner_observations":
             observations = "" if self._is_no(text_clean) else text_clean
 
@@ -2555,11 +2623,17 @@ class WhatsAppPartnerApiController(http.Controller):
 
             return summary
 
+        # ==========================================================
+        # 7) CONFIRMACIÓN FINAL
+        # ==========================================================
         if state == "awaiting_toner_confirmation":
             if not self._is_yes(text_clean):
                 if self._is_no(text_clean):
                     session.reset_conversation(reason="abandoned")
-                    _logger.info("[WA-TONER] Confirmación cancelada session=%s", session.id)
+                    _logger.info(
+                        "[WA-TONER] Confirmación cancelada session=%s",
+                        session.id,
+                    )
                     return "Listo, cancelé la solicitud de tóner."
 
                 return "Por favor responde SI para confirmar o NO para cancelar."
@@ -2591,6 +2665,7 @@ class WhatsAppPartnerApiController(http.Controller):
                     "flow_context": context,
                 },
             )
+
             partner.whatsapp_enable_human_mode_api(taken_by_name="Bot WhatsApp")
             session.action_set_human()
 
@@ -2606,6 +2681,9 @@ class WhatsAppPartnerApiController(http.Controller):
                 "Te estoy derivando con un asesor para completarla."
             )
 
+        # ==========================================================
+        # ESTADO DESCONOCIDO
+        # ==========================================================
         _logger.warning(
             "[WA-TONER] Estado no reconocido state=%s session=%s",
             state,
@@ -2613,7 +2691,6 @@ class WhatsAppPartnerApiController(http.Controller):
         )
 
         return "Estoy procesando tu solicitud de tóner. Por favor continúa con la información solicitada."
-
     def _continue_onsite_flow(self, partner, session, identifiers, text, payload=False):
         context = session.get_context()
         text_clean = (text or "").strip()
