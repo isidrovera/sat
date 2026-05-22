@@ -2635,39 +2635,39 @@ class WhatsAppPartnerApiController(http.Controller):
         state = session.conversation_state
 
         if state == "awaiting_machine_selection_onsite":
-        index = self._parse_menu_index(text_clean)
-        options = context.get("machine_options") or []
+            index = self._parse_menu_index(text_clean)
+            options = context.get("machine_options") or []
 
-        if not index or index < 1 or index > len(options):
-            return "Por favor responde con el número del equipo de la lista."
+            if not index or index < 1 or index > len(options):
+                return "Por favor responde con el número del equipo de la lista."
 
-        selected = options[index - 1]
-        machine_id = selected.get("id")
-        machine = request.env["alquiler"].sudo().browse(machine_id).exists()
+            selected = options[index - 1]
+            machine_id = selected.get("id")
+            machine = request.env["alquiler"].sudo().browse(machine_id).exists()
 
-        if not machine:
-            return "El equipo seleccionado ya no está disponible. Por favor inicia nuevamente la solicitud."
+            if not machine:
+                return "El equipo seleccionado ya no está disponible. Por favor inicia nuevamente la solicitud."
 
-        link = selected.get("form_url") or self._get_service_url(
-            partner=partner,
-            company=partner.whatsapp_active_company_id if partner else False,
-            machine=machine,
-        )
+            link = selected.get("form_url") or self._get_service_url(
+                partner=partner,
+                company=partner.whatsapp_active_company_id if partner else False,
+                machine=machine,
+            )
 
-        session.advance_state(
-            "awaiting_service_description",
-            {
-                "machine_id": machine.id,
-                "machine_label": self._get_machine_label(machine),
-                "form_url": link,
-            },
-        )
+            session.advance_state(
+                "awaiting_service_description",
+                {
+                    "machine_id": machine.id,
+                    "machine_label": self._get_machine_label(machine),
+                    "form_url": link,
+                },
+            )
 
-        return (
-            "Equipo seleccionado:\n%s\n\n"
-            "Puedes registrar tu servicio presencial aquí:\n%s\n\n"
-            "O descríbenos brevemente el problema del equipo."
-        ) % (self._get_machine_label(machine), link)
+            return (
+                "Equipo seleccionado:\n%s\n\n"
+                "Puedes registrar tu servicio presencial aquí:\n%s\n\n"
+                "O descríbenos brevemente el problema del equipo."
+            ) % (self._get_machine_label(machine), link)
 
         if state == "awaiting_service_description":
             if len(text_clean) < 4:
