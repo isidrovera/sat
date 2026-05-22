@@ -8,7 +8,7 @@
             <field name="email_from">soporte@andescopiers.com.pe</field>
             <field name="email_to">{{object.product_alquiler.correo_}}</field>
             <field name="email_cc">comercial01@andescopiers.com.pe,
-                comercial@andescopiers.com.pe, campuero@corapsac.com.pe, lincoln@corapsac.com</field>
+                comercial@andescopiers.com.pe, campuero@corapsac.com.pe</field>
             <field name="subject">Visita Técnica - {{ctx.get('cantidad_tickets', 1)}} Servicio(s) Programado(s)</field>
             <field name="model_id" ref="model_ticket_alquiler" />
             <field name="auto_delete" eval="True" />
@@ -244,7 +244,7 @@
             <field name="subject">Reporte de Asistencia Directa - Servicios</field>
             <field name="email_from">soporte@andescopiers.com.pe</field>
             <field name="email_to">t.escalante@corapsac.com.pe</field>
-            <field name="email_cc">comercial01@andescopiers.com.pe, comercial@andescopiers.com.pe, campuero@corapsac.com.pe, lincoln@corapsac.com</field>
+            <field name="email_cc">comercial01@andescopiers.com.pe, comercial@andescopiers.com.pe, campuero@corapsac.com.pe</field>
             <field name="model_id" ref="model_ticket_alquiler" />
             <field name="auto_delete" eval="True" />
             <field name="body_html"><![CDATA[
@@ -386,8 +386,8 @@
             <field name="subject">✅ Reporte de Asistencia Directa - {{ctx.get('cantidad_tickets', 1)}} Servicio(s)</field>
             <field name="email_from">soporte@andescopiers.com.pe</field>
             <field name="email_to">t.escalante@corapsac.com.pe</field>
-            <field name="email_cc">comercial01@andescopiers.com.pe, comercial@andescopiers.com.pe, campuero@corapsac.com.pe,
-                lincoln@corapsac.com</field>
+            <field name="email_cc">comercial01@andescopiers.com.pe, comercial@andescopiers.com.pe, campuero@corapsac.com.pe
+                </field>
             <field name="model_id" ref="sat.model_ticket_alquiler" />
             <field name="auto_delete" eval="True" />
             <field name="body_html"><![CDATA[

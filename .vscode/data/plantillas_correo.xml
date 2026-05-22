@@ -5,7 +5,7 @@
       <field name="name">Envio de Ticket al Cliente</field>
       <field name="email_from">soporte@andescopiers.com.pe</field>
       <field name="email_to">{{object.product_alquiler.correo_}}</field>
-      <field name="email_cc">comercial01@andescopiers.com.pe, comercial@andescopiers.com.pe, campuero@corapsac.com.pe, lincoln@corapsac.com</field>
+      <field name="email_cc">comercial01@andescopiers.com.pe, comercial@andescopiers.com.pe, campuero@corapsac.com.pe</field>
       <field name="subject">Nuevo Ticket # {{object.name}} </field>
       <field name="body_html">
         <![CDATA[
@@ -48,7 +48,7 @@
       <field name="name">Finalización de Ticket al Cliente</field>
       <field name="email_from">soporte@andescopiers.com.pe</field>
       <field name="email_to">{{object.product_alquiler.correo_}}</field>
-      <field name="email_cc">comercial01@andescopiers.com.pe, comercial@andescopiers.com.pe, campuero@corapsac.com.pe, lincoln@corapsac.com</field>
+      <field name="email_cc">comercial01@andescopiers.com.pe, comercial@andescopiers.com.pe, campuero@corapsac.com.pe</field>
       <field name="subject">Finalización de Ticket #{{object.name}}</field>
       <field name="model_id" ref="model_ticket_alquiler"/>
       <field name="auto_delete" eval="True"/>
@@ -137,7 +137,7 @@
       <field name="subject">Asistencia Directa</field>
       <field name="email_from">soporte@andescopiers.com.pe</field>
       <field name="email_to">t.escalante@corapsac.com.pe</field>
-      <field name="email_cc">comercial01@andescopiers.com.pe, comercial@andescopiers.com.pe, campuero@corapsac.com.pe, lincoln@corapsac.com</field>
+      <field name="email_cc">comercial01@andescopiers.com.pe, comercial@andescopiers.com.pe, campuero@corapsac.com.pe</field>
       <field name="body_html"><![CDATA[
             <p>Estimada Señora Teresa,</p>
             <p>Le escribo para informarle que el trabajador designado acudió directamente al cliente sin ninguna tardanza o necesidad de aplicar descuentos. Adjunto encontrará el ticket correspondiente a la visita:</p>
@@ -166,7 +166,7 @@
       <field name="subject">Marcacion salida</field>
       <field name="email_from">soporte@andescopiers.com.pe</field>
       <field name="email_to">t.escalante@corapsac.com.pe</field>
-      <field name="email_cc">comercial01@andescopiers.com.pe, comercial@andescopiers.com.pe, campuero@corapsac.com.pe, lincoln@corapsac.com</field>
+      <field name="email_cc">comercial01@andescopiers.com.pe, comercial@andescopiers.com.pe, campuero@corapsac.com.pe</field>
       <field name="body_html"><![CDATA[
             <p>Estimada Señora Teresa,</p>
             <p>Le escribo para informarle que el trabajador designado no pudo regresar a marcar su salida,no aplicar descuentos. Adjunto encontrará el ticket correspondiente a la visita:</p>

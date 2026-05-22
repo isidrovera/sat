@@ -6,7 +6,7 @@
             <field name="email_from">soporte@andescopiers.com.pe</field>
             <field name="email_to">{{object.product_alquiler.correo_}}</field>
             <field name="email_cc">comercial01@andescopiers.com.pe,
-                comercial@andescopiers.com.pe, campuero@corapsac.com.pe, lincoln@corapsac.com</field>
+                comercial@andescopiers.com.pe, campuero@corapsac.com.pe</field>
             <field name="subject">Nuevo Ticket # {{object.name}}</field>
             <field name="model_id" ref="model_ticket_alquiler" />
             <field name="auto_delete" eval="True" />
@@ -99,7 +99,7 @@
             <field name="email_from">soporte@andescopiers.com.pe</field>
             <field name="email_to">{{object.product_alquiler.correo_}}</field>
             <field name="email_cc">comercial01@andescopiers.com.pe,
-                comercial@andescopiers.com.pe, campuero@corapsac.com.pe, lincoln@corapsac.com</field>
+                comercial@andescopiers.com.pe, campuero@corapsac.com.pe</field>
             <field name="subject">✅ Finalización de Ticket #{{object.name}}</field>
             <field name="model_id" ref="model_ticket_alquiler" />
             <field name="report_template_ids" eval="[(4, ref('sat.action_ticket_alquiler'))]"/>
@@ -280,8 +280,8 @@
             <field name="subject">✅ Reporte de Asistencia Directa - Ticket #{{object.name}}</field>
             <field name="email_from">soporte@andescopiers.com.pe</field>
             <field name="email_to">t.escalante@corapsac.com.pe</field>
-            <field name="email_cc">comercial01@andescopiers.com.pe, comercial@andescopiers.com.pe, campuero@corapsac.com.pe,
-                lincoln@corapsac.com</field>
+            <field name="email_cc">comercial01@andescopiers.com.pe, comercial@andescopiers.com.pe, campuero@corapsac.com.pe
+                </field>
             <field name="model_id" ref="model_ticket_alquiler" />
             <field name="auto_delete" eval="True" />
             <field name="body_html"><![CDATA[
@@ -363,8 +363,7 @@
             <field name="subject">⚠️ Notificación - Marcación de Salida - Ticket #{{object.name}}</field>
             <field name="email_from">soporte@andescopiers.com.pe</field>
             <field name="email_to">t.escalante@corapsac.com.pe</field>
-            <field name="email_cc">comercial01@andescopiers.com.pe, comercial@andescopiers.com.pe, campuero@corapsac.com.pe,
-                lincoln@corapsac.com</field>
+            <field name="email_cc">comercial01@andescopiers.com.pe, comercial@andescopiers.com.pe, campuero@corapsac.com.pe</field>
             <field name="model_id" ref="model_ticket_alquiler" />
             <field name="auto_delete" eval="True" />
             <field name="body_html"><![CDATA[
