@@ -3360,19 +3360,6 @@ class WhatsAppPartnerApiController(http.Controller):
         if has_multiple_companies:
             lines.append("*5* 🏢 Cambiar / ver empresa activa")
 
-        lines.extend([
-            "",
-            "También puedes escribir tu consulta directamente, por ejemplo:",
-            "",
-            "• Necesito tóner",
-            "• Mi máquina se traba",
-            "• Sale código de error",
-            "• No imprime",
-            "• No escanea al correo",
-            "",
-            "Para atención directa, escribe *ASESOR*.",
-        ])
-
         return "\n".join(lines)
 
     def _company_selection_message(self, partner, session=False):
