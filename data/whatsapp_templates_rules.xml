@@ -140,7 +140,7 @@
                 *3* 💻 Asistencia remota 
                 *4* 👨‍💼 Hablar con un técnico 
                 *5* 🏢 Cambiar / ver empresa activa Para atención
-                directa, escribe *ASESOR*.
+                
 </field>
             <field name="active">True</field>
         </record>
@@ -160,10 +160,15 @@
             <field name="title">Respuesta general</field>
             <field name="category">fallback</field>
             <field name="body">
-                No pude identificar con seguridad tu solicitud. Empresa activa: 🏢
-                *{{company_name}}* Puedes elegir una opción: *1* 🖨️ Solicitar tóner *2* 🛠️
-                Registrar servicio técnico *3* 💻 Asistencia remota *4* 👨‍💼 Hablar con un técnico
-                *5* 🏢 Cambiar / ver empresa activa Para atención directa, escribe *ASESOR*.
+                No pude identificar con seguridad tu solicitud. Empresa activa: 
+                🏢
+                *{{company_name}}* 
+                Puedes elegir una opción: 
+                *1* 🖨️ Solicitar tóner 
+                *2* 🛠️ Registrar servicio técnico 
+                *3* 💻 Asistencia remota 
+                *4* 👨‍💼 Hablar con un técnico
+                *5* 🏢 Cambiar / ver empresa activa Para atención.
 </field>
             <field name="active">True</field>
         </record>
@@ -189,8 +194,8 @@
                 *2* 🛠️ Registrar servicio técnico 
                 *3* 💻 Asistencia remota 
                 *4* 👨‍💼 Hablar con un técnico 
-                *5* 🏢 Cambiar / ver empresa activa Para atención
-                directa, escribe *ASESOR*.
+                *5* 🏢 Cambiar / ver empresa activa Para atención.
+               
 </field>
             <field name="active">True</field>
         </record>
@@ -201,10 +206,15 @@
             <field name="body">
                 🖨️ *Solicitud de tóner / suministros* Para solicitar tóner puedes continuar por
                 este chat. Si no deseas llenar el formulario o necesitas ayuda, puedes contactar al
-                área correspondiente: *Área de suministros / tóner* 👤 *Jennifer Allpes* 📞
-                Teléfono: 51999332772 📧 Correo: alquiler@andescopiers.com.pe 👤 *Lizeth Acuña* 📞
-                Teléfono: 51999332772 📧 Correo: comercial01@andescopiers.com.pe Si deseas regresar
-                al menú principal, escribe *MENU*.
+                área correspondiente: 
+                *Área de suministros / tóner* 
+                👤 *Jennifer Allpes* 
+                📞 Teléfono: 51999332772 
+                📧 Correo: alquiler@andescopiers.com.pe 
+                👤 *Lizeth Acuña* 
+                📞 Teléfono: 51981597727 
+                📧 Correo: comercial01@andescopiers.com.pe 
+                Si deseas regresar al menú principal, escribe *MENU*.
 </field>
             <field name="active">True</field>
         </record>
@@ -215,10 +225,14 @@
             <field name="body">
                 💼 *Ventas / alquiler de equipos* Gracias por contactarnos. Para consultas sobre
                 *venta, alquiler o cotización de fotocopiadoras*, puedes comunicarte directamente
-                con nuestra área comercial: 👤 *Jennifer Allpes* 📞 Teléfono: 51999332772 📧 Correo:
-                alquiler@andescopiers.com.pe 👤 *Lizeth Acuña* 📞 Teléfono: 51999332772 📧 Correo:
-                comercial01@andescopiers.com.pe Si deseas regresar al menú principal, escribe
-                *MENU*.
+                con nuestra área comercial: 
+                👤 *Jennifer Allpes* 
+                📞 Teléfono: 51999332772 
+                📧 Correo:   alquiler@andescopiers.com.pe 
+                👤 *Lizeth Acuña* 
+                📞 Teléfono: 51981597727
+                📧 Correo:  comercial01@andescopiers.com.pe 
+                Si deseas regresar al menú principal, escribe *MENU*.
 </field>
             <field name="active">True</field>
         </record>
@@ -229,11 +243,14 @@
             <field name="body">
                 🧾 *Facturación / pagos / administración* Gracias por contactarnos. Para consultas
                 sobre *facturación, pagos, recibos, guías, comprobantes o temas administrativos*,
-                puedes comunicarte directamente con nuestra área comercial / administrativa: 👤
-                *Jennifer Allpes* 📞 Teléfono: 51999332772 📧 Correo: alquiler@andescopiers.com.pe
-                👤 *Lizeth Acuña* 📞 Teléfono: 51999332772 📧 Correo:
-                comercial01@andescopiers.com.pe Si deseas regresar al menú principal, escribe
-                *MENU*.
+                puedes comunicarte directamente con nuestra área comercial / administrativa: 
+                👤 *Jennifer Allpes* 
+                📞 Teléfono: 51999332772 
+                📧 Correo: alquiler@andescopiers.com.pe
+                👤 *Lizeth Acuña* 
+                📞 Teléfono: 51981597727 
+                📧 Correo: comercial01@andescopiers.com.pe 
+                Si deseas regresar al menú principal, escribe *MENU*.
 </field>
             <field name="active">True</field>
         </record>
@@ -253,10 +270,15 @@
             <field name="title">No entendido con menú técnico</field>
             <field name="category">fallback</field>
             <field name="body">
-                No pude identificar con seguridad tu solicitud. Empresa activa: 🏢
-                *{{company_name}}* Puedes elegir una opción: *1* 🖨️ Solicitar tóner *2* 🛠️
-                Registrar servicio técnico *3* 💻 Asistencia remota *4* 👨‍💼 Hablar con un técnico
-                *5* 🏢 Cambiar / ver empresa activa Para atención directa, escribe *ASESOR*.
+                No pude identificar con seguridad tu solicitud. 
+                Empresa activa: 
+                🏢 *{{company_name}}* 
+                Puedes elegir una opción: 
+                *1* 🖨️ Solicitar tóner 
+                *2* 🛠️ Registrar servicio técnico 
+                *3* 💻 Asistencia remota 
+                *4* 👨‍💼 Hablar con un técnico
+                *5* 🏢 Cambiar / ver empresa activa Para atención.
 </field>
             <field name="active">True</field>
         </record>
@@ -308,10 +330,15 @@
             <field name="match_type">contains</field>
             <field name="applies_to">all</field>
             <field name="response">
-                Hola {{partner_name}} 👋 Empresa activa: 🏢 *{{company_name}}* ¿En qué podemos
-                ayudarte? *1* 🖨️ Solicitar tóner *2* 🛠️ Registrar servicio técnico *3* 💻
-                Asistencia remota *4* 👨‍💼 Hablar con un técnico *5* 🏢 Cambiar / ver empresa
-                activa Para atención directa, escribe *ASESOR*.
+                Hola {{partner_name}} 
+                👋 Empresa activa: 🏢 *{{company_name}}* 
+                ¿En qué podemos ayudarte? 
+                *1* 🖨️ Solicitar tóner 
+                *2* 🛠️ Registrar servicio técnico 
+                *3* 💻
+                Asistencia remota 
+                *4* 👨‍💼 Hablar con un técnico 
+                *5* 🏢 Cambiar / ver empresa activa.
 </field>
             <field name="stop_flow">False</field>
             <field name="allow_ai_after">True</field>
@@ -326,10 +353,15 @@
             <field name="match_type">contains</field>
             <field name="applies_to">all</field>
             <field name="response">
-                Buenos días {{partner_name}} 👋 Empresa activa: 🏢 *{{company_name}}* ¿En qué
-                podemos ayudarte? *1* 🖨️ Solicitar tóner *2* 🛠️ Registrar servicio técnico *3* 💻
-                Asistencia remota *4* 👨‍💼 Hablar con un técnico *5* 🏢 Cambiar / ver empresa
-                activa Para atención directa, escribe *ASESOR*.
+                Buenos días {{partner_name}} 
+                👋 Empresa activa: 
+                🏢 *{{company_name}}* 
+                ¿En qué podemos ayudarte? 
+                *1* 🖨️ Solicitar tóner 
+                *2* 🛠️ Registrar servicio técnico 
+                *3* 💻 Asistencia remota 
+                *4* 👨‍💼 Hablar con un técnico 
+                *5* 🏢 Cambiar / ver empresa activa.
 </field>
             <field name="stop_flow">False</field>
             <field name="allow_ai_after">True</field>
@@ -344,10 +376,15 @@
             <field name="match_type">contains</field>
             <field name="applies_to">all</field>
             <field name="response">
-                Buenas tardes {{partner_name}} 👋 Empresa activa: 🏢 *{{company_name}}* ¿En qué
-                podemos ayudarte? *1* 🖨️ Solicitar tóner *2* 🛠️ Registrar servicio técnico *3* 💻
-                Asistencia remota *4* 👨‍💼 Hablar con un técnico *5* 🏢 Cambiar / ver empresa
-                activa Para atención directa, escribe *ASESOR*.
+                Buenas tardes {{partner_name}} 
+                👋 Empresa activa: 🏢 *{{company_name}}* 
+                ¿En qué
+                podemos ayudarte? 
+                *1* 🖨️ Solicitar tóner 
+                *2* 🛠️ Registrar servicio técnico 
+                *3* 💻 Asistencia remota 
+                *4* 👨‍💼 Hablar con un técnico 
+                *5* 🏢 Cambiar / ver empresa activa.
 </field>
             <field name="stop_flow">False</field>
             <field name="allow_ai_after">True</field>
