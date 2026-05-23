@@ -3303,6 +3303,379 @@ class WhatsAppPartnerApiController(http.Controller):
     # ==========================================================
     # Empresas
     # ==========================================================
+    def _build_main_menu_text(self, partner=False, session=False):
+        """
+        Menú principal WhatsApp.
+
+        Se usa para:
+        - Saludo registrado.
+        - Después de seleccionar empresa.
+        - Cuando el usuario escribe MENU.
+        - Fallbacks controlados.
+
+        Muestra siempre la empresa activa si existe.
+        Si el contacto tiene varias empresas, muestra opción 5 para cambiar/ver empresa.
+        """
+        partner_name = "cliente"
+        company_name = "No seleccionada"
+
+        if partner:
+            try:
+                if partner.name:
+                    partner_name = partner.name.split()[0]
+            except Exception:
+                partner_name = partner.name or "cliente"
+
+            try:
+                if partner.whatsapp_active_company_id:
+                    company_name = partner.whatsapp_active_company_id.name or "No seleccionada"
+            except Exception:
+                company_name = "No seleccionada"
+
+        has_multiple_companies = False
+        try:
+            if partner and hasattr(partner, "_get_whatsapp_available_companies"):
+                companies = partner._get_whatsapp_available_companies()
+                has_multiple_companies = bool(len(companies) > 1)
+        except Exception:
+            _logger.exception("[WA-COMPANY] No se pudo verificar empresas asociadas para menú")
+            has_multiple_companies = False
+
+        lines = [
+            "Hola %s 👋" % partner_name,
+            "",
+            "Soy el asistente virtual de *ANDES SOLUTION COPIERS*.",
+            "",
+            "Empresa activa:",
+            "🏢 *%s*" % company_name,
+            "",
+            "¿En qué podemos ayudarte hoy?",
+            "",
+            "*1* 🖨️ Solicitar tóner",
+            "*2* 🛠️ Registrar servicio técnico",
+            "*3* 💻 Asistencia remota",
+            "*4* 👨‍💼 Hablar con un técnico",
+        ]
+
+        if has_multiple_companies:
+            lines.append("*5* 🏢 Cambiar / ver empresa activa")
+
+        lines.extend([
+            "",
+            "También puedes escribir tu consulta directamente, por ejemplo:",
+            "",
+            "• Necesito tóner",
+            "• Mi máquina se traba",
+            "• Sale código de error",
+            "• No imprime",
+            "• No escanea al correo",
+            "",
+            "Para atención directa, escribe *ASESOR*.",
+        ])
+
+        return "\n".join(lines)
+
+    def _company_selection_message(self, partner, session=False):
+        """
+        Lista empresas asociadas al contacto y deja el flujo esperando
+        que el usuario responda con el número de empresa.
+
+        Se activa cuando:
+        - El contacto tiene varias empresas y aún no seleccionó una.
+        - El usuario escribe 5 / empresa / cambiar empresa.
+        - Odoo detecta action == select_company.
+        """
+        if not partner:
+            _logger.warning("[WA-COMPANY] No se pudo mostrar empresas: partner vacío")
+            return "No pude identificar el contacto."
+
+        try:
+            partner_name = partner.name.split()[0] if partner.name else "cliente"
+        except Exception:
+            partner_name = partner.name or "cliente"
+
+        try:
+            companies = partner._get_whatsapp_available_companies()
+        except Exception:
+            _logger.exception(
+                "[WA-COMPANY] Error obteniendo empresas asociadas partner=%s",
+                partner.id if partner else False,
+            )
+            companies = request.env["res.partner"].sudo().browse()
+
+        _logger.info(
+            "[WA-COMPANY] Mostrar selección de empresa | partner_id=%s companies=%s active_company=%s session=%s",
+            partner.id if partner else False,
+            len(companies) if companies else 0,
+            partner.whatsapp_active_company_id.id if partner and partner.whatsapp_active_company_id else False,
+            session.id if session else False,
+        )
+
+        if not companies:
+            return (
+                "Hola %s 👋\n\n"
+                "No tienes empresas asociadas todavía.\n\n"
+                "Por favor envíame el *RUC de tu empresa* para completar el registro."
+            ) % partner_name
+
+        # Si solo tiene una empresa, seleccionarla automáticamente.
+        if len(companies) == 1:
+            company = companies[0]
+
+            try:
+                partner.whatsapp_set_active_company(company)
+            except Exception:
+                _logger.exception(
+                    "[WA-COMPANY] Error seleccionando empresa única partner=%s company=%s",
+                    partner.id if partner else False,
+                    company.id if company else False,
+                )
+
+            if session:
+                try:
+                    session.complete_flow(close_reason="single_company_selected")
+                except Exception:
+                    _logger.exception(
+                        "[WA-COMPANY] Error cerrando flujo por empresa única session=%s",
+                        session.id if session else False,
+                    )
+
+            _logger.info(
+                "[WA-COMPANY] Empresa única seleccionada | partner_id=%s company_id=%s",
+                partner.id if partner else False,
+                company.id if company else False,
+            )
+
+            return (
+                "✅ Empresa seleccionada correctamente:\n\n"
+                "🏢 *%s*\n"
+                "%s\n\n"
+                "%s"
+            ) % (
+                company.name or "Empresa",
+                "RUC: %s" % company.vat if company.vat else "",
+                self._build_main_menu_text(partner=partner, session=session),
+            )
+
+        options = []
+
+        lines = [
+            "Hola %s 👋" % partner_name,
+            "",
+            "Estas son tus empresas asociadas:",
+            "",
+        ]
+
+        idx = 1
+        active_company_id = partner.whatsapp_active_company_id.id if partner.whatsapp_active_company_id else False
+
+        for company in companies:
+            is_active = bool(active_company_id and company.id == active_company_id)
+
+            options.append({
+                "id": company.id,
+                "name": company.name or "",
+                "vat": company.vat or "",
+            })
+
+            active_label = " ✅ Actual" if is_active else ""
+
+            lines.append("*%s* 🏢 %s%s" % (
+                idx,
+                company.name or "Empresa sin nombre",
+                active_label,
+            ))
+
+            if company.vat:
+                lines.append("RUC: %s" % company.vat)
+
+            lines.append("")
+            idx += 1
+
+        lines.extend([
+            "Responde con el *número* de la empresa que deseas usar.",
+            "",
+            "Luego podrás solicitar tóner o registrar servicio para la empresa seleccionada.",
+            "",
+            "Para regresar al menú principal, escribe *MENU*.",
+        ])
+
+        if session:
+            try:
+                session.start_flow(
+                    "registration",
+                    "awaiting_company_selection",
+                    context={
+                        "intent": "select_company",
+                        "company_options": options,
+                    },
+                )
+
+                _logger.info(
+                    "[WA-COMPANY] Flujo selección empresa iniciado | partner_id=%s session_id=%s options=%s",
+                    partner.id if partner else False,
+                    session.id if session else False,
+                    len(options),
+                )
+            except Exception:
+                _logger.exception(
+                    "[WA-COMPANY] Error iniciando flujo selección empresa partner=%s session=%s",
+                    partner.id if partner else False,
+                    session.id if session else False,
+                )
+
+        return "\n".join(lines)
+
+    def _continue_company_selection(self, partner, session, text):
+        """
+        Continúa la selección de empresa.
+
+        Espera que el usuario responda:
+        - Número de empresa.
+        - MENU para volver al menú.
+        - CANCELAR/SALIR para cancelar selección.
+        """
+        if not partner:
+            _logger.warning("[WA-COMPANY] Continuación sin partner")
+            return "No pude identificar el contacto."
+
+        if not session:
+            _logger.warning("[WA-COMPANY] Continuación sin session partner=%s", partner.id)
+            return "No pude encontrar la sesión activa. Escribe *MENU* para empezar nuevamente."
+
+        text_clean = (text or "").strip()
+        text_lower = text_clean.lower()
+
+        _logger.info(
+            "[WA-COMPANY] Continuando selección empresa | partner_id=%s session_id=%s text=%s",
+            partner.id if partner else False,
+            session.id if session else False,
+            text_clean[:200],
+        )
+
+        # Permitir volver al menú.
+        if text_lower in ["menu", "menú", "inicio", "ayuda", "opciones"]:
+            try:
+                session.reset_conversation(reason="company_selection_menu")
+            except Exception:
+                _logger.exception(
+                    "[WA-COMPANY] Error reseteando flujo por MENU session=%s",
+                    session.id if session else False,
+                )
+
+            return self._build_main_menu_text(partner=partner, session=session)
+
+        # Permitir cancelar.
+        if text_lower in ["cancelar", "cancela", "salir", "terminar", "anular"]:
+            try:
+                session.reset_conversation(reason="company_selection_cancelled")
+            except Exception:
+                _logger.exception(
+                    "[WA-COMPANY] Error cancelando flujo de empresa session=%s",
+                    session.id if session else False,
+                )
+
+            return (
+                "✅ Se canceló la selección de empresa.\n\n"
+                "%s"
+            ) % self._build_main_menu_text(partner=partner, session=session)
+
+        try:
+            context = session.get_context()
+        except Exception:
+            _logger.exception(
+                "[WA-COMPANY] Error leyendo contexto session=%s",
+                session.id if session else False,
+            )
+            context = {}
+
+        options = context.get("company_options") or []
+        index = self._parse_menu_index(text_clean)
+
+        if not options:
+            _logger.warning(
+                "[WA-COMPANY] Sin company_options en contexto | partner_id=%s session_id=%s context=%s",
+                partner.id if partner else False,
+                session.id if session else False,
+                context,
+            )
+            return self._company_selection_message(partner, session=session)
+
+        if not index or index < 1 or index > len(options):
+            _logger.info(
+                "[WA-COMPANY] Índice inválido | partner_id=%s session_id=%s index=%s total=%s",
+                partner.id if partner else False,
+                session.id if session else False,
+                index,
+                len(options),
+            )
+
+            return (
+                "No reconozco esa opción.\n\n"
+                "Por favor responde con el *número* de la empresa de la lista.\n\n"
+                "También puedes escribir *MENU* para volver al menú principal."
+            )
+
+        selected = options[index - 1]
+        company_id = selected.get("id")
+
+        company = request.env["res.partner"].sudo().browse(int(company_id)).exists() if company_id else False
+
+        if not company:
+            _logger.warning(
+                "[WA-COMPANY] Empresa seleccionada no existe | partner_id=%s session_id=%s selected=%s",
+                partner.id if partner else False,
+                session.id if session else False,
+                selected,
+            )
+
+            return "No pude encontrar la empresa seleccionada. Intenta nuevamente."
+
+        try:
+            partner.whatsapp_set_active_company(company)
+        except Exception:
+            _logger.exception(
+                "[WA-COMPANY] Error asignando empresa activa | partner_id=%s company_id=%s",
+                partner.id if partner else False,
+                company.id if company else False,
+            )
+            return "No pude seleccionar la empresa. Intenta nuevamente o escribe *ASESOR*."
+
+        try:
+            session.write({"active_company_id": company.id})
+        except Exception:
+            _logger.exception(
+                "[WA-COMPANY] Error actualizando active_company_id en session=%s company=%s",
+                session.id if session else False,
+                company.id if company else False,
+            )
+
+        try:
+            session.complete_flow(close_reason="company_selected")
+        except Exception:
+            _logger.exception(
+                "[WA-COMPANY] Error completando flujo selección empresa session=%s",
+                session.id if session else False,
+            )
+
+        _logger.info(
+            "[WA-COMPANY] Empresa seleccionada correctamente | partner_id=%s company_id=%s company_name=%s session_id=%s",
+            partner.id if partner else False,
+            company.id if company else False,
+            company.name or "",
+            session.id if session else False,
+        )
+
+        return (
+            "✅ Empresa seleccionada correctamente:\n\n"
+            "🏢 *%s*\n"
+            "%s\n\n"
+            "%s"
+        ) % (
+            company.name or "Empresa",
+            "RUC: %s" % company.vat if company.vat else "",
+            self._build_main_menu_text(partner=partner, session=session),
+        )
     def _company_selection_message(self, partner, session=False):
         if not partner:
             return "No pude identificar el contacto."
@@ -3345,24 +3718,6 @@ class WhatsAppPartnerApiController(http.Controller):
             )
 
         return "\n".join(lines)
-
-    def _continue_company_selection(self, partner, session, text):
-        context = session.get_context()
-        options = context.get("company_options") or []
-        index = self._parse_menu_index(text)
-
-        if not index or index < 1 or index > len(options):
-            return "Por favor responde con el número de la empresa de la lista."
-
-        selected = options[index - 1]
-        company = request.env["res.partner"].sudo().browse(selected.get("id")).exists()
-        if not company:
-            return "No pude encontrar la empresa seleccionada. Intenta nuevamente."
-
-        partner.whatsapp_set_active_company(company)
-        session.complete_flow(close_reason="completed_registration")
-
-        return "Empresa seleccionada: %s. ¿En qué podemos ayudarte?" % company.name
 
     # ==========================================================
     # Endpoint central: procesar conversación completa
