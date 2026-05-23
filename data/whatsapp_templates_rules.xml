@@ -131,10 +131,15 @@
             <field name="title">Saludo registrado</field>
             <field name="category">greeting</field>
             <field name="body">
-                Hola {{partner_name}} 👋 Soy el asistente virtual de *ANDES SOLUTION COPIERS*.
-                Empresa activa: 🏢 *{{company_name}}* ¿En qué podemos ayudarte hoy? *1* 🖨️
-                Solicitar tóner *2* 🛠️ Registrar servicio técnico *3* 💻 Asistencia remota *4*
-                👨‍💼 Hablar con un técnico *5* 🏢 Cambiar / ver empresa activa Para atención
+                Hola {{partner_name}} 
+                👋 Soy el asistente virtual de *ANDES SOLUTION COPIERS*.
+                Empresa activa: 🏢 *{{company_name}}* 
+                ¿En qué podemos ayudarte hoy? 
+                *1* 🖨️ Solicitar tóner 
+                *2* 🛠️ Registrar servicio técnico 
+                *3* 💻 Asistencia remota 
+                *4* 👨‍💼 Hablar con un técnico 
+                *5* 🏢 Cambiar / ver empresa activa Para atención
                 directa, escribe *ASESOR*.
 </field>
             <field name="active">True</field>
@@ -176,10 +181,15 @@
             <field name="title">Menú principal técnico</field>
             <field name="category">fallback</field>
             <field name="body">
-                Hola {{partner_name}} 👋 Soy el asistente virtual de *ANDES SOLUTION COPIERS*.
-                Empresa activa: 🏢 *{{company_name}}* ¿En qué podemos ayudarte hoy? *1* 🖨️
-                Solicitar tóner *2* 🛠️ Registrar servicio técnico *3* 💻 Asistencia remota *4*
-                👨‍💼 Hablar con un técnico *5* 🏢 Cambiar / ver empresa activa Para atención
+                Hola {{partner_name}} 
+                👋 Soy el asistente virtual de *ANDES SOLUTION COPIERS*.
+                Empresa activa: 🏢 *{{company_name}}* 
+                ¿En qué podemos ayudarte hoy? 
+                *1* 🖨️ Solicitar tóner 
+                *2* 🛠️ Registrar servicio técnico 
+                *3* 💻 Asistencia remota 
+                *4* 👨‍💼 Hablar con un técnico 
+                *5* 🏢 Cambiar / ver empresa activa Para atención
                 directa, escribe *ASESOR*.
 </field>
             <field name="active">True</field>
