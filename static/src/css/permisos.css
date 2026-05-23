@@ -2,6 +2,10 @@
    PERMISOS WEB RESPONSIVE
    Ruta: /leave/request
    Template: sat.leave_request_template
+
+   IMPORTANTE:
+   Todo está encapsulado bajo .o_leave_request_page
+   para que NO afecte home, login, portal ni otras páginas.
    ============================================================ */
 
 .o_leave_request_page {
@@ -14,7 +18,7 @@
    CONTENEDOR
    ============================================================ */
 
-.o_leave_container {
+.o_leave_request_page .o_leave_container {
     width: 100%;
     max-width: 1180px;
     margin: 0 auto;
@@ -26,14 +30,14 @@
    HERO
    ============================================================ */
 
-.o_leave_hero {
+.o_leave_request_page .o_leave_hero {
     padding: 34px 0 20px;
     background:
         radial-gradient(circle at top left, rgba(37, 99, 235, 0.18), transparent 34%),
         linear-gradient(135deg, #111827 0%, #1f2937 52%, #0f172a 100%);
 }
 
-.o_leave_hero_card {
+.o_leave_request_page .o_leave_hero_card {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -45,7 +49,7 @@
     box-shadow: 0 18px 40px rgba(15, 23, 42, 0.28);
 }
 
-.o_leave_badge {
+.o_leave_request_page .o_leave_badge {
     display: inline-flex;
     align-items: center;
     padding: 6px 12px;
@@ -59,7 +63,7 @@
     text-transform: uppercase;
 }
 
-.o_leave_hero h1 {
+.o_leave_request_page .o_leave_hero h1 {
     margin: 0;
     color: #ffffff;
     font-size: 32px;
@@ -67,7 +71,7 @@
     line-height: 1.15;
 }
 
-.o_leave_hero p {
+.o_leave_request_page .o_leave_hero p {
     max-width: 650px;
     margin: 10px 0 0;
     color: #d1d5db;
@@ -78,7 +82,7 @@
    USUARIO
    ============================================================ */
 
-.o_leave_user_box {
+.o_leave_request_page .o_leave_user_box {
     display: flex;
     align-items: center;
     gap: 12px;
@@ -89,7 +93,7 @@
     color: #ffffff;
 }
 
-.o_leave_user_avatar {
+.o_leave_request_page .o_leave_user_avatar {
     width: 44px;
     height: 44px;
     border-radius: 999px;
@@ -103,13 +107,13 @@
     flex: 0 0 auto;
 }
 
-.o_leave_user_box strong {
+.o_leave_request_page .o_leave_user_box strong {
     display: block;
     font-size: 14px;
     line-height: 1.25;
 }
 
-.o_leave_user_box span {
+.o_leave_request_page .o_leave_user_box span {
     display: block;
     margin-top: 2px;
     color: #d1d5db;
@@ -120,11 +124,11 @@
    CONTENIDO
    ============================================================ */
 
-.o_leave_content {
+.o_leave_request_page .o_leave_content {
     padding: 26px 0 46px;
 }
 
-.o_leave_layout {
+.o_leave_request_page .o_leave_layout {
     display: grid;
     grid-template-columns: 330px minmax(0, 1fr);
     gap: 22px;
@@ -135,12 +139,12 @@
    PANEL LATERAL
    ============================================================ */
 
-.o_leave_side {
+.o_leave_request_page .o_leave_side {
     position: sticky;
     top: 18px;
 }
 
-.o_leave_info_card {
+.o_leave_request_page .o_leave_info_card {
     padding: 22px;
     border-radius: 20px;
     background: #ffffff;
@@ -148,26 +152,26 @@
     box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
 }
 
-.o_leave_info_card h3 {
+.o_leave_request_page .o_leave_info_card h3 {
     margin: 0 0 16px;
     font-size: 18px;
     font-weight: 800;
     color: #111827;
 }
 
-.o_leave_info_item {
+.o_leave_request_page .o_leave_info_item {
     display: flex;
     gap: 12px;
     padding: 14px 0;
     border-top: 1px solid #eef2f7;
 }
 
-.o_leave_info_item:first-of-type {
+.o_leave_request_page .o_leave_info_item:first-of-type {
     border-top: 0;
     padding-top: 0;
 }
 
-.o_leave_info_icon {
+.o_leave_request_page .o_leave_info_icon {
     width: 30px;
     height: 30px;
     flex: 0 0 auto;
@@ -181,13 +185,13 @@
     font-weight: 800;
 }
 
-.o_leave_info_item strong {
+.o_leave_request_page .o_leave_info_item strong {
     display: block;
     font-size: 14px;
     color: #111827;
 }
 
-.o_leave_info_item p {
+.o_leave_request_page .o_leave_info_item p {
     margin: 4px 0 0;
     color: #6b7280;
     font-size: 13px;
@@ -198,7 +202,7 @@
    FORM CARD
    ============================================================ */
 
-.o_leave_form_card {
+.o_leave_request_page .o_leave_form_card {
     padding: 26px;
     border-radius: 20px;
     background: #ffffff;
@@ -206,7 +210,7 @@
     box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
 }
 
-.o_leave_form_header {
+.o_leave_request_page .o_leave_form_header {
     display: flex;
     justify-content: space-between;
     gap: 14px;
@@ -215,14 +219,14 @@
     border-bottom: 1px solid #e5e7eb;
 }
 
-.o_leave_form_header h2 {
+.o_leave_request_page .o_leave_form_header h2 {
     margin: 0;
     color: #111827;
     font-size: 24px;
     font-weight: 800;
 }
 
-.o_leave_form_header p {
+.o_leave_request_page .o_leave_form_header p {
     margin: 6px 0 0;
     color: #6b7280;
     font-size: 14px;
@@ -232,7 +236,7 @@
    ALERTAS
    ============================================================ */
 
-.o_leave_alert {
+.o_leave_request_page .o_leave_alert {
     margin: 16px 0;
     padding: 14px 16px;
     border-radius: 12px;
@@ -241,25 +245,25 @@
     border: 1px solid transparent;
 }
 
-.o_leave_alert.is-success {
+.o_leave_request_page .o_leave_alert.is-success {
     background: #ecfdf5;
     color: #065f46;
     border-color: #a7f3d0;
 }
 
-.o_leave_alert.is-error {
+.o_leave_request_page .o_leave_alert.is-error {
     background: #fef2f2;
     color: #991b1b;
     border-color: #fecaca;
 }
 
-.o_leave_alert.is-warning {
+.o_leave_request_page .o_leave_alert.is-warning {
     background: #fffbeb;
     color: #92400e;
     border-color: #fde68a;
 }
 
-.o_leave_alert strong {
+.o_leave_request_page .o_leave_alert strong {
     display: block;
     margin-bottom: 4px;
 }
@@ -268,24 +272,24 @@
    FORMULARIO
    ============================================================ */
 
-.o_leave_form {
+.o_leave_request_page .o_leave_form {
     width: 100%;
 }
 
-.o_leave_section {
+.o_leave_request_page .o_leave_section {
     padding: 20px 0;
     border-bottom: 1px solid #eef2f7;
 }
 
-.o_leave_section:last-of-type {
+.o_leave_request_page .o_leave_section:last-of-type {
     border-bottom: 0;
 }
 
-.o_leave_section_title {
+.o_leave_request_page .o_leave_section_title {
     margin-bottom: 14px;
 }
 
-.o_leave_section_title span {
+.o_leave_request_page .o_leave_section_title span {
     display: inline-flex;
     align-items: center;
     padding: 6px 12px;
@@ -296,35 +300,35 @@
     font-weight: 800;
 }
 
-.o_leave_grid {
+.o_leave_request_page .o_leave_grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 16px;
 }
 
-.o_leave_field {
+.o_leave_request_page .o_leave_field {
     display: flex;
     flex-direction: column;
     gap: 7px;
 }
 
-.o_leave_field label {
+.o_leave_request_page .o_leave_field label {
     color: #374151;
     font-size: 14px;
     font-weight: 800;
 }
 
-.o_leave_field small {
+.o_leave_request_page .o_leave_field small {
     color: #6b7280;
     font-size: 12px;
     line-height: 1.4;
 }
 
-.o_leave_required {
+.o_leave_request_page .o_leave_required {
     color: #dc2626;
 }
 
-.o_leave_input {
+.o_leave_request_page .o_leave_input {
     width: 100%;
     min-height: 46px;
     padding: 11px 13px;
@@ -337,17 +341,17 @@
     transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
 }
 
-.o_leave_input:focus {
+.o_leave_request_page .o_leave_input:focus {
     border-color: #2563eb;
     box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
 }
 
-.o_leave_input[readonly] {
+.o_leave_request_page .o_leave_input[readonly] {
     background: #f9fafb;
     color: #4b5563;
 }
 
-.o_leave_textarea {
+.o_leave_request_page .o_leave_textarea {
     min-height: 118px;
     resize: vertical;
 }
@@ -356,11 +360,11 @@
    CHECKBOX / SWITCH
    ============================================================ */
 
-.o_leave_switch_row {
+.o_leave_request_page .o_leave_switch_row {
     margin-top: 16px;
 }
 
-.o_leave_switch_label {
+.o_leave_request_page .o_leave_switch_label {
     display: inline-flex;
     align-items: center;
     gap: 10px;
@@ -371,13 +375,13 @@
     font-size: 14px;
 }
 
-.o_leave_switch_label input {
+.o_leave_request_page .o_leave_switch_label input {
     width: 18px;
     height: 18px;
     accent-color: #2563eb;
 }
 
-.o_leave_hours {
+.o_leave_request_page .o_leave_hours {
     margin-top: 16px;
 }
 
@@ -385,11 +389,11 @@
    UPLOAD
    ============================================================ */
 
-.o_leave_upload {
+.o_leave_request_page .o_leave_upload {
     position: relative;
 }
 
-.o_leave_file {
+.o_leave_request_page .o_leave_file {
     position: absolute;
     width: 1px;
     height: 1px;
@@ -397,7 +401,7 @@
     pointer-events: none;
 }
 
-.o_leave_upload_box {
+.o_leave_request_page .o_leave_upload_box {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -413,27 +417,27 @@
     transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
 }
 
-.o_leave_upload_box:hover {
+.o_leave_request_page .o_leave_upload_box:hover {
     background: #dbeafe;
     border-color: #2563eb;
     transform: translateY(-1px);
 }
 
-.o_leave_upload_icon {
+.o_leave_request_page .o_leave_upload_icon {
     font-size: 30px;
 }
 
-.o_leave_upload_box strong {
+.o_leave_request_page .o_leave_upload_box strong {
     color: #1e3a8a;
     font-size: 15px;
 }
 
-.o_leave_upload_box small {
+.o_leave_request_page .o_leave_upload_box small {
     color: #475569;
     font-size: 12px;
 }
 
-.o_leave_upload_box em {
+.o_leave_request_page .o_leave_upload_box em {
     margin-top: 8px;
     color: #2563eb;
     font-size: 12px;
@@ -446,7 +450,7 @@
    BOTONES
    ============================================================ */
 
-.o_leave_actions {
+.o_leave_request_page .o_leave_actions {
     display: flex;
     align-items: center;
     justify-content: flex-end;
@@ -454,8 +458,8 @@
     padding-top: 24px;
 }
 
-.o_leave_btn_primary,
-.o_leave_btn_secondary {
+.o_leave_request_page .o_leave_btn_primary,
+.o_leave_request_page .o_leave_btn_secondary {
     min-height: 46px;
     display: inline-flex;
     align-items: center;
@@ -470,20 +474,20 @@
     transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
 }
 
-.o_leave_btn_primary {
+.o_leave_request_page .o_leave_btn_primary {
     background: #2563eb;
     color: #ffffff;
     border-color: #1d4ed8;
     box-shadow: 0 8px 18px rgba(37, 99, 235, 0.22);
 }
 
-.o_leave_btn_primary:hover {
+.o_leave_request_page .o_leave_btn_primary:hover {
     background: #1d4ed8;
     color: #ffffff;
     transform: translateY(-1px);
 }
 
-.o_leave_btn_primary:disabled {
+.o_leave_request_page .o_leave_btn_primary:disabled {
     background: #93c5fd;
     border-color: #93c5fd;
     cursor: not-allowed;
@@ -491,32 +495,32 @@
     box-shadow: none;
 }
 
-.o_leave_btn_secondary {
+.o_leave_request_page .o_leave_btn_secondary {
     background: #ffffff;
     color: #374151;
     border-color: #d1d5db;
 }
 
-.o_leave_btn_secondary:hover {
+.o_leave_request_page .o_leave_btn_secondary:hover {
     background: #f9fafb;
     color: #111827;
     text-decoration: none;
 }
 
 /* ============================================================
-   UTILIDADES
+   UTILIDADES AISLADAS
    ============================================================ */
 
-.d-none {
+.o_leave_request_page .d-none {
     display: none !important;
 }
 
-.o_leave_is-invalid {
+.o_leave_request_page .o_leave_is-invalid {
     border-color: #dc2626 !important;
     box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.10) !important;
 }
 
-.o_leave_is-valid {
+.o_leave_request_page .o_leave_is-valid {
     border-color: #16a34a !important;
 }
 
@@ -525,25 +529,25 @@
    ============================================================ */
 
 @media (max-width: 992px) {
-    .o_leave_hero_card {
+    .o_leave_request_page .o_leave_hero_card {
         align-items: flex-start;
         flex-direction: column;
     }
 
-    .o_leave_user_box {
+    .o_leave_request_page .o_leave_user_box {
         width: 100%;
         min-width: 0;
     }
 
-    .o_leave_layout {
+    .o_leave_request_page .o_leave_layout {
         grid-template-columns: 1fr;
     }
 
-    .o_leave_side {
+    .o_leave_request_page .o_leave_side {
         position: static;
     }
 
-    .o_leave_info_card {
+    .o_leave_request_page .o_leave_info_card {
         display: grid;
         grid-template-columns: 1fr;
     }
@@ -554,62 +558,62 @@
    ============================================================ */
 
 @media (max-width: 640px) {
-    .o_leave_container {
+    .o_leave_request_page .o_leave_container {
         padding-left: 12px;
         padding-right: 12px;
     }
 
-    .o_leave_hero {
+    .o_leave_request_page .o_leave_hero {
         padding-top: 22px;
     }
 
-    .o_leave_hero_card {
+    .o_leave_request_page .o_leave_hero_card {
         padding: 20px;
         border-radius: 18px;
     }
 
-    .o_leave_hero h1 {
+    .o_leave_request_page .o_leave_hero h1 {
         font-size: 24px;
     }
 
-    .o_leave_hero p {
+    .o_leave_request_page .o_leave_hero p {
         font-size: 14px;
     }
 
-    .o_leave_content {
+    .o_leave_request_page .o_leave_content {
         padding-top: 18px;
     }
 
-    .o_leave_form_card,
-    .o_leave_info_card {
+    .o_leave_request_page .o_leave_form_card,
+    .o_leave_request_page .o_leave_info_card {
         padding: 18px;
         border-radius: 18px;
     }
 
-    .o_leave_form_header h2 {
+    .o_leave_request_page .o_leave_form_header h2 {
         font-size: 21px;
     }
 
-    .o_leave_grid {
+    .o_leave_request_page .o_leave_grid {
         grid-template-columns: 1fr;
         gap: 13px;
     }
 
-    .o_leave_section {
+    .o_leave_request_page .o_leave_section {
         padding: 18px 0;
     }
 
-    .o_leave_actions {
+    .o_leave_request_page .o_leave_actions {
         flex-direction: column;
         align-items: stretch;
     }
 
-    .o_leave_btn_primary,
-    .o_leave_btn_secondary {
+    .o_leave_request_page .o_leave_btn_primary,
+    .o_leave_request_page .o_leave_btn_secondary {
         width: 100%;
     }
 
-    .o_leave_upload_box {
+    .o_leave_request_page .o_leave_upload_box {
         min-height: 135px;
         padding: 18px;
     }
@@ -620,16 +624,16 @@
    ============================================================ */
 
 @media (max-width: 380px) {
-    .o_leave_hero h1 {
+    .o_leave_request_page .o_leave_hero h1 {
         font-size: 22px;
     }
 
-    .o_leave_form_card,
-    .o_leave_info_card {
+    .o_leave_request_page .o_leave_form_card,
+    .o_leave_request_page .o_leave_info_card {
         padding: 15px;
     }
 
-    .o_leave_input {
+    .o_leave_request_page .o_leave_input {
         font-size: 13px;
     }
 }

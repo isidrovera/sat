@@ -287,8 +287,8 @@
         'web.assets_frontend': [
             'sat/static/src/js/searchFilter.js',
             'sat/static/src/js/evidencia_publicv1.js',
-            #'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
-            #sat/static/src/css/permisos.css',
+            'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
+            'sat/static/src/css/permisos.css',
             'sat/static/src/js/permisos.js',
             
         ],
