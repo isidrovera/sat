@@ -13,14 +13,14 @@
             <field name="value">15</field>
         </record>
 
-         <record id="param_sat_boot_api_base_url" model="ir.config_parameter">
-            <field name="key">sat.boot_api_base_url</field>
+        <record id="param_sat_whatsapp_gateway_base_url" model="ir.config_parameter">
+            <field name="key">sat.whatsapp_gateway_base_url</field>
             <field name="value">https://boot.andessolutioncopiers.com</field>
         </record>
 
-        <record id="param_sat_boot_api_key" model="ir.config_parameter">
-            <field name="key">sat.boot_api_key</field>
-            <field name="value">REEMPLAZAR_API_KEY</field>
+        <record id="param_sat_whatsapp_gateway_api_key" model="ir.config_parameter">
+            <field name="key">sat.whatsapp_gateway_api_key</field>
+            <field name="value">TU_API_KEY_REAL</field>
         </record>
 
     </data>

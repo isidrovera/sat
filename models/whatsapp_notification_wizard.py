@@ -69,15 +69,15 @@ class WhatsappNotificationWizard(models.TransientModel):
         try:
             ICP = self.env["ir.config_parameter"].sudo()
 
-            base_url = ICP.get_param("sat.boot_api_base_url")
-            api_key = ICP.get_param("sat.boot_api_key")
+            base_url = ICP.get_param("sat.whatsapp_gateway_base_url")
+            api_key = ICP.get_param("sat.whatsapp_gateway_api_key")
 
             if not base_url:
-                _logger.error("❌ Falta configurar el parámetro sat.boot_api_base_url")
+                _logger.error("❌ Falta configurar el parámetro sat.whatsapp_gateway_base_url")
                 return [("", "Falta configurar dominio API")]
 
             if not api_key:
-                _logger.error("❌ Falta configurar el parámetro sat.boot_api_key")
+                _logger.error("❌ Falta configurar el parámetro sat.whatsapp_gateway_api_key")
                 return [("", "Falta configurar API Key")]
 
             base_url = base_url.rstrip("/")
