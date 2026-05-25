@@ -2,11 +2,13 @@
 # WIZARD COMPLETO PARA NOTIFICACIÓN A GRUPOS DE WHATSAPP - TICKETS
 # =============================================================================
 
-from odoo import models, fields, api, _
-from odoo.exceptions import UserError
+
+import logging
 import requests
 import json
 
+from odoo import models, fields, api, _
+from odoo.exceptions import UserError
 
 _logger = logging.getLogger(__name__)
 
