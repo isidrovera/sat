@@ -26,37 +26,79 @@ class HeredaSatNotificaciones(models.Model):
     
 
     def _send_whatsapp_message_boot(self, phone, message):
-        """Envía WhatsApp usando la API BOOT externa."""
-        url = 'https://boot.andessolutioncopiers.com/api/send-message'
-        data = {'to': phone, 'message': message}
-        headers = {
-            'Content-Type': 'application/json',
-            'x-api-key': 'wg_fc215093f007df7ff4a32c04c7d8170d11960583e3a1b43a695037f5a627d3e3'
-        }
-
+        """Envía WhatsApp usando la API BOOT configurada en parámetros del sistema."""
         try:
-            resp = requests.post(url, headers=headers, json=data, timeout=30)
-            _logger.info("[WA BOOT] status=%s body=%s", resp.status_code, resp.text)
+            ICP = self.env["ir.config_parameter"].sudo()
+
+            base_url = ICP.get_param("sat.whatsapp_gateway_base_url")
+            api_key = ICP.get_param("sat.whatsapp_gateway_api_key")
+
+            if not base_url:
+                _logger.error("[WA BOOT] Falta configurar sat.whatsapp_gateway_base_url")
+                return False
+
+            if not api_key:
+                _logger.error("[WA BOOT] Falta configurar sat.whatsapp_gateway_api_key")
+                return False
+
+            base_url = base_url.rstrip("/")
+            url = f"{base_url}/api/send-message"
+
+            data = {
+                "to": phone,
+                "message": message,
+            }
+
+            headers = {
+                "Content-Type": "application/json",
+                "x-api-key": api_key,
+            }
+
+            resp = requests.post(
+                url,
+                headers=headers,
+                json=data,
+                timeout=30,
+            )
+
+            _logger.info(
+                "[WA BOOT] status=%s body=%s",
+                resp.status_code,
+                resp.text,
+            )
 
             try:
                 js = resp.json()
-            except Exception:
-                js = {}
+            except ValueError:
+                _logger.warning(
+                    "[WA BOOT] Respuesta no JSON. phone=%s status=%s body=%s",
+                    phone,
+                    resp.status_code,
+                    resp.text[:500],
+                )
+                return False
 
-            if resp.status_code == 200 and js.get('success'):
+            if resp.status_code == 200 and js.get("success"):
                 return True
 
-            _logger.warning("[WA BOOT] No success. phone=%s resp=%s", phone, js or resp.text)
+            _logger.warning(
+                "[WA BOOT] No success. phone=%s status=%s resp=%s",
+                phone,
+                resp.status_code,
+                js,
+            )
             return False
 
         except requests.exceptions.Timeout:
             _logger.error("[WA BOOT] Timeout enviando a %s", phone)
             return False
+
         except requests.exceptions.RequestException as e:
             _logger.error("[WA BOOT] Error de red enviando a %s: %s", phone, e)
             return False
+
         except Exception as e:
-            _logger.error("[WA BOOT] Error inesperado: %s", e)
+            _logger.exception("[WA BOOT] Error inesperado: %s", e)
             return False
 
     def _notify_tecnico_guardar_hoja_contometro_snmp(self, old_val, new_val):

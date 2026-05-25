@@ -632,50 +632,120 @@ class CopierPartsRequest(models.Model):
     # ─────────────────────────────────────────
 
     def send_whatsapp_message(self, phone, message):
-        """Envía mensaje WhatsApp via API externa."""
-        url = 'https://boot.andessolutioncopiers.com/api/send-message'
-        headers = {
-            'Content-Type': 'application/json',
-            'x-api-key': 'wg_fc215093f007df7ff4a32c04c7d8170d11960583e3a1b43a695037f5a627d3e3',
-        }
-        data = {'to': phone, 'message': message}
-
-        _logger.info("WhatsApp → enviando a %s...", phone)
-
+        """Envía mensaje WhatsApp vía API externa configurada en parámetros del sistema."""
         try:
-            response = requests.post(url, headers=headers, json=data, timeout=30)
+            ICP = self.env["ir.config_parameter"].sudo()
+
+            base_url = ICP.get_param("sat.whatsapp_gateway_base_url")
+            api_key = ICP.get_param("sat.whatsapp_gateway_api_key")
+
+            if not base_url:
+                error_msg = "Falta configurar el parámetro sat.whatsapp_gateway_base_url"
+                _logger.error("❌ %s", error_msg)
+                return {
+                    "error": error_msg,
+                    "success": False,
+                }
+
+            if not api_key:
+                error_msg = "Falta configurar el parámetro sat.whatsapp_gateway_api_key"
+                _logger.error("❌ %s", error_msg)
+                return {
+                    "error": error_msg,
+                    "success": False,
+                }
+
+            base_url = base_url.rstrip("/")
+            url = f"{base_url}/api/send-message"
+
+            headers = {
+                "Content-Type": "application/json",
+                "x-api-key": api_key,
+            }
+
+            data = {
+                "to": phone,
+                "message": message,
+            }
+
+            _logger.info("WhatsApp → enviando a %s...", phone)
+
+            response = requests.post(
+                url,
+                headers=headers,
+                json=data,
+                timeout=30,
+            )
+
             _logger.info(
-                "WhatsApp ← status %s para %s.", response.status_code, phone,
+                "WhatsApp ← status %s para %s.",
+                response.status_code,
+                phone,
             )
 
             try:
                 response_json = response.json()
-                if response.status_code == 200 and response_json.get('success'):
-                    _logger.info("✅ WhatsApp enviado correctamente a %s.", phone)
-                    return response_json
-                error_msg = response_json.get('error', 'Error desconocido')
-                _logger.error(
-                    "❌ API WhatsApp respondió con error para %s: %s", phone, error_msg,
-                )
-                return {'error': error_msg, 'success': False}
-
             except json.JSONDecodeError as e:
                 _logger.error(
-                    "❌ WhatsApp respuesta no-JSON para %s: %s", phone, response.text,
+                    "❌ WhatsApp respuesta no-JSON para %s: %s",
+                    phone,
+                    response.text,
                 )
-                return {'error': str(e), 'success': False}
+                return {
+                    "error": str(e),
+                    "success": False,
+                    "status_code": response.status_code,
+                }
+
+            if response.status_code == 200 and response_json.get("success"):
+                _logger.info("✅ WhatsApp enviado correctamente a %s.", phone)
+                return response_json
+
+            error_msg = response_json.get("error", "Error desconocido")
+            _logger.error(
+                "❌ API WhatsApp respondió con error para %s | Status %s: %s",
+                phone,
+                response.status_code,
+                error_msg,
+            )
+
+            return {
+                "error": error_msg,
+                "success": False,
+                "status_code": response.status_code,
+            }
 
         except requests.exceptions.Timeout:
             _logger.error("❌ Timeout al enviar WhatsApp a %s.", phone)
-            return {'error': 'Timeout', 'success': False}
+
+            return {
+                "error": "Timeout",
+                "success": False,
+            }
 
         except requests.exceptions.RequestException as e:
-            _logger.error("❌ Error de red al enviar WhatsApp a %s: %s", phone, str(e))
-            return {'error': str(e), 'success': False}
+            _logger.error(
+                "❌ Error de red al enviar WhatsApp a %s: %s",
+                phone,
+                str(e),
+            )
+
+            return {
+                "error": str(e),
+                "success": False,
+            }
 
         except Exception as e:
-            _logger.error("❌ Excepción inesperada al enviar WhatsApp a %s: %s", phone, str(e))
-            return {'error': str(e), 'success': False}
+            _logger.exception(
+                "❌ Excepción inesperada al enviar WhatsApp a %s: %s",
+                phone,
+                str(e),
+            )
+
+            return {
+                "error": str(e),
+                "success": False,
+            }
 
     # ─────────────────────────────────────────
     # Acciones desde Odoo (botones)

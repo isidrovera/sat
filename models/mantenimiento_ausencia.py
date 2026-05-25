@@ -859,7 +859,7 @@ class MantenimientoTecnicoAusencia(models.Model):
     def enviar_mensaje_whatsapp(self, phone, message):
         """
         Envía un mensaje de WhatsApp a un número o grupo.
-        Usa directamente la API funcional indicada.
+        Usa el Gateway configurado en parámetros del sistema.
         """
         self.ensure_one()
 
@@ -869,50 +869,95 @@ class MantenimientoTecnicoAusencia(models.Model):
             _logger.warning("[Ausencias][WhatsApp] Teléfono vacío o inválido.")
             return False
 
-        url = 'https://boot.andessolutioncopiers.com/api/send-message'
-
-        data = {
-            'to': phone,
-            'message': message,
-        }
-
-        headers = {
-            'Content-Type': 'application/json',
-            'x-api-key': 'wg_fc215093f007df7ff4a32c04c7d8170d11960583e3a1b43a695037f5a627d3e3',
-        }
-
         try:
+            ICP = self.env["ir.config_parameter"].sudo()
+
+            base_url = ICP.get_param("sat.whatsapp_gateway_base_url")
+            api_key = ICP.get_param("sat.whatsapp_gateway_api_key")
+
+            if not base_url:
+                _logger.error(
+                    "❌ [Ausencias][WhatsApp] Falta configurar sat.whatsapp_gateway_base_url"
+                )
+                return False
+
+            if not api_key:
+                _logger.error(
+                    "❌ [Ausencias][WhatsApp] Falta configurar sat.whatsapp_gateway_api_key"
+                )
+                return False
+
+            base_url = base_url.rstrip("/")
+            url = f"{base_url}/api/send-message"
+
+            data = {
+                "to": phone,
+                "message": message,
+            }
+
+            headers = {
+                "Content-Type": "application/json",
+                "x-api-key": api_key,
+            }
+
             _logger.info("[Ausencias][WhatsApp] Enviando mensaje a %s", phone)
 
             response = requests.post(
                 url,
                 headers=headers,
                 json=data,
-                timeout=30
+                timeout=30,
             )
 
-            response.raise_for_status()
+            response_data = {}
 
-            response_data = response.json()
+            try:
+                response_data = response.json()
+            except ValueError:
+                _logger.error(
+                    "❌ [Ausencias][WhatsApp] Respuesta no JSON. Status: %s | Body: %s",
+                    response.status_code,
+                    response.text[:500],
+                )
+                return False
 
-            if response_data.get('success'):
-                _logger.info("✅ [Ausencias][WhatsApp] Mensaje enviado exitosamente a %s", phone)
+            if response.status_code == 200 and response_data.get("success"):
+                _logger.info(
+                    "✅ [Ausencias][WhatsApp] Mensaje enviado exitosamente a %s",
+                    phone,
+                )
                 return True
 
-            error_msg = response_data.get('error', 'Error desconocido')
-            _logger.error("❌ [Ausencias][WhatsApp] Error en API al enviar a %s: %s", phone, error_msg)
+            error_msg = response_data.get("error", "Error desconocido")
+            _logger.error(
+                "❌ [Ausencias][WhatsApp] Error API al enviar a %s | Status: %s | Error: %s",
+                phone,
+                response.status_code,
+                error_msg,
+            )
             return False
 
         except requests.exceptions.Timeout:
-            _logger.error("❌ [Ausencias][WhatsApp] Timeout al enviar mensaje de WhatsApp a %s", phone)
+            _logger.error(
+                "❌ [Ausencias][WhatsApp] Timeout al enviar mensaje de WhatsApp a %s",
+                phone,
+            )
             return False
 
         except requests.exceptions.RequestException as e:
-            _logger.error("❌ [Ausencias][WhatsApp] Error al enviar mensaje de WhatsApp a %s: %s", phone, e)
+            _logger.error(
+                "❌ [Ausencias][WhatsApp] Error al enviar mensaje de WhatsApp a %s: %s",
+                phone,
+                e,
+            )
             return False
 
         except Exception as e:
-            _logger.error("❌ [Ausencias][WhatsApp] Error inesperado al enviar WhatsApp a %s: %s", phone, e)
+            _logger.exception(
+                "❌ [Ausencias][WhatsApp] Error inesperado al enviar WhatsApp a %s: %s",
+                phone,
+                e,
+            )
             return False
 
     # ============================================================

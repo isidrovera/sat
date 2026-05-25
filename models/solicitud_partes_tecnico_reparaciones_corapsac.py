@@ -1,5 +1,6 @@
 import uuid
 import requests
+import json
 import logging
 from odoo import _, http, models, fields, api
 from odoo.http import request as http_request
@@ -11,8 +12,7 @@ _logger = logging.getLogger(__name__)
 JEFE_AREA_PHONE   = '51975399303'
 LOGISTICA_PHONE   = '51999332773'
 GERENCIA_PHONE    = '51922541085'
-WA_API_URL        = 'https://boot.andessolutioncopiers.com/api/send-message'
-WA_API_KEY        = 'wg_fc215093f007df7ff4a32c04c7d8170d11960583e3a1b43a695037f5a627d3e3'
+
 
 
 def _clean_phone(phone):
@@ -22,22 +22,101 @@ def _clean_phone(phone):
     return phone
 
 
-def _send_whatsapp(phone, message):
-    headers = {
-        'Content-Type': 'application/json',
-        'x-api-key': WA_API_KEY,
-    }
+def _send_whatsapp(env, phone, message):
+    """Envía WhatsApp usando Gateway configurado en parámetros del sistema."""
     try:
-        r = requests.post(WA_API_URL, headers=headers,
-                          json={'to': phone, 'message': message}, timeout=30)
-        rj = r.json()
-        if r.status_code == 200 and rj.get('success'):
-            _logger.info('✅ WhatsApp enviado a %s', phone)
-        else:
-            _logger.error('❌ WhatsApp error a %s: %s', phone, rj.get('error'))
-    except Exception as e:
-        _logger.error('❌ WhatsApp exception a %s: %s', phone, e)
+        ICP = env["ir.config_parameter"].sudo()
 
+        base_url = ICP.get_param("sat.whatsapp_gateway_base_url")
+        api_key = ICP.get_param("sat.whatsapp_gateway_api_key")
+
+        if not base_url:
+            _logger.error("❌ Falta configurar sat.whatsapp_gateway_base_url")
+            return {
+                "success": False,
+                "error": "Falta configurar sat.whatsapp_gateway_base_url",
+            }
+
+        if not api_key:
+            _logger.error("❌ Falta configurar sat.whatsapp_gateway_api_key")
+            return {
+                "success": False,
+                "error": "Falta configurar sat.whatsapp_gateway_api_key",
+            }
+
+        base_url = base_url.rstrip("/")
+        url = f"{base_url}/api/send-message"
+
+        headers = {
+            "Content-Type": "application/json",
+            "x-api-key": api_key,
+        }
+
+        payload = {
+            "to": phone,
+            "message": message,
+        }
+
+        response = requests.post(
+            url,
+            headers=headers,
+            json=payload,
+            timeout=30,
+        )
+
+        try:
+            response_json = response.json()
+        except ValueError:
+            _logger.error(
+                "❌ WhatsApp API no devolvió JSON válido a %s | Status: %s | Body: %s",
+                phone,
+                response.status_code,
+                response.text[:500],
+            )
+            return {
+                "success": False,
+                "error": "Respuesta no JSON de WhatsApp API",
+                "status_code": response.status_code,
+            }
+
+        if response.status_code == 200 and response_json.get("success"):
+            _logger.info("✅ WhatsApp enviado a %s", phone)
+            return response_json
+
+        error_msg = response_json.get("error", "Error desconocido")
+        _logger.error(
+            "❌ WhatsApp error a %s | Status: %s | Error: %s",
+            phone,
+            response.status_code,
+            error_msg,
+        )
+
+        return {
+            "success": False,
+            "error": error_msg,
+            "status_code": response.status_code,
+        }
+
+    except requests.exceptions.Timeout:
+        _logger.error("❌ Timeout enviando WhatsApp a %s", phone)
+        return {
+            "success": False,
+            "error": "Timeout",
+        }
+
+    except requests.exceptions.RequestException as e:
+        _logger.exception("❌ Error de red enviando WhatsApp a %s: %s", phone, str(e))
+        return {
+            "success": False,
+            "error": str(e),
+        }
+
+    except Exception as e:
+        _logger.exception("❌ WhatsApp exception a %s: %s", phone, str(e))
+        return {
+            "success": False,
+            "error": str(e),
+        }
 
 # ══════════════════════════════════════════════════════════════════════════
 # MODELO PRINCIPAL
@@ -185,7 +264,7 @@ class SolicitudParteTecnico(models.Model):
             f"⚠️ Gestiona la disponibilidad de cada parte en Odoo:\n"
             f"👉 {self._url_odoo()}"
         )
-        _send_whatsapp(JEFE_AREA_PHONE, msg_wa)
+        _send_whatsapp(self.env, JEFE_AREA_PHONE, msg_wa)
         self._enviar_template('sat.email_template_solicitud_parte_nueva')
 
     # ══════════════════════════════════════════════════════════════════════
@@ -208,7 +287,7 @@ class SolicitudParteTecnico(models.Model):
             f"👉 *APROBAR RETIRO:*\n{self._url_aprobar_gerencia()}"
         )
         # FIX: solo Gerencia recibe esta notificación
-        _send_whatsapp(GERENCIA_PHONE, msg_wa)
+        _send_whatsapp(self.env, GERENCIA_PHONE, msg_wa)
         self._enviar_template('sat.email_template_solicitud_parte_aprobacion')
 
     # ══════════════════════════════════════════════════════════════════════
@@ -230,7 +309,7 @@ class SolicitudParteTecnico(models.Model):
             f"✅ *SÍ TENGO:*\n{self._url_logistica_tiene()}\n\n"
             f"❌ *NO TENGO:*\n{self._url_logistica_no_tiene()}"
         )
-        _send_whatsapp(LOGISTICA_PHONE, msg_wa)
+        _send_whatsapp(self.env, LOGISTICA_PHONE, msg_wa)
         self._enviar_template('sat.email_template_solicitud_parte_consulta_logistica')
 
     # ══════════════════════════════════════════════════════════════════════
@@ -265,7 +344,7 @@ class SolicitudParteTecnico(models.Model):
             f"¿Autorizas la salida de stock?\n\n"
             f"👉 *APROBAR SALIDA:*\n{self._url_aprobar_gerencia()}"
         )
-        _send_whatsapp(GERENCIA_PHONE, msg_wa)
+        _send_whatsapp(self.env, GERENCIA_PHONE, msg_wa)
         self._enviar_template('sat.email_template_solicitud_parte_aprobacion_stock')
 
     # ══════════════════════════════════════════════════════════════════════
@@ -299,7 +378,7 @@ class SolicitudParteTecnico(models.Model):
             f"*Repuestos que NO hay en stock y se deben comprar:*\n{partes_wa}\n\n"
             f"👉 *APROBAR COMPRA:*\n{self._url_aprobar_compra()}"
         )
-        _send_whatsapp(GERENCIA_PHONE, msg_wa)
+        _send_whatsapp(self.env, GERENCIA_PHONE, msg_wa)
         self._enviar_template('sat.email_template_solicitud_parte_aprobacion_compra')
 
     # ══════════════════════════════════════════════════════════════════════
@@ -335,7 +414,7 @@ class SolicitudParteTecnico(models.Model):
             f"*Repuestos a entregar (registrar salida en tu sistema):*\n{partes_wa}\n\n"
             f"⚠️ Registra la salida en tu sistema de stock."
         )
-        _send_whatsapp(LOGISTICA_PHONE, msg_wa)
+        _send_whatsapp(self.env, LOGISTICA_PHONE, msg_wa)
         self._enviar_template('sat.email_template_solicitud_parte_logistica_entregar')
 
     # ══════════════════════════════════════════════════════════════════════
@@ -371,7 +450,7 @@ class SolicitudParteTecnico(models.Model):
             f"*Repuestos a conseguir/comprar:*\n{partes_wa}\n\n"
             f"⚠️ Gestiona la compra y notifica cuando esté disponible."
         )
-        _send_whatsapp(LOGISTICA_PHONE, msg_wa)
+        _send_whatsapp(self.env, LOGISTICA_PHONE, msg_wa)
         self._enviar_template('sat.email_template_solicitud_parte_logistica_compra')
 
     def _notificar_tecnico_en_espera(self):
@@ -387,7 +466,7 @@ class SolicitudParteTecnico(models.Model):
             f"Serás notificado cuando estén disponibles."
         )
         if self.tecnico_id.mobile_phone:
-            _send_whatsapp(_clean_phone(self.tecnico_id.mobile_phone), msg_wa)
+            _send_whatsapp(self.env, _clean_phone(self.tecnico_id.mobile_phone), msg_wa)
 
     # ══════════════════════════════════════════════════════════════════════
     # PASO 5: Gerencia aprueba → notifica solo al Técnico
@@ -411,7 +490,7 @@ class SolicitudParteTecnico(models.Model):
         )
         # FIX: solo el técnico recibe este aviso
         if self.tecnico_id.mobile_phone:
-            _send_whatsapp(_clean_phone(self.tecnico_id.mobile_phone), msg_wa)
+            _send_whatsapp(self.env, _clean_phone(self.tecnico_id.mobile_phone), msg_wa)
 
         email_tecnico = self.tecnico_id.email
         if email_tecnico:
@@ -449,8 +528,8 @@ class SolicitudParteTecnico(models.Model):
             f"*Máquina:* {self.marca or ''} {self.modelo or ''}\n\n"
             f"✅ El técnico confirmó el retiro de todas las partes."
         )
-        _send_whatsapp(JEFE_AREA_PHONE, msg_wa)
-        _send_whatsapp(GERENCIA_PHONE, msg_wa)
+        _send_whatsapp(self.env, JEFE_AREA_PHONE, msg_wa)
+        _send_whatsapp(self.env, GERENCIA_PHONE, msg_wa)
 
     # ══════════════════════════════════════════════════════════════════════
     # Lógica de avance de estado tras gestión del jefe

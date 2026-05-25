@@ -43,57 +43,106 @@ class ReparacionesMensajes(models.Model):
 
 
     def send_whatsapp_message(self, phone, message):
-        """Envía un mensaje de WhatsApp utilizando la API externa."""
-        url = 'https://boot.andessolutioncopiers.com/api/send-message'
-        data = {
-            'to': phone,
-            'message': message
-        }
-        headers = {
-            'Content-Type': 'application/json',
-            'x-api-key': 'wg_fc215093f007df7ff4a32c04c7d8170d11960583e3a1b43a695037f5a627d3e3'
-        }
-        
+        """Envía un mensaje de WhatsApp utilizando la API externa desde parámetros del sistema."""
         try:
-            response = requests.post(url, headers=headers, json=data, timeout=30)
-            
-            print("Código de estado:", response.status_code)
-            print("Respuesta de la API:", response.text)
-            
-            # Verificar si la respuesta contiene un cuerpo JSON válido
+            ICP = self.env["ir.config_parameter"].sudo()
+
+            base_url = ICP.get_param("sat.whatsapp_gateway_base_url")
+            api_key = ICP.get_param("sat.whatsapp_gateway_api_key")
+
+            if not base_url:
+                error_msg = "Falta configurar el parámetro sat.whatsapp_gateway_base_url"
+                _logger.error("❌ %s", error_msg)
+                return {
+                    "error": error_msg,
+                    "success": False,
+                }
+
+            if not api_key:
+                error_msg = "Falta configurar el parámetro sat.whatsapp_gateway_api_key"
+                _logger.error("❌ %s", error_msg)
+                return {
+                    "error": error_msg,
+                    "success": False,
+                }
+
+            base_url = base_url.rstrip("/")
+            url = f"{base_url}/api/send-message"
+
+            data = {
+                "to": phone,
+                "message": message,
+            }
+
+            headers = {
+                "Content-Type": "application/json",
+                "x-api-key": api_key,
+            }
+
+            response = requests.post(
+                url,
+                headers=headers,
+                json=data,
+                timeout=30,
+            )
+
+            _logger.info("Código de estado WhatsApp API: %s", response.status_code)
+            _logger.info("Respuesta de WhatsApp API: %s", response.text)
+
             try:
                 response_json = response.json()
-                print("Respuesta JSON:", response_json)
-                
-                # Validar respuesta exitosa
-                if response.status_code == 200 and response_json.get('success'):
-                    print(f"✅ Mensaje enviado exitosamente a {phone}")
+                _logger.info("Respuesta JSON WhatsApp API: %s", response_json)
+
+                if response.status_code == 200 and response_json.get("success"):
+                    _logger.info("✅ Mensaje enviado exitosamente a %s", phone)
                     return response_json
-                else:
-                    error_msg = response_json.get('error', 'Error desconocido')
-                    print(f"❌ Error en API: {error_msg}")
-                    return {"error": error_msg, "success": False}
-                    
+
+                error_msg = response_json.get("error", "Error desconocido")
+                _logger.error("❌ Error en API WhatsApp: %s", error_msg)
+
+                return {
+                    "error": error_msg,
+                    "success": False,
+                    "status_code": response.status_code,
+                }
+
             except json.JSONDecodeError as e:
                 error_msg = f"La respuesta no contiene un JSON válido: {str(e)}"
-                print(error_msg)
-                print("Respuesta raw:", response.text)
-                return {"error": error_msg, "success": False}
-                
+                _logger.error("❌ %s", error_msg)
+                _logger.error("Respuesta raw WhatsApp API: %s", response.text)
+
+                return {
+                    "error": error_msg,
+                    "success": False,
+                    "status_code": response.status_code,
+                }
+
         except requests.exceptions.Timeout:
             error_msg = f"Timeout al enviar mensaje a {phone}"
-            print(f"❌ {error_msg}")
-            return {"error": error_msg, "success": False}
-            
+            _logger.error("❌ %s", error_msg)
+
+            return {
+                "error": error_msg,
+                "success": False,
+            }
+
         except requests.exceptions.RequestException as e:
             error_msg = f"Error de red al enviar mensaje: {str(e)}"
-            print(f"❌ {error_msg}")
-            return {"error": error_msg, "success": False}
-            
+            _logger.exception("❌ %s", error_msg)
+
+            return {
+                "error": error_msg,
+                "success": False,
+            }
+
         except Exception as e:
             error_msg = f"Error inesperado: {str(e)}"
-            print(f"❌ {error_msg}")
-            return {"error": error_msg, "success": False}
+            _logger.exception("❌ %s", error_msg)
+
+            return {
+                "error": error_msg,
+                "success": False,
+            }
     def get_selection_labels(self):
         selection_labels = {}
         for field_name, field in self._fields.items():

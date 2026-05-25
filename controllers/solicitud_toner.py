@@ -602,30 +602,90 @@ Recibirá confirmación de la fecha de entrega.
             return request.redirect('/pagina_error')
 
     def send_whatsapp_message_toner(self, phone, message):
-        """Envia un mensaje de WhatsApp relacionado con la solicitud de tóner."""
+        """Envía un mensaje de WhatsApp relacionado con la solicitud de tóner."""
         try:
-            _logger.debug(f"Enviando mensaje de WhatsApp para tóner a {phone} con contenido: {message}")
-            
-            # ✅ Nueva API
-            url = 'https://boot.andessolutioncopiers.com/api/send-message'
+            _logger.debug(
+                "Enviando mensaje de WhatsApp para tóner a %s con contenido: %s",
+                phone,
+                message,
+            )
+
+            ICP = self.env["ir.config_parameter"].sudo()
+
+            base_url = ICP.get_param("sat.whatsapp_gateway_base_url")
+            api_key = ICP.get_param("sat.whatsapp_gateway_api_key")
+
+            if not base_url:
+                _logger.error("❌ Falta configurar sat.whatsapp_gateway_base_url")
+                return False
+
+            if not api_key:
+                _logger.error("❌ Falta configurar sat.whatsapp_gateway_api_key")
+                return False
+
+            base_url = base_url.rstrip("/")
+            url = f"{base_url}/api/send-message"
+
             data = {
-                'to': phone,
-                'message': message
+                "to": phone,
+                "message": message,
             }
+
             headers = {
-                'Content-Type': 'application/json',
-                'x-api-key': 'wg_fc215093f007df7ff4a32c04c7d8170d11960583e3a1b43a695037f5a627d3e3'
+                "Content-Type": "application/json",
+                "x-api-key": api_key,
             }
-            
-            response = requests.post(url, headers=headers, json=data, timeout=30)
-            _logger.debug(f"Código de estado: {response.status_code}")
-            _logger.debug(f"Respuesta de la API: {response.text}")
-            
-            if response.status_code == 200:
+
+            response = requests.post(
+                url,
+                headers=headers,
+                json=data,
+                timeout=30,
+            )
+
+            _logger.debug("Código de estado WhatsApp tóner: %s", response.status_code)
+            _logger.debug("Respuesta de la API WhatsApp tóner: %s", response.text)
+
+            try:
                 response_data = response.json()
-                return response_data.get('success', False)
+            except ValueError:
+                _logger.error(
+                    "❌ Respuesta no JSON al enviar WhatsApp tóner a %s | Status: %s | Body: %s",
+                    phone,
+                    response.status_code,
+                    response.text[:500],
+                )
+                return False
+
+            if response.status_code == 200 and response_data.get("success"):
+                _logger.info("✅ WhatsApp tóner enviado correctamente a %s", phone)
+                return True
+
+            error_msg = response_data.get("error", "Error desconocido")
+            _logger.error(
+                "❌ Error API WhatsApp tóner a %s | Status: %s | Error: %s",
+                phone,
+                response.status_code,
+                error_msg,
+            )
             return False
-            
+
+        except requests.exceptions.Timeout:
+            _logger.error("❌ Timeout enviando WhatsApp tóner a %s", phone)
+            return False
+
+        except requests.exceptions.RequestException as e:
+            _logger.error(
+                "❌ Error de red enviando WhatsApp tóner a %s: %s",
+                phone,
+                str(e),
+            )
+            return False
+
         except Exception as e:
-            _logger.error(f"Error enviando mensaje de WhatsApp para tóner: {str(e)}")
+            _logger.exception(
+                "❌ Error enviando mensaje de WhatsApp para tóner a %s: %s",
+                phone,
+                str(e),
+            )
             return False

@@ -5,6 +5,7 @@ from odoo.http import request
 from datetime import datetime, timedelta
 from odoo.exceptions import UserError
 from pytz import timezone, UTC
+import json
 import requests
 import json
 import logging
@@ -404,72 +405,125 @@ Para finalizar rápidamente un ticket, ingresa a Odoo y usa la opción "Finaliza
             return False
 
     def send_whatsapp_message(self, phone, message, file_url=None):
-        """Envía un mensaje de WhatsApp con o sin archivo adjunto utilizando la API externa."""
-        _logger.debug(f"Enviando mensaje a {phone} con contenido: {message} y archivo: {file_url}")
-        
+        """Envía un mensaje de WhatsApp con o sin archivo adjunto usando parámetros del sistema."""
+        _logger.debug(
+            "Enviando mensaje a %s con contenido: %s y archivo: %s",
+            phone,
+            message,
+            file_url,
+        )
+
         try:
-            # Si hay archivo, usar endpoint de media
+            ICP = self.env["ir.config_parameter"].sudo()
+
+            base_url = ICP.get_param("sat.whatsapp_gateway_base_url")
+            api_key = ICP.get_param("sat.whatsapp_gateway_api_key")
+
+            if not base_url:
+                error_msg = "Falta configurar el parámetro sat.whatsapp_gateway_base_url"
+                _logger.error("❌ %s", error_msg)
+                return {
+                    "error": error_msg,
+                    "success": False,
+                }
+
+            if not api_key:
+                error_msg = "Falta configurar el parámetro sat.whatsapp_gateway_api_key"
+                _logger.error("❌ %s", error_msg)
+                return {
+                    "error": error_msg,
+                    "success": False,
+                }
+
+            base_url = base_url.rstrip("/")
+
             if file_url:
-                url = 'https://boot.andessolutioncopiers.com/api/send-media'
+                url = f"{base_url}/api/send-media"
                 data = {
-                    'to': phone,
-                    'caption': message,
-                    'url': file_url
+                    "to": phone,
+                    "caption": message,
+                    "url": file_url,
                 }
             else:
-                # Sin archivo, usar endpoint de texto
-                url = 'https://boot.andessolutioncopiers.com/api/send-message'
+                url = f"{base_url}/api/send-message"
                 data = {
-                    'to': phone,
-                    'message': message
+                    "to": phone,
+                    "message": message,
                 }
-            
+
             headers = {
-                'Content-Type': 'application/json',
-                'x-api-key': 'wg_fc215093f007df7ff4a32c04c7d8170d11960583e3a1b43a695037f5a627d3e3'
+                "Content-Type": "application/json",
+                "x-api-key": api_key,
             }
-            
-            response = requests.post(url, headers=headers, json=data, timeout=30)
-            
-            _logger.debug(f"Código de estado: {response.status_code}")
-            _logger.debug(f"Respuesta de la API: {response.text}")
-            
+
+            response = requests.post(
+                url,
+                headers=headers,
+                json=data,
+                timeout=30,
+            )
+
+            _logger.debug("Código de estado: %s", response.status_code)
+            _logger.debug("Respuesta de la API: %s", response.text)
+
             try:
                 response_json = response.json()
-                _logger.debug(f"Respuesta JSON: {response_json}")
-                
-                # Validar respuesta exitosa
-                if response.status_code == 200 and response_json.get('success'):
-                    _logger.info(f"✅ Mensaje enviado exitosamente a {phone}")
+                _logger.debug("Respuesta JSON: %s", response_json)
+
+                if response.status_code == 200 and response_json.get("success"):
+                    _logger.info(
+                        "✅ Mensaje enviado exitosamente a %s",
+                        phone,
+                    )
                     return response_json
-                else:
-                    error_msg = response_json.get('error', 'Error desconocido')
-                    _logger.error(f"❌ Error en API: {error_msg}")
-                    return {"error": error_msg, "success": False}
-                    
+
+                error_msg = response_json.get("error", "Error desconocido")
+                _logger.error("❌ Error en API: %s", error_msg)
+
+                return {
+                    "error": error_msg,
+                    "success": False,
+                    "status_code": response.status_code,
+                }
+
             except json.JSONDecodeError as e:
                 error_msg = f"La respuesta no contiene un JSON válido: {str(e)}"
                 _logger.error(error_msg)
-                _logger.error(f"Respuesta raw: {response.text}")
-                return {"error": error_msg, "success": False}
-                
+                _logger.error("Respuesta raw: %s", response.text)
+
+                return {
+                    "error": error_msg,
+                    "success": False,
+                    "status_code": response.status_code,
+                }
+
         except requests.exceptions.Timeout:
             error_msg = f"Timeout al enviar mensaje a {phone}"
-            _logger.error(f"❌ {error_msg}")
-            return {"error": error_msg, "success": False}
-            
+            _logger.error("❌ %s", error_msg)
+
+            return {
+                "error": error_msg,
+                "success": False,
+            }
+
         except requests.exceptions.RequestException as e:
             error_msg = f"Error de red al enviar mensaje: {str(e)}"
-            _logger.error(f"❌ {error_msg}")
-            return {"error": error_msg, "success": False}
-            
+            _logger.error("❌ %s", error_msg)
+
+            return {
+                "error": error_msg,
+                "success": False,
+            }
+
         except Exception as e:
             error_msg = f"Error inesperado: {str(e)}"
-            _logger.error(f"❌ {error_msg}")
-            return {"error": error_msg, "success": False}
+            _logger.error("❌ %s", error_msg)
 
-
-    
+            return {
+                "error": error_msg,
+                "success": False,
+            }
+        
 
     def enviar_mensaje_whatsapp_finalizacion(self):
         msg_cliente_finalizacion = "Hola, estimado cliente.\n\nQueremos informarle que hemos completado satisfactoriamente nuestra visita técnica programada. A continuación, le detallamos el trabajo realizado durante la visita:\n\n*Ticket #:* {}\n*Fecha de Visita:* {}\n*Tipo de servicio:* {}\n*Dirección:* {}\n*Técnico Asignado:* {}\n*DNI:* {}\n\n*ESPECIFICACIONES DEL EQUIPO*\n*Marca:* {}\n*Modelo:* {}\n*Serie:* {}\n*Contómetro K:* {}\n*Contómetro color:* {}\n*Contómetro scanner:* {}\n\n*PROBLEMA REPORTADO*\n{}\n\n*INFORME TÉCNICO*\n{}\n\nAgradecemos su confianza en nuestros servicios y productos. Si necesita más asistencia o tiene cualquier requerimiento adicional, no dude en comunicarse con nosotros.".format(

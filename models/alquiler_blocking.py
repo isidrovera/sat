@@ -343,50 +343,90 @@ class UnidadAlquiler(models.Model):
             phone = '51' + phone
         return phone
 
+    
     def _send_whatsapp_notification(self, phone, message):
-        """Envía notificación a WhatsApp (grupos o números individuales)"""
+        """Envía notificación a WhatsApp usando Gateway configurado en parámetros del sistema."""
         if not phone:
             _logger.warning("Teléfono/grupo no especificado")
             return False
-            
+
         try:
-            # ✅ Nueva API
-            url = 'https://boot.andessolutioncopiers.com/api/send-message'
-            data = {
-                'to': phone,  # Funciona para ambos: "51999999999" o "51990649502-1484267115@g.us"
-                'message': message
-            }
-            headers = {
-                'Content-Type': 'application/json',
-                'x-api-key': 'wg_fc215093f007df7ff4a32c04c7d8170d11960583e3a1b43a695037f5a627d3e3'
-            }
-            
-            response = requests.post(url, headers=headers, json=data, timeout=30)
-            
-            if response.status_code == 200:
-                response_data = response.json()
-                # ✅ Verificar respuesta de la API
-                if response_data.get('success'):
-                    _logger.info(f"✅ Notificación enviada exitosamente a {phone}")
-                    return True
-                else:
-                    error_msg = response_data.get('error', 'Error desconocido')
-                    _logger.error(f"❌ Error en API: {error_msg} para {phone}")
-                    return False
-            else:
-                _logger.error(f"❌ Error HTTP al enviar a {phone}: {response.status_code} - {response.text}")
+            ICP = self.env["ir.config_parameter"].sudo()
+
+            base_url = ICP.get_param("sat.whatsapp_gateway_base_url")
+            api_key = ICP.get_param("sat.whatsapp_gateway_api_key")
+
+            if not base_url:
+                _logger.error("❌ Falta configurar sat.whatsapp_gateway_base_url")
                 return False
-                
+
+            if not api_key:
+                _logger.error("❌ Falta configurar sat.whatsapp_gateway_api_key")
+                return False
+
+            base_url = base_url.rstrip("/")
+            url = f"{base_url}/api/send-message"
+
+            data = {
+                "to": phone,  # Número o grupo: 51999999999 / 51990649502-1484267115@g.us
+                "message": message,
+            }
+
+            headers = {
+                "Content-Type": "application/json",
+                "x-api-key": api_key,
+            }
+
+            response = requests.post(
+                url,
+                headers=headers,
+                json=data,
+                timeout=30,
+            )
+
+            try:
+                response_data = response.json()
+            except ValueError:
+                _logger.error(
+                    "❌ Respuesta no JSON al enviar a %s | Status: %s | Body: %s",
+                    phone,
+                    response.status_code,
+                    response.text[:500],
+                )
+                return False
+
+            if response.status_code == 200 and response_data.get("success"):
+                _logger.info("✅ Notificación enviada exitosamente a %s", phone)
+                return True
+
+            error_msg = response_data.get("error", "Error desconocido")
+            _logger.error(
+                "❌ Error API WhatsApp al enviar a %s | Status: %s | Error: %s",
+                phone,
+                response.status_code,
+                error_msg,
+            )
+            return False
+
         except requests.exceptions.Timeout:
-            _logger.error(f"❌ Timeout al enviar notificación WhatsApp a {phone}")
+            _logger.error("❌ Timeout al enviar notificación WhatsApp a %s", phone)
             return False
+
         except requests.exceptions.RequestException as e:
-            _logger.error(f"❌ Error de red al enviar notificación WhatsApp: {str(e)}")
+            _logger.error(
+                "❌ Error de red al enviar notificación WhatsApp a %s: %s",
+                phone,
+                str(e),
+            )
             return False
+
         except Exception as e:
-            _logger.error(f"❌ Error inesperado al enviar notificación WhatsApp: {str(e)}")
+            _logger.exception(
+                "❌ Error inesperado al enviar notificación WhatsApp a %s: %s",
+                phone,
+                str(e),
+            )
             return False
-     # Reemplazar los campos Char por estos:
 
     grupo_notificaciones_id = fields.Selection(
         selection='_get_grupos_whatsapp',
@@ -401,29 +441,80 @@ class UnidadAlquiler(models.Model):
     )
     @api.model
     def _get_grupos_whatsapp(self):
-        """Obtiene la lista de grupos de WhatsApp desde la API"""
+        """Obtiene la lista de grupos de WhatsApp desde la API configurada en parámetros del sistema."""
         try:
-            url = 'https://boot.andessolutioncopiers.com/api/groups'
+            ICP = self.env["ir.config_parameter"].sudo()
+
+            base_url = ICP.get_param("sat.whatsapp_gateway_base_url")
+            api_key = ICP.get_param("sat.whatsapp_gateway_api_key")
+
+            if not base_url:
+                _logger.error("❌ Falta configurar sat.whatsapp_gateway_base_url")
+                return [("", "Falta configurar dominio API")]
+
+            if not api_key:
+                _logger.error("❌ Falta configurar sat.whatsapp_gateway_api_key")
+                return [("", "Falta configurar API Key")]
+
+            base_url = base_url.rstrip("/")
+            url = f"{base_url}/api/groups"
+
             headers = {
-                'x-api-key': 'wg_fc215093f007df7ff4a32c04c7d8170d11960583e3a1b43a695037f5a627d3e3'
+                "x-api-key": api_key,
             }
-            
-            response = requests.get(url, headers=headers, timeout=10)
-            
+
+            response = requests.get(
+                url,
+                headers=headers,
+                timeout=10,
+            )
+
             if response.status_code == 200:
                 data = response.json()
-                if data.get('success') and data.get('data'):
+
+                if data.get("success") and data.get("data"):
                     grupos = []
-                    for grupo in data['data']:
-                        grupos.append((
-                            grupo['id'], 
-                            f"{grupo['name']} ({grupo.get('participants', 0)} miembros)"
-                        ))
-                    return grupos
-            return [('', 'Error al cargar grupos')]
+
+                    for grupo in data["data"]:
+                        grupo_id = grupo.get("id")
+                        grupo_name = grupo.get("name")
+                        participants = grupo.get("participants", 0)
+
+                        if grupo_id and grupo_name:
+                            grupos.append((
+                                grupo_id,
+                                f"{grupo_name} ({participants} miembros)",
+                            ))
+
+                    grupos.sort(key=lambda x: x[1])
+
+                    return grupos or [("", "No hay grupos disponibles")]
+
+                return [("", "No hay grupos disponibles")]
+
+            elif response.status_code == 401:
+                _logger.error("❌ Error de autenticación al obtener grupos WhatsApp")
+                return [("", "Error de autenticación")]
+
+            else:
+                _logger.error(
+                    "❌ Error al cargar grupos WhatsApp. Status: %s | Body: %s",
+                    response.status_code,
+                    response.text[:500],
+                )
+                return [("", "Error al cargar grupos")]
+
+        except requests.exceptions.Timeout:
+            _logger.exception("⏱️ Timeout al obtener grupos WhatsApp")
+            return [("", "Timeout al cargar grupos")]
+
+        except requests.exceptions.RequestException as e:
+            _logger.exception("🌐 Error de red al obtener grupos WhatsApp: %s", str(e))
+            return [("", "Error de red al cargar grupos")]
+
         except Exception as e:
-            _logger.exception(f"Error al obtener grupos: {str(e)}")
-            return [('', 'Error al cargar grupos')]
+            _logger.exception("💥 Error al obtener grupos WhatsApp: %s", str(e))
+            return [("", "Error al cargar grupos")]
     def action_refresh_grupos(self):
         """Refresca la lista de grupos disponibles"""
         # Forzar recálculo del selection
