@@ -412,54 +412,66 @@
     <field name="tipo_id" ref="comp_tipo_fusora"/>
 </record>
   <!-- ====== ADF ====== -->
-  <record id="sub_adf_pickup" model="componente.subparte">
+<record id="sub_adf_pickup" model="componente.subparte">
     <field name="name">Pickup roller</field>
     <field name="code">ADF_PICKUP_ROLLER</field>
     <field name="tipo_id" ref="comp_tipo_adf"/>
-  </record>
-  <record id="sub_adf_separation" model="componente.subparte">
-    <field name="name">Separation pad/roller</field>
-    <field name="code">ADF_SEPARATION</field>
+</record>
+
+<record id="sub_adf_separation" model="componente.subparte">
+    <field name="name">Separation pad</field>
+    <field name="code">ADF_SEPARATION_PAD</field>
     <field name="tipo_id" ref="comp_tipo_adf"/>
-  </record>
-  <record id="sub_adf_feed" model="componente.subparte">
+</record>
+
+<record id="sub_adf_separation_roller" model="componente.subparte">
+    <field name="name">Separation roller</field>
+    <field name="code">ADF_SEPARATION_ROLLER</field>
+    <field name="tipo_id" ref="comp_tipo_adf"/>
+</record>
+
+<record id="sub_adf_feed" model="componente.subparte">
     <field name="name">Feed rollers</field>
     <field name="code">ADF_FEED_ROLLERS</field>
     <field name="tipo_id" ref="comp_tipo_adf"/>
-  </record>
-  <record id="sub_adf_belt" model="componente.subparte">
-    <field name="name">Correa / Belt</field>
+</record>
+
+<record id="sub_adf_belt" model="componente.subparte">
+    <field name="name">Belt</field>
     <field name="code">ADF_BELT</field>
     <field name="tipo_id" ref="comp_tipo_adf"/>
-  </record>
-  <record id="sub_adf_sensors" model="componente.subparte">
-    <field name="name">Sensores / Flags</field>
+</record>
+
+<record id="sub_adf_sensors" model="componente.subparte">
+    <field name="name">Sensors / Flags</field>
     <field name="code">ADF_SENSORS</field>
     <field name="tipo_id" ref="comp_tipo_adf"/>
-  </record>
-  <record id="sub_adf_clutch" model="componente.subparte">
-    <field name="name">Embragues / Motores</field>
+</record>
+
+<record id="sub_adf_clutch" model="componente.subparte">
+    <field name="name">Clutches / Motors</field>
     <field name="code">ADF_CLUTCH_MOTORS</field>
     <field name="tipo_id" ref="comp_tipo_adf"/>
-  </record>
+</record>
 
-  <!-- Extras ADF -->
-  <record id="sub_adf_hinges" model="componente.subparte">
-    <field name="name">Bisagras ADF</field>
+<!-- Extras ADF -->
+<record id="sub_adf_hinges" model="componente.subparte">
+    <field name="name">ADF hinges</field>
     <field name="code">ADF_HINGES</field>
     <field name="tipo_id" ref="comp_tipo_adf"/>
-  </record>
-  <record id="sub_adf_oneway_gears" model="componente.subparte">
-    <field name="name">Engranajes one-way</field>
+</record>
+
+<record id="sub_adf_oneway_gears" model="componente.subparte">
+    <field name="name">One-way gears</field>
     <field name="code">ADF_ONEWAY_GEARS</field>
     <field name="tipo_id" ref="comp_tipo_adf"/>
-  </record>
-  <record id="sub_adf_mylar_guides" model="componente.subparte">
-    <field name="name">Guías Mylar</field>
+</record>
+
+<record id="sub_adf_mylar_guides" model="componente.subparte">
+    <field name="name">Mylar guides</field>
     <field name="code">ADF_MYLAR_GUIDES</field>
     <field name="tipo_id" ref="comp_tipo_adf"/>
-  </record>
-
+</record>
   <!-- ====== TRAY / CASETERAS ====== -->
   <record id="sub_tray_pickup" model="componente.subparte">
     <field name="name">Pickup roller</field>
