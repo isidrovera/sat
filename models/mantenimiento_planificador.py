@@ -428,12 +428,24 @@ class MantenimientoPlanificador(models.Model):
             tecnico = perfil.tecnico_id
 
             disp = perfil.get_disponibilidad_fecha(fecha)
+
+            # Si el técnico está bloqueado/no disponible, nunca se asigna.
             if not disp.get('disponible'):
                 continue
 
-            if hora_inicio < disp.get('hora_inicio') or hora_fin > disp.get('hora_fin'):
-                continue
+            permite_asignaciones_multiples = bool(
+                disp.get('permite_asignaciones_multiples')
+            )
 
+            # Si NO está activado el modo múltiple, se respeta el horario normal.
+            # Si está activado, se permite asignar incluso fuera del rango horario,
+            # siempre que la disponibilidad de ese día esté aprobada y disponible=True.
+            if not permite_asignaciones_multiples:
+                if hora_inicio < disp.get('hora_inicio') or hora_fin > disp.get('hora_fin'):
+                    continue
+
+            # Validación de zona.
+            # El modo múltiple no debe saltarse la zona, salvo que ignorar_zona=True.
             if not ignorar_zona:
                 if not self._perfil_compatible_zona(perfil, zona, permitir_flexible=True):
                     continue
@@ -442,11 +454,10 @@ class MantenimientoPlanificador(models.Model):
             ocupados_lineas = len(self._get_horas_ocupadas_lineas(tecnico.id, fecha))
 
             capacidad = disp.get('capacidad') or 0
-            permite_asignaciones_multiples = bool(
-                disp.get('permite_asignaciones_multiples')
-            )
             total_ocupados = ocupados_dia + ocupados_lineas
 
+            # En modo normal se valida capacidad y cruces.
+            # En modo múltiple se permite varias asignaciones el mismo día/hora.
             if not permite_asignaciones_multiples:
                 if total_ocupados >= capacidad:
                     continue
@@ -459,7 +470,12 @@ class MantenimientoPlanificador(models.Model):
                 ):
                     continue
 
-                if self._linea_ocupa_tecnico(tecnico.id, fecha, hora_inicio, hora_fin):
+                if self._linea_ocupa_tecnico(
+                    tecnico.id,
+                    fecha,
+                    hora_inicio,
+                    hora_fin
+                ):
                     continue
 
             score = 0
@@ -468,6 +484,7 @@ class MantenimientoPlanificador(models.Model):
                 score += 50
 
             if permite_asignaciones_multiples:
+                # Se prioriza al técnico que tiene la excepción manual activa.
                 score += 1000
             else:
                 score += max(0, capacidad - total_ocupados) * 10

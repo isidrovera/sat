@@ -2131,7 +2131,7 @@ class TicketAlquiler(models.Model):
                         duracion_horas=duracion_horas,
                         excluir_ticket_id=ticket.id,
                         ocupaciones_temporales=ocupaciones_temporales,
-                        dias_busqueda=10,
+                        dias_busqueda=0,
                     )
             except Exception as e:
                 _logger.error(
@@ -2201,11 +2201,10 @@ class TicketAlquiler(models.Model):
 
             valores_ticket = {
                 'responsable': tecnico.id,
-                # item['agenda'] está en hora local. Para escribir en Odoo
-                # se convierte a UTC naive.
                 'agenda': self._datetime_local_naive_to_utc_masivo(item['agenda']),
                 'asistencia_id': asistencia_directa,
                 'tipo_servicio_id': item['tipo_servicio_id'],
+                'duracion_programada_horas': item['duracion_horas'],
                 'estado': 'proceso',
             }
 
@@ -2218,7 +2217,11 @@ class TicketAlquiler(models.Model):
             )
 
             try:
-                ticket.write(valores_ticket)
+                if permite_asignaciones_multiples:
+                    ticket.with_context(skip_planificador_validation=True).write(valores_ticket)
+                else:
+                    ticket.write(valores_ticket)
+
                 tickets_escritos |= ticket
 
                 _logger.warning(
