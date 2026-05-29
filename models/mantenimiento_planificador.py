@@ -442,24 +442,36 @@ class MantenimientoPlanificador(models.Model):
             ocupados_lineas = len(self._get_horas_ocupadas_lineas(tecnico.id, fecha))
 
             capacidad = disp.get('capacidad') or 0
+            permite_asignaciones_multiples = bool(
+                disp.get('permite_asignaciones_multiples')
+            )
             total_ocupados = ocupados_dia + ocupados_lineas
 
-            if total_ocupados >= capacidad:
-                continue
+            if not permite_asignaciones_multiples:
+                if total_ocupados >= capacidad:
+                    continue
 
-            if self._ticket_ocupa_tecnico(tecnico.id, inicio_dt, fin_dt, excluir_ticket_id=excluir_ticket_id):
-                continue
+                if self._ticket_ocupa_tecnico(
+                    tecnico.id,
+                    inicio_dt,
+                    fin_dt,
+                    excluir_ticket_id=excluir_ticket_id
+                ):
+                    continue
 
-            if self._linea_ocupa_tecnico(tecnico.id, fecha, hora_inicio, hora_fin):
-                continue
+                if self._linea_ocupa_tecnico(tecnico.id, fecha, hora_inicio, hora_fin):
+                    continue
 
             score = 0
 
             if zona and zona in perfil.zona_preferida_ids:
                 score += 50
 
-            score += max(0, capacidad - total_ocupados) * 10
-            score -= total_ocupados * 5
+            if permite_asignaciones_multiples:
+                score += 1000
+            else:
+                score += max(0, capacidad - total_ocupados) * 10
+                score -= total_ocupados * 5
 
             candidatos.append({
                 'perfil': perfil,
@@ -467,6 +479,7 @@ class MantenimientoPlanificador(models.Model):
                 'score': score,
                 'capacidad': capacidad,
                 'ocupados': total_ocupados,
+                'permite_asignaciones_multiples': permite_asignaciones_multiples,
             })
 
         candidatos = sorted(candidatos, key=lambda x: x['score'], reverse=True)

@@ -65,19 +65,19 @@ class MantenimientoTecnicoPerfil(models.Model):
     trabaja_sabado = fields.Boolean(string='Sábado', default=True)
     trabaja_domingo = fields.Boolean(string='Domingo', default=False)
 
-    hora_inicio_lunes = fields.Float(string='Inicio lunes', default=8.30)
-    hora_fin_lunes = fields.Float(string='Fin lunes', default=18.30)
+    hora_inicio_lunes = fields.Float(string='Inicio lunes', default=8.5)
+    hora_fin_lunes = fields.Float(string='Fin lunes', default=18.5)
 
-    hora_inicio_martes = fields.Float(string='Inicio martes', default=8.30)
-    hora_fin_martes = fields.Float(string='Fin martes', default=18.30)
+    hora_inicio_martes = fields.Float(string='Inicio martes', default=8.5)
+    hora_fin_martes = fields.Float(string='Fin martes', default=18.5)
 
-    hora_inicio_miercoles = fields.Float(string='Inicio miércoles', default=8.30)
-    hora_fin_miercoles = fields.Float(string='Fin miércoles', default=18.30)
+    hora_inicio_miercoles = fields.Float(string='Inicio miércoles', default=8.5)
+    hora_fin_miercoles = fields.Float(string='Fin miércoles', default=18.5)
 
-    hora_inicio_jueves = fields.Float(string='Inicio jueves', default=8.30)
+    hora_inicio_jueves = fields.Float(string='Inicio jueves', default=8.5)
     hora_fin_jueves = fields.Float(string='Fin jueves', default=18.0)
 
-    hora_inicio_viernes = fields.Float(string='Inicio viernes', default=8.30)
+    hora_inicio_viernes = fields.Float(string='Inicio viernes', default=8.5)
     hora_fin_viernes = fields.Float(string='Fin viernes', default=18.0)
 
     hora_inicio_sabado = fields.Float(string='Inicio sábado', default=9.0)
@@ -200,6 +200,7 @@ class MantenimientoTecnicoPerfil(models.Model):
             'hora_inicio': 8.0,
             'hora_fin': 18.0,
             'capacidad': 4,
+            'permite_asignaciones_multiples': True/False,
             'origen': 'base' / 'excepcion' / 'bloqueado'
         }
         """
@@ -213,6 +214,7 @@ class MantenimientoTecnicoPerfil(models.Model):
         capacidad = self.capacidad_sabado if fecha.weekday() == 5 else self.capacidad_diaria
 
         disponible = bool(trabaja and capacidad > 0)
+        permite_asignaciones_multiples = False
         origen = 'base'
 
         excepcion = self.env['mantenimiento.tecnico.disponibilidad'].search([
@@ -227,6 +229,7 @@ class MantenimientoTecnicoPerfil(models.Model):
             hora_inicio = excepcion.hora_inicio
             hora_fin = excepcion.hora_fin
             capacidad = excepcion.capacidad
+            permite_asignaciones_multiples = bool(excepcion.permite_asignaciones_multiples)
 
             if not excepcion.disponible:
                 origen = 'bloqueado'
@@ -236,6 +239,7 @@ class MantenimientoTecnicoPerfil(models.Model):
             'hora_inicio': hora_inicio,
             'hora_fin': hora_fin,
             'capacidad': capacidad,
+            'permite_asignaciones_multiples': permite_asignaciones_multiples,
             'origen': origen,
         }
 
@@ -329,6 +333,17 @@ class MantenimientoTecnicoDisponibilidad(models.Model):
         help='Cantidad máxima de servicios que puede atender en esta fecha.'
     )
 
+    permite_asignaciones_multiples = fields.Boolean(
+        string='Permitir asignaciones múltiples este día',
+        default=False,
+        tracking=True,
+        help=(
+            'Si está activo, el planificador podrá asignar varias órdenes al técnico '
+            'en esta misma fecha, incluso con el mismo horario, sin validar capacidad '
+            'ni cruces de horario. Solo aplica a esta disponibilidad aprobada.'
+        )
+    )
+
     tipo = fields.Selection([
         ('normal', 'Disponibilidad especial'),
         ('sabado_extra', 'Sábado excepcional'),
@@ -375,6 +390,7 @@ class MantenimientoTecnicoDisponibilidad(models.Model):
                 rec.hora_inicio = 0.0
                 rec.hora_fin = 24.0
                 rec.capacidad = 0
+                rec.permite_asignaciones_multiples = False
 
     @api.constrains('fecha', 'perfil_id', 'estado')
     def _check_fecha_perfil_aprobado_unico(self):
@@ -394,7 +410,7 @@ class MantenimientoTecnicoDisponibilidad(models.Model):
                     _("Ya existe una disponibilidad aprobada para este técnico en esa fecha.")
                 )
 
-    @api.constrains('hora_inicio', 'hora_fin', 'capacidad', 'disponible')
+    @api.constrains('hora_inicio', 'hora_fin', 'capacidad', 'disponible', 'permite_asignaciones_multiples')
     def _check_horas_y_capacidad(self):
         for rec in self:
             if rec.hora_inicio < 0 or rec.hora_inicio > 24:
@@ -412,6 +428,11 @@ class MantenimientoTecnicoDisponibilidad(models.Model):
             if not rec.disponible and rec.capacidad != 0:
                 raise ValidationError(
                     _("Si el técnico no está disponible, la capacidad debe ser 0.")
+                )
+
+            if not rec.disponible and rec.permite_asignaciones_multiples:
+                raise ValidationError(
+                    _("No puede permitir asignaciones múltiples si el técnico no está disponible.")
                 )
 
     def action_enviar_aprobacion(self):
