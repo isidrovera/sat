@@ -121,6 +121,7 @@
                                         <field name="dia_completo"/>
                                         <field name="hora_inicio" widget="float_time"/>
                                         <field name="hora_fin" widget="float_time"/>
+                                        <field name="permite_asignaciones_multiples"/>
                                         <field name="capacidad"/>
                                         <field name="estado"/>
                                     </list>
@@ -340,7 +341,7 @@
                             <group string="Disponibilidad">
                                 <field name="disponible"/>
                                 <field name="dia_completo"/>
-                                
+                                <field name="permite_asignaciones_multiples"/>
                                 <field name="hora_inicio" widget="float_time" invisible="dia_completo"/>
                                 <field name="hora_fin" widget="float_time" invisible="dia_completo"/>
                                 <field name="capacidad"/>
