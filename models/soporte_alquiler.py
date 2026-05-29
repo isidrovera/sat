@@ -1758,6 +1758,92 @@ class TicketAlquiler(models.Model):
         fecha_dt = fecha_dt.replace(second=0, microsecond=0)
         return fecha_dt.replace(minute=0) + timedelta(hours=1)
 
+    def _get_user_timezone_masivo(self):
+        """Devuelve la zona horaria usada para cálculos locales de asignación masiva."""
+        return timezone(self.env.user.tz or 'America/Lima')
+
+    def _datetime_utc_to_local_naive_masivo(self, fecha_dt):
+        """
+        Convierte un Datetime almacenado/recibido en UTC naive a hora local naive.
+
+        En Odoo los campos Datetime se almacenan en UTC. Para validar horarios
+        laborales y disponibilidad del técnico debemos trabajar en hora local.
+        """
+        if not fecha_dt:
+            return False
+
+        fecha_dt = fields.Datetime.to_datetime(fecha_dt)
+        local_tz = self._get_user_timezone_masivo()
+
+        if fecha_dt.tzinfo:
+            return fecha_dt.astimezone(local_tz).replace(tzinfo=None)
+
+        return UTC.localize(fecha_dt).astimezone(local_tz).replace(tzinfo=None)
+
+    def _datetime_local_naive_to_utc_masivo(self, fecha_dt):
+        """
+        Convierte una fecha/hora local naive a UTC naive para escribir en Odoo.
+        """
+        if not fecha_dt:
+            return False
+
+        fecha_dt = fields.Datetime.to_datetime(fecha_dt)
+        local_tz = self._get_user_timezone_masivo()
+
+        if fecha_dt.tzinfo:
+            return fecha_dt.astimezone(UTC).replace(tzinfo=None)
+
+        return local_tz.localize(fecha_dt).astimezone(UTC).replace(tzinfo=None)
+
+    def _get_disponibilidad_tecnico_fecha_masiva(self, tecnico, fecha_dt):
+        """
+        Obtiene la disponibilidad aprobada del técnico para la fecha local indicada.
+        """
+        if not tecnico or not fecha_dt:
+            return False
+
+        fecha_local = fields.Datetime.to_datetime(fecha_dt).date()
+
+        perfil = self.env['mantenimiento.tecnico.perfil'].search([
+            ('tecnico_id', '=', tecnico.id),
+            ('active', '=', True),
+        ], limit=1)
+
+        if not perfil:
+            return False
+
+        return self.env['mantenimiento.tecnico.disponibilidad'].search([
+            ('perfil_id', '=', perfil.id),
+            ('fecha', '=', fecha_local),
+            ('estado', '=', 'aprobado'),
+        ], order='sequence desc, id desc', limit=1)
+
+    def _permite_asignaciones_multiples_masiva(self, tecnico, fecha_dt):
+        """
+        Indica si el técnico tiene activada la excepción manual para permitir
+        varias asignaciones en la misma fecha y horario.
+
+        Si existe una disponibilidad aprobada con disponible=False, se mantiene
+        como bloqueo fuerte y no se permite asignar.
+        """
+        disponibilidad = self._get_disponibilidad_tecnico_fecha_masiva(tecnico, fecha_dt)
+
+        if disponibilidad and not disponibilidad.disponible:
+            raise UserError(_(
+                "El técnico %s no está disponible para la fecha %s."
+            ) % (
+                tecnico.name,
+                fields.Datetime.to_datetime(fecha_dt).strftime('%d/%m/%Y'),
+            ))
+
+        if not disponibilidad:
+            return False
+
+        if 'permite_asignaciones_multiples' not in disponibilidad._fields:
+            return False
+
+        return bool(disponibilidad.permite_asignaciones_multiples)
+
     def _ticket_cruza_horario_masivo(
         self,
         tecnico_id,
@@ -1803,7 +1889,9 @@ class TicketAlquiler(models.Model):
             if not ticket.agenda:
                 continue
 
-            ticket_inicio = fields.Datetime.to_datetime(ticket.agenda)
+            # ticket.agenda está almacenado en UTC; para comparar con los bloques
+            # de asignación masiva se convierte primero a hora local naive.
+            ticket_inicio = self._datetime_utc_to_local_naive_masivo(ticket.agenda)
             duracion = ticket._get_duracion_ticket_calendario()
             ticket_fin = ticket_inicio + timedelta(hours=duracion)
 
@@ -1978,11 +2066,20 @@ class TicketAlquiler(models.Model):
         ocupaciones_temporales = []
         asignaciones = []
 
-        fecha_cursor = fields.Datetime.to_datetime(fecha_visita)
+        # El valor del wizard llega como Datetime UTC naive desde Odoo.
+        # Para asignación masiva trabajamos en hora local, así evitamos casos
+        # donde 09:00 Lima se evalúa erróneamente como 04:00.
+        fecha_cursor = self._datetime_utc_to_local_naive_masivo(fecha_visita)
+
+        permite_asignaciones_multiples = self._permite_asignaciones_multiples_masiva(
+            tecnico,
+            fecha_cursor,
+        )
 
         _logger.warning(
-            "🟣 [ASIGNACION MASIVA][CURSOR_INICIAL] fecha_cursor=%s",
+            "🟣 [ASIGNACION MASIVA][CURSOR_INICIAL] fecha_cursor_local=%s permite_asignaciones_multiples=%s",
             fecha_cursor,
+            permite_asignaciones_multiples,
         )
 
         # ============================================================
@@ -2022,14 +2119,20 @@ class TicketAlquiler(models.Model):
             )
 
             try:
-                agenda_libre = self._buscar_siguiente_agenda_libre_masiva(
-                    tecnico=tecnico,
-                    fecha_inicio=fecha_cursor,
-                    duracion_horas=duracion_horas,
-                    excluir_ticket_id=ticket.id,
-                    ocupaciones_temporales=ocupaciones_temporales,
-                    dias_busqueda=10,
-                )
+                if permite_asignaciones_multiples:
+                    # Modo excepcional manual:
+                    # todos los tickets quedan el mismo día y a la misma hora.
+                    # No se busca siguiente cupo ni se bloquea por cruce.
+                    agenda_libre = fecha_cursor
+                else:
+                    agenda_libre = self._buscar_siguiente_agenda_libre_masiva(
+                        tecnico=tecnico,
+                        fecha_inicio=fecha_cursor,
+                        duracion_horas=duracion_horas,
+                        excluir_ticket_id=ticket.id,
+                        ocupaciones_temporales=ocupaciones_temporales,
+                        dias_busqueda=10,
+                    )
             except Exception as e:
                 _logger.error(
                     "🔴 [ASIGNACION MASIVA][CALCULO][%s] Error buscando agenda libre para ticket=%s tecnico=%s fecha_cursor=%s duracion=%s error=%s",
@@ -2064,7 +2167,8 @@ class TicketAlquiler(models.Model):
                 'observaciones': ticket_data.get('observaciones') or '',
             })
 
-            fecha_cursor = agenda_fin
+            if not permite_asignaciones_multiples:
+                fecha_cursor = agenda_fin
 
             _logger.warning(
                 "🟢 [ASIGNACION MASIVA][SLOT][%s] ticket=%s tecnico=%s inicio=%s fin=%s tipo=%s duracion=%s",
@@ -2097,7 +2201,9 @@ class TicketAlquiler(models.Model):
 
             valores_ticket = {
                 'responsable': tecnico.id,
-                'agenda': item['agenda'],
+                # item['agenda'] está en hora local. Para escribir en Odoo
+                # se convierte a UTC naive.
+                'agenda': self._datetime_local_naive_to_utc_masivo(item['agenda']),
                 'asistencia_id': asistencia_directa,
                 'tipo_servicio_id': item['tipo_servicio_id'],
                 'estado': 'proceso',
