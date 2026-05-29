@@ -387,6 +387,15 @@ class TicketAlquilerMantenimientoPlanificador(models.Model):
                         % (tecnico.name, fecha.strftime('%d/%m/%Y'))
                     )
 
+                if disp.get('permite_asignaciones_multiples'):
+                    _logger.warning(
+                        "🧭 [PLANIFICADOR VALIDACION][ASIGNACIONES_MULTIPLES] ticket=%s tecnico=%s fecha=%s: se omite validación de horario y cruces",
+                        rec.name,
+                        tecnico.name,
+                        fecha,
+                    )
+                    continue
+
                 if hora_inicio < disp.get('hora_inicio') or hora_fin > disp.get('hora_fin'):
                     raise ValidationError(
                         _("El técnico %s no está disponible en el horario %.2f - %.2f.")
