@@ -1105,13 +1105,13 @@
                       decoration-warning="estado in ('borrador','esperando_gerencia','informe_solicitado','informe_recibido')"
                       decoration-danger="estado in ('rechazado','cancelado')" js_class="pedido_tree_dashboard">
                     <field name="name" string="Pedido N°"/>
-                    <field name="ticket_id"/>
+                    <field name="ticket_id" optional="hide"/>
                     <field name="cliente_id"/>
                     <field name="modelo_nombre" optional="show"/>
                     <field name="serie"/>
-                    <field name="tecnico_id"/>
-                    <field name="fecha"/>
-                    <field name="total_lineas" string="Líneas"/>
+                    <field name="tecnico_id" optional="hide"/>
+                    <field name="fecha" optional="hide"/>
+                    <field name="total_lineas" string="Líneas" optional="hide"/>
                     <field name="estado" widget="badge"/>
                     <field name="aprobado_por" optional="hide"/>
                     <field name="fecha_aprobacion" optional="hide"/>
