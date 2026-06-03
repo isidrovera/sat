@@ -1635,6 +1635,43 @@ class TicketAlquiler(models.Model):
         except Exception as e:
             raise ValidationError(_("Error al crear la evaluación: {}").format(str(e)))
 
+
+    # ============================================================
+    # NOTIFICACIÓN CLIENTE EXTERNO
+    # ============================================================
+
+    def _enviar_correo_cliente_externo(self):
+        """
+        Envía correo de aviso a Cristian cuando se asigna un ticket
+        cuyo equipo está en estado 'externo'.
+        Se itera sobre self, por lo que acepta un recordset de uno o varios tickets.
+        """
+        template = self.env.ref('sat.email_template_ticket_cliente_externo', raise_if_not_found=False)
+        if not template:
+            _logger.warning(
+                "[_enviar_correo_cliente_externo] Plantilla 'email_template_ticket_cliente_externo' "
+                "no encontrada en módulo sat. No se enviará correo."
+            )
+            return
+
+        for ticket in self:
+            if ticket.product_alquiler.estado_alquiler_id != 'externo':
+                continue
+
+            try:
+                template.send_mail(ticket.id, force_send=True)
+                _logger.info(
+                    "[_enviar_correo_cliente_externo] Correo enviado | ticket=%s | equipo=%s | serie=%s",
+                    ticket.name,
+                    ticket.product_alquiler.name.name if ticket.product_alquiler.name else 'N/A',
+                    ticket.serie_id_r or 'N/A',
+                )
+            except Exception as e:
+                _logger.error(
+                    "[_enviar_correo_cliente_externo] Error enviando correo | ticket=%s | error=%s",
+                    ticket.name, str(e)
+                )
+
     def action_asignar_masivo(self):
         _logger.info("🎯 [asignar_masivo] records=%s ids=%s", len(self), self.ids)
         tickets_no_nuevos = self.filtered(lambda t: t.estado != 'nuevo')
@@ -1669,6 +1706,10 @@ class TicketAlquiler(models.Model):
         if len(self) > 1:
             return self.action_asignar_masivo()
         self.ensure_one()
+
+        # Notificar si el equipo es cliente externo
+        self._enviar_correo_cliente_externo()
+
         wizard = self.env['whatsapp.notification.wizard'].create({
             'ticket_id': self.id,
             'es_asignacion_masiva': False,
