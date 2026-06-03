@@ -705,15 +705,15 @@
 
             <!-- Saludo -->
             <div style="margin-bottom: 20px;">
-                Cristina,
+                Cristian,
             </div>
 
             <!-- Mensaje -->
             <div style="background-color: #fff5f5; padding: 20px; margin: 15px 0; border-left: 4px solid #e53e3e;">
                 <div style="margin: 0;">
                     Se está programando una visita técnica a un <strong>cliente externo</strong>.
-                    Gerencia solicita que realices el seguimiento correspondiente a este servicio
-                    para conocer cómo resultó la atención.
+                    Por favor realiza el seguimiento necesario a este servicio para conocer
+                    cómo resultó la atención.
                 </div>
             </div>
 
@@ -761,11 +761,7 @@
                 <div style="margin: 10px 0;"><t t-out="object.description"/></div>
             </div>
 
-            <!-- Pie -->
-            <div style="text-align: center; margin-top: 30px; padding: 20px; background-color: #f7fafc; color: #718096; font-size: 13px;">
-                Este correo fue generado automáticamente por el sistema de tickets de Andes Copiers.<br/>
-                Por favor no responder a este mensaje.
-            </div>
+           
 
         </div>
     </div>
