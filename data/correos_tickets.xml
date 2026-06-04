@@ -681,6 +681,7 @@
     <field name="name">Aviso Cliente Externo - Visita Técnica Programada</field>
     <field name="email_from">soporte@andescopiers.com.pe</field>
     <field name="email_to">campuero@corapsac.com.pe</field>
+     <field name="email_cc">salvarez@andescopiers.com.pe</field>
     <field name="subject">🔧 Visita Técnica Programada - Cliente Externo | Ticket #{{object.name}}</field>
     <field name="model_id" ref="model_ticket_alquiler" />
     <field name="auto_delete" eval="True" />
