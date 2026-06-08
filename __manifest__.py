@@ -77,7 +77,7 @@
         "data/whatsapp_templates_rules.xml",
         'data/whatsapp_session_config_data.xml',
         'data/whatsapp_session_cron_data.xml',
-        'data/reparaciones_avance_data.xml'     
+        'data/reparaciones_avance_data.xml',    
         'views/ventas.xml',   
         'views/modelos.xml',
         'views/repuestos_alquiler.xml',
