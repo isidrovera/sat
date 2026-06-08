@@ -120,3 +120,4 @@ from . import whatsapp_template
 from . import whatsapp_media
 from . import whatsapp_handoff
 from . import whatsapp_outbox
+from . import reparaciones_avance_alertas

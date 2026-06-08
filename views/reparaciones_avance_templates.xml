@@ -1,0 +1,212 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <template id="reparaciones_avance_error_page" name="Error avance reparación">
+        <t t-call="website.layout">
+            <div class="container my-5">
+                <div class="row justify-content-center">
+                    <div class="col-lg-8">
+                        <div class="alert alert-warning">
+                            <h3 class="mb-3">
+                                <t t-esc="title"/>
+                            </h3>
+                            <p class="mb-0">
+                                <t t-esc="message"/>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <template id="reparaciones_avance_page" name="Avance reparación">
+        <t t-call="website.layout">
+            <div class="container my-4">
+
+                <div class="row justify-content-center">
+                    <div class="col-lg-10">
+
+                        <div class="card shadow-sm mb-3">
+                            <div class="card-body">
+                                <h3 class="mb-3">Registrar avance de reparación</h3>
+
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <p class="mb-1">
+                                            <strong>Reparación:</strong>
+                                            <t t-esc="reparacion.name or 'NA'"/>
+                                        </p>
+                                        <p class="mb-1">
+                                            <strong>Cliente:</strong>
+                                            <t t-esc="reparacion.cliente_id.name if reparacion.cliente_id else 'NA'"/>
+                                        </p>
+                                        <p class="mb-1">
+                                            <strong>Modelo:</strong>
+                                            <t t-esc="reparacion.nombre_maquina or 'NA'"/>
+                                        </p>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <p class="mb-1">
+                                            <strong>Serie:</strong>
+                                            <t t-esc="reparacion.serie_id or 'NA'"/>
+                                        </p>
+                                        <p class="mb-1">
+                                            <strong>Técnico:</strong>
+                                            <t t-esc="reparacion.responsable_id.name if reparacion.responsable_id else 'NA'"/>
+                                        </p>
+                                        <p class="mb-1">
+                                            <strong>Estado:</strong>
+                                            En revisión
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <t t-if="error">
+                            <div class="alert alert-danger">
+                                <t t-esc="error"/>
+                            </div>
+                        </t>
+
+                        <t t-if="success">
+                            <div class="alert alert-success">
+                                <t t-esc="success"/>
+                            </div>
+                        </t>
+
+                        <form t-att-action="'/reparacion/avance/%s/guardar' % token"
+                              method="post"
+                              enctype="multipart/form-data">
+
+                            <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+
+                            <div class="card shadow-sm mb-3">
+                                <div class="card-body">
+                                    <h5 class="mb-3">Seleccione avance o motivo de demora</h5>
+
+                                    <t t-foreach="grouped_options.items()" t-as="group">
+                                        <div class="mb-4">
+                                            <h6 class="border-bottom pb-2">
+                                                <t t-esc="group[1]['label']"/>
+                                            </h6>
+
+                                            <div class="row">
+                                                <t t-foreach="group[1]['options']" t-as="option">
+                                                    <div class="col-md-6 mb-3">
+                                                        <div class="border rounded p-3 h-100">
+                                                            <div class="form-check">
+                                                                <input class="form-check-input"
+                                                                       type="checkbox"
+                                                                       name="opcion_ids"
+                                                                       t-att-id="'option_%s' % option.id"
+                                                                       t-att-value="option.id"/>
+                                                                <label class="form-check-label fw-bold"
+                                                                       t-att-for="'option_%s' % option.id">
+                                                                    <t t-esc="option.name"/>
+                                                                </label>
+                                                            </div>
+
+                                                            <t t-if="option.allow_color">
+                                                                <div class="mt-2">
+                                                                    <label class="form-label small">Color afectado</label>
+                                                                    <select class="form-select form-select-sm"
+                                                                            t-att-name="'color_%s' % option.id">
+                                                                        <option value="">Seleccione</option>
+                                                                        <option value="black">Negro</option>
+                                                                        <option value="cyan">Cyan</option>
+                                                                        <option value="magenta">Magenta</option>
+                                                                        <option value="yellow">Yellow</option>
+                                                                        <option value="varios">Varios colores</option>
+                                                                    </select>
+                                                                </div>
+                                                            </t>
+
+                                                            <t t-if="option.allow_part_detail">
+                                                                <div class="mt-2">
+                                                                    <label class="form-label small">Parte / repuesto</label>
+                                                                    <input type="text"
+                                                                           class="form-control form-control-sm"
+                                                                           placeholder="Ej. Fusor, cilindro, sensor, tarjeta..."
+                                                                           t-att-name="'parte_%s' % option.id"/>
+                                                                </div>
+                                                            </t>
+
+                                                            <t t-if="option.require_detail">
+                                                                <div class="mt-2">
+                                                                    <label class="form-label small">Detalle</label>
+                                                                    <input type="text"
+                                                                           class="form-control form-control-sm"
+                                                                           placeholder="Detalle breve"
+                                                                           t-att-name="'detalle_%s' % option.id"/>
+                                                                </div>
+                                                            </t>
+                                                        </div>
+                                                    </div>
+                                                </t>
+                                            </div>
+                                        </div>
+                                    </t>
+                                </div>
+                            </div>
+
+                            <div class="card shadow-sm mb-3">
+                                <div class="card-body">
+                                    <h5 class="mb-3">Detalle adicional</h5>
+                                    <textarea name="detalle"
+                                              class="form-control"
+                                              rows="4"
+                                              placeholder="Ej. Equipo muy contaminado, se está aspirando y revisando alimentación de tóner negro."></textarea>
+                                </div>
+                            </div>
+
+                            <div class="card shadow-sm mb-3">
+                                <div class="card-body">
+                                    <h5 class="mb-3">Fotos del avance</h5>
+                                    <input type="file"
+                                           name="fotos"
+                                           class="form-control"
+                                           accept="image/*"
+                                           capture="environment"
+                                           multiple="multiple"/>
+                                    <small class="text-muted">
+                                        Puede tomar fotos desde el celular o adjuntar imágenes existentes.
+                                    </small>
+                                </div>
+                            </div>
+
+                            <div class="card shadow-sm mb-3">
+                                <div class="card-body">
+                                    <div class="form-check">
+                                        <input class="form-check-input"
+                                               type="checkbox"
+                                               name="notificar_asesora"
+                                               id="notificar_asesora"
+                                               value="1"/>
+                                        <label class="form-check-label fw-bold" for="notificar_asesora">
+                                            Notificar este avance a la asesora por WhatsApp
+                                        </label>
+                                    </div>
+                                    <small class="text-muted">
+                                        Si no marca esta opción, el avance quedará registrado pero no se enviará a la asesora.
+                                    </small>
+                                </div>
+                            </div>
+
+                            <div class="d-grid gap-2 mb-5">
+                                <button type="submit" class="btn btn-primary btn-lg">
+                                    Guardar avance
+                                </button>
+                            </div>
+
+                        </form>
+
+                    </div>
+                </div>
+
+            </div>
+        </t>
+    </template>
+
+</odoo>

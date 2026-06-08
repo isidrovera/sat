@@ -383,6 +383,43 @@
                   <field name="fotos_ids" widget="gallery_widget" class="w-100"/>
                 </div>
               </page>
+              <page string="Avances y Alertas" name="avances_alertas">
+                <group>
+                    <group string="Seguimiento de avance">
+                        <field name="avance_estado_alerta" widget="badge"/>
+                        <field name="avance_alertas_activas"/>
+                        <field name="fecha_inicio_revision" readonly="1"/>
+                        <field name="fecha_ultimo_avance" readonly="1"/>
+                        <field name="fecha_proxima_alerta_avance" readonly="1"/>
+                    </group>
+
+                    <group string="Alertas al jefe de área">
+                        <field name="jefe_area_user_id"/>
+                        <field name="ultima_alerta_avance_jefe" readonly="1"/>
+                        <field name="cantidad_alertas_avance_jefe" readonly="1"/>
+                        <field name="avance_token" readonly="1"/>
+                        <button name="action_generar_url_avance"
+                            string="Abrir URL de avance"
+                            type="object"
+                            class="btn-primary"
+                            icon="fa-link"
+                            invisible="estado_id != 'en_revision'"/>
+                    </group>
+                </group>
+
+                <separator string="Historial de avances"/>
+
+                <field name="avance_ids" readonly="1">
+                    <list>
+                        <field name="create_date"/>
+                        <field name="user_id"/>
+                        <field name="responsable_id"/>
+                        <field name="notificar_asesora"/>
+                        <field name="asesora_notificada"/>
+                        <field name="estado"/>
+                    </list>
+                </field>
+            </page>
             </notebook>
           </sheet>
           <chatter />

@@ -1,0 +1,507 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+
+    <!-- ========================================================= -->
+    <!-- PARÁMETROS BASE                                           -->
+    <!-- ========================================================= -->
+
+    <!-- Intervalo de alerta en horas. Por defecto: 1 hora -->
+    <record id="param_reparaciones_avance_interval_hours" model="ir.config_parameter">
+        <field name="key">sat.reparaciones_avance_interval_hours</field>
+        <field name="value">1</field>
+    </record>
+
+    <!-- Teléfono del jefe de área. Cambiar por el número real. Formato sugerido: 519XXXXXXXX -->
+    <record id="param_reparaciones_avance_jefe_phone" model="ir.config_parameter">
+        <field name="key">sat.reparaciones_avance_jefe_phone</field>
+        <field name="value"></field>
+    </record>
+
+    <!-- Opcional: ID de usuario jefe de área. Si está vacío, se usará el teléfono anterior -->
+    <record id="param_reparaciones_avance_jefe_user_id" model="ir.config_parameter">
+        <field name="key">sat.reparaciones_avance_jefe_user_id</field>
+        <field name="value"></field>
+    </record>
+
+
+    <!-- ========================================================= -->
+    <!-- OPCIONES: DIAGNÓSTICO                                     -->
+    <!-- ========================================================= -->
+
+    <record id="avance_opcion_muy_sucia" model="reparacion.avance.opcion">
+        <field name="name">Muy sucia</field>
+        <field name="message_text">Equipo muy sucio internamente</field>
+        <field name="category">diagnostico</field>
+        <field name="sequence">10</field>
+    </record>
+
+    <record id="avance_opcion_no_enciende" model="reparacion.avance.opcion">
+        <field name="name">No enciende</field>
+        <field name="message_text">La máquina no enciende</field>
+        <field name="category">diagnostico</field>
+        <field name="sequence">20</field>
+    </record>
+
+    <record id="avance_opcion_marca_codigo" model="reparacion.avance.opcion">
+        <field name="name">Marca código</field>
+        <field name="message_text">La máquina marca código de error</field>
+        <field name="category">diagnostico</field>
+        <field name="sequence">30</field>
+        <field name="require_detail">1</field>
+    </record>
+
+    <record id="avance_opcion_no_imprime" model="reparacion.avance.opcion">
+        <field name="name">No imprime</field>
+        <field name="message_text">La máquina no imprime</field>
+        <field name="category">diagnostico</field>
+        <field name="sequence">40</field>
+    </record>
+
+    <record id="avance_opcion_no_copia" model="reparacion.avance.opcion">
+        <field name="name">No copia</field>
+        <field name="message_text">La máquina no copia correctamente</field>
+        <field name="category">diagnostico</field>
+        <field name="sequence">50</field>
+    </record>
+
+    <record id="avance_opcion_no_escanea" model="reparacion.avance.opcion">
+        <field name="name">No escanea</field>
+        <field name="message_text">La máquina no escanea correctamente</field>
+        <field name="category">diagnostico</field>
+        <field name="sequence">60</field>
+    </record>
+
+    <record id="avance_opcion_no_hay_sistema" model="reparacion.avance.opcion">
+        <field name="name">No hay sistema</field>
+        <field name="message_text">La máquina no tiene sistema operativo funcional</field>
+        <field name="category">diagnostico</field>
+        <field name="sequence">70</field>
+    </record>
+
+
+    <!-- ========================================================= -->
+    <!-- OPCIONES: ALIMENTACIÓN DE PAPEL                           -->
+    <!-- ========================================================= -->
+
+    <record id="avance_opcion_no_pasa_papel" model="reparacion.avance.opcion">
+        <field name="name">No pasa papel</field>
+        <field name="message_text">La máquina no alimenta papel correctamente</field>
+        <field name="category">papel</field>
+        <field name="sequence">100</field>
+    </record>
+
+    <record id="avance_opcion_no_jala_papel" model="reparacion.avance.opcion">
+        <field name="name">No jala papel</field>
+        <field name="message_text">La máquina no jala papel</field>
+        <field name="category">papel</field>
+        <field name="sequence">110</field>
+    </record>
+
+    <record id="avance_opcion_atasco_bandeja_1" model="reparacion.avance.opcion">
+        <field name="name">Atasco en bandeja 1</field>
+        <field name="message_text">Presenta atasco en bandeja 1</field>
+        <field name="category">papel</field>
+        <field name="sequence">120</field>
+    </record>
+
+    <record id="avance_opcion_atasco_bandeja_2" model="reparacion.avance.opcion">
+        <field name="name">Atasco en bandeja 2</field>
+        <field name="message_text">Presenta atasco en bandeja 2</field>
+        <field name="category">papel</field>
+        <field name="sequence">130</field>
+    </record>
+
+    <record id="avance_opcion_atasco_bypass" model="reparacion.avance.opcion">
+        <field name="name">Atasco en bypass</field>
+        <field name="message_text">Presenta atasco en bypass</field>
+        <field name="category">papel</field>
+        <field name="sequence">140</field>
+    </record>
+
+    <record id="avance_opcion_atasco_duplex" model="reparacion.avance.opcion">
+        <field name="name">Atasco en dúplex</field>
+        <field name="message_text">Presenta atasco en dúplex</field>
+        <field name="category">papel</field>
+        <field name="sequence">150</field>
+    </record>
+
+    <record id="avance_opcion_rodillos_gastados" model="reparacion.avance.opcion">
+        <field name="name">Rodillos gastados</field>
+        <field name="message_text">Se detectaron rodillos gastados</field>
+        <field name="category">papel</field>
+        <field name="sequence">160</field>
+    </record>
+
+    <record id="avance_opcion_sensor_papel_falla" model="reparacion.avance.opcion">
+        <field name="name">Sensor de papel fallando</field>
+        <field name="message_text">Se detectó posible falla en sensor de papel</field>
+        <field name="category">papel</field>
+        <field name="sequence">170</field>
+    </record>
+
+
+    <!-- ========================================================= -->
+    <!-- OPCIONES: TÓNER / REVELADO                                -->
+    <!-- ========================================================= -->
+
+    <record id="avance_opcion_no_alimenta_toner" model="reparacion.avance.opcion">
+        <field name="name">No alimenta tóner</field>
+        <field name="message_text">Presenta problema de alimentación de tóner</field>
+        <field name="category">toner_revelado</field>
+        <field name="sequence">200</field>
+        <field name="allow_color">1</field>
+    </record>
+
+    <record id="avance_opcion_falta_toner" model="reparacion.avance.opcion">
+        <field name="name">Falta tóner</field>
+        <field name="message_text">Falta tóner en la máquina</field>
+        <field name="category">toner_revelado</field>
+        <field name="sequence">210</field>
+        <field name="allow_color">1</field>
+    </record>
+
+    <record id="avance_opcion_botella_toner_no_detecta" model="reparacion.avance.opcion">
+        <field name="name">Botella de tóner no detecta</field>
+        <field name="message_text">La botella de tóner no es detectada correctamente</field>
+        <field name="category">toner_revelado</field>
+        <field name="sequence">220</field>
+        <field name="allow_color">1</field>
+    </record>
+
+    <record id="avance_opcion_colando_developer" model="reparacion.avance.opcion">
+        <field name="name">Colando developer</field>
+        <field name="message_text">Se está colando developer</field>
+        <field name="category">toner_revelado</field>
+        <field name="sequence">230</field>
+        <field name="allow_color">1</field>
+    </record>
+
+    <record id="avance_opcion_falta_developer" model="reparacion.avance.opcion">
+        <field name="name">Falta developer</field>
+        <field name="message_text">Falta developer</field>
+        <field name="category">toner_revelado</field>
+        <field name="sequence">240</field>
+        <field name="allow_color">1</field>
+    </record>
+
+    <record id="avance_opcion_developer_contaminado" model="reparacion.avance.opcion">
+        <field name="name">Developer contaminado</field>
+        <field name="message_text">Se detectó developer contaminado</field>
+        <field name="category">toner_revelado</field>
+        <field name="sequence">250</field>
+        <field name="allow_color">1</field>
+    </record>
+
+    <record id="avance_opcion_toner_derramado" model="reparacion.avance.opcion">
+        <field name="name">Tóner derramado</field>
+        <field name="message_text">Se detectó tóner derramado dentro del equipo</field>
+        <field name="category">toner_revelado</field>
+        <field name="sequence">260</field>
+        <field name="allow_color">1</field>
+    </record>
+
+
+    <!-- ========================================================= -->
+    <!-- OPCIONES: LIMPIEZA / MANTENIMIENTO                        -->
+    <!-- ========================================================= -->
+
+    <record id="avance_opcion_aspirando" model="reparacion.avance.opcion">
+        <field name="name">Aspirando</field>
+        <field name="message_text">Se está aspirando el equipo</field>
+        <field name="category">limpieza</field>
+        <field name="sequence">300</field>
+    </record>
+
+    <record id="avance_opcion_limpieza_profunda" model="reparacion.avance.opcion">
+        <field name="name">Limpieza interna profunda</field>
+        <field name="message_text">Se está realizando limpieza interna profunda</field>
+        <field name="category">limpieza</field>
+        <field name="sequence">310</field>
+    </record>
+
+    <record id="avance_opcion_limpieza_optico" model="reparacion.avance.opcion">
+        <field name="name">Limpieza de óptico</field>
+        <field name="message_text">Se está realizando limpieza del sistema óptico</field>
+        <field name="category">limpieza</field>
+        <field name="sequence">320</field>
+    </record>
+
+    <record id="avance_opcion_limpieza_sensores" model="reparacion.avance.opcion">
+        <field name="name">Limpieza de sensores</field>
+        <field name="message_text">Se está realizando limpieza de sensores</field>
+        <field name="category">limpieza</field>
+        <field name="sequence">330</field>
+    </record>
+
+    <record id="avance_opcion_contaminado_toner" model="reparacion.avance.opcion">
+        <field name="name">Equipo contaminado con tóner</field>
+        <field name="message_text">El equipo se encuentra contaminado con tóner</field>
+        <field name="category">limpieza</field>
+        <field name="sequence">340</field>
+    </record>
+
+    <record id="avance_opcion_contaminado_polvo" model="reparacion.avance.opcion">
+        <field name="name">Equipo contaminado con polvo</field>
+        <field name="message_text">El equipo se encuentra contaminado con polvo</field>
+        <field name="category">limpieza</field>
+        <field name="sequence">350</field>
+    </record>
+
+
+    <!-- ========================================================= -->
+    <!-- OPCIONES: IMAGEN / CALIDAD                                -->
+    <!-- ========================================================= -->
+
+    <record id="avance_opcion_puliendo_cilindro" model="reparacion.avance.opcion">
+        <field name="name">Puliendo cilindro</field>
+        <field name="message_text">Se está puliendo cilindro</field>
+        <field name="category">imagen</field>
+        <field name="sequence">400</field>
+        <field name="allow_color">1</field>
+    </record>
+
+    <record id="avance_opcion_puliendo_faja_transferencia" model="reparacion.avance.opcion">
+        <field name="name">Puliendo faja de transferencia</field>
+        <field name="message_text">Se está puliendo la faja de transferencia</field>
+        <field name="category">imagen</field>
+        <field name="sequence">410</field>
+    </record>
+
+    <record id="avance_opcion_mancha_impresion" model="reparacion.avance.opcion">
+        <field name="name">Mancha en impresión</field>
+        <field name="message_text">Presenta manchas en impresión</field>
+        <field name="category">imagen</field>
+        <field name="sequence">420</field>
+    </record>
+
+    <record id="avance_opcion_raya_impresion" model="reparacion.avance.opcion">
+        <field name="name">Raya en impresión</field>
+        <field name="message_text">Presenta rayas en impresión</field>
+        <field name="category">imagen</field>
+        <field name="sequence">430</field>
+    </record>
+
+    <record id="avance_opcion_imagen_borrosa" model="reparacion.avance.opcion">
+        <field name="name">Imagen borrosa</field>
+        <field name="message_text">Presenta imagen borrosa</field>
+        <field name="category">imagen</field>
+        <field name="sequence">440</field>
+    </record>
+
+    <record id="avance_opcion_probando_calidad" model="reparacion.avance.opcion">
+        <field name="name">Probando calidad</field>
+        <field name="message_text">Se están realizando pruebas de calidad</field>
+        <field name="category">imagen</field>
+        <field name="sequence">450</field>
+    </record>
+
+
+    <!-- ========================================================= -->
+    <!-- OPCIONES: FUSOR                                           -->
+    <!-- ========================================================= -->
+
+    <record id="avance_opcion_lubricando_fusor" model="reparacion.avance.opcion">
+        <field name="name">Lubricando fusor</field>
+        <field name="message_text">Se está lubricando fusor</field>
+        <field name="category">fusor</field>
+        <field name="sequence">500</field>
+    </record>
+
+    <record id="avance_opcion_fusor_revision" model="reparacion.avance.opcion">
+        <field name="name">Fusor en revisión</field>
+        <field name="message_text">El fusor se encuentra en revisión</field>
+        <field name="category">fusor</field>
+        <field name="sequence">510</field>
+    </record>
+
+    <record id="avance_opcion_faja_fusora_gastada" model="reparacion.avance.opcion">
+        <field name="name">Faja fusora gastada</field>
+        <field name="message_text">Se detectó faja fusora gastada</field>
+        <field name="category">fusor</field>
+        <field name="sequence">520</field>
+    </record>
+
+    <record id="avance_opcion_rodillo_presion_gastado" model="reparacion.avance.opcion">
+        <field name="name">Rodillo de presión gastado</field>
+        <field name="message_text">Se detectó rodillo de presión gastado</field>
+        <field name="category">fusor</field>
+        <field name="sequence">530</field>
+    </record>
+
+    <record id="avance_opcion_error_temperatura" model="reparacion.avance.opcion">
+        <field name="name">Error de temperatura</field>
+        <field name="message_text">Presenta error relacionado a temperatura</field>
+        <field name="category">fusor</field>
+        <field name="sequence">540</field>
+        <field name="require_detail">1</field>
+    </record>
+
+    <record id="avance_opcion_papel_arruga_fusor" model="reparacion.avance.opcion">
+        <field name="name">Papel se arruga en fusor</field>
+        <field name="message_text">El papel se arruga al pasar por el fusor</field>
+        <field name="category">fusor</field>
+        <field name="sequence">550</field>
+    </record>
+
+
+    <!-- ========================================================= -->
+    <!-- OPCIONES: PARTES / REPUESTOS                              -->
+    <!-- ========================================================= -->
+
+    <record id="avance_opcion_buscando_partes" model="reparacion.avance.opcion">
+        <field name="name">Buscando partes</field>
+        <field name="message_text">Se están buscando partes para continuar la reparación</field>
+        <field name="category">partes</field>
+        <field name="sequence">600</field>
+        <field name="allow_part_detail">1</field>
+    </record>
+
+    <record id="avance_opcion_parte_no_disponible" model="reparacion.avance.opcion">
+        <field name="name">Parte no disponible</field>
+        <field name="message_text">La parte requerida no se encuentra disponible</field>
+        <field name="category">partes</field>
+        <field name="sequence">610</field>
+        <field name="allow_part_detail">1</field>
+    </record>
+
+    <record id="avance_opcion_parte_en_almacen" model="reparacion.avance.opcion">
+        <field name="name">Parte en almacén pendiente de entrega</field>
+        <field name="message_text">La parte se encuentra pendiente de entrega por almacén</field>
+        <field name="category">partes</field>
+        <field name="sequence">620</field>
+        <field name="allow_part_detail">1</field>
+    </record>
+
+    <record id="avance_opcion_esperando_autorizacion" model="reparacion.avance.opcion">
+        <field name="name">Esperando autorización</field>
+        <field name="message_text">Se está esperando autorización para continuar</field>
+        <field name="category">partes</field>
+        <field name="sequence">630</field>
+        <field name="allow_part_detail">1</field>
+    </record>
+
+    <record id="avance_opcion_repuesto_solicitado" model="reparacion.avance.opcion">
+        <field name="name">Repuesto solicitado</field>
+        <field name="message_text">El repuesto ya fue solicitado</field>
+        <field name="category">partes</field>
+        <field name="sequence">640</field>
+        <field name="allow_part_detail">1</field>
+    </record>
+
+
+    <!-- ========================================================= -->
+    <!-- OPCIONES: SISTEMA / SOFTWARE                              -->
+    <!-- ========================================================= -->
+
+    <record id="avance_opcion_formateando" model="reparacion.avance.opcion">
+        <field name="name">Formateando</field>
+        <field name="message_text">Se está formateando el equipo</field>
+        <field name="category">sistema</field>
+        <field name="sequence">700</field>
+    </record>
+
+    <record id="avance_opcion_instalando_sistema" model="reparacion.avance.opcion">
+        <field name="name">Instalando sistema</field>
+        <field name="message_text">Se está instalando sistema</field>
+        <field name="category">sistema</field>
+        <field name="sequence">710</field>
+    </record>
+
+    <record id="avance_opcion_configurando_red" model="reparacion.avance.opcion">
+        <field name="name">Configurando red</field>
+        <field name="message_text">Se está configurando red</field>
+        <field name="category">sistema</field>
+        <field name="sequence">720</field>
+    </record>
+
+    <record id="avance_opcion_configurando_scaner" model="reparacion.avance.opcion">
+        <field name="name">Configurando escáner</field>
+        <field name="message_text">Se está configurando escáner</field>
+        <field name="category">sistema</field>
+        <field name="sequence">730</field>
+    </record>
+
+    <record id="avance_opcion_actualizando_firmware" model="reparacion.avance.opcion">
+        <field name="name">Actualizando firmware</field>
+        <field name="message_text">Se está actualizando firmware</field>
+        <field name="category">sistema</field>
+        <field name="sequence">740</field>
+    </record>
+
+    <record id="avance_opcion_probando_disco" model="reparacion.avance.opcion">
+        <field name="name">Probando disco duro</field>
+        <field name="message_text">Se está probando disco duro</field>
+        <field name="category">sistema</field>
+        <field name="sequence">750</field>
+    </record>
+
+
+    <!-- ========================================================= -->
+    <!-- OPCIONES: FINALIZADOR / ACCESORIOS                        -->
+    <!-- ========================================================= -->
+
+    <record id="avance_opcion_finalizador_no_funciona" model="reparacion.avance.opcion">
+        <field name="name">Finalizador no funciona</field>
+        <field name="message_text">El finalizador no funciona correctamente</field>
+        <field name="category">accesorios</field>
+        <field name="sequence">800</field>
+    </record>
+
+    <record id="avance_opcion_grapa_no_funciona" model="reparacion.avance.opcion">
+        <field name="name">Grapa no funciona</field>
+        <field name="message_text">El sistema de grapa no funciona correctamente</field>
+        <field name="category">accesorios</field>
+        <field name="sequence">810</field>
+    </record>
+
+    <record id="avance_opcion_atasco_finalizador" model="reparacion.avance.opcion">
+        <field name="name">Atasco en finalizador</field>
+        <field name="message_text">Presenta atasco en finalizador</field>
+        <field name="category">accesorios</field>
+        <field name="sequence">820</field>
+    </record>
+
+    <record id="avance_opcion_adf_no_alimenta" model="reparacion.avance.opcion">
+        <field name="name">ADF no alimenta</field>
+        <field name="message_text">El ADF no alimenta documentos correctamente</field>
+        <field name="category">accesorios</field>
+        <field name="sequence">830</field>
+    </record>
+
+    <record id="avance_opcion_duplex_no_funciona" model="reparacion.avance.opcion">
+        <field name="name">Dúplex no funciona</field>
+        <field name="message_text">El dúplex no funciona correctamente</field>
+        <field name="category">accesorios</field>
+        <field name="sequence">840</field>
+    </record>
+
+
+    <!-- ========================================================= -->
+    <!-- OPCIÓN: OTRO                                              -->
+    <!-- ========================================================= -->
+
+    <record id="avance_opcion_otro" model="reparacion.avance.opcion">
+        <field name="name">Otro</field>
+        <field name="message_text">Otro avance o incidencia</field>
+        <field name="category">otro</field>
+        <field name="sequence">900</field>
+        <field name="require_detail">1</field>
+    </record>
+
+
+    <!-- ========================================================= -->
+    <!-- CRON: ALERTAS DE AVANCE                                   -->
+    <!-- ========================================================= -->
+
+    <record id="ir_cron_reparaciones_alerta_avance" model="ir.cron">
+        <field name="name">Reparaciones: Alertar avances pendientes</field>
+        <field name="model_id" ref="model_reparaciones_reparaciones"/>
+        <field name="state">code</field>
+        <field name="code">model._cron_alertar_reparaciones_en_revision()</field>
+        <field name="interval_number">15</field>
+        <field name="interval_type">minutes</field>
+        <field name="numbercall">-1</field>
+        <field name="active">True</field>
+    </record>
+
+</odoo>

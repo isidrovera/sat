@@ -76,7 +76,8 @@
         'data/mantenimiento_zonas_lima.xml',
         "data/whatsapp_templates_rules.xml",
         'data/whatsapp_session_config_data.xml',
-        'data/whatsapp_session_cron_data.xml',     
+        'data/whatsapp_session_cron_data.xml',
+        'data/reparaciones_avance_data.xml'     
         'views/ventas.xml',   
         'views/modelos.xml',
         'views/repuestos_alquiler.xml',
@@ -171,7 +172,8 @@
         'views/permisos_templates.xml',
         "views/res_partner_views.xml",
         "views/whatsapp_views.xml",
-        'views/whatsapp_inbox_app_views.xml',   
+        'views/whatsapp_inbox_app_views.xml',
+        'views/reparaciones_avance_templates.xml',  
         'views/acciones_menus.xml',
         
     ],

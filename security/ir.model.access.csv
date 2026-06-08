@@ -286,3 +286,6 @@ access_whatsapp_template_user,whatsapp.template.user,model_whatsapp_template,bas
 access_whatsapp_media_user,whatsapp.media.user,model_whatsapp_media,base.group_user,1,1,1,1
 access_whatsapp_handoff_user,whatsapp.handoff.user,model_whatsapp_handoff,base.group_user,1,1,1,1
 access_whatsapp_outbox_user,whatsapp.outbox.user,model_whatsapp_outbox,base.group_user,1,1,1,1
+access_reparacion_avance_opcion_user,reparacion.avance.opcion user,model_reparacion_avance_opcion,base.group_user,1,1,1,1
+access_reparacion_avance_user,reparacion.avance user,model_reparacion_avance,base.group_user,1,1,1,1
+access_reparacion_avance_linea_user,reparacion.avance.linea user,model_reparacion_avance_linea,base.group_user,1,1,1,1
