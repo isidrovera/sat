@@ -499,8 +499,7 @@
         <field name="state">code</field>
         <field name="code">model._cron_alertar_reparaciones_en_revision()</field>
         <field name="interval_number">15</field>
-        <field name="interval_type">minutes</field>
-        <field name="numbercall">-1</field>
+        <field name="interval_type">minutes</field>        
         <field name="active">True</field>
     </record>
 
