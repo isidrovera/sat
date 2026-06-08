@@ -511,9 +511,35 @@ class ReparacionesAvanceAlertas(models.Model):
     jefe_area_user_id = fields.Many2one(
         'res.users',
         string='Jefe de área para alertas',
+        default=lambda self: self._default_jefe_area_user_id(),
         copy=False,
         help='Si se configura, se usará su móvil/partner para enviar alertas. Si está vacío, se usará el parámetro del sistema.',
     )
+    @api.model
+    def _default_jefe_area_user_id(self):
+        """
+        Usuario por defecto para jefe de área.
+
+        Prioridad:
+        1. Parámetro sat.reparaciones_avance_jefe_user_id
+        2. Usuario con nombre ISIDRO VERA POLO
+        """
+        ICP = self.env['ir.config_parameter'].sudo()
+        user_id = ICP.get_param('sat.reparaciones_avance_jefe_user_id')
+
+        if user_id:
+            try:
+                user = self.env['res.users'].sudo().browse(int(user_id))
+                if user.exists():
+                    return user.id
+            except Exception:
+                pass
+
+        user = self.env['res.users'].sudo().search([
+            ('name', '=ilike', 'ISIDRO VERA POLO')
+        ], limit=1)
+
+        return user.id if user else False
 
     @api.depends('avance_ids')
     def _compute_avance_count(self):
