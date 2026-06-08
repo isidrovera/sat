@@ -59,41 +59,33 @@ class ReparacionesAvanceController(http.Controller):
         """
         return value in ('1', 'true', 'True', 'on', 'yes', 'si', 'sí')
 
-    def _create_attachments_from_files(self, reparacion, files):
+    def _prepare_file_values_from_files(self, files):
         """
-        Crea adjuntos desde archivos subidos en la página.
-
-        Se adjuntan a la reparación para que queden vinculados en Odoo.
+        Prepara archivos subidos para que el modelo los guarde
+        en reparacion.avance.linea.
         """
-        attachment_ids = []
+        file_values = []
 
         if not files:
-            return attachment_ids
-
-        Attachment = request.env['ir.attachment'].sudo()
+            return file_values
 
         for file_storage in files:
             if not file_storage:
                 continue
 
-            filename = file_storage.filename or 'avance_reparacion.jpg'
+            filename = file_storage.filename or 'foto_avance.jpg'
             content = file_storage.read()
 
             if not content:
                 continue
 
-            attachment = Attachment.create({
+            file_values.append({
                 'name': filename,
-                'type': 'binary',
                 'datas': base64.b64encode(content),
-                'res_model': 'reparaciones.reparaciones',
-                'res_id': reparacion.id,
-                'mimetype': file_storage.content_type or 'application/octet-stream',
+                'mimetype': file_storage.content_type or 'image/jpeg',
             })
 
-            attachment_ids.append(attachment.id)
-
-        return attachment_ids
+        return file_values
 
     def _extract_option_data_from_post(self, post):
         """
@@ -222,10 +214,10 @@ class ReparacionesAvanceController(http.Controller):
             )
 
         files = request.httprequest.files.getlist('fotos')
-        attachment_ids = []
+        file_values = []
 
         try:
-            attachment_ids = self._create_attachments_from_files(reparacion, files)
+            file_values = self._prepare_file_values_from_files(files)
         except Exception as e:
             _logger.exception(
                 "[AVANCE REPARACIÓN] Error subiendo fotos para reparación ID %s: %s",
@@ -242,7 +234,7 @@ class ReparacionesAvanceController(http.Controller):
             avance = reparacion.create_avance_rapido(
                 option_data=option_data,
                 detalle=detalle,
-                attachment_ids=attachment_ids,
+                file_values=file_values,
                 notificar_asesora=notificar_asesora,
             )
         except Exception as e:

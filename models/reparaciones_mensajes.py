@@ -308,7 +308,105 @@ class ReparacionesWhatsapp(models.Model):
                 'success': False,
                 'error': error_msg,
             }
+    def send_whatsapp_media_message(self, phone, attachment, caption=False):
+        """
+        Envía una imagen/documento por WhatsApp usando el gateway.
 
+        Requiere que el gateway soporte envío media en base64.
+
+        Parámetros:
+        - sat.whatsapp_gateway_base_url
+        - sat.whatsapp_gateway_api_key
+        - sat.whatsapp_gateway_media_endpoint opcional
+        Por defecto: /api/send-media
+        """
+        try:
+            ICP = self.env['ir.config_parameter'].sudo()
+
+            base_url = ICP.get_param('sat.whatsapp_gateway_base_url')
+            api_key = ICP.get_param('sat.whatsapp_gateway_api_key')
+            media_endpoint = ICP.get_param(
+                'sat.whatsapp_gateway_media_endpoint',
+                '/api/send-media'
+            )
+
+            if not base_url:
+                return {
+                    'success': False,
+                    'error': 'Falta configurar sat.whatsapp_gateway_base_url',
+                }
+
+            if not api_key:
+                return {
+                    'success': False,
+                    'error': 'Falta configurar sat.whatsapp_gateway_api_key',
+                }
+
+            if not attachment or not attachment.datas:
+                return {
+                    'success': False,
+                    'error': 'Adjunto vacío o sin datos',
+                }
+
+            base_url = base_url.rstrip('/')
+            media_endpoint = media_endpoint if media_endpoint.startswith('/') else '/' + media_endpoint
+            url = f"{base_url}{media_endpoint}"
+
+            payload = {
+                'to': phone,
+                'caption': caption or '',
+                'filename': attachment.name or 'foto_avance.jpg',
+                'mimetype': attachment.mimetype or 'image/jpeg',
+                'mediaBase64': attachment.datas.decode() if isinstance(attachment.datas, bytes) else attachment.datas,
+            }
+
+            headers = {
+                'Content-Type': 'application/json',
+                'x-api-key': api_key,
+            }
+
+            response = requests.post(
+                url,
+                headers=headers,
+                json=payload,
+                timeout=60,
+            )
+
+            _logger.info(
+                "[WHATSAPP MEDIA] Código de estado API: %s",
+                response.status_code,
+            )
+            _logger.info(
+                "[WHATSAPP MEDIA] Respuesta API: %s",
+                response.text,
+            )
+
+            try:
+                response_json = response.json()
+            except Exception:
+                return {
+                    'success': False,
+                    'error': 'La respuesta media no contiene JSON válido',
+                    'status_code': response.status_code,
+                    'raw_response': response.text,
+                }
+
+            if response.status_code == 200 and response_json.get('success'):
+                return response_json
+
+            return {
+                'success': False,
+                'error': response_json.get('error', 'Error desconocido enviando media'),
+                'status_code': response.status_code,
+                'response': response_json,
+            }
+
+        except Exception as e:
+            _logger.exception("[WHATSAPP MEDIA] Error enviando media: %s", e)
+            return {
+                'success': False,
+                'error': str(e),
+            }
     # -------------------------------------------------------------------------
     # SELECTION LABELS
     # -------------------------------------------------------------------------

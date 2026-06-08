@@ -224,44 +224,42 @@ class ReparacionAvance(models.Model):
         self.ensure_one()
 
         reparacion = self.reparacion_id
-        gallery_url = reparacion._get_gallery_url() if hasattr(reparacion, '_get_gallery_url') else ''
-        record_url = reparacion._get_action_record_url() if hasattr(reparacion, '_get_action_record_url') else ''
 
         cliente = reparacion.cliente_id.name if reparacion.cliente_id else 'NA'
-        tecnico = reparacion.responsable_id.name if reparacion.responsable_id else 'NA'
         modelo = reparacion.nombre_maquina or 'NA'
         serie = reparacion.serie_id or 'NA'
 
         opciones = self._get_option_texts()
-        opciones_txt = "\n".join([f"- {item}" for item in opciones]) if opciones else "- Avance registrado"
+        motivo = "; ".join(opciones) if opciones else 'Demora registrada'
 
-        detalle = self.detalle or 'Sin detalle adicional.'
+        if self.detalle:
+            motivo = "%s - %s" % (motivo, self.detalle)
 
-        msg = f"""*Avance de reparación*
+        msg = f"""*Demora de reparación*
 
-*Cliente:* {cliente}
-*Modelo:* {modelo}
-*Serie:* {serie}
-*Técnico:* {tecnico}
-*Estado actual:* En revisión
+    *Cliente:* {cliente}
+    *Modelo:* {modelo}
+    *Serie:* {serie}
 
-*Avance reportado:*
-{opciones_txt}
-
-*Detalle:*
-{detalle}
-
-*Enlaces:*
-Fotos: {gallery_url}
-Registro: {record_url}
-"""
+    *Motivo:* {motivo}
+    *Estado:* Continúa en revisión.
+    """
 
         return msg
+    def _get_line_attachments(self):
+        self.ensure_one()
 
+        attachments = self.env['ir.attachment'].sudo().browse()
+
+        for line in self.line_ids:
+            attachments |= line.attachment_ids
+
+        return attachments
     def action_notificar_asesora(self):
         """
-        Notifica el avance a la asesora.
-        Esta acción se ejecuta cuando el jefe o usuario autorizado decide informar.
+        Notifica el avance a la asesora:
+        1) Envía texto corto.
+        2) Envía fotos como imagen por WhatsApp, no como link.
         """
         for record in self:
             reparacion = record.reparacion_id
@@ -272,22 +270,76 @@ Registro: {record_url}
             if not hasattr(reparacion, 'send_whatsapp_message'):
                 raise UserError(_("No se encontró el método send_whatsapp_message en reparaciones."))
 
+            if not hasattr(reparacion, 'send_whatsapp_media_message'):
+                raise UserError(_("No se encontró el método send_whatsapp_media_message en reparaciones."))
+
             if not reparacion.asesora_mobile_clean:
                 record.write({
                     'estado': 'error',
                     'error_notificacion': _('La asesora no tiene número móvil configurado.'),
                 })
                 reparacion.message_post(
-                    body=_(
-                        "⚠️ No se notificó el avance a la asesora porque no tiene número móvil configurado."
-                    )
+                    body=_("⚠️ No se notificó el avance a la asesora porque no tiene número móvil configurado.")
                 )
                 continue
 
+            phone = reparacion.asesora_mobile_clean
             msg = record._build_msg_asesora()
-            result = reparacion.send_whatsapp_message(reparacion.asesora_mobile_clean, msg)
 
-            if result.get('success'):
+            result_text = reparacion.send_whatsapp_message(phone, msg)
+
+            if not result_text.get('success'):
+                error = result_text.get('error', 'Error desconocido enviando texto')
+                record.write({
+                    'estado': 'error',
+                    'error_notificacion': error,
+                })
+                reparacion.message_post(
+                    body=_(
+                        "⚠️ No se pudo enviar el texto del avance a la asesora.<br/>"
+                        "<b>Error:</b> %(error)s"
+                    ) % {
+                        'error': error,
+                    }
+                )
+                continue
+
+            media_errors = []
+            attachments = record._get_line_attachments()
+
+            for attachment in attachments:
+                mimetype = attachment.mimetype or ''
+
+                if not mimetype.startswith('image/'):
+                    continue
+
+                result_media = reparacion.send_whatsapp_media_message(
+                    phone,
+                    attachment,
+                    caption=False,
+                )
+
+                if not result_media.get('success'):
+                    media_errors.append(
+                        "%s: %s" % (
+                            attachment.name,
+                            result_media.get('error', 'Error desconocido enviando imagen')
+                        )
+                    )
+
+            if media_errors:
+                record.write({
+                    'estado': 'error',
+                    'error_notificacion': "\n".join(media_errors),
+                })
+                reparacion.message_post(
+                    body=_(
+                        "⚠️ El texto del avance fue enviado, pero algunas fotos no se enviaron:<br/>%(errors)s"
+                    ) % {
+                        'errors': "<br/>".join(media_errors),
+                    }
+                )
+            else:
                 record.write({
                     'asesora_notificada': True,
                     'fecha_notificacion_asesora': fields.Datetime.now(),
@@ -297,25 +349,9 @@ Registro: {record_url}
 
                 reparacion.message_post(
                     body=_(
-                        "✅ Avance notificado a la asesora por WhatsApp.<br/>"
-                        "<b>Avance:</b> %(avance)s"
+                        "✅ Avance notificado a la asesora por WhatsApp con %(count)s foto(s)."
                     ) % {
-                        'avance': record.display_name,
-                    }
-                )
-            else:
-                error = result.get('error', 'Error desconocido')
-                record.write({
-                    'estado': 'error',
-                    'error_notificacion': error,
-                })
-
-                reparacion.message_post(
-                    body=_(
-                        "⚠️ No se pudo notificar el avance a la asesora.<br/>"
-                        "<b>Error:</b> %(error)s"
-                    ) % {
-                        'error': error,
+                        'count': len(attachments),
                     }
                 )
 
@@ -361,7 +397,13 @@ class ReparacionAvanceLinea(models.Model):
         string='Parte / repuesto',
         help='Ejemplo: fusor, cilindro, developer, faja de transferencia, rodillos, sensor, tarjeta, fuente, panel.',
     )
-
+    attachment_ids = fields.Many2many(
+        'ir.attachment',
+        'reparacion_avance_linea_ir_attachment_rel',
+        'linea_id',
+        'attachment_id',
+        string='Fotos',
+    )
     detalle = fields.Char(
         string='Detalle',
     )
@@ -654,17 +696,19 @@ class ReparacionesAvanceAlertas(models.Model):
             }
         )
 
-    def create_avance_rapido(self, option_data=None, detalle=False, attachment_ids=None, notificar_asesora=False):
+    def create_avance_rapido(self, option_data=None, detalle=False, attachment_ids=None, file_values=None, notificar_asesora=False):
         """
-        Método helper para que el controller cree avances rápido.
+        Crea avance rápido.
 
-        option_data esperado:
+        Las fotos se guardan en las líneas del avance.
+        No se guardan en reparaciones.foto.
+
+        file_values esperado:
         [
             {
-                'opcion_id': 1,
-                'color': 'black',
-                'parte': 'Fusor',
-                'detalle': '...'
+                'name': 'foto.jpg',
+                'datas': base64,
+                'mimetype': 'image/jpeg',
             }
         ]
         """
@@ -672,28 +716,76 @@ class ReparacionesAvanceAlertas(models.Model):
 
         option_data = option_data or []
         attachment_ids = attachment_ids or []
+        file_values = file_values or []
 
-        line_vals = []
+        avance = self.env['reparacion.avance'].sudo().create({
+            'reparacion_id': self.id,
+            'detalle': detalle or False,
+            'notificar_asesora': False,
+        })
+
+        created_lines = self.env['reparacion.avance.linea'].sudo().browse()
 
         for item in option_data:
             opcion_id = item.get('opcion_id')
             if not opcion_id:
                 continue
 
-            line_vals.append((0, 0, {
+            line = self.env['reparacion.avance.linea'].sudo().create({
+                'avance_id': avance.id,
                 'opcion_id': opcion_id,
                 'color': item.get('color') or False,
                 'parte': item.get('parte') or False,
                 'detalle': item.get('detalle') or False,
-            }))
+            })
 
-        avance = self.env['reparacion.avance'].sudo().create({
-            'reparacion_id': self.id,
-            'detalle': detalle or False,
-            'line_ids': line_vals,
-            'attachment_ids': [(6, 0, attachment_ids)] if attachment_ids else False,
-            'notificar_asesora': bool(notificar_asesora),
-        })
+            created_lines |= line
+
+        if not created_lines and detalle:
+            opcion = self.env.ref('sat.avance_opcion_otro', raise_if_not_found=False)
+            if opcion:
+                line = self.env['reparacion.avance.linea'].sudo().create({
+                    'avance_id': avance.id,
+                    'opcion_id': opcion.id,
+                    'detalle': detalle,
+                })
+                created_lines |= line
+
+        Attachment = self.env['ir.attachment'].sudo()
+
+        for line in created_lines:
+            line_attachment_ids = []
+
+            for attach_id in attachment_ids:
+                attachment = Attachment.browse(attach_id)
+                if attachment.exists():
+                    attachment.write({
+                        'res_model': 'reparacion.avance.linea',
+                        'res_id': line.id,
+                    })
+                    line_attachment_ids.append(attachment.id)
+
+            for file_data in file_values:
+                attachment = Attachment.create({
+                    'name': file_data.get('name') or 'foto_avance.jpg',
+                    'type': 'binary',
+                    'datas': file_data.get('datas'),
+                    'res_model': 'reparacion.avance.linea',
+                    'res_id': line.id,
+                    'mimetype': file_data.get('mimetype') or 'image/jpeg',
+                })
+                line_attachment_ids.append(attachment.id)
+
+            if line_attachment_ids:
+                line.write({
+                    'attachment_ids': [(6, 0, line_attachment_ids)],
+                })
+
+        if notificar_asesora:
+            avance.write({
+                'notificar_asesora': True,
+            })
+            avance.action_notificar_asesora()
 
         return avance
 
