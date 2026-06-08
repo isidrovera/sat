@@ -6,16 +6,16 @@ import { useState, onWillUpdateProps } from "@odoo/owl";
 import { useService } from "@web/core/utils/hooks";
 
 const ODOO_COLOR_MAP = {
-    0:  { bg: "#6c757d", border: "#adb5bd", text: "#495057" },
-    1:  { bg: "#e24b4a", border: "#e24b4a", text: "#ffffff" },
-    2:  { bg: "#f06050", border: "#f06050", text: "#ffffff" },
-    3:  { bg: "#ba7517", border: "#ba7517", text: "#ffffff" },
-    4:  { bg: "#cb9a4a", border: "#cb9a4a", text: "#ffffff" },
-    5:  { bg: "#9c5b9d", border: "#9c5b9d", text: "#ffffff" },
-    6:  { bg: "#5b899e", border: "#5b899e", text: "#ffffff" },
-    7:  { bg: "#1f6abb", border: "#1f6abb", text: "#ffffff" },
-    8:  { bg: "#4f8e8a", border: "#4f8e8a", text: "#ffffff" },
-    9:  { bg: "#9b59b6", border: "#9b59b6", text: "#ffffff" },
+    0: { bg: "#6c757d", border: "#adb5bd", text: "#495057" },
+    1: { bg: "#e24b4a", border: "#e24b4a", text: "#ffffff" },
+    2: { bg: "#f06050", border: "#f06050", text: "#ffffff" },
+    3: { bg: "#ba7517", border: "#ba7517", text: "#ffffff" },
+    4: { bg: "#cb9a4a", border: "#cb9a4a", text: "#ffffff" },
+    5: { bg: "#9c5b9d", border: "#9c5b9d", text: "#ffffff" },
+    6: { bg: "#5b899e", border: "#5b899e", text: "#ffffff" },
+    7: { bg: "#1f6abb", border: "#1f6abb", text: "#ffffff" },
+    8: { bg: "#4f8e8a", border: "#4f8e8a", text: "#ffffff" },
+    9: { bg: "#9b59b6", border: "#9b59b6", text: "#ffffff" },
     10: { bg: "#639922", border: "#639922", text: "#ffffff" },
     11: { bg: "#a8587b", border: "#a8587b", text: "#ffffff" },
 };
@@ -36,6 +36,18 @@ function toBool(value, defaultValue = false) {
     return Boolean(value);
 }
 
+function normalizeStringProp(value) {
+    if (value === undefined || value === null || value === "") {
+        return undefined;
+    }
+
+    if (value === false || value === "false" || value === "False") {
+        return undefined;
+    }
+
+    return String(value);
+}
+
 export class ChipSelectField extends Many2OneField {
     static template = "sat.ChipSelectField";
 
@@ -54,18 +66,11 @@ export class ChipSelectField extends Many2OneField {
         this.orm = useService("orm");
         this.notification = useService("notification");
 
-        /*
-         * Versión fija.
-         * No usamos select() porque puede chocar con métodos internos del Many2OneField.
-         * Usamos funciones puente para que no se pierda el contexto de this.
-         */
         this.onToggleOptions = (ev) => {
-            console.log("[ChipSelect][onToggleOptions] click flecha");
             return this.toggleOptions(ev);
         };
 
         this.onSelectOption = (option, ev) => {
-            console.log("[ChipSelect][onSelectOption] click opcion", option);
             return this.selectOption(option, ev);
         };
 
@@ -83,7 +88,7 @@ export class ChipSelectField extends Many2OneField {
 
         this._lastTypeId = this.filterTypeId;
 
-        console.log("[ChipSelect][setup VERSION AUTOSAVE 2026-05-18 FIX PROPS]", {
+        console.log("[ChipSelect][setup FIX PROPS STRING]", {
             fieldName: this.props.name,
             relation: this.relation,
             readonly: this.props.readonly,
@@ -94,7 +99,6 @@ export class ChipSelectField extends Many2OneField {
             recordModel: this.recordModel,
             recordResId: this.recordResId,
             currentId: this.currentId,
-            record: this.props.record,
             recordData: this.props.record && this.props.record.data,
         });
 
@@ -125,7 +129,7 @@ export class ChipSelectField extends Many2OneField {
         }
 
         if (Array.isArray(val)) {
-            return val[0];
+            return val[0] || null;
         }
 
         if (typeof val === "object") {
@@ -186,7 +190,7 @@ export class ChipSelectField extends Many2OneField {
         }
 
         if (Array.isArray(val)) {
-            return val[0];
+            return val[0] || null;
         }
 
         if (typeof val === "object") {
@@ -251,7 +255,6 @@ export class ChipSelectField extends Many2OneField {
             this.uiState.loaded = true;
 
             console.log("[ChipSelect][loadOptions] Opciones cargadas", records);
-
         } catch (err) {
             console.error("[ChipSelect][loadOptions] Error", err);
             this.uiState.options = [];
@@ -330,11 +333,6 @@ export class ChipSelectField extends Many2OneField {
     toggleOptions(ev = null) {
         this._stopEvent(ev);
 
-        /*
-         * No bloquear con props.readonly.
-         * En One2many/Kanban embebido Odoo puede mandar readonly=true
-         * aunque el campo se deba poder editar.
-         */
         this.uiState.expanded = !this.uiState.expanded;
 
         console.log("[ChipSelect][toggleOptions]", {
@@ -398,15 +396,9 @@ export class ChipSelectField extends Many2OneField {
 
         this._resetSaveStatus();
 
-        /*
-         * Primero marcamos localmente para que visualmente cambie sí o sí.
-         */
         this.uiState.localSelectedId = option.id;
         this.uiState.expanded = false;
 
-        /*
-         * Luego intentamos actualizar el record de Odoo.
-         */
         try {
             await this.props.record.update({
                 [this.props.name]: [option.id, option.name],
@@ -416,14 +408,13 @@ export class ChipSelectField extends Many2OneField {
                 selectedId: option.id,
                 selectedName: option.name,
             });
-
         } catch (updateErr) {
-            console.warn("[ChipSelect][selectOption] record.update FALLÓ, pero selección local queda marcada", updateErr);
+            console.warn(
+                "[ChipSelect][selectOption] record.update FALLÓ, pero selección local queda marcada",
+                updateErr
+            );
         }
 
-        /*
-         * Finalmente intentamos autoguardar.
-         */
         if (this.props.autoSave) {
             try {
                 await this._autoSaveOption(option);
@@ -432,9 +423,12 @@ export class ChipSelectField extends Many2OneField {
 
                 this._markSaveError("No guardado");
 
-                this.notification.add("No se pudo guardar automáticamente. Usa Guardar cambios antes de salir.", {
-                    type: "warning",
-                });
+                this.notification.add(
+                    "No se pudo guardar automáticamente. Usa Guardar cambios antes de salir.",
+                    {
+                        type: "warning",
+                    }
+                );
             }
         }
 
@@ -496,22 +490,23 @@ export const chipSelectField = {
             options?.autoSave ??
             true;
 
+        const rawFilterByField =
+            attrs?.filter_by_field ??
+            attrs?.filterByField ??
+            options?.filter_by_field ??
+            options?.filterByField;
+
+        const rawFilterRelation =
+            attrs?.filter_relation ??
+            attrs?.filterRelation ??
+            options?.filter_relation ??
+            options?.filterRelation;
+
+        const filterByField = normalizeStringProp(rawFilterByField);
+        const filterRelation = normalizeStringProp(rawFilterRelation);
+
         const finalProps = {
             ...props,
-
-            filterByField:
-                attrs?.filter_by_field ??
-                attrs?.filterByField ??
-                options?.filter_by_field ??
-                options?.filterByField ??
-                null,
-
-            filterRelation:
-                attrs?.filter_relation ??
-                attrs?.filterRelation ??
-                options?.filter_relation ??
-                options?.filterRelation ??
-                null,
 
             shortenLabels: toBool(
                 attrs?.shorten_labels ??
@@ -524,7 +519,21 @@ export const chipSelectField = {
             autoSave: toBool(rawAutoSave, true),
         };
 
-        console.log("[ChipSelect][extractProps]", finalProps);
+        /*
+         * Importante:
+         * No enviar filterByField ni filterRelation si están vacíos.
+         * En Owl, optional=true permite omitir la prop,
+         * pero si la mandas como null/false, falla porque espera String.
+         */
+        if (filterByField !== undefined) {
+            finalProps.filterByField = filterByField;
+        }
+
+        if (filterRelation !== undefined) {
+            finalProps.filterRelation = filterRelation;
+        }
+
+        console.log("[ChipSelect][extractProps FIX]", finalProps);
 
         return finalProps;
     },
