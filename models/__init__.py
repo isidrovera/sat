@@ -124,3 +124,4 @@ from . import reparaciones_avance_alertas
 from . import sat_notificacion_log
 from . import sat_revision_notificaciones
 from . import reparaciones_notificaciones
+from . import evaluacion_personal_dashboard
