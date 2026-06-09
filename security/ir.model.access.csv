@@ -25,8 +25,8 @@ access_reparacion_add_subparts_wizard_line_user,access.reparacion.add.subparts.w
 access_reparacion_comp_eval_user,reparacion.componente.evaluacion user,model_reparacion_componente_evaluacion,base.group_user,1,1,1,0
 access_reparacion_comp_eval_admin,reparacion.componente.evaluacion admin,model_reparacion_componente_evaluacion,base.group_system,1,1,1,1
 access_reparacion_componente_evaluacion_system,reparacion.componente.evaluacion.system,model_reparacion_componente_evaluacion,base.group_system,1,1,1,1
-access_reparacion_acc_eval_user,Reparación Acc Evaluación (user),model_reparacion_accesorio_evaluacion,base.group_user,1,1,1,0
-access_reparacion_acc_eval_system,Reparación Acc Evaluación (system),model_reparacion_accesorio_evaluacion,base.group_system,1,1,1,1
+access_reparacion_acc_eval_user,ReparaciÃ³n Acc EvaluaciÃ³n (user),model_reparacion_accesorio_evaluacion,base.group_user,1,1,1,0
+access_reparacion_acc_eval_system,ReparaciÃ³n Acc EvaluaciÃ³n (system),model_reparacion_accesorio_evaluacion,base.group_system,1,1,1,1
 access_tipo_maquina_user,tipo.maquina_user_access,model_tipo_maquina,base.group_user,1,1,0,0
 access_tipo_maquina_tecnico,tipo.maquina_tecnico_access,model_tipo_maquina,sat.sat_tecnica_group_user,1,1,0,0
 access_tipo_maquina_system,tipo.maquina_system_access,model_tipo_maquina,base.group_system,1,1,1,1
@@ -127,10 +127,10 @@ access_client_service_evaluation_user,client.service.evaluation.user,model_clien
 access_client_service_evaluation_manager,client.service.evaluation.manager,model_client_service_evaluation,base.group_system,1,1,1,1
 access_client_service_evaluation_portal,client_service_evaluation.portal_access,model_client_service_evaluation,base.group_portal,1,0,0,0
 access_inspeccion_resultado_user,inspeccion.resultado.user,model_inspeccion_resultado,base.group_system,1,1,1,1
-access_inspeccion_resultado_user,inspeccion.resultado.user,model_inspeccion_resultado,base.group_user,1,1,1,1
+access_inspeccion_resultado_user_user,inspeccion.resultado.user,model_inspeccion_resultado,base.group_user,1,1,1,1
 access_inspeccion_resultado_portal,inspeccion_resultado.portal_access,model_inspeccion_resultado,base.group_portal,1,0,0,0
 access_wizard_enviar_inspeccion_user,wizard.enviar.inspeccion.user,model_wizard_enviar_inspeccion,base.group_system,1,1,1,1
-access_wizard_enviar_inspeccion_user,wizard.enviar.inspeccion.user,model_wizard_enviar_inspeccion,base.group_user,1,1,1,1
+access_wizard_enviar_inspeccion_user_user,wizard.enviar.inspeccion.user,model_wizard_enviar_inspeccion,base.group_user,1,1,1,1
 access_wizard_enviar_inspeccion_portal,wizard_enviar_inspeccion.portal_access,model_wizard_enviar_inspeccion,base.group_portal,1,0,0,0
 access_wizard_asignar_componentes_user,wizard.asignar.componentes.user,model_wizard_asignar_componentes,base.group_user,1,1,1,1
 access_wizard_asignar_componentes_linea_user,wizard.asignar.componentes.linea.user,model_wizard_asignar_componentes_linea,base.group_user,1,1,1,1
@@ -211,8 +211,8 @@ access_sat_import_line_user,sat.import.line user,model_sat_import_line,base.grou
 access_sat_import_line_admin,sat.import.line admin,model_sat_import_line,base.group_system,1,1,1,1
 access_sat_import_assign_header_wizard_user,sat.import.assign.header.wizard user,model_sat_import_assign_header_wizard,base.group_user,1,1,1,0
 access_sat_import_assign_header_wizard_admin,sat.import.assign.header.wizard admin,model_sat_import_assign_header_wizard,base.group_system,1,1,1,1
-access_evaluacion_personal_detalle_diario_base,Evaluación Personal Detalle Diario - Base,model_evaluacion_personal_detalle_diario,base.group_user,1,0,0,0
-access_evaluacion_personal_detalle_diario_user,Evaluación Personal Detalle Diario - User,model_evaluacion_personal_detalle_diario,base.group_system,1,1,1,0
+access_evaluacion_personal_detalle_diario_base,EvaluaciÃ³n Personal Detalle Diario - Base,model_evaluacion_personal_detalle_diario,base.group_user,1,0,0,0
+access_evaluacion_personal_detalle_diario_user,EvaluaciÃ³n Personal Detalle Diario - User,model_evaluacion_personal_detalle_diario,base.group_system,1,1,1,0
 access_tecnico_dispositivo_gps_admin,tecnico.dispositivo.gps admin,model_tecnico_dispositivo_gps,base.group_system,1,1,1,1
 access_tecnico_dispositivo_gps_user,tecnico.dispositivo.gps user,model_tecnico_dispositivo_gps,base.group_user,1,0,0,0
 access_mdm_config_admin,mdm.config admin,model_mdm_config,base.group_system,1,1,1,1
@@ -239,8 +239,8 @@ access_ticket_retiro_token_user,ticket.retiro.token user,model_ticket_retiro_tok
 access_ticket_retiro_token_admin,ticket.retiro.token admin,model_ticket_retiro_token,base.group_system,1,1,1,1
 access_ticket_componente_evaluacion_user,ticket.componente.evaluacion user,model_ticket_componente_evaluacion,base.group_user,1,1,1,0
 access_ticket_componente_evaluacion_admin,ticket.componente.evaluacion admin,model_ticket_componente_evaluacion,base.group_system,1,1,1,1
-access_ticket_componente_evaluacion_user,ticket.componente.evaluacion user,model_ticket_componente_evaluacion,base.group_user,1,1,1,0
-access_ticket_componente_evaluacion_admin,ticket.componente.evaluacion admin,model_ticket_componente_evaluacion,base.group_system,1,1,1,1
+access_ticket_componente_evaluacion_user_user,ticket.componente.evaluacion user,model_ticket_componente_evaluacion,base.group_user,1,1,1,0
+access_ticket_componente_evaluacion_admin_system,ticket.componente.evaluacion admin,model_ticket_componente_evaluacion,base.group_system,1,1,1,1
 access_ticket_accesorio_evaluacion_user,ticket.accesorio.evaluacion user,model_ticket_accesorio_evaluacion,base.group_user,1,1,1,0
 access_ticket_accesorio_evaluacion_admin,ticket.accesorio.evaluacion admin,model_ticket_accesorio_evaluacion,base.group_system,1,1,1,1
 access_ticket_componente_intervencion_user,ticket.componente.intervencion user,model_ticket_componente_intervencion,base.group_user,1,1,1,0
@@ -289,3 +289,9 @@ access_whatsapp_outbox_user,whatsapp.outbox.user,model_whatsapp_outbox,base.grou
 access_reparacion_avance_opcion_user,reparacion.avance.opcion user,model_reparacion_avance_opcion,base.group_user,1,1,1,1
 access_reparacion_avance_user,reparacion.avance user,model_reparacion_avance,base.group_user,1,1,1,1
 access_reparacion_avance_linea_user,reparacion.avance.linea user,model_reparacion_avance_linea,base.group_user,1,1,1,1
+access_sat_dashboard_user_base,sat_dashboard.user.base,model_sat_dashboard,base.group_user,1,0,0,0
+access_evaluacion_personal_user_base,evaluacion_personal.user.base,model_evaluacion_personal,base.group_user,1,0,0,0
+access_taller_incidencia_user_base,taller_incidencia.user.base,model_taller_incidencia,base.group_user,1,0,0,0
+access_excel_import_model_user_base,excel_import_model.user.base,model_excel_import_model,base.group_user,1,0,0,0
+access_sale_order_user_base,sale_order.user.base,model_sale_order,base.group_user,1,0,0,0
+access_sale_order_line_user_base,sale_order_line.user.base,model_sale_order_line,base.group_user,1,0,0,0
