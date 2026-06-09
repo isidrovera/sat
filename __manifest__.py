@@ -278,6 +278,9 @@
             'sat/static/src/whatsapp_inbox/whatsapp_inbox_app.js',
             'sat/static/src/whatsapp_inbox/whatsapp_inbox_app.xml',
             'sat/static/src/whatsapp_inbox/whatsapp_inbox_app.scss',
+            'sat/static/src/js/evaluacion_personal_dashboard.js',
+            'sat/static/src/xml/evaluacion_personal_dashboard.xml',
+            'sat/static/src/scss/evaluacion_personal_dashboard.scss',
                 
                 
             # External Libraries existentes
