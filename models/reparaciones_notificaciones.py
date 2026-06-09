@@ -323,6 +323,7 @@ El equipo ya fue tomado por taller y se encuentra en revisión.
 
         cliente = self._sat_get_cliente_revision()
         cliente_name = cliente.name if cliente else 'NA'
+
         asesora_user = self._sat_get_asesora_user_revision()
         asesora = asesora_user.name if asesora_user else 'NA'
 
@@ -330,16 +331,47 @@ El equipo ya fue tomado por taller y se encuentra en revisión.
         serie = self._sat_get_serie_revision()
         tecnico = self.responsable_id.name if self.responsable_id else 'NA'
 
+        pdf_url = ''
+        gallery_url = ''
+
+        try:
+            if hasattr(self, 'generate_pdf_report_url'):
+                pdf_url = self.generate_pdf_report_url() or ''
+        except Exception as e:
+            _logger.warning(
+                "[SAT NOTIF FINALIZACION] No se pudo generar URL PDF reparación ID %s: %s",
+                self.id,
+                e,
+            )
+
+        try:
+            if hasattr(self, '_get_gallery_url'):
+                gallery_url = self._get_gallery_url() or ''
+        except Exception as e:
+            _logger.warning(
+                "[SAT NOTIF FINALIZACION] No se pudo generar URL galería reparación ID %s: %s",
+                self.id,
+                e,
+            )
+
+        extra_urls = ""
+
+        if pdf_url:
+            extra_urls += "\n*Reporte PDF:*\n%s\n" % pdf_url
+
+        if gallery_url:
+            extra_urls += "\n*Galería de fotos:*\n%s\n" % gallery_url
+
         msg = f"""*Reparación finalizada*
 
-*Cliente:* {cliente_name}
-*Asesora:* {asesora}
-*Modelo:* {modelo}
-*Serie:* {serie}
-*Técnico:* {tecnico}
+    *Cliente:* {cliente_name}
+    *Asesora:* {asesora}
+    *Modelo:* {modelo}
+    *Serie:* {serie}
+    *Técnico:* {tecnico}
 
-El equipo fue finalizado por taller.
-"""
+    El equipo fue finalizado por taller.
+    {extra_urls}"""
 
         return msg
 
