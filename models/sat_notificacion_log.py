@@ -1024,6 +1024,8 @@ class SatNotificacionLog(models.Model):
             })
         return True
 
+class SatSatNotificacionLog(models.Model):
+    _inherit = 'sat.sat'
 
     notificacion_log_ids = fields.One2many(
         'sat.notificacion.log',
