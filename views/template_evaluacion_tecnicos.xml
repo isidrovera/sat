@@ -1,546 +1,1652 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
-    <!-- Plantilla del Formulario de Evaluación -->
+    <!-- ========================================================= -->
+    <!-- Plantilla del Formulario de Evaluación                    -->
+    <!-- ========================================================= -->
     <template id="evaluation_form_template" name="Formulario de Evaluación">
         <t t-call="website.layout">
-            <div class="container py-4 py-md-5">
-                <div class="row justify-content-center">
-                    <div class="col-12 col-lg-10 col-xl-8">
-                        <!-- Card Principal -->
-                        <div class="card shadow-lg border-0 rounded-4 overflow-hidden">
-                            <!-- Encabezado con Gradiente -->
-                            <div class="card-header border-0 text-white py-4 py-md-5" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-                                <div class="text-center">
-                                    <div class="mb-3">
-                                        <i class="fa fa-star fa-3x opacity-75"></i>
-                                    </div>
-                                    <h2 class="mb-2 fw-bold">Evaluación de Servicio Técnico</h2>
-                                    <p class="mb-0 opacity-90">Su opinión es muy importante para mejorar nuestro servicio</p>
-                                </div>
-                            </div>
 
-                            <!-- Cuerpo del formulario -->
-                            <div class="card-body p-3 p-md-5">
-                                <!-- Detalles del Servicio -->
-                                <div class="alert alert-light border-0 shadow-sm rounded-3 mb-4">
-                                    <div class="row g-3">
-                                        <div class="col-12 col-md-4">
-                                            <div class="d-flex align-items-center">
-                                                <div class="bg-primary bg-opacity-10 rounded-circle p-2 me-3">
-                                                    <i class="fa fa-ticket text-primary"></i>
-                                                </div>
-                                                <div>
-                                                    <small class="text-muted d-block">Ticket</small>
-                                                    <strong class="d-block"><t t-esc="evaluation.ticket_id.name"/></strong>
-                                                </div>
-                                            </div>
+            <div class="o_eval_page">
+                <div class="container py-3 py-md-5">
+                    <div class="row justify-content-center">
+                        <div class="col-12 col-lg-10 col-xl-8">
+
+                            <!-- Card principal -->
+                            <div class="card o_eval_main_card shadow-lg border-0 rounded-4 overflow-hidden">
+
+                                <!-- Encabezado -->
+                                <div class="o_eval_header text-white">
+                                    <div class="text-center">
+                                        <div class="o_eval_header_icon mx-auto mb-3">
+                                            <i class="fa fa-star"></i>
                                         </div>
-                                        <div class="col-12 col-md-4">
-                                            <div class="d-flex align-items-center">
-                                                <div class="bg-success bg-opacity-10 rounded-circle p-2 me-3">
-                                                    <i class="fa fa-user text-success"></i>
-                                                </div>
-                                                <div>
-                                                    <small class="text-muted d-block">Técnico</small>
-                                                    <strong class="d-block"><t t-esc="evaluation.technician_id.name"/></strong>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="col-12 col-md-4">
-                                            <div class="d-flex align-items-center">
-                                                <div class="bg-info bg-opacity-10 rounded-circle p-2 me-3">
-                                                    <i class="fa fa-calendar text-info"></i>
-                                                </div>
-                                                <div>
-                                                    <small class="text-muted d-block">Fecha</small>
-                                                    <strong class="d-block"><t t-esc="evaluation.evaluation_date.strftime('%d/%m/%Y')"/></strong>
-                                                </div>
-                                            </div>
-                                        </div>
+                                        <h1 class="o_eval_title mb-2">
+                                            Evaluación de Servicio Técnico
+                                        </h1>
+                                        <p class="o_eval_subtitle mb-0">
+                                            Su opinión nos ayuda a mejorar la calidad de nuestro servicio.
+                                        </p>
                                     </div>
                                 </div>
 
-                                <form action="/evaluation/submit/process" method="post" class="needs-validation" novalidate="novalidate">
-                                    <input type="hidden" name="token" t-att-value="evaluation.token"/>
-                                    <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                <!-- Cuerpo -->
+                                <div class="card-body o_eval_body">
 
-                                    <!-- Sección de Evaluación -->
-                                    <div class="mb-4">
+                                    <!-- Detalles del servicio -->
+                                    <section class="o_service_summary mb-4">
+                                        <div class="row g-3">
+
+                                            <div class="col-12 col-md-4">
+                                                <div class="o_summary_item">
+                                                    <div class="o_summary_icon o_summary_icon_primary">
+                                                        <i class="fa fa-ticket"></i>
+                                                    </div>
+                                                    <div class="o_summary_text">
+                                                        <small>Servicios atendidos</small>
+                                                        <strong>
+                                                            <t t-esc="len(evaluation.ticket_ids)"/>
+                                                            ticket(s)
+                                                        </strong>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="col-12 col-md-4">
+                                                <div class="o_summary_item">
+                                                    <div class="o_summary_icon o_summary_icon_success">
+                                                        <i class="fa fa-user"></i>
+                                                    </div>
+                                                    <div class="o_summary_text">
+                                                        <small>Técnico</small>
+                                                        <strong>
+                                                            <t t-esc="evaluation.technician_id.name or 'No asignado'"/>
+                                                        </strong>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="col-12 col-md-4">
+                                                <div class="o_summary_item">
+                                                    <div class="o_summary_icon o_summary_icon_info">
+                                                        <i class="fa fa-calendar"></i>
+                                                    </div>
+                                                    <div class="o_summary_text">
+                                                        <small>Fecha de visita</small>
+                                                        <strong>
+                                                            <t t-if="evaluation.visit_date">
+                                                                <t t-esc="evaluation.visit_date.strftime('%d/%m/%Y')"/>
+                                                            </t>
+                                                            <t t-elif="evaluation.evaluation_date">
+                                                                <t t-esc="evaluation.evaluation_date.strftime('%d/%m/%Y')"/>
+                                                            </t>
+                                                            <t t-else="">
+                                                                No registrada
+                                                            </t>
+                                                        </strong>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                        </div>
+
+                                        <!-- Tickets / Equipos incluidos -->
+                                        <t t-if="evaluation.ticket_ids">
+                                            <div class="o_ticket_box mt-3">
+                                                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+                                                    <div class="o_section_caption">
+                                                        <i class="fa fa-print me-1"></i>
+                                                        Equipos o tickets incluidos en esta visita
+                                                    </div>
+                                                    <span class="badge rounded-pill text-bg-light border">
+                                                        <t t-esc="len(evaluation.ticket_ids)"/>
+                                                        registro(s)
+                                                    </span>
+                                                </div>
+
+                                                <div class="o_ticket_list">
+                                                    <t t-foreach="evaluation.ticket_ids" t-as="ticket">
+                                                        <div class="o_ticket_item">
+                                                            <div class="o_ticket_icon">
+                                                                <i class="fa fa-file-text-o"></i>
+                                                            </div>
+
+                                                            <div class="o_ticket_content">
+                                                                <strong class="o_ticket_name">
+                                                                    <t t-esc="ticket.name or 'Ticket sin nombre'"/>
+                                                                </strong>
+
+                                                                <t t-if="'product_alquiler' in ticket._fields and ticket.product_alquiler">
+                                                                    <span class="o_ticket_equipment">
+                                                                        <t t-esc="ticket.product_alquiler.display_name"/>
+                                                                    </span>
+                                                                </t>
+
+                                                                <t t-if="'tipo_servicio' in ticket._fields and ticket.tipo_servicio">
+                                                                    <small class="o_ticket_service">
+                                                                        Servicio:
+                                                                        <t t-esc="ticket.tipo_servicio"/>
+                                                                    </small>
+                                                                </t>
+                                                            </div>
+                                                        </div>
+                                                    </t>
+                                                </div>
+                                            </div>
+                                        </t>
+                                    </section>
+
+                                    <!-- Formulario -->
+                                    <form action="/evaluation/submit/process"
+                                          method="post"
+                                          class="needs-validation o_eval_form"
+                                          novalidate="novalidate">
+
+                                        <input type="hidden" name="token" t-att-value="evaluation.token"/>
+                                        <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+
+                                        <!-- Título de sección -->
                                         <div class="text-center mb-4">
-                                            <h5 class="fw-bold text-primary">Aspectos del Servicio</h5>
-                                            <p class="text-muted small">Por favor, califique cada aspecto del servicio recibido</p>
+                                            <span class="o_eval_badge">
+                                                Evaluación del servicio
+                                            </span>
+                                            <h2 class="o_eval_section_title mt-3 mb-2">
+                                                Califique la atención recibida
+                                            </h2>
+                                            <p class="text-muted mb-0">
+                                                Marque una opción por cada pregunta.
+                                            </p>
                                         </div>
 
-                                        <!-- Pregunta: Saludo y Presentación -->
-                                        <div class="question-card mb-4 p-3 p-md-4 border rounded-3 bg-light">
-                                            <label class="form-label fw-bold mb-3">
-                                                <i class="fa fa-handshake-o text-primary me-2"></i>
+                                        <!-- Saludo y presentación -->
+                                        <div class="o_question_card">
+                                            <label class="o_question_title">
+                                                <i class="fa fa-handshake-o"></i>
                                                 ¿Cómo califica el saludo y presentación del técnico?
                                             </label>
-                                            <div class="rating-options">
+
+                                            <div class="o_option_list">
                                                 <t t-foreach="[('1', 'No saludó ni se presentó'),
-                                                           ('2', 'Saludo y presentación básica'),
-                                                           ('3', 'Saludo correcto y profesional'),
-                                                           ('4', 'Saludo profesional y actitud positiva'),
-                                                           ('5', 'Saludo excelente, mostró cortesía y empatía')]" t-as="option">
-                                                    <div class="form-check mb-2">
-                                                        <input type="radio" class="form-check-input" required="1"
-                                                            name="saludo_presentacion" t-att-value="option[0]"
-                                                            t-att-id="'saludo_presentacion_' + option[0]"/>
-                                                        <label class="form-check-label w-100 ps-2" t-att-for="'saludo_presentacion_' + option[0]">
-                                                            <span class="badge bg-primary bg-opacity-10 text-primary me-2"><t t-esc="option[0]"/></span>
-                                                            <t t-esc="option[1]"/>
+                                                               ('2', 'Saludo y presentación básica'),
+                                                               ('3', 'Saludo correcto y profesional'),
+                                                               ('4', 'Saludo profesional y actitud positiva'),
+                                                               ('5', 'Saludo excelente, mostró cortesía y empatía')]"
+                                                   t-as="option">
+                                                    <div class="o_radio_option">
+                                                        <input type="radio"
+                                                               class="form-check-input"
+                                                               required="1"
+                                                               name="saludo_presentacion"
+                                                               t-att-value="option[0]"
+                                                               t-att-id="'saludo_presentacion_' + option[0]"/>
+                                                        <label t-att-for="'saludo_presentacion_' + option[0]">
+                                                            <span class="o_number_badge">
+                                                                <t t-esc="option[0]"/>
+                                                            </span>
+                                                            <span>
+                                                                <t t-esc="option[1]"/>
+                                                            </span>
                                                         </label>
                                                     </div>
                                                 </t>
-                                                <div class="invalid-feedback">Por favor, seleccione una opción</div>
+                                            </div>
+
+                                            <div class="invalid-feedback">
+                                                Por favor, seleccione una opción.
                                             </div>
                                         </div>
 
-                                        <!-- Pregunta: Revisión del Problema -->
-                                        <div class="question-card mb-4 p-3 p-md-4 border rounded-3 bg-light">
-                                            <label class="form-label fw-bold mb-3">
-                                                <i class="fa fa-search text-primary me-2"></i>
+                                        <!-- Diagnóstico -->
+                                        <div class="o_question_card">
+                                            <label class="o_question_title">
+                                                <i class="fa fa-search"></i>
                                                 ¿Cómo califica la revisión del problema?
                                             </label>
-                                            <div class="rating-options rating-stars">
-                                                <div class="d-flex justify-content-center gap-3 flex-wrap">
-                                                    <t t-foreach="[('1', 'Malo'), ('2', 'Regular'), ('3', 'Bueno'), ('4', 'Muy Bueno'), ('5', 'Excelente')]" t-as="option">
-                                                        <div class="form-check text-center">
-                                                            <input type="radio" class="form-check-input d-none star-input" required="1"
-                                                                name="diagnostico_problema" t-att-value="option[0]"
-                                                                t-att-id="'diagnostico_problema_' + option[0]"/>
-                                                            <label class="form-check-label star-label" t-att-for="'diagnostico_problema_' + option[0]">
-                                                                <div class="star-wrapper">
-                                                                    <i class="fa fa-star fa-2x"></i>
-                                                                </div>
-                                                                <small class="d-block mt-2"><t t-esc="option[1]"/></small>
-                                                            </label>
-                                                        </div>
-                                                    </t>
-                                                </div>
-                                                <div class="invalid-feedback text-center">Por favor, seleccione una opción</div>
+
+                                            <div class="o_star_rating">
+                                                <t t-foreach="[('1', 'Malo'), ('2', 'Regular'), ('3', 'Bueno'), ('4', 'Muy bueno'), ('5', 'Excelente')]"
+                                                   t-as="option">
+                                                    <div class="o_star_option">
+                                                        <input type="radio"
+                                                               class="star-input"
+                                                               required="1"
+                                                               name="diagnostico_problema"
+                                                               t-att-value="option[0]"
+                                                               t-att-id="'diagnostico_problema_' + option[0]"/>
+                                                        <label t-att-for="'diagnostico_problema_' + option[0]">
+                                                            <i class="fa fa-star"></i>
+                                                            <small>
+                                                                <t t-esc="option[1]"/>
+                                                            </small>
+                                                        </label>
+                                                    </div>
+                                                </t>
+                                            </div>
+
+                                            <div class="invalid-feedback text-center">
+                                                Por favor, seleccione una opción.
                                             </div>
                                         </div>
 
-                                        <!-- Pregunta: Solución Brindada -->
-                                        <div class="question-card mb-4 p-3 p-md-4 border rounded-3 bg-light">
-                                            <label class="form-label fw-bold mb-3">
-                                                <i class="fa fa-check-circle text-primary me-2"></i>
+                                        <!-- Solución -->
+                                        <div class="o_question_card">
+                                            <label class="o_question_title">
+                                                <i class="fa fa-check-circle"></i>
                                                 ¿Cómo califica la solución brindada?
                                             </label>
-                                            <div class="rating-options rating-stars">
-                                                <div class="d-flex justify-content-center gap-3 flex-wrap">
-                                                    <t t-foreach="[('1', 'Malo'), ('2', 'Regular'), ('3', 'Bueno'), ('4', 'Muy Bueno'), ('5', 'Excelente')]" t-as="option">
-                                                        <div class="form-check text-center">
-                                                            <input type="radio" class="form-check-input d-none star-input" required="1"
-                                                                name="solucion_problema" t-att-value="option[0]"
-                                                                t-att-id="'solucion_problema_' + option[0]"/>
-                                                            <label class="form-check-label star-label" t-att-for="'solucion_problema_' + option[0]">
-                                                                <div class="star-wrapper">
-                                                                    <i class="fa fa-star fa-2x"></i>
-                                                                </div>
-                                                                <small class="d-block mt-2"><t t-esc="option[1]"/></small>
-                                                            </label>
-                                                        </div>
-                                                    </t>
-                                                </div>
-                                                <div class="invalid-feedback text-center">Por favor, seleccione una opción</div>
+
+                                            <div class="o_star_rating">
+                                                <t t-foreach="[('1', 'Malo'), ('2', 'Regular'), ('3', 'Bueno'), ('4', 'Muy bueno'), ('5', 'Excelente')]"
+                                                   t-as="option">
+                                                    <div class="o_star_option">
+                                                        <input type="radio"
+                                                               class="star-input"
+                                                               required="1"
+                                                               name="solucion_problema"
+                                                               t-att-value="option[0]"
+                                                               t-att-id="'solucion_problema_' + option[0]"/>
+                                                        <label t-att-for="'solucion_problema_' + option[0]">
+                                                            <i class="fa fa-star"></i>
+                                                            <small>
+                                                                <t t-esc="option[1]"/>
+                                                            </small>
+                                                        </label>
+                                                    </div>
+                                                </t>
+                                            </div>
+
+                                            <div class="invalid-feedback text-center">
+                                                Por favor, seleccione una opción.
                                             </div>
                                         </div>
 
-                                        <!-- Pregunta: Explicación del Trabajo -->
-                                        <div class="question-card mb-4 p-3 p-md-4 border rounded-3 bg-light">
-                                            <label class="form-label fw-bold mb-3">
-                                                <i class="fa fa-comments text-primary me-2"></i>
+                                        <!-- Explicación -->
+                                        <div class="o_question_card">
+                                            <label class="o_question_title">
+                                                <i class="fa fa-comments"></i>
                                                 ¿Cómo califica la explicación del trabajo realizado?
                                             </label>
-                                            <div class="rating-options rating-stars">
-                                                <div class="d-flex justify-content-center gap-3 flex-wrap">
-                                                    <t t-foreach="[('1', 'Malo'), ('2', 'Regular'), ('3', 'Bueno'), ('4', 'Muy Bueno'), ('5', 'Excelente')]" t-as="option">
-                                                        <div class="form-check text-center">
-                                                            <input type="radio" class="form-check-input d-none star-input" required="1"
-                                                                name="explicacion_trabajo" t-att-value="option[0]"
-                                                                t-att-id="'explicacion_trabajo_' + option[0]"/>
-                                                            <label class="form-check-label star-label" t-att-for="'explicacion_trabajo_' + option[0]">
-                                                                <div class="star-wrapper">
-                                                                    <i class="fa fa-star fa-2x"></i>
-                                                                </div>
-                                                                <small class="d-block mt-2"><t t-esc="option[1]"/></small>
-                                                            </label>
-                                                        </div>
-                                                    </t>
-                                                </div>
-                                                <div class="invalid-feedback text-center">Por favor, seleccione una opción</div>
+
+                                            <div class="o_star_rating">
+                                                <t t-foreach="[('1', 'Malo'), ('2', 'Regular'), ('3', 'Bueno'), ('4', 'Muy bueno'), ('5', 'Excelente')]"
+                                                   t-as="option">
+                                                    <div class="o_star_option">
+                                                        <input type="radio"
+                                                               class="star-input"
+                                                               required="1"
+                                                               name="explicacion_trabajo"
+                                                               t-att-value="option[0]"
+                                                               t-att-id="'explicacion_trabajo_' + option[0]"/>
+                                                        <label t-att-for="'explicacion_trabajo_' + option[0]">
+                                                            <i class="fa fa-star"></i>
+                                                            <small>
+                                                                <t t-esc="option[1]"/>
+                                                            </small>
+                                                        </label>
+                                                    </div>
+                                                </t>
+                                            </div>
+
+                                            <div class="invalid-feedback text-center">
+                                                Por favor, seleccione una opción.
                                             </div>
                                         </div>
 
-                                        <!-- Pregunta: Limpieza y Orden -->
-                                        <div class="question-card mb-4 p-3 p-md-4 border rounded-3 bg-light">
-                                            <label class="form-label fw-bold mb-3">
-                                                <i class="fa fa-magic text-primary me-2"></i>
+                                        <!-- Limpieza -->
+                                        <div class="o_question_card">
+                                            <label class="o_question_title">
+                                                <i class="fa fa-magic"></i>
                                                 ¿Cómo califica la limpieza y orden después del servicio?
                                             </label>
-                                            <div class="rating-options rating-stars">
-                                                <div class="d-flex justify-content-center gap-3 flex-wrap">
-                                                    <t t-foreach="[('1', 'Malo'), ('2', 'Regular'), ('3', 'Bueno'), ('4', 'Muy Bueno'), ('5', 'Excelente')]" t-as="option">
-                                                        <div class="form-check text-center">
-                                                            <input type="radio" class="form-check-input d-none star-input" required="1"
-                                                                name="limpieza_orden" t-att-value="option[0]"
-                                                                t-att-id="'limpieza_orden_' + option[0]"/>
-                                                            <label class="form-check-label star-label" t-att-for="'limpieza_orden_' + option[0]">
-                                                                <div class="star-wrapper">
-                                                                    <i class="fa fa-star fa-2x"></i>
-                                                                </div>
-                                                                <small class="d-block mt-2"><t t-esc="option[1]"/></small>
-                                                            </label>
-                                                        </div>
-                                                    </t>
-                                                </div>
-                                                <div class="invalid-feedback text-center">Por favor, seleccione una opción</div>
-                                            </div>
-                                        </div>
 
-                                        <!-- Pregunta: Conformidad de Retiro -->
-                                        <div class="question-card mb-4 p-3 p-md-4 border rounded-3 bg-light">
-                                            <label class="form-label fw-bold mb-3">
-                                                <i class="fa fa-sign-out text-primary me-2"></i>
-                                                ¿El técnico obtuvo la conformidad antes de retirarse?
-                                            </label>
-                                            <div class="rating-options">
-                                                <t t-foreach="[('con_visto', 'Con Visto Bueno', 'success'),
-                                                           ('sin_visto', 'Sin Visto Bueno', 'warning'),
-                                                           ('sin_aviso', 'Se Retiró Sin Avisar', 'danger')]" t-as="option">
-                                                    <div class="form-check mb-2">
-                                                        <input type="radio" class="form-check-input" required="1"
-                                                            name="retiro_tecnico" t-att-value="option[0]"
-                                                            t-att-id="'retiro_tecnico_' + option[0]"/>
-                                                        <label class="form-check-label w-100 ps-2" t-att-for="'retiro_tecnico_' + option[0]">
-                                                            <span t-att-class="'badge bg-' + option[2] + ' bg-opacity-10 text-' + option[2] + ' me-2'">
-                                                                <i t-att-class="'fa fa-' + ('check' if option[0] == 'con_visto' else 'exclamation-triangle')"></i>
-                                                            </span>
-                                                            <t t-esc="option[1]"/>
+                                            <div class="o_star_rating">
+                                                <t t-foreach="[('1', 'Malo'), ('2', 'Regular'), ('3', 'Bueno'), ('4', 'Muy bueno'), ('5', 'Excelente')]"
+                                                   t-as="option">
+                                                    <div class="o_star_option">
+                                                        <input type="radio"
+                                                               class="star-input"
+                                                               required="1"
+                                                               name="limpieza_orden"
+                                                               t-att-value="option[0]"
+                                                               t-att-id="'limpieza_orden_' + option[0]"/>
+                                                        <label t-att-for="'limpieza_orden_' + option[0]">
+                                                            <i class="fa fa-star"></i>
+                                                            <small>
+                                                                <t t-esc="option[1]"/>
+                                                            </small>
                                                         </label>
                                                     </div>
                                                 </t>
-                                                <div class="invalid-feedback">Por favor, seleccione una opción</div>
+                                            </div>
+
+                                            <div class="invalid-feedback text-center">
+                                                Por favor, seleccione una opción.
                                             </div>
                                         </div>
 
-                                        <!-- Preguntas Sí/No -->
-                                        <div class="row g-3">
-                                            <!-- Pregunta: Realización de Pruebas -->
-                                            <div class="col-12 col-md-6">
-                                                <div class="question-card h-100 p-3 p-md-4 border rounded-3 bg-light">
-                                                    <label class="form-label fw-bold mb-3">
-                                                        <i class="fa fa-flask text-primary me-2"></i>
-                                                        ¿Realizó pruebas del equipo?
-                                                    </label>
-                                                    <div class="rating-options d-flex gap-2">
-                                                        <div class="form-check flex-fill">
-                                                            <input type="radio" class="btn-check" required="1"
-                                                                name="realizo_pruebas" value="si" id="realizo_pruebas_si"/>
-                                                            <label class="btn btn-outline-success w-100" for="realizo_pruebas_si">
-                                                                <i class="fa fa-check me-2"></i>Sí
-                                                            </label>
-                                                        </div>
-                                                        <div class="form-check flex-fill">
-                                                            <input type="radio" class="btn-check" required="1"
-                                                                name="realizo_pruebas" value="no" id="realizo_pruebas_no"/>
-                                                            <label class="btn btn-outline-danger w-100" for="realizo_pruebas_no">
-                                                                <i class="fa fa-times me-2"></i>No
-                                                            </label>
-                                                        </div>
-                                                    </div>
-                                                    <div class="invalid-feedback">Por favor, seleccione una opción</div>
-                                                </div>
-                                            </div>
-
-                                            <!-- Pregunta: Consulta de Suministros -->
-                                            <div class="col-12 col-md-6">
-                                                <div class="question-card h-100 p-3 p-md-4 border rounded-3 bg-light">
-                                                    <label class="form-label fw-bold mb-3">
-                                                        <i class="fa fa-cubes text-primary me-2"></i>
-                                                        ¿Consultó sobre el stock de suministros?
-                                                    </label>
-                                                    <div class="rating-options d-flex gap-2">
-                                                        <div class="form-check flex-fill">
-                                                            <input type="radio" class="btn-check" required="1"
-                                                                name="consulto_suministros" value="si" id="consulto_suministros_si"/>
-                                                            <label class="btn btn-outline-success w-100" for="consulto_suministros_si">
-                                                                <i class="fa fa-check me-2"></i>Sí
-                                                            </label>
-                                                        </div>
-                                                        <div class="form-check flex-fill">
-                                                            <input type="radio" class="btn-check" required="1"
-                                                                name="consulto_suministros" value="no" id="consulto_suministros_no"/>
-                                                            <label class="btn btn-outline-danger w-100" for="consulto_suministros_no">
-                                                                <i class="fa fa-times me-2"></i>No
-                                                            </label>
-                                                        </div>
-                                                    </div>
-                                                    <div class="invalid-feedback">Por favor, seleccione una opción</div>
-                                                </div>
-                                            </div>
-
-                                            <!-- Pregunta: Consulta de Problemas Adicionales -->
-                                            <div class="col-12 col-md-6">
-                                                <div class="question-card h-100 p-3 p-md-4 border rounded-3 bg-light">
-                                                    <label class="form-label fw-bold mb-3">
-                                                        <i class="fa fa-question-circle text-primary me-2"></i>
-                                                        ¿Preguntó si había problemas adicionales?
-                                                    </label>
-                                                    <div class="rating-options d-flex gap-2">
-                                                        <div class="form-check flex-fill">
-                                                            <input type="radio" class="btn-check" required="1"
-                                                                name="consulto_problemas" value="si" id="consulto_problemas_si"/>
-                                                            <label class="btn btn-outline-success w-100" for="consulto_problemas_si">
-                                                                <i class="fa fa-check me-2"></i>Sí
-                                                            </label>
-                                                        </div>
-                                                        <div class="form-check flex-fill">
-                                                            <input type="radio" class="btn-check" required="1"
-                                                                name="consulto_problemas" value="no" id="consulto_problemas_no"/>
-                                                            <label class="btn btn-outline-danger w-100" for="consulto_problemas_no">
-                                                                <i class="fa fa-times me-2"></i>No
-                                                            </label>
-                                                        </div>
-                                                    </div>
-                                                    <div class="invalid-feedback">Por favor, seleccione una opción</div>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <!-- Pregunta: Revisión de Equipos Adicionales -->
-                                        <div class="question-card mt-3 mb-4 p-3 p-md-4 border rounded-3 bg-light">
-                                            <label class="form-label fw-bold mb-3">
-                                                <i class="fa fa-desktop text-primary me-2"></i>
+                                        <!-- Revisión adicional -->
+                                        <div class="o_question_card">
+                                            <label class="o_question_title">
+                                                <i class="fa fa-desktop"></i>
                                                 ¿Realizó revisión de equipos adicionales?
                                             </label>
-                                            <div class="rating-options">
-                                                <t t-foreach="[
-                                                    ('1', 'No revisó otros equipos ni consultó sobre más impresoras'),
-                                                    ('2', 'Revisión básica - Solo preguntó si había más equipos'),
-                                                    ('3', 'Bueno - Verificó estado básico de otros equipos'),
-                                                    ('4', 'Muy Bueno - Revisó estado y funcionamiento de equipos adicionales'),
-                                                    ('5', 'Excelente - Revisión completa de todos los equipos e impresoras, verificó operatividad')]"
-                                                    t-as="option">
-                                                    <div class="form-check mb-2">
-                                                        <input type="radio" class="form-check-input" required="1"
-                                                            name="revision_adicional" t-att-value="option[0]"
-                                                            t-att-id="'revision_adicional_' + option[0]"/>
-                                                        <label class="form-check-label w-100 ps-2" t-att-for="'revision_adicional_' + option[0]">
-                                                            <span class="badge bg-primary bg-opacity-10 text-primary me-2"><t t-esc="option[0]"/></span>
-                                                            <t t-esc="option[1]"/>
+
+                                            <div class="o_option_list">
+                                                <t t-foreach="[('1', 'No revisó otros equipos ni consultó sobre más impresoras'),
+                                                               ('2', 'Revisión básica - Solo preguntó si había más equipos'),
+                                                               ('3', 'Bueno - Verificó estado básico de otros equipos'),
+                                                               ('4', 'Muy bueno - Revisó estado y funcionamiento de equipos adicionales'),
+                                                               ('5', 'Excelente - Revisión completa de todos los equipos e impresoras, verificó operatividad')]"
+                                                   t-as="option">
+                                                    <div class="o_radio_option">
+                                                        <input type="radio"
+                                                               class="form-check-input"
+                                                               required="1"
+                                                               name="revision_adicional"
+                                                               t-att-value="option[0]"
+                                                               t-att-id="'revision_adicional_' + option[0]"/>
+                                                        <label t-att-for="'revision_adicional_' + option[0]">
+                                                            <span class="o_number_badge">
+                                                                <t t-esc="option[0]"/>
+                                                            </span>
+                                                            <span>
+                                                                <t t-esc="option[1]"/>
+                                                            </span>
                                                         </label>
                                                     </div>
                                                 </t>
-                                                <div class="invalid-feedback">Por favor, seleccione una opción</div>
+                                            </div>
+
+                                            <div class="invalid-feedback">
+                                                Por favor, seleccione una opción.
+                                            </div>
+                                        </div>
+
+                                        <!-- Conformidad de retiro -->
+                                        <div class="o_question_card">
+                                            <label class="o_question_title">
+                                                <i class="fa fa-sign-out"></i>
+                                                ¿El técnico obtuvo la conformidad antes de retirarse?
+                                            </label>
+
+                                            <div class="o_option_list">
+                                                <t t-foreach="[('con_visto', 'Con visto bueno', 'check', 'success'),
+                                                               ('sin_visto', 'Sin visto bueno', 'exclamation-triangle', 'warning'),
+                                                               ('sin_aviso', 'Se retiró sin avisar', 'times', 'danger')]"
+                                                   t-as="option">
+                                                    <div class="o_radio_option o_radio_option_status">
+                                                        <input type="radio"
+                                                               class="form-check-input"
+                                                               required="1"
+                                                               name="retiro_tecnico"
+                                                               t-att-value="option[0]"
+                                                               t-att-id="'retiro_tecnico_' + option[0]"/>
+                                                        <label t-att-for="'retiro_tecnico_' + option[0]">
+                                                            <span t-att-class="'o_status_badge o_status_' + option[3]">
+                                                                <i t-att-class="'fa fa-' + option[2]"></i>
+                                                            </span>
+                                                            <span>
+                                                                <t t-esc="option[1]"/>
+                                                            </span>
+                                                        </label>
+                                                    </div>
+                                                </t>
+                                            </div>
+
+                                            <div class="invalid-feedback">
+                                                Por favor, seleccione una opción.
+                                            </div>
+                                        </div>
+
+                                        <!-- Preguntas rápidas -->
+                                        <div class="o_quick_questions">
+                                            <div class="row g-3">
+
+                                                <div class="col-12 col-md-4">
+                                                    <div class="o_question_card o_question_card_compact h-100">
+                                                        <label class="o_question_title">
+                                                            <i class="fa fa-flask"></i>
+                                                            ¿Realizó pruebas del equipo?
+                                                        </label>
+
+                                                        <div class="o_yes_no_group">
+                                                            <input type="radio"
+                                                                   class="btn-check"
+                                                                   required="1"
+                                                                   name="realizo_pruebas"
+                                                                   value="si"
+                                                                   id="realizo_pruebas_si"/>
+                                                            <label class="btn o_yes_btn" for="realizo_pruebas_si">
+                                                                <i class="fa fa-check"></i>
+                                                                Sí
+                                                            </label>
+
+                                                            <input type="radio"
+                                                                   class="btn-check"
+                                                                   required="1"
+                                                                   name="realizo_pruebas"
+                                                                   value="no"
+                                                                   id="realizo_pruebas_no"/>
+                                                            <label class="btn o_no_btn" for="realizo_pruebas_no">
+                                                                <i class="fa fa-times"></i>
+                                                                No
+                                                            </label>
+                                                        </div>
+
+                                                        <div class="invalid-feedback">
+                                                            Seleccione una opción.
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div class="col-12 col-md-4">
+                                                    <div class="o_question_card o_question_card_compact h-100">
+                                                        <label class="o_question_title">
+                                                            <i class="fa fa-cubes"></i>
+                                                            ¿Consultó sobre el stock de suministros?
+                                                        </label>
+
+                                                        <div class="o_yes_no_group">
+                                                            <input type="radio"
+                                                                   class="btn-check"
+                                                                   required="1"
+                                                                   name="consulto_suministros"
+                                                                   value="si"
+                                                                   id="consulto_suministros_si"/>
+                                                            <label class="btn o_yes_btn" for="consulto_suministros_si">
+                                                                <i class="fa fa-check"></i>
+                                                                Sí
+                                                            </label>
+
+                                                            <input type="radio"
+                                                                   class="btn-check"
+                                                                   required="1"
+                                                                   name="consulto_suministros"
+                                                                   value="no"
+                                                                   id="consulto_suministros_no"/>
+                                                            <label class="btn o_no_btn" for="consulto_suministros_no">
+                                                                <i class="fa fa-times"></i>
+                                                                No
+                                                            </label>
+                                                        </div>
+
+                                                        <div class="invalid-feedback">
+                                                            Seleccione una opción.
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div class="col-12 col-md-4">
+                                                    <div class="o_question_card o_question_card_compact h-100">
+                                                        <label class="o_question_title">
+                                                            <i class="fa fa-question-circle"></i>
+                                                            ¿Preguntó si había problemas adicionales?
+                                                        </label>
+
+                                                        <div class="o_yes_no_group">
+                                                            <input type="radio"
+                                                                   class="btn-check"
+                                                                   required="1"
+                                                                   name="consulto_problemas"
+                                                                   value="si"
+                                                                   id="consulto_problemas_si"/>
+                                                            <label class="btn o_yes_btn" for="consulto_problemas_si">
+                                                                <i class="fa fa-check"></i>
+                                                                Sí
+                                                            </label>
+
+                                                            <input type="radio"
+                                                                   class="btn-check"
+                                                                   required="1"
+                                                                   name="consulto_problemas"
+                                                                   value="no"
+                                                                   id="consulto_problemas_no"/>
+                                                            <label class="btn o_no_btn" for="consulto_problemas_no">
+                                                                <i class="fa fa-times"></i>
+                                                                No
+                                                            </label>
+                                                        </div>
+
+                                                        <div class="invalid-feedback">
+                                                            Seleccione una opción.
+                                                        </div>
+                                                    </div>
+                                                </div>
+
                                             </div>
                                         </div>
 
                                         <!-- Comentarios -->
-                                        <div class="question-card mb-4 p-3 p-md-4 border rounded-3 bg-light">
-                                            <label class="form-label fw-bold mb-3">
-                                                <i class="fa fa-comment text-primary me-2"></i>
-                                                Comentarios o Sugerencias
+                                        <div class="o_question_card">
+                                            <label class="o_question_title">
+                                                <i class="fa fa-comment"></i>
+                                                Comentarios o sugerencias
                                             </label>
-                                            <textarea name="comentarios" class="form-control border-2" rows="4"
-                                                placeholder="Comparta sus comentarios o sugerencias para ayudarnos a mejorar nuestro servicio..."></textarea>
-                                            <small class="text-muted mt-2 d-block">
-                                                <i class="fa fa-info-circle me-1"></i>Opcional: Sus comentarios son muy valiosos para nosotros
+
+                                            <textarea name="comentarios"
+                                                      class="form-control o_comment_box"
+                                                      rows="4"
+                                                      maxlength="1000"
+                                                      placeholder="Comparta sus comentarios o sugerencias para ayudarnos a mejorar nuestro servicio..."></textarea>
+
+                                            <small class="text-muted d-block mt-2">
+                                                <i class="fa fa-info-circle me-1"></i>
+                                                Opcional. Sus comentarios son muy valiosos para nosotros.
                                             </small>
                                         </div>
 
-                                        <!-- Botón de Envío -->
-                                        <div class="text-center mt-4">
-                                            <button type="submit" class="btn btn-lg px-5 py-3 fw-bold shadow-sm" 
-                                                style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; color: white;">
-                                                <i class="fa fa-paper-plane me-2"></i>Enviar Evaluación
+                                        <!-- Botón -->
+                                        <div class="o_submit_area text-center">
+                                            <button type="submit"
+                                                    class="btn o_submit_btn"
+                                                    id="o_eval_submit_btn">
+                                                <i class="fa fa-paper-plane me-2"></i>
+                                                Enviar evaluación
                                             </button>
+                                            <p class="text-muted small mt-3 mb-0">
+                                                La evaluación solo puede enviarse una vez.
+                                            </p>
                                         </div>
-                                    </div>
-                                </form>
+
+                                    </form>
+                                </div>
                             </div>
+
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- CSS Personalizado -->
+            <!-- ===================================================== -->
+            <!-- CSS Personalizado                                     -->
+            <!-- ===================================================== -->
             <style>
                 <![CDATA[
-                .star-label {
+                .o_eval_page {
+                    min-height: 100vh;
+                    background:
+                        radial-gradient(circle at top left, rgba(102, 126, 234, 0.12), transparent 30%),
+                        radial-gradient(circle at bottom right, rgba(118, 75, 162, 0.12), transparent 28%),
+                        #f6f7fb;
+                }
+
+                .o_eval_main_card {
+                    backdrop-filter: blur(8px);
+                    border-radius: 1.25rem !important;
+                }
+
+                .o_eval_header {
+                    padding: 2.2rem 1.25rem;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                }
+
+                .o_eval_header_icon {
+                    width: 72px;
+                    height: 72px;
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    background: rgba(255, 255, 255, 0.16);
+                    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+                }
+
+                .o_eval_header_icon i {
+                    font-size: 2.2rem;
+                    color: #fff;
+                }
+
+                .o_eval_title {
+                    font-size: clamp(1.55rem, 4vw, 2.25rem);
+                    font-weight: 800;
+                    letter-spacing: -0.03em;
+                }
+
+                .o_eval_subtitle {
+                    font-size: clamp(0.95rem, 2.5vw, 1.08rem);
+                    opacity: 0.92;
+                }
+
+                .o_eval_body {
+                    padding: 1.25rem;
+                }
+
+                .o_service_summary {
+                    background: #ffffff;
+                    border: 1px solid rgba(0, 0, 0, 0.06);
+                    border-radius: 1rem;
+                    padding: 1rem;
+                    box-shadow: 0 10px 25px rgba(15, 23, 42, 0.06);
+                }
+
+                .o_summary_item {
+                    height: 100%;
+                    display: flex;
+                    align-items: center;
+                    gap: 0.85rem;
+                    padding: 0.85rem;
+                    border-radius: 0.9rem;
+                    background: #f8fafc;
+                    border: 1px solid rgba(0, 0, 0, 0.04);
+                }
+
+                .o_summary_icon {
+                    width: 42px;
+                    height: 42px;
+                    min-width: 42px;
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+
+                .o_summary_icon_primary {
+                    background: rgba(102, 126, 234, 0.12);
+                    color: #667eea;
+                }
+
+                .o_summary_icon_success {
+                    background: rgba(25, 135, 84, 0.12);
+                    color: #198754;
+                }
+
+                .o_summary_icon_info {
+                    background: rgba(13, 202, 240, 0.14);
+                    color: #0dcaf0;
+                }
+
+                .o_summary_text small {
+                    display: block;
+                    color: #64748b;
+                    line-height: 1.1;
+                    margin-bottom: 0.25rem;
+                }
+
+                .o_summary_text strong {
+                    display: block;
+                    color: #0f172a;
+                    line-height: 1.2;
+                    word-break: break-word;
+                }
+
+                .o_section_caption {
+                    font-size: 0.88rem;
+                    font-weight: 700;
+                    color: #475569;
+                }
+
+                .o_ticket_box {
+                    padding-top: 0.2rem;
+                }
+
+                .o_ticket_list {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 0.55rem;
+                }
+
+                .o_ticket_item {
+                    display: flex;
+                    gap: 0.75rem;
+                    align-items: flex-start;
+                    padding: 0.85rem;
+                    background: #f8fafc;
+                    border: 1px solid rgba(15, 23, 42, 0.06);
+                    border-radius: 0.85rem;
+                }
+
+                .o_ticket_icon {
+                    width: 34px;
+                    height: 34px;
+                    min-width: 34px;
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    background: rgba(102, 126, 234, 0.12);
+                    color: #667eea;
+                }
+
+                .o_ticket_content {
+                    min-width: 0;
+                }
+
+                .o_ticket_name {
+                    display: block;
+                    color: #0f172a;
+                    line-height: 1.25;
+                    word-break: break-word;
+                }
+
+                .o_ticket_equipment {
+                    display: block;
+                    color: #475569;
+                    font-size: 0.9rem;
+                    line-height: 1.3;
+                    margin-top: 0.15rem;
+                    word-break: break-word;
+                }
+
+                .o_ticket_service {
+                    display: inline-block;
+                    color: #64748b;
+                    margin-top: 0.2rem;
+                }
+
+                .o_eval_badge {
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    padding: 0.45rem 0.9rem;
+                    border-radius: 999px;
+                    font-size: 0.8rem;
+                    font-weight: 800;
+                    color: #667eea;
+                    background: rgba(102, 126, 234, 0.12);
+                }
+
+                .o_eval_section_title {
+                    font-size: clamp(1.2rem, 3vw, 1.65rem);
+                    font-weight: 800;
+                    color: #0f172a;
+                    letter-spacing: -0.02em;
+                }
+
+                .o_question_card {
+                    margin-bottom: 1rem;
+                    padding: 1rem;
+                    border-radius: 1rem;
+                    background: #ffffff;
+                    border: 1px solid rgba(15, 23, 42, 0.08);
+                    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.045);
+                    transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+                }
+
+                .o_question_card:hover {
+                    border-color: rgba(102, 126, 234, 0.22);
+                    box-shadow: 0 14px 28px rgba(15, 23, 42, 0.075);
+                    transform: translateY(-1px);
+                }
+
+                .o_question_card_compact {
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: space-between;
+                }
+
+                .o_question_title {
+                    display: flex;
+                    align-items: flex-start;
+                    gap: 0.55rem;
+                    width: 100%;
+                    color: #0f172a;
+                    font-weight: 800;
+                    line-height: 1.35;
+                    margin-bottom: 0.9rem;
+                }
+
+                .o_question_title i {
+                    color: #667eea;
+                    margin-top: 0.15rem;
+                    min-width: 18px;
+                }
+
+                .o_option_list {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 0.6rem;
+                }
+
+                .o_radio_option {
+                    position: relative;
+                }
+
+                .o_radio_option input {
+                    position: absolute;
+                    left: 1rem;
+                    top: 50%;
+                    transform: translateY(-50%);
+                    z-index: 2;
+                }
+
+                .o_radio_option label {
+                    width: 100%;
+                    min-height: 48px;
+                    display: flex;
+                    align-items: center;
+                    gap: 0.65rem;
+                    padding: 0.75rem 0.85rem 0.75rem 2.6rem;
+                    border-radius: 0.85rem;
+                    background: #f8fafc;
+                    border: 1px solid rgba(15, 23, 42, 0.08);
+                    color: #334155;
                     cursor: pointer;
-                    transition: all 0.3s ease;
+                    transition: all 0.2s ease;
                 }
-                
-                .star-wrapper {
-                    color: #ddd;
-                    transition: all 0.3s ease;
+
+                .o_radio_option label:hover {
+                    background: rgba(102, 126, 234, 0.08);
+                    border-color: rgba(102, 126, 234, 0.25);
                 }
-                
-                .star-input:checked + .star-label .star-wrapper {
-                    color: #ffc107;
-                    transform: scale(1.2);
-                }
-                
-                .star-label:hover .star-wrapper {
-                    color: #ffdb4d;
-                    transform: scale(1.1);
-                }
-                
-                .question-card {
-                    transition: all 0.3s ease;
-                }
-                
-                .question-card:hover {
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-                    transform: translateY(-2px);
-                }
-                
-                .form-check-input:checked {
-                    background-color: #667eea;
+
+                .o_radio_option input:checked + label {
+                    background: rgba(102, 126, 234, 0.12);
                     border-color: #667eea;
+                    color: #0f172a;
+                    box-shadow: 0 8px 18px rgba(102, 126, 234, 0.14);
                 }
-                
-                .btn-check:checked + .btn {
-                    transform: scale(1.05);
+
+                .o_number_badge {
+                    width: 28px;
+                    height: 28px;
+                    min-width: 28px;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    border-radius: 50%;
+                    font-weight: 800;
+                    color: #667eea;
+                    background: rgba(102, 126, 234, 0.12);
                 }
-                
-                @media (max-width: 768px) {
-                    .star-wrapper i {
-                        font-size: 1.5rem !important;
+
+                .o_status_badge {
+                    width: 30px;
+                    height: 30px;
+                    min-width: 30px;
+                    border-radius: 50%;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+
+                .o_status_success {
+                    color: #198754;
+                    background: rgba(25, 135, 84, 0.12);
+                }
+
+                .o_status_warning {
+                    color: #b58100;
+                    background: rgba(255, 193, 7, 0.18);
+                }
+
+                .o_status_danger {
+                    color: #dc3545;
+                    background: rgba(220, 53, 69, 0.12);
+                }
+
+                .o_star_rating {
+                    display: grid;
+                    grid-template-columns: repeat(5, minmax(0, 1fr));
+                    gap: 0.55rem;
+                }
+
+                .o_star_option {
+                    min-width: 0;
+                }
+
+                .o_star_option input {
+                    display: none;
+                }
+
+                .o_star_option label {
+                    min-height: 82px;
+                    padding: 0.75rem 0.35rem;
+                    border-radius: 0.9rem;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 0.35rem;
+                    background: #f8fafc;
+                    border: 1px solid rgba(15, 23, 42, 0.08);
+                    color: #94a3b8;
+                    cursor: pointer;
+                    text-align: center;
+                    transition: all 0.2s ease;
+                }
+
+                .o_star_option label i {
+                    font-size: 1.65rem;
+                    color: #cbd5e1;
+                    transition: all 0.2s ease;
+                }
+
+                .o_star_option label small {
+                    font-size: 0.76rem;
+                    color: #475569;
+                    line-height: 1.15;
+                }
+
+                .o_star_option label:hover {
+                    background: rgba(255, 193, 7, 0.08);
+                    border-color: rgba(255, 193, 7, 0.45);
+                    transform: translateY(-1px);
+                }
+
+                .o_star_option label:hover i {
+                    color: #ffc107;
+                    transform: scale(1.08);
+                }
+
+                .o_star_option input:checked + label {
+                    background: rgba(255, 193, 7, 0.16);
+                    border-color: #ffc107;
+                    box-shadow: 0 8px 18px rgba(255, 193, 7, 0.16);
+                }
+
+                .o_star_option input:checked + label i {
+                    color: #ffc107;
+                    transform: scale(1.12);
+                }
+
+                .o_yes_no_group {
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 0.65rem;
+                    margin-top: auto;
+                }
+
+                .o_yes_no_group .btn {
+                    min-height: 46px;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 0.4rem;
+                    border-radius: 0.85rem;
+                    font-weight: 800;
+                    transition: all 0.2s ease;
+                }
+
+                .o_yes_btn {
+                    color: #198754;
+                    border: 1px solid rgba(25, 135, 84, 0.45);
+                    background: rgba(25, 135, 84, 0.06);
+                }
+
+                .o_no_btn {
+                    color: #dc3545;
+                    border: 1px solid rgba(220, 53, 69, 0.45);
+                    background: rgba(220, 53, 69, 0.06);
+                }
+
+                .btn-check:checked + .o_yes_btn {
+                    color: #ffffff;
+                    background: #198754;
+                    border-color: #198754;
+                    box-shadow: 0 8px 18px rgba(25, 135, 84, 0.22);
+                }
+
+                .btn-check:checked + .o_no_btn {
+                    color: #ffffff;
+                    background: #dc3545;
+                    border-color: #dc3545;
+                    box-shadow: 0 8px 18px rgba(220, 53, 69, 0.22);
+                }
+
+                .o_comment_box {
+                    border-radius: 0.9rem;
+                    border: 1px solid rgba(15, 23, 42, 0.12);
+                    padding: 0.9rem 1rem;
+                    resize: vertical;
+                }
+
+                .o_comment_box:focus {
+                    border-color: #667eea;
+                    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.16);
+                }
+
+                .o_submit_area {
+                    padding: 0.8rem 0 0.25rem;
+                }
+
+                .o_submit_btn {
+                    min-width: min(100%, 320px);
+                    min-height: 56px;
+                    padding: 0.9rem 1.6rem;
+                    border-radius: 999px;
+                    border: none;
+                    color: #ffffff;
+                    font-weight: 900;
+                    letter-spacing: -0.01em;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    box-shadow: 0 14px 28px rgba(102, 126, 234, 0.28);
+                    transition: all 0.2s ease;
+                }
+
+                .o_submit_btn:hover {
+                    color: #ffffff;
+                    transform: translateY(-1px);
+                    box-shadow: 0 18px 34px rgba(102, 126, 234, 0.34);
+                }
+
+                .o_submit_btn:disabled {
+                    opacity: 0.72;
+                    cursor: not-allowed;
+                    transform: none;
+                }
+
+                .was-validated .form-check-input:invalid ~ label,
+                .was-validated .star-input:invalid + label {
+                    border-color: rgba(220, 53, 69, 0.65);
+                }
+
+                .invalid-feedback {
+                    margin-top: 0.55rem;
+                    font-weight: 600;
+                }
+
+                @media (min-width: 768px) {
+                    .o_eval_body {
+                        padding: 2rem;
                     }
-                    
-                    .rating-stars small {
-                        font-size: 0.75rem;
+
+                    .o_eval_header {
+                        padding: 3rem 2rem;
+                    }
+
+                    .o_question_card {
+                        padding: 1.25rem;
+                        margin-bottom: 1.1rem;
+                    }
+                }
+
+                @media (max-width: 767.98px) {
+                    .o_eval_page {
+                        background: #f6f7fb;
+                    }
+
+                    .container {
+                        padding-left: 0.8rem;
+                        padding-right: 0.8rem;
+                    }
+
+                    .o_eval_main_card {
+                        border-radius: 1rem !important;
+                    }
+
+                    .o_eval_header {
+                        padding: 1.8rem 1rem;
+                    }
+
+                    .o_eval_header_icon {
+                        width: 58px;
+                        height: 58px;
+                    }
+
+                    .o_eval_header_icon i {
+                        font-size: 1.8rem;
+                    }
+
+                    .o_service_summary {
+                        padding: 0.8rem;
+                    }
+
+                    .o_summary_item {
+                        padding: 0.75rem;
+                    }
+
+                    .o_question_card {
+                        padding: 0.9rem;
+                        border-radius: 0.9rem;
+                    }
+
+                    .o_question_card:hover {
+                        transform: none;
+                    }
+
+                    .o_question_title {
+                        font-size: 0.98rem;
+                    }
+
+                    .o_radio_option label {
+                        min-height: 50px;
+                        padding-top: 0.7rem;
+                        padding-bottom: 0.7rem;
+                    }
+
+                    .o_star_rating {
+                        grid-template-columns: repeat(5, 1fr);
+                        gap: 0.35rem;
+                    }
+
+                    .o_star_option label {
+                        min-height: 72px;
+                        padding: 0.55rem 0.15rem;
+                        border-radius: 0.75rem;
+                    }
+
+                    .o_star_option label i {
+                        font-size: 1.28rem;
+                    }
+
+                    .o_star_option label small {
+                        font-size: 0.66rem;
+                    }
+
+                    .o_yes_no_group {
+                        gap: 0.5rem;
+                    }
+
+                    .o_submit_btn {
+                        width: 100%;
+                    }
+                }
+
+                @media (max-width: 380px) {
+                    .o_star_option label small {
+                        font-size: 0.6rem;
+                    }
+
+                    .o_star_option label i {
+                        font-size: 1.15rem;
+                    }
+
+                    .o_number_badge {
+                        width: 25px;
+                        height: 25px;
+                        min-width: 25px;
                     }
                 }
                 ]]>
             </style>
 
-            <!-- Script para validación del formulario -->
+            <!-- ===================================================== -->
+            <!-- Script de validación                                  -->
+            <!-- ===================================================== -->
             <script>
                 <![CDATA[
-                (function() {
-                    'use strict'
-                    
-                    // Validación de formulario
-                    var forms = document.querySelectorAll('.needs-validation')
-                    Array.prototype.slice.call(forms).forEach(function(form) {
-                        form.addEventListener('submit', function(event) {
+                (function () {
+                    'use strict';
+
+                    var forms = document.querySelectorAll('.needs-validation');
+
+                    Array.prototype.slice.call(forms).forEach(function (form) {
+                        form.addEventListener('submit', function (event) {
                             if (!form.checkValidity()) {
-                                event.preventDefault()
-                                event.stopPropagation()
-                                
-                                // Scroll al primer error
+                                event.preventDefault();
+                                event.stopPropagation();
+
                                 var firstInvalid = form.querySelector(':invalid');
                                 if (firstInvalid) {
-                                    firstInvalid.scrollIntoView({behavior: 'smooth', block: 'center'});
+                                    firstInvalid.scrollIntoView({
+                                        behavior: 'smooth',
+                                        block: 'center'
+                                    });
+
+                                    try {
+                                        firstInvalid.focus({ preventScroll: true });
+                                    } catch (e) {}
                                 }
+
+                                form.classList.add('was-validated');
+                                return false;
                             }
-                            form.classList.add('was-validated')
-                        }, false)
-                    })
-                    
-                    // Animación suave al hacer clic en radio buttons
-                    document.querySelectorAll('.form-check-input, .btn-check').forEach(function(input) {
-                        input.addEventListener('change', function() {
-                            if (this.checked) {
-                                var label = this.nextElementSibling || document.querySelector('label[for="' + this.id + '"]');
-                                if (label) {
-                                    label.style.transform = 'scale(1.05)';
-                                    setTimeout(function() {
-                                        label.style.transform = 'scale(1)';
-                                    }, 200);
-                                }
+
+                            var submitButton = form.querySelector('#o_eval_submit_btn');
+                            if (submitButton) {
+                                submitButton.disabled = true;
+                                submitButton.innerHTML = '<i class="fa fa-spinner fa-spin me-2"></i>Enviando...';
+                            }
+
+                            form.classList.add('was-validated');
+                        }, false);
+                    });
+
+                    var inputs = document.querySelectorAll('.form-check-input, .btn-check, .star-input');
+
+                    Array.prototype.slice.call(inputs).forEach(function (input) {
+                        input.addEventListener('change', function () {
+                            var questionCard = input.closest('.o_question_card');
+                            if (questionCard) {
+                                questionCard.classList.remove('o_question_error');
                             }
                         });
                     });
-                })()
+                })();
                 ]]>
             </script>
+
         </t>
     </template>
 
-    <!-- Plantilla de Agradecimiento -->
+
+    <!-- ========================================================= -->
+    <!-- Plantilla de Agradecimiento                              -->
+    <!-- ========================================================= -->
     <template id="evaluation_thanks" name="Evaluación Completada">
         <t t-call="website.layout">
-            <div class="container py-5">
-                <div class="row justify-content-center">
-                    <div class="col-12 col-md-8 col-lg-6">
-                        <div class="card shadow-lg border-0 rounded-4 overflow-hidden text-center">
-                            <div class="card-body p-5">
-                                <div class="mb-4">
-                                    <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex p-4 mb-3">
-                                        <i class="fa fa-check-circle text-success" style="font-size: 4rem;"></i>
+
+            <div class="o_eval_result_page o_eval_success_page">
+                <div class="container py-5">
+                    <div class="row justify-content-center">
+                        <div class="col-12 col-md-8 col-lg-6">
+
+                            <div class="card o_result_card shadow-lg border-0 rounded-4 overflow-hidden text-center">
+                                <div class="card-body p-4 p-md-5">
+
+                                    <div class="o_result_icon o_result_icon_success mx-auto mb-4">
+                                        <i class="fa fa-check-circle"></i>
                                     </div>
+
+                                    <h1 class="o_result_title mb-3">
+                                        ¡Gracias por su evaluación!
+                                    </h1>
+
+                                    <p class="o_result_text mb-4">
+                                        Su retroalimentación fue registrada correctamente y nos ayudará a mejorar nuestro servicio.
+                                    </p>
+
+                                    <t t-if="evaluation">
+                                        <div class="o_result_summary mb-4">
+                                            <div class="row g-2 text-start">
+                                                <div class="col-12">
+                                                    <div class="o_result_summary_item">
+                                                        <span>Técnico</span>
+                                                        <strong>
+                                                            <t t-esc="evaluation.technician_id.name or 'No asignado'"/>
+                                                        </strong>
+                                                    </div>
+                                                </div>
+
+                                                <t t-if="evaluation.visit_date">
+                                                    <div class="col-12">
+                                                        <div class="o_result_summary_item">
+                                                            <span>Fecha de visita</span>
+                                                            <strong>
+                                                                <t t-esc="evaluation.visit_date.strftime('%d/%m/%Y')"/>
+                                                            </strong>
+                                                        </div>
+                                                    </div>
+                                                </t>
+
+                                                <div class="col-12">
+                                                    <div class="o_result_summary_item">
+                                                        <span>Servicios evaluados</span>
+                                                        <strong>
+                                                            <t t-esc="len(evaluation.ticket_ids)"/>
+                                                            ticket(s)
+                                                        </strong>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </t>
+
+                                    <a href="/"
+                                       class="btn o_result_btn">
+                                        <i class="fa fa-home me-2"></i>
+                                        Volver al inicio
+                                    </a>
+
                                 </div>
-                                <h2 class="fw-bold mb-3">¡Gracias por su evaluación!</h2>
-                                <p class="lead text-muted mb-4">Su retroalimentación nos ayuda a mejorar nuestro servicio continuamente.</p>
-                                <a href="/" class="btn btn-lg px-5 fw-bold shadow-sm" 
-                                    style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; color: white;">
-                                    <i class="fa fa-home me-2"></i>Volver al Inicio
-                                </a>
                             </div>
+
                         </div>
                     </div>
                 </div>
             </div>
+
+            <style>
+                <![CDATA[
+                .o_eval_result_page {
+                    min-height: 100vh;
+                    display: flex;
+                    align-items: center;
+                    background:
+                        radial-gradient(circle at top left, rgba(25, 135, 84, 0.12), transparent 32%),
+                        radial-gradient(circle at bottom right, rgba(102, 126, 234, 0.10), transparent 28%),
+                        #f6f7fb;
+                }
+
+                .o_result_card {
+                    border-radius: 1.25rem !important;
+                }
+
+                .o_result_icon {
+                    width: 96px;
+                    height: 96px;
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+
+                .o_result_icon i {
+                    font-size: 4rem;
+                }
+
+                .o_result_icon_success {
+                    background: rgba(25, 135, 84, 0.12);
+                    color: #198754;
+                }
+
+                .o_result_title {
+                    font-size: clamp(1.55rem, 4vw, 2.15rem);
+                    font-weight: 900;
+                    color: #0f172a;
+                    letter-spacing: -0.03em;
+                }
+
+                .o_result_text {
+                    font-size: 1.05rem;
+                    color: #64748b;
+                }
+
+                .o_result_summary {
+                    background: #f8fafc;
+                    border: 1px solid rgba(15, 23, 42, 0.08);
+                    border-radius: 1rem;
+                    padding: 0.85rem;
+                }
+
+                .o_result_summary_item {
+                    display: flex;
+                    justify-content: space-between;
+                    gap: 1rem;
+                    padding: 0.75rem;
+                    border-radius: 0.75rem;
+                    background: #ffffff;
+                }
+
+                .o_result_summary_item span {
+                    color: #64748b;
+                    font-size: 0.88rem;
+                }
+
+                .o_result_summary_item strong {
+                    color: #0f172a;
+                    text-align: right;
+                }
+
+                .o_result_btn {
+                    min-height: 52px;
+                    padding: 0.85rem 1.5rem;
+                    border-radius: 999px;
+                    border: none;
+                    color: #ffffff;
+                    font-weight: 900;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    box-shadow: 0 14px 28px rgba(102, 126, 234, 0.28);
+                }
+
+                .o_result_btn:hover {
+                    color: #ffffff;
+                    transform: translateY(-1px);
+                    box-shadow: 0 18px 34px rgba(102, 126, 234, 0.34);
+                }
+
+                @media (max-width: 767.98px) {
+                    .o_eval_result_page {
+                        align-items: flex-start;
+                    }
+
+                    .o_result_icon {
+                        width: 82px;
+                        height: 82px;
+                    }
+
+                    .o_result_icon i {
+                        font-size: 3.3rem;
+                    }
+
+                    .o_result_btn {
+                        width: 100%;
+                    }
+                }
+                ]]>
+            </style>
+
         </t>
     </template>
 
-    <!-- Plantilla de Error -->
+
+    <!-- ========================================================= -->
+    <!-- Plantilla de Error                                       -->
+    <!-- ========================================================= -->
     <template id="evaluation_error" name="Error en Evaluación">
         <t t-call="website.layout">
-            <div class="container py-5">
-                <div class="row justify-content-center">
-                    <div class="col-12 col-md-8 col-lg-6">
-                        <div class="card shadow-lg border-0 rounded-4 overflow-hidden text-center">
-                            <div class="card-body p-5">
-                                <div class="mb-4">
-                                    <div class="bg-danger bg-opacity-10 rounded-circle d-inline-flex p-4 mb-3">
-                                        <i class="fa fa-exclamation-triangle text-danger" style="font-size: 4rem;"></i>
+
+            <div class="o_eval_result_page o_eval_error_page">
+                <div class="container py-5">
+                    <div class="row justify-content-center">
+                        <div class="col-12 col-md-8 col-lg-6">
+
+                            <div class="card o_result_card shadow-lg border-0 rounded-4 overflow-hidden text-center">
+                                <div class="card-body p-4 p-md-5">
+
+                                    <div class="o_result_icon o_result_icon_error mx-auto mb-4">
+                                        <i class="fa fa-exclamation-triangle"></i>
                                     </div>
+
+                                    <h1 class="o_result_title mb-3">
+                                        Ha ocurrido un error
+                                    </h1>
+
+                                    <p class="o_result_text mb-4">
+                                        No se pudo procesar su evaluación. Por favor, intente nuevamente más tarde.
+                                    </p>
+
+                                    <a href="/"
+                                       class="btn o_result_btn_outline">
+                                        <i class="fa fa-home me-2"></i>
+                                        Volver al inicio
+                                    </a>
+
                                 </div>
-                                <h2 class="fw-bold mb-3">Ha ocurrido un error</h2>
-                                <p class="lead text-muted mb-4">No se pudo procesar su evaluación. Por favor, intente nuevamente más tarde.</p>
-                                <a href="/" class="btn btn-lg btn-outline-primary px-5 fw-bold">
-                                    <i class="fa fa-home me-2"></i>Volver al Inicio
-                                </a>
                             </div>
+
                         </div>
                     </div>
                 </div>
             </div>
+
+            <style>
+                <![CDATA[
+                .o_eval_result_page {
+                    min-height: 100vh;
+                    display: flex;
+                    align-items: center;
+                    background:
+                        radial-gradient(circle at top left, rgba(220, 53, 69, 0.12), transparent 32%),
+                        radial-gradient(circle at bottom right, rgba(102, 126, 234, 0.10), transparent 28%),
+                        #f6f7fb;
+                }
+
+                .o_result_card {
+                    border-radius: 1.25rem !important;
+                }
+
+                .o_result_icon {
+                    width: 96px;
+                    height: 96px;
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+
+                .o_result_icon i {
+                    font-size: 3.8rem;
+                }
+
+                .o_result_icon_error {
+                    background: rgba(220, 53, 69, 0.12);
+                    color: #dc3545;
+                }
+
+                .o_result_title {
+                    font-size: clamp(1.55rem, 4vw, 2.15rem);
+                    font-weight: 900;
+                    color: #0f172a;
+                    letter-spacing: -0.03em;
+                }
+
+                .o_result_text {
+                    font-size: 1.05rem;
+                    color: #64748b;
+                }
+
+                .o_result_btn_outline {
+                    min-height: 52px;
+                    padding: 0.85rem 1.5rem;
+                    border-radius: 999px;
+                    font-weight: 900;
+                    color: #667eea;
+                    border: 1px solid rgba(102, 126, 234, 0.45);
+                    background: rgba(102, 126, 234, 0.06);
+                }
+
+                .o_result_btn_outline:hover {
+                    color: #ffffff;
+                    background: #667eea;
+                    border-color: #667eea;
+                }
+
+                @media (max-width: 767.98px) {
+                    .o_eval_result_page {
+                        align-items: flex-start;
+                    }
+
+                    .o_result_btn_outline {
+                        width: 100%;
+                    }
+                }
+                ]]>
+            </style>
+
         </t>
     </template>
 
-    <!-- Plantilla de Evaluación Expirada -->
+
+    <!-- ========================================================= -->
+    <!-- Plantilla de Evaluación Expirada / No Disponible          -->
+    <!-- ========================================================= -->
     <template id="evaluation_expired" name="Evaluación Expirada">
         <t t-call="website.layout">
-            <div class="container py-5">
-                <div class="row justify-content-center">
-                    <div class="col-12 col-md-8 col-lg-6">
-                        <div class="card shadow-lg border-0 rounded-4 overflow-hidden text-center">
-                            <div class="card-body p-5">
-                                <div class="mb-4">
-                                    <div class="bg-warning bg-opacity-10 rounded-circle d-inline-flex p-4 mb-3">
-                                        <i class="fa fa-clock-o text-warning" style="font-size: 4rem;"></i>
+
+            <div class="o_eval_result_page o_eval_expired_page">
+                <div class="container py-5">
+                    <div class="row justify-content-center">
+                        <div class="col-12 col-md-8 col-lg-6">
+
+                            <div class="card o_result_card shadow-lg border-0 rounded-4 overflow-hidden text-center">
+                                <div class="card-body p-4 p-md-5">
+
+                                    <div class="o_result_icon o_result_icon_warning mx-auto mb-4">
+                                        <i class="fa fa-clock-o"></i>
                                     </div>
+
+                                    <h1 class="o_result_title mb-3">
+                                        Evaluación no disponible
+                                    </h1>
+
+                                    <p class="o_result_text mb-4">
+                                        Esta evaluación ya fue respondida, expiró o el enlace no es válido.
+                                    </p>
+
+                                    <div class="o_result_notice mb-4">
+                                        <i class="fa fa-info-circle me-1"></i>
+                                        Si considera que esto es un error, comuníquese con nuestro equipo de soporte.
+                                    </div>
+
+                                    <a href="/"
+                                       class="btn o_result_btn_outline">
+                                        <i class="fa fa-home me-2"></i>
+                                        Volver al inicio
+                                    </a>
+
                                 </div>
-                                <h2 class="fw-bold mb-3">Evaluación No Disponible</h2>
-                                <p class="lead text-muted mb-4">Esta evaluación ya no está disponible o ha expirado.</p>
-                                <a href="/" class="btn btn-lg btn-outline-primary px-5 fw-bold">
-                                    <i class="fa fa-home me-2"></i>Volver al Inicio
-                                </a>
                             </div>
+
                         </div>
                     </div>
                 </div>
             </div>
+
+            <style>
+                <![CDATA[
+                .o_eval_result_page {
+                    min-height: 100vh;
+                    display: flex;
+                    align-items: center;
+                    background:
+                        radial-gradient(circle at top left, rgba(255, 193, 7, 0.16), transparent 32%),
+                        radial-gradient(circle at bottom right, rgba(102, 126, 234, 0.10), transparent 28%),
+                        #f6f7fb;
+                }
+
+                .o_result_card {
+                    border-radius: 1.25rem !important;
+                }
+
+                .o_result_icon {
+                    width: 96px;
+                    height: 96px;
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+
+                .o_result_icon i {
+                    font-size: 3.8rem;
+                }
+
+                .o_result_icon_warning {
+                    background: rgba(255, 193, 7, 0.18);
+                    color: #b58100;
+                }
+
+                .o_result_title {
+                    font-size: clamp(1.55rem, 4vw, 2.15rem);
+                    font-weight: 900;
+                    color: #0f172a;
+                    letter-spacing: -0.03em;
+                }
+
+                .o_result_text {
+                    font-size: 1.05rem;
+                    color: #64748b;
+                }
+
+                .o_result_notice {
+                    padding: 0.85rem 1rem;
+                    border-radius: 0.9rem;
+                    background: #f8fafc;
+                    border: 1px solid rgba(15, 23, 42, 0.08);
+                    color: #64748b;
+                    font-size: 0.92rem;
+                }
+
+                .o_result_btn_outline {
+                    min-height: 52px;
+                    padding: 0.85rem 1.5rem;
+                    border-radius: 999px;
+                    font-weight: 900;
+                    color: #667eea;
+                    border: 1px solid rgba(102, 126, 234, 0.45);
+                    background: rgba(102, 126, 234, 0.06);
+                }
+
+                .o_result_btn_outline:hover {
+                    color: #ffffff;
+                    background: #667eea;
+                    border-color: #667eea;
+                }
+
+                @media (max-width: 767.98px) {
+                    .o_eval_result_page {
+                        align-items: flex-start;
+                    }
+
+                    .o_result_btn_outline {
+                        width: 100%;
+                    }
+                }
+                ]]>
+            </style>
+
         </t>
     </template>
+
 </odoo>
