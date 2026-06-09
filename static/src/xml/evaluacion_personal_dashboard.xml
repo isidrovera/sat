@@ -1,18 +1,337 @@
-<?xml version="1.0" encoding="utf-8"?>
-<odoo>
-    <data>
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
 
-        <record id="action_evaluacion_personal_dashboard_client" model="ir.actions.client">
-            <field name="name">Dashboard Evaluaciones</field>
-            <field name="tag">evaluacion_personal_dashboard_tag</field>
-        </record>
+    <t t-name="sat.EvaluacionPersonalDashboard">
 
-        <menuitem
-            id="menu_evaluacion_personal_dashboard_client"
-            name="Dashboard Evaluaciones"
-            parent="menu_evaluaciones_root"
-            action="action_evaluacion_personal_dashboard_client"
-            sequence="5"/>
+        <div class="o_eval_personal_dashboard">
 
-    </data>
-</odoo>
+            <!-- HEADER -->
+            <div class="o_eval_dash_topbar">
+                <div>
+                    <h2>
+                        <i class="fa fa-chart-line me-2"/>
+                        Dashboard Evaluaciones
+                    </h2>
+                    <p>
+                        Productividad, puntaje y seguimiento del personal técnico.
+                    </p>
+                </div>
+
+                <div class="o_eval_dash_filters">
+                    <div class="o_eval_dash_date">
+                        <label>Inicio</label>
+                        <input type="date"
+                               t-att-value="state.fechaInicio"
+                               t-on-change="onChangeDateStart"/>
+                    </div>
+
+                    <div class="o_eval_dash_date">
+                        <label>Fin</label>
+                        <input type="date"
+                               t-att-value="state.fechaFin"
+                               t-on-change="onChangeDateEnd"/>
+                    </div>
+
+                    <button class="btn btn-primary" t-on-click="onApplyFilter">
+                        <i class="fa fa-filter me-1"/>
+                        Aplicar
+                    </button>
+
+                    <button class="btn btn-light" t-on-click="openEvaluaciones">
+                        <i class="fa fa-list me-1"/>
+                        Ver lista
+                    </button>
+                </div>
+            </div>
+
+            <t t-if="state.loading">
+                <div class="o_eval_dash_loading">
+                    <i class="fa fa-spinner fa-spin me-2"/>
+                    Cargando dashboard...
+                </div>
+            </t>
+
+            <t t-else="">
+
+                <!-- KPI CARDS -->
+                <div class="o_eval_dash_kpi_grid">
+
+                    <div class="o_eval_dash_kpi_card primary">
+                        <div class="o_eval_dash_kpi_icon">
+                            <i class="fa fa-clipboard-check"/>
+                        </div>
+                        <div>
+                            <span>Evaluaciones</span>
+                            <strong t-esc="state.kpis.totalEvaluaciones"/>
+                        </div>
+                    </div>
+
+                    <div class="o_eval_dash_kpi_card info">
+                        <div class="o_eval_dash_kpi_icon">
+                            <i class="fa fa-users"/>
+                        </div>
+                        <div>
+                            <span>Técnicos</span>
+                            <strong t-esc="state.kpis.totalTecnicos"/>
+                        </div>
+                    </div>
+
+                    <div class="o_eval_dash_kpi_card success">
+                        <div class="o_eval_dash_kpi_icon">
+                            <i class="fa fa-star"/>
+                        </div>
+                        <div>
+                            <span>Promedio Puntaje</span>
+                            <strong>
+                                <t t-esc="getPercent(state.kpis.promedioPuntaje)"/>%
+                            </strong>
+                        </div>
+                    </div>
+
+                    <div class="o_eval_dash_kpi_card purple">
+                        <div class="o_eval_dash_kpi_icon">
+                            <i class="fa fa-chart-bar"/>
+                        </div>
+                        <div>
+                            <span>Productividad</span>
+                            <strong>
+                                <t t-esc="getPercent(state.kpis.promedioProductividad)"/>%
+                            </strong>
+                        </div>
+                    </div>
+
+                    <div class="o_eval_dash_kpi_card warning">
+                        <div class="o_eval_dash_kpi_icon">
+                            <i class="fa fa-tools"/>
+                        </div>
+                        <div>
+                            <span>Reparaciones</span>
+                            <strong t-esc="state.kpis.totalReparaciones"/>
+                        </div>
+                    </div>
+
+                    <div class="o_eval_dash_kpi_card blue">
+                        <div class="o_eval_dash_kpi_icon">
+                            <i class="fa fa-ticket"/>
+                        </div>
+                        <div>
+                            <span>Tickets</span>
+                            <strong t-esc="state.kpis.totalTickets"/>
+                        </div>
+                    </div>
+
+                    <div class="o_eval_dash_kpi_card dark">
+                        <div class="o_eval_dash_kpi_icon">
+                            <i class="fa fa-briefcase"/>
+                        </div>
+                        <div>
+                            <span>Total Trabajos</span>
+                            <strong>
+                                <t t-esc="state.kpis.totalTrabajos"/>
+                                /
+                                <t t-esc="state.kpis.objetivoTotal"/>
+                            </strong>
+                        </div>
+                    </div>
+
+                    <div class="o_eval_dash_kpi_card danger" t-on-click="openSeguimiento">
+                        <div class="o_eval_dash_kpi_icon">
+                            <i class="fa fa-exclamation-triangle"/>
+                        </div>
+                        <div>
+                            <span>Seguimiento</span>
+                            <strong t-esc="state.kpis.seguimiento"/>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- MAIN GRID -->
+                <div class="o_eval_dash_grid">
+
+                    <!-- PRODUCTIVIDAD POR TÉCNICO -->
+                    <div class="o_eval_dash_panel">
+                        <div class="o_eval_dash_panel_header">
+                            <h3>
+                                <i class="fa fa-chart-line me-2"/>
+                                Productividad por Técnico
+                            </h3>
+                        </div>
+
+                        <div class="o_eval_dash_bar_list">
+                            <t t-foreach="state.productividadPorTecnico" t-as="ev" t-key="ev.id">
+                                <div class="o_eval_dash_bar_item" t-on-click="() => this.openEvaluacion(ev)">
+                                    <div class="o_eval_dash_bar_label">
+                                        <span t-esc="getTecnicoName(ev)"/>
+                                        <strong>
+                                            <t t-esc="getPercent(ev.porcentaje_productividad_total)"/>%
+                                        </strong>
+                                    </div>
+                                    <div class="o_eval_dash_bar_track">
+                                        <div t-att-style="getBarWidth(ev.porcentaje_productividad_total)"
+                                             t-attf-class="o_eval_dash_bar_fill #{ev.porcentaje_productividad_total >= 85 ? 'success' : ev.porcentaje_productividad_total >= 70 ? 'info' : ev.porcentaje_productividad_total >= 50 ? 'warning' : 'danger'}"/>
+                                    </div>
+                                </div>
+                            </t>
+                        </div>
+                    </div>
+
+                    <!-- NIVELES DONUT SIMPLE -->
+                    <div class="o_eval_dash_panel">
+                        <div class="o_eval_dash_panel_header">
+                            <h3>
+                                <i class="fa fa-medal me-2"/>
+                                Niveles de Desempeño
+                            </h3>
+                        </div>
+
+                        <div class="o_eval_dash_level_list">
+                            <t t-foreach="state.niveles" t-as="nivel" t-key="nivel.key">
+                                <div class="o_eval_dash_level_item">
+                                    <span t-attf-class="o_eval_dash_dot #{nivel.className}"/>
+                                    <span t-esc="nivel.label"/>
+                                    <strong t-esc="nivel.value"/>
+                                </div>
+                            </t>
+                        </div>
+
+                        <div class="o_eval_dash_summary_box">
+                            <div>
+                                <span>Deficientes</span>
+                                <strong class="text-danger" t-esc="state.kpis.deficientes"/>
+                            </div>
+                            <div>
+                                <span>Destacados</span>
+                                <strong class="text-success" t-esc="state.kpis.destacados"/>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- REPARACIONES -->
+                    <div class="o_eval_dash_panel">
+                        <div class="o_eval_dash_panel_header">
+                            <h3>
+                                <i class="fa fa-wrench me-2"/>
+                                Reparaciones por Técnico
+                            </h3>
+                        </div>
+
+                        <t t-set="maxRep" t-value="getMaxValue(state.reparacionesPorTecnico, 'cantidad_reparaciones')"/>
+
+                        <div class="o_eval_dash_bar_list compact">
+                            <t t-foreach="state.reparacionesPorTecnico" t-as="ev" t-key="ev.id">
+                                <div class="o_eval_dash_bar_item" t-on-click="() => this.openEvaluacion(ev)">
+                                    <div class="o_eval_dash_bar_label">
+                                        <span t-esc="getTecnicoName(ev)"/>
+                                        <strong t-esc="ev.cantidad_reparaciones"/>
+                                    </div>
+                                    <div class="o_eval_dash_bar_track">
+                                        <div t-att-style="getRelativeWidth(ev.cantidad_reparaciones, maxRep)"
+                                             class="o_eval_dash_bar_fill warning"/>
+                                    </div>
+                                </div>
+                            </t>
+                        </div>
+                    </div>
+
+                    <!-- TICKETS -->
+                    <div class="o_eval_dash_panel">
+                        <div class="o_eval_dash_panel_header">
+                            <h3>
+                                <i class="fa fa-ticket me-2"/>
+                                Tickets por Técnico
+                            </h3>
+                        </div>
+
+                        <t t-set="maxTickets" t-value="getMaxValue(state.ticketsPorTecnico, 'cantidad_tickets')"/>
+
+                        <div class="o_eval_dash_bar_list compact">
+                            <t t-foreach="state.ticketsPorTecnico" t-as="ev" t-key="ev.id">
+                                <div class="o_eval_dash_bar_item" t-on-click="() => this.openEvaluacion(ev)">
+                                    <div class="o_eval_dash_bar_label">
+                                        <span t-esc="getTecnicoName(ev)"/>
+                                        <strong t-esc="ev.cantidad_tickets"/>
+                                    </div>
+                                    <div class="o_eval_dash_bar_track">
+                                        <div t-att-style="getRelativeWidth(ev.cantidad_tickets, maxTickets)"
+                                             class="o_eval_dash_bar_fill info"/>
+                                    </div>
+                                </div>
+                            </t>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- TABLE -->
+                <div class="o_eval_dash_panel full">
+                    <div class="o_eval_dash_panel_header">
+                        <h3>
+                            <i class="fa fa-table me-2"/>
+                            Resumen de Evaluaciones
+                        </h3>
+                    </div>
+
+                    <div class="o_eval_dash_table_wrap">
+                        <table class="o_eval_dash_table">
+                            <thead>
+                                <tr>
+                                    <th>Técnico</th>
+                                    <th>Puntaje</th>
+                                    <th>Nivel</th>
+                                    <th>Productividad</th>
+                                    <th>Trabajos</th>
+                                    <th>Reparaciones</th>
+                                    <th>Tickets</th>
+                                    <th>Días Activos</th>
+                                    <th>Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-foreach="state.evaluaciones" t-as="ev" t-key="ev.id">
+                                    <tr t-on-click="() => this.openEvaluacion(ev)">
+                                        <td>
+                                            <strong t-esc="getTecnicoName(ev)"/>
+                                            <div class="text-muted small" t-esc="ev.name"/>
+                                        </td>
+                                        <td>
+                                            <strong>
+                                                <t t-esc="getPercent(ev.puntaje_total)"/>%
+                                            </strong>
+                                        </td>
+                                        <td>
+                                            <span t-attf-class="o_eval_dash_badge #{ev.nivel_desempeno}">
+                                                <t t-esc="getNivelLabel(ev.nivel_desempeno)"/>
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <t t-esc="getPercent(ev.porcentaje_productividad_total)"/>%
+                                        </td>
+                                        <td>
+                                            <t t-esc="ev.total_trabajos_mes || 0"/>
+                                            /
+                                            <t t-esc="ev.objetivo_total_trabajos || 0"/>
+                                        </td>
+                                        <td t-esc="ev.cantidad_reparaciones || 0"/>
+                                        <td t-esc="ev.cantidad_tickets || 0"/>
+                                        <td>
+                                            <t t-esc="ev.total_dias_trabajados || 0"/>
+                                        </td>
+                                        <td>
+                                            <span t-attf-class="o_eval_dash_status #{ev.estado_dashboard}">
+                                                <t t-esc="getEstadoLabel(ev.estado_dashboard)"/>
+                                            </span>
+                                        </td>
+                                    </tr>
+                                </t>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </t>
+        </div>
+
+    </t>
+
+</templates>
