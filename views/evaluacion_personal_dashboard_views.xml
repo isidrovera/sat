@@ -2,13 +2,15 @@
 <odoo>
     <data>
 
+        <!-- Acción JS / OWL real -->
         <record id="action_evaluacion_personal_dashboard_client" model="ir.actions.client">
             <field name="name">Dashboard Evaluaciones</field>
             <field name="tag">evaluacion_personal_dashboard_tag</field>
         </record>
 
+        <!-- Si ya existía el menú dashboard anterior, usamos el MISMO ID para actualizarlo -->
         <menuitem
-            id="menu_evaluacion_personal_dashboard_client"
+            id="menu_evaluacion_personal_dashboard"
             name="Dashboard Evaluaciones"
             parent="menu_evaluaciones_root"
             action="action_evaluacion_personal_dashboard_client"
