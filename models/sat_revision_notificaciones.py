@@ -197,6 +197,8 @@ class SatRevisionNotificaciones(models.Model):
         self.ensure_one()
 
         cliente = self.cliente_id.name if self.cliente_id else 'NA'
+        asesora_user = self._sat_get_asesora_user()
+        asesora = asesora_user.name if asesora_user else (self.asesora_id or 'NA')
         modelo = self.name.name if self.name else 'NA'
         serie = self.serie_id or 'NA'
 
@@ -208,6 +210,7 @@ class SatRevisionNotificaciones(models.Model):
         msg = f"""*Máquina colocada para revisión*
 
 *Cliente:* {cliente}
+*Asesora:* {asesora}
 *Modelo:* {modelo}
 *Serie:* {serie}
 

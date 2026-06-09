@@ -227,6 +227,8 @@ class ReparacionAvance(models.Model):
         reparacion = self.reparacion_id
 
         cliente = reparacion.cliente_id.name if reparacion.cliente_id else 'NA'
+        asesora_user = self._get_asesora_user()
+        asesora = asesora_user.name if asesora_user else 'NA'
         modelo = reparacion.nombre_maquina or 'NA'
         serie = reparacion.serie_id or 'NA'
 
@@ -242,6 +244,7 @@ class ReparacionAvance(models.Model):
         msg = f"""*Demora de reparación*
 
 *Cliente:* {cliente}
+*Asesora:* {asesora}
 *Modelo:* {modelo}
 *Serie:* {serie}
 
@@ -1014,17 +1017,27 @@ class ReparacionesAvanceAlertas(models.Model):
         avance_url = self._get_avance_url()
 
         cliente = self.cliente_id.name if self.cliente_id else 'NA'
+        asesora = 'NA'
+        try:
+            if self.maquina_id and self.maquina_id.cliente_id and self.maquina_id.cliente_id.asesora_id:
+                asesora = self.maquina_id.cliente_id.asesora_id.name
+            elif self.cliente_id and self.cliente_id.asesora_id:
+                asesora = self.cliente_id.asesora_id.name
+        except Exception:
+            asesora = 'NA'
         tecnico = self.responsable_id.name if self.responsable_id else 'NA'
         modelo = self.nombre_maquina or 'NA'
         serie = self.serie_id or 'NA'
 
         alertas = self.cantidad_alertas_avance_jefe + 1
+        
 
         msg = f"""*Alerta de demora pendiente*
 
 La reparación continúa en revisión y requiere registrar motivo de demora.
 
 *Cliente:* {cliente}
+*Asesora:* {asesora}
 *Modelo:* {modelo}
 *Serie:* {serie}
 *Técnico:* {tecnico}

@@ -163,6 +163,8 @@ class ReparacionesNotificaciones(models.Model):
 
         cliente = self._sat_get_cliente_revision()
         cliente_name = cliente.name if cliente else 'NA'
+        asesora_user = self._sat_get_asesora_user_revision()
+        asesora = asesora_user.name if asesora_user else 'NA'
 
         modelo = self._sat_get_modelo_revision()
         serie = self._sat_get_serie_revision()
@@ -171,6 +173,7 @@ class ReparacionesNotificaciones(models.Model):
         msg = f"""*Revisión iniciada*
 
 *Cliente:* {cliente_name}
+*Asesora:* {asesora}
 *Modelo:* {modelo}
 *Serie:* {serie}
 *Técnico:* {tecnico}
@@ -320,6 +323,8 @@ El equipo ya fue tomado por taller y se encuentra en revisión.
 
         cliente = self._sat_get_cliente_revision()
         cliente_name = cliente.name if cliente else 'NA'
+        asesora_user = self._sat_get_asesora_user_revision()
+        asesora = asesora_user.name if asesora_user else 'NA'
 
         modelo = self._sat_get_modelo_revision()
         serie = self._sat_get_serie_revision()
@@ -328,6 +333,7 @@ El equipo ya fue tomado por taller y se encuentra en revisión.
         msg = f"""*Reparación finalizada*
 
 *Cliente:* {cliente_name}
+*Asesora:* {asesora}
 *Modelo:* {modelo}
 *Serie:* {serie}
 *Técnico:* {tecnico}
