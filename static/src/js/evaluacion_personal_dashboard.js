@@ -14,7 +14,15 @@ export class EvaluacionPersonalDashboard extends Component {
 
         this.state = useState({
             loading: true,
+            loadingDetalle: false,
+
+            fechaInicio: null,
+            fechaFin: null,
+
             evaluaciones: [],
+            detalleDiario: [],
+            selectedEvaluacion: null,
+
             kpis: {
                 totalEvaluaciones: 0,
                 totalTecnicos: 0,
@@ -27,15 +35,18 @@ export class EvaluacionPersonalDashboard extends Component {
                 deficientes: 0,
                 seguimiento: 0,
                 destacados: 0,
+                diasActivos: 0,
+                diasSinActividad: 0,
             },
+
             rankingPuntaje: [],
             rankingProductividad: [],
-            niveles: [],
-            productividadPorTecnico: [],
             reparacionesPorTecnico: [],
             ticketsPorTecnico: [],
-            fechaInicio: null,
-            fechaFin: null,
+            diasSinActividadRanking: [],
+
+            niveles: [],
+            estadosProductividad: [],
         });
 
         onWillStart(async () => {
@@ -44,10 +55,16 @@ export class EvaluacionPersonalDashboard extends Component {
         });
     }
 
+    // ============================================================
+    // FECHAS
+    // ============================================================
+
     _setDefaultDates() {
         const today = new Date();
-        const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-        const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+
+        // Carga todo el año actual para que no salga vacío si no hay datos del mes actual.
+        const firstDay = new Date(today.getFullYear(), 0, 1);
+        const lastDay = new Date(today.getFullYear(), 11, 31);
 
         this.state.fechaInicio = this._formatDate(firstDay);
         this.state.fechaFin = this._formatDate(lastDay);
@@ -59,6 +76,10 @@ export class EvaluacionPersonalDashboard extends Component {
         const day = String(date.getDate()).padStart(2, "0");
         return `${year}-${month}-${day}`;
     }
+
+    // ============================================================
+    // CARGA PRINCIPAL
+    // ============================================================
 
     async loadDashboard() {
         this.state.loading = true;
@@ -73,23 +94,41 @@ export class EvaluacionPersonalDashboard extends Component {
                 "name",
                 "fecha",
                 "usuario_id",
+                "evaluador_id",
                 "state",
+
                 "cantidad_reparaciones",
                 "objetivo_reparaciones",
                 "porcentaje_reparaciones",
+
                 "cantidad_tickets",
                 "objetivo_tickets",
                 "porcentaje_tickets",
+
+                "puntaje_objetivos",
+                "puntaje_desempeno",
                 "puntaje_total",
                 "nivel_desempeno",
+
                 "total_dias_trabajados",
                 "total_dias_sin_actividad",
-                "necesita_capacitacion",
+                "mejor_dia_fecha",
+                "mejor_dia_total",
+                "peor_dia_fecha",
+                "peor_dia_total",
 
-                // campos del archivo evaluacion_personal_dashboard.py
+                "necesita_capacitacion",
+                "temas_capacitacion",
+                "fortalezas",
+                "areas_mejora",
+                "plan_accion",
+
                 "total_trabajos_mes",
                 "objetivo_total_trabajos",
                 "porcentaje_productividad_total",
+                "porcentaje_productividad_real",
+                "promedio_diario_total",
+                "diferencia_objetivo_total",
                 "estado_productividad",
                 "estado_dashboard",
                 "requiere_seguimiento",
@@ -97,17 +136,28 @@ export class EvaluacionPersonalDashboard extends Component {
                 "resumen_dashboard",
                 "alerta_dashboard",
                 "indicador_actividad",
+                "resumen_productividad",
+                "resumen_puntaje",
+                "resumen_objetivo",
+                "actividad_promedio_por_dia_activo",
             ];
 
             const evaluaciones = await this.orm.searchRead(
                 "evaluacion.personal",
                 domain,
                 fields,
-                { order: "puntaje_total desc" }
+                { order: "fecha desc, puntaje_total desc" }
             );
 
             this.state.evaluaciones = evaluaciones;
             this._computeDashboard(evaluaciones);
+
+            if (evaluaciones.length) {
+                await this.selectEvaluacion(evaluaciones[0]);
+            } else {
+                this.state.selectedEvaluacion = null;
+                this.state.detalleDiario = [];
+            }
         } catch (error) {
             console.error("Error cargando dashboard de evaluaciones:", error);
             this.notification.add("No se pudo cargar el dashboard de evaluaciones.", {
@@ -131,12 +181,23 @@ export class EvaluacionPersonalDashboard extends Component {
         let deficientes = 0;
         let seguimiento = 0;
         let destacados = 0;
+        let diasActivos = 0;
+        let diasSinActividad = 0;
 
         const nivelesMap = {
             deficiente: 0,
             regular: 0,
             bueno: 0,
             muy_bueno: 0,
+            excelente: 0,
+        };
+
+        const productividadMap = {
+            sin_datos: 0,
+            critico: 0,
+            bajo: 0,
+            aceptable: 0,
+            bueno: 0,
             excelente: 0,
         };
 
@@ -150,10 +211,14 @@ export class EvaluacionPersonalDashboard extends Component {
 
             totalPuntaje += puntaje;
             totalProductividad += productividad;
+
             totalReparaciones += ev.cantidad_reparaciones || 0;
             totalTickets += ev.cantidad_tickets || 0;
             totalTrabajos += ev.total_trabajos_mes || 0;
             objetivoTotal += ev.objetivo_total_trabajos || 0;
+
+            diasActivos += ev.total_dias_trabajados || 0;
+            diasSinActividad += ev.total_dias_sin_actividad || 0;
 
             if (ev.nivel_desempeno === "deficiente") {
                 deficientes += 1;
@@ -170,6 +235,10 @@ export class EvaluacionPersonalDashboard extends Component {
             if (ev.nivel_desempeno && nivelesMap[ev.nivel_desempeno] !== undefined) {
                 nivelesMap[ev.nivel_desempeno] += 1;
             }
+
+            if (ev.estado_productividad && productividadMap[ev.estado_productividad] !== undefined) {
+                productividadMap[ev.estado_productividad] += 1;
+            }
         }
 
         this.state.kpis = {
@@ -184,25 +253,15 @@ export class EvaluacionPersonalDashboard extends Component {
             deficientes,
             seguimiento,
             destacados,
+            diasActivos,
+            diasSinActividad,
         };
 
         this.state.rankingPuntaje = [...evaluaciones]
             .sort((a, b) => (b.puntaje_total || 0) - (a.puntaje_total || 0))
-            .slice(0, 8);
+            .slice(0, 10);
 
         this.state.rankingProductividad = [...evaluaciones]
-            .sort((a, b) => (b.porcentaje_productividad_total || 0) - (a.porcentaje_productividad_total || 0))
-            .slice(0, 8);
-
-        this.state.niveles = [
-            { label: "Deficiente", key: "deficiente", value: nivelesMap.deficiente, className: "danger" },
-            { label: "Regular", key: "regular", value: nivelesMap.regular, className: "warning" },
-            { label: "Bueno", key: "bueno", value: nivelesMap.bueno, className: "info" },
-            { label: "Muy Bueno", key: "muy_bueno", value: nivelesMap.muy_bueno, className: "primary" },
-            { label: "Excelente", key: "excelente", value: nivelesMap.excelente, className: "success" },
-        ];
-
-        this.state.productividadPorTecnico = [...evaluaciones]
             .sort((a, b) => (b.porcentaje_productividad_total || 0) - (a.porcentaje_productividad_total || 0))
             .slice(0, 10);
 
@@ -213,6 +272,111 @@ export class EvaluacionPersonalDashboard extends Component {
         this.state.ticketsPorTecnico = [...evaluaciones]
             .sort((a, b) => (b.cantidad_tickets || 0) - (a.cantidad_tickets || 0))
             .slice(0, 10);
+
+        this.state.diasSinActividadRanking = [...evaluaciones]
+            .sort((a, b) => (b.total_dias_sin_actividad || 0) - (a.total_dias_sin_actividad || 0))
+            .slice(0, 10);
+
+        this.state.niveles = [
+            { label: "Deficiente", key: "deficiente", value: nivelesMap.deficiente, className: "danger" },
+            { label: "Regular", key: "regular", value: nivelesMap.regular, className: "warning" },
+            { label: "Bueno", key: "bueno", value: nivelesMap.bueno, className: "info" },
+            { label: "Muy Bueno", key: "muy_bueno", value: nivelesMap.muy_bueno, className: "primary" },
+            { label: "Excelente", key: "excelente", value: nivelesMap.excelente, className: "success" },
+        ];
+
+        this.state.estadosProductividad = [
+            { label: "Crítico", key: "critico", value: productividadMap.critico, className: "danger" },
+            { label: "Bajo", key: "bajo", value: productividadMap.bajo, className: "warning" },
+            { label: "Aceptable", key: "aceptable", value: productividadMap.aceptable, className: "yellow" },
+            { label: "Bueno", key: "bueno", value: productividadMap.bueno, className: "info" },
+            { label: "Excelente", key: "excelente", value: productividadMap.excelente, className: "success" },
+        ];
+    }
+
+    // ============================================================
+    // DETALLE DIARIO
+    // ============================================================
+
+    async selectEvaluacion(ev) {
+        this.state.selectedEvaluacion = ev;
+        await this.loadDetalleDiario(ev.id);
+    }
+
+    async loadDetalleDiario(evaluacionId) {
+        if (!evaluacionId) {
+            this.state.detalleDiario = [];
+            return;
+        }
+
+        this.state.loadingDetalle = true;
+
+        try {
+            const fields = [
+                "fecha",
+                "dia_semana",
+                "cantidad_reparaciones",
+                "cantidad_tickets",
+                "total_trabajos",
+                "objetivo_dia",
+                "porcentaje_cumplimiento",
+                "cumple_objetivo",
+                "estado_dia",
+                "clientes_atendidos",
+                "modelos_trabajados",
+                "cantidad_clientes",
+            ];
+
+            const detalle = await this.orm.searchRead(
+                "evaluacion.personal.detalle.diario",
+                [["evaluacion_id", "=", evaluacionId]],
+                fields,
+                { order: "fecha asc" }
+            );
+
+            this.state.detalleDiario = detalle;
+        } catch (error) {
+            console.error("Error cargando detalle diario:", error);
+            this.notification.add("No se pudo cargar el detalle diario.", {
+                type: "warning",
+            });
+        } finally {
+            this.state.loadingDetalle = false;
+        }
+    }
+
+    // ============================================================
+    // HELPERS
+    // ============================================================
+
+    getTecnicoName(record) {
+        return record.usuario_id && record.usuario_id[1] ? record.usuario_id[1] : "Sin técnico";
+    }
+
+    getEvaluadorName(record) {
+        return record.evaluador_id && record.evaluador_id[1] ? record.evaluador_id[1] : "Sin evaluador";
+    }
+
+    getPercent(value) {
+        return Math.round(value || 0);
+    }
+
+    getFloat(value) {
+        return Number(value || 0).toFixed(2);
+    }
+
+    getBarWidth(value) {
+        return `width: ${Math.min(100, Math.max(0, value || 0))}%`;
+    }
+
+    getRelativeWidth(value, maxValue) {
+        const width = maxValue ? (value / maxValue) * 100 : 0;
+        return `width: ${Math.min(100, Math.max(0, width))}%`;
+    }
+
+    getMaxValue(records, fieldName) {
+        const values = records.map((record) => record[fieldName] || 0);
+        return Math.max(...values, 1);
     }
 
     getNivelLabel(nivel) {
@@ -237,27 +401,43 @@ export class EvaluacionPersonalDashboard extends Component {
         return labels[estado] || "Sin datos";
     }
 
-    getTecnicoName(record) {
-        return record.usuario_id && record.usuario_id[1] ? record.usuario_id[1] : "Sin técnico";
+    getEstadoDiaLabel(estado) {
+        const labels = {
+            sin_actividad: "Sin Actividad",
+            bajo: "Bajo",
+            aceptable: "Aceptable",
+            bueno: "Bueno",
+            excelente: "Excelente",
+        };
+        return labels[estado] || "Sin datos";
     }
 
-    getPercent(value) {
-        return Math.round(value || 0);
+    getProductividadLabel(estado) {
+        const labels = {
+            sin_datos: "Sin Datos",
+            critico: "Crítico",
+            bajo: "Bajo",
+            aceptable: "Aceptable",
+            bueno: "Bueno",
+            excelente: "Excelente",
+        };
+        return labels[estado] || "Sin datos";
     }
 
-    getBarWidth(value) {
-        return `width: ${Math.min(100, Math.max(0, value || 0))}%`;
+    getMonthName(dateStr) {
+        if (!dateStr) {
+            return "";
+        }
+        const date = new Date(`${dateStr}T00:00:00`);
+        return date.toLocaleDateString("es-PE", {
+            month: "long",
+            year: "numeric",
+        });
     }
 
-    getMaxValue(records, fieldName) {
-        const values = records.map((r) => r[fieldName] || 0);
-        return Math.max(...values, 1);
-    }
-
-    getRelativeWidth(value, maxValue) {
-        const width = maxValue ? (value / maxValue) * 100 : 0;
-        return `width: ${Math.min(100, Math.max(0, width))}%`;
-    }
+    // ============================================================
+    // EVENTOS
+    // ============================================================
 
     async onApplyFilter() {
         await this.loadDashboard();
@@ -271,6 +451,10 @@ export class EvaluacionPersonalDashboard extends Component {
         this.state.fechaFin = ev.target.value;
     }
 
+    // ============================================================
+    // ACCIONES ODOO
+    // ============================================================
+
     async openEvaluaciones() {
         await this.action.doAction("sat.action_evaluacion_personal");
     }
@@ -282,6 +466,17 @@ export class EvaluacionPersonalDashboard extends Component {
             res_model: "evaluacion.personal",
             res_id: record.id,
             views: [[false, "form"]],
+            target: "current",
+        });
+    }
+
+    async openDetalleDiario(record) {
+        await this.action.doAction({
+            type: "ir.actions.act_window",
+            name: `Detalle Diario - ${this.getTecnicoName(record)}`,
+            res_model: "evaluacion.personal.detalle.diario",
+            views: [[false, "list"], [false, "form"], [false, "pivot"], [false, "graph"]],
+            domain: [["evaluacion_id", "=", record.id]],
             target: "current",
         });
     }
@@ -301,6 +496,20 @@ export class EvaluacionPersonalDashboard extends Component {
         await this.openFilteredEvaluaciones(
             [["requiere_seguimiento", "=", true]],
             "Evaluaciones con Seguimiento"
+        );
+    }
+
+    async openDeficientes() {
+        await this.openFilteredEvaluaciones(
+            [["nivel_desempeno", "=", "deficiente"]],
+            "Evaluaciones Deficientes"
+        );
+    }
+
+    async openDestacados() {
+        await this.openFilteredEvaluaciones(
+            [["estado_dashboard", "=", "destacado"]],
+            "Evaluaciones Destacadas"
         );
     }
 }

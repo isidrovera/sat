@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates xml:space="preserve">
 
-    <t t-name="sat.EvaluacionPersonalDashboard">
+    <t t-name="sat.EvaluacionPersonalDashboard" owl="1">
 
         <div class="o_eval_personal_dashboard">
 
@@ -13,7 +13,7 @@
                         Dashboard Evaluaciones
                     </h2>
                     <p>
-                        Productividad, puntaje y seguimiento del personal técnico.
+                        Productividad, puntaje, seguimiento y detalle diario del personal técnico.
                     </p>
                 </div>
 
@@ -102,7 +102,7 @@
 
                     <div class="o_eval_dash_kpi_card warning">
                         <div class="o_eval_dash_kpi_icon">
-                            <i class="fa fa-tools"/>
+                            <i class="fa fa-wrench"/>
                         </div>
                         <div>
                             <span>Reparaciones</span>
@@ -144,12 +144,52 @@
                         </div>
                     </div>
 
+                    <div class="o_eval_dash_kpi_card danger" t-on-click="openDeficientes">
+                        <div class="o_eval_dash_kpi_icon">
+                            <i class="fa fa-arrow-down"/>
+                        </div>
+                        <div>
+                            <span>Deficientes</span>
+                            <strong t-esc="state.kpis.deficientes"/>
+                        </div>
+                    </div>
+
+                    <div class="o_eval_dash_kpi_card success" t-on-click="openDestacados">
+                        <div class="o_eval_dash_kpi_icon">
+                            <i class="fa fa-trophy"/>
+                        </div>
+                        <div>
+                            <span>Destacados</span>
+                            <strong t-esc="state.kpis.destacados"/>
+                        </div>
+                    </div>
+
+                    <div class="o_eval_dash_kpi_card green">
+                        <div class="o_eval_dash_kpi_icon">
+                            <i class="fa fa-calendar-check"/>
+                        </div>
+                        <div>
+                            <span>Días Activos</span>
+                            <strong t-esc="state.kpis.diasActivos"/>
+                        </div>
+                    </div>
+
+                    <div class="o_eval_dash_kpi_card red">
+                        <div class="o_eval_dash_kpi_icon">
+                            <i class="fa fa-calendar-times"/>
+                        </div>
+                        <div>
+                            <span>Sin Actividad</span>
+                            <strong t-esc="state.kpis.diasSinActividad"/>
+                        </div>
+                    </div>
+
                 </div>
 
                 <!-- MAIN GRID -->
                 <div class="o_eval_dash_grid">
 
-                    <!-- PRODUCTIVIDAD POR TÉCNICO -->
+                    <!-- PRODUCTIVIDAD -->
                     <div class="o_eval_dash_panel">
                         <div class="o_eval_dash_panel_header">
                             <h3>
@@ -159,8 +199,8 @@
                         </div>
 
                         <div class="o_eval_dash_bar_list">
-                            <t t-foreach="state.productividadPorTecnico" t-as="ev" t-key="ev.id">
-                                <div class="o_eval_dash_bar_item" t-on-click="() => this.openEvaluacion(ev)">
+                            <t t-foreach="state.rankingProductividad" t-as="ev" t-key="'prod_' + ev.id">
+                                <div class="o_eval_dash_bar_item" t-on-click="() => this.selectEvaluacion(ev)">
                                     <div class="o_eval_dash_bar_label">
                                         <span t-esc="getTecnicoName(ev)"/>
                                         <strong>
@@ -176,7 +216,7 @@
                         </div>
                     </div>
 
-                    <!-- NIVELES DONUT SIMPLE -->
+                    <!-- NIVELES -->
                     <div class="o_eval_dash_panel">
                         <div class="o_eval_dash_panel_header">
                             <h3>
@@ -188,22 +228,32 @@
                         <div class="o_eval_dash_level_list">
                             <t t-foreach="state.niveles" t-as="nivel" t-key="nivel.key">
                                 <div class="o_eval_dash_level_item">
-                                    <span t-attf-class="o_eval_dash_dot #{nivel.className}"/>
-                                    <span t-esc="nivel.label"/>
+                                    <div>
+                                        <span t-attf-class="o_eval_dash_dot #{nivel.className}"/>
+                                        <span t-esc="nivel.label"/>
+                                    </div>
                                     <strong t-esc="nivel.value"/>
                                 </div>
                             </t>
                         </div>
 
-                        <div class="o_eval_dash_summary_box">
-                            <div>
-                                <span>Deficientes</span>
-                                <strong class="text-danger" t-esc="state.kpis.deficientes"/>
-                            </div>
-                            <div>
-                                <span>Destacados</span>
-                                <strong class="text-success" t-esc="state.kpis.destacados"/>
-                            </div>
+                        <div class="o_eval_dash_panel_header mt-3">
+                            <h3>
+                                <i class="fa fa-gauge-high me-2"/>
+                                Estado de Productividad
+                            </h3>
+                        </div>
+
+                        <div class="o_eval_dash_level_list">
+                            <t t-foreach="state.estadosProductividad" t-as="estado" t-key="'estado_' + estado.key">
+                                <div class="o_eval_dash_level_item">
+                                    <div>
+                                        <span t-attf-class="o_eval_dash_dot #{estado.className}"/>
+                                        <span t-esc="estado.label"/>
+                                    </div>
+                                    <strong t-esc="estado.value"/>
+                                </div>
+                            </t>
                         </div>
                     </div>
 
@@ -219,8 +269,8 @@
                         <t t-set="maxRep" t-value="getMaxValue(state.reparacionesPorTecnico, 'cantidad_reparaciones')"/>
 
                         <div class="o_eval_dash_bar_list compact">
-                            <t t-foreach="state.reparacionesPorTecnico" t-as="ev" t-key="ev.id">
-                                <div class="o_eval_dash_bar_item" t-on-click="() => this.openEvaluacion(ev)">
+                            <t t-foreach="state.reparacionesPorTecnico" t-as="ev" t-key="'rep_' + ev.id">
+                                <div class="o_eval_dash_bar_item" t-on-click="() => this.selectEvaluacion(ev)">
                                     <div class="o_eval_dash_bar_label">
                                         <span t-esc="getTecnicoName(ev)"/>
                                         <strong t-esc="ev.cantidad_reparaciones"/>
@@ -246,8 +296,8 @@
                         <t t-set="maxTickets" t-value="getMaxValue(state.ticketsPorTecnico, 'cantidad_tickets')"/>
 
                         <div class="o_eval_dash_bar_list compact">
-                            <t t-foreach="state.ticketsPorTecnico" t-as="ev" t-key="ev.id">
-                                <div class="o_eval_dash_bar_item" t-on-click="() => this.openEvaluacion(ev)">
+                            <t t-foreach="state.ticketsPorTecnico" t-as="ev" t-key="'ticket_' + ev.id">
+                                <div class="o_eval_dash_bar_item" t-on-click="() => this.selectEvaluacion(ev)">
                                     <div class="o_eval_dash_bar_label">
                                         <span t-esc="getTecnicoName(ev)"/>
                                         <strong t-esc="ev.cantidad_tickets"/>
@@ -261,14 +311,280 @@
                         </div>
                     </div>
 
+                    <!-- DÍAS SIN ACTIVIDAD -->
+                    <div class="o_eval_dash_panel">
+                        <div class="o_eval_dash_panel_header">
+                            <h3>
+                                <i class="fa fa-calendar-times me-2"/>
+                                Más días sin actividad
+                            </h3>
+                        </div>
+
+                        <t t-set="maxSinAct" t-value="getMaxValue(state.diasSinActividadRanking, 'total_dias_sin_actividad')"/>
+
+                        <div class="o_eval_dash_bar_list compact">
+                            <t t-foreach="state.diasSinActividadRanking" t-as="ev" t-key="'sinact_' + ev.id">
+                                <div class="o_eval_dash_bar_item" t-on-click="() => this.selectEvaluacion(ev)">
+                                    <div class="o_eval_dash_bar_label">
+                                        <span t-esc="getTecnicoName(ev)"/>
+                                        <strong>
+                                            <t t-esc="ev.total_dias_sin_actividad || 0"/> días
+                                        </strong>
+                                    </div>
+                                    <div class="o_eval_dash_bar_track">
+                                        <div t-att-style="getRelativeWidth(ev.total_dias_sin_actividad, maxSinAct)"
+                                             class="o_eval_dash_bar_fill danger"/>
+                                    </div>
+                                </div>
+                            </t>
+                        </div>
+                    </div>
+
+                    <!-- RANKING PUNTAJE -->
+                    <div class="o_eval_dash_panel">
+                        <div class="o_eval_dash_panel_header">
+                            <h3>
+                                <i class="fa fa-ranking-star me-2"/>
+                                Ranking por Puntaje
+                            </h3>
+                        </div>
+
+                        <div class="o_eval_ranking_list">
+                            <t t-foreach="state.rankingPuntaje" t-as="ev" t-key="'rank_' + ev.id">
+                                <div class="o_eval_ranking_item" t-on-click="() => this.selectEvaluacion(ev)">
+                                    <div>
+                                        <strong t-esc="getTecnicoName(ev)"/>
+                                        <span t-esc="getNivelLabel(ev.nivel_desempeno)"/>
+                                    </div>
+                                    <strong>
+                                        <t t-esc="getPercent(ev.puntaje_total)"/>%
+                                    </strong>
+                                </div>
+                            </t>
+                        </div>
+                    </div>
+
                 </div>
 
-                <!-- TABLE -->
+                <!-- DETALLE COMPLETO POR TÉCNICO -->
+                <div class="o_eval_dash_panel full">
+                    <div class="o_eval_dash_panel_header">
+                        <h3>
+                            <i class="fa fa-users me-2"/>
+                            Detalle completo por técnico
+                        </h3>
+                    </div>
+
+                    <div class="o_eval_tecnico_detail_grid">
+                        <t t-foreach="state.evaluaciones" t-as="ev" t-key="'detalle_' + ev.id">
+                            <div t-attf-class="o_eval_tecnico_card #{state.selectedEvaluacion and state.selectedEvaluacion.id == ev.id ? 'selected' : ''}"
+                                 t-on-click="() => this.selectEvaluacion(ev)">
+
+                                <div class="o_eval_tecnico_head">
+                                    <div>
+                                        <strong t-esc="getTecnicoName(ev)"/>
+                                        <span>
+                                            <t t-esc="ev.name"/>
+                                            -
+                                            <t t-esc="getMonthName(ev.fecha)"/>
+                                        </span>
+                                    </div>
+
+                                    <span t-attf-class="o_eval_dash_status #{ev.estado_dashboard}">
+                                        <t t-esc="getEstadoLabel(ev.estado_dashboard)"/>
+                                    </span>
+                                </div>
+
+                                <div class="o_eval_tecnico_score">
+                                    <div>
+                                        <span>Puntaje</span>
+                                        <strong>
+                                            <t t-esc="getPercent(ev.puntaje_total)"/>%
+                                        </strong>
+                                    </div>
+                                    <div>
+                                        <span>Productividad</span>
+                                        <strong>
+                                            <t t-esc="getPercent(ev.porcentaje_productividad_total)"/>%
+                                        </strong>
+                                    </div>
+                                </div>
+
+                                <div class="o_eval_tecnico_progress">
+                                    <div class="o_eval_tecnico_progress_label">
+                                        <span>Productividad total</span>
+                                        <span>
+                                            <t t-esc="ev.total_trabajos_mes || 0"/>
+                                            /
+                                            <t t-esc="ev.objetivo_total_trabajos || 0"/>
+                                        </span>
+                                    </div>
+                                    <div class="o_eval_dash_bar_track">
+                                        <div t-att-style="getBarWidth(ev.porcentaje_productividad_total)"
+                                             t-attf-class="o_eval_dash_bar_fill #{ev.porcentaje_productividad_total >= 85 ? 'success' : ev.porcentaje_productividad_total >= 70 ? 'info' : ev.porcentaje_productividad_total >= 50 ? 'warning' : 'danger'}"/>
+                                    </div>
+                                </div>
+
+                                <div class="o_eval_tecnico_metrics">
+                                    <div>
+                                        <i class="fa fa-wrench text-warning"/>
+                                        <span>Reparaciones</span>
+                                        <strong>
+                                            <t t-esc="ev.cantidad_reparaciones || 0"/>
+                                            /
+                                            <t t-esc="ev.objetivo_reparaciones || 0"/>
+                                        </strong>
+                                    </div>
+
+                                    <div>
+                                        <i class="fa fa-ticket text-info"/>
+                                        <span>Tickets</span>
+                                        <strong>
+                                            <t t-esc="ev.cantidad_tickets || 0"/>
+                                            /
+                                            <t t-esc="ev.objetivo_tickets || 0"/>
+                                        </strong>
+                                    </div>
+
+                                    <div>
+                                        <i class="fa fa-calendar-check text-success"/>
+                                        <span>Días activos</span>
+                                        <strong t-esc="ev.total_dias_trabajados || 0"/>
+                                    </div>
+
+                                    <div>
+                                        <i class="fa fa-calendar-times text-danger"/>
+                                        <span>Sin actividad</span>
+                                        <strong t-esc="ev.total_dias_sin_actividad || 0"/>
+                                    </div>
+                                </div>
+
+                                <div class="o_eval_tecnico_footer">
+                                    <span t-attf-class="o_eval_dash_badge #{ev.nivel_desempeno}">
+                                        <t t-esc="getNivelLabel(ev.nivel_desempeno)"/>
+                                    </span>
+
+                                    <span t-if="ev.requiere_seguimiento" class="o_eval_follow_alert">
+                                        <i class="fa fa-exclamation-triangle me-1"/>
+                                        Seguimiento
+                                    </span>
+                                </div>
+
+                                <div class="o_eval_tecnico_actions">
+                                    <button class="btn btn-sm btn-outline-primary"
+                                            t-on-click.stop="() => this.openEvaluacion(ev)">
+                                        Ver Evaluación
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-secondary"
+                                            t-on-click.stop="() => this.openDetalleDiario(ev)">
+                                        Diario
+                                    </button>
+                                </div>
+
+                            </div>
+                        </t>
+                    </div>
+                </div>
+
+                <!-- PANEL DETALLE DIARIO -->
+                <div class="o_eval_dash_panel full" t-if="state.selectedEvaluacion">
+                    <div class="o_eval_dash_panel_header o_eval_detail_header">
+                        <div>
+                            <h3>
+                                <i class="fa fa-calendar-days me-2"/>
+                                Detalle diario:
+                                <t t-esc="getTecnicoName(state.selectedEvaluacion)"/>
+                            </h3>
+                            <p>
+                                <t t-esc="state.selectedEvaluacion.name"/>
+                                -
+                                <t t-esc="getMonthName(state.selectedEvaluacion.fecha)"/>
+                            </p>
+                        </div>
+
+                        <div>
+                            <button class="btn btn-sm btn-primary"
+                                    t-on-click="() => this.openDetalleDiario(state.selectedEvaluacion)">
+                                Abrir detalle
+                            </button>
+                        </div>
+                    </div>
+
+                    <t t-if="state.loadingDetalle">
+                        <div class="o_eval_dash_loading small">
+                            <i class="fa fa-spinner fa-spin me-2"/>
+                            Cargando detalle diario...
+                        </div>
+                    </t>
+
+                    <t t-else="">
+                        <div class="o_eval_daily_grid">
+                            <t t-foreach="state.detalleDiario" t-as="dia" t-key="'dia_' + dia.id">
+                                <div t-attf-class="o_eval_daily_card #{dia.estado_dia}">
+                                    <div class="o_eval_daily_head">
+                                        <strong>
+                                            <t t-esc="dia.dia_semana"/>
+                                        </strong>
+                                        <span t-esc="dia.fecha"/>
+                                    </div>
+
+                                    <div class="o_eval_daily_numbers">
+                                        <div>
+                                            <span>Total</span>
+                                            <strong>
+                                                <t t-esc="dia.total_trabajos || 0"/>
+                                                /
+                                                <t t-esc="dia.objetivo_dia || 0"/>
+                                            </strong>
+                                        </div>
+                                        <div>
+                                            <span>Cumpl.</span>
+                                            <strong>
+                                                <t t-esc="getPercent(dia.porcentaje_cumplimiento)"/>%
+                                            </strong>
+                                        </div>
+                                    </div>
+
+                                    <div class="o_eval_dash_bar_track">
+                                        <div t-att-style="getBarWidth(dia.porcentaje_cumplimiento)"
+                                             t-attf-class="o_eval_dash_bar_fill #{dia.porcentaje_cumplimiento >= 100 ? 'success' : dia.porcentaje_cumplimiento >= 70 ? 'warning' : 'danger'}"/>
+                                    </div>
+
+                                    <div class="o_eval_daily_meta">
+                                        <span>
+                                            <i class="fa fa-wrench"/>
+                                            <t t-esc="dia.cantidad_reparaciones || 0"/>
+                                        </span>
+                                        <span>
+                                            <i class="fa fa-ticket"/>
+                                            <t t-esc="dia.cantidad_tickets || 0"/>
+                                        </span>
+                                        <span t-attf-class="o_eval_daily_state #{dia.estado_dia}">
+                                            <t t-esc="getEstadoDiaLabel(dia.estado_dia)"/>
+                                        </span>
+                                    </div>
+
+                                    <div class="o_eval_daily_text">
+                                        <strong>Clientes:</strong>
+                                        <span t-esc="dia.clientes_atendidos || 'Sin clientes'"/>
+                                    </div>
+
+                                    <div class="o_eval_daily_text">
+                                        <strong>Equipos:</strong>
+                                        <span t-esc="dia.modelos_trabajados || 'Sin equipos'"/>
+                                    </div>
+                                </div>
+                            </t>
+                        </div>
+                    </t>
+                </div>
+
+                <!-- TABLA COMPLETA -->
                 <div class="o_eval_dash_panel full">
                     <div class="o_eval_dash_panel_header">
                         <h3>
                             <i class="fa fa-table me-2"/>
-                            Resumen de Evaluaciones
+                            Resumen general de evaluaciones
                         </h3>
                     </div>
 
@@ -277,23 +593,26 @@
                             <thead>
                                 <tr>
                                     <th>Técnico</th>
+                                    <th>Fecha</th>
                                     <th>Puntaje</th>
                                     <th>Nivel</th>
                                     <th>Productividad</th>
                                     <th>Trabajos</th>
                                     <th>Reparaciones</th>
                                     <th>Tickets</th>
-                                    <th>Días Activos</th>
+                                    <th>Días activos</th>
+                                    <th>Sin actividad</th>
                                     <th>Estado</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <t t-foreach="state.evaluaciones" t-as="ev" t-key="ev.id">
-                                    <tr t-on-click="() => this.openEvaluacion(ev)">
+                                <t t-foreach="state.evaluaciones" t-as="ev" t-key="'row_' + ev.id">
+                                    <tr t-on-click="() => this.selectEvaluacion(ev)">
                                         <td>
                                             <strong t-esc="getTecnicoName(ev)"/>
                                             <div class="text-muted small" t-esc="ev.name"/>
                                         </td>
+                                        <td t-esc="ev.fecha"/>
                                         <td>
                                             <strong>
                                                 <t t-esc="getPercent(ev.puntaje_total)"/>%
@@ -312,11 +631,18 @@
                                             /
                                             <t t-esc="ev.objetivo_total_trabajos || 0"/>
                                         </td>
-                                        <td t-esc="ev.cantidad_reparaciones || 0"/>
-                                        <td t-esc="ev.cantidad_tickets || 0"/>
                                         <td>
-                                            <t t-esc="ev.total_dias_trabajados || 0"/>
+                                            <t t-esc="ev.cantidad_reparaciones || 0"/>
+                                            /
+                                            <t t-esc="ev.objetivo_reparaciones || 0"/>
                                         </td>
+                                        <td>
+                                            <t t-esc="ev.cantidad_tickets || 0"/>
+                                            /
+                                            <t t-esc="ev.objetivo_tickets || 0"/>
+                                        </td>
+                                        <td t-esc="ev.total_dias_trabajados || 0"/>
+                                        <td t-esc="ev.total_dias_sin_actividad || 0"/>
                                         <td>
                                             <span t-attf-class="o_eval_dash_status #{ev.estado_dashboard}">
                                                 <t t-esc="getEstadoLabel(ev.estado_dashboard)"/>

@@ -1,8 +1,11 @@
 .o_eval_personal_dashboard {
+    height: calc(100vh - 46px);
+    max-height: calc(100vh - 46px);
+    overflow-y: auto;
+    overflow-x: hidden;
     padding: 16px;
     background: #f4f6fb;
-    min-height: 100%;
-    overflow-y: auto;
+    scroll-behavior: smooth;
 
     .o_eval_dash_topbar {
         display: flex;
@@ -61,6 +64,10 @@
         border-radius: 14px;
         font-size: 16px;
         color: #6b7280;
+
+        &.small {
+            padding: 20px;
+        }
     }
 
     .o_eval_dash_kpi_grid {
@@ -96,6 +103,7 @@
             font-size: 20px;
             background: #eef2ff;
             color: #4f46e5;
+            flex-shrink: 0;
         }
 
         span {
@@ -119,6 +127,8 @@
         &.blue { border-left-color: #3b82f6; }
         &.dark { border-left-color: #111827; }
         &.danger { border-left-color: #ef4444; }
+        &.green { border-left-color: #16a34a; }
+        &.red { border-left-color: #dc2626; }
     }
 
     .o_eval_dash_grid {
@@ -149,6 +159,19 @@
             font-weight: 800;
             margin: 0;
             color: #111827;
+        }
+
+        p {
+            margin: 4px 0 0;
+            color: #6b7280;
+            font-size: 13px;
+        }
+
+        &.o_eval_detail_header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
         }
     }
 
@@ -223,41 +246,306 @@
         padding: 10px 12px;
         color: #374151;
         font-weight: 600;
+
+        > div {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
     }
 
     .o_eval_dash_dot {
         width: 12px;
         height: 12px;
         border-radius: 999px;
-        margin-right: 8px;
+        display: inline-block;
 
         &.danger { background: #ef4444; }
         &.warning { background: #f59e0b; }
+        &.yellow { background: #eab308; }
         &.info { background: #06b6d4; }
         &.primary { background: #6366f1; }
         &.success { background: #22c55e; }
     }
 
-    .o_eval_dash_summary_box {
-        margin-top: 16px;
+    .o_eval_ranking_list {
+        display: flex;
+        flex-direction: column;
+        gap: 9px;
+    }
+
+    .o_eval_ranking_item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: #f8fafc;
+        border-radius: 12px;
+        padding: 10px 12px;
+        cursor: pointer;
+
+        &:hover {
+            background: #eef2ff;
+        }
+
+        strong {
+            color: #111827;
+        }
+
+        span {
+            display: block;
+            color: #6b7280;
+            font-size: 12px;
+        }
+    }
+
+    .o_eval_tecnico_detail_grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(280px, 1fr));
+        gap: 14px;
+    }
+
+    .o_eval_tecnico_card {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 16px;
+        padding: 14px;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+
+        &:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.10);
+            border-color: #c7d2fe;
+        }
+
+        &.selected {
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.14);
+        }
+    }
+
+    .o_eval_tecnico_head {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        border-bottom: 1px solid #e5e7eb;
+        padding-bottom: 10px;
+        margin-bottom: 12px;
+
+        strong {
+            display: block;
+            font-size: 14px;
+            color: #111827;
+        }
+
+        span {
+            display: block;
+            font-size: 12px;
+            color: #6b7280;
+        }
+    }
+
+    .o_eval_tecnico_score {
         display: grid;
         grid-template-columns: repeat(2, 1fr);
-        gap: 12px;
+        gap: 10px;
+        margin-bottom: 12px;
 
         > div {
             background: #f8fafc;
             border-radius: 12px;
-            padding: 14px;
+            padding: 10px;
+
+            span {
+                display: block;
+                font-size: 12px;
+                color: #6b7280;
+            }
+
+            strong {
+                display: block;
+                font-size: 22px;
+                color: #111827;
+            }
+        }
+    }
+
+    .o_eval_tecnico_progress {
+        margin-bottom: 12px;
+    }
+
+    .o_eval_tecnico_progress_label {
+        display: flex;
+        justify-content: space-between;
+        font-size: 12px;
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 5px;
+    }
+
+    .o_eval_tecnico_metrics {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+
+        > div {
+            background: #f9fafb;
+            border-radius: 10px;
+            padding: 9px;
+
+            i {
+                margin-right: 4px;
+            }
+
+            span {
+                display: block;
+                font-size: 12px;
+                color: #6b7280;
+                margin-top: 3px;
+            }
+
+            strong {
+                display: block;
+                font-size: 14px;
+                color: #111827;
+            }
+        }
+    }
+
+    .o_eval_tecnico_footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 12px;
+        padding-top: 10px;
+        border-top: 1px solid #e5e7eb;
+    }
+
+    .o_eval_tecnico_actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 12px;
+        flex-wrap: wrap;
+    }
+
+    .o_eval_follow_alert {
+        color: #b91c1c;
+        background: #fee2e2;
+        border-radius: 999px;
+        padding: 4px 9px;
+        font-size: 12px;
+        font-weight: 700;
+    }
+
+    .o_eval_daily_grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(220px, 1fr));
+        gap: 12px;
+    }
+
+    .o_eval_daily_card {
+        border: 1px solid #e5e7eb;
+        border-radius: 14px;
+        padding: 12px;
+        background: #fff;
+
+        &.excelente {
+            border-left: 5px solid #16a34a;
+        }
+
+        &.bueno {
+            border-left: 5px solid #0284c7;
+        }
+
+        &.aceptable {
+            border-left: 5px solid #f59e0b;
+        }
+
+        &.bajo {
+            border-left: 5px solid #dc2626;
+        }
+
+        &.sin_actividad {
+            border-left: 5px solid #94a3b8;
+        }
+    }
+
+    .o_eval_daily_head {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        margin-bottom: 8px;
+
+        strong {
+            color: #111827;
+        }
+
+        span {
+            color: #6b7280;
+            font-size: 12px;
+        }
+    }
+
+    .o_eval_daily_numbers {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+        margin-bottom: 8px;
+
+        > div {
+            background: #f8fafc;
+            border-radius: 10px;
+            padding: 8px;
 
             span {
                 display: block;
                 color: #6b7280;
-                font-size: 13px;
+                font-size: 12px;
             }
 
             strong {
-                font-size: 26px;
+                display: block;
+                color: #111827;
+                font-size: 16px;
             }
+        }
+    }
+
+    .o_eval_daily_meta {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 9px;
+        font-size: 12px;
+        color: #374151;
+    }
+
+    .o_eval_daily_state {
+        border-radius: 999px;
+        padding: 3px 8px;
+        font-weight: 700;
+
+        &.excelente { background: #dcfce7; color: #15803d; }
+        &.bueno { background: #dbeafe; color: #1d4ed8; }
+        &.aceptable { background: #fef3c7; color: #b45309; }
+        &.bajo { background: #fee2e2; color: #b91c1c; }
+        &.sin_actividad { background: #f1f5f9; color: #475569; }
+    }
+
+    .o_eval_daily_text {
+        margin-top: 8px;
+        font-size: 12px;
+        color: #4b5563;
+
+        strong {
+            color: #111827;
+        }
+
+        span {
+            display: block;
+            margin-top: 2px;
         }
     }
 
@@ -279,6 +567,7 @@
                 color: #64748b;
                 padding: 12px;
                 border-bottom: 1px solid #e5e7eb;
+                white-space: nowrap;
             }
         }
 
@@ -296,6 +585,7 @@
                 border-bottom: 1px solid #e5e7eb;
                 vertical-align: middle;
                 color: #374151;
+                white-space: nowrap;
             }
         }
     }
@@ -328,14 +618,34 @@
     }
 }
 
-@media (max-width: 1200px) {
+@media (max-width: 1300px) {
     .o_eval_personal_dashboard {
+        .o_eval_dash_kpi_grid {
+            grid-template-columns: repeat(3, minmax(180px, 1fr));
+        }
+
+        .o_eval_tecnico_detail_grid {
+            grid-template-columns: repeat(2, minmax(260px, 1fr));
+        }
+
+        .o_eval_daily_grid {
+            grid-template-columns: repeat(3, minmax(220px, 1fr));
+        }
+    }
+}
+
+@media (max-width: 1000px) {
+    .o_eval_personal_dashboard {
+        .o_eval_dash_grid {
+            grid-template-columns: 1fr;
+        }
+
         .o_eval_dash_kpi_grid {
             grid-template-columns: repeat(2, minmax(180px, 1fr));
         }
 
-        .o_eval_dash_grid {
-            grid-template-columns: 1fr;
+        .o_eval_daily_grid {
+            grid-template-columns: repeat(2, minmax(220px, 1fr));
         }
     }
 }
@@ -343,6 +653,7 @@
 @media (max-width: 768px) {
     .o_eval_personal_dashboard {
         padding: 10px;
+        height: calc(100vh - 46px);
 
         .o_eval_dash_topbar {
             flex-direction: column;
@@ -358,8 +669,15 @@
             }
         }
 
-        .o_eval_dash_kpi_grid {
+        .o_eval_dash_kpi_grid,
+        .o_eval_tecnico_detail_grid,
+        .o_eval_daily_grid {
             grid-template-columns: 1fr;
+        }
+
+        .o_eval_dash_panel_header.o_eval_detail_header {
+            flex-direction: column;
+            align-items: stretch;
         }
     }
 }
