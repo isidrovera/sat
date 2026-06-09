@@ -5,14 +5,13 @@ import uuid
 from datetime import timedelta
 
 from odoo import api, fields, models, _
-from odoo.exceptions import UserError
 
 _logger = logging.getLogger(__name__)
 
 
 class ReparacionAvanceOpcion(models.Model):
     _name = 'reparacion.avance.opcion'
-    _description = 'Opción de Avance de Reparación'
+    _description = 'Opción de Demora de Reparación'
     _order = 'sequence, category, name'
 
     name = fields.Char(
@@ -80,13 +79,13 @@ class ReparacionAvanceOpcion(models.Model):
 
 class ReparacionAvance(models.Model):
     _name = 'reparacion.avance'
-    _description = 'Avance de Reparación'
+    _description = 'Demora de Reparación'
     _inherit = ['mail.thread', 'mail.activity.mixin']
     _order = 'create_date desc, id desc'
 
     name = fields.Char(
         string='Referencia',
-        default=lambda self: _('Nuevo avance'),
+        default=lambda self: _('Nueva demora'),
         copy=False,
         readonly=True,
     )
@@ -130,19 +129,21 @@ class ReparacionAvance(models.Model):
     line_ids = fields.One2many(
         'reparacion.avance.linea',
         'avance_id',
-        string='Opciones de avance',
+        string='Motivos de demora',
     )
 
     detalle = fields.Text(
         string='Detalle adicional',
     )
 
+    # Se mantiene por compatibilidad con registros antiguos.
+    # Las fotos nuevas se guardan en reparacion.avance.linea.attachment_ids.
     attachment_ids = fields.Many2many(
         'ir.attachment',
         'reparacion_avance_ir_attachment_rel',
         'avance_id',
         'attachment_id',
-        string='Fotos / Adjuntos',
+        string='Fotos / Adjuntos antiguos',
     )
 
     notificar_asesora = fields.Boolean(
@@ -185,14 +186,14 @@ class ReparacionAvance(models.Model):
         records = super().create(vals_list)
 
         for record in records:
-            if record.name == _('Nuevo avance'):
-                record.name = _('Avance %s') % record.id
+            if record.name == _('Nueva demora'):
+                record.name = _('Demora %s') % record.id
 
             try:
                 record.reparacion_id._after_avance_registrado(record)
             except Exception as e:
                 _logger.exception(
-                    "[AVANCE REPARACIÓN] Error actualizando reparación después de registrar avance %s: %s",
+                    "[DEMORA REPARACIÓN] Error actualizando reparación después de registrar demora %s: %s",
                     record.id,
                     e,
                 )
@@ -202,7 +203,7 @@ class ReparacionAvance(models.Model):
                     record.action_notificar_asesora()
                 except Exception as e:
                     _logger.exception(
-                        "[AVANCE REPARACIÓN] Error notificando asesora desde avance %s: %s",
+                        "[DEMORA REPARACIÓN] Error notificando asesora desde demora %s: %s",
                         record.id,
                         e,
                     )
@@ -235,17 +236,21 @@ class ReparacionAvance(models.Model):
         if self.detalle:
             motivo = "%s - %s" % (motivo, self.detalle)
 
+        if len(motivo) > 450:
+            motivo = motivo[:447] + '...'
+
         msg = f"""*Demora de reparación*
 
-    *Cliente:* {cliente}
-    *Modelo:* {modelo}
-    *Serie:* {serie}
+*Cliente:* {cliente}
+*Modelo:* {modelo}
+*Serie:* {serie}
 
-    *Motivo:* {motivo}
-    *Estado:* Continúa en revisión.
-    """
+*Motivo:* {motivo}
+*Estado:* Continúa en revisión.
+"""
 
         return msg
+
     def _get_line_attachments(self):
         self.ensure_one()
 
@@ -255,91 +260,236 @@ class ReparacionAvance(models.Model):
             attachments |= line.attachment_ids
 
         return attachments
+
+    def _get_asesora_user(self):
+        self.ensure_one()
+
+        reparacion = self.reparacion_id
+
+        try:
+            if reparacion.maquina_id and reparacion.maquina_id.cliente_id:
+                return reparacion.maquina_id.cliente_id.asesora_id
+        except Exception:
+            pass
+
+        try:
+            if reparacion.cliente_id:
+                return reparacion.cliente_id.asesora_id
+        except Exception:
+            pass
+
+        return False
+
+    def _get_copia_comercial_phone(self):
+        ICP = self.env['ir.config_parameter'].sudo()
+        return ICP.get_param(
+            'sat.notificaciones_comerciales_copia_phone',
+            '19373717674'
+        ) or ''
+
     def action_notificar_asesora(self):
         """
-        Notifica el avance a la asesora:
-        1) Envía texto corto.
-        2) Envía fotos como imagen por WhatsApp, no como link.
+        Notifica la demora usando sat.notificacion.log.
+
+        - Texto a asesora.
+        - Fotos como media a asesora.
+        - Texto a copia comercial.
+        - Fotos como media a copia comercial.
+        - Respeta horario laboral para asesora y copia comercial.
         """
+        Log = self.env['sat.notificacion.log'].sudo()
+
         for record in self:
             reparacion = record.reparacion_id
 
             if not reparacion:
                 continue
 
-            if not hasattr(reparacion, 'send_whatsapp_message'):
-                raise UserError(_("No se encontró el método send_whatsapp_message en reparaciones."))
+            asesora_phone = reparacion.asesora_mobile_clean or ''
+            copia_phone = record._get_copia_comercial_phone()
 
-            if not hasattr(reparacion, 'send_whatsapp_media_message'):
-                raise UserError(_("No se encontró el método send_whatsapp_media_message en reparaciones."))
+            asesora_user = record._get_asesora_user()
+            cliente = reparacion.cliente_id if reparacion.cliente_id else False
+            maquina = reparacion.maquina_id if reparacion.maquina_id else False
 
-            if not reparacion.asesora_mobile_clean:
+            msg = record._build_msg_asesora()
+            attachments = record._get_line_attachments()
+
+            created_logs = self.env['sat.notificacion.log'].sudo().browse()
+            asesora_text_log = False
+
+            # ------------------------------------------------------
+            # 1) Texto a asesora
+            # ------------------------------------------------------
+            if asesora_phone:
+                asesora_text_log = Log.create_notification(
+                    event_type='demora_asesora',
+                    phone=asesora_phone,
+                    message=msg,
+                    recipient_type='asesora',
+                    recipient_name=asesora_user.name if asesora_user else 'Asesora',
+                    maquina=maquina,
+                    reparacion=reparacion,
+                    avance=record,
+                    cliente=cliente,
+                    asesora_user=asesora_user,
+                    respect_business_hours=True,
+                    force_send=False,
+                    unique_key='demora_asesora:avance:%s:text:%s' % (
+                        record.id,
+                        asesora_phone,
+                    ),
+                    source_record=record,
+                    send_immediately=True,
+                    note='Notificación de demora enviada a asesora.',
+                )
+
+                if asesora_text_log:
+                    created_logs |= asesora_text_log
+
+            else:
                 record.write({
                     'estado': 'error',
                     'error_notificacion': _('La asesora no tiene número móvil configurado.'),
                 })
-                reparacion.message_post(
-                    body=_("⚠️ No se notificó el avance a la asesora porque no tiene número móvil configurado.")
-                )
-                continue
 
-            phone = reparacion.asesora_mobile_clean
-            msg = record._build_msg_asesora()
-
-            result_text = reparacion.send_whatsapp_message(phone, msg)
-
-            if not result_text.get('success'):
-                error = result_text.get('error', 'Error desconocido enviando texto')
-                record.write({
-                    'estado': 'error',
-                    'error_notificacion': error,
-                })
                 reparacion.message_post(
                     body=_(
-                        "⚠️ No se pudo enviar el texto del avance a la asesora.<br/>"
-                        "<b>Error:</b> %(error)s"
-                    ) % {
-                        'error': error,
-                    }
-                )
-                continue
-
-            media_errors = []
-            attachments = record._get_line_attachments()
-
-            for attachment in attachments:
-                mimetype = attachment.mimetype or ''
-
-                if not mimetype.startswith('image/'):
-                    continue
-
-                result_media = reparacion.send_whatsapp_media_message(
-                    phone,
-                    attachment,
-                    caption=False,
+                        "⚠️ No se creó notificación de demora para la asesora "
+                        "porque no tiene número móvil configurado."
+                    ),
+                    subtype_xmlid='mail.mt_note',
                 )
 
-                if not result_media.get('success'):
-                    media_errors.append(
-                        "%s: %s" % (
-                            attachment.name,
-                            result_media.get('error', 'Error desconocido enviando imagen')
-                        )
+            # ------------------------------------------------------
+            # 2) Fotos a asesora
+            # ------------------------------------------------------
+            if asesora_phone:
+                for attachment in attachments:
+                    mimetype = attachment.mimetype or ''
+
+                    if not mimetype.startswith('image/'):
+                        continue
+
+                    log = Log.create_notification(
+                        event_type='foto_demora',
+                        phone=asesora_phone,
+                        message=False,
+                        caption='Evidencia de demora',
+                        recipient_type='asesora',
+                        recipient_name=asesora_user.name if asesora_user else 'Asesora',
+                        maquina=maquina,
+                        reparacion=reparacion,
+                        avance=record,
+                        cliente=cliente,
+                        asesora_user=asesora_user,
+                        is_media=True,
+                        attachment=attachment,
+                        respect_business_hours=True,
+                        force_send=False,
+                        unique_key='foto_demora:avance:%s:asesora:%s:att:%s' % (
+                            record.id,
+                            asesora_phone,
+                            attachment.id,
+                        ),
+                        source_record=record,
+                        send_immediately=True,
+                        note='Foto de demora enviada a asesora.',
                     )
 
-            if media_errors:
+                    if log:
+                        created_logs |= log
+
+            # ------------------------------------------------------
+            # 3) Texto copia comercial
+            # ------------------------------------------------------
+            if copia_phone and copia_phone != asesora_phone:
+                log = Log.create_notification(
+                    event_type='copia_comercial',
+                    phone=copia_phone,
+                    message=msg,
+                    recipient_type='copia_comercial',
+                    recipient_name='Copia comercial',
+                    maquina=maquina,
+                    reparacion=reparacion,
+                    avance=record,
+                    cliente=cliente,
+                    asesora_user=asesora_user,
+                    respect_business_hours=True,
+                    force_send=False,
+                    unique_key='demora_asesora:avance:%s:copia:%s' % (
+                        record.id,
+                        copia_phone,
+                    ),
+                    source_record=record,
+                    send_immediately=True,
+                    note='Copia comercial de demora de reparación.',
+                )
+
+                if log:
+                    created_logs |= log
+
+                # --------------------------------------------------
+                # 4) Fotos copia comercial
+                # --------------------------------------------------
+                for attachment in attachments:
+                    mimetype = attachment.mimetype or ''
+
+                    if not mimetype.startswith('image/'):
+                        continue
+
+                    log = Log.create_notification(
+                        event_type='foto_demora',
+                        phone=copia_phone,
+                        message=False,
+                        caption='Evidencia de demora',
+                        recipient_type='copia_comercial',
+                        recipient_name='Copia comercial',
+                        maquina=maquina,
+                        reparacion=reparacion,
+                        avance=record,
+                        cliente=cliente,
+                        asesora_user=asesora_user,
+                        is_media=True,
+                        attachment=attachment,
+                        respect_business_hours=True,
+                        force_send=False,
+                        unique_key='foto_demora:avance:%s:copia:%s:att:%s' % (
+                            record.id,
+                            copia_phone,
+                            attachment.id,
+                        ),
+                        source_record=record,
+                        send_immediately=True,
+                        note='Copia comercial de foto de demora.',
+                    )
+
+                    if log:
+                        created_logs |= log
+
+            # ------------------------------------------------------
+            # Estado de la demora
+            # ------------------------------------------------------
+            error_logs = created_logs.filtered(lambda l: l.state == 'error')
+            pending_logs = created_logs.filtered(
+                lambda l: l.state in ('pending', 'pending_out_of_hours', 'sending')
+            )
+
+            sent_text = bool(asesora_text_log and asesora_text_log.state == 'sent')
+            pending_text = bool(
+                asesora_text_log
+                and asesora_text_log.state in ('pending', 'pending_out_of_hours', 'sending')
+            )
+
+            if error_logs:
                 record.write({
                     'estado': 'error',
-                    'error_notificacion': "\n".join(media_errors),
+                    'error_notificacion': '\n'.join(
+                        [msg for msg in error_logs.mapped('error_message') if msg]
+                    ) or _('Error enviando notificación de demora.'),
                 })
-                reparacion.message_post(
-                    body=_(
-                        "⚠️ El texto del avance fue enviado, pero algunas fotos no se enviaron:<br/>%(errors)s"
-                    ) % {
-                        'errors': "<br/>".join(media_errors),
-                    }
-                )
-            else:
+
+            elif sent_text:
                 record.write({
                     'asesora_notificada': True,
                     'fecha_notificacion_asesora': fields.Datetime.now(),
@@ -347,23 +497,48 @@ class ReparacionAvance(models.Model):
                     'error_notificacion': False,
                 })
 
-                reparacion.message_post(
-                    body=_(
-                        "✅ Avance notificado a la asesora por WhatsApp con %(count)s foto(s)."
-                    ) % {
-                        'count': len(attachments),
-                    }
-                )
+            elif pending_text or pending_logs:
+                record.write({
+                    'estado': 'registrado',
+                    'error_notificacion': False,
+                })
+
+            else:
+                record.write({
+                    'estado': 'registrado',
+                    'error_notificacion': False,
+                })
+
+            # ------------------------------------------------------
+            # Chatter resumen
+            # ------------------------------------------------------
+            reparacion.message_post(
+                body=_(
+                    "📲 <b>Notificaciones de demora generadas</b><br/>"
+                    "<b>Demora:</b> %(avance)s<br/>"
+                    "<b>Asesora:</b> %(asesora)s<br/>"
+                    "<b>Copia comercial:</b> %(copia)s<br/>"
+                    "<b>Fotos:</b> %(fotos)s<br/>"
+                    "<b>Registros creados:</b> %(count)s"
+                ) % {
+                    'avance': record.name or record.id,
+                    'asesora': asesora_phone or 'Sin número',
+                    'copia': copia_phone or 'Sin número',
+                    'fotos': len(attachments),
+                    'count': len(created_logs),
+                },
+                subtype_xmlid='mail.mt_note',
+            )
 
 
 class ReparacionAvanceLinea(models.Model):
     _name = 'reparacion.avance.linea'
-    _description = 'Línea de Avance de Reparación'
+    _description = 'Línea de Demora de Reparación'
     _order = 'id'
 
     avance_id = fields.Many2one(
         'reparacion.avance',
-        string='Avance',
+        string='Demora',
         required=True,
         ondelete='cascade',
     )
@@ -397,6 +572,7 @@ class ReparacionAvanceLinea(models.Model):
         string='Parte / repuesto',
         help='Ejemplo: fusor, cilindro, developer, faja de transferencia, rodillos, sensor, tarjeta, fuente, panel.',
     )
+
     attachment_ids = fields.Many2many(
         'ir.attachment',
         'reparacion_avance_linea_ir_attachment_rel',
@@ -404,6 +580,7 @@ class ReparacionAvanceLinea(models.Model):
         'attachment_id',
         string='Fotos',
     )
+
     detalle = fields.Char(
         string='Detalle',
     )
@@ -442,16 +619,16 @@ class ReparacionesAvanceAlertas(models.Model):
     avance_ids = fields.One2many(
         'reparacion.avance',
         'reparacion_id',
-        string='Avances',
+        string='Demoras',
     )
 
     avance_count = fields.Integer(
-        string='Cantidad de avances',
+        string='Cantidad de demoras',
         compute='_compute_avance_count',
     )
 
     avance_token = fields.Char(
-        string='Token de avance',
+        string='Token de demora',
         copy=False,
         readonly=True,
         index=True,
@@ -464,13 +641,13 @@ class ReparacionesAvanceAlertas(models.Model):
     )
 
     fecha_ultimo_avance = fields.Datetime(
-        string='Último avance',
+        string='Última demora',
         copy=False,
         tracking=True,
     )
 
     fecha_proxima_alerta_avance = fields.Datetime(
-        string='Próxima alerta de avance',
+        string='Próxima alerta de demora',
         copy=False,
         tracking=True,
     )
@@ -489,7 +666,7 @@ class ReparacionesAvanceAlertas(models.Model):
     )
 
     avance_alertas_activas = fields.Boolean(
-        string='Alertas de avance activas',
+        string='Alertas de demora activas',
         default=True,
         copy=False,
     )
@@ -497,12 +674,12 @@ class ReparacionesAvanceAlertas(models.Model):
     avance_estado_alerta = fields.Selection(
         [
             ('sin_alerta', 'Sin alerta'),
-            ('pendiente', 'Pendiente de avance'),
+            ('pendiente', 'Pendiente de demora'),
             ('alertado_jefe', 'Jefe alertado'),
-            ('con_avance', 'Con avance'),
+            ('con_avance', 'Con demora registrada'),
             ('cerrado', 'Cerrado'),
         ],
-        string='Estado alerta de avance',
+        string='Estado alerta de demora',
         default='sin_alerta',
         copy=False,
         tracking=True,
@@ -515,6 +692,7 @@ class ReparacionesAvanceAlertas(models.Model):
         copy=False,
         help='Si se configura, se usará su móvil/partner para enviar alertas. Si está vacío, se usará el parámetro del sistema.',
     )
+
     @api.model
     def _default_jefe_area_user_id(self):
         """
@@ -609,7 +787,7 @@ class ReparacionesAvanceAlertas(models.Model):
         else:
             phone = str(phone).replace('+', '')
             phone = ''.join(phone.split())
-            if phone and not phone.startswith('51'):
+            if phone and not phone.startswith('51') and len(phone) == 9:
                 phone = '51' + phone
 
         return phone
@@ -639,8 +817,7 @@ class ReparacionesAvanceAlertas(models.Model):
 
     def _prepare_avance_tracking_on_revision(self):
         """
-        Prepara control de avance cuando una reparación entra en revisión.
-        No cambia tu lógica de reparación; solo registra fechas para alertas.
+        Prepara control de demoras cuando una reparación entra en revisión.
         """
         now = fields.Datetime.now()
         interval = self._get_avance_interval_hours()
@@ -687,12 +864,12 @@ class ReparacionesAvanceAlertas(models.Model):
         return res
 
     # -------------------------------------------------------------------------
-    # REGISTRO DE AVANCE
+    # REGISTRO DE DEMORA
     # -------------------------------------------------------------------------
 
     def _after_avance_registrado(self, avance):
         """
-        Se ejecuta después de registrar un avance.
+        Se ejecuta después de registrar una demora.
         Reinicia la alerta para una hora después.
         """
         self.ensure_one()
@@ -708,25 +885,33 @@ class ReparacionesAvanceAlertas(models.Model):
         })
 
         option_texts = avance._get_option_texts()
-        options_html = "<br/>".join(["- %s" % item for item in option_texts]) if option_texts else _("Avance registrado")
+        options_html = "<br/>".join(["- %s" % item for item in option_texts]) if option_texts else _("Demora registrada")
 
         self.message_post(
             body=_(
-                "📝 <b>Avance registrado</b><br/>"
+                "📝 <b>Demora registrada</b><br/>"
                 "%(options)s<br/>"
                 "<br/>"
                 "<b>Detalle:</b><br/>%(detalle)s"
             ) % {
                 'options': options_html,
                 'detalle': avance.detalle or _('Sin detalle adicional.'),
-            }
+            },
+            subtype_xmlid='mail.mt_note',
         )
 
-    def create_avance_rapido(self, option_data=None, detalle=False, attachment_ids=None, file_values=None, notificar_asesora=False):
+    def create_avance_rapido(
+        self,
+        option_data=None,
+        detalle=False,
+        attachment_ids=None,
+        file_values=None,
+        notificar_asesora=False
+    ):
         """
-        Crea avance rápido.
+        Crea demora rápida.
 
-        Las fotos se guardan en las líneas del avance.
+        Las fotos se guardan en las líneas.
         No se guardan en reparaciones.foto.
 
         file_values esperado:
@@ -779,7 +964,11 @@ class ReparacionesAvanceAlertas(models.Model):
 
         Attachment = self.env['ir.attachment'].sudo()
 
-        for line in created_lines:
+        # Si el formulario tiene una sola carga general de fotos,
+        # las guardamos en la primera línea para evitar duplicados.
+        target_line = created_lines[:1]
+
+        if target_line:
             line_attachment_ids = []
 
             for attach_id in attachment_ids:
@@ -787,23 +976,23 @@ class ReparacionesAvanceAlertas(models.Model):
                 if attachment.exists():
                     attachment.write({
                         'res_model': 'reparacion.avance.linea',
-                        'res_id': line.id,
+                        'res_id': target_line.id,
                     })
                     line_attachment_ids.append(attachment.id)
 
             for file_data in file_values:
                 attachment = Attachment.create({
-                    'name': file_data.get('name') or 'foto_avance.jpg',
+                    'name': file_data.get('name') or 'foto_demora.jpg',
                     'type': 'binary',
                     'datas': file_data.get('datas'),
                     'res_model': 'reparacion.avance.linea',
-                    'res_id': line.id,
+                    'res_id': target_line.id,
                     'mimetype': file_data.get('mimetype') or 'image/jpeg',
                 })
                 line_attachment_ids.append(attachment.id)
 
             if line_attachment_ids:
-                line.write({
+                target_line.write({
                     'attachment_ids': [(6, 0, line_attachment_ids)],
                 })
 
@@ -823,7 +1012,6 @@ class ReparacionesAvanceAlertas(models.Model):
         self.ensure_one()
 
         avance_url = self._get_avance_url()
-        gallery_url = self._get_gallery_url() if hasattr(self, '_get_gallery_url') else ''
 
         cliente = self.cliente_id.name if self.cliente_id else 'NA'
         tecnico = self.responsable_id.name if self.responsable_id else 'NA'
@@ -832,9 +1020,9 @@ class ReparacionesAvanceAlertas(models.Model):
 
         alertas = self.cantidad_alertas_avance_jefe + 1
 
-        msg = f"""*Alerta de avance pendiente*
+        msg = f"""*Alerta de demora pendiente*
 
-La reparación continúa en revisión y requiere actualización de avance.
+La reparación continúa en revisión y requiere registrar motivo de demora.
 
 *Cliente:* {cliente}
 *Modelo:* {modelo}
@@ -843,47 +1031,60 @@ La reparación continúa en revisión y requiere actualización de avance.
 *Reparación:* {self.name or 'NA'}
 *Alerta N°:* {alertas}
 
-El jefe de área debe registrar el avance o decidir qué informar a la asesora.
-
-*Registrar avance:*
+*Registrar demora:*
 {avance_url}
-
-*Fotos actuales:*
-{gallery_url}
 """
 
         return msg
 
     def _send_alerta_avance_jefe(self):
         """
-        Envía alerta al jefe de área.
-        No notifica directamente a la asesora.
+        Envía alerta al jefe de área usando sat.notificacion.log.
+        Esta alerta es interna, por eso NO respeta horario laboral.
         """
+        Log = self.env['sat.notificacion.log'].sudo()
+
         for record in self:
             if record.estado_id != 'en_revision':
                 continue
 
-            if not hasattr(record, 'send_whatsapp_message'):
-                _logger.error(
-                    "[AVANCE REPARACIÓN] No existe send_whatsapp_message en reparación ID %s",
-                    record.id,
-                )
-                continue
-
             phone = record._get_jefe_area_phone()
+
             if not phone:
                 record.message_post(
                     body=_(
-                        "⚠️ No se pudo enviar alerta de avance porque no hay teléfono configurado para el jefe de área.<br/>"
+                        "⚠️ No se pudo crear alerta de demora porque no hay teléfono configurado "
+                        "para el jefe de área.<br/>"
                         "Configure sat.reparaciones_avance_jefe_phone o sat.reparaciones_avance_jefe_user_id."
-                    )
+                    ),
+                    subtype_xmlid='mail.mt_note',
                 )
                 continue
 
             msg = record._build_msg_alerta_jefe_avance()
-            result = record.send_whatsapp_message(phone, msg)
+            alerta_num = record.cantidad_alertas_avance_jefe + 1
 
-            if result.get('success'):
+            log = Log.create_notification(
+                event_type='demora_jefe',
+                phone=phone,
+                message=msg,
+                recipient_type='jefe_area',
+                recipient_name=record.jefe_area_user_id.name if record.jefe_area_user_id else 'Jefe de área',
+                maquina=record.maquina_id if record.maquina_id else False,
+                reparacion=record,
+                cliente=record.cliente_id if record.cliente_id else False,
+                respect_business_hours=False,
+                force_send=True,
+                unique_key='demora_jefe:reparacion:%s:alerta:%s' % (
+                    record.id,
+                    alerta_num,
+                ),
+                source_record=record,
+                send_immediately=True,
+                note='Alerta interna de demora enviada al jefe de área.',
+            )
+
+            if log and log.state == 'sent':
                 interval = record._get_avance_interval_hours()
                 now = fields.Datetime.now()
 
@@ -897,24 +1098,35 @@ El jefe de área debe registrar el avance o decidir qué informar a la asesora.
 
                 record.message_post(
                     body=_(
-                        "⏰ Alerta de avance enviada al jefe de área.<br/>"
+                        "⏰ Alerta de demora enviada al jefe de área.<br/>"
                         "<b>Número:</b> %(phone)s<br/>"
                         "<b>Próxima alerta:</b> %(next)s"
                     ) % {
                         'phone': phone,
                         'next': record.fecha_proxima_alerta_avance,
-                    }
+                    },
+                    subtype_xmlid='mail.mt_note',
                 )
+
+            elif log:
+                record.message_post(
+                    body=_(
+                        "⚠️ Se creó la alerta de demora al jefe, pero no quedó enviada.<br/>"
+                        "<b>Estado:</b> %(state)s<br/>"
+                        "<b>Error:</b> %(error)s"
+                    ) % {
+                        'state': log.state,
+                        'error': log.error_message or '',
+                    },
+                    subtype_xmlid='mail.mt_note',
+                )
+
             else:
                 record.message_post(
                     body=_(
-                        "⚠️ No se pudo enviar alerta de avance al jefe de área.<br/>"
-                        "<b>Número:</b> %(phone)s<br/>"
-                        "<b>Error:</b> %(error)s"
-                    ) % {
-                        'phone': phone,
-                        'error': result.get('error', 'Error desconocido'),
-                    }
+                        "⚠️ No se pudo crear el registro de alerta de demora al jefe."
+                    ),
+                    subtype_xmlid='mail.mt_note',
                 )
 
     # -------------------------------------------------------------------------
@@ -940,7 +1152,7 @@ El jefe de área debe registrar el avance o decidir qué informar a la asesora.
         reparaciones = self.search(domain, limit=100)
 
         _logger.info(
-            "[AVANCE REPARACIÓN] Cron encontró %s reparaciones en revisión con alerta vencida",
+            "[DEMORA REPARACIÓN] Cron encontró %s reparaciones en revisión con alerta vencida",
             len(reparaciones),
         )
 
@@ -949,7 +1161,7 @@ El jefe de área debe registrar el avance o decidir qué informar a la asesora.
                 reparacion._send_alerta_avance_jefe()
             except Exception as e:
                 _logger.exception(
-                    "[AVANCE REPARACIÓN] Error procesando alerta para reparación ID %s: %s",
+                    "[DEMORA REPARACIÓN] Error procesando alerta para reparación ID %s: %s",
                     reparacion.id,
                     e,
                 )
@@ -965,7 +1177,7 @@ El jefe de área debe registrar el avance o decidir qué informar a la asesora.
 
         return {
             'type': 'ir.actions.act_window',
-            'name': _('Avances de reparación'),
+            'name': _('Demoras de reparación'),
             'res_model': 'reparacion.avance',
             'view_mode': 'list,form',
             'domain': [('reparacion_id', '=', self.id)],
@@ -981,11 +1193,12 @@ El jefe de área debe registrar el avance o decidir qué informar a la asesora.
 
         self.message_post(
             body=_(
-                "🔗 URL de avance generada:<br/>"
+                "🔗 URL para registrar demora generada:<br/>"
                 "<a href='%(url)s' target='_blank'>%(url)s</a>"
             ) % {
                 'url': url,
-            }
+            },
+            subtype_xmlid='mail.mt_note',
         )
 
         return {

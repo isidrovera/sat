@@ -1,0 +1,369 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <data>
+
+        <!-- =========================================================
+             VISTA LISTA: NOTIFICACIONES WHATSAPP
+        ========================================================== -->
+        <record id="view_sat_notificacion_log_list" model="ir.ui.view">
+            <field name="name">sat.notificacion.log.list</field>
+            <field name="model">sat.notificacion.log</field>
+            <field name="arch" type="xml">
+                <list string="Notificaciones WhatsApp"
+                      default_order="create_date desc"
+                      decoration-success="state == 'sent'"
+                      decoration-warning="state in ('pending', 'pending_out_of_hours', 'sending')"
+                      decoration-danger="state == 'error'"
+                      decoration-muted="state in ('cancelled', 'skipped_duplicate')">
+
+                    <field name="create_date" string="Creado"/>
+                    <field name="event_type" string="Evento"/>
+                    <field name="state" string="Estado" widget="badge"
+                           decoration-success="state == 'sent'"
+                           decoration-warning="state in ('pending', 'pending_out_of_hours', 'sending')"
+                           decoration-danger="state == 'error'"
+                           decoration-muted="state in ('cancelled', 'skipped_duplicate')"/>
+
+                    <field name="recipient_type" string="Tipo"/>
+                    <field name="recipient_name" string="Destinatario"/>
+                    <field name="phone_clean" string="Teléfono"/>
+
+                    <field name="maquina_id" string="Máquina"/>
+                    <field name="reparacion_id" string="Reparación"/>
+                    <field name="cliente_id" string="Cliente"/>
+
+                    <field name="lima_scheduled_text" string="Programado Lima"/>
+                    <field name="lima_sent_text" string="Enviado Lima"/>
+                    <field name="retry_count" string="Reintentos"/>
+                    <field name="error_message" string="Error"/>
+                </list>
+            </field>
+        </record>
+
+        <!-- =========================================================
+             VISTA FORMULARIO: NOTIFICACIÓN WHATSAPP
+        ========================================================== -->
+        <record id="view_sat_notificacion_log_form" model="ir.ui.view">
+            <field name="name">sat.notificacion.log.form</field>
+            <field name="model">sat.notificacion.log</field>
+            <field name="arch" type="xml">
+                <form string="Notificación WhatsApp">
+                    <header>
+                        <button name="action_send_now"
+                                type="object"
+                                string="Enviar ahora"
+                                class="btn-primary"
+                                icon="fa-paper-plane"
+                                invisible="state in ('sent', 'cancelled', 'skipped_duplicate')"/>
+
+                        <button name="action_reset_to_pending"
+                                type="object"
+                                string="Reintentar"
+                                class="btn-secondary"
+                                icon="fa-refresh"
+                                invisible="state not in ('error', 'cancelled')"/>
+
+                        <button name="action_cancel"
+                                type="object"
+                                string="Cancelar"
+                                class="btn-secondary"
+                                icon="fa-ban"
+                                invisible="state in ('sent', 'cancelled', 'skipped_duplicate')"/>
+
+                        <field name="state"
+                               widget="statusbar"
+                               statusbar_visible="draft,pending,pending_out_of_hours,sending,sent,error,cancelled"/>
+                    </header>
+
+                    <sheet>
+                        <div class="oe_title">
+                            <label for="name"/>
+                            <h1>
+                                <field name="name" readonly="1"/>
+                            </h1>
+                        </div>
+
+                        <group>
+                            <group string="Datos de la notificación">
+                                <field name="event_type" readonly="1"/>
+                                <field name="recipient_type" readonly="1"/>
+                                <field name="recipient_name" readonly="1"/>
+                                <field name="phone" readonly="1"/>
+                                <field name="phone_clean" readonly="1"/>
+                            </group>
+
+                            <group string="Estado y horario">
+                                <field name="respect_business_hours" readonly="1"/>
+                                <field name="force_send" readonly="1"/>
+                                <field name="scheduled_date" readonly="1"/>
+                                <field name="lima_scheduled_text" readonly="1"/>
+                                <field name="sent_date" readonly="1"/>
+                                <field name="lima_sent_text" readonly="1"/>
+                                <field name="business_status" readonly="1"/>
+                                <field name="business_reason" readonly="1"/>
+                            </group>
+                        </group>
+
+                        <group>
+                            <group string="Relaciones">
+                                <field name="maquina_id" readonly="1"/>
+                                <field name="reparacion_id" readonly="1"/>
+                                <field name="avance_id" readonly="1"/>
+                                <field name="avance_linea_id" readonly="1"/>
+                                <field name="cliente_id" readonly="1"/>
+                                <field name="asesora_user_id" readonly="1"/>
+                                <field name="user_id" readonly="1"/>
+                            </group>
+
+                            <group string="Gateway / Reintentos">
+                                <field name="gateway_status_code" readonly="1"/>
+                                <field name="retry_count" readonly="1"/>
+                                <field name="max_retries" readonly="1"/>
+                                <field name="last_attempt_date" readonly="1"/>
+                                <field name="source_model" readonly="1"/>
+                                <field name="source_res_id" readonly="1"/>
+                                <field name="unique_key" readonly="1"/>
+                            </group>
+                        </group>
+
+                        <notebook>
+                            <page string="Mensaje" name="mensaje">
+                                <group>
+                                    <field name="message" readonly="1" nolabel="1"/>
+                                </group>
+                            </page>
+
+                            <page string="Media / Imagen" name="media">
+                                <group>
+                                    <group>
+                                        <field name="is_media" readonly="1"/>
+                                        <field name="attachment_id" readonly="1"/>
+                                    </group>
+                                    <group>
+                                        <field name="caption" readonly="1"/>
+                                    </group>
+                                </group>
+                            </page>
+
+                            <page string="Respuesta Gateway" name="gateway">
+                                <group>
+                                    <field name="gateway_response" readonly="1" nolabel="1"/>
+                                </group>
+                            </page>
+
+                            <page string="Error" name="error">
+                                <group>
+                                    <field name="error_message" readonly="1" nolabel="1"/>
+                                </group>
+                            </page>
+
+                            <page string="Notas internas" name="notas">
+                                <group>
+                                    <field name="note" readonly="1" nolabel="1"/>
+                                </group>
+                            </page>
+                        </notebook>
+                    </sheet>
+
+                    <chatter/>
+                </form>
+            </field>
+        </record>
+
+        <!-- =========================================================
+             VISTA SEARCH: FILTROS
+        ========================================================== -->
+        <record id="view_sat_notificacion_log_search" model="ir.ui.view">
+            <field name="name">sat.notificacion.log.search</field>
+            <field name="model">sat.notificacion.log</field>
+            <field name="arch" type="xml">
+                <search string="Buscar Notificaciones WhatsApp">
+                    <field name="name"/>
+                    <field name="event_type"/>
+                    <field name="state"/>
+                    <field name="recipient_type"/>
+                    <field name="recipient_name"/>
+                    <field name="phone_clean"/>
+                    <field name="maquina_id"/>
+                    <field name="reparacion_id"/>
+                    <field name="cliente_id"/>
+                    <field name="user_id"/>
+
+                    <separator/>
+
+                    <filter name="filter_pendientes"
+                            string="Pendientes"
+                            domain="[('state', 'in', ['pending', 'pending_out_of_hours', 'sending'])]"/>
+
+                    <filter name="filter_enviadas"
+                            string="Enviadas"
+                            domain="[('state', '=', 'sent')]"/>
+
+                    <filter name="filter_errores"
+                            string="Con error"
+                            domain="[('state', '=', 'error')]"/>
+
+                    <filter name="filter_fuera_horario"
+                            string="Fuera de horario"
+                            domain="[('state', '=', 'pending_out_of_hours')]"/>
+
+                    <filter name="filter_media"
+                            string="Media / Fotos"
+                            domain="[('is_media', '=', True)]"/>
+
+                    <filter name="filter_texto"
+                            string="Solo texto"
+                            domain="[('is_media', '=', False)]"/>
+
+                    <separator/>
+
+                    <filter name="filter_hoy"
+                            string="Creadas hoy"
+                            domain="[('create_date', '&gt;=', datetime.datetime.combine(context_today(), datetime.time(0,0,0))),
+                                     ('create_date', '&lt;=', datetime.datetime.combine(context_today(), datetime.time(23,59,59)))]"/>
+
+                    <filter name="filter_programadas_hoy"
+                            string="Programadas hoy"
+                            domain="[('scheduled_date', '&gt;=', datetime.datetime.combine(context_today(), datetime.time(0,0,0))),
+                                     ('scheduled_date', '&lt;=', datetime.datetime.combine(context_today(), datetime.time(23,59,59)))]"/>
+
+                    <filter name="filter_enviadas_hoy"
+                            string="Enviadas hoy"
+                            domain="[('sent_date', '&gt;=', datetime.datetime.combine(context_today(), datetime.time(0,0,0))),
+                                     ('sent_date', '&lt;=', datetime.datetime.combine(context_today(), datetime.time(23,59,59)))]"/>
+
+                    <separator/>
+
+                    <group expand="0" string="Agrupar por">
+                        <filter name="group_event_type"
+                                string="Evento"
+                                context="{'group_by': 'event_type'}"/>
+
+                        <filter name="group_state"
+                                string="Estado"
+                                context="{'group_by': 'state'}"/>
+
+                        <filter name="group_recipient_type"
+                                string="Tipo destinatario"
+                                context="{'group_by': 'recipient_type'}"/>
+
+                        <filter name="group_maquina"
+                                string="Máquina"
+                                context="{'group_by': 'maquina_id'}"/>
+
+                        <filter name="group_reparacion"
+                                string="Reparación"
+                                context="{'group_by': 'reparacion_id'}"/>
+
+                        <filter name="group_cliente"
+                                string="Cliente"
+                                context="{'group_by': 'cliente_id'}"/>
+
+                        <filter name="group_user"
+                                string="Usuario"
+                                context="{'group_by': 'user_id'}"/>
+
+                        <filter name="group_create_date"
+                                string="Fecha creación"
+                                context="{'group_by': 'create_date:day'}"/>
+
+                        <filter name="group_scheduled_date"
+                                string="Fecha programada"
+                                context="{'group_by': 'scheduled_date:day'}"/>
+
+                        <filter name="group_sent_date"
+                                string="Fecha enviada"
+                                context="{'group_by': 'sent_date:day'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <!-- =========================================================
+             VISTA PIVOT
+        ========================================================== -->
+        <record id="view_sat_notificacion_log_pivot" model="ir.ui.view">
+            <field name="name">sat.notificacion.log.pivot</field>
+            <field name="model">sat.notificacion.log</field>
+            <field name="arch" type="xml">
+                <pivot string="Análisis de Notificaciones WhatsApp">
+                    <field name="event_type" type="row"/>
+                    <field name="state" type="col"/>
+                    <field name="id" type="measure"/>
+                </pivot>
+            </field>
+        </record>
+
+        <!-- =========================================================
+             VISTA GRAPH
+        ========================================================== -->
+        <record id="view_sat_notificacion_log_graph" model="ir.ui.view">
+            <field name="name">sat.notificacion.log.graph</field>
+            <field name="model">sat.notificacion.log</field>
+            <field name="arch" type="xml">
+                <graph string="Notificaciones WhatsApp" type="bar">
+                    <field name="event_type"/>
+                    <field name="id" type="measure"/>
+                </graph>
+            </field>
+        </record>
+
+        <!-- =========================================================
+             ACCIÓN PRINCIPAL
+        ========================================================== -->
+        <record id="action_sat_notificacion_log" model="ir.actions.act_window">
+            <field name="name">Notificaciones WhatsApp</field>
+            <field name="res_model">sat.notificacion.log</field>
+            <field name="view_mode">list,form,pivot,graph</field>
+            <field name="search_view_id" ref="view_sat_notificacion_log_search"/>
+            <field name="context">{'search_default_filter_pendientes': 1}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    No hay notificaciones registradas
+                </p>
+                <p>
+                    Aquí se mostrará el historial de WhatsApp enviados, pendientes,
+                    errores y mensajes programados por fuera de horario.
+                </p>
+            </field>
+        </record>
+
+        <!-- =========================================================
+             MENÚ EN CORAPSAC
+             Debe cargarse después del menú que define menu_corapsac_root.
+        ========================================================== -->
+        <menuitem id="menu_sat_notificacion_log"
+                  name="Notificaciones WhatsApp"
+                  parent="menu_corapsac_root"
+                  action="action_sat_notificacion_log"
+                  sequence="25"/>
+
+        <!-- =========================================================
+             HERENCIA VISTA SAT.SAT: BOTÓN Y PAGE
+        ========================================================== -->
+        <record id="view_sat_sat_form_inherit_notificacion_log" model="ir.ui.view">
+            <field name="name">sat.sat.form.inherit.notificacion.log</field>
+            <field name="model">sat.sat</field>
+            <field name="inherit_id" ref="maquinas_form_view"/>
+            <field name="arch" type="xml">
+
+                <!-- Botón estadístico dentro del button_box -->
+                <xpath expr="//div[@name='button_box']" position="inside">
+                    <button name="action_open_notificacion_logs"
+                            type="object"
+                            class="oe_stat_button"
+                            icon="fa-whatsapp"
+                            help="Ver historial de notificaciones WhatsApp de esta máquina.">
+                        <field name="notificacion_log_count"
+                               string="Notificaciones"
+                               widget="statinfo"/>
+                    </button>
+                </xpath>
+
+               
+
+            </field>
+        </record>
+
+    </data>
+</odoo>

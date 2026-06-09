@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+
+    <!-- Secuencia para logs de notificaciones -->
+    <record id="seq_sat_notificacion_log" model="ir.sequence">
+        <field name="name">SAT Notificación Log</field>
+        <field name="code">sat.notificacion.log</field>
+        <field name="prefix">NOTIF/%(year)s/</field>
+        <field name="padding">5</field>
+        <field name="company_id" eval="False"/>
+    </record>
+
+    <!-- Número copia comercial -->
+    <record id="param_sat_notificaciones_comerciales_copia_phone" model="ir.config_parameter">
+        <field name="key">sat.notificaciones_comerciales_copia_phone</field>
+        <field name="value">19373717674</field>
+    </record>
+
+    <!-- Cron para enviar notificaciones pendientes -->
+    <record id="ir_cron_sat_notificacion_log_send_pending" model="ir.cron">
+        <field name="name">SAT: Enviar notificaciones WhatsApp pendientes</field>
+        <field name="model_id" ref="model_sat_notificacion_log"/>
+        <field name="state">code</field>
+        <field name="code">model.cron_send_pending_notifications()</field>
+        <field name="interval_number">5</field>
+        <field name="interval_type">minutes</field>
+        <field name="numbercall">-1</field>
+        <field name="active">True</field>
+    </record>
+
+</odoo>
