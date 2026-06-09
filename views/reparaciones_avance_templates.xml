@@ -1,148 +1,847 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <odoo>
+    <data>
 
-    <template id="reparaciones_avance_error_page" name="Error avance reparación">
-        <t t-call="website.layout">
-            <div class="container my-5">
-                <div class="row justify-content-center">
-                    <div class="col-lg-8">
-                        <div class="alert alert-warning">
-                            <h3 class="mb-3">
-                                <t t-esc="title"/>
-                            </h3>
-                            <p class="mb-0">
-                                <t t-esc="message"/>
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </t>
-    </template>
+        <!-- =========================================================
+             PÁGINA PÚBLICA: REGISTRAR DEMORA DE REPARACIÓN
+        ========================================================== -->
+        <template id="reparaciones_avance_page" name="Registrar demora de reparación">
+            <t t-call="website.layout">
 
-    <template id="reparaciones_avance_page" name="Avance reparación">
-        <t t-call="website.layout">
-            <div class="container my-4">
+                <style type="text/css">
+                    :root {
+                        --sat-primary: #2563eb;
+                        --sat-primary-dark: #1d4ed8;
+                        --sat-primary-soft: #eff6ff;
+                        --sat-success: #16a34a;
+                        --sat-success-soft: #ecfdf5;
+                        --sat-warning: #f59e0b;
+                        --sat-warning-soft: #fffbeb;
+                        --sat-danger: #dc2626;
+                        --sat-danger-soft: #fef2f2;
+                        --sat-dark: #0f172a;
+                        --sat-muted: #64748b;
+                        --sat-border: #e2e8f0;
+                        --sat-bg: #f8fafc;
+                        --sat-card: #ffffff;
+                        --sat-radius: 18px;
+                        --sat-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+                        --sat-shadow-soft: 0 8px 24px rgba(15, 23, 42, 0.06);
+                    }
 
-                <div class="row justify-content-center">
-                    <div class="col-lg-10">
+                    body {
+                        background: var(--sat-bg);
+                    }
 
-                        <div class="card shadow-sm mb-3">
-                            <div class="card-body">
-                                <h3 class="mb-3">Registrar avance de reparación</h3>
+                    .sat-mobile-page {
+                        min-height: 100vh;
+                        background:
+                            radial-gradient(circle at top left, rgba(37, 99, 235, 0.10), transparent 28rem),
+                            radial-gradient(circle at bottom right, rgba(22, 163, 74, 0.08), transparent 24rem),
+                            var(--sat-bg);
+                        padding: 18px 14px 110px;
+                    }
 
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <p class="mb-1">
-                                            <strong>Reparación:</strong>
-                                            <t t-esc="reparacion.name or 'NA'"/>
-                                        </p>
-                                        <p class="mb-1">
-                                            <strong>Cliente:</strong>
-                                            <t t-esc="reparacion.cliente_id.name if reparacion.cliente_id else 'NA'"/>
-                                        </p>
-                                        <p class="mb-1">
-                                            <strong>Modelo:</strong>
-                                            <t t-esc="reparacion.nombre_maquina or 'NA'"/>
-                                        </p>
+                    .sat-wrap {
+                        width: 100%;
+                        max-width: 980px;
+                        margin: 0 auto;
+                    }
+
+                    .sat-topbar {
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        gap: 12px;
+                        margin-bottom: 14px;
+                    }
+
+                    .sat-brand {
+                        display: flex;
+                        align-items: center;
+                        gap: 10px;
+                    }
+
+                    .sat-brand-icon {
+                        width: 42px;
+                        height: 42px;
+                        border-radius: 14px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        color: white;
+                        background: linear-gradient(135deg, var(--sat-primary), #38bdf8);
+                        box-shadow: 0 10px 22px rgba(37, 99, 235, 0.22);
+                        flex: 0 0 auto;
+                    }
+
+                    .sat-brand-title {
+                        margin: 0;
+                        color: var(--sat-dark);
+                        font-size: 20px;
+                        line-height: 1.1;
+                        font-weight: 800;
+                        letter-spacing: -0.02em;
+                    }
+
+                    .sat-brand-subtitle {
+                        color: var(--sat-muted);
+                        font-size: 12px;
+                        margin-top: 2px;
+                    }
+
+                    .sat-pill-status {
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 7px;
+                        padding: 8px 11px;
+                        border-radius: 999px;
+                        font-size: 12px;
+                        font-weight: 700;
+                        color: #075985;
+                        background: #e0f2fe;
+                        white-space: nowrap;
+                    }
+
+                    .sat-card {
+                        background: var(--sat-card);
+                        border: 1px solid rgba(226, 232, 240, 0.95);
+                        border-radius: var(--sat-radius);
+                        box-shadow: var(--sat-shadow-soft);
+                        overflow: hidden;
+                        margin-bottom: 14px;
+                    }
+
+                    .sat-card-main {
+                        box-shadow: var(--sat-shadow);
+                    }
+
+                    .sat-card-header {
+                        padding: 16px 16px 12px;
+                        border-bottom: 1px solid var(--sat-border);
+                        background: linear-gradient(180deg, #ffffff, #f8fafc);
+                    }
+
+                    .sat-card-title {
+                        margin: 0;
+                        font-size: 16px;
+                        line-height: 1.2;
+                        color: var(--sat-dark);
+                        font-weight: 800;
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                    }
+
+                    .sat-card-subtitle {
+                        margin-top: 5px;
+                        color: var(--sat-muted);
+                        font-size: 13px;
+                    }
+
+                    .sat-card-body {
+                        padding: 16px;
+                    }
+
+                    .sat-summary-grid {
+                        display: grid;
+                        grid-template-columns: repeat(2, minmax(0, 1fr));
+                        gap: 10px;
+                    }
+
+                    .sat-summary-item {
+                        padding: 12px;
+                        border-radius: 15px;
+                        background: #f8fafc;
+                        border: 1px solid var(--sat-border);
+                    }
+
+                    .sat-summary-label {
+                        display: flex;
+                        align-items: center;
+                        gap: 6px;
+                        color: var(--sat-muted);
+                        font-size: 11px;
+                        font-weight: 800;
+                        text-transform: uppercase;
+                        letter-spacing: 0.04em;
+                        margin-bottom: 4px;
+                    }
+
+                    .sat-summary-value {
+                        color: var(--sat-dark);
+                        font-size: 14px;
+                        font-weight: 700;
+                        word-break: break-word;
+                    }
+
+                    .sat-alert {
+                        border-radius: 15px;
+                        padding: 13px 14px;
+                        margin-bottom: 14px;
+                        display: flex;
+                        gap: 10px;
+                        align-items: flex-start;
+                        font-size: 14px;
+                        line-height: 1.35;
+                    }
+
+                    .sat-alert-success {
+                        color: #14532d;
+                        background: var(--sat-success-soft);
+                        border: 1px solid #bbf7d0;
+                    }
+
+                    .sat-alert-error {
+                        color: #7f1d1d;
+                        background: var(--sat-danger-soft);
+                        border: 1px solid #fecaca;
+                    }
+
+                    .sat-category {
+                        margin-bottom: 16px;
+                    }
+
+                    .sat-category-head {
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        margin-bottom: 10px;
+                        gap: 10px;
+                    }
+
+                    .sat-category-title {
+                        margin: 0;
+                        font-size: 14px;
+                        color: var(--sat-dark);
+                        font-weight: 800;
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                    }
+
+                    .sat-category-count {
+                        color: var(--sat-muted);
+                        background: #f1f5f9;
+                        border: 1px solid var(--sat-border);
+                        border-radius: 999px;
+                        padding: 4px 8px;
+                        font-size: 11px;
+                        font-weight: 700;
+                    }
+
+                    .sat-options-grid {
+                        display: grid;
+                        grid-template-columns: repeat(2, minmax(0, 1fr));
+                        gap: 10px;
+                    }
+
+                    .sat-option-wrapper {
+                        position: relative;
+                    }
+
+                    .sat-option-input {
+                        position: absolute;
+                        opacity: 0;
+                        pointer-events: none;
+                    }
+
+                    .sat-option-card {
+                        display: block;
+                        width: 100%;
+                        height: 100%;
+                        border: 1px solid var(--sat-border);
+                        background: #ffffff;
+                        border-radius: 16px;
+                        padding: 12px;
+                        cursor: pointer;
+                        transition: all 0.18s ease;
+                        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+                        min-height: 54px;
+                    }
+
+                    .sat-option-card:hover {
+                        border-color: #93c5fd;
+                        background: #f8fbff;
+                    }
+
+                    .sat-option-input:checked + .sat-option-card {
+                        border-color: var(--sat-primary);
+                        background: var(--sat-primary-soft);
+                        box-shadow: 0 12px 24px rgba(37, 99, 235, 0.14);
+                    }
+
+                    .sat-option-main {
+                        display: flex;
+                        align-items: flex-start;
+                        gap: 9px;
+                    }
+
+                    .sat-check-dot {
+                        width: 22px;
+                        height: 22px;
+                        border-radius: 999px;
+                        border: 2px solid #cbd5e1;
+                        background: white;
+                        flex: 0 0 auto;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        margin-top: 1px;
+                        color: white;
+                        font-size: 12px;
+                    }
+
+                    .sat-option-input:checked + .sat-option-card .sat-check-dot {
+                        background: var(--sat-primary);
+                        border-color: var(--sat-primary);
+                    }
+
+                    .sat-option-input:checked + .sat-option-card .sat-check-dot::before {
+                        content: "✓";
+                        font-weight: 900;
+                    }
+
+                    .sat-option-text {
+                        color: var(--sat-dark);
+                        font-size: 13px;
+                        font-weight: 800;
+                        line-height: 1.25;
+                    }
+
+                    .sat-option-meta {
+                        margin-top: 4px;
+                        color: var(--sat-muted);
+                        font-size: 11px;
+                        font-weight: 600;
+                    }
+
+                    .sat-extra-fields {
+                        display: none;
+                        margin-top: 11px;
+                        padding-top: 10px;
+                        border-top: 1px dashed #cbd5e1;
+                    }
+
+                    .sat-option-wrapper.is-active .sat-extra-fields {
+                        display: grid;
+                        gap: 9px;
+                    }
+
+                    .sat-field {
+                        width: 100%;
+                    }
+
+                    .sat-label {
+                        display: block;
+                        color: var(--sat-dark);
+                        font-size: 13px;
+                        font-weight: 800;
+                        margin-bottom: 7px;
+                    }
+
+                    .sat-control {
+                        width: 100%;
+                        border: 1px solid #cbd5e1;
+                        border-radius: 14px;
+                        padding: 12px 13px;
+                        background: white;
+                        color: var(--sat-dark);
+                        font-size: 15px;
+                        outline: none;
+                        transition: all 0.18s ease;
+                    }
+
+                    .sat-control:focus {
+                        border-color: var(--sat-primary);
+                        box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+                    }
+
+                    textarea.sat-control {
+                        min-height: 92px;
+                        resize: vertical;
+                    }
+
+                    .sat-help {
+                        margin-top: 6px;
+                        color: var(--sat-muted);
+                        font-size: 12px;
+                        line-height: 1.35;
+                    }
+
+                    .sat-upload-box {
+                        border: 1.5px dashed #94a3b8;
+                        border-radius: 18px;
+                        background: linear-gradient(180deg, #ffffff, #f8fafc);
+                        padding: 16px;
+                        text-align: center;
+                    }
+
+                    .sat-upload-icon {
+                        width: 52px;
+                        height: 52px;
+                        border-radius: 18px;
+                        display: inline-flex;
+                        align-items: center;
+                        justify-content: center;
+                        color: var(--sat-primary);
+                        background: var(--sat-primary-soft);
+                        margin-bottom: 10px;
+                        font-size: 22px;
+                    }
+
+                    .sat-upload-title {
+                        color: var(--sat-dark);
+                        font-weight: 900;
+                        font-size: 15px;
+                        margin-bottom: 4px;
+                    }
+
+                    .sat-upload-text {
+                        color: var(--sat-muted);
+                        font-size: 12px;
+                        margin-bottom: 12px;
+                    }
+
+                    .sat-file-input {
+                        display: none;
+                    }
+
+                    .sat-upload-btn {
+                        display: inline-flex;
+                        align-items: center;
+                        justify-content: center;
+                        gap: 8px;
+                        border: none;
+                        background: var(--sat-dark);
+                        color: white;
+                        border-radius: 999px;
+                        padding: 11px 16px;
+                        font-size: 13px;
+                        font-weight: 900;
+                        cursor: pointer;
+                    }
+
+                    .sat-preview-grid {
+                        display: grid;
+                        grid-template-columns: repeat(4, minmax(0, 1fr));
+                        gap: 8px;
+                        margin-top: 13px;
+                    }
+
+                    .sat-preview-item {
+                        position: relative;
+                        border-radius: 13px;
+                        overflow: hidden;
+                        background: #e2e8f0;
+                        aspect-ratio: 1 / 1;
+                        border: 1px solid var(--sat-border);
+                    }
+
+                    .sat-preview-item img {
+                        width: 100%;
+                        height: 100%;
+                        object-fit: cover;
+                        display: block;
+                    }
+
+                    .sat-notify-box {
+                        display: flex;
+                        gap: 12px;
+                        align-items: flex-start;
+                        padding: 14px;
+                        border-radius: 16px;
+                        border: 1px solid #bbf7d0;
+                        background: var(--sat-success-soft);
+                    }
+
+                    .sat-notify-box input {
+                        width: 22px;
+                        height: 22px;
+                        margin-top: 2px;
+                        accent-color: var(--sat-success);
+                        flex: 0 0 auto;
+                    }
+
+                    .sat-notify-title {
+                        color: #14532d;
+                        font-size: 14px;
+                        font-weight: 900;
+                        margin-bottom: 3px;
+                    }
+
+                    .sat-notify-text {
+                        color: #166534;
+                        font-size: 12px;
+                        line-height: 1.35;
+                    }
+
+                    .sat-sticky-actions {
+                        position: fixed;
+                        left: 0;
+                        right: 0;
+                        bottom: 0;
+                        z-index: 50;
+                        padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
+                        background: rgba(248, 250, 252, 0.88);
+                        backdrop-filter: blur(16px);
+                        border-top: 1px solid rgba(226, 232, 240, 0.9);
+                    }
+
+                    .sat-sticky-inner {
+                        max-width: 980px;
+                        margin: 0 auto;
+                        display: flex;
+                        gap: 10px;
+                        align-items: center;
+                    }
+
+                    .sat-submit {
+                        width: 100%;
+                        min-height: 52px;
+                        border: none;
+                        border-radius: 16px;
+                        color: white;
+                        background: linear-gradient(135deg, var(--sat-primary), var(--sat-primary-dark));
+                        box-shadow: 0 16px 28px rgba(37, 99, 235, 0.25);
+                        font-weight: 900;
+                        font-size: 15px;
+                        letter-spacing: -0.01em;
+                        display: inline-flex;
+                        align-items: center;
+                        justify-content: center;
+                        gap: 9px;
+                    }
+
+                    .sat-submit:active {
+                        transform: translateY(1px);
+                    }
+
+                    .sat-secondary-info {
+                        display: none;
+                        color: var(--sat-muted);
+                        font-size: 12px;
+                        font-weight: 700;
+                        white-space: nowrap;
+                    }
+
+                    .sat-empty-options {
+                        padding: 18px;
+                        border-radius: 15px;
+                        background: var(--sat-warning-soft);
+                        border: 1px solid #fde68a;
+                        color: #92400e;
+                        font-weight: 700;
+                        font-size: 14px;
+                    }
+
+                    @media (max-width: 575px) {
+                        .sat-mobile-page {
+                            padding: 14px 10px 104px;
+                        }
+
+                        .sat-topbar {
+                            align-items: flex-start;
+                        }
+
+                        .sat-brand-title {
+                            font-size: 18px;
+                        }
+
+                        .sat-pill-status {
+                            padding: 7px 9px;
+                            font-size: 11px;
+                        }
+
+                        .sat-summary-grid {
+                            grid-template-columns: 1fr;
+                        }
+
+                        .sat-card-header,
+                        .sat-card-body {
+                            padding-left: 13px;
+                            padding-right: 13px;
+                        }
+
+                        .sat-options-grid {
+                            grid-template-columns: 1fr;
+                        }
+
+                        .sat-option-card {
+                            min-height: 58px;
+                            padding: 13px;
+                        }
+
+                        .sat-preview-grid {
+                            grid-template-columns: repeat(3, minmax(0, 1fr));
+                        }
+                    }
+
+                    @media (min-width: 768px) {
+                        .sat-mobile-page {
+                            padding-top: 28px;
+                        }
+
+                        .sat-options-grid {
+                            grid-template-columns: repeat(3, minmax(0, 1fr));
+                        }
+
+                        .sat-secondary-info {
+                            display: block;
+                        }
+                    }
+
+                    @media (min-width: 1024px) {
+                        .sat-options-grid {
+                            grid-template-columns: repeat(4, minmax(0, 1fr));
+                        }
+                    }
+                </style>
+
+                <div class="sat-mobile-page">
+                    <div class="sat-wrap">
+
+                        <!-- TOP -->
+                        <div class="sat-topbar">
+                            <div class="sat-brand">
+                                <div class="sat-brand-icon">
+                                    <i class="fa fa-wrench"/>
+                                </div>
+                                <div>
+                                    <h1 class="sat-brand-title">Registrar demora</h1>
+                                    <div class="sat-brand-subtitle">
+                                        Formulario rápido para taller
                                     </div>
-                                    <div class="col-md-6">
-                                        <p class="mb-1">
-                                            <strong>Serie:</strong>
-                                            <t t-esc="reparacion.serie_id or 'NA'"/>
-                                        </p>
-                                        <p class="mb-1">
-                                            <strong>Técnico:</strong>
+                                </div>
+                            </div>
+
+                            <div class="sat-pill-status">
+                                <i class="fa fa-clock-o"/>
+                                En revisión
+                            </div>
+                        </div>
+
+                        <!-- MENSAJES -->
+                        <t t-if="success">
+                            <div class="sat-alert sat-alert-success">
+                                <i class="fa fa-check-circle"/>
+                                <div>
+                                    <strong>Listo.</strong>
+                                    <br/>
+                                    <span t-esc="success"/>
+                                </div>
+                            </div>
+                        </t>
+
+                        <t t-if="error">
+                            <div class="sat-alert sat-alert-error">
+                                <i class="fa fa-exclamation-triangle"/>
+                                <div>
+                                    <strong>No se pudo continuar.</strong>
+                                    <br/>
+                                    <span t-esc="error"/>
+                                </div>
+                            </div>
+                        </t>
+
+                        <!-- RESUMEN -->
+                        <div class="sat-card sat-card-main">
+                            <div class="sat-card-header">
+                                <h2 class="sat-card-title">
+                                    <i class="fa fa-print"/>
+                                    Reparación
+                                    <t t-if="reparacion.name">
+                                        <span t-esc="reparacion.name"/>
+                                    </t>
+                                </h2>
+                                <div class="sat-card-subtitle">
+                                    Verifique el equipo antes de guardar la demora.
+                                </div>
+                            </div>
+
+                            <div class="sat-card-body">
+                                <div class="sat-summary-grid">
+                                    <div class="sat-summary-item">
+                                        <div class="sat-summary-label">
+                                            <i class="fa fa-building"/>
+                                            Cliente
+                                        </div>
+                                        <div class="sat-summary-value">
+                                            <t t-esc="reparacion.cliente_id.name if reparacion.cliente_id else 'NA'"/>
+                                        </div>
+                                    </div>
+
+                                    <div class="sat-summary-item">
+                                        <div class="sat-summary-label">
+                                            <i class="fa fa-female"/>
+                                            Asesora
+                                        </div>
+                                        <div class="sat-summary-value">
+                                            <t t-if="reparacion.maquina_id and reparacion.maquina_id.cliente_id and reparacion.maquina_id.cliente_id.asesora_id">
+                                                <t t-esc="reparacion.maquina_id.cliente_id.asesora_id.name"/>
+                                            </t>
+                                            <t t-elif="reparacion.cliente_id and reparacion.cliente_id.asesora_id">
+                                                <t t-esc="reparacion.cliente_id.asesora_id.name"/>
+                                            </t>
+                                            <t t-else="">NA</t>
+                                        </div>
+                                    </div>
+
+                                    <div class="sat-summary-item">
+                                        <div class="sat-summary-label">
+                                            <i class="fa fa-cube"/>
+                                            Modelo
+                                        </div>
+                                        <div class="sat-summary-value">
+                                            <t t-esc="reparacion.nombre_maquina or (reparacion.maquina_id.name.name if reparacion.maquina_id and reparacion.maquina_id.name else 'NA')"/>
+                                        </div>
+                                    </div>
+
+                                    <div class="sat-summary-item">
+                                        <div class="sat-summary-label">
+                                            <i class="fa fa-barcode"/>
+                                            Serie
+                                        </div>
+                                        <div class="sat-summary-value">
+                                            <t t-esc="reparacion.serie_id or (reparacion.maquina_id.serie_id if reparacion.maquina_id else 'NA')"/>
+                                        </div>
+                                    </div>
+
+                                    <div class="sat-summary-item">
+                                        <div class="sat-summary-label">
+                                            <i class="fa fa-user"/>
+                                            Técnico
+                                        </div>
+                                        <div class="sat-summary-value">
                                             <t t-esc="reparacion.responsable_id.name if reparacion.responsable_id else 'NA'"/>
-                                        </p>
-                                        <p class="mb-1">
-                                            <strong>Estado:</strong>
+                                        </div>
+                                    </div>
+
+                                    <div class="sat-summary-item">
+                                        <div class="sat-summary-label">
+                                            <i class="fa fa-info-circle"/>
+                                            Estado
+                                        </div>
+                                        <div class="sat-summary-value">
                                             En revisión
-                                        </p>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <t t-if="error">
-                            <div class="alert alert-danger">
-                                <t t-esc="error"/>
-                            </div>
-                        </t>
-
-                        <t t-if="success">
-                            <div class="alert alert-success">
-                                <t t-esc="success"/>
-                            </div>
-                        </t>
-
                         <form t-att-action="'/reparacion/avance/%s/guardar' % token"
                               method="post"
-                              enctype="multipart/form-data">
+                              enctype="multipart/form-data"
+                              id="satDemoraForm">
 
                             <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
 
-                            <div class="card shadow-sm mb-3">
-                                <div class="card-body">
-                                    <h5 class="mb-3">Seleccione avance o motivo de demora</h5>
+                            <!-- MOTIVOS -->
+                            <div class="sat-card">
+                                <div class="sat-card-header">
+                                    <h2 class="sat-card-title">
+                                        <i class="fa fa-list-check"/>
+                                        Motivo de la demora
+                                    </h2>
+                                    <div class="sat-card-subtitle">
+                                        Seleccione uno o varios motivos. Los campos extra aparecen solo cuando corresponde.
+                                    </div>
+                                </div>
+
+                                <div class="sat-card-body">
+                                    <t t-if="not grouped_options">
+                                        <div class="sat-empty-options">
+                                            No hay opciones de demora configuradas.
+                                        </div>
+                                    </t>
 
                                     <t t-foreach="grouped_options.items()" t-as="group">
-                                        <div class="mb-4">
-                                            <h6 class="border-bottom pb-2">
-                                                <t t-esc="group[1]['label']"/>
-                                            </h6>
+                                        <div class="sat-category">
+                                            <div class="sat-category-head">
+                                                <h3 class="sat-category-title">
+                                                    <i class="fa fa-folder-open-o"/>
+                                                    <t t-esc="group[1]['label']"/>
+                                                </h3>
+                                                <div class="sat-category-count">
+                                                    <t t-esc="len(group[1]['options'])"/>
+                                                    opciones
+                                                </div>
+                                            </div>
 
-                                            <div class="row">
+                                            <div class="sat-options-grid">
                                                 <t t-foreach="group[1]['options']" t-as="option">
-                                                    <div class="col-md-6 mb-3">
-                                                        <div class="border rounded p-3 h-100">
-                                                            <div class="form-check">
-                                                                <input class="form-check-input"
-                                                                       type="checkbox"
-                                                                       name="opcion_ids"
-                                                                       t-att-id="'option_%s' % option.id"
-                                                                       t-att-value="option.id"/>
-                                                                <label class="form-check-label fw-bold"
-                                                                       t-att-for="'option_%s' % option.id">
-                                                                    <t t-esc="option.name"/>
-                                                                </label>
+                                                    <div class="sat-option-wrapper">
+                                                        <input class="sat-option-input"
+                                                               type="checkbox"
+                                                               name="opcion_ids"
+                                                               t-att-id="'opcion_%s' % option.id"
+                                                               t-att-value="option.id"
+                                                               t-att-data-require-detail="'1' if option.require_detail else '0'"
+                                                               t-att-data-allow-color="'1' if option.allow_color else '0'"
+                                                               t-att-data-allow-part="'1' if option.allow_part_detail else '0'"/>
+
+                                                        <label class="sat-option-card"
+                                                               t-att-for="'opcion_%s' % option.id">
+                                                            <div class="sat-option-main">
+                                                                <span class="sat-check-dot"/>
+                                                                <div>
+                                                                    <div class="sat-option-text">
+                                                                        <t t-esc="option.name"/>
+                                                                    </div>
+                                                                    <div class="sat-option-meta"
+                                                                         t-if="option.require_detail or option.allow_color or option.allow_part_detail">
+                                                                        Requiere información adicional
+                                                                    </div>
+                                                                </div>
                                                             </div>
 
-                                                            <t t-if="option.allow_color">
-                                                                <div class="mt-2">
-                                                                    <label class="form-label small">Color afectado</label>
-                                                                    <select class="form-select form-select-sm"
-                                                                            t-att-name="'color_%s' % option.id">
-                                                                        <option value="">Seleccione</option>
-                                                                        <option value="black">Negro</option>
-                                                                        <option value="cyan">Cyan</option>
-                                                                        <option value="magenta">Magenta</option>
-                                                                        <option value="yellow">Yellow</option>
-                                                                        <option value="varios">Varios colores</option>
-                                                                    </select>
-                                                                </div>
-                                                            </t>
+                                                            <div class="sat-extra-fields">
+                                                                <t t-if="option.allow_color">
+                                                                    <div class="sat-field sat-extra-color">
+                                                                        <label class="sat-label">
+                                                                            Color afectado
+                                                                        </label>
+                                                                        <select class="sat-control sat-extra-input"
+                                                                                t-att-name="'color_%s' % option.id"
+                                                                                disabled="disabled">
+                                                                            <option value="">Seleccione color</option>
+                                                                            <option value="black">Negro</option>
+                                                                            <option value="cyan">Cyan</option>
+                                                                            <option value="magenta">Magenta</option>
+                                                                            <option value="yellow">Yellow</option>
+                                                                            <option value="varios">Varios colores</option>
+                                                                        </select>
+                                                                    </div>
+                                                                </t>
 
-                                                            <t t-if="option.allow_part_detail">
-                                                                <div class="mt-2">
-                                                                    <label class="form-label small">Parte / repuesto</label>
-                                                                    <input type="text"
-                                                                           class="form-control form-control-sm"
-                                                                           placeholder="Ej. Fusor, cilindro, sensor, tarjeta..."
-                                                                           t-att-name="'parte_%s' % option.id"/>
-                                                                </div>
-                                                            </t>
+                                                                <t t-if="option.allow_part_detail">
+                                                                    <div class="sat-field sat-extra-part">
+                                                                        <label class="sat-label">
+                                                                            Parte / repuesto
+                                                                        </label>
+                                                                        <input class="sat-control sat-extra-input"
+                                                                               type="text"
+                                                                               t-att-name="'parte_%s' % option.id"
+                                                                               placeholder="Ej.: fusor, cilindro, sensor, tarjeta..."
+                                                                               disabled="disabled"/>
+                                                                    </div>
+                                                                </t>
 
-                                                            <t t-if="option.require_detail">
-                                                                <div class="mt-2">
-                                                                    <label class="form-label small">Detalle</label>
-                                                                    <input type="text"
-                                                                           class="form-control form-control-sm"
-                                                                           placeholder="Detalle breve"
-                                                                           t-att-name="'detalle_%s' % option.id"/>
-                                                                </div>
-                                                            </t>
-                                                        </div>
+                                                                <t t-if="option.require_detail">
+                                                                    <div class="sat-field sat-extra-detail">
+                                                                        <label class="sat-label">
+                                                                            Detalle
+                                                                        </label>
+                                                                        <input class="sat-control sat-extra-input"
+                                                                               type="text"
+                                                                               t-att-name="'detalle_%s' % option.id"
+                                                                               placeholder="Detalle corto de esta opción"
+                                                                               disabled="disabled"/>
+                                                                    </div>
+                                                                </t>
+                                                            </div>
+                                                        </label>
                                                     </div>
                                                 </t>
                                             </div>
@@ -151,53 +850,116 @@
                                 </div>
                             </div>
 
-                            <div class="card shadow-sm mb-3">
-                                <div class="card-body">
-                                    <h5 class="mb-3">Detalle adicional</h5>
-                                    <textarea name="detalle"
-                                              class="form-control"
-                                              rows="4"
-                                              placeholder="Ej. Equipo muy contaminado, se está aspirando y revisando alimentación de tóner negro."></textarea>
-                                </div>
-                            </div>
-
-                            <div class="card shadow-sm mb-3">
-                                <div class="card-body">
-                                    <h5 class="mb-3">Fotos del avance</h5>
-                                    <input type="file"
-                                           name="fotos"
-                                           class="form-control"
-                                           accept="image/*"
-                                           capture="environment"
-                                           multiple="multiple"/>
-                                    <small class="text-muted">
-                                        Puede tomar fotos desde el celular o adjuntar imágenes existentes.
-                                    </small>
-                                </div>
-                            </div>
-
-                            <div class="card shadow-sm mb-3">
-                                <div class="card-body">
-                                    <div class="form-check">
-                                        <input class="form-check-input"
-                                               type="checkbox"
-                                               name="notificar_asesora"
-                                               id="notificar_asesora"
-                                               value="1"/>
-                                        <label class="form-check-label fw-bold" for="notificar_asesora">
-                                            Notificar este avance a la asesora por WhatsApp
-                                        </label>
+                            <!-- DETALLE -->
+                            <div class="sat-card">
+                                <div class="sat-card-header">
+                                    <h2 class="sat-card-title">
+                                        <i class="fa fa-pencil"/>
+                                        Detalle adicional
+                                    </h2>
+                                    <div class="sat-card-subtitle">
+                                        Agregue una explicación corta si es necesario.
                                     </div>
-                                    <small class="text-muted">
-                                        Si no marca esta opción, el avance quedará registrado pero no se enviará a la asesora.
-                                    </small>
+                                </div>
+
+                                <div class="sat-card-body">
+                                    <label class="sat-label" for="detalle">
+                                        Comentario
+                                    </label>
+                                    <textarea class="sat-control"
+                                              id="detalle"
+                                              name="detalle"
+                                              placeholder="Ej.: máquina contaminada, se desmontó fusor, falta parte, se está limpiando unidad de imagen..."></textarea>
+                                    <div class="sat-help">
+                                        Puede guardar solo con detalle aunque no seleccione una opción.
+                                    </div>
                                 </div>
                             </div>
 
-                            <div class="d-grid gap-2 mb-5">
-                                <button type="submit" class="btn btn-primary btn-lg">
-                                    Guardar avance
-                                </button>
+                            <!-- FOTOS -->
+                            <div class="sat-card">
+                                <div class="sat-card-header">
+                                    <h2 class="sat-card-title">
+                                        <i class="fa fa-camera"/>
+                                        Fotos de evidencia
+                                    </h2>
+                                    <div class="sat-card-subtitle">
+                                        Tome o suba fotos desde el celular. Se enviarán como imagen por WhatsApp si activa la notificación.
+                                    </div>
+                                </div>
+
+                                <div class="sat-card-body">
+                                    <div class="sat-upload-box">
+                                        <div class="sat-upload-icon">
+                                            <i class="fa fa-camera"/>
+                                        </div>
+                                        <div class="sat-upload-title">
+                                            Agregar fotos
+                                        </div>
+                                        <div class="sat-upload-text">
+                                            Puede seleccionar varias imágenes.
+                                        </div>
+
+                                        <label class="sat-upload-btn" for="fotos">
+                                            <i class="fa fa-plus"/>
+                                            Tomar / subir fotos
+                                        </label>
+
+                                        <input class="sat-file-input"
+                                               id="fotos"
+                                               name="fotos"
+                                               type="file"
+                                               accept="image/*"
+                                               multiple="multiple"/>
+
+                                        <div class="sat-preview-grid" id="satPreviewGrid"/>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- NOTIFICACIÓN -->
+                            <div class="sat-card">
+                                <div class="sat-card-header">
+                                    <h2 class="sat-card-title">
+                                        <i class="fa fa-whatsapp"/>
+                                        Notificación
+                                    </h2>
+                                    <div class="sat-card-subtitle">
+                                        Controle si esta demora será informada a comercial.
+                                    </div>
+                                </div>
+
+                                <div class="sat-card-body">
+                                    <label class="sat-notify-box" for="notificar_asesora">
+                                        <input type="checkbox"
+                                               id="notificar_asesora"
+                                               name="notificar_asesora"
+                                               value="1"
+                                               checked="checked"/>
+                                        <span>
+                                            <span class="sat-notify-title">
+                                                Notificar a la asesora
+                                            </span>
+                                            <span class="sat-notify-text">
+                                                Se enviará la demora y las fotos a la asesora y a copia comercial. Si está fuera de horario, quedará pendiente en el log.
+                                            </span>
+                                        </span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- STICKY ACTIONS -->
+                            <div class="sat-sticky-actions">
+                                <div class="sat-sticky-inner">
+                                    <div class="sat-secondary-info">
+                                        Guardará la demora de esta reparación
+                                    </div>
+
+                                    <button type="submit" class="sat-submit" id="satSubmitBtn">
+                                        <i class="fa fa-save"/>
+                                        Guardar demora
+                                    </button>
+                                </div>
                             </div>
 
                         </form>
@@ -205,8 +967,180 @@
                     </div>
                 </div>
 
-            </div>
-        </t>
-    </template>
+                <script type="text/javascript">
+                    <![CDATA[
+                    (function () {
+                        function toggleOption(wrapper) {
+                            var checkbox = wrapper.querySelector('.sat-option-input');
+                            var inputs = wrapper.querySelectorAll('.sat-extra-input');
 
+                            if (!checkbox) {
+                                return;
+                            }
+
+                            if (checkbox.checked) {
+                                wrapper.classList.add('is-active');
+                                inputs.forEach(function (input) {
+                                    input.disabled = false;
+                                });
+                            } else {
+                                wrapper.classList.remove('is-active');
+                                inputs.forEach(function (input) {
+                                    input.disabled = true;
+                                    input.value = '';
+                                });
+                            }
+                        }
+
+                        document.querySelectorAll('.sat-option-wrapper').forEach(function (wrapper) {
+                            var checkbox = wrapper.querySelector('.sat-option-input');
+
+                            if (!checkbox) {
+                                return;
+                            }
+
+                            checkbox.addEventListener('change', function () {
+                                toggleOption(wrapper);
+                            });
+
+                            toggleOption(wrapper);
+                        });
+
+                        var fotosInput = document.getElementById('fotos');
+                        var previewGrid = document.getElementById('satPreviewGrid');
+
+                        if (fotosInput && previewGrid) {
+                            fotosInput.addEventListener('change', function () {
+                                previewGrid.innerHTML = '';
+
+                                var files = Array.prototype.slice.call(fotosInput.files || []);
+                                files.slice(0, 12).forEach(function (file) {
+                                    if (!file.type || !file.type.match(/^image\//)) {
+                                        return;
+                                    }
+
+                                    var reader = new FileReader();
+
+                                    reader.onload = function (event) {
+                                        var item = document.createElement('div');
+                                        item.className = 'sat-preview-item';
+
+                                        var img = document.createElement('img');
+                                        img.src = event.target.result;
+                                        img.alt = file.name || 'foto';
+
+                                        item.appendChild(img);
+                                        previewGrid.appendChild(item);
+                                    };
+
+                                    reader.readAsDataURL(file);
+                                });
+                            });
+                        }
+
+                        var form = document.getElementById('satDemoraForm');
+                        var submitBtn = document.getElementById('satSubmitBtn');
+
+                        if (form && submitBtn) {
+                            form.addEventListener('submit', function () {
+                                submitBtn.disabled = true;
+                                submitBtn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Guardando...';
+                            });
+                        }
+                    })();
+                    ]]>
+                </script>
+
+            </t>
+        </template>
+
+        <!-- =========================================================
+             PÁGINA PÚBLICA: ERROR
+        ========================================================== -->
+        <template id="reparaciones_avance_error_page" name="Error demora de reparación">
+            <t t-call="website.layout">
+
+                <style type="text/css">
+                    .sat-error-page {
+                        min-height: 100vh;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        padding: 20px;
+                        background:
+                            radial-gradient(circle at top left, rgba(220, 38, 38, 0.10), transparent 24rem),
+                            #f8fafc;
+                    }
+
+                    .sat-error-card {
+                        width: 100%;
+                        max-width: 520px;
+                        background: white;
+                        border-radius: 22px;
+                        border: 1px solid #e2e8f0;
+                        box-shadow: 0 20px 50px rgba(15, 23, 42, 0.10);
+                        padding: 26px;
+                        text-align: center;
+                    }
+
+                    .sat-error-icon {
+                        width: 68px;
+                        height: 68px;
+                        border-radius: 22px;
+                        display: inline-flex;
+                        align-items: center;
+                        justify-content: center;
+                        background: #fef2f2;
+                        color: #dc2626;
+                        font-size: 30px;
+                        margin-bottom: 16px;
+                    }
+
+                    .sat-error-title {
+                        color: #0f172a;
+                        font-size: 22px;
+                        font-weight: 900;
+                        margin: 0 0 8px;
+                        letter-spacing: -0.02em;
+                    }
+
+                    .sat-error-message {
+                        color: #64748b;
+                        font-size: 15px;
+                        line-height: 1.45;
+                        margin: 0;
+                    }
+
+                    .sat-error-footer {
+                        margin-top: 18px;
+                        color: #94a3b8;
+                        font-size: 12px;
+                        font-weight: 700;
+                    }
+                </style>
+
+                <div class="sat-error-page">
+                    <div class="sat-error-card">
+                        <div class="sat-error-icon">
+                            <i class="fa fa-exclamation-triangle"/>
+                        </div>
+
+                        <h1 class="sat-error-title">
+                            <t t-esc="title or 'No disponible'"/>
+                        </h1>
+
+                        <p class="sat-error-message">
+                            <t t-esc="message or 'No se pudo abrir este enlace.'"/>
+                        </p>
+
+                        <div class="sat-error-footer">
+                            Sistema de taller
+                        </div>
+                    </div>
+                </div>
+
+            </t>
+        </template>
+
+    </data>
 </odoo>
