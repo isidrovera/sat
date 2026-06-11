@@ -182,46 +182,96 @@ class ticket_alquiler(models.Model):
             record.total_copias_id = str(contometrok_value + contometroc_value)
 
 
-    @api.constrains('contometrok_id', 'contometroc_id', 'contometros_id')
     def _check_contometro_values(self):
+        """
+        Validación manual de contómetros.
+        NO debe tener @api.constrains para evitar que se ejecute en cada guardado.
+        Se llamará solo desde:
+        - action_en_revision
+        - action_finalizar cuando el estado sea en_revision
+        """
+        if self.env.context.get('skip_constraints'):
+            return
+
         for record in self:
-            # Buscar el último registro de la misma máquina
-            previous_record = self.search(
-                [('product_alquiler', '=', record.product_alquiler.id), ('id', '<', record.id)],
-                limit=1,
-                order='id desc'
-            )
-            
-            # Validar si existe un registro previo para comparaciones
-            if previous_record:
-                if record.contometrok_id <= previous_record.contometrok_id:
-                    raise ValidationError(
-                        _("❗ ERROR: EL VALOR DEL CONTÓMETRO K ES INCORRECTO\n\n"
-                          "Debe ingresar un valor MAYOR que el último valor registrado ({}) para esta máquina."
-                          .format(previous_record.contometrok_id))
-                    )
+            if record.estado != 'en_revision':
+                continue
 
-                if record.contometroc_id <= previous_record.contometroc_id:
-                    raise ValidationError(
-                        _("❗ ERROR: EL VALOR DEL CONTÓMETRO COLOR ES INCORRECTO\n\n"
-                          "Debe ingresar un valor MAYOR que el último valor registrado ({}) para esta máquina."
-                          .format(previous_record.contometroc_id))
-                    )
+            if not record.product_alquiler:
+                continue
 
-                if record.contometros_id <= previous_record.contometros_id:
-                    raise ValidationError(
-                        _("❗ ERROR: EL VALOR DEL CONTÓMETRO SCANNER ES INCORRECTO\n\n"
-                          "Debe ingresar un valor MAYOR que el último valor registrado ({}) para esta máquina."
-                          .format(previous_record.contometros_id))
-                    )
+            previous_record = self.search([
+                ('product_alquiler', '=', record.product_alquiler.id),
+                ('id', '<', record.id),
+                ('estado', '=', 'finalizado'),
+            ], limit=1, order='id desc')
 
-            # Validación para valores de contadores en 0
-            if record.contometrok_id == 0 or record.contometroc_id == 0 or record.contometros_id == 0:
-                raise ValidationError(
-                    _("❗ ERROR: EL VALOR DEL CONTÓMETRO NO PUEDE SER 0\n\n"
-                      "Debe ingresar el valor ACTUAL del contómetro.")
-                )
+            def clean_and_convert(value_str):
+                if not value_str:
+                    return 0
 
+                value_str = str(value_str).strip()
+
+                try:
+                    cleaned = value_str.replace(',', '')
+
+                    if '.' in cleaned:
+                        parts = cleaned.split('.')
+
+                        if len(parts) == 2 and len(parts[1]) == 3 and parts[1].isdigit():
+                            cleaned = parts[0] + parts[1]
+                        else:
+                            cleaned = parts[0]
+
+                    return int(float(cleaned))
+
+                except (ValueError, TypeError):
+                    return 0
+
+            current_k = clean_and_convert(record.contometrok_id)
+            current_color = clean_and_convert(record.contometroc_id)
+            current_scanner = clean_and_convert(record.contometros_id)
+
+            prev_k = clean_and_convert(previous_record.contometrok_id) if previous_record else 0
+            prev_color = clean_and_convert(previous_record.contometroc_id) if previous_record else 0
+            prev_scanner = clean_and_convert(previous_record.contometros_id) if previous_record else 0
+
+            if current_k == 0:
+                raise ValidationError(_("❗ El contómetro K no puede ser 0."))
+
+            if previous_record and current_k <= prev_k:
+                raise ValidationError(_(
+                    "❗ El contómetro K debe ser mayor al último registrado.\n"
+                    "Actual: %s | Anterior: %s | Ticket anterior: %s"
+                ) % (
+                    f"{current_k:,}",
+                    f"{prev_k:,}",
+                    previous_record.name
+                ))
+
+            if record.tipo_id == 'color':
+                if current_color == 0:
+                    raise ValidationError(_("❗ El contómetro Color no puede ser 0."))
+
+                if previous_record and current_color <= prev_color:
+                    raise ValidationError(_(
+                        "❗ El contómetro Color debe ser mayor al último registrado.\n"
+                        "Actual: %s | Anterior: %s | Ticket anterior: %s"
+                    ) % (
+                        f"{current_color:,}",
+                        f"{prev_color:,}",
+                        previous_record.name
+                    ))
+
+            if current_scanner and previous_record and prev_scanner and current_scanner < prev_scanner:
+                raise ValidationError(_(
+                    "❗ El contómetro Scanner no debe ser menor al último registrado.\n"
+                    "Actual: %s | Anterior: %s | Ticket anterior: %s"
+                ) % (
+                    f"{current_scanner:,}",
+                    f"{prev_scanner:,}",
+                    previous_record.name
+                ))
 
     
     tipo_servicio_id = fields.Selection([("instalacion", "Instalación"), ("retiro", "Retiro de maquina"),

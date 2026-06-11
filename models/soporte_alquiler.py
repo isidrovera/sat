@@ -1412,26 +1412,21 @@ class TicketAlquiler(models.Model):
             )
             return False
 
-    @api.constrains('contometrok_id', 'contometroc_id', 'contometros_id', 'estado')
     def _check_contometro_values(self):
         """
-        Valida contómetros solo cuando el ticket está en estado 'En Revisión'.
-
-        Motivo:
-        - En estados como Nuevo, Asignado, En Ruta o En Sitio, el técnico puede estar
-        completando datos progresivamente.
-        - La validación fuerte debe aplicarse cuando realmente corresponde revisar
-        y cerrar técnicamente el equipo.
+        Validación manual de contómetros.
+        NO debe tener @api.constrains para evitar que se ejecute en cada guardado.
+        Se llamará solo desde:
+        - action_en_revision
+        - action_finalizar cuando el estado sea en_revision
         """
         if self.env.context.get('skip_constraints'):
             return
 
         for record in self:
-            # ✅ Solo validar contómetros en estado En Revisión
             if record.estado != 'en_revision':
                 continue
 
-            # Si no hay equipo, no se puede comparar histórico
             if not record.product_alquiler:
                 continue
 
@@ -1453,7 +1448,6 @@ class TicketAlquiler(models.Model):
                     if '.' in cleaned:
                         parts = cleaned.split('.')
 
-                        # Caso: 1.000 => 1000
                         if len(parts) == 2 and len(parts[1]) == 3 and parts[1].isdigit():
                             cleaned = parts[0] + parts[1]
                         else:
@@ -1472,9 +1466,6 @@ class TicketAlquiler(models.Model):
             prev_color = clean_and_convert(previous_record.contometroc_id) if previous_record else 0
             prev_scanner = clean_and_convert(previous_record.contometros_id) if previous_record else 0
 
-            # ============================================================
-            # CONTÓMETRO K
-            # ============================================================
             if current_k == 0:
                 raise ValidationError(_("❗ El contómetro K no puede ser 0."))
 
@@ -1488,9 +1479,6 @@ class TicketAlquiler(models.Model):
                     previous_record.name
                 ))
 
-            # ============================================================
-            # CONTÓMETRO COLOR — SOLO MÁQUINAS A COLOR
-            # ============================================================
             if record.tipo_id == 'color':
                 if current_color == 0:
                     raise ValidationError(_("❗ El contómetro Color no puede ser 0."))
@@ -1505,10 +1493,6 @@ class TicketAlquiler(models.Model):
                         previous_record.name
                     ))
 
-            # ============================================================
-            # CONTÓMETRO SCANNER — OPCIONAL
-            # Solo valida si el usuario lo llenó.
-            # ============================================================
             if current_scanner and previous_record and prev_scanner and current_scanner < prev_scanner:
                 raise ValidationError(_(
                     "❗ El contómetro Scanner no debe ser menor al último registrado.\n"
@@ -1518,59 +1502,7 @@ class TicketAlquiler(models.Model):
                     f"{prev_scanner:,}",
                     previous_record.name
                 ))
-
-    @api.constrains('contometrok_id', 'contometroc_id', 'contometros_id')
-    def _check_contometro_values(self):
-        if self.env.context.get('skip_constraints'):
-            return
-        for record in self:
-            previous_record = self.search(
-                [('product_alquiler', '=', record.product_alquiler.id), ('id', '<', record.id)],
-                limit=1, order='id desc'
-            )
-
-            def clean_and_convert(value_str):
-                if not value_str:
-                    return 0
-                value_str = str(value_str).strip()
-                try:
-                    cleaned = value_str.replace(',', '')
-                    if '.' in cleaned:
-                        parts = cleaned.split('.')
-                        if len(parts) == 2 and len(parts[1]) == 3 and parts[1].isdigit():
-                            cleaned = parts[0] + parts[1]
-                        else:
-                            cleaned = parts[0]
-                    return int(float(cleaned))
-                except (ValueError, TypeError):
-                    return 0
-
-            current_k = clean_and_convert(record.contometrok_id)
-            current_color = clean_and_convert(record.contometroc_id)
-            current_scanner = clean_and_convert(record.contometros_id)
-            prev_k = clean_and_convert(previous_record.contometrok_id) if previous_record else 0
-            prev_color = clean_and_convert(previous_record.contometroc_id) if previous_record else 0
-            prev_scanner = clean_and_convert(previous_record.contometros_id) if previous_record else 0
-
-            if previous_record and current_k <= prev_k:
-                raise ValidationError(_(
-                    "❗ El contómetro K debe ser mayor al último registrado.\n"
-                    "Actual: %s | Anterior: %s | Ticket: %s"
-                ) % (f"{current_k:,}", f"{prev_k:,}", previous_record.name))
-
-            if record.tipo_id == 'color':
-                if previous_record and current_color <= prev_color:
-                    raise ValidationError(_(
-                        "❗ El contómetro Color debe ser mayor al último registrado.\n"
-                        "Actual: %s | Anterior: %s | Ticket: %s"
-                    ) % (f"{current_color:,}", f"{prev_color:,}", previous_record.name))
-                if current_color == 0:
-                    raise ValidationError(_("❗ El contómetro Color no puede ser 0."))
-
-            
-            if current_k == 0:
-                raise ValidationError(_("❗ El contómetro K no puede ser 0."))
-
+        
     @api.depends('agenda')
     def _compute_agenda_local(self):
         user_tz = self.env.user.tz or 'UTC'
