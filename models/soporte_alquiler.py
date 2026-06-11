@@ -183,7 +183,39 @@ class TicketAlquiler(models.Model):
     contometros_id = fields.Char(string="Contometro Scanner", tracking=True)
     contometrok_id = fields.Char(string="Contometro K", tracking=True)
     contometroc_id = fields.Char(string="Contometro Color", tracking=True)
-    total_copias_id = fields.Char(string="Contometro Total P+C", compute="sumar_field")
+    total_copias_id = fields.Char(
+        string="Contometro Total P+C",
+        compute="_compute_total_copias",
+        store=True
+    )
+    @api.depends('contometrok_id', 'contometroc_id')
+    def _compute_total_copias(self):
+        def _to_int(value):
+            if not value:
+                return 0
+
+            value = str(value).strip()
+
+            try:
+                cleaned = value.replace(',', '')
+
+                if '.' in cleaned:
+                    parts = cleaned.split('.')
+
+                    if len(parts) == 2 and len(parts[1]) == 3 and parts[1].isdigit():
+                        cleaned = parts[0] + parts[1]
+                    else:
+                        cleaned = parts[0]
+
+                return int(float(cleaned))
+
+            except (ValueError, TypeError):
+                return 0
+
+        for record in self:
+            k = _to_int(record.contometrok_id)
+            c = _to_int(record.contometroc_id)
+            record.total_copias_id = str(k + c)
     pedido_origen_id = fields.Many2one(
         'ticket.repuesto.pedido',
         string='Pedido de repuestos origen',
