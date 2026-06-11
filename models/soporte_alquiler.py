@@ -185,8 +185,7 @@ class TicketAlquiler(models.Model):
     contometroc_id = fields.Char(string="Contometro Color", tracking=True)
     total_copias_id = fields.Char(
         string="Contometro Total P+C",
-        compute="_compute_total_copias",
-        store=True
+        compute="_compute_total_copias"
     )
     @api.depends('contometrok_id', 'contometroc_id')
     def _compute_total_copias(self):
