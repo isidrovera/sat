@@ -294,11 +294,14 @@ class ReparacionAvance(models.Model):
         """
         Notifica la demora usando sat.notificacion.log.
 
-        - Texto a asesora.
-        - Fotos como media a asesora.
-        - Texto a copia comercial.
-        - Fotos como media a copia comercial.
-        - Respeta horario laboral para asesora y copia comercial.
+        Condición obligatoria para notificar a asesora y copia comercial:
+        1. La reparación/máquina debe tener cliente.
+        2. El cliente debe tener asesora.
+        3. La asesora debe tener celular.
+
+        Si falta cualquiera de esos datos, NO se notifica ni a asesora ni a copia comercial.
+
+        El jefe de área es independiente y sí puede recibir alerta interna aunque no exista asesora.
         """
         Log = self.env['sat.notificacion.log'].sudo()
 
@@ -315,42 +318,42 @@ class ReparacionAvance(models.Model):
             cliente = reparacion.cliente_id if reparacion.cliente_id else False
             maquina = reparacion.maquina_id if reparacion.maquina_id else False
 
-            msg = record._build_msg_asesora()
-            attachments = record._get_line_attachments()
-
             created_logs = self.env['sat.notificacion.log'].sudo().browse()
-            asesora_text_log = False
 
             # ------------------------------------------------------
-            # 1) Texto a asesora
+            # VALIDACIONES OBLIGATORIAS
             # ------------------------------------------------------
-            if asesora_phone:
-                asesora_text_log = Log.create_notification(
-                    event_type='demora_asesora',
-                    phone=asesora_phone,
-                    message=msg,
-                    recipient_type='asesora',
-                    recipient_name=asesora_user.name if asesora_user else 'Asesora',
-                    maquina=maquina,
-                    reparacion=reparacion,
-                    avance=record,
-                    cliente=cliente,
-                    asesora_user=asesora_user,
-                    respect_business_hours=True,
-                    force_send=False,
-                    unique_key='demora_asesora:avance:%s:text:%s' % (
-                        record.id,
-                        asesora_phone,
+            if not cliente:
+                record.write({
+                    'estado': 'registrado',
+                    'error_notificacion': False,
+                })
+
+                reparacion.message_post(
+                    body=_(
+                        "ℹ️ No se notificó la demora a asesora ni copia comercial "
+                        "porque la reparación no tiene cliente asignado."
                     ),
-                    source_record=record,
-                    send_immediately=True,
-                    note='Notificación de demora enviada a asesora.',
+                    subtype_xmlid='mail.mt_note',
                 )
+                continue
 
-                if asesora_text_log:
-                    created_logs |= asesora_text_log
+            if not asesora_user:
+                record.write({
+                    'estado': 'registrado',
+                    'error_notificacion': False,
+                })
 
-            else:
+                reparacion.message_post(
+                    body=_(
+                        "ℹ️ No se notificó la demora a asesora ni copia comercial "
+                        "porque el cliente no tiene asesora asignada."
+                    ),
+                    subtype_xmlid='mail.mt_note',
+                )
+                continue
+
+            if not asesora_phone:
                 record.write({
                     'estado': 'error',
                     'error_notificacion': _('La asesora no tiene número móvil configurado.'),
@@ -358,53 +361,87 @@ class ReparacionAvance(models.Model):
 
                 reparacion.message_post(
                     body=_(
-                        "⚠️ No se creó notificación de demora para la asesora "
-                        "porque no tiene número móvil configurado."
+                        "ℹ️ No se notificó la demora a asesora ni copia comercial "
+                        "porque la asesora no tiene celular configurado."
                     ),
                     subtype_xmlid='mail.mt_note',
                 )
+                continue
+
+            msg = record._build_msg_asesora()
+            attachments = record._get_line_attachments()
+
+            asesora_text_log = False
+
+            # ------------------------------------------------------
+            # 1) Texto a asesora
+            # ------------------------------------------------------
+            asesora_text_log = Log.create_notification(
+                event_type='demora_asesora',
+                phone=asesora_phone,
+                message=msg,
+                recipient_type='asesora',
+                recipient_name=asesora_user.name,
+                maquina=maquina,
+                reparacion=reparacion,
+                avance=record,
+                cliente=cliente,
+                asesora_user=asesora_user,
+                respect_business_hours=True,
+                force_send=False,
+                unique_key='demora_asesora:avance:%s:text:%s' % (
+                    record.id,
+                    asesora_phone,
+                ),
+                source_record=record,
+                send_immediately=True,
+                note='Notificación de demora enviada a asesora.',
+            )
+
+            if asesora_text_log:
+                created_logs |= asesora_text_log
 
             # ------------------------------------------------------
             # 2) Fotos a asesora
             # ------------------------------------------------------
-            if asesora_phone:
-                for attachment in attachments:
-                    mimetype = attachment.mimetype or ''
+            for attachment in attachments:
+                mimetype = attachment.mimetype or ''
 
-                    if not mimetype.startswith('image/'):
-                        continue
+                if not mimetype.startswith('image/'):
+                    continue
 
-                    log = Log.create_notification(
-                        event_type='foto_demora',
-                        phone=asesora_phone,
-                        message=False,
-                        caption='Evidencia de demora',
-                        recipient_type='asesora',
-                        recipient_name=asesora_user.name if asesora_user else 'Asesora',
-                        maquina=maquina,
-                        reparacion=reparacion,
-                        avance=record,
-                        cliente=cliente,
-                        asesora_user=asesora_user,
-                        is_media=True,
-                        attachment=attachment,
-                        respect_business_hours=True,
-                        force_send=False,
-                        unique_key='foto_demora:avance:%s:asesora:%s:att:%s' % (
-                            record.id,
-                            asesora_phone,
-                            attachment.id,
-                        ),
-                        source_record=record,
-                        send_immediately=True,
-                        note='Foto de demora enviada a asesora.',
-                    )
+                log = Log.create_notification(
+                    event_type='foto_demora',
+                    phone=asesora_phone,
+                    message=False,
+                    caption='Evidencia de demora',
+                    recipient_type='asesora',
+                    recipient_name=asesora_user.name,
+                    maquina=maquina,
+                    reparacion=reparacion,
+                    avance=record,
+                    cliente=cliente,
+                    asesora_user=asesora_user,
+                    is_media=True,
+                    attachment=attachment,
+                    respect_business_hours=True,
+                    force_send=False,
+                    unique_key='foto_demora:avance:%s:asesora:%s:att:%s' % (
+                        record.id,
+                        asesora_phone,
+                        attachment.id,
+                    ),
+                    source_record=record,
+                    send_immediately=True,
+                    note='Foto de demora enviada a asesora.',
+                )
 
-                    if log:
-                        created_logs |= log
+                if log:
+                    created_logs |= log
 
             # ------------------------------------------------------
             # 3) Texto copia comercial
+            # Solo se crea si también existe cliente + asesora + celular.
             # ------------------------------------------------------
             if copia_phone and copia_phone != asesora_phone:
                 log = Log.create_notification(
@@ -519,13 +556,17 @@ class ReparacionAvance(models.Model):
                 body=_(
                     "📲 <b>Notificaciones de demora generadas</b><br/>"
                     "<b>Demora:</b> %(avance)s<br/>"
-                    "<b>Asesora:</b> %(asesora)s<br/>"
+                    "<b>Cliente:</b> %(cliente)s<br/>"
+                    "<b>Asesora:</b> %(asesora_name)s<br/>"
+                    "<b>Celular asesora:</b> %(asesora_phone)s<br/>"
                     "<b>Copia comercial:</b> %(copia)s<br/>"
                     "<b>Fotos:</b> %(fotos)s<br/>"
                     "<b>Registros creados:</b> %(count)s"
                 ) % {
                     'avance': record.name or record.id,
-                    'asesora': asesora_phone or 'Sin número',
+                    'cliente': cliente.name if cliente else '',
+                    'asesora_name': asesora_user.name if asesora_user else '',
+                    'asesora_phone': asesora_phone or '',
                     'copia': copia_phone or 'Sin número',
                     'fotos': len(attachments),
                     'count': len(created_logs),

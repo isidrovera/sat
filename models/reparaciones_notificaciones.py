@@ -191,11 +191,12 @@ El equipo ya fue tomado por taller y se encuentra en revisión.
         """
         Crea logs de notificación cuando la reparación entra en revisión.
 
-        Destinatarios:
-        1. Asesora
-        2. Copia comercial
+        Condición obligatoria para notificar a asesora y copia comercial:
+        1. La reparación/máquina debe tener cliente.
+        2. El cliente debe tener asesora.
+        3. La asesora debe tener celular.
 
-        Respeta horario laboral Perú/Lima.
+        Si falta cualquiera de esos datos, NO se notifica ni a asesora ni a copia comercial.
         """
         self.ensure_one()
 
@@ -208,50 +209,75 @@ El equipo ya fue tomado por taller y se encuentra en revisión.
         asesora_phone = self._sat_get_asesora_phone_revision()
         copia_phone = self._sat_get_copia_comercial_phone_revision()
 
-        msg = self._sat_build_msg_revision_iniciada()
-
         created_logs = self.env['sat.notificacion.log'].sudo().browse()
+
+        # ------------------------------------------------------
+        # VALIDACIONES OBLIGATORIAS
+        # ------------------------------------------------------
+        if not cliente:
+            self.message_post(
+                body=_(
+                    "ℹ️ No se generó notificación de <b>Revisión iniciada</b> "
+                    "porque la reparación no tiene cliente asignado."
+                ),
+                subtype_xmlid='mail.mt_note',
+            )
+            return created_logs
+
+        if not asesora_user:
+            self.message_post(
+                body=_(
+                    "ℹ️ No se generó notificación de <b>Revisión iniciada</b> "
+                    "porque el cliente no tiene asesora asignada."
+                ),
+                subtype_xmlid='mail.mt_note',
+            )
+            return created_logs
+
+        if not asesora_phone:
+            self.message_post(
+                body=_(
+                    "ℹ️ No se generó notificación de <b>Revisión iniciada</b> "
+                    "porque la asesora no tiene celular configurado."
+                ),
+                subtype_xmlid='mail.mt_note',
+            )
+            return created_logs
+
+        msg = self._sat_build_msg_revision_iniciada()
 
         # ------------------------------------------------------
         # 1) Asesora
         # ------------------------------------------------------
-        if asesora_phone:
-            unique_key = "revision_iniciada:reparacion:%s:asesora:%s" % (
-                self.id,
-                asesora_phone,
-            )
+        unique_key = "revision_iniciada:reparacion:%s:asesora:%s" % (
+            self.id,
+            asesora_phone,
+        )
 
-            log = Log.create_notification(
-                event_type='revision_iniciada',
-                phone=asesora_phone,
-                message=msg,
-                recipient_type='asesora',
-                recipient_name=asesora_user.name if asesora_user else 'Asesora',
-                maquina=maquina,
-                reparacion=self,
-                cliente=cliente,
-                asesora_user=asesora_user,
-                respect_business_hours=True,
-                force_send=False,
-                unique_key=unique_key,
-                source_record=self,
-                send_immediately=True,
-                note='Notificación generada cuando la reparación entró en revisión.',
-            )
+        log = Log.create_notification(
+            event_type='revision_iniciada',
+            phone=asesora_phone,
+            message=msg,
+            recipient_type='asesora',
+            recipient_name=asesora_user.name,
+            maquina=maquina,
+            reparacion=self,
+            cliente=cliente,
+            asesora_user=asesora_user,
+            respect_business_hours=True,
+            force_send=False,
+            unique_key=unique_key,
+            source_record=self,
+            send_immediately=True,
+            note='Notificación generada cuando la reparación entró en revisión.',
+        )
 
-            if log:
-                created_logs |= log
-        else:
-            self.message_post(
-                body=_(
-                    "⚠️ No se creó notificación de <b>Revisión iniciada</b> para la asesora "
-                    "porque no tiene celular configurado."
-                ),
-                subtype_xmlid='mail.mt_note',
-            )
+        if log:
+            created_logs |= log
 
         # ------------------------------------------------------
         # 2) Copia comercial
+        # Solo se crea si también existe cliente + asesora + celular.
         # ------------------------------------------------------
         if copia_phone and copia_phone != asesora_phone:
             unique_key = "revision_iniciada:reparacion:%s:copia:%s" % (
@@ -287,18 +313,22 @@ El equipo ya fue tomado por taller y se encuentra en revisión.
             body = _(
                 "📲 <b>Notificaciones de revisión iniciada generadas</b><br/>"
                 "<b>Reparación:</b> %(rep)s<br/>"
+                "<b>Cliente:</b> %(cliente)s<br/>"
                 "<b>Modelo:</b> %(modelo)s<br/>"
                 "<b>Serie:</b> %(serie)s<br/>"
                 "<b>Técnico:</b> %(tecnico)s<br/>"
-                "<b>Asesora:</b> %(asesora)s<br/>"
+                "<b>Asesora:</b> %(asesora_name)s<br/>"
+                "<b>Celular asesora:</b> %(asesora_phone)s<br/>"
                 "<b>Copia comercial:</b> %(copia)s<br/>"
                 "<b>Registros creados:</b> %(count)s"
             ) % {
                 'rep': self.name or '',
+                'cliente': cliente.name if cliente else '',
                 'modelo': self._sat_get_modelo_revision(),
                 'serie': self._sat_get_serie_revision(),
                 'tecnico': self.responsable_id.name if self.responsable_id else '',
-                'asesora': asesora_phone or 'Sin número',
+                'asesora_name': asesora_user.name if asesora_user else '',
+                'asesora_phone': asesora_phone or '',
                 'copia': copia_phone or 'Sin número',
                 'count': len(created_logs),
             }
@@ -383,11 +413,12 @@ El equipo ya fue tomado por taller y se encuentra en revisión.
         """
         Crea logs de finalización de reparación.
 
-        Destinatarios:
-        1. Asesora
-        2. Copia comercial
+        Condición obligatoria para notificar a asesora y copia comercial:
+        1. La reparación/máquina debe tener cliente.
+        2. El cliente debe tener asesora.
+        3. La asesora debe tener celular.
 
-        Respeta horario laboral Perú/Lima.
+        Si falta cualquiera de esos datos, NO se notifica ni a asesora ni a copia comercial.
         """
         self.ensure_one()
 
@@ -400,50 +431,75 @@ El equipo ya fue tomado por taller y se encuentra en revisión.
         asesora_phone = self._sat_get_asesora_phone_revision()
         copia_phone = self._sat_get_copia_comercial_phone_revision()
 
-        msg = self._sat_build_msg_finalizacion()
-
         created_logs = self.env['sat.notificacion.log'].sudo().browse()
+
+        # ------------------------------------------------------
+        # VALIDACIONES OBLIGATORIAS
+        # ------------------------------------------------------
+        if not cliente:
+            self.message_post(
+                body=_(
+                    "ℹ️ No se generó notificación de <b>Finalización</b> "
+                    "porque la reparación no tiene cliente asignado."
+                ),
+                subtype_xmlid='mail.mt_note',
+            )
+            return created_logs
+
+        if not asesora_user:
+            self.message_post(
+                body=_(
+                    "ℹ️ No se generó notificación de <b>Finalización</b> "
+                    "porque el cliente no tiene asesora asignada."
+                ),
+                subtype_xmlid='mail.mt_note',
+            )
+            return created_logs
+
+        if not asesora_phone:
+            self.message_post(
+                body=_(
+                    "ℹ️ No se generó notificación de <b>Finalización</b> "
+                    "porque la asesora no tiene celular configurado."
+                ),
+                subtype_xmlid='mail.mt_note',
+            )
+            return created_logs
+
+        msg = self._sat_build_msg_finalizacion()
 
         # ------------------------------------------------------
         # 1) Asesora
         # ------------------------------------------------------
-        if asesora_phone:
-            unique_key = "finalizacion:reparacion:%s:asesora:%s" % (
-                self.id,
-                asesora_phone,
-            )
+        unique_key = "finalizacion:reparacion:%s:asesora:%s" % (
+            self.id,
+            asesora_phone,
+        )
 
-            log = Log.create_notification(
-                event_type='finalizacion',
-                phone=asesora_phone,
-                message=msg,
-                recipient_type='asesora',
-                recipient_name=asesora_user.name if asesora_user else 'Asesora',
-                maquina=maquina,
-                reparacion=self,
-                cliente=cliente,
-                asesora_user=asesora_user,
-                respect_business_hours=True,
-                force_send=False,
-                unique_key=unique_key,
-                source_record=self,
-                send_immediately=True,
-                note='Notificación generada al finalizar reparación.',
-            )
+        log = Log.create_notification(
+            event_type='finalizacion',
+            phone=asesora_phone,
+            message=msg,
+            recipient_type='asesora',
+            recipient_name=asesora_user.name,
+            maquina=maquina,
+            reparacion=self,
+            cliente=cliente,
+            asesora_user=asesora_user,
+            respect_business_hours=True,
+            force_send=False,
+            unique_key=unique_key,
+            source_record=self,
+            send_immediately=True,
+            note='Notificación generada al finalizar reparación.',
+        )
 
-            if log:
-                created_logs |= log
-        else:
-            self.message_post(
-                body=_(
-                    "⚠️ No se creó notificación de <b>Finalización</b> para la asesora "
-                    "porque no tiene celular configurado."
-                ),
-                subtype_xmlid='mail.mt_note',
-            )
+        if log:
+            created_logs |= log
 
         # ------------------------------------------------------
         # 2) Copia comercial
+        # Solo se crea si también existe cliente + asesora + celular.
         # ------------------------------------------------------
         if copia_phone and copia_phone != asesora_phone:
             unique_key = "finalizacion:reparacion:%s:copia:%s" % (
@@ -479,18 +535,22 @@ El equipo ya fue tomado por taller y se encuentra en revisión.
             body = _(
                 "📲 <b>Notificaciones de finalización generadas</b><br/>"
                 "<b>Reparación:</b> %(rep)s<br/>"
+                "<b>Cliente:</b> %(cliente)s<br/>"
                 "<b>Modelo:</b> %(modelo)s<br/>"
                 "<b>Serie:</b> %(serie)s<br/>"
                 "<b>Técnico:</b> %(tecnico)s<br/>"
-                "<b>Asesora:</b> %(asesora)s<br/>"
+                "<b>Asesora:</b> %(asesora_name)s<br/>"
+                "<b>Celular asesora:</b> %(asesora_phone)s<br/>"
                 "<b>Copia comercial:</b> %(copia)s<br/>"
                 "<b>Registros creados:</b> %(count)s"
             ) % {
                 'rep': self.name or '',
+                'cliente': cliente.name if cliente else '',
                 'modelo': self._sat_get_modelo_revision(),
                 'serie': self._sat_get_serie_revision(),
                 'tecnico': self.responsable_id.name if self.responsable_id else '',
-                'asesora': asesora_phone or 'Sin número',
+                'asesora_name': asesora_user.name if asesora_user else '',
+                'asesora_phone': asesora_phone or '',
                 'copia': copia_phone or 'Sin número',
                 'count': len(created_logs),
             }
@@ -505,7 +565,6 @@ El equipo ya fue tomado por taller y se encuentra en revisión.
             )
 
         return created_logs
-
     # ==========================================================
     # OVERRIDE DEL MÉTODO EXISTENTE
     # ==========================================================

@@ -232,11 +232,12 @@ Se notificará cuando taller inicie la revisión.
         """
         Crea notificaciones por log cuando la máquina entra a para_revision.
 
-        Destinatarios:
-        1. Asesora
-        2. Copia comercial
+        Condición obligatoria para notificar a asesora y copia comercial:
+        1. La máquina debe tener cliente.
+        2. El cliente debe tener asesora.
+        3. La asesora debe tener celular.
 
-        Respeta horario laboral para ambos.
+        Si falta cualquiera de esos datos, NO se notifica ni a asesora ni a copia comercial.
         """
         self.ensure_one()
 
@@ -247,30 +248,93 @@ Se notificará cuando taller inicie la revisión.
         asesora_phone = self._sat_get_asesora_phone()
         copia_phone = self._sat_get_copia_comercial_phone()
 
+        created_logs = self.env['sat.notificacion.log'].sudo().browse()
+
+        # ------------------------------------------------------
+        # VALIDACIONES OBLIGATORIAS
+        # ------------------------------------------------------
+        if not cliente:
+            self.message_post(
+                body=_(
+                    "ℹ️ No se generó notificación de <b>Para revisión</b> "
+                    "porque la máquina no tiene cliente asignado."
+                ),
+                subtype_xmlid='mail.mt_note',
+            )
+            return created_logs
+
+        if not asesora_user:
+            self.message_post(
+                body=_(
+                    "ℹ️ No se generó notificación de <b>Para revisión</b> "
+                    "porque el cliente no tiene asesora asignada."
+                ),
+                subtype_xmlid='mail.mt_note',
+            )
+            return created_logs
+
+        if not asesora_phone:
+            self.message_post(
+                body=_(
+                    "ℹ️ No se generó notificación de <b>Para revisión</b> "
+                    "porque la asesora no tiene celular configurado."
+                ),
+                subtype_xmlid='mail.mt_note',
+            )
+            return created_logs
+
         msg = self._sat_build_msg_para_revision()
 
         fecha_key = ''
         if self.fecha_para_revision:
             fecha_key = fields.Datetime.to_string(self.fecha_para_revision)
 
-        created_logs = self.env['sat.notificacion.log'].sudo().browse()
-
         # ------------------------------------------------------
         # 1) Asesora
         # ------------------------------------------------------
-        if asesora_phone:
-            unique_key = "para_revision:maquina:%s:asesora:%s:%s" % (
+        unique_key = "para_revision:maquina:%s:asesora:%s:%s" % (
+            self.id,
+            asesora_phone,
+            fecha_key or self.write_date or self.id,
+        )
+
+        log = Log.create_notification(
+            event_type='para_revision',
+            phone=asesora_phone,
+            message=msg,
+            recipient_type='asesora',
+            recipient_name=asesora_user.name,
+            maquina=self,
+            cliente=cliente,
+            asesora_user=asesora_user,
+            respect_business_hours=True,
+            force_send=False,
+            unique_key=unique_key,
+            source_record=self,
+            send_immediately=True,
+            note='Notificación generada al colocar máquina para revisión.',
+        )
+
+        if log:
+            created_logs |= log
+
+        # ------------------------------------------------------
+        # 2) Copia comercial
+        # Solo se crea si también existe cliente + asesora + celular.
+        # ------------------------------------------------------
+        if copia_phone and copia_phone != asesora_phone:
+            unique_key = "para_revision:maquina:%s:copia:%s:%s" % (
                 self.id,
-                asesora_phone,
+                copia_phone,
                 fecha_key or self.write_date or self.id,
             )
 
             log = Log.create_notification(
-                event_type='para_revision',
-                phone=asesora_phone,
+                event_type='copia_comercial',
+                phone=copia_phone,
                 message=msg,
-                recipient_type='asesora',
-                recipient_name=asesora_user.name if asesora_user else (self.asesora_id or 'Asesora'),
+                recipient_type='copia_comercial',
+                recipient_name='Copia comercial',
                 maquina=self,
                 cliente=cliente,
                 asesora_user=asesora_user,
@@ -279,51 +343,11 @@ Se notificará cuando taller inicie la revisión.
                 unique_key=unique_key,
                 source_record=self,
                 send_immediately=True,
-                note='Notificación generada al colocar máquina para revisión.',
+                note='Copia comercial de máquina colocada para revisión.',
             )
 
             if log:
                 created_logs |= log
-        else:
-            self.message_post(
-                body=_(
-                    "⚠️ No se creó notificación de <b>Para revisión</b> para la asesora "
-                    "porque no tiene celular configurado."
-                ),
-                subtype_xmlid='mail.mt_note',
-            )
-
-        # ------------------------------------------------------
-        # 2) Copia comercial
-        # ------------------------------------------------------
-        if copia_phone:
-            # Evitar duplicado si copia comercial es igual al número de asesora
-            if copia_phone != asesora_phone:
-                unique_key = "para_revision:maquina:%s:copia:%s:%s" % (
-                    self.id,
-                    copia_phone,
-                    fecha_key or self.write_date or self.id,
-                )
-
-                log = Log.create_notification(
-                    event_type='copia_comercial',
-                    phone=copia_phone,
-                    message=msg,
-                    recipient_type='copia_comercial',
-                    recipient_name='Copia comercial',
-                    maquina=self,
-                    cliente=cliente,
-                    asesora_user=asesora_user,
-                    respect_business_hours=True,
-                    force_send=False,
-                    unique_key=unique_key,
-                    source_record=self,
-                    send_immediately=True,
-                    note='Copia comercial de máquina colocada para revisión.',
-                )
-
-                if log:
-                    created_logs |= log
 
         # ------------------------------------------------------
         # Chatter resumen
@@ -333,13 +357,17 @@ Se notificará cuando taller inicie la revisión.
                 "📲 <b>Notificaciones de Para revisión generadas</b><br/>"
                 "<b>Máquina:</b> %(modelo)s<br/>"
                 "<b>Serie:</b> %(serie)s<br/>"
-                "<b>Asesora:</b> %(asesora)s<br/>"
+                "<b>Cliente:</b> %(cliente)s<br/>"
+                "<b>Asesora:</b> %(asesora_name)s<br/>"
+                "<b>Celular asesora:</b> %(asesora_phone)s<br/>"
                 "<b>Copia comercial:</b> %(copia)s<br/>"
                 "<b>Registros creados:</b> %(count)s"
             ) % {
                 'modelo': self.name.name if self.name else '',
                 'serie': self.serie_id or '',
-                'asesora': asesora_phone or 'Sin número',
+                'cliente': cliente.name if cliente else '',
+                'asesora_name': asesora_user.name if asesora_user else '',
+                'asesora_phone': asesora_phone or '',
                 'copia': copia_phone or 'Sin número',
                 'count': len(created_logs),
             }
