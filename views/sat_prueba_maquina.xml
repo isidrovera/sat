@@ -12,50 +12,57 @@
         <list string="Pruebas de Máquina"
               decoration-success="estado_prueba == 'completado'"
               decoration-warning="estado_prueba == 'incompleto'"
+              decoration-danger="estado_prueba == 'con_alertas'"
               decoration-muted="estado_prueba == 'pendiente'"
               default_order="fecha_ultima_actualizacion desc, id desc">
 
           <field name="fecha_inicio" string="Fecha Inicio" optional="show"/>
           <field name="fecha_ultima_actualizacion" string="Últ. SNMP" optional="show"/>
           <field name="maquina_id" string="Máquina"/>
+          <field name="reparacion_id" string="Reparación" optional="hide"/>
           <field name="tecnico_id" string="Técnico" optional="show"/>
-          <field name="origen" string="Origen" optional="show"/>
 
-          <!-- Contadores actuales -->
+          <field name="snmp_ip" string="IP" optional="hide"/>
+          <field name="snmp_serie" string="Serie SNMP" optional="hide"/>
+          <field name="snmp_marca" string="Marca" optional="hide"/>
+          <field name="snmp_modelo" string="Modelo SNMP" optional="hide"/>
+
           <field name="contador_actual_total" string="Total" optional="show"/>
-          <field name="contador_actual_bn" string="BN" optional="hide"/>
+          <field name="contador_actual_bn" string="B/N" optional="hide"/>
           <field name="contador_actual_color" string="Color" optional="hide"/>
 
-          <!-- Deltas clave visibles en lista -->
           <field name="delta_total" string="Δ Total" optional="show"/>
-          <field name="delta_impresiones" string="Δ Imp." optional="show"/>
           <field name="delta_copias" string="Δ Cop." optional="show"/>
-          <field name="delta_scanner" string="Δ Scan" optional="hide"/>
-          <field name="delta_duplex" string="Δ Dpl." optional="hide"/>
+          <field name="delta_impresiones" string="Δ Imp." optional="show"/>
+          <field name="delta_scanner" string="Δ Scan" optional="show"/>
+          <field name="delta_duplex" string="Δ Dúplex" optional="show"/>
+          <field name="delta_copias_bn" string="Δ Cop. B/N" optional="hide"/>
+          <field name="delta_copias_color" string="Δ Cop. Color" optional="hide"/>
+          <field name="delta_impresiones_bn" string="Δ Imp. B/N" optional="hide"/>
+          <field name="delta_impresiones_color" string="Δ Imp. Color" optional="hide"/>
 
-          <!-- Pruebas OK (booleanos visuales) -->
+          <field name="prueba_copia_ok" string="✔ Cop." widget="boolean_toggle" readonly="1"/>
           <field name="prueba_impresion_ok" string="✔ Imp." widget="boolean_toggle" readonly="1"/>
-          <field name="prueba_copia_ok"     string="✔ Cop." widget="boolean_toggle" readonly="1"/>
-          <field name="prueba_scanner_ok"   string="✔ Scan" widget="boolean_toggle" readonly="1" optional="show"/>
-          <field name="prueba_color_ok"     string="✔ Color" widget="boolean_toggle" readonly="1" optional="show"/>
-          <field name="prueba_duplex_ok"    string="✔ Dpl." widget="boolean_toggle" readonly="1" optional="show"/>
+          <field name="prueba_scanner_ok" string="✔ Scan" widget="boolean_toggle" readonly="1" optional="show"/>
+          <field name="prueba_color_ok" string="✔ Color" widget="boolean_toggle" readonly="1" optional="show"/>
+          <field name="prueba_bn_ok" string="✔ B/N" widget="boolean_toggle" readonly="1" optional="show"/>
+          <field name="prueba_duplex_ok" string="✔ Dúplex" widget="boolean_toggle" readonly="1" optional="show"/>
 
-          <!-- Tóner -->
+          <field name="cantidad_alertas_snmp" string="Alertas" optional="show"/>
           <field name="estado_toner" string="Tóner"
                  decoration-danger="estado_toner == 'critico'"
                  decoration-warning="estado_toner == 'bajo'"
                  decoration-success="estado_toner == 'ok'"
+                 decoration-muted="estado_toner == 'sin_datos'"
                  optional="show"/>
 
-          <!-- Nivel y estado -->
           <field name="nivel_prueba" string="Nivel" optional="show"/>
           <field name="estado_prueba" string="Estado"
                  decoration-success="estado_prueba == 'completado'"
                  decoration-warning="estado_prueba == 'incompleto'"
+                 decoration-danger="estado_prueba == 'con_alertas'"
                  decoration-muted="estado_prueba == 'pendiente'"/>
 
-          <!-- Campos ocultos para decorations -->
-          <field name="reparacion_id" column_invisible="1"/>
         </list>
       </field>
     </record>
@@ -70,122 +77,215 @@
       <field name="arch" type="xml">
         <form string="Prueba de Máquina">
 
-          <!-- BARRA DE ESTADO -->
           <header>
-            <field name="estado_prueba" widget="statusbar"
-                   statusbar_visible="pendiente,en_proceso,completado,incompleto"/>
+            <field name="estado_prueba"
+                   widget="statusbar"
+                   statusbar_visible="pendiente,en_proceso,completado,incompleto,con_alertas"/>
           </header>
 
           <sheet>
 
-            <!-- TÍTULO / CABECERA -->
             <div class="oe_title">
               <h1>
-                <field name="maquina_id" placeholder="Selecciona la máquina..."/>
+                <field name="maquina_id" placeholder="Máquina"/>
               </h1>
               <h2>
-                <field name="reparacion_id" placeholder="Reparación asociada..."/>
+                <field name="reparacion_id" placeholder="Reparación"/>
               </h2>
             </div>
 
-            <!-- FILA DE KPIs RÁPIDOS (badges) -->
             <div class="o_row mb-3">
               <field name="nivel_prueba" widget="badge"
-                     decoration-success="nivel_prueba == 'avanzado'"
+                     decoration-success="nivel_prueba in ('avanzado','completo')"
                      decoration-warning="nivel_prueba == 'intermedio'"
-                     decoration-info="nivel_prueba == 'basico'"/>
+                     decoration-info="nivel_prueba == 'basico'"
+                     decoration-muted="nivel_prueba == 'sin_prueba'"/>
+
               <field name="estado_toner" widget="badge"
                      decoration-danger="estado_toner == 'critico'"
                      decoration-warning="estado_toner == 'bajo'"
-                     decoration-success="estado_toner == 'ok'"/>
+                     decoration-success="estado_toner == 'ok'"
+                     decoration-muted="estado_toner == 'sin_datos'"/>
+
+              <field name="cantidad_alertas_snmp" widget="badge"
+                     decoration-danger="cantidad_alertas_snmp &gt; 0"/>
+
               <field name="origen" widget="badge"/>
             </div>
 
-            <!-- GRUPO PRINCIPAL: Información general -->
             <group string="Información General">
               <group>
                 <field name="tecnico_id"/>
                 <field name="fecha_inicio"/>
+                <field name="fecha_snapshot_snmp"/>
                 <field name="fecha_ultima_actualizacion"/>
+                <field name="es_snapshot" widget="boolean_toggle"/>
               </group>
               <group>
-                <field name="es_snapshot" widget="boolean_toggle"/>
+                <field name="snmp_ip"/>
+                <field name="snmp_serie"/>
+                <field name="snmp_marca"/>
+                <field name="snmp_modelo"/>
+                <field name="snmp_enterprise_id"/>
+                <field name="snmp_config"/>
               </group>
             </group>
 
-            <!-- NOTEBOOK DE PESTAÑAS -->
             <notebook>
 
-              <!-- PESTAÑA 1: CONTADORES -->
-              <page string="Contadores" name="contadores">
-                <group string="Contadores Iniciales (Snapshot)">
+              <!-- ==================================================== -->
+              <!-- RESUMEN -->
+              <!-- ==================================================== -->
+              <page string="Resumen" name="resumen">
+                <group string="Resultado de pruebas">
                   <group>
+                    <field name="prueba_copia_ok" widget="boolean_toggle" readonly="1"/>
+                    <field name="prueba_impresion_ok" widget="boolean_toggle" readonly="1"/>
+                    <field name="prueba_scanner_ok" widget="boolean_toggle" readonly="1"/>
+                    <field name="prueba_duplex_ok" widget="boolean_toggle" readonly="1"/>
+                  </group>
+                  <group>
+                    <field name="prueba_bn_ok" widget="boolean_toggle" readonly="1"/>
+                    <field name="prueba_color_ok" widget="boolean_toggle" readonly="1"/>
+                    <field name="prueba_copia_bn_ok" widget="boolean_toggle" readonly="1"/>
+                    <field name="prueba_copia_color_ok" widget="boolean_toggle" readonly="1"/>
+                    <field name="prueba_impresion_bn_ok" widget="boolean_toggle" readonly="1"/>
+                    <field name="prueba_impresion_color_ok" widget="boolean_toggle" readonly="1"/>
+                  </group>
+                </group>
+
+                <group string="Resumen automático para ventas / reclamos">
+                  <field name="resumen_prueba" nolabel="1" readonly="1"/>
+                </group>
+              </page>
+
+
+              <!-- ==================================================== -->
+              <!-- CONTADORES GENERALES -->
+              <!-- ==================================================== -->
+              <page string="Contadores Generales" name="contadores_generales">
+
+                <group string="Inicial vs Actual">
+                  <group string="Inicial">
                     <field name="contador_inicial_total"/>
                     <field name="contador_inicial_bn"/>
                     <field name="contador_inicial_color"/>
-                  </group>
-                  <group>
-                    <field name="contador_inicial_impresiones"/>
                     <field name="contador_inicial_copias"/>
+                    <field name="contador_inicial_impresiones"/>
                     <field name="contador_inicial_scanner"/>
                     <field name="contador_inicial_duplex"/>
+                    <field name="contador_inicial_fax"/>
+                    <field name="contador_inicial_gran_total"/>
                   </group>
-                </group>
 
-                <group string="Contadores Actuales (SNMP)">
-                  <group>
+                  <group string="Actual">
                     <field name="contador_actual_total"/>
                     <field name="contador_actual_bn"/>
                     <field name="contador_actual_color"/>
-                  </group>
-                  <group>
-                    <field name="contador_impresiones"/>
                     <field name="contador_copias"/>
+                    <field name="contador_impresiones"/>
                     <field name="contador_scanner"/>
                     <field name="contador_duplex"/>
+                    <field name="contador_fax"/>
+                    <field name="contador_gran_total"/>
                   </group>
-                </group>
-              </page>
 
-              <!-- PESTAÑA 2: AUDITORÍA DE DELTAS -->
-              <page string="Auditoría" name="auditoria">
-                <group string="Páginas producidas durante la prueba (Actual − Inicial)">
-                  <group>
+                  <group string="Diferencia">
                     <field name="delta_total" readonly="1"/>
                     <field name="delta_bn" readonly="1"/>
                     <field name="delta_color" readonly="1"/>
-                  </group>
-                  <group>
-                    <field name="delta_impresiones" readonly="1"/>
                     <field name="delta_copias" readonly="1"/>
+                    <field name="delta_impresiones" readonly="1"/>
                     <field name="delta_scanner" readonly="1"/>
                     <field name="delta_duplex" readonly="1"/>
+                    <field name="delta_fax" readonly="1"/>
+                    <field name="delta_gran_total" readonly="1"/>
                   </group>
                 </group>
 
-                <group string="Validaciones automáticas">
-                  <group>
-                    <field name="prueba_impresion_ok" widget="boolean_toggle" readonly="1"/>
-                    <field name="prueba_copia_ok"     widget="boolean_toggle" readonly="1"/>
-                    <field name="prueba_scanner_ok"   widget="boolean_toggle" readonly="1"/>
-                  </group>
-                  <group>
-                    <field name="prueba_color_ok"  widget="boolean_toggle" readonly="1"/>
-                    <field name="prueba_duplex_ok" widget="boolean_toggle" readonly="1"/>
-                  </group>
-                </group>
               </page>
 
-              <!-- PESTAÑA 3: TÓNER -->
-              <page string="Tóner" name="toner">
-                <group string="Niveles de Tóner">
+
+              <!-- ==================================================== -->
+              <!-- DETALLE B/N Y COLOR -->
+              <!-- ==================================================== -->
+              <page string="Detalle B/N y Color" name="detalle_bn_color">
+
+                <group string="Copias B/N">
                   <group>
-                    <field name="toner_negro"   widget="percentpie" string="Negro (%)"/>
-                    <field name="toner_cyan"    widget="percentpie" string="Cyan (%)"/>
+                    <field name="contador_inicial_copias_bn"/>
+                    <field name="contador_actual_copias_bn"/>
+                    <field name="delta_copias_bn" readonly="1"/>
                   </group>
                   <group>
-                    <field name="toner_magenta" widget="percentpie" string="Magenta (%)"/>
-                    <field name="toner_amarillo" widget="percentpie" string="Amarillo (%)"/>
+                    <field name="prueba_copia_bn_ok" widget="boolean_toggle" readonly="1"/>
+                  </group>
+                </group>
+
+                <group string="Impresiones B/N">
+                  <group>
+                    <field name="contador_inicial_impresiones_bn"/>
+                    <field name="contador_actual_impresiones_bn"/>
+                    <field name="delta_impresiones_bn" readonly="1"/>
+                  </group>
+                  <group>
+                    <field name="prueba_impresion_bn_ok" widget="boolean_toggle" readonly="1"/>
+                  </group>
+                </group>
+
+                <group string="Copias Color">
+                  <group>
+                    <field name="contador_inicial_copias_color"/>
+                    <field name="contador_actual_copias_color"/>
+                    <field name="delta_copias_color" readonly="1"/>
+                  </group>
+                  <group>
+                    <field name="prueba_copia_color_ok" widget="boolean_toggle" readonly="1"/>
+                  </group>
+                </group>
+
+                <group string="Impresiones Color">
+                  <group>
+                    <field name="contador_inicial_impresiones_color"/>
+                    <field name="contador_actual_impresiones_color"/>
+                    <field name="delta_impresiones_color" readonly="1"/>
+                  </group>
+                  <group>
+                    <field name="prueba_impresion_color_ok" widget="boolean_toggle" readonly="1"/>
+                  </group>
+                </group>
+
+              </page>
+
+
+              <!-- ==================================================== -->
+              <!-- TÓNER -->
+              <!-- ==================================================== -->
+              <page string="Tóner" name="toner">
+
+                <group string="Tóner Negro">
+                  <group>
+                    <field name="toner_inicial_negro"/>
+                    <field name="toner_negro" widget="percentpie"/>
+                    <field name="delta_toner_negro" readonly="1"/>
+                  </group>
+                </group>
+
+                <group string="Tóner Color">
+                  <group>
+                    <field name="toner_inicial_cyan"/>
+                    <field name="toner_cyan" widget="percentpie"/>
+                    <field name="delta_toner_cyan" readonly="1"/>
+                  </group>
+                  <group>
+                    <field name="toner_inicial_magenta"/>
+                    <field name="toner_magenta" widget="percentpie"/>
+                    <field name="delta_toner_magenta" readonly="1"/>
+                  </group>
+                  <group>
+                    <field name="toner_inicial_amarillo"/>
+                    <field name="toner_amarillo" widget="percentpie"/>
+                    <field name="delta_toner_amarillo" readonly="1"/>
                   </group>
                 </group>
 
@@ -193,23 +293,254 @@
                   <field name="estado_toner" widget="badge"
                          decoration-danger="estado_toner == 'critico'"
                          decoration-warning="estado_toner == 'bajo'"
-                         decoration-success="estado_toner == 'ok'"/>
+                         decoration-success="estado_toner == 'ok'"
+                         decoration-muted="estado_toner == 'sin_datos'"/>
                 </group>
+
               </page>
 
-              <!-- PESTAÑA 4: EVIDENCIA -->
+
+              <!-- ==================================================== -->
+              <!-- HISTORIAL SNMP -->
+              <!-- ==================================================== -->
+              <page string="Historial SNMP" name="historial_snmp">
+                <field name="snmp_log_ids" readonly="1">
+                  <list string="Historial SNMP" default_order="fecha desc">
+                    <field name="fecha"/>
+                    <field name="ip"/>
+                    <field name="serie"/>
+                    <field name="marca"/>
+                    <field name="modelo"/>
+                    <field name="total"/>
+                    <field name="copias"/>
+                    <field name="impresiones"/>
+                    <field name="scanner"/>
+                    <field name="duplex"/>
+                    <field name="bn"/>
+                    <field name="color"/>
+                    <field name="copias_bn"/>
+                    <field name="impresiones_bn"/>
+                    <field name="copias_color"/>
+                    <field name="impresiones_color"/>
+                    <field name="toner_negro"/>
+                    <field name="toner_cyan"/>
+                    <field name="toner_magenta"/>
+                    <field name="toner_amarillo"/>
+                    <field name="alertas_count"/>
+                  </list>
+                  <form string="Lectura SNMP">
+                    <sheet>
+                      <group>
+                        <group>
+                          <field name="fecha"/>
+                          <field name="ip"/>
+                          <field name="serie"/>
+                          <field name="marca"/>
+                          <field name="modelo"/>
+                          <field name="enterprise_id"/>
+                          <field name="snmp_config"/>
+                        </group>
+                        <group>
+                          <field name="total"/>
+                          <field name="bn"/>
+                          <field name="color"/>
+                          <field name="copias"/>
+                          <field name="impresiones"/>
+                          <field name="scanner"/>
+                          <field name="duplex"/>
+                        </group>
+                      </group>
+
+                      <notebook>
+                        <page string="Detalle B/N Color">
+                          <group>
+                            <field name="copias_bn"/>
+                            <field name="impresiones_bn"/>
+                            <field name="copias_color"/>
+                            <field name="impresiones_color"/>
+                          </group>
+                        </page>
+
+                        <page string="Tóner">
+                          <group>
+                            <field name="toner_negro"/>
+                            <field name="toner_cyan"/>
+                            <field name="toner_magenta"/>
+                            <field name="toner_amarillo"/>
+                          </group>
+                        </page>
+
+                        <page string="JSON">
+                          <field name="payload_json" nolabel="1"/>
+                          <field name="counters_json" nolabel="1"/>
+                          <field name="toner_json" nolabel="1"/>
+                        </page>
+
+                        <page string="Resumen TXT">
+                          <field name="summary_text" nolabel="1"/>
+                        </page>
+                      </notebook>
+                    </sheet>
+                  </form>
+                </field>
+              </page>
+
+
+              <!-- ==================================================== -->
+              <!-- DETALLE SNMP COMPLETO -->
+              <!-- ==================================================== -->
+              <page string="Detalle SNMP Completo" name="detalle_snmp">
+                <field name="snmp_detalle_ids" readonly="1">
+                  <list string="Detalle SNMP"
+                        decoration-info="categoria == 'contador'"
+                        decoration-success="categoria == 'toner'"
+                        decoration-warning="categoria in ('consumible','unidad')"
+                        decoration-danger="categoria == 'alerta'">
+                    <field name="categoria"/>
+                    <field name="grupo"/>
+                    <field name="nombre"/>
+                    <field name="valor_inicial_texto"/>
+                    <field name="valor_actual_texto"/>
+                    <field name="valor_inicial_numero"/>
+                    <field name="valor_actual_numero"/>
+                    <field name="delta_numero"/>
+                    <field name="unidad"/>
+                    <field name="oid"/>
+                    <field name="source_name"/>
+                    <field name="fecha_inicial"/>
+                    <field name="fecha_ultima_lectura"/>
+                    <field name="activa"/>
+                  </list>
+                  <form string="Detalle SNMP">
+                    <sheet>
+                      <group>
+                        <group>
+                          <field name="categoria"/>
+                          <field name="grupo"/>
+                          <field name="nombre"/>
+                          <field name="unidad"/>
+                          <field name="activa"/>
+                        </group>
+                        <group>
+                          <field name="fecha_inicial"/>
+                          <field name="fecha_ultima_lectura"/>
+                          <field name="source_name"/>
+                          <field name="oid"/>
+                          <field name="oid_name"/>
+                        </group>
+                      </group>
+
+                      <group string="Valores">
+                        <group>
+                          <field name="valor_inicial_texto"/>
+                          <field name="valor_actual_texto"/>
+                        </group>
+                        <group>
+                          <field name="valor_inicial_numero"/>
+                          <field name="valor_actual_numero"/>
+                          <field name="delta_numero" readonly="1"/>
+                          <field name="tiene_valor_numerico"/>
+                        </group>
+                      </group>
+
+                      <notebook>
+                        <page string="Raw JSON">
+                          <field name="raw_json" nolabel="1"/>
+                        </page>
+                      </notebook>
+                    </sheet>
+                  </form>
+                </field>
+              </page>
+
+
+              <!-- ==================================================== -->
+              <!-- ALERTAS SNMP -->
+              <!-- ==================================================== -->
+              <page string="Alertas SNMP" name="alertas_snmp">
+                <group>
+                  <field name="tiene_alertas_snmp" widget="boolean_toggle" readonly="1"/>
+                  <field name="cantidad_alertas_snmp" readonly="1"/>
+                </group>
+
+                <field name="snmp_alerta_ids" readonly="1">
+                  <list string="Alertas SNMP"
+                        decoration-danger="activa == True"
+                        decoration-muted="activa == False">
+                    <field name="fecha"/>
+                    <field name="activa"/>
+                    <field name="descripcion"/>
+                    <field name="codigo"/>
+                    <field name="severidad"/>
+                    <field name="grupo"/>
+                    <field name="ubicacion"/>
+                    <field name="oid"/>
+                    <field name="source_name"/>
+                  </list>
+                  <form string="Alerta SNMP">
+                    <sheet>
+                      <group>
+                        <group>
+                          <field name="fecha"/>
+                          <field name="activa"/>
+                          <field name="descripcion"/>
+                          <field name="codigo"/>
+                          <field name="severidad"/>
+                        </group>
+                        <group>
+                          <field name="grupo"/>
+                          <field name="ubicacion"/>
+                          <field name="oid"/>
+                          <field name="source_name"/>
+                        </group>
+                      </group>
+                      <notebook>
+                        <page string="Raw JSON">
+                          <field name="raw_json" nolabel="1"/>
+                        </page>
+                      </notebook>
+                    </sheet>
+                  </form>
+                </field>
+              </page>
+
+
+              <!-- ==================================================== -->
+              <!-- PAYLOAD TÉCNICO -->
+              <!-- ==================================================== -->
+              <page string="Payload Técnico" name="payload_tecnico">
+                <group>
+                  <field name="snmp_summary_file"/>
+                </group>
+
+                <notebook>
+                  <page string="Payload JSON">
+                    <field name="raw_payload_json" nolabel="1"/>
+                  </page>
+
+                  <page string="Resumen TXT">
+                    <field name="raw_summary_text" nolabel="1"/>
+                  </page>
+                </notebook>
+              </page>
+
+
+              <!-- ==================================================== -->
+              <!-- EVIDENCIA -->
+              <!-- ==================================================== -->
               <page string="Evidencia" name="evidencia">
                 <group>
-                  <field name="foto_prueba" widget="image" string="Foto de Prueba"
+                  <field name="foto_prueba"
+                         widget="image"
+                         string="Foto de Prueba"
                          options="{'size': [400, 300]}"/>
-                  <field name="observaciones" string="Observaciones"/>
+                  <field name="observaciones"/>
                 </group>
               </page>
 
             </notebook>
           </sheet>
 
-          <!-- CHATTER: registra tracking de todos los campos -->
           <chatter/>
 
         </form>
@@ -217,16 +548,69 @@
     </record>
 
 
-    
+    <!-- ============================================================ -->
+    <!-- VISTA SEARCH - sat.prueba.maquina                            -->
+    <!-- ============================================================ -->
+    <record id="view_prueba_maquina_search" model="ir.ui.view">
+      <field name="name">sat.prueba.maquina.search</field>
+      <field name="model">sat.prueba.maquina</field>
+      <field name="arch" type="xml">
+        <search string="Buscar Pruebas">
+          <field name="maquina_id"/>
+          <field name="reparacion_id"/>
+          <field name="tecnico_id"/>
+          <field name="snmp_serie"/>
+          <field name="snmp_modelo"/>
+          <field name="snmp_marca"/>
+
+          <filter name="con_alertas"
+                  string="Con alertas"
+                  domain="[('tiene_alertas_snmp','=',True)]"/>
+
+          <filter name="completadas"
+                  string="Completadas"
+                  domain="[('estado_prueba','=','completado')]"/>
+
+          <filter name="incompletas"
+                  string="Incompletas"
+                  domain="[('estado_prueba','=','incompleto')]"/>
+
+          <filter name="toner_bajo"
+                  string="Tóner bajo/crítico"
+                  domain="[('estado_toner','in',['bajo','critico'])]"/>
+
+          <group expand="0" string="Agrupar por">
+            <filter name="group_estado"
+                    string="Estado"
+                    context="{'group_by': 'estado_prueba'}"/>
+            <filter name="group_nivel"
+                    string="Nivel"
+                    context="{'group_by': 'nivel_prueba'}"/>
+            <filter name="group_tecnico"
+                    string="Técnico"
+                    context="{'group_by': 'tecnico_id'}"/>
+            <filter name="group_maquina"
+                    string="Máquina"
+                    context="{'group_by': 'maquina_id'}"/>
+            <filter name="group_marca"
+                    string="Marca SNMP"
+                    context="{'group_by': 'snmp_marca'}"/>
+          </group>
+        </search>
+      </field>
+    </record>
+
+
+    <!-- ============================================================ -->
+    <!-- ACCIÓN                                                       -->
+    <!-- ============================================================ -->
     <record id="action_prueba_maquina" model="ir.actions.act_window">
       <field name="name">Pruebas de Máquina</field>
       <field name="res_model">sat.prueba.maquina</field>
       <field name="view_mode">list,form</field>
       <field name="view_id" ref="view_prueba_maquina_list"/>
+      <field name="search_view_id" ref="view_prueba_maquina_search"/>
     </record>
-
-  
-    
 
   </data>
 </odoo>

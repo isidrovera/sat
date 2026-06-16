@@ -1256,12 +1256,37 @@ class SatSat(models.Model):
 
     def _sat_post_write_update_prueba_from_snmp(self):
         """
-        Mantiene la actualización de prueba técnica desde SNMP.
+        Actualiza la prueba técnica desde SNMP.
+
+        Nuevo flujo:
+        - Antes actualizaba solo campos sueltos.
+        - Ahora llama a sat.prueba.maquina.aplicar_snmp_payload()
+            para registrar:
+            * contadores principales
+            * contadores B/N y color separados
+            * copias / impresiones / scanner / dúplex
+            * tóner
+            * consumibles
+            * unidades
+            * accesorios
+            * bandejas
+            * alertas
+            * historial SNMP
+            * detalle completo por OID
+            * payload completo
+
+        Mantiene compatibilidad:
+        - Si el controlador todavía no manda snmp_payload,
+            arma uno básico con snmp_counters y snmp_toner.
         """
         self.ensure_one()
 
         try:
-            Prueba = self.env['sat.prueba.maquina']
+            # Solo procesar cuando la actualización viene realmente de SNMP.
+            if self.ultima_fuente_actualizacion != 'snmp':
+                return
+
+            Prueba = self.env['sat.prueba.maquina'].sudo()
 
             prueba = Prueba.search([
                 ('maquina_id', '=', self.id),
@@ -1269,88 +1294,71 @@ class SatSat(models.Model):
 
             if not prueba:
                 _logger.warning(
-                    "[PRUEBA] No se encontró prueba activa para máquina %s",
+                    "[PRUEBA SNMP] No se encontró prueba activa para máquina ID %s | Serie=%s",
                     self.id,
+                    self.serie_id,
                 )
                 return
 
-            def to_int(value):
-                digits = re.sub(r'[^\d]', '', str(value or '0'))
-                return int(digits) if digits else 0
-
             snmp_counters = self.env.context.get('snmp_counters') or {}
             snmp_toner = self.env.context.get('snmp_toner') or {}
+            snmp_payload = self.env.context.get('snmp_payload') or {}
 
-            prueba_vals = {
-                'contador_actual_total': to_int(self.contometro),
-                'fecha_ultima_actualizacion': fields.Datetime.now(),
-            }
+            # Compatibilidad:
+            # Si todavía el controlador no manda snmp_payload,
+            # construimos uno básico para que el método nuevo pueda trabajar.
+            if not isinstance(snmp_payload, dict):
+                snmp_payload = {}
 
-            if snmp_counters:
-                bw = (
-                    snmp_counters.get('bw')
-                    or snmp_counters.get('print_bw')
-                    or snmp_counters.get('copy_bw')
-                )
-                if bw is not None:
-                    prueba_vals['contador_actual_bn'] = to_int(bw)
+            if not snmp_payload:
+                snmp_payload = {
+                    'ip': False,
+                    'serial': self.serie_id,
+                    'brand': self.marca or '',
+                    'model': self.name.name if self.name else '',
+                    'total_counter': self.contometro,
+                    'counters': snmp_counters,
+                    'toner': snmp_toner,
+                }
 
-                color = (
-                    snmp_counters.get('color')
-                    or snmp_counters.get('print_full_color')
-                )
-                if color is not None:
-                    prueba_vals['contador_actual_color'] = to_int(color)
+            # Asegurar que counters/toner existan dentro del payload.
+            if isinstance(snmp_counters, dict) and snmp_counters:
+                snmp_payload.setdefault('counters', snmp_counters)
 
-                impresiones = (
-                    snmp_counters.get('print')
-                    or snmp_counters.get('print_total')
-                )
-                if impresiones is not None:
-                    prueba_vals['contador_impresiones'] = to_int(impresiones)
+            if isinstance(snmp_toner, dict) and snmp_toner:
+                snmp_payload.setdefault('toner', snmp_toner)
 
-                copias = (
-                    snmp_counters.get('copy')
-                    or snmp_counters.get('copy_total')
-                )
-                if copias is not None:
-                    prueba_vals['contador_copias'] = to_int(copias)
+            # Si el payload trae total vacío, usar el contometro actualizado de sat.sat.
+            if not snmp_payload.get('total_counter'):
+                snmp_payload['total_counter'] = self.contometro
 
-                scanner = snmp_counters.get('scan')
-                if scanner is not None:
-                    prueba_vals['contador_scanner'] = to_int(scanner)
+            # Si faltan datos básicos, completar desde sat.sat.
+            snmp_payload.setdefault('serial', self.serie_id)
+            snmp_payload.setdefault('brand', self.marca or '')
+            snmp_payload.setdefault('model', self.name.name if self.name else '')
 
-                duplex = snmp_counters.get('duplex')
-                if duplex is not None:
-                    prueba_vals['contador_duplex'] = to_int(duplex)
-
-            if snmp_toner:
-                negro = snmp_toner.get('black')
-                if negro is not None:
-                    prueba_vals['toner_negro'] = float(negro)
-
-                cyan = snmp_toner.get('cyan')
-                if cyan is not None:
-                    prueba_vals['toner_cyan'] = float(cyan)
-
-                magenta = snmp_toner.get('magenta')
-                if magenta is not None:
-                    prueba_vals['toner_magenta'] = float(magenta)
-
-                amarillo = snmp_toner.get('yellow')
-                if amarillo is not None:
-                    prueba_vals['toner_amarillo'] = float(amarillo)
-
-            prueba.write(prueba_vals)
+            prueba.aplicar_snmp_payload(
+                counters=snmp_counters,
+                toner=snmp_toner,
+                payload=snmp_payload,
+            )
 
             _logger.info(
-                "[PRUEBA] SNMP actualizado en prueba ID %s | campos=%s",
+                "[PRUEBA SNMP] Payload aplicado en prueba ID %s | Máquina ID=%s | Serie=%s | counters=%s | toner=%s",
                 prueba.id,
-                list(prueba_vals.keys()),
+                self.id,
+                self.serie_id,
+                list(snmp_counters.keys()) if isinstance(snmp_counters, dict) else [],
+                list(snmp_toner.keys()) if isinstance(snmp_toner, dict) else [],
             )
 
         except Exception as e:
-            _logger.error("[PRUEBA] Error actualizando desde SNMP: %s", e)
+            _logger.error(
+                "[PRUEBA SNMP] Error actualizando prueba desde SNMP para máquina ID %s: %s",
+                self.id,
+                e,
+                exc_info=True,
+            )
     
     prueba_ids = fields.One2many(
         'sat.prueba.maquina',

@@ -297,3 +297,9 @@ access_sale_order_user_base,sale_order.user.base,model_sale_order,base.group_use
 access_sale_order_line_user_base,sale_order_line.user.base,model_sale_order_line,base.group_user,1,0,0,0
 access_sat_notificacion_log_user,sat.notificacion.log user,model_sat_notificacion_log,base.group_user,1,1,1,0
 access_sat_notificacion_log_manager,sat.notificacion.log manager,model_sat_notificacion_log,base.group_system,1,1,1,1
+access_sat_prueba_maquina_snmp_log_user,sat.prueba.maquina.snmp.log user,model_sat_prueba_maquina_snmp_log,base.group_user,1,1,1,0
+access_sat_prueba_maquina_snmp_log_manager,sat.prueba.maquina.snmp.log manager,model_sat_prueba_maquina_snmp_log,base.group_system,1,1,1,1
+access_sat_prueba_maquina_snmp_detalle_user,sat.prueba.maquina.snmp.detalle user,model_sat_prueba_maquina_snmp_detalle,base.group_user,1,1,1,0
+access_sat_prueba_maquina_snmp_detalle_manager,sat.prueba.maquina.snmp.detalle manager,model_sat_prueba_maquina_snmp_detalle,base.group_system,1,1,1,1
+access_sat_prueba_maquina_snmp_alerta_user,sat.prueba.maquina.snmp.alerta user,model_sat_prueba_maquina_snmp_alerta,base.group_user,1,1,1,0
+access_sat_prueba_maquina_snmp_alerta_manager,sat.prueba.maquina.snmp.alerta manager,model_sat_prueba_maquina_snmp_alerta,base.group_system,1,1,1,1
