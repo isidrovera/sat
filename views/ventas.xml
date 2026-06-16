@@ -248,29 +248,58 @@
                   </list>
                 </field>
               </page>
-              <page string="Pruebas Técnicas">
-                <field name="prueba_ids" nolabel="1">
-                  <list create="0" edit="0" delete="0"
-          decoration-success="estado_toner == 'ok'"
-          decoration-warning="estado_toner == 'bajo'"
-          decoration-danger="estado_toner == 'critico'">
-                    <field name="reparacion_id"/>
-                    <!-- CONTADORES -->
-                    <field name="contador_inicial_total"/>
-                    <field name="contador_actual_total"/>
-                    <field name="contador_impresiones"/>
-                    <field name="contador_copias"/>
-                    <!-- TONER -->
-                    <field name="toner_negro" widget="progressbar"/>
-                    <field name="toner_cyan" widget="progressbar"/>
-                    <field name="toner_magenta" widget="progressbar"/>
-                    <field name="toner_amarillo" widget="progressbar"/>
-                    <!-- ESTADO -->
-                    <field name="estado_toner"/>
-                    <field name="fecha_ultima_actualizacion"/>
-                  </list>
-                </field>
-              </page>
+             <page string="Pruebas Técnicas" name="pruebas_tecnicas">
+
+    <!-- Dashboard moderno OWL -->
+    <field name="prueba_tecnica_dashboard_json"
+           widget="sat_pruebas_dashboard"
+           nolabel="1"
+           readonly="1"/>
+
+    <!-- Vista clásica Odoo -->
+    <separator string="Vista clásica Odoo"/>
+
+    <field name="prueba_ids" nolabel="1">
+        <list create="0"
+              edit="0"
+              delete="0"
+              decoration-success="estado_toner == 'ok'"
+              decoration-warning="estado_toner == 'bajo'"
+              decoration-danger="estado_toner == 'critico'">
+
+            <field name="reparacion_id"/>
+
+            <!-- CONTADORES -->
+            <field name="contador_inicial_total"/>
+            <field name="contador_actual_total"/>
+            <field name="contador_impresiones"/>
+            <field name="contador_copias"/>
+            <field name="contador_scanner"/>
+            <field name="contador_duplex"/>
+
+            <!-- DELTAS -->
+            <field name="delta_total"/>
+            <field name="delta_impresiones"/>
+            <field name="delta_copias"/>
+            <field name="delta_scanner"/>
+            <field name="delta_duplex"/>
+
+            <!-- TONER -->
+            <field name="toner_negro" widget="progressbar"/>
+            <field name="toner_cyan" widget="progressbar"/>
+            <field name="toner_magenta" widget="progressbar"/>
+            <field name="toner_amarillo" widget="progressbar"/>
+
+            <!-- ESTADO -->
+            <field name="estado_toner"/>
+            <field name="estado_prueba"/>
+            <field name="nivel_prueba"/>
+            <field name="cantidad_alertas_snmp"/>
+            <field name="fecha_ultima_actualizacion"/>
+        </list>
+    </field>
+
+</page>
               <page string="📲 Notificaciones WhatsApp" name="notificaciones_whatsapp">
     <field name="notificacion_log_ids" readonly="1" nolabel="1">
         <list create="0" edit="0" delete="0"

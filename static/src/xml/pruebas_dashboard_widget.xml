@@ -1,0 +1,263 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="sat.SatPruebasDashboardWidget">
+
+        <div class="sat_pruebas_dashboard">
+
+            <t t-if="!hasData">
+                <div class="sat_empty_state">
+                    <div class="sat_empty_icon">
+                        <i class="fa fa-flask"/>
+                    </div>
+                    <div>
+                        <h3>No hay pruebas técnicas registradas</h3>
+                        <p>Cuando SNMP genere lecturas, aquí aparecerán contadores, tóner y validaciones.</p>
+                    </div>
+                </div>
+            </t>
+
+            <t t-if="hasData">
+
+                <!-- Encabezado -->
+                <div class="sat_dashboard_header">
+                    <div>
+                        <div class="sat_dashboard_overline">Pruebas técnicas SNMP</div>
+                        <h2>
+                            <t t-esc="data.modelo || 'Máquina'"/>
+                        </h2>
+                        <p>
+                            Serie:
+                            <strong>
+                                <t t-esc="data.serie || '-'"/>
+                            </strong>
+                            <t t-if="ultima.snmp_ip">
+                                · IP:
+                                <strong>
+                                    <t t-esc="ultima.snmp_ip"/>
+                                </strong>
+                            </t>
+                        </p>
+                    </div>
+
+                    <div class="sat_header_badges">
+                        <span t-att-class="'sat_badge ' + estadoGeneralClass">
+                            <t t-esc="ultima.estado_prueba_label || 'Pendiente'"/>
+                        </span>
+                        <span t-att-class="'sat_badge ' + tonerGeneralClass">
+                            Tóner:
+                            <t t-esc="ultima.estado_toner_label || 'Sin datos'"/>
+                        </span>
+                    </div>
+                </div>
+
+                <!-- KPIs -->
+                <div class="sat_kpi_grid">
+
+                    <div class="sat_kpi_card sat_kpi_main">
+                        <div class="sat_kpi_label">Contador actual</div>
+                        <div class="sat_kpi_value">
+                            <t t-esc="formatNumber(ultima.contador_actual_total)"/>
+                        </div>
+                        <div class="sat_kpi_footer">
+                            Inicial:
+                            <t t-esc="formatNumber(ultima.contador_inicial_total)"/>
+                        </div>
+                    </div>
+
+                    <div class="sat_kpi_card">
+                        <div class="sat_kpi_label">Δ Total</div>
+                        <div class="sat_kpi_value">
+                            <t t-esc="formatDelta(ultima.delta_total)"/>
+                        </div>
+                        <div class="sat_kpi_footer">Diferencia desde inicio</div>
+                    </div>
+
+                    <div class="sat_kpi_card">
+                        <div class="sat_kpi_label">Copias</div>
+                        <div class="sat_kpi_value">
+                            <t t-esc="formatNumber(ultima.contador_copias)"/>
+                        </div>
+                        <div class="sat_kpi_footer">
+                            Δ
+                            <t t-esc="formatDelta(ultima.delta_copias)"/>
+                        </div>
+                    </div>
+
+                    <div class="sat_kpi_card">
+                        <div class="sat_kpi_label">Impresiones</div>
+                        <div class="sat_kpi_value">
+                            <t t-esc="formatNumber(ultima.contador_impresiones)"/>
+                        </div>
+                        <div class="sat_kpi_footer">
+                            Δ
+                            <t t-esc="formatDelta(ultima.delta_impresiones)"/>
+                        </div>
+                    </div>
+
+                    <div class="sat_kpi_card">
+                        <div class="sat_kpi_label">Scanner</div>
+                        <div class="sat_kpi_value">
+                            <t t-esc="formatNumber(ultima.contador_scanner)"/>
+                        </div>
+                        <div class="sat_kpi_footer">
+                            Δ
+                            <t t-esc="formatDelta(ultima.delta_scanner)"/>
+                        </div>
+                    </div>
+
+                    <div class="sat_kpi_card">
+                        <div class="sat_kpi_label">Dúplex</div>
+                        <div class="sat_kpi_value">
+                            <t t-esc="formatNumber(ultima.contador_duplex)"/>
+                        </div>
+                        <div class="sat_kpi_footer">
+                            Δ
+                            <t t-esc="formatDelta(ultima.delta_duplex)"/>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Tóner -->
+                <div class="sat_panel">
+                    <div class="sat_panel_header">
+                        <div>
+                            <h3>Niveles de tóner</h3>
+                            <p>Última lectura SNMP</p>
+                        </div>
+                        <span class="sat_panel_date">
+                            <t t-esc="ultima.fecha_ultima_actualizacion || '-'"/>
+                        </span>
+                    </div>
+
+                    <div class="sat_toner_grid">
+                        <t t-foreach="tonerCards" t-as="toner" t-key="toner.key">
+                            <div t-att-class="'sat_toner_card ' + toner.className">
+                                <div class="sat_toner_top">
+                                    <span class="sat_toner_code">
+                                        <t t-esc="toner.code"/>
+                                    </span>
+                                    <span class="sat_toner_label">
+                                        <t t-esc="toner.label"/>
+                                    </span>
+                                </div>
+
+                                <div class="sat_toner_circle" t-att-style="circleStyle(toner.value)">
+                                    <div>
+                                        <strong>
+                                            <t t-esc="toner.value"/>
+                                        </strong>
+                                        <span>%</span>
+                                    </div>
+                                </div>
+
+                                <div class="sat_toner_bar">
+                                    <div t-att-style="percentStyle(toner.value)"/>
+                                </div>
+                            </div>
+                        </t>
+                    </div>
+                </div>
+
+                <!-- Validaciones -->
+                <div class="sat_panel">
+                    <div class="sat_panel_header">
+                        <div>
+                            <h3>Validaciones de prueba</h3>
+                            <p>Resultado automático según deltas de contadores</p>
+                        </div>
+                        <span class="sat_badge sat_badge_light">
+                            Nivel:
+                            <t t-esc="ultima.nivel_prueba_label || '-'"/>
+                        </span>
+                    </div>
+
+                    <div class="sat_check_grid">
+                        <t t-foreach="pruebaChecks" t-as="check" t-key="check.label">
+                            <div t-att-class="check.value ? 'sat_check_item sat_check_ok' : 'sat_check_item sat_check_fail'">
+                                <i t-att-class="check.value ? 'fa fa-check-circle' : 'fa fa-circle-o'"/>
+                                <span>
+                                    <t t-esc="check.label"/>
+                                </span>
+                            </div>
+                        </t>
+                    </div>
+                </div>
+
+                <!-- Historial resumido -->
+                <div class="sat_panel">
+                    <div class="sat_panel_header">
+                        <div>
+                            <h3>Historial de pruebas</h3>
+                            <p>
+                                Total:
+                                <t t-esc="totalPruebas"/>
+                                lectura(s)
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="sat_history_table_wrap">
+                        <table class="sat_history_table">
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Total</th>
+                                    <th>Δ Total</th>
+                                    <th>Copias</th>
+                                    <th>Impresiones</th>
+                                    <th>Scanner</th>
+                                    <th>Dúplex</th>
+                                    <th>Tóner</th>
+                                    <th>Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-foreach="pruebas" t-as="p" t-key="p.id">
+                                    <tr>
+                                        <td>
+                                            <t t-esc="p.fecha_ultima_actualizacion || '-'"/>
+                                        </td>
+                                        <td>
+                                            <t t-esc="formatNumber(p.contador_actual_total)"/>
+                                        </td>
+                                        <td>
+                                            <t t-esc="formatDelta(p.delta_total)"/>
+                                        </td>
+                                        <td>
+                                            <t t-esc="formatNumber(p.contador_copias)"/>
+                                        </td>
+                                        <td>
+                                            <t t-esc="formatNumber(p.contador_impresiones)"/>
+                                        </td>
+                                        <td>
+                                            <t t-esc="formatNumber(p.contador_scanner)"/>
+                                        </td>
+                                        <td>
+                                            <t t-esc="formatNumber(p.contador_duplex)"/>
+                                        </td>
+                                        <td>
+                                            <span t-att-class="'sat_mini_badge sat_toner_' + p.estado_toner">
+                                                <t t-esc="p.estado_toner_label || '-'"/>
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span t-att-class="'sat_mini_badge sat_estado_' + p.estado_prueba">
+                                                <t t-esc="p.estado_prueba_label || '-'"/>
+                                            </span>
+                                        </td>
+                                    </tr>
+                                </t>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </t>
+
+        </div>
+
+    </t>
+
+</templates>

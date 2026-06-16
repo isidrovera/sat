@@ -2568,3 +2568,183 @@ class SatSat(models.Model):
             record.message_post(
                 body="Se regresó el estado de 'Entregada' a 'Finalizado'. Se limpiaron factura y fecha de entrega."
             )
+
+
+    
+
+    # ==========================================================
+    # DASHBOARD PRUEBAS TÉCNICAS
+    # ==========================================================
+
+    prueba_tecnica_dashboard_json = fields.Text(
+        string='Dashboard Pruebas Técnicas',
+        compute='_compute_prueba_tecnica_dashboard_json',
+        readonly=True,
+    )
+
+
+    def _sat_prueba_float(self, value):
+        try:
+            if value in (None, False, ''):
+                return 0.0
+            return float(value)
+        except Exception:
+            return 0.0
+
+
+    def _sat_prueba_int(self, value):
+        try:
+            if value in (None, False, ''):
+                return 0
+            return int(value)
+        except Exception:
+            return 0
+
+
+    def _sat_prueba_estado_label(self, field_name, value):
+        field = self.env['sat.prueba.maquina']._fields.get(field_name)
+        if not field or not getattr(field, 'selection', None):
+            return value or ''
+        return dict(field.selection).get(value, value or '')
+
+
+    @api.depends(
+        'prueba_ids',
+        'prueba_ids.fecha_inicio',
+        'prueba_ids.fecha_ultima_actualizacion',
+        'prueba_ids.snmp_ip',
+        'prueba_ids.snmp_serie',
+        'prueba_ids.snmp_marca',
+        'prueba_ids.snmp_modelo',
+        'prueba_ids.contador_inicial_total',
+        'prueba_ids.contador_actual_total',
+        'prueba_ids.contador_actual_bn',
+        'prueba_ids.contador_actual_color',
+        'prueba_ids.contador_impresiones',
+        'prueba_ids.contador_copias',
+        'prueba_ids.contador_scanner',
+        'prueba_ids.contador_duplex',
+        'prueba_ids.delta_total',
+        'prueba_ids.delta_bn',
+        'prueba_ids.delta_color',
+        'prueba_ids.delta_impresiones',
+        'prueba_ids.delta_copias',
+        'prueba_ids.delta_scanner',
+        'prueba_ids.delta_duplex',
+        'prueba_ids.toner_negro',
+        'prueba_ids.toner_cyan',
+        'prueba_ids.toner_magenta',
+        'prueba_ids.toner_amarillo',
+        'prueba_ids.estado_toner',
+        'prueba_ids.estado_prueba',
+        'prueba_ids.nivel_prueba',
+        'prueba_ids.cantidad_alertas_snmp',
+        'prueba_ids.prueba_impresion_ok',
+        'prueba_ids.prueba_copia_ok',
+        'prueba_ids.prueba_scanner_ok',
+        'prueba_ids.prueba_duplex_ok',
+        'prueba_ids.prueba_bn_ok',
+        'prueba_ids.prueba_color_ok',
+    )
+    def _compute_prueba_tecnica_dashboard_json(self):
+        import json
+
+        for rec in self:
+            pruebas = rec.prueba_ids.sorted(
+                key=lambda p: p.fecha_ultima_actualizacion or p.fecha_inicio or p.create_date or fields.Datetime.now(),
+                reverse=True
+            )
+
+            items = []
+            for prueba in pruebas:
+                toner_negro = rec._sat_prueba_float(prueba.toner_negro)
+                toner_cyan = rec._sat_prueba_float(prueba.toner_cyan)
+                toner_magenta = rec._sat_prueba_float(prueba.toner_magenta)
+                toner_amarillo = rec._sat_prueba_float(prueba.toner_amarillo)
+
+                toners = [
+                    toner_negro,
+                    toner_cyan,
+                    toner_magenta,
+                    toner_amarillo,
+                ]
+                toners_validos = [t for t in toners if t is not None]
+                toner_minimo = min(toners_validos) if toners_validos else 0.0
+
+                fecha_snmp = prueba.fecha_ultima_actualizacion or prueba.fecha_inicio
+                fecha_txt = ''
+                if fecha_snmp:
+                    try:
+                        fecha_txt = fields.Datetime.to_string(fecha_snmp)
+                    except Exception:
+                        fecha_txt = str(fecha_snmp)
+
+                items.append({
+                    'id': prueba.id,
+                    'name': prueba.display_name or ('Prueba #%s' % prueba.id),
+
+                    'fecha_ultima_actualizacion': fecha_txt,
+                    'snmp_ip': prueba.snmp_ip or '',
+                    'snmp_serie': prueba.snmp_serie or '',
+                    'snmp_marca': prueba.snmp_marca or '',
+                    'snmp_modelo': prueba.snmp_modelo or '',
+
+                    'contador_inicial_total': rec._sat_prueba_int(prueba.contador_inicial_total),
+                    'contador_actual_total': rec._sat_prueba_int(prueba.contador_actual_total),
+                    'contador_actual_bn': rec._sat_prueba_int(prueba.contador_actual_bn),
+                    'contador_actual_color': rec._sat_prueba_int(prueba.contador_actual_color),
+
+                    'contador_impresiones': rec._sat_prueba_int(prueba.contador_impresiones),
+                    'contador_copias': rec._sat_prueba_int(prueba.contador_copias),
+                    'contador_scanner': rec._sat_prueba_int(prueba.contador_scanner),
+                    'contador_duplex': rec._sat_prueba_int(prueba.contador_duplex),
+
+                    'delta_total': rec._sat_prueba_int(prueba.delta_total),
+                    'delta_bn': rec._sat_prueba_int(prueba.delta_bn),
+                    'delta_color': rec._sat_prueba_int(prueba.delta_color),
+                    'delta_impresiones': rec._sat_prueba_int(prueba.delta_impresiones),
+                    'delta_copias': rec._sat_prueba_int(prueba.delta_copias),
+                    'delta_scanner': rec._sat_prueba_int(prueba.delta_scanner),
+                    'delta_duplex': rec._sat_prueba_int(prueba.delta_duplex),
+
+                    'toner_negro': toner_negro,
+                    'toner_cyan': toner_cyan,
+                    'toner_magenta': toner_magenta,
+                    'toner_amarillo': toner_amarillo,
+                    'toner_minimo': toner_minimo,
+
+                    'estado_toner': prueba.estado_toner or 'sin_datos',
+                    'estado_toner_label': rec._sat_prueba_estado_label('estado_toner', prueba.estado_toner),
+
+                    'estado_prueba': prueba.estado_prueba or 'pendiente',
+                    'estado_prueba_label': rec._sat_prueba_estado_label('estado_prueba', prueba.estado_prueba),
+
+                    'nivel_prueba': prueba.nivel_prueba or 'sin_prueba',
+                    'nivel_prueba_label': rec._sat_prueba_estado_label('nivel_prueba', prueba.nivel_prueba),
+
+                    'cantidad_alertas_snmp': rec._sat_prueba_int(prueba.cantidad_alertas_snmp),
+
+                    'prueba_impresion_ok': bool(prueba.prueba_impresion_ok),
+                    'prueba_copia_ok': bool(prueba.prueba_copia_ok),
+                    'prueba_scanner_ok': bool(prueba.prueba_scanner_ok),
+                    'prueba_duplex_ok': bool(prueba.prueba_duplex_ok),
+                    'prueba_bn_ok': bool(prueba.prueba_bn_ok),
+                    'prueba_color_ok': bool(prueba.prueba_color_ok),
+                })
+
+            ultima = items[0] if items else {}
+
+            payload = {
+                'maquina_id': rec.id,
+                'modelo': rec.name.name if rec.name else '',
+                'serie': rec.serie_id or '',
+                'marca': rec.marca or '',
+                'total_pruebas': len(items),
+                'ultima': ultima,
+                'items': items,
+            }
+
+            rec.prueba_tecnica_dashboard_json = json.dumps(
+                payload,
+                ensure_ascii=False
+            )

@@ -281,7 +281,11 @@
             'sat/static/src/js/evaluacion_personal_dashboard.js',
             'sat/static/src/xml/evaluacion_personal_dashboard.xml',
             'sat/static/src/scss/evaluacion_personal_dashboard.scss',
-                
+
+            'sat/static/src/js/pruebas_dashboard_widget.js',
+            'sat/static/src/scss/pruebas_dashboard.scss',
+            'sat/static/src/xml/pruebas_dashboard_widget.xml',
+                    
                 
             # External Libraries existentes
             'https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js',
