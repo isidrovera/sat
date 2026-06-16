@@ -338,7 +338,220 @@ class SatSat(models.Model):
         ('snmp', 'SNMP'),
         ('reparacion', 'Reparación'),
     ], string='Última Fuente', readonly=True, default='manual', copy=False)
+    # ==========================================================
+    # CONTADORES SNMP DETALLADOS - ÚLTIMA LECTURA
+    # ==========================================================
 
+    snmp_contador_total = fields.Integer(
+        string='SNMP Total',
+        readonly=True,
+        copy=False,
+        tracking=True,
+    )
+
+    snmp_contador_bn = fields.Integer(
+        string='SNMP B/N',
+        readonly=True,
+        copy=False,
+        tracking=True,
+    )
+
+    snmp_contador_color = fields.Integer(
+        string='SNMP Color',
+        readonly=True,
+        copy=False,
+        tracking=True,
+    )
+
+    snmp_contador_copias = fields.Integer(
+        string='SNMP Copias',
+        readonly=True,
+        copy=False,
+        tracking=True,
+    )
+
+    snmp_contador_impresiones = fields.Integer(
+        string='SNMP Impresiones',
+        readonly=True,
+        copy=False,
+        tracking=True,
+    )
+
+    snmp_contador_scanner = fields.Integer(
+        string='SNMP Scanner',
+        readonly=True,
+        copy=False,
+        tracking=True,
+    )
+
+    snmp_contador_duplex = fields.Integer(
+        string='SNMP Dúplex',
+        readonly=True,
+        copy=False,
+        tracking=True,
+    )
+
+    snmp_contador_copias_bn = fields.Integer(
+        string='SNMP Copias B/N',
+        readonly=True,
+        copy=False,
+        tracking=True,
+    )
+
+    snmp_contador_impresiones_bn = fields.Integer(
+        string='SNMP Impresiones B/N',
+        readonly=True,
+        copy=False,
+        tracking=True,
+    )
+
+    snmp_contador_copias_color = fields.Integer(
+        string='SNMP Copias Color',
+        readonly=True,
+        copy=False,
+        tracking=True,
+    )
+
+    snmp_contador_impresiones_color = fields.Integer(
+        string='SNMP Impresiones Color',
+        readonly=True,
+        copy=False,
+        tracking=True,
+    )
+
+    snmp_contador_fax = fields.Integer(
+        string='SNMP Fax',
+        readonly=True,
+        copy=False,
+        tracking=True,
+    )
+
+    snmp_contador_gran_total = fields.Integer(
+        string='SNMP Gran Total',
+        readonly=True,
+        copy=False,
+        tracking=True,
+    )
+
+    # ==========================================================
+    # TÓNER SNMP - ÚLTIMA LECTURA
+    # ==========================================================
+
+    snmp_toner_negro = fields.Float(
+        string='SNMP Tóner Negro (%)',
+        readonly=True,
+        copy=False,
+        tracking=True,
+    )
+
+    snmp_toner_cyan = fields.Float(
+        string='SNMP Tóner Cyan (%)',
+        readonly=True,
+        copy=False,
+        tracking=True,
+    )
+
+    snmp_toner_magenta = fields.Float(
+        string='SNMP Tóner Magenta (%)',
+        readonly=True,
+        copy=False,
+        tracking=True,
+    )
+
+    snmp_toner_amarillo = fields.Float(
+        string='SNMP Tóner Amarillo (%)',
+        readonly=True,
+        copy=False,
+        tracking=True,
+    )
+    def _sat_prepare_snmp_detail_vals_from_context(self):
+        """
+        Prepara valores SNMP detallados para guardar en sat.sat
+        usando el payload/counters/toner que llega por context.
+        """
+        self.ensure_one()
+
+        snmp_payload = self.env.context.get('snmp_payload') or {}
+        snmp_counters = self.env.context.get('snmp_counters') or {}
+        snmp_toner = self.env.context.get('snmp_toner') or {}
+
+        if not isinstance(snmp_payload, dict):
+            snmp_payload = {}
+
+        if not isinstance(snmp_counters, dict):
+            snmp_counters = {}
+
+        if not isinstance(snmp_toner, dict):
+            snmp_toner = {}
+
+        counters = snmp_payload.get('counters') if isinstance(snmp_payload.get('counters'), dict) else snmp_counters
+        toner = snmp_payload.get('toner') if isinstance(snmp_payload.get('toner'), dict) else snmp_toner
+
+        counters = counters or {}
+        toner = toner or {}
+
+        def _num(*keys):
+            for key in keys:
+                value = None
+
+                if key in snmp_payload and snmp_payload.get(key) not in (None, False, ''):
+                    value = snmp_payload.get(key)
+                elif key in counters and counters.get(key) not in (None, False, ''):
+                    value = counters.get(key)
+
+                if value not in (None, False, ''):
+                    try:
+                        text = str(value).replace(',', '').strip()
+                        match = re.search(r'-?\d+', text)
+                        return int(match.group(0)) if match else 0
+                    except Exception:
+                        return 0
+
+            return 0
+
+        def _float_toner(*keys):
+            for key in keys:
+                value = None
+
+                if key in toner and toner.get(key) not in (None, False, ''):
+                    value = toner.get(key)
+                elif key in snmp_payload and snmp_payload.get(key) not in (None, False, ''):
+                    value = snmp_payload.get(key)
+
+                if value not in (None, False, ''):
+                    try:
+                        text = str(value).replace(',', '').strip()
+                        match = re.search(r'-?\d+(?:\.\d+)?', text)
+                        return float(match.group(0)) if match else 0.0
+                    except Exception:
+                        return 0.0
+
+            return 0.0
+
+        return {
+            'snmp_contador_total': _num('total_counter', 'grand_total_counter', 'total', 'total_counter'),
+            'snmp_contador_bn': _num('bw_counter', 'bw', 'bw_total', 'bn'),
+            'snmp_contador_color': _num('color_counter', 'color', 'color_total', 'full_color'),
+
+            'snmp_contador_copias': _num('copy_counter', 'copy', 'copy_total', 'copies'),
+            'snmp_contador_impresiones': _num('print_counter', 'print', 'print_total', 'prints'),
+            'snmp_contador_scanner': _num('scan_counter', 'scan', 'scanner', 'scans'),
+            'snmp_contador_duplex': _num('duplex_counter', 'duplex', 'duplex_total'),
+
+            'snmp_contador_copias_bn': _num('copy_bw', 'copies_bw', 'copy_black'),
+            'snmp_contador_impresiones_bn': _num('print_bw', 'prints_bw', 'print_black'),
+
+            'snmp_contador_copias_color': _num('copy_color', 'copies_color'),
+            'snmp_contador_impresiones_color': _num('print_color', 'prints_color', 'print_full_color'),
+
+            'snmp_contador_fax': _num('fax_counter', 'fax'),
+            'snmp_contador_gran_total': _num('grand_total_counter', 'gran_total', 'total_counter', 'total'),
+
+            'snmp_toner_negro': _float_toner('black', 'k', 'negro'),
+            'snmp_toner_cyan': _float_toner('cyan', 'c'),
+            'snmp_toner_magenta': _float_toner('magenta', 'm'),
+            'snmp_toner_amarillo': _float_toner('yellow', 'amarillo', 'y'),
+        }
     contometro_proveedor = fields.Char(
         string='Contómetro proveedor (llegada)',
         tracking=True,
@@ -739,7 +952,24 @@ class SatSat(models.Model):
         # ---------------------------
         if vals_ingreso_in:
             vals.update(vals_ingreso_in)
+        # Si viene de SNMP, guardar también contadores detallados en sat.sat
+        if vals.get('ultima_fuente_actualizacion') == 'snmp':
+            for record in self:
+                try:
+                    snmp_detail_vals = record._sat_prepare_snmp_detail_vals_from_context()
+                    vals.update(snmp_detail_vals)
 
+                    _logger.info(
+                        "[SAT SNMP DETALLE] Valores detallados preparados para máquina ID=%s | %s",
+                        record.id,
+                        snmp_detail_vals,
+                    )
+                except Exception as e:
+                    _logger.error(
+                        "[SAT SNMP DETALLE] Error preparando contadores detallados SNMP | ID=%s | error=%s",
+                        record.id,
+                        e,
+                    )
         _logger.error(
             "SAT.WRITE → ANTES SUPER | IDS=%s | VALS=%s | INGRESO_REAPPLY=%s",
             self.ids,
