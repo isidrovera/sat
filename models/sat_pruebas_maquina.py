@@ -963,7 +963,28 @@ class SatPruebaMaquina(models.Model):
         vals.update(vals_iniciales)
         vals.update(vals_actuales)
 
+        _logger.info(
+            "[PRUEBA SNMP WRITE] prueba=%s maquina=%s | vals_keys=%s | vals=%s",
+            self.id,
+            self.maquina_id.id,
+            sorted(list(vals.keys())),
+            vals,
+        )
+
         self.sudo().write(vals)
+
+        _logger.info(
+            "[PRUEBA SNMP WRITE OK] prueba=%s maquina=%s | total=%s copias=%s impresiones=%s scanner=%s duplex=%s bn=%s color=%s",
+            self.id,
+            self.maquina_id.id,
+            self.contador_actual_total,
+            self.contador_copias,
+            self.contador_impresiones,
+            self.contador_scanner,
+            self.contador_duplex,
+            self.contador_actual_bn,
+            self.contador_actual_color,
+        )
 
         # Guardar log por cada lectura.
         log = self._crear_log_snmp(
@@ -1019,184 +1040,338 @@ class SatPruebaMaquina(models.Model):
         """
         Mapea payload SNMP completo a campos de sat.prueba.maquina.
 
-        Corrige:
-        - Dúplex
-        - Copias B/N
-        - Impresiones B/N
-        - Copias Color
-        - Impresiones Color
-        - Alias nuevos enviados por el agente:
-            bw, bw_total, bn
-            color, color_total, full_color
-            copy_bw, copies_bw, copy_black
-            print_bw, prints_bw, print_black
-            copy_color, copies_color
-            print_color, prints_color, print_full_color
+        Versión reforzada con logs:
+        - Busca valores en counters, payload y raw_counters.
+        - Respeta 0 como valor válido.
+        - Registra qué llaves llegaron.
+        - Registra de qué origen salió cada contador.
+        - Registra qué contadores quedaron en 0 para poder revisar alias/OID.
         """
-
         counters = counters or {}
         toner = toner or {}
         payload = payload or {}
         now = now or fields.Datetime.now()
 
         if not isinstance(counters, dict):
+            _logger.warning(
+                "[PRUEBA SNMP MAPEO] counters no es dict | prueba=%s | tipo=%s | valor=%s",
+                self.id,
+                type(counters).__name__,
+                counters,
+            )
             counters = {}
 
         if not isinstance(toner, dict):
+            _logger.warning(
+                "[PRUEBA SNMP MAPEO] toner no es dict | prueba=%s | tipo=%s | valor=%s",
+                self.id,
+                type(toner).__name__,
+                toner,
+            )
             toner = {}
 
         if not isinstance(payload, dict):
+            _logger.warning(
+                "[PRUEBA SNMP MAPEO] payload no es dict | prueba=%s | tipo=%s | valor=%s",
+                self.id,
+                type(payload).__name__,
+                payload,
+            )
             payload = {}
 
-        def _first_number(*keys):
-            """
-            Busca primero en counters y luego en payload.
-            No usa 'or' porque 0 es valor válido.
-            """
-            for key in keys:
-                if key in counters:
-                    value = counters.get(key)
-                    if value is not None and value is not False and value != '':
-                        return _to_int(value)
+        # Si payload trae counters/toner, también los combinamos aquí.
+        payload_counters = payload.get('counters') if isinstance(payload.get('counters'), dict) else {}
+        payload_toner = payload.get('toner') if isinstance(payload.get('toner'), dict) else {}
+        raw_counters = payload.get('raw_counters') or counters.get('raw') or {}
 
-                if key in payload:
-                    value = payload.get(key)
-                    if value is not None and value is not False and value != '':
-                        return _to_int(value)
+        if not isinstance(raw_counters, dict):
+            raw_counters = {}
 
+        _logger.info(
+            "[PRUEBA SNMP INPUT] prueba=%s maquina=%s serie=%s | payload_keys=%s | counters_keys=%s | "
+            "payload_counters_keys=%s | toner_keys=%s | payload_toner_keys=%s | raw_counters_count=%s",
+            self.id,
+            self.maquina_id.id,
+            payload.get('serial'),
+            sorted(list(payload.keys())),
+            sorted(list(counters.keys())),
+            sorted(list(payload_counters.keys())),
+            sorted(list(toner.keys())),
+            sorted(list(payload_toner.keys())),
+            len(raw_counters),
+        )
+
+        def _valid(value):
+            return value is not None and value is not False and value != ''
+
+        def _norm_key(value):
+            value = _to_text(value).lower()
+            value = value.replace('-', '_').replace(' ', '_').replace('/', '_')
+            value = re.sub(r'[^a-z0-9_]+', '_', value)
+            value = re.sub(r'_+', '_', value).strip('_')
+            return value
+
+        def _raw_value(data):
+            if isinstance(data, dict):
+                for k in (
+                    'value', 'valor', 'counter', 'count', 'level',
+                    'current', 'valor_actual', 'valor_actual_numero',
+                ):
+                    if k in data and _valid(data.get(k)):
+                        return data.get(k)
+            return data
+
+        def _raw_meta(data):
+            if isinstance(data, dict):
+                return {
+                    'oid': data.get('oid') or data.get('oid_value') or data.get('oid_counter') or '',
+                    'source_name': data.get('source_name') or data.get('origen') or data.get('name') or '',
+                    'oid_name': data.get('oid_name') or '',
+                    'unit': data.get('unit') or data.get('unidad') or '',
+                }
+            return {}
+
+        # Construye una bolsa de búsqueda con prioridad.
+        # No se usa dict simple porque una misma clave puede venir de varios orígenes.
+        candidates = []
+
+        for key, value in counters.items():
+            if key == 'raw':
+                continue
+            candidates.append({
+                'origin': 'arg.counters',
+                'key': key,
+                'norm': _norm_key(key),
+                'value': value,
+                'meta': {},
+            })
+
+        for key, value in payload_counters.items():
+            if key == 'raw':
+                continue
+            candidates.append({
+                'origin': 'payload.counters',
+                'key': key,
+                'norm': _norm_key(key),
+                'value': value,
+                'meta': {},
+            })
+
+        # También revisar top-level porque el intake manda total_counter, copy_counter, etc.
+        for key, value in payload.items():
+            if isinstance(value, (dict, list)):
+                continue
+            candidates.append({
+                'origin': 'payload.top',
+                'key': key,
+                'norm': _norm_key(key),
+                'value': value,
+                'meta': {},
+            })
+
+        # raw_counters: puede venir por nombre humano o por source_name.
+        for name, data in raw_counters.items():
+            meta = _raw_meta(data)
+            value = _raw_value(data)
+            raw_names = [
+                name,
+                meta.get('source_name'),
+                meta.get('oid_name'),
+            ]
+            for raw_name in raw_names:
+                if not raw_name:
+                    continue
+                candidates.append({
+                    'origin': 'payload.raw_counters',
+                    'key': raw_name,
+                    'norm': _norm_key(raw_name),
+                    'value': value,
+                    'meta': meta,
+                })
+
+        def _find_number(field_label, aliases, contains_aliases=None):
+            aliases_norm = [_norm_key(a) for a in aliases]
+            contains_norm = [_norm_key(a) for a in (contains_aliases or [])]
+
+            # 1) exacto por prioridad de inserción.
+            for alias in aliases_norm:
+                for c in candidates:
+                    if c.get('norm') == alias and _valid(c.get('value')):
+                        value = _to_int(c.get('value'))
+                        _logger.info(
+                            "[PRUEBA SNMP FOUND] prueba=%s campo=%s valor=%s | alias=%s | origen=%s | key=%s | meta=%s",
+                            self.id,
+                            field_label,
+                            value,
+                            alias,
+                            c.get('origin'),
+                            c.get('key'),
+                            c.get('meta'),
+                        )
+                        return value
+
+            # 2) contiene alias, solo para raw/humano.
+            for alias in contains_norm:
+                for c in candidates:
+                    norm = c.get('norm') or ''
+                    if alias and alias in norm and _valid(c.get('value')):
+                        value = _to_int(c.get('value'))
+                        _logger.info(
+                            "[PRUEBA SNMP FOUND CONTAINS] prueba=%s campo=%s valor=%s | alias=%s | origen=%s | key=%s | meta=%s",
+                            self.id,
+                            field_label,
+                            value,
+                            alias,
+                            c.get('origin'),
+                            c.get('key'),
+                            c.get('meta'),
+                        )
+                        return value
+
+            _logger.warning(
+                "[PRUEBA SNMP MISSING] prueba=%s campo=%s sin valor | aliases=%s | contains=%s | available_norm_keys=%s",
+                self.id,
+                field_label,
+                aliases,
+                contains_aliases or [],
+                sorted(list(set([c.get('norm') for c in candidates if c.get('norm')]))),
+            )
             return 0
 
-        def _first_float_from_toner(*keys):
-            """
-            Busca tóner primero en toner y luego en payload.
-            Respeta 0 como valor válido.
-            """
-            for key in keys:
-                if key in toner:
-                    value = toner.get(key)
-                    if value is not None and value is not False and value != '':
-                        return _to_float_or_false(value)
+        def _find_toner(field_label, aliases):
+            sources = []
 
-                if key in payload:
-                    value = payload.get(key)
-                    if value is not None and value is not False and value != '':
-                        return _to_float_or_false(value)
+            for key, value in toner.items():
+                sources.append(('arg.toner', key, _norm_key(key), value))
 
+            for key, value in payload_toner.items():
+                sources.append(('payload.toner', key, _norm_key(key), value))
+
+            # Algunos agentes mandan toner_black como top-level.
+            for key, value in payload.items():
+                if isinstance(value, (dict, list)):
+                    continue
+                sources.append(('payload.top', key, _norm_key(key), value))
+
+            aliases_norm = [_norm_key(a) for a in aliases]
+            for alias in aliases_norm:
+                for origin, key, norm, value in sources:
+                    if norm == alias and _valid(value):
+                        result = _to_float_or_false(value)
+                        _logger.info(
+                            "[PRUEBA SNMP TONER FOUND] prueba=%s campo=%s valor=%s | alias=%s | origen=%s | key=%s",
+                            self.id,
+                            field_label,
+                            result,
+                            alias,
+                            origin,
+                            key,
+                        )
+                        return result
+
+            _logger.warning(
+                "[PRUEBA SNMP TONER MISSING] prueba=%s campo=%s sin valor | aliases=%s | toner_keys=%s | payload_toner_keys=%s",
+                self.id,
+                field_label,
+                aliases,
+                sorted(list(toner.keys())),
+                sorted(list(payload_toner.keys())),
+            )
             return False
 
-        total = _first_number(
-            'total',
-            'total_counter',
+        total = _find_number(
+            'contador_actual_total',
+            ['total', 'total_counter', 'page_count', 'meter_total', 'counter_total'],
+            ['total page', 'page count', 'total counter', 'meter total'],
         )
 
-        copies = _first_number(
-            'copy',
-            'copy_total',
-            'copies',
-            'copy_counter',
+        copies = _find_number(
+            'contador_copias',
+            ['copy', 'copy_total', 'copies', 'copy_counter', 'copias', 'contador_copias'],
+            ['copy', 'copies', 'copias'],
         )
 
-        prints = _first_number(
-            'print',
-            'print_total',
-            'prints',
-            'print_counter',
+        prints = _find_number(
+            'contador_impresiones',
+            ['print', 'print_total', 'prints', 'print_counter', 'impresiones', 'contador_impresiones'],
+            ['print', 'prints', 'impresion', 'impresiones'],
         )
 
-        scans = _first_number(
-            'scan',
-            'scanner',
-            'scans',
-            'scan_counter',
+        scans = _find_number(
+            'contador_scanner',
+            ['scan', 'scanner', 'scans', 'scan_counter', 'contador_scanner', 'contador_scan'],
+            ['scan', 'scanner'],
         )
 
-        duplex = _first_number(
-            'duplex',
-            'duplex_total',
-            'two_sided',
-            'two_sided_total',
-            'duplex_counter',
+        duplex = _find_number(
+            'contador_duplex',
+            ['duplex', 'duplex_total', 'two_sided', 'two_sided_total', 'duplex_counter', 'contador_duplex'],
+            ['duplex', 'two sided', 'two_sided', '2 sided', 'doble cara'],
         )
 
-        bw = _first_number(
-            'bw',
-            'bw_total',
-            'bn',
-            'black_white',
-            'bw_counter',
+        bw = _find_number(
+            'contador_actual_bn',
+            ['bw', 'bw_total', 'bn', 'black_white', 'mono', 'mono_total', 'bw_counter', 'contador_bn'],
+            ['black white', 'black_white', 'mono', 'b_w', 'bn', 'b/n'],
         )
 
-        color = _first_number(
-            'color',
-            'color_total',
-            'full_color',
-            'color_counter',
+        color = _find_number(
+            'contador_actual_color',
+            ['color', 'color_total', 'full_color', 'color_counter', 'contador_color'],
+            ['full color', 'full_color', 'color'],
         )
 
-        copy_bw = _first_number(
-            'copy_bw',
-            'copies_bw',
-            'copy_black',
-            'copies_black',
+        copy_bw = _find_number(
+            'contador_actual_copias_bn',
+            ['copy_bw', 'copies_bw', 'copy_black', 'copies_black', 'copy_bn', 'copias_bn'],
+            ['copy black', 'copies black', 'copy bw', 'copy b_w', 'copias bn', 'copias b/n'],
         )
 
-        print_bw = _first_number(
-            'print_bw',
-            'prints_bw',
-            'print_black',
-            'prints_black',
+        print_bw = _find_number(
+            'contador_actual_impresiones_bn',
+            ['print_bw', 'prints_bw', 'print_black', 'prints_black', 'print_bn', 'impresiones_bn'],
+            ['print black', 'prints black', 'print bw', 'print b_w', 'impresiones bn', 'impresiones b/n'],
         )
 
-        copy_color = _first_number(
-            'copy_color',
-            'copies_color',
+        copy_color = _find_number(
+            'contador_actual_copias_color',
+            ['copy_color', 'copies_color', 'copias_color'],
+            ['copy color', 'copies color', 'copias color'],
         )
 
-        print_color = _first_number(
-            'print_color',
-            'prints_color',
-            'print_full_color',
-            'prints_full_color',
+        print_color = _find_number(
+            'contador_actual_impresiones_color',
+            ['print_color', 'prints_color', 'print_full_color', 'prints_full_color', 'impresiones_color'],
+            ['print color', 'prints color', 'print full color', 'impresiones color'],
         )
 
-        fax = _first_number(
-            'fax',
-            'fax_total',
-            'fax_counter',
+        fax = _find_number(
+            'contador_fax',
+            ['fax', 'fax_total', 'fax_counter', 'contador_fax'],
+            ['fax'],
         )
 
-        gran_total = _first_number(
-            'grand_total',
-            'gran_total',
-            'grand_total_counter',
+        gran_total = _find_number(
+            'contador_gran_total',
+            ['grand_total', 'gran_total', 'grand_total_counter', 'total_general'],
+            ['grand total', 'gran total'],
         )
 
-        toner_black = _first_float_from_toner(
-            'black',
-            'k',
-            'negro',
-            'toner_black',
+        toner_black = _find_toner(
             'toner_negro',
+            ['black', 'k', 'negro', 'toner_black', 'toner_negro'],
         )
-
-        toner_cyan = _first_float_from_toner(
-            'cyan',
-            'c',
+        toner_cyan = _find_toner(
             'toner_cyan',
+            ['cyan', 'c', 'toner_cyan'],
         )
-
-        toner_magenta = _first_float_from_toner(
-            'magenta',
-            'm',
+        toner_magenta = _find_toner(
             'toner_magenta',
+            ['magenta', 'm', 'toner_magenta'],
         )
-
-        toner_yellow = _first_float_from_toner(
-            'yellow',
-            'y',
-            'amarillo',
-            'toner_yellow',
+        toner_yellow = _find_toner(
             'toner_amarillo',
+            ['yellow', 'y', 'amarillo', 'toner_yellow', 'toner_amarillo'],
         )
 
         vals = {
@@ -1214,9 +1389,6 @@ class SatPruebaMaquina(models.Model):
             'raw_payload_json': _json_dumps(payload),
             'raw_summary_text': _to_text(payload.get('summary_text')),
 
-            # ==================================================
-            # CONTADORES GENERALES
-            # ==================================================
             'contador_actual_total': total,
             'contador_actual_bn': bw,
             'contador_actual_color': color,
@@ -1225,32 +1397,55 @@ class SatPruebaMaquina(models.Model):
             'contador_scanner': scans,
             'contador_duplex': duplex,
 
-            # ==================================================
-            # DETALLE B/N / COLOR
-            # ==================================================
             'contador_actual_copias_bn': copy_bw,
             'contador_actual_impresiones_bn': print_bw,
             'contador_actual_copias_color': copy_color,
             'contador_actual_impresiones_color': print_color,
 
-            # ==================================================
-            # OTROS
-            # ==================================================
             'contador_fax': fax,
             'contador_gran_total': gran_total,
         }
 
         if toner_black is not False:
             vals['toner_negro'] = toner_black
-
         if toner_cyan is not False:
             vals['toner_cyan'] = toner_cyan
-
         if toner_magenta is not False:
             vals['toner_magenta'] = toner_magenta
-
         if toner_yellow is not False:
             vals['toner_amarillo'] = toner_yellow
+
+        _logger.info(
+            "[PRUEBA SNMP VALS FINAL] prueba=%s maquina=%s | vals=%s",
+            self.id,
+            self.maquina_id.id,
+            vals,
+        )
+
+        faltantes = [
+            k for k in [
+                'contador_actual_total',
+                'contador_actual_bn',
+                'contador_actual_color',
+                'contador_impresiones',
+                'contador_copias',
+                'contador_scanner',
+                'contador_duplex',
+                'contador_actual_copias_bn',
+                'contador_actual_impresiones_bn',
+                'contador_actual_copias_color',
+                'contador_actual_impresiones_color',
+            ]
+            if not vals.get(k)
+        ]
+
+        if faltantes:
+            _logger.warning(
+                "[PRUEBA SNMP VALS CERO] prueba=%s maquina=%s | campos_en_cero=%s | revisar aliases/OID en raw_payload_json y snmp_detalle_ids",
+                self.id,
+                self.maquina_id.id,
+                faltantes,
+            )
 
         return vals
     def _preparar_valores_iniciales_desde_actuales(self, vals_actuales, now):
@@ -1337,7 +1532,29 @@ class SatPruebaMaquina(models.Model):
             'summary_text': _to_text(payload.get('summary_text')),
         }
 
-        return Log.create(vals)
+        _logger.info(
+            "[PRUEBA SNMP LOG CREATE] prueba=%s maquina=%s | total=%s copias=%s impresiones=%s scanner=%s duplex=%s bn=%s color=%s",
+            self.id,
+            self.maquina_id.id,
+            vals.get('total'),
+            vals.get('copias'),
+            vals.get('impresiones'),
+            vals.get('scanner'),
+            vals.get('duplex'),
+            vals.get('bn'),
+            vals.get('color'),
+        )
+
+        log = Log.create(vals)
+
+        _logger.info(
+            "[PRUEBA SNMP LOG OK] prueba=%s maquina=%s | log_id=%s",
+            self.id,
+            self.maquina_id.id,
+            log.id,
+        )
+
+        return log
 
     # ======================================================
     # DETALLE SNMP COMPLETO
@@ -1508,6 +1725,19 @@ class SatPruebaMaquina(models.Model):
 
         Detalle = self.env['sat.prueba.maquina.snmp.detalle'].sudo()
 
+        _logger.info(
+            "[PRUEBA SNMP DETALLE START] prueba=%s maquina=%s | items=%s | counters=%s | toner=%s | raw_counters=%s",
+            self.id,
+            self.maquina_id.id,
+            len(items),
+            len(counters or {}),
+            len(toner or {}),
+            len(raw_counters) if isinstance(raw_counters, dict) else 0,
+        )
+
+        detalle_creados = 0
+        detalle_actualizados = 0
+
         for item in items:
             categoria = _to_text(item.get('categoria')) or 'otro'
             nombre = _to_text(item.get('nombre')) or 'Sin nombre'
@@ -1549,6 +1779,7 @@ class SatPruebaMaquina(models.Model):
 
             if detalle:
                 detalle.write(vals)
+                detalle_actualizados += 1
             else:
                 vals.update({
                     'fecha_inicial': fields.Datetime.now(),
@@ -1556,6 +1787,16 @@ class SatPruebaMaquina(models.Model):
                     'valor_inicial_numero': number if number is not False else 0.0,
                 })
                 Detalle.create(vals)
+                detalle_creados += 1
+
+        _logger.info(
+            "[PRUEBA SNMP DETALLE OK] prueba=%s maquina=%s | creados=%s | actualizados=%s | total_items=%s",
+            self.id,
+            self.maquina_id.id,
+            detalle_creados,
+            detalle_actualizados,
+            len(items),
+        )
 
     # ======================================================
     # ALERTAS SNMP
@@ -1596,10 +1837,23 @@ class SatPruebaMaquina(models.Model):
                 'description': raw_alerts.strip(),
             })
 
+        _logger.info(
+            "[PRUEBA SNMP ALERTAS START] prueba=%s maquina=%s | alert_items=%s | raw_type=%s",
+            self.id,
+            self.maquina_id.id,
+            len(alert_items),
+            type(raw_alerts).__name__,
+        )
+
         # Si no hay alertas, no crear falsa alerta.
         if not alert_items:
             if log:
                 log.write({'alertas_count': 0})
+            _logger.info(
+                "[PRUEBA SNMP ALERTAS OK] prueba=%s maquina=%s | sin_alertas",
+                self.id,
+                self.maquina_id.id,
+            )
             return
 
         count = 0
@@ -1666,6 +1920,13 @@ class SatPruebaMaquina(models.Model):
 
         if log:
             log.write({'alertas_count': count})
+
+        _logger.info(
+            "[PRUEBA SNMP ALERTAS OK] prueba=%s maquina=%s | activas=%s",
+            self.id,
+            self.maquina_id.id,
+            count,
+        )
 
 
 # ==========================================================
