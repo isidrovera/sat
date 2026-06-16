@@ -43,10 +43,19 @@ def _to_float_or_false(value):
     """
     Convierte valores SNMP a float.
     Retorna False cuando el valor no existe.
+    Respeta 0 como valor válido.
     """
     try:
-        if value in (None, False, ''):
+        if value is None or value is False:
             return False
+
+        if isinstance(value, str):
+            text = value.replace(',', '').strip()
+            if text == '':
+                return False
+
+            m = re.search(r'-?\d+(?:\.\d+)?', text)
+            return float(m.group(0)) if m else False
 
         if isinstance(value, bool):
             return float(int(value))
@@ -921,6 +930,31 @@ class SatPruebaMaquina(models.Model):
             now=now,
         )
 
+        _logger.info(
+            "[PRUEBA SNMP MAPEO] Prueba ID=%s | Máquina ID=%s | Serie=%s | "
+            "total=%s | copias=%s | impresiones=%s | scanner=%s | duplex=%s | "
+            "bn=%s | color=%s | copy_bw=%s | print_bw=%s | copy_color=%s | print_color=%s | "
+            "toner K=%s C=%s M=%s Y=%s",
+            self.id,
+            self.maquina_id.id,
+            payload.get('serial'),
+            vals_actuales.get('contador_actual_total'),
+            vals_actuales.get('contador_copias'),
+            vals_actuales.get('contador_impresiones'),
+            vals_actuales.get('contador_scanner'),
+            vals_actuales.get('contador_duplex'),
+            vals_actuales.get('contador_actual_bn'),
+            vals_actuales.get('contador_actual_color'),
+            vals_actuales.get('contador_actual_copias_bn'),
+            vals_actuales.get('contador_actual_impresiones_bn'),
+            vals_actuales.get('contador_actual_copias_color'),
+            vals_actuales.get('contador_actual_impresiones_color'),
+            vals_actuales.get('toner_negro'),
+            vals_actuales.get('toner_cyan'),
+            vals_actuales.get('toner_magenta'),
+            vals_actuales.get('toner_amarillo'),
+        )
+
         vals_iniciales = {}
         if not self.fecha_snapshot_snmp:
             vals_iniciales = self._preparar_valores_iniciales_desde_actuales(vals_actuales, now)
@@ -960,13 +994,21 @@ class SatPruebaMaquina(models.Model):
                 "Copias: <b>%s</b><br/>"
                 "Impresiones: <b>%s</b><br/>"
                 "Scanner: <b>%s</b><br/>"
-                "Dúplex: <b>%s</b>"
+                "Dúplex: <b>%s</b><br/>"
+                "Copias B/N: <b>%s</b><br/>"
+                "Impresiones B/N: <b>%s</b><br/>"
+                "Copias Color: <b>%s</b><br/>"
+                "Impresiones Color: <b>%s</b>"
             ) % (
                 vals_actuales.get('contador_actual_total', 0),
                 vals_actuales.get('contador_copias', 0),
                 vals_actuales.get('contador_impresiones', 0),
                 vals_actuales.get('contador_scanner', 0),
                 vals_actuales.get('contador_duplex', 0),
+                vals_actuales.get('contador_actual_copias_bn', 0),
+                vals_actuales.get('contador_actual_impresiones_bn', 0),
+                vals_actuales.get('contador_actual_copias_color', 0),
+                vals_actuales.get('contador_actual_impresiones_color', 0),
             ),
             subtype_xmlid='mail.mt_note',
         )
@@ -974,80 +1016,188 @@ class SatPruebaMaquina(models.Model):
         return True
 
     def _preparar_valores_actuales_snmp(self, counters=None, toner=None, payload=None, now=None):
+        """
+        Mapea payload SNMP completo a campos de sat.prueba.maquina.
+
+        Corrige:
+        - Dúplex
+        - Copias B/N
+        - Impresiones B/N
+        - Copias Color
+        - Impresiones Color
+        - Alias nuevos enviados por el agente:
+            bw, bw_total, bn
+            color, color_total, full_color
+            copy_bw, copies_bw, copy_black
+            print_bw, prints_bw, print_black
+            copy_color, copies_color
+            print_color, prints_color, print_full_color
+        """
+
         counters = counters or {}
         toner = toner or {}
         payload = payload or {}
         now = now or fields.Datetime.now()
 
-        total = (
-            _safe_get_number(counters, 'total', 'total_counter')
-            or _to_int(payload.get('total_counter'))
+        if not isinstance(counters, dict):
+            counters = {}
+
+        if not isinstance(toner, dict):
+            toner = {}
+
+        if not isinstance(payload, dict):
+            payload = {}
+
+        def _first_number(*keys):
+            """
+            Busca primero en counters y luego en payload.
+            No usa 'or' porque 0 es valor válido.
+            """
+            for key in keys:
+                if key in counters:
+                    value = counters.get(key)
+                    if value is not None and value is not False and value != '':
+                        return _to_int(value)
+
+                if key in payload:
+                    value = payload.get(key)
+                    if value is not None and value is not False and value != '':
+                        return _to_int(value)
+
+            return 0
+
+        def _first_float_from_toner(*keys):
+            """
+            Busca tóner primero en toner y luego en payload.
+            Respeta 0 como valor válido.
+            """
+            for key in keys:
+                if key in toner:
+                    value = toner.get(key)
+                    if value is not None and value is not False and value != '':
+                        return _to_float_or_false(value)
+
+                if key in payload:
+                    value = payload.get(key)
+                    if value is not None and value is not False and value != '':
+                        return _to_float_or_false(value)
+
+            return False
+
+        total = _first_number(
+            'total',
+            'total_counter',
         )
 
-        copies = (
-            _safe_get_number(counters, 'copy', 'copy_total', 'copies')
-            or _to_int(payload.get('copy_counter'))
+        copies = _first_number(
+            'copy',
+            'copy_total',
+            'copies',
+            'copy_counter',
         )
 
-        prints = (
-            _safe_get_number(counters, 'print', 'print_total', 'prints')
-            or _to_int(payload.get('print_counter'))
+        prints = _first_number(
+            'print',
+            'print_total',
+            'prints',
+            'print_counter',
         )
 
-        scans = (
-            _safe_get_number(counters, 'scan', 'scanner', 'scans')
-            or _to_int(payload.get('scan_counter'))
+        scans = _first_number(
+            'scan',
+            'scanner',
+            'scans',
+            'scan_counter',
         )
 
-        duplex = (
-            _safe_get_number(counters, 'duplex', 'duplex_total')
-            or _to_int(payload.get('duplex_counter'))
+        duplex = _first_number(
+            'duplex',
+            'duplex_total',
+            'two_sided',
+            'two_sided_total',
+            'duplex_counter',
         )
 
-        bw = (
-            _safe_get_number(counters, 'bw', 'bw_total', 'black_white', 'bn')
-            or _to_int(payload.get('bw_counter'))
+        bw = _first_number(
+            'bw',
+            'bw_total',
+            'bn',
+            'black_white',
+            'bw_counter',
         )
 
-        color = (
-            _safe_get_number(counters, 'color', 'color_total', 'full_color')
-            or _to_int(payload.get('color_counter'))
+        color = _first_number(
+            'color',
+            'color_total',
+            'full_color',
+            'color_counter',
         )
 
-        copy_bw = (
-            _safe_get_number(counters, 'copy_bw', 'copies_bw', 'copy_black')
-            or _to_int(payload.get('copy_bw'))
+        copy_bw = _first_number(
+            'copy_bw',
+            'copies_bw',
+            'copy_black',
+            'copies_black',
         )
 
-        print_bw = (
-            _safe_get_number(counters, 'print_bw', 'prints_bw', 'print_black')
-            or _to_int(payload.get('print_bw'))
+        print_bw = _first_number(
+            'print_bw',
+            'prints_bw',
+            'print_black',
+            'prints_black',
         )
 
-        copy_color = (
-            _safe_get_number(counters, 'copy_color', 'copies_color')
-            or _to_int(payload.get('copy_color'))
+        copy_color = _first_number(
+            'copy_color',
+            'copies_color',
         )
 
-        print_color = (
-            _safe_get_number(counters, 'print_color', 'prints_color', 'print_full_color')
-            or _to_int(payload.get('print_color'))
+        print_color = _first_number(
+            'print_color',
+            'prints_color',
+            'print_full_color',
+            'prints_full_color',
         )
 
-        fax = (
-            _safe_get_number(counters, 'fax', 'fax_total')
-            or _to_int(payload.get('fax_counter'))
+        fax = _first_number(
+            'fax',
+            'fax_total',
+            'fax_counter',
         )
 
-        gran_total = (
-            _safe_get_number(counters, 'grand_total', 'gran_total')
-            or _to_int(payload.get('grand_total_counter'))
+        gran_total = _first_number(
+            'grand_total',
+            'gran_total',
+            'grand_total_counter',
         )
 
-        toner_black = _safe_get_float(toner, 'black', 'k', 'negro')
-        toner_cyan = _safe_get_float(toner, 'cyan', 'c')
-        toner_magenta = _safe_get_float(toner, 'magenta', 'm')
-        toner_yellow = _safe_get_float(toner, 'yellow', 'y', 'amarillo')
+        toner_black = _first_float_from_toner(
+            'black',
+            'k',
+            'negro',
+            'toner_black',
+            'toner_negro',
+        )
+
+        toner_cyan = _first_float_from_toner(
+            'cyan',
+            'c',
+            'toner_cyan',
+        )
+
+        toner_magenta = _first_float_from_toner(
+            'magenta',
+            'm',
+            'toner_magenta',
+        )
+
+        toner_yellow = _first_float_from_toner(
+            'yellow',
+            'y',
+            'amarillo',
+            'toner_yellow',
+            'toner_amarillo',
+        )
 
         vals = {
             'fecha_ultima_actualizacion': now,
@@ -1056,7 +1206,7 @@ class SatPruebaMaquina(models.Model):
             'snmp_ip': _to_text(payload.get('ip')),
             'snmp_serie': _to_text(payload.get('serial')),
             'snmp_marca': _to_text(payload.get('brand')),
-            'snmp_modelo': _to_text(payload.get('model')),
+            'snmp_modelo': _to_text(payload.get('model') or payload.get('model_raw')),
             'snmp_enterprise_id': _to_text(payload.get('enterprise_id')),
             'snmp_config': _to_text(payload.get('snmp_config')),
             'snmp_summary_file': _to_text(payload.get('summary_file')),
@@ -1064,6 +1214,9 @@ class SatPruebaMaquina(models.Model):
             'raw_payload_json': _json_dumps(payload),
             'raw_summary_text': _to_text(payload.get('summary_text')),
 
+            # ==================================================
+            # CONTADORES GENERALES
+            # ==================================================
             'contador_actual_total': total,
             'contador_actual_bn': bw,
             'contador_actual_color': color,
@@ -1072,26 +1225,34 @@ class SatPruebaMaquina(models.Model):
             'contador_scanner': scans,
             'contador_duplex': duplex,
 
+            # ==================================================
+            # DETALLE B/N / COLOR
+            # ==================================================
             'contador_actual_copias_bn': copy_bw,
             'contador_actual_impresiones_bn': print_bw,
             'contador_actual_copias_color': copy_color,
             'contador_actual_impresiones_color': print_color,
 
+            # ==================================================
+            # OTROS
+            # ==================================================
             'contador_fax': fax,
             'contador_gran_total': gran_total,
         }
 
         if toner_black is not False:
             vals['toner_negro'] = toner_black
+
         if toner_cyan is not False:
             vals['toner_cyan'] = toner_cyan
+
         if toner_magenta is not False:
             vals['toner_magenta'] = toner_magenta
+
         if toner_yellow is not False:
             vals['toner_amarillo'] = toner_yellow
 
         return vals
-
     def _preparar_valores_iniciales_desde_actuales(self, vals_actuales, now):
         """
         Toma snapshot inicial SNMP solo la primera vez.
