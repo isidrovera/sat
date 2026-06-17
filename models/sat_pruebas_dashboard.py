@@ -370,102 +370,133 @@ class SatSatPruebasDashboard(models.Model):
 
     def _sat_dashboard_snmp_items(self, prueba):
         """
-        Devuelve componentes/consumibles desde snmp_detalle_ids.
+        Devuelve componentes/consumibles para el dashboard moderno.
 
-        Categorías esperadas:
-          - consumible
-          - unidad
-          - accesorio
+        Lee primero desde snmp_detalle_ids.
+        Si no encuentra nada, lee desde raw_payload_json.
+
+        Esto permite mostrar:
+          - developer
+          - drum / tambor / image unit
+          - fusora / fuser / fixing
+          - transfer belt / faja transferencia
+          - waste toner / tóner residual
+          - accesorios
           - sistema
-
-        Aquí aparecen:
-          developer, drum, fusora, transfer belt, waste toner,
-          image unit, maintenance kit, feeder, finisher, HDD, firmware, etc.
         """
         resultado = []
+        vistos = set()
 
-        try:
-            if 'snmp_detalle_ids' not in prueba._fields:
-                return resultado
+        def _add_item(
+            item_id,
+            categoria,
+            nombre,
+            valor,
+            unidad='%',
+            oid='',
+            source_name='',
+        ):
+            nombre = str(nombre or '').strip()
+            categoria = str(categoria or 'otro').strip()
 
-            detalles = prueba.snmp_detalle_ids.filtered(
-                lambda d: (d.categoria or '') in (
-                    'consumible',
-                    'unidad',
-                    'accesorio',
-                    'sistema',
-                )
+            if not nombre:
+                return
+
+            valor = self._sat_dashboard_float(valor)
+            unidad = str(unidad or '%').strip()
+            oid = str(oid or '').strip()
+            source_name = str(source_name or '').strip()
+
+            tipo_visual, tipo_label, icono, css_class = self._sat_dashboard_component_tipo_visual(
+                nombre=nombre,
+                categoria=categoria,
             )
 
-            vistos = set()
+            estado = self._sat_dashboard_component_estado(valor, unidad)
 
-            for det in detalles:
-                categoria = self._sat_dashboard_detalle_text(det, 'categoria') or 'otro'
+            key = '%s|%s|%s|%s' % (
+                categoria,
+                self._sat_dashboard_norm(nombre),
+                self._sat_dashboard_norm(source_name),
+                oid,
+            )
 
-                nombre = self._sat_dashboard_detalle_text(
-                    det,
-                    'nombre',
-                    'descripcion',
-                    'description',
-                    'source_name',
-                ) or 'Elemento SNMP'
+            if key in vistos:
+                return
 
-                source_name = self._sat_dashboard_detalle_text(
-                    det,
-                    'source_name',
-                    'origen',
+            vistos.add(key)
+
+            resultado.append({
+                'id': item_id,
+                'categoria': categoria,
+                'tipo_visual': tipo_visual,
+                'tipo_label': tipo_label,
+                'icono': icono,
+                'css_class': css_class,
+                'nombre': nombre,
+                'valor': valor,
+                'valor_percent': self._sat_dashboard_percent_clamp(valor),
+                'unidad': unidad,
+                'oid': oid,
+                'source_name': source_name,
+                'estado': estado,
+            })
+
+        # ======================================================
+        # 1) Leer desde líneas SNMP guardadas
+        # ======================================================
+        try:
+            if 'snmp_detalle_ids' in prueba._fields:
+                detalles = prueba.snmp_detalle_ids.filtered(
+                    lambda d: (d.categoria or '') in (
+                        'consumible',
+                        'unidad',
+                        'accesorio',
+                        'sistema',
+                        'toner',
+                    )
                 )
 
-                oid = self._sat_dashboard_detalle_text(
-                    det,
-                    'oid',
-                    'oid_valor',
-                    'oid_value',
-                    'oid_counter',
-                )
+                for det in detalles:
+                    categoria = self._sat_dashboard_detalle_text(det, 'categoria') or 'otro'
 
-                unidad = self._sat_dashboard_detalle_text(
-                    det,
-                    'unidad',
-                    'unit',
-                ) or '%'
+                    nombre = self._sat_dashboard_detalle_text(
+                        det,
+                        'nombre',
+                        'source_name',
+                    ) or 'Elemento SNMP'
 
-                valor = self._sat_dashboard_detalle_value(det)
+                    source_name = self._sat_dashboard_detalle_text(
+                        det,
+                        'source_name',
+                        'origen',
+                    )
 
-                tipo_visual, tipo_label, icono, css_class = self._sat_dashboard_component_tipo_visual(
-                    nombre=nombre,
-                    categoria=categoria,
-                )
+                    oid = self._sat_dashboard_detalle_text(
+                        det,
+                        'oid',
+                        'oid_valor',
+                        'oid_value',
+                        'oid_counter',
+                    )
 
-                estado = self._sat_dashboard_component_estado(valor, unidad)
+                    unidad = self._sat_dashboard_detalle_text(
+                        det,
+                        'unidad',
+                        'unit',
+                    ) or '%'
 
-                key = '%s|%s|%s|%s' % (
-                    categoria,
-                    self._sat_dashboard_norm(nombre),
-                    self._sat_dashboard_norm(source_name),
-                    oid,
-                )
+                    valor = self._sat_dashboard_detalle_value(det)
 
-                if key in vistos:
-                    continue
-
-                vistos.add(key)
-
-                resultado.append({
-                    'id': det.id,
-                    'categoria': categoria,
-                    'tipo_visual': tipo_visual,
-                    'tipo_label': tipo_label,
-                    'icono': icono,
-                    'css_class': css_class,
-                    'nombre': nombre,
-                    'valor': valor,
-                    'valor_percent': self._sat_dashboard_percent_clamp(valor),
-                    'unidad': unidad,
-                    'oid': oid,
-                    'source_name': source_name,
-                    'estado': estado,
-                })
+                    _add_item(
+                        item_id=det.id,
+                        categoria=categoria,
+                        nombre=nombre,
+                        valor=valor,
+                        unidad=unidad,
+                        oid=oid,
+                        source_name=source_name,
+                    )
 
         except Exception as e:
             _logger.warning(
@@ -474,7 +505,79 @@ class SatSatPruebasDashboard(models.Model):
                 e,
             )
 
-        # Orden visual: primero lo más técnico/importante
+        # ======================================================
+        # 2) Fallback: leer desde raw_payload_json
+        # ======================================================
+        try:
+            raw_payload = {}
+
+            if 'raw_payload_json' in prueba._fields and prueba.raw_payload_json:
+                raw_payload = json.loads(prueba.raw_payload_json or '{}')
+
+            if isinstance(raw_payload, dict):
+                bloques = [
+                    ('consumible', 'supplies'),
+                    ('consumible', 'raw_supplies'),
+                    ('unidad', 'units'),
+                    ('unidad', 'raw_units'),
+                    ('accesorio', 'accessories'),
+                    ('accesorio', 'raw_accessories'),
+                    ('sistema', 'system'),
+                    ('sistema', 'raw_system'),
+                ]
+
+                for categoria, key_bloque in bloques:
+                    bloque = raw_payload.get(key_bloque) or {}
+
+                    if not isinstance(bloque, dict):
+                        continue
+
+                    for key, data in bloque.items():
+                        if isinstance(data, dict):
+                            nombre = (
+                                data.get('name')
+                                or data.get('description')
+                                or data.get('nombre')
+                                or data.get('source_name')
+                                or key
+                            )
+
+                            valor = (
+                                data.get('level')
+                                or data.get('value')
+                                or data.get('valor')
+                                or data.get('current')
+                                or data.get('valor_actual_numero')
+                                or 0
+                            )
+
+                            unidad = data.get('unit') or data.get('unidad') or '%'
+                            oid = data.get('oid') or data.get('oid_value') or ''
+                            source_name = data.get('source_name') or key_bloque
+                        else:
+                            nombre = key
+                            valor = data
+                            unidad = '%'
+                            oid = ''
+                            source_name = key_bloque
+
+                        _add_item(
+                            item_id='%s_%s' % (key_bloque, self._sat_dashboard_norm(key)),
+                            categoria=categoria,
+                            nombre=nombre,
+                            valor=valor,
+                            unidad=unidad,
+                            oid=oid,
+                            source_name=source_name,
+                        )
+
+        except Exception as e:
+            _logger.warning(
+                '[DASHBOARD PRUEBAS] No se pudo leer raw_payload_json de prueba %s: %s',
+                prueba.id,
+                e,
+            )
+
         prioridad = {
             'developer': 1,
             'drum': 2,

@@ -273,11 +273,22 @@
                     </div>
 
                 </div>
+                <div class="sat_component_empty" t-if="!hasComponentesSnmp">
+                    <div class="sat_component_empty_icon">
+                        <i class="fa fa-cogs"/>
+                    </div>
+                    <div>
+                        <strong>No hay unidades o consumibles SNMP para mostrar</strong>
+                        <span>
+                            La lectura no trajo developer, drum, fusora, transferencia o residual en units/supplies.
+                        </span>
+                    </div>
+                </div>
 
                 <!-- ======================================================
                      COMPONENTES Y UNIDADES
                      ====================================================== -->
-                <div class="sat_panel sat_panel_components" t-if="hasComponentesSnmp">
+                <div class="sat_panel sat_panel_components" >
 
                     <div class="sat_panel_header">
                         <div>
