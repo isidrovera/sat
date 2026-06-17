@@ -5,6 +5,9 @@
 
         <div t-att-class="isColorMachine ? 'sat_pruebas_dashboard sat_dashboard_color' : 'sat_pruebas_dashboard sat_dashboard_bn'">
 
+            <!-- ======================================================
+                 EMPTY STATE
+                 ====================================================== -->
             <t t-if="!hasData">
                 <div class="sat_empty_state">
                     <div class="sat_empty_icon">
@@ -12,14 +15,16 @@
                     </div>
                     <div>
                         <h3>No hay pruebas técnicas registradas</h3>
-                        <p>Cuando SNMP genere lecturas, aquí aparecerán contadores, tóner y validaciones.</p>
+                        <p>Cuando SNMP genere lecturas, aquí aparecerán contadores, tóner, unidades y validaciones.</p>
                     </div>
                 </div>
             </t>
 
             <t t-if="hasData">
 
-                <!-- HEADER -->
+                <!-- ======================================================
+                     HERO / HEADER
+                     ====================================================== -->
                 <div class="sat_dashboard_hero">
 
                     <div class="sat_dashboard_hero_left">
@@ -50,13 +55,23 @@
                                 </span>
                             </t>
 
-                            <span>
-                                <i class="fa fa-cog"/>
+                            <span t-att-class="'sat_machine_badge ' + machineTypeClass">
+                                <i t-att-class="'fa ' + machineTypeIcon"/>
                                 Tipo:
                                 <strong>
                                     <t t-esc="machineTypeLabel"/>
                                 </strong>
                             </span>
+
+                            <t t-if="ultima.snmp_marca">
+                                <span>
+                                    <i class="fa fa-industry"/>
+                                    Marca:
+                                    <strong>
+                                        <t t-esc="ultima.snmp_marca"/>
+                                    </strong>
+                                </span>
+                            </t>
                         </div>
                     </div>
 
@@ -71,11 +86,77 @@
                             Tóner:
                             <t t-esc="ultima.estado_toner_label || 'Sin datos'"/>
                         </span>
+
+                        <span t-if="hasAlertas" class="sat_big_badge sat_estado_con_alertas">
+                            <i class="fa fa-warning"/>
+                            <t t-esc="alertasCount"/>
+                            alerta(s)
+                        </span>
                     </div>
 
                 </div>
 
-                <!-- CONTADORES -->
+                <!-- ======================================================
+                     RESUMEN SUPERIOR
+                     ====================================================== -->
+                <div class="sat_summary_strip">
+
+                    <div class="sat_summary_item">
+                        <div class="sat_summary_icon sat_summary_blue">
+                            <i class="fa fa-database"/>
+                        </div>
+                        <div>
+                            <span>Lecturas</span>
+                            <strong>
+                                <t t-esc="totalPruebas"/>
+                            </strong>
+                        </div>
+                    </div>
+
+                    <div class="sat_summary_item">
+                        <div class="sat_summary_icon sat_summary_green">
+                            <i class="fa fa-check-circle"/>
+                        </div>
+                        <div>
+                            <span>Validaciones</span>
+                            <strong>
+                                <t t-esc="checksOkCount"/>
+                                /
+                                <t t-esc="checksTotalCount"/>
+                            </strong>
+                        </div>
+                    </div>
+
+                    <div class="sat_summary_item">
+                        <div class="sat_summary_icon sat_summary_toner">
+                            <i class="fa fa-tint"/>
+                        </div>
+                        <div>
+                            <span>Tóner mínimo</span>
+                            <strong>
+                                <t t-esc="tonerMinimo"/>
+                                %
+                            </strong>
+                        </div>
+                    </div>
+
+                    <div class="sat_summary_item">
+                        <div class="sat_summary_icon sat_summary_units">
+                            <i class="fa fa-cogs"/>
+                        </div>
+                        <div>
+                            <span>Componentes</span>
+                            <strong>
+                                <t t-esc="componentesSnmp.length"/>
+                            </strong>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- ======================================================
+                     CONTADORES
+                     ====================================================== -->
                 <div class="sat_section_header">
                     <div>
                         <h3>Contadores principales</h3>
@@ -89,7 +170,7 @@
 
                 <div class="sat_kpi_grid">
                     <t t-foreach="counters" t-as="counter" t-key="counter.key">
-                        <div t-att-class="counter.main ? 'sat_kpi_card sat_kpi_main' : 'sat_kpi_card'">
+                        <div t-att-class="counter.main ? 'sat_kpi_card sat_kpi_main sat_kpi_' + counter.accent : 'sat_kpi_card sat_kpi_' + counter.accent">
                             <div class="sat_kpi_icon">
                                 <i t-att-class="'fa ' + counter.icon"/>
                             </div>
@@ -111,19 +192,16 @@
                     </t>
                 </div>
 
-                <!-- TONER -->
+                <!-- ======================================================
+                     TÓNER
+                     ====================================================== -->
                 <div class="sat_panel sat_panel_toner">
 
                     <div class="sat_panel_header">
                         <div>
                             <h3>Niveles de tóner</h3>
                             <p>
-                                <t t-if="isColorMachine">
-                                    Mostrando K, C, M y Y porque la máquina es color.
-                                </t>
-                                <t t-if="isBwMachine">
-                                    Mostrando solo tóner negro porque la máquina es B/N.
-                                </t>
+                                <t t-esc="tonerResumenTexto"/>
                             </p>
                         </div>
 
@@ -196,7 +274,229 @@
 
                 </div>
 
-                <!-- VALIDACIONES -->
+                <!-- ======================================================
+                     COMPONENTES Y UNIDADES
+                     ====================================================== -->
+                <div class="sat_panel sat_panel_components" t-if="hasComponentesSnmp">
+
+                    <div class="sat_panel_header">
+                        <div>
+                            <h3>Unidades, consumibles y sistema</h3>
+                            <p>Developer, drum, fusora, residual, transferencia, accesorios y datos técnicos enviados por SNMP.</p>
+                        </div>
+
+                        <span class="sat_section_pill">
+                            <t t-esc="componentesSnmp.length"/>
+                            elemento(s)
+                        </span>
+                    </div>
+
+                    <div class="sat_component_summary_grid" t-if="hasComponentesResumen">
+                        <t t-foreach="componentesResumen" t-as="summary" t-key="summary.key">
+                            <div t-att-class="'sat_component_summary ' + summary.className">
+                                <i t-att-class="'fa ' + summary.icon"/>
+                                <span>
+                                    <t t-esc="summary.label"/>
+                                </span>
+                                <strong>
+                                    <t t-esc="summary.value"/>
+                                </strong>
+                            </div>
+                        </t>
+                    </div>
+
+                    <!-- UNIDADES -->
+                    <div class="sat_component_group" t-if="hasUnidadesSnmp">
+                        <div class="sat_component_group_header">
+                            <div>
+                                <h4>
+                                    <i class="fa fa-cogs"/>
+                                    Unidades
+                                </h4>
+                                <p>Drum, developer, fusora, transferencia e imagen.</p>
+                            </div>
+                            <span>
+                                <t t-esc="unidadesSnmp.length"/>
+                            </span>
+                        </div>
+
+                        <div class="sat_component_grid">
+                            <t t-foreach="unidadesSnmp" t-as="item" t-key="item.id">
+                                <div t-att-class="componentCardClass(item)">
+                                    <div class="sat_component_icon">
+                                        <i t-att-class="'fa ' + getComponentIcon(item)"/>
+                                    </div>
+
+                                    <div class="sat_component_body">
+                                        <div class="sat_component_top">
+                                            <span class="sat_component_type">
+                                                <t t-esc="getComponentTypeLabel(item)"/>
+                                            </span>
+
+                                            <span t-att-class="'sat_component_status sat_status_' + (item.estado || 'info')">
+                                                <t t-esc="getComponentEstadoLabel(item)"/>
+                                            </span>
+                                        </div>
+
+                                        <strong class="sat_component_name">
+                                            <t t-esc="item.nombre"/>
+                                        </strong>
+
+                                        <div class="sat_component_value">
+                                            <span>
+                                                <t t-esc="formatDecimal(getComponentValue(item), 0)"/>
+                                            </span>
+                                            <small>
+                                                <t t-esc="componentUnit(item)"/>
+                                            </small>
+                                        </div>
+
+                                        <div class="sat_component_bar" t-if="hasComponentPercent(item)">
+                                            <div t-att-style="getComponentBarStyle(item)"/>
+                                        </div>
+
+                                        <div class="sat_component_source" t-if="componentSource(item)">
+                                            <i class="fa fa-code"/>
+                                            <t t-esc="componentSource(item)"/>
+                                        </div>
+                                    </div>
+                                </div>
+                            </t>
+                        </div>
+                    </div>
+
+                    <!-- CONSUMIBLES -->
+                    <div class="sat_component_group" t-if="hasConsumiblesSnmp">
+                        <div class="sat_component_group_header">
+                            <div>
+                                <h4>
+                                    <i class="fa fa-flask"/>
+                                    Consumibles
+                                </h4>
+                                <p>Tóner residual, suministros y consumibles adicionales.</p>
+                            </div>
+                            <span>
+                                <t t-esc="consumiblesSnmp.length"/>
+                            </span>
+                        </div>
+
+                        <div class="sat_component_grid">
+                            <t t-foreach="consumiblesSnmp" t-as="item" t-key="item.id">
+                                <div t-att-class="componentCardClass(item)">
+                                    <div class="sat_component_icon">
+                                        <i t-att-class="'fa ' + getComponentIcon(item)"/>
+                                    </div>
+
+                                    <div class="sat_component_body">
+                                        <div class="sat_component_top">
+                                            <span class="sat_component_type">
+                                                <t t-esc="getComponentTypeLabel(item)"/>
+                                            </span>
+
+                                            <span t-att-class="'sat_component_status sat_status_' + (item.estado || 'info')">
+                                                <t t-esc="getComponentEstadoLabel(item)"/>
+                                            </span>
+                                        </div>
+
+                                        <strong class="sat_component_name">
+                                            <t t-esc="item.nombre"/>
+                                        </strong>
+
+                                        <div class="sat_component_value">
+                                            <span>
+                                                <t t-esc="formatDecimal(getComponentValue(item), 0)"/>
+                                            </span>
+                                            <small>
+                                                <t t-esc="componentUnit(item)"/>
+                                            </small>
+                                        </div>
+
+                                        <div class="sat_component_bar" t-if="hasComponentPercent(item)">
+                                            <div t-att-style="getComponentBarStyle(item)"/>
+                                        </div>
+
+                                        <div class="sat_component_source" t-if="componentSource(item)">
+                                            <i class="fa fa-code"/>
+                                            <t t-esc="componentSource(item)"/>
+                                        </div>
+                                    </div>
+                                </div>
+                            </t>
+                        </div>
+                    </div>
+
+                    <!-- ACCESORIOS Y SISTEMA -->
+                    <div class="sat_component_two_cols" t-if="hasAccesoriosSnmp || hasSistemaSnmp">
+
+                        <div class="sat_component_group sat_component_group_compact" t-if="hasAccesoriosSnmp">
+                            <div class="sat_component_group_header">
+                                <div>
+                                    <h4>
+                                        <i class="fa fa-puzzle-piece"/>
+                                        Accesorios
+                                    </h4>
+                                    <p>ADF, finalizador, lector y accesorios detectados.</p>
+                                </div>
+                                <span>
+                                    <t t-esc="accesoriosSnmp.length"/>
+                                </span>
+                            </div>
+
+                            <div class="sat_component_list">
+                                <t t-foreach="accesoriosSnmp" t-as="item" t-key="item.id">
+                                    <div t-att-class="'sat_component_line ' + (item.css_class || '')">
+                                        <i t-att-class="'fa ' + getComponentIcon(item)"/>
+                                        <div>
+                                            <strong>
+                                                <t t-esc="item.nombre"/>
+                                            </strong>
+                                            <span>
+                                                <t t-esc="componentSource(item) || getComponentTypeLabel(item)"/>
+                                            </span>
+                                        </div>
+                                    </div>
+                                </t>
+                            </div>
+                        </div>
+
+                        <div class="sat_component_group sat_component_group_compact" t-if="hasSistemaSnmp">
+                            <div class="sat_component_group_header">
+                                <div>
+                                    <h4>
+                                        <i class="fa fa-hdd-o"/>
+                                        Sistema
+                                    </h4>
+                                    <p>HDD, firmware, memoria y datos internos.</p>
+                                </div>
+                                <span>
+                                    <t t-esc="sistemaSnmp.length"/>
+                                </span>
+                            </div>
+
+                            <div class="sat_component_list">
+                                <t t-foreach="sistemaSnmp" t-as="item" t-key="item.id">
+                                    <div t-att-class="'sat_component_line ' + (item.css_class || '')">
+                                        <i t-att-class="'fa ' + getComponentIcon(item)"/>
+                                        <div>
+                                            <strong>
+                                                <t t-esc="item.nombre"/>
+                                            </strong>
+                                            <span>
+                                                <t t-esc="componentSource(item) || getComponentTypeLabel(item)"/>
+                                            </span>
+                                        </div>
+                                    </div>
+                                </t>
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- ======================================================
+                     VALIDACIONES
+                     ====================================================== -->
                 <div class="sat_panel">
 
                     <div class="sat_panel_header">
@@ -233,7 +533,9 @@
 
                 </div>
 
-                <!-- HISTORIAL -->
+                <!-- ======================================================
+                     HISTORIAL
+                     ====================================================== -->
                 <div class="sat_panel">
 
                     <div class="sat_panel_header">
