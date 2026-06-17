@@ -235,82 +235,164 @@ class SatSatPruebasDashboard(models.Model):
     # ==========================================================
 
     def _sat_dashboard_component_tipo_visual(self, nombre, categoria):
+        """
+        Clasifica visualmente cualquier elemento SNMP para el dashboard.
+
+        Detecta:
+        - developer / revelador
+        - drum / tambor / opc / image unit
+        - fuser / fusor / fusora / fixing
+        - transfer / transferencia / belt / faja
+        - waste toner / residual
+        - toner
+        - sistema
+        - accesorios
+        - unidades genéricas
+        - consumibles genéricos
+        """
         texto = str(nombre or '').lower()
         categoria = str(categoria or '').lower()
 
-        if 'developer' in texto or 'revelador' in texto:
+        texto_norm = texto
+        texto_norm = texto_norm.replace('á', 'a')
+        texto_norm = texto_norm.replace('é', 'e')
+        texto_norm = texto_norm.replace('í', 'i')
+        texto_norm = texto_norm.replace('ó', 'o')
+        texto_norm = texto_norm.replace('ú', 'u')
+        texto_norm = texto_norm.replace('ñ', 'n')
+
+        categoria_norm = categoria
+        categoria_norm = categoria_norm.replace('á', 'a')
+        categoria_norm = categoria_norm.replace('é', 'e')
+        categoria_norm = categoria_norm.replace('í', 'i')
+        categoria_norm = categoria_norm.replace('ó', 'o')
+        categoria_norm = categoria_norm.replace('ú', 'u')
+        categoria_norm = categoria_norm.replace('ñ', 'n')
+
+        # Developer / Revelador
+        if (
+            'developer' in texto_norm
+            or 'developing' in texto_norm
+            or 'revelador' in texto_norm
+            or 'unidad revelado' in texto_norm
+            or 'unidad de revelado' in texto_norm
+            or 'dv unit' in texto_norm
+            or 'dv-unit' in texto_norm
+        ):
             return 'developer', 'Developer', 'fa-flask', 'sat_component_developer'
 
+        # Drum / Tambor / OPC / Image Unit
         if (
-            'drum' in texto
-            or 'tambor' in texto
-            or 'opc' in texto
-            or 'image unit' in texto
-            or 'imaging unit' in texto
+            'drum' in texto_norm
+            or 'tambor' in texto_norm
+            or 'opc' in texto_norm
+            or 'image unit' in texto_norm
+            or 'imaging unit' in texto_norm
+            or 'photoconductor' in texto_norm
+            or 'pc unit' in texto_norm
+            or 'pc-unit' in texto_norm
+            or 'unidad imagen' in texto_norm
+            or 'unidad de imagen' in texto_norm
         ):
             return 'drum', 'Drum / Tambor', 'fa-circle-o-notch', 'sat_component_drum'
 
+        # Fusor / Fusora / Fuser / Fixing
         if (
-            'fuser' in texto
-            or 'fusor' in texto
-            or 'fusora' in texto
-            or 'fixing' in texto
-            or 'fixation' in texto
+            'fuser' in texto_norm
+            or 'fusor' in texto_norm
+            or 'fusora' in texto_norm
+            or 'fixing' in texto_norm
+            or 'fixation' in texto_norm
+            or 'heat roller' in texto_norm
+            or 'hot roller' in texto_norm
+            or 'unidad fusora' in texto_norm
+            or 'unidad de fusion' in texto_norm
+            or 'unidad fusion' in texto_norm
         ):
             return 'fuser', 'Fusora', 'fa-fire', 'sat_component_fuser'
 
+        # Transferencia / Transfer Belt / Faja
         if (
-            'transfer' in texto
-            or 'transferencia' in texto
-            or 'belt' in texto
-            or 'faja' in texto
-            or 'transfer belt' in texto
+            'transfer' in texto_norm
+            or 'transferencia' in texto_norm
+            or 'transfer belt' in texto_norm
+            or 'belt' in texto_norm
+            or 'faja' in texto_norm
+            or 'cinta transferencia' in texto_norm
+            or 'unidad transferencia' in texto_norm
+            or 'unidad de transferencia' in texto_norm
         ):
             return 'transfer', 'Transferencia', 'fa-exchange', 'sat_component_transfer'
 
+        # Waste / Residual
         if (
-            'waste' in texto
-            or 'residual' in texto
-            or 'waste toner' in texto
-            or 'toner residual' in texto
-            or 'tóner residual' in texto
+            'waste' in texto_norm
+            or 'residual' in texto_norm
+            or 'waste toner' in texto_norm
+            or 'toner residual' in texto_norm
+            or 'tóner residual' in texto_norm
+            or 'toner waste' in texto_norm
+            or 'waste box' in texto_norm
+            or 'waste container' in texto_norm
+            or 'residu' in texto_norm
         ):
             return 'waste', 'Residual', 'fa-trash', 'sat_component_waste'
 
-        if 'toner' in texto or 'tóner' in texto:
+        # Toner
+        if (
+            'toner' in texto_norm
+            or 'tóner' in texto_norm
+            or 'black toner' in texto_norm
+            or 'cyan toner' in texto_norm
+            or 'magenta toner' in texto_norm
+            or 'yellow toner' in texto_norm
+        ):
             return 'toner', 'Tóner', 'fa-tint', 'sat_component_toner'
 
+        # Sistema
         if (
-            'hdd' in texto
-            or 'hard disk' in texto
-            or 'firmware' in texto
-            or 'flash memory' in texto
-            or 'memory' in texto
-            or 'memoria' in texto
+            'hdd' in texto_norm
+            or 'hard disk' in texto_norm
+            or 'disco' in texto_norm
+            or 'firmware' in texto_norm
+            or 'flash memory' in texto_norm
+            or 'memory' in texto_norm
+            or 'memoria' in texto_norm
+            or 'rom' in texto_norm
+            or 'version' in texto_norm
+            or 'versión' in texto_norm
         ):
             return 'system', 'Sistema', 'fa-hdd-o', 'sat_component_system'
 
+        # Accesorios
         if (
-            'feeder' in texto
-            or 'document feeder' in texto
-            or 'reader' in texto
-            or 'finisher' in texto
-            or 'finalizador' in texto
-            or 'staple' in texto
-            or 'grapa' in texto
+            'feeder' in texto_norm
+            or 'document feeder' in texto_norm
+            or 'adf' in texto_norm
+            or 'reader' in texto_norm
+            or 'finisher' in texto_norm
+            or 'finalizador' in texto_norm
+            or 'staple' in texto_norm
+            or 'grapa' in texto_norm
+            or 'punch' in texto_norm
+            or 'booklet' in texto_norm
+            or 'cassette' in texto_norm
+            or 'tray' in texto_norm
+            or 'bandeja' in texto_norm
         ):
             return 'accessory', 'Accesorio', 'fa-puzzle-piece', 'sat_component_accessory'
 
-        if categoria == 'unidad':
+        # Clasificación por categoría
+        if categoria_norm in ('unidad', 'unit', 'units', 'life', 'maintenance'):
             return 'unit', 'Unidad', 'fa-cube', 'sat_component_unit'
 
-        if categoria == 'consumible':
+        if categoria_norm in ('consumible', 'consumibles', 'supply', 'supplies', 'consumable', 'consumables'):
             return 'supply', 'Consumible', 'fa-cube', 'sat_component_supply'
 
-        if categoria == 'sistema':
+        if categoria_norm in ('sistema', 'system', 'raw_system'):
             return 'system', 'Sistema', 'fa-hdd-o', 'sat_component_system'
 
-        if categoria == 'accesorio':
+        if categoria_norm in ('accesorio', 'accessory', 'accessories'):
             return 'accessory', 'Accesorio', 'fa-puzzle-piece', 'sat_component_accessory'
 
         return 'other', 'Componente', 'fa-cube', 'sat_component_other'
@@ -373,19 +455,80 @@ class SatSatPruebasDashboard(models.Model):
         Devuelve componentes/consumibles para el dashboard moderno.
 
         Lee primero desde snmp_detalle_ids.
-        Si no encuentra nada, lee desde raw_payload_json.
+        Si no encuentra nada o si el detalle viene incompleto,
+        también lee desde raw_payload_json.
 
-        Esto permite mostrar:
-          - developer
-          - drum / tambor / image unit
-          - fusora / fuser / fixing
-          - transfer belt / faja transferencia
-          - waste toner / tóner residual
-          - accesorios
-          - sistema
+        Permite mostrar:
+        - developer
+        - drum / tambor / image unit
+        - fusora / fuser / fixing
+        - transfer belt / faja transferencia
+        - waste toner / tóner residual
+        - accesorios
+        - sistema
+
+        Importante:
+        No filtra de forma cerrada por categoria, porque algunos SNMP
+        guardan developer/drum/fuser como raw, life, maintenance,
+        supply, unit, drum, developer, fuser, etc.
         """
         resultado = []
         vistos = set()
+
+        def _categoria_dashboard(categoria_original, nombre, source_name=''):
+            """
+            Convierte cualquier categoría/nombre SNMP a las categorías
+            que entiende el dashboard:
+            - unidad
+            - consumible
+            - accesorio
+            - sistema
+            - otro
+            """
+            texto = "%s %s %s" % (
+                nombre or '',
+                source_name or '',
+                categoria_original or '',
+            )
+
+            tipo_visual, tipo_label, icono, css_class = self._sat_dashboard_component_tipo_visual(
+                nombre=texto,
+                categoria=categoria_original,
+            )
+
+            if tipo_visual in ('developer', 'drum', 'fuser', 'transfer', 'unit'):
+                return 'unidad'
+
+            if tipo_visual in ('waste', 'toner', 'supply'):
+                return 'consumible'
+
+            if tipo_visual == 'accessory':
+                return 'accesorio'
+
+            if tipo_visual == 'system':
+                return 'sistema'
+
+            cat = str(categoria_original or '').lower().strip()
+            cat = cat.replace('á', 'a')
+            cat = cat.replace('é', 'e')
+            cat = cat.replace('í', 'i')
+            cat = cat.replace('ó', 'o')
+            cat = cat.replace('ú', 'u')
+            cat = cat.replace('ñ', 'n')
+
+            if cat in ('unidad', 'unit', 'units', 'life', 'maintenance', 'drum', 'developer', 'fuser', 'transfer'):
+                return 'unidad'
+
+            if cat in ('consumible', 'consumibles', 'supply', 'supplies', 'consumable', 'consumables', 'toner', 'waste'):
+                return 'consumible'
+
+            if cat in ('accesorio', 'accessory', 'accessories', 'tray', 'trays', 'paper_tray'):
+                return 'accesorio'
+
+            if cat in ('sistema', 'system', 'raw_system', 'firmware', 'memory'):
+                return 'sistema'
+
+            return 'otro'
 
         def _add_item(
             item_id,
@@ -407,15 +550,27 @@ class SatSatPruebasDashboard(models.Model):
             oid = str(oid or '').strip()
             source_name = str(source_name or '').strip()
 
-            tipo_visual, tipo_label, icono, css_class = self._sat_dashboard_component_tipo_visual(
+            categoria_dashboard = _categoria_dashboard(
+                categoria_original=categoria,
                 nombre=nombre,
-                categoria=categoria,
+                source_name=source_name,
+            )
+
+            texto_clasificacion = "%s %s %s" % (
+                nombre,
+                source_name,
+                categoria,
+            )
+
+            tipo_visual, tipo_label, icono, css_class = self._sat_dashboard_component_tipo_visual(
+                nombre=texto_clasificacion,
+                categoria=categoria_dashboard,
             )
 
             estado = self._sat_dashboard_component_estado(valor, unidad)
 
             key = '%s|%s|%s|%s' % (
-                categoria,
+                categoria_dashboard,
                 self._sat_dashboard_norm(nombre),
                 self._sat_dashboard_norm(source_name),
                 oid,
@@ -428,7 +583,8 @@ class SatSatPruebasDashboard(models.Model):
 
             resultado.append({
                 'id': item_id,
-                'categoria': categoria,
+                'categoria': categoria_dashboard,
+                'categoria_original': categoria,
                 'tipo_visual': tipo_visual,
                 'tipo_label': tipo_label,
                 'icono': icono,
@@ -442,34 +598,86 @@ class SatSatPruebasDashboard(models.Model):
                 'estado': estado,
             })
 
+        def _valor_from_dict(data):
+            """
+            Lee valores con nombres comunes usados por distintos payloads SNMP.
+            """
+            if not isinstance(data, dict):
+                return data
+
+            for key in (
+                'level',
+                'percent',
+                'percentage',
+                'remaining',
+                'remaining_percent',
+                'life',
+                'life_percent',
+                'value',
+                'valor',
+                'current',
+                'current_value',
+                'valor_actual_numero',
+                'valor_numero',
+                'count',
+                'counter',
+            ):
+                value = data.get(key)
+                if value not in (None, False, ''):
+                    return value
+
+            return 0
+
+        def _nombre_from_dict(key, data):
+            """
+            Lee nombre/descripción con nombres comunes usados por distintos payloads SNMP.
+            """
+            if not isinstance(data, dict):
+                return key
+
+            return (
+                data.get('name')
+                or data.get('description')
+                or data.get('descripcion')
+                or data.get('nombre')
+                or data.get('label')
+                or data.get('source_name')
+                or data.get('key')
+                or key
+            )
+
         # ======================================================
         # 1) Leer desde líneas SNMP guardadas
         # ======================================================
         try:
             if 'snmp_detalle_ids' in prueba._fields:
-                detalles = prueba.snmp_detalle_ids.filtered(
-                    lambda d: (d.categoria or '') in (
-                        'consumible',
-                        'unidad',
-                        'accesorio',
-                        'sistema',
-                        'toner',
-                    )
-                )
+                detalles = prueba.snmp_detalle_ids
 
                 for det in detalles:
-                    categoria = self._sat_dashboard_detalle_text(det, 'categoria') or 'otro'
+                    categoria = self._sat_dashboard_detalle_text(
+                        det,
+                        'categoria',
+                        'category',
+                        'tipo',
+                        'type',
+                    ) or 'otro'
 
                     nombre = self._sat_dashboard_detalle_text(
                         det,
                         'nombre',
+                        'name',
+                        'descripcion',
+                        'description',
                         'source_name',
+                        'label',
                     ) or 'Elemento SNMP'
 
                     source_name = self._sat_dashboard_detalle_text(
                         det,
                         'source_name',
                         'origen',
+                        'key',
+                        'source',
                     )
 
                     oid = self._sat_dashboard_detalle_text(
@@ -478,12 +686,14 @@ class SatSatPruebasDashboard(models.Model):
                         'oid_valor',
                         'oid_value',
                         'oid_counter',
+                        'snmp_oid',
                     )
 
                     unidad = self._sat_dashboard_detalle_text(
                         det,
                         'unidad',
                         'unit',
+                        'units',
                     ) or '%'
 
                     valor = self._sat_dashboard_detalle_value(det)
@@ -516,60 +726,120 @@ class SatSatPruebasDashboard(models.Model):
 
             if isinstance(raw_payload, dict):
                 bloques = [
+                    # Consumibles
                     ('consumible', 'supplies'),
                     ('consumible', 'raw_supplies'),
+                    ('consumible', 'consumables'),
+                    ('consumible', 'raw_consumables'),
+                    ('consumible', 'supply'),
+                    ('consumible', 'toner'),
+                    ('consumible', 'waste'),
+                    ('consumible', 'waste_toner'),
+                    ('consumible', 'wasteToner'),
+
+                    # Unidades
                     ('unidad', 'units'),
                     ('unidad', 'raw_units'),
+                    ('unidad', 'unit'),
+                    ('unidad', 'life'),
+                    ('unidad', 'lifetime'),
+                    ('unidad', 'maintenance'),
+                    ('unidad', 'maintenance_parts'),
+                    ('unidad', 'parts'),
+                    ('unidad', 'drum'),
+                    ('unidad', 'drums'),
+                    ('unidad', 'developer'),
+                    ('unidad', 'developers'),
+                    ('unidad', 'fuser'),
+                    ('unidad', 'fusers'),
+                    ('unidad', 'fixing'),
+                    ('unidad', 'transfer'),
+                    ('unidad', 'transfer_belt'),
+                    ('unidad', 'image_unit'),
+                    ('unidad', 'imaging_unit'),
+
+                    # Accesorios
                     ('accesorio', 'accessories'),
                     ('accesorio', 'raw_accessories'),
+                    ('accesorio', 'accessory'),
+                    ('accesorio', 'trays'),
+                    ('accesorio', 'paper_trays'),
+                    ('accesorio', 'paper_sources'),
+
+                    # Sistema
                     ('sistema', 'system'),
                     ('sistema', 'raw_system'),
+                    ('sistema', 'firmware'),
+                    ('sistema', 'memory'),
+                    ('sistema', 'storage'),
+
+                    # Bloques amplios por si el controlador guarda todo mezclado
+                    ('otro', 'raw'),
+                    ('otro', 'details'),
+                    ('otro', 'detalle'),
+                    ('otro', 'snmp_details'),
+                    ('otro', 'snmp_detalles'),
                 ]
 
                 for categoria, key_bloque in bloques:
-                    bloque = raw_payload.get(key_bloque) or {}
+                    bloque = raw_payload.get(key_bloque)
 
-                    if not isinstance(bloque, dict):
+                    if bloque in (None, False, ''):
                         continue
 
-                    for key, data in bloque.items():
-                        if isinstance(data, dict):
-                            nombre = (
-                                data.get('name')
-                                or data.get('description')
-                                or data.get('nombre')
-                                or data.get('source_name')
-                                or key
+                    # Caso dict: {'drum_black': {'level': 80}, ...}
+                    if isinstance(bloque, dict):
+                        for key, data in bloque.items():
+                            if isinstance(data, dict):
+                                nombre = _nombre_from_dict(key, data)
+                                valor = _valor_from_dict(data)
+                                unidad = data.get('unit') or data.get('unidad') or data.get('units') or '%'
+                                oid = data.get('oid') or data.get('oid_value') or data.get('snmp_oid') or ''
+                                source_name = data.get('source_name') or data.get('source') or key_bloque
+                            else:
+                                nombre = key
+                                valor = data
+                                unidad = '%'
+                                oid = ''
+                                source_name = key_bloque
+
+                            _add_item(
+                                item_id='%s_%s' % (key_bloque, self._sat_dashboard_norm(key)),
+                                categoria=categoria,
+                                nombre=nombre,
+                                valor=valor,
+                                unidad=unidad,
+                                oid=oid,
+                                source_name=source_name,
                             )
 
-                            valor = (
-                                data.get('level')
-                                or data.get('value')
-                                or data.get('valor')
-                                or data.get('current')
-                                or data.get('valor_actual_numero')
-                                or 0
+                    # Caso list: [{'name': 'Drum Black', 'level': 80}, ...]
+                    elif isinstance(bloque, list):
+                        for index, data in enumerate(bloque):
+                            key = '%s_%s' % (key_bloque, index)
+
+                            if isinstance(data, dict):
+                                nombre = _nombre_from_dict(key, data)
+                                valor = _valor_from_dict(data)
+                                unidad = data.get('unit') or data.get('unidad') or data.get('units') or '%'
+                                oid = data.get('oid') or data.get('oid_value') or data.get('snmp_oid') or ''
+                                source_name = data.get('source_name') or data.get('source') or key_bloque
+                            else:
+                                nombre = key
+                                valor = data
+                                unidad = '%'
+                                oid = ''
+                                source_name = key_bloque
+
+                            _add_item(
+                                item_id='%s_%s' % (key_bloque, index),
+                                categoria=categoria,
+                                nombre=nombre,
+                                valor=valor,
+                                unidad=unidad,
+                                oid=oid,
+                                source_name=source_name,
                             )
-
-                            unidad = data.get('unit') or data.get('unidad') or '%'
-                            oid = data.get('oid') or data.get('oid_value') or ''
-                            source_name = data.get('source_name') or key_bloque
-                        else:
-                            nombre = key
-                            valor = data
-                            unidad = '%'
-                            oid = ''
-                            source_name = key_bloque
-
-                        _add_item(
-                            item_id='%s_%s' % (key_bloque, self._sat_dashboard_norm(key)),
-                            categoria=categoria,
-                            nombre=nombre,
-                            valor=valor,
-                            unidad=unidad,
-                            oid=oid,
-                            source_name=source_name,
-                        )
 
         except Exception as e:
             _logger.warning(

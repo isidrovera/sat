@@ -1488,26 +1488,18 @@ class SatSat(models.Model):
         """
         Actualiza la prueba técnica desde SNMP.
 
-        Nuevo flujo:
-        - Antes actualizaba solo campos sueltos.
-        - Ahora llama a sat.prueba.maquina.aplicar_snmp_payload()
-            para registrar:
-            * contadores principales
-            * contadores B/N y color separados
-            * copias / impresiones / scanner / dúplex
-            * tóner
-            * consumibles
-            * unidades
-            * accesorios
-            * bandejas
-            * alertas
-            * historial SNMP
-            * detalle completo por OID
-            * payload completo
-
-        Mantiene compatibilidad:
-        - Si el controlador todavía no manda snmp_payload,
-            arma uno básico con snmp_counters y snmp_toner.
+        Flujo:
+        - Solo corre cuando ultima_fuente_actualizacion = 'snmp'.
+        - Busca la última prueba técnica de la máquina.
+        - Toma del context:
+            * snmp_counters
+            * snmp_toner
+            * snmp_payload
+        - Asegura que el payload completo no se pierda.
+        - Si el controlador solo manda counters/toner, arma payload básico.
+        - Si el controlador manda units/supplies/raw_units/raw_supplies,
+        los conserva para que aplicar_snmp_payload() los guarde y luego
+        el dashboard los pueda mostrar.
         """
         self.ensure_one()
 
@@ -1534,12 +1526,18 @@ class SatSat(models.Model):
             snmp_toner = self.env.context.get('snmp_toner') or {}
             snmp_payload = self.env.context.get('snmp_payload') or {}
 
-            # Compatibilidad:
-            # Si todavía el controlador no manda snmp_payload,
-            # construimos uno básico para que el método nuevo pueda trabajar.
+            if not isinstance(snmp_counters, dict):
+                snmp_counters = {}
+
+            if not isinstance(snmp_toner, dict):
+                snmp_toner = {}
+
             if not isinstance(snmp_payload, dict):
                 snmp_payload = {}
 
+            # ======================================================
+            # Si no llega payload completo, construir uno básico.
+            # ======================================================
             if not snmp_payload:
                 snmp_payload = {
                     'ip': False,
@@ -1551,22 +1549,105 @@ class SatSat(models.Model):
                     'toner': snmp_toner,
                 }
 
-            # Asegurar que counters/toner existan dentro del payload.
+            # ======================================================
+            # Asegurar que counters y toner estén dentro del payload.
+            # No usar reemplazo destructivo, solo completar.
+            # ======================================================
             if isinstance(snmp_counters, dict) and snmp_counters:
-                snmp_payload.setdefault('counters', snmp_counters)
+                if not isinstance(snmp_payload.get('counters'), dict):
+                    snmp_payload['counters'] = {}
+                snmp_payload['counters'].update(snmp_counters)
 
             if isinstance(snmp_toner, dict) and snmp_toner:
-                snmp_payload.setdefault('toner', snmp_toner)
+                if not isinstance(snmp_payload.get('toner'), dict):
+                    snmp_payload['toner'] = {}
+                snmp_payload['toner'].update(snmp_toner)
 
-            # Si el payload trae total vacío, usar el contometro actualizado de sat.sat.
+            # ======================================================
+            # Completar datos básicos sin borrar lo que ya vino.
+            # ======================================================
             if not snmp_payload.get('total_counter'):
                 snmp_payload['total_counter'] = self.contometro
 
-            # Si faltan datos básicos, completar desde sat.sat.
             snmp_payload.setdefault('serial', self.serie_id)
             snmp_payload.setdefault('brand', self.marca or '')
             snmp_payload.setdefault('model', self.name.name if self.name else '')
 
+            # ======================================================
+            # Normalización suave de bloques comunes.
+            # Esto NO inventa datos, solo replica nombres para que
+            # aplicar_snmp_payload/dashboard tengan más probabilidad de leerlos.
+            # ======================================================
+
+            # supplies / consumables
+            if isinstance(snmp_payload.get('consumables'), dict) and not snmp_payload.get('supplies'):
+                snmp_payload['supplies'] = snmp_payload.get('consumables')
+
+            if isinstance(snmp_payload.get('raw_consumables'), dict) and not snmp_payload.get('raw_supplies'):
+                snmp_payload['raw_supplies'] = snmp_payload.get('raw_consumables')
+
+            # units / maintenance / life
+            if isinstance(snmp_payload.get('maintenance'), dict) and not snmp_payload.get('units'):
+                snmp_payload['units'] = snmp_payload.get('maintenance')
+
+            if isinstance(snmp_payload.get('life'), dict) and not snmp_payload.get('units'):
+                snmp_payload['units'] = snmp_payload.get('life')
+
+            if isinstance(snmp_payload.get('lifetime'), dict) and not snmp_payload.get('units'):
+                snmp_payload['units'] = snmp_payload.get('lifetime')
+
+            # Bloques específicos hacia units si no existe units
+            unidades_compuestas = {}
+
+            for key in [
+                'developer',
+                'developers',
+                'drum',
+                'drums',
+                'fuser',
+                'fusers',
+                'fixing',
+                'transfer',
+                'transfer_belt',
+                'image_unit',
+                'imaging_unit',
+            ]:
+                value = snmp_payload.get(key)
+                if isinstance(value, dict):
+                    for sub_key, sub_value in value.items():
+                        unidades_compuestas['%s_%s' % (key, sub_key)] = sub_value
+                elif value not in (None, False, ''):
+                    unidades_compuestas[key] = value
+
+            if unidades_compuestas:
+                if not isinstance(snmp_payload.get('units'), dict):
+                    snmp_payload['units'] = {}
+                snmp_payload['units'].update(unidades_compuestas)
+
+            # Waste toner hacia supplies
+            consumibles_compuestos = {}
+
+            for key in [
+                'waste',
+                'waste_toner',
+                'wasteToner',
+            ]:
+                value = snmp_payload.get(key)
+                if isinstance(value, dict):
+                    for sub_key, sub_value in value.items():
+                        consumibles_compuestos['%s_%s' % (key, sub_key)] = sub_value
+                elif value not in (None, False, ''):
+                    consumibles_compuestos[key] = value
+
+            if consumibles_compuestos:
+                if not isinstance(snmp_payload.get('supplies'), dict):
+                    snmp_payload['supplies'] = {}
+                snmp_payload['supplies'].update(consumibles_compuestos)
+
+            # ======================================================
+            # Aplicar payload a la prueba.
+            # Este método debe guardar raw_payload_json y snmp_detalle_ids.
+            # ======================================================
             prueba.aplicar_snmp_payload(
                 counters=snmp_counters,
                 toner=snmp_toner,
@@ -1574,12 +1655,13 @@ class SatSat(models.Model):
             )
 
             _logger.info(
-                "[PRUEBA SNMP] Payload aplicado en prueba ID %s | Máquina ID=%s | Serie=%s | counters=%s | toner=%s",
+                "[PRUEBA SNMP] Payload aplicado en prueba ID %s | Máquina ID=%s | Serie=%s | counters=%s | toner=%s | payload_keys=%s",
                 prueba.id,
                 self.id,
                 self.serie_id,
                 list(snmp_counters.keys()) if isinstance(snmp_counters, dict) else [],
                 list(snmp_toner.keys()) if isinstance(snmp_toner, dict) else [],
+                list(snmp_payload.keys()) if isinstance(snmp_payload, dict) else [],
             )
 
         except Exception as e:
