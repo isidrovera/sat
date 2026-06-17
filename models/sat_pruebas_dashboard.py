@@ -3,8 +3,10 @@
 import json
 import logging
 import re
+from datetime import date, datetime
 
 from odoo import api, fields, models
+from odoo.models import NewId
 
 _logger = logging.getLogger(__name__)
 
@@ -21,6 +23,93 @@ class SatSatPruebasDashboard(models.Model):
     # ==========================================================
     # HELPERS GENERALES
     # ==========================================================
+
+    def _sat_dashboard_safe_id(self, value):
+        """
+        Devuelve un ID seguro para JSON.
+
+        En onchange Odoo puede usar IDs temporales tipo NewId.
+        Ese objeto no se puede serializar con json.dumps, por eso
+        cualquier NewId se convierte a False.
+        """
+        if not value:
+            return False
+
+        if isinstance(value, NewId):
+            return False
+
+        try:
+            if value.__class__.__name__ == 'NewId':
+                return False
+        except Exception:
+            pass
+
+        try:
+            return int(value)
+        except Exception:
+            return False
+
+    def _sat_dashboard_json_safe(self, value):
+        """
+        Limpia cualquier estructura antes de convertirla a JSON.
+
+        Protege contra:
+        - NewId en registros nuevos o líneas One2many en memoria.
+        - recordsets de Odoo.
+        - fechas/datetimes.
+        - listas, tuplas, sets y diccionarios anidados.
+        """
+        if isinstance(value, NewId):
+            return False
+
+        try:
+            if value.__class__.__name__ == 'NewId':
+                return False
+        except Exception:
+            pass
+
+        if isinstance(value, dict):
+            return {
+                str(k): self._sat_dashboard_json_safe(v)
+                for k, v in value.items()
+            }
+
+        if isinstance(value, (list, tuple, set)):
+            return [
+                self._sat_dashboard_json_safe(v)
+                for v in value
+            ]
+
+        if isinstance(value, models.BaseModel):
+            if len(value) == 1:
+                return {
+                    'id': self._sat_dashboard_safe_id(value.id),
+                    'name': value.display_name or '',
+                }
+            return [
+                {
+                    'id': self._sat_dashboard_safe_id(rec.id),
+                    'name': rec.display_name or '',
+                }
+                for rec in value
+            ]
+
+        if isinstance(value, (datetime, date)):
+            return value.isoformat()
+
+        if isinstance(value, bytes):
+            return False
+
+        return value
+
+    def _sat_dashboard_json_dumps(self, payload):
+        """
+        Convierte el payload del dashboard a JSON de forma segura.
+        """
+        return json.dumps(
+            self._sat_dashboard_json_safe(payload),
+            ensure_ascii=False,
+        )
 
     def _sat_dashboard_int(self, value):
         try:
@@ -582,7 +671,7 @@ class SatSatPruebasDashboard(models.Model):
             vistos.add(key)
 
             resultado.append({
-                'id': item_id,
+                'id': self._sat_dashboard_safe_id(item_id) if not isinstance(item_id, str) else item_id,
                 'categoria': categoria_dashboard,
                 'categoria_original': categoria,
                 'tipo_visual': tipo_visual,
@@ -699,7 +788,7 @@ class SatSatPruebasDashboard(models.Model):
                     valor = self._sat_dashboard_detalle_value(det)
 
                     _add_item(
-                        item_id=det.id,
+                        item_id=self._sat_dashboard_safe_id(det.id),
                         categoria=categoria,
                         nombre=nombre,
                         valor=valor,
@@ -993,9 +1082,11 @@ class SatSatPruebasDashboard(models.Model):
                     componentes = rec._sat_dashboard_snmp_items(prueba)
                     component_groups = rec._sat_dashboard_component_groups(componentes)
 
+                    prueba_safe_id = rec._sat_dashboard_safe_id(prueba.id)
+
                     item = {
-                        'id': prueba.id,
-                        'name': prueba.display_name or ('Prueba #%s' % prueba.id),
+                        'id': prueba_safe_id,
+                        'name': prueba.display_name or ('Prueba #%s' % (prueba_safe_id or 'Nueva')),
 
                         'fecha_inicio': rec._sat_dashboard_datetime_text(prueba.fecha_inicio),
                         'fecha_ultima_actualizacion': rec._sat_dashboard_datetime_text(
@@ -1090,7 +1181,7 @@ class SatSatPruebasDashboard(models.Model):
                 ultima = items[0] if items else {}
 
                 payload = {
-                    'maquina_id': rec.id,
+                    'maquina_id': rec._sat_dashboard_safe_id(rec.id),
                     'modelo': rec.name.name if rec.name else '',
                     'serie': rec.serie_id or '',
                     'marca': rec.marca or '',
@@ -1105,10 +1196,7 @@ class SatSatPruebasDashboard(models.Model):
                     'items': items,
                 }
 
-                rec.prueba_tecnica_dashboard_json = json.dumps(
-                    payload,
-                    ensure_ascii=False,
-                )
+                rec.prueba_tecnica_dashboard_json = rec._sat_dashboard_json_dumps(payload)
 
             except Exception as e:
                 _logger.error(
@@ -1118,8 +1206,8 @@ class SatSatPruebasDashboard(models.Model):
                     exc_info=True,
                 )
 
-                rec.prueba_tecnica_dashboard_json = json.dumps({
-                    'maquina_id': rec.id,
+                rec.prueba_tecnica_dashboard_json = rec._sat_dashboard_json_dumps({
+                    'maquina_id': rec._sat_dashboard_safe_id(rec.id),
                     'modelo': rec.name.name if rec.name else '',
                     'serie': rec.serie_id or '',
                     'marca': rec.marca or '',
@@ -1132,4 +1220,4 @@ class SatSatPruebasDashboard(models.Model):
                     'ultima': {},
                     'items': [],
                     'error': str(e),
-                }, ensure_ascii=False)
+                })
