@@ -585,8 +585,7 @@ class SatSatPruebasDashboard(models.Model):
         # Detalle SNMP para unidades / consumibles
         'prueba_ids.snmp_detalle_ids',
         'prueba_ids.snmp_detalle_ids.categoria',
-        'prueba_ids.snmp_detalle_ids.nombre',
-        'prueba_ids.snmp_detalle_ids.descripcion',
+        'prueba_ids.snmp_detalle_ids.nombre',        
         'prueba_ids.snmp_detalle_ids.source_name',
         'prueba_ids.snmp_detalle_ids.valor_actual_numero',
         'prueba_ids.snmp_detalle_ids.unidad',
