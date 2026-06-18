@@ -647,8 +647,8 @@ class WhatsAppProcessMixin:
             identifiers,
             message_text,
             intent_result,
-            business_status,
             payload=payload,
+            business_status=business_status,
         )
 
         if outside_hours_note and reply:
