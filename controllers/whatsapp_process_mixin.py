@@ -641,15 +641,27 @@ class WhatsAppProcessMixin:
 
         intent_result = intent_result or {"found": False}
 
-        reply = self._execute_intent_action(
+        # ======================================================
+        # IMPORTANTE:
+        # _execute_intent_action está definido como:
+        #   _execute_intent_action(result, partner, session, identifiers,
+        #                          payload=False, business_status=None)
+        #
+        # Por eso el primer argumento debe ser intent_result.
+        # Además esta función devuelve un dict, no texto directo.
+        # ======================================================
+        action_result = self._execute_intent_action(
+            intent_result,
             partner,
             session,
             identifiers,
-            message_text,
-            intent_result,
             payload=payload,
             business_status=business_status,
         )
+
+        action_result = action_result or {}
+
+        reply = action_result.get("content") or ""
 
         if outside_hours_note and reply:
             reply = "%s\n\n%s" % (outside_hours_note, reply)
@@ -661,6 +673,7 @@ class WhatsAppProcessMixin:
                 "ignored": True,
                 "applies_to": applies_to,
                 "intent": intent_result,
+                "action": action_result,
                 "partner_id": partner.id,
                 "session_id": session.id,
                 "message": False,
@@ -685,9 +698,9 @@ class WhatsAppProcessMixin:
             partner=partner,
             identifiers=identifiers,
             content=reply,
-            intent=intent_result.get("intent") or "unknown",
+            intent=action_result.get("intent") or intent_result.get("intent") or "unknown",
             payload=payload,
-            template=intent_result.get("response_template") or False,
+            template=action_result.get("template") or intent_result.get("response_template") or False,
         )
 
         response = {
@@ -695,6 +708,7 @@ class WhatsAppProcessMixin:
             "found": bool(intent_result.get("found")),
             "applies_to": applies_to,
             "intent": intent_result,
+            "action": action_result,
             "partner_id": partner.id,
             "session_id": session.id,
             "message": reply,
@@ -707,8 +721,8 @@ class WhatsAppProcessMixin:
             "[WA-PROCESS] Respuesta final emitida | partner_id=%s session_id=%s intent=%s action=%s outbox_id=%s",
             partner.id if partner else False,
             session.id if session else False,
-            intent_result.get("intent") or False,
-            intent_result.get("action") or False,
+            action_result.get("intent") or intent_result.get("intent") or False,
+            action_result.get("action") or intent_result.get("action") or False,
             emitted.get("outbox_id"),
         )
 
