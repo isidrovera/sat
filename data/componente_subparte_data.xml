@@ -22,6 +22,11 @@
     <field name="code">UI_DRUM_LUBE_BAR</field>
     <field name="tipo_id" ref="comp_tipo_ui"/>
 </record>
+<record id="sub_ui_sello_miller" model="componente.subparte">
+    <field name="name">Sello Miller</field>
+    <field name="code">UI_SELLO_MILLER</field>
+    <field name="tipo_id" ref="comp_tipo_ui"/>
+</record>
   <record id="sub_ui_pcr_cleaning_sponge" model="componente.subparte">
     <field name="name">Rodillo de esponja de limpieza del PCR</field>
     <field name="code">UI_PCR_CLEAN_SPONGE</field>
