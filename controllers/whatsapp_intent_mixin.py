@@ -278,18 +278,18 @@ class WhatsAppIntentMixin:
 
         try:
             result = IntentRule.detect_intent(
-                text or "",
+                message=text or "",
                 partner=partner if partner else False,
                 applies_to=applies_to,
-                after_hours=after_hours,
+                is_after_hours=after_hours,
                 current_flow=current_flow,
             )
         except TypeError:
             result = IntentRule.detect_intent(
-                text or "",
+                message=text or "",
                 partner=partner if partner else False,
                 applies_to=applies_to,
-                after_hours=after_hours,
+                is_after_hours=after_hours,
             )
 
         result = result or {}
