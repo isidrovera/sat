@@ -1211,5 +1211,118 @@
     <field name="stop_flow">False</field>
     <field name="allow_ai_after">False</field>
 </record>
+
+
+<!-- ========================================================= -->
+<!-- PLANTILLA CONSULTA HORARIO / CALENDARIO                   -->
+<!-- ========================================================= -->
+
+<record id="whatsapp_template_business_hours_query" model="whatsapp.template">
+    <field name="name">business_hours_query</field>
+    <field name="title">Consulta horario de atención</field>
+    <field name="category">business_hours</field>
+    <field name="body">
+        🕒 *Horario de atención*
+
+        Estado actual: *{{business_reason}}*
+
+        Horario de hoy:
+        {{display_hours}}
+
+        {{business_message}}
+
+        Puedes dejarnos tu consulta por este medio y te responderemos según disponibilidad.
+    </field>
+    <field name="active">True</field>
+</record>
+
+<!-- ========================================================= -->
+<!-- INTENCIONES - HORARIO / CALENDARIO                        -->
+<!-- ========================================================= -->
+
+<record id="whatsapp_intent_rule_business_hours_general" model="whatsapp.intent.rule">
+    <field name="name">Horario - Consulta general</field>
+    <field name="active">True</field>
+    <field name="sequence">150</field>
+    <field name="priority">94</field>
+    <field name="intent">business_hours</field>
+    <field name="action">business_hours</field>
+    <field name="target_flow">none</field>
+    <field name="response_template">business_hours_query</field>
+    <field name="match_type">regex</field>
+    <field name="pattern">
+        horario|horarios|hora de atencion|hora de atención|horario de atencion|horario de atención|a que hora atienden|a qué hora atienden|hasta que hora atienden|hasta qué hora atienden|hasta que hora trabajan|hasta qué hora trabajan|a que hora cierran|a qué hora cierran|a que hora abren|a qué hora abren|estan atendiendo|están atendiendo|estan abierto|están abierto|esta abierto|está abierto|siguen atendiendo
+    </field>
+    <field name="applies_to">all</field>
+    <field name="requires_registered">False</field>
+    <field name="requires_company">False</field>
+    <field name="only_during_idle">True</field>
+    <field name="stop_flow">False</field>
+    <field name="allow_ai_after">False</field>
+</record>
+
+<record id="whatsapp_intent_rule_business_hours_today" model="whatsapp.intent.rule">
+    <field name="name">Horario - Hoy trabajan</field>
+    <field name="active">True</field>
+    <field name="sequence">151</field>
+    <field name="priority">95</field>
+    <field name="intent">business_hours</field>
+    <field name="action">business_hours</field>
+    <field name="target_flow">none</field>
+    <field name="response_template">business_hours_query</field>
+    <field name="match_type">regex</field>
+    <field name="pattern">
+        hoy trabajan|trabajan hoy|hoy atienden|atienden hoy|hoy estan atendiendo|hoy están atendiendo|hoy abren|abren hoy|hoy hay atencion|hoy hay atención|hay atencion hoy|hay atención hoy|hoy laboran|laboran hoy
+    </field>
+    <field name="applies_to">all</field>
+    <field name="requires_registered">False</field>
+    <field name="requires_company">False</field>
+    <field name="only_during_idle">True</field>
+    <field name="stop_flow">False</field>
+    <field name="allow_ai_after">False</field>
+</record>
+
+<record id="whatsapp_intent_rule_business_hours_break" model="whatsapp.intent.rule">
+    <field name="name">Horario - Refrigerio</field>
+    <field name="active">True</field>
+    <field name="sequence">152</field>
+    <field name="priority">94</field>
+    <field name="intent">business_hours</field>
+    <field name="action">business_hours</field>
+    <field name="target_flow">none</field>
+    <field name="response_template">business_hours_query</field>
+    <field name="match_type">regex</field>
+    <field name="pattern">
+        refrigerio|almuerzo|hora de almuerzo|estan en refrigerio|están en refrigerio|estan almorzando|están almorzando|a que hora vuelven|a qué hora vuelven|cuando vuelven|cuándo vuelven|cuando regresan|cuándo regresan
+    </field>
+    <field name="applies_to">all</field>
+    <field name="requires_registered">False</field>
+    <field name="requires_company">False</field>
+    <field name="only_during_idle">True</field>
+    <field name="stop_flow">False</field>
+    <field name="allow_ai_after">False</field>
+</record>
+
+<record id="whatsapp_intent_rule_business_hours_weekend_holiday" model="whatsapp.intent.rule">
+    <field name="name">Horario - Sábado / domingo / feriado</field>
+    <field name="active">True</field>
+    <field name="sequence">153</field>
+    <field name="priority">94</field>
+    <field name="intent">business_hours</field>
+    <field name="action">business_hours</field>
+    <field name="target_flow">none</field>
+    <field name="response_template">business_hours_query</field>
+    <field name="match_type">regex</field>
+    <field name="pattern">
+        atienden sabado|atienden sábado|trabajan sabado|trabajan sábado|abren sabado|abren sábado|atienden domingo|trabajan domingo|abren domingo|atienden feriado|trabajan feriado|abren feriado|hoy es feriado|feriado atienden|feriados atienden|fin de semana atienden
+    </field>
+    <field name="applies_to">all</field>
+    <field name="requires_registered">False</field>
+    <field name="requires_company">False</field>
+    <field name="only_during_idle">True</field>
+    <field name="stop_flow">False</field>
+    <field name="allow_ai_after">False</field>
+</record>
+
     </data>
 </odoo>

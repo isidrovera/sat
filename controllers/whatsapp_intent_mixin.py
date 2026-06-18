@@ -10,486 +10,851 @@ _logger = logging.getLogger(__name__)
 
 class WhatsAppIntentMixin:
     # ==========================================================
-    # Intención y acciones
+    # Detectar intención
     # ==========================================================
-    def _detect_intent(self, message_text, partner=False, business_status=False, session=False, payload=False):
-        """
-        Detecta intención del mensaje.
-
-        Orden de prioridad:
-        1) Si n8n/Gemini envía ai_intent con confianza alta, usar esa intención.
-        2) Si no hay ai_intent válido, usar whatsapp.intent.rule.
-        3) Si ocurre error, devolver found=False.
-        """
+    def _detect_intent(
+        self,
+        text,
+        partner=False,
+        business_status=None,
+        session=False,
+        payload=False,
+    ):
         payload = payload or {}
         business_status = business_status or {}
 
         applies_to = self._get_applies_to(
-            partner,
+            partner=partner,
             business_status=business_status,
-        ) if partner else "new"
+            session=session,
+        )
 
-        text_debug = (message_text or "").strip()
+        current_flow = "none"
+        if session and session.current_flow:
+            current_flow = session.current_flow or "none"
+
+        after_hours = not bool(business_status.get("is_open"))
 
         _logger.info(
             "[WA-INTENT] INICIO detectar intención | partner_id=%s session_id=%s applies_to=%s flow=%s text=%s",
             partner.id if partner else False,
             session.id if session else False,
             applies_to,
-            session.current_flow if session else False,
-            text_debug[:300],
+            current_flow,
+            text,
         )
 
-        ai_provider = (payload.get("ai_provider") or "").strip()
-        ai_intent_raw = (payload.get("ai_intent") or "").strip()
-        ai_sub_intent = (payload.get("ai_sub_intent") or "").strip()
-        ai_summary = (payload.get("ai_summary") or "").strip()
-        ai_reason = (payload.get("ai_reason") or "").strip()
+        # ======================================================
+        # 1) Intento recibido desde IA / n8n
+        # ======================================================
+        ai_provider = payload.get("ai_provider") or False
+        ai_intent = payload.get("ai_intent") or False
+        ai_sub_intent = payload.get("ai_sub_intent") or False
+        ai_reason = payload.get("ai_reason") or False
+        ai_summary = payload.get("ai_summary") or False
         ai_needs_human = bool(payload.get("ai_needs_human"))
 
         try:
-            ai_confidence = float(payload.get("ai_confidence") or 0.0)
+            ai_confidence = float(payload.get("ai_confidence") or 0)
         except Exception:
             ai_confidence = 0.0
 
+        try:
+            threshold = float(
+                request.env["ir.config_parameter"].sudo().get_param(
+                    "sat.whatsapp_ai_intent_threshold",
+                    default="0.75",
+                )
+            )
+        except Exception:
+            threshold = 0.75
+
         _logger.info(
             "[WA-INTENT-AI] Datos recibidos | provider=%s intent=%s sub_intent=%s confidence=%s needs_human=%s reason=%s summary=%s",
-            ai_provider or False,
-            ai_intent_raw or False,
-            ai_sub_intent or False,
+            ai_provider,
+            ai_intent,
+            ai_sub_intent,
             ai_confidence,
             ai_needs_human,
-            ai_reason or False,
-            ai_summary[:300] if ai_summary else False,
+            ai_reason,
+            ai_summary,
         )
 
-        ai_intent_map = {
-            "toner": {
-                "intent": "toner",
-                "action": "start_flow_toner",
-                "target_flow": "toner",
-                "response_template": False,
-            },
-
-            "onsite_service": {
-                "intent": "onsite_service",
-                "action": "start_flow_onsite",
-                "target_flow": "onsite",
-                "response_template": False,
-            },
-            "service": {
-                "intent": "onsite_service",
-                "action": "start_flow_onsite",
-                "target_flow": "onsite",
-                "response_template": False,
-            },
-            "printer_issue": {
-                "intent": "printer_issue",
-                "action": "start_flow_onsite",
-                "target_flow": "onsite",
-                "response_template": False,
-            },
-
-            "remote_support": {
-                "intent": "remote_service",
-                "action": "start_flow_remote",
-                "target_flow": "remote",
-                "response_template": False,
-            },
-            "remote_service": {
-                "intent": "remote_service",
-                "action": "start_flow_remote",
-                "target_flow": "remote",
-                "response_template": False,
-            },
-            "anydesk": {
-                "intent": "remote_service",
-                "action": "start_flow_remote",
-                "target_flow": "remote",
-                "response_template": False,
-            },
-            "scanner": {
-                "intent": "remote_service",
-                "action": "start_flow_remote",
-                "target_flow": "remote",
-                "response_template": False,
-            },
-
-            "greeting": {
-                "intent": "greeting",
-                "action": "reply",
-                "target_flow": "none",
-                "response_template": "main_menu_technical",
-            },
-            "thanks": {
-                "intent": "thanks",
-                "action": "reply",
-                "target_flow": "none",
-                "response_template": "thanks_reply",
-            },
-            "goodbye": {
-                "intent": "goodbye",
-                "action": "reply",
-                "target_flow": "none",
-                "response_template": "goodbye_reply",
-            },
-            "sales": {
-                "intent": "sales",
-                "action": "reply",
-                "target_flow": "none",
-                "response_template": "sales_contact",
-            },
-            "billing": {
-                "intent": "billing",
-                "action": "reply",
-                "target_flow": "none",
-                "response_template": "billing_contact",
-            },
-
-            "human": {
+        if ai_needs_human:
+            return {
+                "found": True,
                 "intent": "human",
                 "action": "handoff",
                 "target_flow": "none",
                 "response_template": "human_take",
-            },
-        }
+                "source": "ai",
+                "confidence": ai_confidence,
+                "ai_provider": ai_provider,
+                "ai_reason": ai_reason,
+                "ai_summary": ai_summary,
+            }, applies_to
 
-        try:
-            threshold_param = request.env["ir.config_parameter"].sudo().get_param(
-                "sat.whatsapp_ai_intent_threshold",
-                "0.75",
-            )
-            ai_threshold = float(threshold_param or 0.75)
-        except Exception:
-            ai_threshold = 0.75
+        if ai_intent and ai_confidence >= threshold:
+            normalized_ai_intent = str(ai_intent or "").strip().lower()
 
-        if ai_intent_raw and ai_confidence >= ai_threshold:
-            ai_key = ai_intent_raw.strip().lower()
+            ai_map = {
+                "toner": {
+                    "intent": "toner",
+                    "action": "start_flow_toner",
+                    "target_flow": "toner",
+                },
+                "supplies": {
+                    "intent": "toner",
+                    "action": "start_flow_toner",
+                    "target_flow": "toner",
+                },
+                "suministros": {
+                    "intent": "toner",
+                    "action": "start_flow_toner",
+                    "target_flow": "toner",
+                },
+                "onsite_service": {
+                    "intent": "onsite_service",
+                    "action": "start_flow_onsite",
+                    "target_flow": "onsite",
+                },
+                "service": {
+                    "intent": "onsite_service",
+                    "action": "start_flow_onsite",
+                    "target_flow": "onsite",
+                },
+                "printer_issue": {
+                    "intent": "printer_issue",
+                    "action": "start_flow_onsite",
+                    "target_flow": "onsite",
+                },
+                "technical_service": {
+                    "intent": "onsite_service",
+                    "action": "start_flow_onsite",
+                    "target_flow": "onsite",
+                },
+                "remote_service": {
+                    "intent": "remote_service",
+                    "action": "start_flow_remote",
+                    "target_flow": "remote",
+                },
+                "remote_support": {
+                    "intent": "remote_service",
+                    "action": "start_flow_remote",
+                    "target_flow": "remote",
+                },
+                "anydesk": {
+                    "intent": "remote_service",
+                    "action": "start_flow_remote",
+                    "target_flow": "remote",
+                },
+                "scanner": {
+                    "intent": "remote_service",
+                    "action": "start_flow_remote",
+                    "target_flow": "remote",
+                },
+                "scan": {
+                    "intent": "remote_service",
+                    "action": "start_flow_remote",
+                    "target_flow": "remote",
+                },
+                "business_hours": {
+                    "intent": "business_hours",
+                    "action": "business_hours",
+                    "target_flow": "none",
+                    "response_template": "business_hours_query",
+                },
+                "hours": {
+                    "intent": "business_hours",
+                    "action": "business_hours",
+                    "target_flow": "none",
+                    "response_template": "business_hours_query",
+                },
+                "schedule": {
+                    "intent": "business_hours",
+                    "action": "business_hours",
+                    "target_flow": "none",
+                    "response_template": "business_hours_query",
+                },
+                "calendar": {
+                    "intent": "business_hours",
+                    "action": "business_hours",
+                    "target_flow": "none",
+                    "response_template": "business_hours_query",
+                },
+                "greeting": {
+                    "intent": "greeting",
+                    "action": "reply",
+                    "target_flow": "none",
+                    "response_template": "main_menu_technical",
+                },
+                "thanks": {
+                    "intent": "thanks",
+                    "action": "reply",
+                    "target_flow": "none",
+                    "response_template": "thanks_reply",
+                },
+                "goodbye": {
+                    "intent": "goodbye",
+                    "action": "reply",
+                    "target_flow": "none",
+                    "response_template": "goodbye_reply",
+                },
+                "billing": {
+                    "intent": "billing",
+                    "action": "reply",
+                    "target_flow": "none",
+                    "response_template": "billing_contact",
+                },
+                "sales": {
+                    "intent": "sales",
+                    "action": "reply",
+                    "target_flow": "none",
+                    "response_template": "sales_contact",
+                },
+                "human": {
+                    "intent": "human",
+                    "action": "handoff",
+                    "target_flow": "none",
+                    "response_template": "human_take",
+                },
+            }
 
-            if ai_key in ai_intent_map:
-                mapped = ai_intent_map[ai_key]
+            mapped = ai_map.get(normalized_ai_intent)
 
-                result = {
+            if mapped:
+                result = dict(mapped)
+                result.update({
                     "found": True,
                     "source": "ai_intent",
-                    "provider": ai_provider or "ai",
-                    "intent": mapped.get("intent"),
-                    "action": mapped.get("action"),
-                    "target_flow": mapped.get("target_flow") or "none",
-                    "response_template": mapped.get("response_template") or False,
                     "confidence": ai_confidence,
-                    "ai_intent": ai_intent_raw,
-                    "ai_sub_intent": ai_sub_intent or False,
-                    "ai_summary": ai_summary or False,
-                    "ai_reason": ai_reason or False,
-                    "ai_needs_human": ai_needs_human,
-                    "applies_to": applies_to,
-                    "rule_id": False,
-                    "rule_name": "AI / Gemini / n8n",
-                    "stop_flow": False,
-                    "allow_ai_after": False,
-                }
+                    "ai_provider": ai_provider,
+                    "ai_intent": ai_intent,
+                    "ai_sub_intent": ai_sub_intent,
+                    "ai_reason": ai_reason,
+                    "ai_summary": ai_summary,
+                })
 
-                _logger.warning(
-                    "[WA-INTENT-AI] USANDO intención AI | original_ai=%s mapped_intent=%s action=%s target_flow=%s confidence=%s threshold=%s sub_intent=%s text=%s",
-                    ai_intent_raw,
+                _logger.info(
+                    "[WA-INTENT-AI] Intención aceptada | intent=%s action=%s confidence=%s threshold=%s",
                     result.get("intent"),
                     result.get("action"),
-                    result.get("target_flow"),
                     ai_confidence,
-                    ai_threshold,
-                    ai_sub_intent or False,
-                    text_debug[:300],
+                    threshold,
                 )
 
                 return result, applies_to
 
-            _logger.warning(
-                "[WA-INTENT-AI] AI intent no reconocido, se usará detector Odoo | ai_intent=%s confidence=%s text=%s",
-                ai_intent_raw,
+            _logger.info(
+                "[WA-INTENT-AI] Intent IA no mapeado | intent=%s confidence=%s",
+                ai_intent,
                 ai_confidence,
-                text_debug[:300],
             )
 
-        elif ai_intent_raw:
+        elif ai_intent:
             _logger.info(
-                "[WA-INTENT-AI] AI intent ignorado por baja confianza | ai_intent=%s confidence=%s threshold=%s text=%s",
-                ai_intent_raw,
+                "[WA-INTENT-AI] Intent IA descartado por confianza | intent=%s confidence=%s threshold=%s",
+                ai_intent,
                 ai_confidence,
-                ai_threshold,
-                text_debug[:300],
+                threshold,
             )
         else:
             _logger.info(
                 "[WA-INTENT-AI] No llegó ai_intent desde n8n | text=%s",
-                text_debug[:300],
+                text,
             )
+
+        # ======================================================
+        # 2) Detector de reglas Odoo
+        # ======================================================
+        _logger.info(
+            "[WA-INTENT-ODOO] Ejecutando detector por reglas | applies_to=%s after_hours=%s current_flow=%s text=%s",
+            applies_to,
+            after_hours,
+            current_flow,
+            text,
+        )
+
+        IntentRule = request.env["whatsapp.intent.rule"].sudo()
 
         try:
-            _logger.info(
-                "[WA-INTENT-ODOO] Ejecutando detector por reglas | applies_to=%s after_hours=%s current_flow=%s text=%s",
-                applies_to,
-                not business_status.get("is_open"),
-                session.current_flow if session else False,
-                text_debug[:300],
-            )
-
-            result = request.env["whatsapp.intent.rule"].sudo().detect_intent(
-                message=message_text,
+            result = IntentRule.detect_intent(
+                text or "",
                 partner=partner if partner else False,
                 applies_to=applies_to,
-                is_after_hours=not business_status.get("is_open"),
-                current_flow=session.current_flow if session else False,
+                after_hours=after_hours,
+                current_flow=current_flow,
             )
-            result = result or {"found": False}
-
-            _logger.info(
-                "[WA-INTENT-ODOO] Resultado reglas | found=%s intent=%s action=%s template=%s target_flow=%s",
-                bool(result.get("found")),
-                result.get("intent"),
-                result.get("action"),
-                result.get("response_template"),
-                result.get("target_flow"),
-            )
-
         except TypeError:
-            _logger.warning(
-                "[WA-INTENT-ODOO] detect_intent no acepta current_flow, usando compatibilidad antigua"
+            result = IntentRule.detect_intent(
+                text or "",
+                partner=partner if partner else False,
+                applies_to=applies_to,
+                after_hours=after_hours,
             )
 
-            try:
-                result = request.env["whatsapp.intent.rule"].sudo().detect_intent(
-                    message=message_text,
-                    partner=partner if partner else False,
-                    applies_to=applies_to,
-                    is_after_hours=not business_status.get("is_open"),
-                )
-                result = result or {"found": False}
+        result = result or {}
 
-                _logger.info(
-                    "[WA-INTENT-ODOO] Resultado reglas compatibilidad | found=%s intent=%s action=%s template=%s target_flow=%s",
-                    bool(result.get("found")),
-                    result.get("intent"),
-                    result.get("action"),
-                    result.get("response_template"),
-                    result.get("target_flow"),
-                )
+        if "found" not in result:
+            result["found"] = False
 
-            except Exception:
-                _logger.exception(
-                    "[SAT-WHATSAPP-API] Error detectando intención por reglas compatibilidad"
-                )
-                result = {"found": False}
+        if not result.get("intent"):
+            result["intent"] = "unknown"
 
-        except Exception:
-            _logger.exception("[SAT-WHATSAPP-API] Error detectando intención")
-            result = {"found": False}
+        if not result.get("action"):
+            result["action"] = "ai"
+
+        if not result.get("target_flow"):
+            result["target_flow"] = "none"
+
+        result["source"] = result.get("source") or "odoo_rules"
+
+        _logger.info(
+            "[WA-INTENT-ODOO] Resultado reglas | found=%s intent=%s action=%s template=%s target_flow=%s",
+            result.get("found"),
+            result.get("intent"),
+            result.get("action"),
+            result.get("response_template"),
+            result.get("target_flow"),
+        )
 
         _logger.info(
             "[WA-INTENT] FIN detectar intención | found=%s intent=%s action=%s source=%s applies_to=%s",
-            bool(result.get("found")),
+            result.get("found"),
             result.get("intent"),
             result.get("action"),
-            result.get("source") or "odoo_rules",
+            result.get("source"),
             applies_to,
         )
 
         return result, applies_to
 
+    # ==========================================================
+    # Ejecutar intención
+    # ==========================================================
     def _execute_intent_action(
         self,
+        result,
         partner,
         session,
         identifiers,
-        message_text,
-        intent_result,
-        business_status,
         payload=False,
+        business_status=None,
     ):
-        intent_result = intent_result or {}
-        intent = intent_result.get("intent") or "unknown"
-        action = intent_result.get("action") or False
+        result = result or {}
+        payload = payload or {}
+        business_status = business_status or {}
 
-        text_lower = (message_text or "").strip().lower()
+        intent = result.get("intent") or "unknown"
+        action = result.get("action") or "ai"
+        target_flow = result.get("target_flow") or "none"
+        template = result.get("response_template") or False
 
-        if text_lower in ["cancelar", "cancela", "salir", "terminar"]:
-            session.reset_conversation(reason="abandoned")
-            return "Listo, cancelé el flujo activo. ¿En qué más podemos ayudarte?"
+        message_text = (
+            payload.get("message")
+            or payload.get("text")
+            or payload.get("content")
+            or ""
+        )
 
+        _logger.info(
+            "[WA-INTENT] Ejecutando acción | partner_id=%s session_id=%s intent=%s action=%s target_flow=%s template=%s",
+            partner.id if partner else False,
+            session.id if session else False,
+            intent,
+            action,
+            target_flow,
+            template,
+        )
+
+        # ======================================================
+        # Cancelar flujo activo
+        # ======================================================
+        if (
+            intent == "cancel"
+            or action == "cancel_flow"
+            or result.get("cancels_active_flow")
+        ):
+            if session:
+                session.reset_conversation(reason="cancelled_by_user")
+
+            message = self._render_template(
+                template or "cancel_flow_reply",
+                partner=partner,
+                session=session,
+                fallback="✅ Se canceló la operación actual. Puedes escribir MENÚ para ver las opciones disponibles.",
+            )
+
+            return {
+                "content": message,
+                "intent": "cancel",
+                "action": "cancel_flow",
+                "template": template or "cancel_flow_reply",
+                "create_outbox": True,
+                "stop": True,
+            }
+
+        # ======================================================
+        # Ignorar
+        # ======================================================
         if action == "ignore":
-            return False
+            return {
+                "content": "",
+                "intent": intent,
+                "action": action,
+                "template": False,
+                "create_outbox": False,
+                "stop": True,
+            }
 
-        if action == "cancel_flow":
-            session.reset_conversation(reason="abandoned")
-            return "Listo, cancelé el flujo activo. ¿En qué más podemos ayudarte?"
+        # ======================================================
+        # Consulta de horario / calendario
+        # IMPORTANTE: antes de action == reply
+        # ======================================================
+        if action == "business_hours" or intent == "business_hours":
+            business_status = business_status or self._compute_business_status()
 
+            company = (
+                partner.whatsapp_active_company_id
+                if partner and partner.whatsapp_active_company_id
+                else False
+            )
+
+            reason_label = (
+                business_status.get("reason_label")
+                or business_status.get("reason")
+                or ""
+            )
+
+            business_message = (
+                business_status.get("message")
+                or business_status.get("business_message")
+                or ""
+            )
+
+            display_hours = business_status.get("display_hours") or ""
+
+            if not display_hours:
+                display_hours = "Horario no configurado para hoy."
+
+            if not business_message:
+                if business_status.get("is_open"):
+                    business_message = "Estamos en horario de atención."
+                else:
+                    business_message = "En este momento estamos fuera de horario de atención."
+
+            message = self._render_template(
+                template or "business_hours_query",
+                partner=partner,
+                session=session,
+                company=company,
+                extra={
+                    "business_reason": reason_label,
+                    "business_message": business_message,
+                    "display_hours": display_hours,
+                    "business_date": business_status.get("date") or "",
+                    "business_is_open": business_status.get("is_open"),
+                },
+                fallback=(
+                    "🕒 *Horario de atención*\n\n"
+                    "Estado actual: *%s*\n\n"
+                    "Horario de hoy:\n"
+                    "%s\n\n"
+                    "%s"
+                ) % (
+                    reason_label or "Consulta de horario",
+                    display_hours,
+                    business_message,
+                ),
+            )
+
+            return {
+                "content": message,
+                "intent": "business_hours",
+                "action": "business_hours",
+                "template": template or "business_hours_query",
+                "create_outbox": True,
+                "stop": False,
+            }
+
+        # ======================================================
+        # Saludo
+        # IMPORTANTE: antes de action == reply
+        # ======================================================
         if intent == "greeting":
-            return self._get_greeting_message(
+            message = self._get_greeting_message(
                 partner=partner,
                 session=session,
                 business_status=business_status,
             )
 
+            return {
+                "content": message,
+                "intent": "greeting",
+                "action": "reply",
+                "template": template or "main_menu_technical",
+                "create_outbox": True,
+                "stop": False,
+            }
+
+        # ======================================================
+        # Handoff humano
+        # IMPORTANTE: antes de action == reply
+        # ======================================================
         if action == "handoff" or intent == "human":
-            request.env["whatsapp.handoff"].sudo().create_unknown_intent_handoff(
-                partner,
-                session=session,
-                initial_message=message_text or "",
-                context={
-                    "intent_result": intent_result,
-                    "reason": "Cliente solicitó atención humana.",
-                },
-            )
+            try:
+                request.env["whatsapp.handoff"].sudo().create_unknown_intent_handoff(
+                    partner,
+                    session=session,
+                    initial_message=message_text,
+                    context={
+                        "reason": result.get("ai_reason")
+                        or result.get("reason")
+                        or "Cliente solicita atención humana.",
+                        "intent_result": result,
+                    },
+                )
+            except Exception:
+                _logger.exception(
+                    "[WA-INTENT] No se pudo crear handoff humano partner=%s session=%s",
+                    partner.id if partner else False,
+                    session.id if session else False,
+                )
 
-            partner.whatsapp_enable_human_mode_api(taken_by_name="Bot WhatsApp")
-            session.action_set_human()
+            if partner:
+                partner.whatsapp_enable_human_mode_api(taken_by_name="Bot WhatsApp")
 
-            return self._render_template(
-                "human_take",
+            if session:
+                session.action_set_human()
+
+            message = self._render_template(
+                template or "human_take",
                 partner=partner,
                 session=session,
-                fallback="He derivado tu conversación con un asesor. Te atenderán en breve.",
+                fallback="👨‍💼 Un asesor continuará con la atención.",
             )
 
-        if action == "reply":
-            template = intent_result.get("response_template")
-            if template:
-                rendered = self._render_template(
-                    template,
-                    partner=partner,
-                    session=session,
-                    company=partner.whatsapp_active_company_id if partner and partner.whatsapp_active_company_id else False,
-                    fallback=False,
-                )
-                if rendered:
-                    return rendered
+            return {
+                "content": message,
+                "intent": "human",
+                "action": "handoff",
+                "template": template or "human_take",
+                "create_outbox": True,
+                "stop": True,
+            }
 
+        # ======================================================
+        # Respuesta por plantilla
+        # ======================================================
+        if action == "reply":
+            message = self._render_template(
+                template or "fallback",
+                partner=partner,
+                session=session,
+                company=(
+                    partner.whatsapp_active_company_id
+                    if partner and partner.whatsapp_active_company_id
+                    else False
+                ),
+                fallback=self._build_main_menu_text(partner),
+            )
+
+            return {
+                "content": message,
+                "intent": intent,
+                "action": "reply",
+                "template": template or "fallback",
+                "create_outbox": True,
+                "stop": False,
+            }
+
+        # ======================================================
+        # Solicitar DNI
+        # ======================================================
         if action == "ask_dni":
-            return self._render_template(
-                "ask_dni",
+            if session:
+                session.start_flow(
+                    "registration",
+                    "awaiting_dni",
+                    context={
+                        "intent": "registration",
+                    },
+                )
+
+            message = self._render_template(
+                template or "ask_dni",
                 partner=partner,
                 session=session,
                 fallback="Para poder ayudarte, por favor envíame tu DNI de 8 dígitos.",
             )
 
+            return {
+                "content": message,
+                "intent": "dni",
+                "action": "ask_dni",
+                "template": template or "ask_dni",
+                "create_outbox": True,
+                "stop": False,
+            }
+
+        # ======================================================
+        # Solicitar RUC
+        # ======================================================
         if action == "ask_ruc":
-            return self._render_template(
-                "ask_ruc",
+            if session:
+                session.start_flow(
+                    "registration",
+                    "awaiting_ruc",
+                    context={
+                        "intent": "registration",
+                        "dni": self._only_digits(message_text),
+                    },
+                )
+
+            message = self._render_template(
+                template or "ask_ruc",
                 partner=partner,
                 session=session,
-                fallback="Por favor envíame el RUC de tu empresa.",
+                fallback="Ahora envíame el RUC de tu empresa para completar el registro.",
             )
 
-        if action == "select_company":
-            return self._company_selection_message(partner, session=session)
+            return {
+                "content": message,
+                "intent": "ruc",
+                "action": "ask_ruc",
+                "template": template or "ask_ruc",
+                "create_outbox": True,
+                "stop": False,
+            }
 
-        if action == "start_flow_toner" or intent == "toner":
-            return self._start_toner_flow(
-                partner,
-                session,
-                identifiers,
+        # ======================================================
+        # Seleccionar empresa
+        # ======================================================
+        if action == "select_company" or intent == "select_company":
+            message = self._company_selection_message(partner, session)
+
+            return {
+                "content": message,
+                "intent": "select_company",
+                "action": "select_company",
+                "template": template or "select_company",
+                "create_outbox": True,
+                "stop": False,
+            }
+
+        # ======================================================
+        # Flujo tóner
+        # ======================================================
+        if action == "start_flow_toner" or target_flow == "toner" or intent == "toner":
+            message = self._start_toner_flow(
+                partner=partner,
+                session=session,
+                identifiers=identifiers,
                 payload=payload,
             )
 
-        if action == "start_flow_onsite" or intent in [
-            "onsite_service",
-            "service",
-            "printer_issue",
-        ]:
-            return self._start_onsite_flow(
-                partner,
-                session,
-                identifiers,
+            return {
+                "content": message,
+                "intent": "toner",
+                "action": "start_flow_toner",
+                "template": False,
+                "create_outbox": True,
+                "stop": False,
+            }
+
+        # ======================================================
+        # Flujo servicio presencial
+        # ======================================================
+        if (
+            action == "start_flow_onsite"
+            or target_flow == "onsite"
+            or intent in ["onsite_service", "printer_issue", "service"]
+        ):
+            message = self._start_onsite_flow(
+                partner=partner,
+                session=session,
+                identifiers=identifiers,
                 payload=payload,
             )
 
-        if action == "start_flow_remote" or intent in [
-            "remote_service",
-            "anydesk",
-            "scanner",
-        ]:
-            return self._start_remote_flow(
-                partner,
-                session,
-                identifiers,
+            return {
+                "content": message,
+                "intent": intent or "onsite_service",
+                "action": "start_flow_onsite",
+                "template": False,
+                "create_outbox": True,
+                "stop": False,
+            }
+
+        # ======================================================
+        # Flujo soporte remoto
+        # ======================================================
+        if (
+            action == "start_flow_remote"
+            or target_flow == "remote"
+            or intent in ["remote_service", "scanner", "remote_support"]
+        ):
+            message = self._start_remote_flow(
+                partner=partner,
+                session=session,
+                identifiers=identifiers,
                 payload=payload,
             )
 
+            return {
+                "content": message,
+                "intent": "remote_service",
+                "action": "start_flow_remote",
+                "template": False,
+                "create_outbox": True,
+                "stop": False,
+            }
+
+        # ======================================================
+        # Link servicio
+        # ======================================================
         if action == "send_service_link":
-            link = self._get_service_url(
-                partner=partner,
-                company=partner.whatsapp_active_company_id if partner else False,
+            company = (
+                partner.whatsapp_active_company_id
+                if partner and partner.whatsapp_active_company_id
+                else False
             )
-            return "Puedes registrar tu solicitud aquí:\n%s" % link
 
+            machine = self._get_context_machine(session.get_context() if session else {})
+            service_link = self._get_service_url(
+                partner=partner,
+                company=company,
+                machine=machine,
+            )
+
+            message = self._render_template(
+                template or "service_link",
+                partner=partner,
+                session=session,
+                company=company,
+                extra={
+                    "service_link": service_link,
+                },
+                fallback="Puedes registrar tu servicio técnico aquí:\n%s" % service_link,
+            )
+
+            return {
+                "content": message,
+                "intent": "onsite_service",
+                "action": "send_service_link",
+                "template": template or "service_link",
+                "create_outbox": True,
+                "stop": False,
+            }
+
+        # ======================================================
+        # Agradecimiento
+        # ======================================================
         if intent == "thanks":
-            return self._render_template(
-                "thanks_reply",
+            message = self._render_template(
+                template or "thanks_reply",
                 partner=partner,
                 session=session,
-                fallback="Con gusto. ¿Necesitas algo más?",
+                fallback="Con gusto. Estamos para ayudarte.",
             )
 
+            return {
+                "content": message,
+                "intent": "thanks",
+                "action": "reply",
+                "template": template or "thanks_reply",
+                "create_outbox": True,
+                "stop": False,
+            }
+
+        # ======================================================
+        # Despedida
+        # ======================================================
         if intent == "goodbye":
-            return self._render_template(
-                "goodbye_reply",
+            message = self._render_template(
+                template or "goodbye_reply",
                 partner=partner,
                 session=session,
-                fallback="Gracias por comunicarte con nosotros. Que tengas buen día.",
+                fallback="Gracias por comunicarte con ANDES SOLUTION COPIERS. Que tengas un excelente día.",
             )
 
-        request.env["whatsapp.handoff"].sudo().create_unknown_intent_handoff(
-            partner,
-            session=session,
-            initial_message=message_text,
-            context={"intent_result": intent_result},
-        )
-        partner.whatsapp_enable_human_mode_api(taken_by_name="Bot WhatsApp")
-        session.action_set_human()
+            return {
+                "content": message,
+                "intent": "goodbye",
+                "action": "reply",
+                "template": template or "goodbye_reply",
+                "create_outbox": True,
+                "stop": False,
+            }
 
-        return (
-            "No pude identificar con seguridad tu solicitud. "
-            "Te estoy derivando con un asesor para que pueda ayudarte."
+        # ======================================================
+        # Fallback: no entendido => handoff
+        # ======================================================
+        try:
+            request.env["whatsapp.handoff"].sudo().create_unknown_intent_handoff(
+                partner,
+                session=session,
+                initial_message=message_text,
+                context={
+                    "reason": "Intención no reconocida automáticamente.",
+                    "intent_result": result,
+                },
+            )
+        except Exception:
+            _logger.exception(
+                "[WA-INTENT] No se pudo crear handoff de intención desconocida partner=%s session=%s",
+                partner.id if partner else False,
+                session.id if session else False,
+            )
+
+        if partner:
+            partner.whatsapp_enable_human_mode_api(taken_by_name="Bot WhatsApp")
+
+        if session:
+            session.action_set_human()
+
+        message = self._render_template(
+            "unknown_with_menu",
+            partner=partner,
+            session=session,
+            fallback=(
+                "No pude identificar con seguridad tu solicitud. "
+                "Un asesor continuará con la atención."
+            ),
         )
+
+        return {
+            "content": message,
+            "intent": intent or "unknown",
+            "action": action or "ai",
+            "template": "unknown_with_menu",
+            "create_outbox": True,
+            "stop": True,
+        }
 
     # ==========================================================
     # Menú principal
     # ==========================================================
-    def _build_main_menu_text(self, partner=False, session=False):
-        partner_name = "cliente"
-        company_name = "No seleccionada"
+    def _build_main_menu_text(self, partner=False):
+        company_name = "Sin empresa activa"
 
-        if partner:
-            try:
-                if partner.name:
-                    partner_name = partner.name.split()[0]
-            except Exception:
-                partner_name = partner.name or "cliente"
-
-            try:
-                if partner.whatsapp_active_company_id:
-                    company_name = partner.whatsapp_active_company_id.name or "No seleccionada"
-            except Exception:
-                company_name = "No seleccionada"
-
-        has_multiple_companies = False
         try:
-            if partner and hasattr(partner, "_get_whatsapp_available_companies"):
-                companies = partner._get_whatsapp_available_companies()
-                has_multiple_companies = bool(len(companies) > 1)
+            if partner and partner.whatsapp_active_company_id:
+                company_name = partner.whatsapp_active_company_id.display_name
         except Exception:
-            _logger.exception(
-                "[WA-COMPANY] No se pudo verificar empresas asociadas para menú"
-            )
-            has_multiple_companies = False
+            pass
+
+        show_company_option = False
+        try:
+            if partner and len(partner.whatsapp_company_ids) > 1:
+                show_company_option = True
+        except Exception:
+            show_company_option = False
 
         lines = [
-            "Hola %s 👋" % partner_name,
+            "Hola 👋 Soy el asistente virtual de *ANDES SOLUTION COPIERS*.",
             "",
-            "Soy el asistente virtual de *ANDES SOLUTION COPIERS*.",
-            "",
-            "Empresa activa:",
-            "🏢 *%s*" % company_name,
+            "Empresa activa: 🏢 *%s*" % company_name,
             "",
             "¿En qué podemos ayudarte hoy?",
             "",
@@ -499,7 +864,10 @@ class WhatsAppIntentMixin:
             "*4* 👨‍💼 Hablar con un técnico",
         ]
 
-        if has_multiple_companies:
+        if show_company_option:
             lines.append("*5* 🏢 Cambiar / ver empresa activa")
+
+        lines.append("")
+        lines.append("También puedes escribir directamente tu consulta.")
 
         return "\n".join(lines)
