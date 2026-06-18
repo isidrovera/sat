@@ -1220,18 +1220,18 @@
 <record id="whatsapp_template_business_hours_query" model="whatsapp.template">
     <field name="name">business_hours_query</field>
     <field name="title">Consulta horario de atención</field>
-    <field name="category">business_hours</field>
+    <field name="category">fallback</field>
     <field name="body">
-        🕒 *Horario de atención*
+🕒 *Horario de atención*
 
-        Estado actual: *{{business_reason}}*
+Estado actual: *{{business_reason}}*
 
-        Horario de hoy:
-        {{display_hours}}
+Horario de hoy:
+{{display_hours}}
 
-        {{business_message}}
+{{business_message}}
 
-        Puedes dejarnos tu consulta por este medio y te responderemos según disponibilidad.
+Puedes dejarnos tu consulta por este medio y te responderemos según disponibilidad.
     </field>
     <field name="active">True</field>
 </record>
@@ -1246,7 +1246,7 @@
     <field name="sequence">150</field>
     <field name="priority">94</field>
     <field name="intent">business_hours</field>
-    <field name="action">business_hours</field>
+    <field name="action">reply</field>
     <field name="target_flow">none</field>
     <field name="response_template">business_hours_query</field>
     <field name="match_type">regex</field>
@@ -1267,7 +1267,7 @@
     <field name="sequence">151</field>
     <field name="priority">95</field>
     <field name="intent">business_hours</field>
-    <field name="action">business_hours</field>
+    <field name="action">reply</field>
     <field name="target_flow">none</field>
     <field name="response_template">business_hours_query</field>
     <field name="match_type">regex</field>
@@ -1288,7 +1288,7 @@
     <field name="sequence">152</field>
     <field name="priority">94</field>
     <field name="intent">business_hours</field>
-    <field name="action">business_hours</field>
+    <field name="action">reply</field>
     <field name="target_flow">none</field>
     <field name="response_template">business_hours_query</field>
     <field name="match_type">regex</field>
@@ -1309,7 +1309,7 @@
     <field name="sequence">153</field>
     <field name="priority">94</field>
     <field name="intent">business_hours</field>
-    <field name="action">business_hours</field>
+    <field name="action">reply</field>
     <field name="target_flow">none</field>
     <field name="response_template">business_hours_query</field>
     <field name="match_type">regex</field>
