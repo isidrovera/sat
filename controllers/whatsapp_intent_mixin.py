@@ -26,7 +26,6 @@ class WhatsAppIntentMixin:
         applies_to = self._get_applies_to(
             partner=partner,
             business_status=business_status,
-            session=session,
         )
 
         current_flow = "none"
