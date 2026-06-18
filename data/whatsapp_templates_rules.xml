@@ -928,5 +928,288 @@
             <field name="stop_flow">False</field>
             <field name="allow_ai_after">False</field>
         </record>
+        <!-- ========================================================= -->
+<!-- INTENCIONES COMPLEMENTARIAS - SERVICIO / IMPRESIÓN        -->
+<!-- ========================================================= -->
+
+<record id="whatsapp_intent_rule_no_puedo_imprimir" model="whatsapp.intent.rule">
+    <field name="name">Servicio - No puedo imprimir</field>
+    <field name="active">True</field>
+    <field name="sequence">121</field>
+    <field name="priority">96</field>
+    <field name="intent">onsite_service</field>
+    <field name="action">start_flow_onsite</field>
+    <field name="target_flow">onsite</field>
+    <field name="match_type">regex</field>
+    <field name="pattern">
+        no puedo imprimir|no imprime|no esta imprimiendo|no está imprimiendo|no sale impresion|no sale impresión|no sale nada|no bota hoja|no bota papel|manda imprimir y no sale|mando imprimir y no sale|envio a imprimir y no sale|envío a imprimir y no sale|la impresora no imprime|el equipo no imprime|no puedo sacar copia|no copia|no fotocopia|no puedo fotocopiar
+    </field>
+    <field name="applies_to">all</field>
+    <field name="requires_registered">True</field>
+    <field name="requires_company">True</field>
+    <field name="only_during_idle">True</field>
+    <field name="stop_flow">False</field>
+    <field name="allow_ai_after">False</field>
+</record>
+
+<record id="whatsapp_intent_rule_impresion_calidad_avanzada" model="whatsapp.intent.rule">
+    <field name="name">Servicio - Calidad de impresión avanzada</field>
+    <field name="active">True</field>
+    <field name="sequence">132</field>
+    <field name="priority">94</field>
+    <field name="intent">printer_issue</field>
+    <field name="action">start_flow_onsite</field>
+    <field name="target_flow">onsite</field>
+    <field name="match_type">regex</field>
+    <field name="pattern">
+        imprime con rayas|sale con rayas|sale linea|sale línea|sale lineas|sale líneas|sale mancha|sale manchado|sale sucio|imprime sucio|imprime claro|imprime muy claro|imprime oscuro|sale oscuro|sale claro|sale borroso|imprime borroso|sale fondo gris|sale con sombra|sale doble imagen|repite imagen|imagen corrida|sale blanco|hoja en blanco|sale vacio|sale vacío|sale cortado|sale incompleto|no fija toner|no fija tóner|se borra la impresion|se borra la impresión
+    </field>
+    <field name="applies_to">all</field>
+    <field name="requires_registered">True</field>
+    <field name="requires_company">True</field>
+    <field name="only_during_idle">True</field>
+    <field name="stop_flow">False</field>
+    <field name="allow_ai_after">False</field>
+</record>
+
+<record id="whatsapp_intent_rule_codigos_error" model="whatsapp.intent.rule">
+    <field name="name">Servicio - Códigos de error</field>
+    <field name="active">True</field>
+    <field name="sequence">133</field>
+    <field name="priority">95</field>
+    <field name="intent">onsite_service</field>
+    <field name="action">start_flow_onsite</field>
+    <field name="target_flow">onsite</field>
+    <field name="match_type">regex</field>
+    <field name="pattern">
+        codigo|código|codigo de error|código de error|marca codigo|marca código|sale codigo|sale código|error sc|sc[0-9]+|error c[0-9]+|error e[0-9]+|llave roja|luz roja|alerta en pantalla|mensaje de error|pantalla con error|no deja imprimir por error
+    </field>
+    <field name="applies_to">all</field>
+    <field name="requires_registered">True</field>
+    <field name="requires_company">True</field>
+    <field name="only_during_idle">True</field>
+    <field name="stop_flow">False</field>
+    <field name="allow_ai_after">False</field>
+</record>
+
+<record id="whatsapp_intent_rule_papel_atascos_avanzado" model="whatsapp.intent.rule">
+    <field name="name">Servicio - Papel / atascos avanzado</field>
+    <field name="active">True</field>
+    <field name="sequence">134</field>
+    <field name="priority">95</field>
+    <field name="intent">printer_issue</field>
+    <field name="action">start_flow_onsite</field>
+    <field name="target_flow">onsite</field>
+    <field name="match_type">regex</field>
+    <field name="pattern">
+        atasco|atascado|papel atascado|hoja atascada|se atasca|se traba|traba papel|traba hoja|papel trabado|hoja trabada|no jala papel|no jala hoja|no toma papel|no toma hoja|no agarra papel|no agarra hoja|no alimenta papel|no alimenta hojas|no recoge papel|no recoge hoja|se queda el papel|rompe papel|rompe hoja|arruga papel|papel arrugado|bandeja no funciona|cassette no funciona|casete no funciona|adf no jala|alimentador no jala|duplex no funciona|dúplex no funciona
+    </field>
+    <field name="applies_to">all</field>
+    <field name="requires_registered">True</field>
+    <field name="requires_company">True</field>
+    <field name="only_during_idle">True</field>
+    <field name="stop_flow">False</field>
+    <field name="allow_ai_after">False</field>
+</record>
+
+<!-- ========================================================= -->
+<!-- INTENCIONES COMPLEMENTARIAS - REMOTO / ESCÁNER / RED      -->
+<!-- ========================================================= -->
+
+<record id="whatsapp_intent_rule_pc_red_driver" model="whatsapp.intent.rule">
+    <field name="name">Remoto - PC / red / driver / conexión</field>
+    <field name="active">True</field>
+    <field name="sequence">135</field>
+    <field name="priority">94</field>
+    <field name="intent">remote_service</field>
+    <field name="action">start_flow_remote</field>
+    <field name="target_flow">remote</field>
+    <field name="match_type">regex</field>
+    <field name="pattern">
+        instalar impresora|instalar driver|driver|controlador|configurar impresora|agregar impresora|conectar impresora|no conecta impresora|no aparece impresora|no encuentro impresora|impresora offline|impresora fuera de linea|impresora fuera de línea|no puedo imprimir desde la pc|no puedo imprimir desde mi pc|no imprime desde pc|no imprime desde computadora|no imprime desde laptop|problema de red|ip impresora|ip de impresora|cambio de ip|windows|mac|wifi|wi-fi|red|smb|carpeta compartida
+    </field>
+    <field name="applies_to">all</field>
+    <field name="requires_registered">True</field>
+    <field name="requires_company">True</field>
+    <field name="only_during_idle">True</field>
+    <field name="stop_flow">False</field>
+    <field name="allow_ai_after">False</field>
+</record>
+
+<record id="whatsapp_intent_rule_scanner_email_folder" model="whatsapp.intent.rule">
+    <field name="name">Remoto - Escáner / correo / carpeta</field>
+    <field name="active">True</field>
+    <field name="sequence">136</field>
+    <field name="priority">95</field>
+    <field name="intent">remote_service</field>
+    <field name="action">start_flow_remote</field>
+    <field name="target_flow">remote</field>
+    <field name="match_type">regex</field>
+    <field name="pattern">
+        escaner|escáner|scanner|scan|no escanea|no puedo escanear|no llega escaneo|no llega al correo|no llega a mi correo|scan to email|scan to folder|correo|email|smtp|carpeta|carpeta compartida|smb|destino de escaneo|configurar escaner|configurar escáner|crear carpeta|escanear a carpeta|escanear a correo
+    </field>
+    <field name="applies_to">all</field>
+    <field name="requires_registered">True</field>
+    <field name="requires_company">True</field>
+    <field name="only_during_idle">True</field>
+    <field name="stop_flow">False</field>
+    <field name="allow_ai_after">False</field>
+</record>
+
+<record id="whatsapp_intent_rule_anydesk_directo" model="whatsapp.intent.rule">
+    <field name="name">Remoto - AnyDesk directo</field>
+    <field name="active">True</field>
+    <field name="sequence">137</field>
+    <field name="priority">96</field>
+    <field name="intent">remote_service</field>
+    <field name="action">start_flow_remote</field>
+    <field name="target_flow">remote</field>
+    <field name="match_type">regex</field>
+    <field name="pattern">
+        anydesk|anidesk|codigo anydesk|código anydesk|te paso anydesk|mi anydesk|soporte remoto|asistencia remota|conexion remota|conexión remota|teamviewer|conectarse a mi pc|pueden entrar a mi pc|revisar mi pc|ayuda remota
+    </field>
+    <field name="applies_to">all</field>
+    <field name="requires_registered">True</field>
+    <field name="requires_company">True</field>
+    <field name="only_during_idle">True</field>
+    <field name="stop_flow">False</field>
+    <field name="allow_ai_after">False</field>
+</record>
+
+<!-- ========================================================= -->
+<!-- INTENCIONES COMPLEMENTARIAS - TÓNER / SUMINISTROS         -->
+<!-- ========================================================= -->
+
+<record id="whatsapp_intent_rule_toner_colores_detalle" model="whatsapp.intent.rule">
+    <field name="name">Tóner - Colores y suministros detalle</field>
+    <field name="active">True</field>
+    <field name="sequence">138</field>
+    <field name="priority">96</field>
+    <field name="intent">toner</field>
+    <field name="action">start_flow_toner</field>
+    <field name="target_flow">toner</field>
+    <field name="match_type">regex</field>
+    <field name="pattern">
+        toner|tóner|tonner|toner negro|tóner negro|negro|black|k toner|cyan|cian|magenta|yellow|amarillo|cmyk|kit toner|kit de toner|kit de tóner|cartucho|cartuchos|suministro|suministros|tinta|cilindro|drum|tambor|unidad de imagen|unidad imagen|developer|revelador|fusor|fuser|faja transferencia|banda transferencia|waste toner|botella residual|residual de toner|residual de tóner
+    </field>
+    <field name="applies_to">all</field>
+    <field name="requires_registered">True</field>
+    <field name="requires_company">True</field>
+    <field name="only_during_idle">True</field>
+    <field name="stop_flow">False</field>
+    <field name="allow_ai_after">False</field>
+</record>
+
+<record id="whatsapp_intent_rule_toner_bajo_sin_toner" model="whatsapp.intent.rule">
+    <field name="name">Tóner - Bajo / vacío / reemplazar</field>
+    <field name="active">True</field>
+    <field name="sequence">139</field>
+    <field name="priority">96</field>
+    <field name="intent">toner</field>
+    <field name="action">start_flow_toner</field>
+    <field name="target_flow">toner</field>
+    <field name="match_type">regex</field>
+    <field name="pattern">
+        sin toner|sin tóner|no tiene toner|no tiene tóner|falta toner|falta tóner|toner bajo|tóner bajo|toner vacio|tóner vacío|toner agotado|tóner agotado|reemplazar toner|reemplazar tóner|cambiar toner|cambiar tóner|pedir toner|pedir tóner|solicitar toner|solicitar tóner|necesito toner|necesito tóner|me falta toner|me falta tóner|equipo pide toner|equipo pide tóner
+    </field>
+    <field name="applies_to">all</field>
+    <field name="requires_registered">True</field>
+    <field name="requires_company">True</field>
+    <field name="only_during_idle">True</field>
+    <field name="stop_flow">False</field>
+    <field name="allow_ai_after">False</field>
+</record>
+
+<!-- ========================================================= -->
+<!-- INTENCIONES COMPLEMENTARIAS - FINISHER / ACCESORIOS       -->
+<!-- ========================================================= -->
+
+<record id="whatsapp_intent_rule_finalizador_accesorios" model="whatsapp.intent.rule">
+    <field name="name">Servicio - Finalizador / engrapado / accesorios</field>
+    <field name="active">True</field>
+    <field name="sequence">140</field>
+    <field name="priority">92</field>
+    <field name="intent">onsite_service</field>
+    <field name="action">start_flow_onsite</field>
+    <field name="target_flow">onsite</field>
+    <field name="match_type">regex</field>
+    <field name="pattern">
+        finalizador|finisher|grapadora|engrapadora|no engrapa|no grapa|grapas|perforador|punch|clasificador|bandeja salida|bandeja de salida|no compagina|no ordena copias|tapa rota|tapas rotas|bisagra rota|puerta rota|puerta abierta|sensor puerta|sensor tapa
+    </field>
+    <field name="applies_to">all</field>
+    <field name="requires_registered">True</field>
+    <field name="requires_company">True</field>
+    <field name="only_during_idle">True</field>
+    <field name="stop_flow">False</field>
+    <field name="allow_ai_after">False</field>
+</record>
+
+<!-- ========================================================= -->
+<!-- INTENCIONES COMPLEMENTARIAS - HUMANO / URGENCIA           -->
+<!-- ========================================================= -->
+
+<record id="whatsapp_intent_rule_human_comercial_tecnico" model="whatsapp.intent.rule">
+    <field name="name">Humano - Asesor / técnico / atención directa</field>
+    <field name="active">True</field>
+    <field name="sequence">141</field>
+    <field name="priority">98</field>
+    <field name="intent">human</field>
+    <field name="action">handoff</field>
+    <field name="target_flow">none</field>
+    <field name="match_type">regex</field>
+    <field name="pattern">
+        asesor|un asesor|hablar con asesor|quiero asesor|persona|humano|operador|agente|atencion humana|atención humana|tecnico|técnico|quiero un tecnico|quiero un técnico|hablar con tecnico|hablar con técnico|que me llamen|llamenme|llámenme|contactenme|contáctenme|urgente|emergencia|reclamo|queja|molesto|no me atienden
+    </field>
+    <field name="applies_to">all</field>
+    <field name="only_during_idle">True</field>
+    <field name="stop_flow">True</field>
+    <field name="allow_ai_after">False</field>
+</record>
+
+<!-- ========================================================= -->
+<!-- INTENCIONES COMPLEMENTARIAS - FACTURACIÓN / VENTAS        -->
+<!-- ========================================================= -->
+
+<record id="whatsapp_intent_rule_facturacion_documentos" model="whatsapp.intent.rule">
+    <field name="name">Facturación - Documentos / pagos / guías</field>
+    <field name="active">True</field>
+    <field name="sequence">142</field>
+    <field name="priority">87</field>
+    <field name="intent">billing</field>
+    <field name="action">reply</field>
+    <field name="target_flow">none</field>
+    <field name="response_template">billing_contact</field>
+    <field name="match_type">regex</field>
+    <field name="pattern">
+        factura|facturacion|facturación|boleta|comprobante|recibo|guia|guía|guia de remision|guía de remisión|pago|pagos|deuda|cobranza|deposito|depósito|transferencia|detraccion|detracción|retencion|retención|estado de cuenta|orden de compra|oc|credito|crédito|nota de credito|nota de crédito|administracion|administración
+    </field>
+    <field name="applies_to">all</field>
+    <field name="requires_registered">False</field>
+    <field name="requires_company">False</field>
+    <field name="only_during_idle">True</field>
+    <field name="stop_flow">False</field>
+    <field name="allow_ai_after">False</field>
+</record>
+
+<record id="whatsapp_intent_rule_ventas_alquiler_cotizacion" model="whatsapp.intent.rule">
+    <field name="name">Ventas - Alquiler / compra / cotización</field>
+    <field name="active">True</field>
+    <field name="sequence">143</field>
+    <field name="priority">87</field>
+    <field name="intent">sales</field>
+    <field name="action">reply</field>
+    <field name="target_flow">none</field>
+    <field name="response_template">sales_contact</field>
+    <field name="match_type">regex</field>
+    <field name="pattern">
+        venta|ventas|comprar|compra|cotizar|cotizacion|cotización|proforma|precio|precios|alquiler|alquilar|rentar|renta|arrendar|contrato|renovar contrato|renovacion|renovación|maquina nueva|máquina nueva|fotocopiadora nueva|impresora nueva|equipo nuevo|equipo color|equipo blanco y negro|necesito una maquina|necesito una máquina|quiero una impresora|quiero una fotocopiadora
+    </field>
+    <field name="applies_to">all</field>
+    <field name="requires_registered">False</field>
+    <field name="requires_company">False</field>
+    <field name="only_during_idle">True</field>
+    <field name="stop_flow">False</field>
+    <field name="allow_ai_after">False</field>
+</record>
     </data>
 </odoo>
