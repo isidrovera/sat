@@ -660,3 +660,175 @@ class WhatsAppEndpointMixin:
             start_ts=start_ts,
         )
         return response
+
+
+
+    # ==========================================================
+    # Endpoint: marcar outbox enviado
+    # ==========================================================
+    @http.route("/sat/whatsapp/outbox/mark-sent", type="json", auth="public", methods=["POST"], csrf=False)
+    def whatsapp_outbox_mark_sent(self, **kwargs):
+        start_ts = time.time()
+        endpoint = "/sat/whatsapp/outbox/mark-sent"
+        payload = self._get_json_payload()
+        identifiers = self._extract_identifiers(payload)
+
+        if not self._check_token():
+            response = self._json_error("No autorizado", "UNAUTHORIZED", 401)
+            self._safe_log_api(
+                endpoint,
+                payload,
+                response,
+                identifiers,
+                status="unauthorized",
+                start_ts=start_ts,
+            )
+            return response
+
+        outbox_id = payload.get("outbox_id")
+        external_message_id = (
+            payload.get("external_message_id")
+            or payload.get("message_id")
+            or False
+        )
+
+        if not outbox_id:
+            response = self._json_error(
+                "outbox_id requerido",
+                "OUTBOX_ID_REQUIRED",
+                400,
+            )
+            self._safe_log_api(
+                endpoint,
+                payload,
+                response,
+                identifiers,
+                status="error",
+                error_code="OUTBOX_ID_REQUIRED",
+                start_ts=start_ts,
+            )
+            return response
+
+        outbox = request.env["whatsapp.outbox"].sudo().browse(int(outbox_id)).exists()
+
+        if not outbox:
+            response = self._json_error(
+                "Outbox no encontrado",
+                "OUTBOX_NOT_FOUND",
+                404,
+            )
+            self._safe_log_api(
+                endpoint,
+                payload,
+                response,
+                identifiers,
+                status="not_found",
+                error_code="OUTBOX_NOT_FOUND",
+                start_ts=start_ts,
+            )
+            return response
+
+        outbox.action_mark_sent(external_message_id=external_message_id)
+
+        response = {
+            "ok": True,
+            "outbox_id": outbox.id,
+            "state": outbox.state,
+            "external_message_id": outbox.external_message_id,
+        }
+
+        self._safe_log_api(
+            endpoint,
+            payload,
+            response,
+            identifiers,
+            partner=outbox.partner_id,
+            session=outbox.session_id,
+            start_ts=start_ts,
+        )
+        return response
+
+    # ==========================================================
+    # Endpoint: marcar outbox fallido
+    # ==========================================================
+    @http.route("/sat/whatsapp/outbox/mark-failed", type="json", auth="public", methods=["POST"], csrf=False)
+    def whatsapp_outbox_mark_failed(self, **kwargs):
+        start_ts = time.time()
+        endpoint = "/sat/whatsapp/outbox/mark-failed"
+        payload = self._get_json_payload()
+        identifiers = self._extract_identifiers(payload)
+
+        if not self._check_token():
+            response = self._json_error("No autorizado", "UNAUTHORIZED", 401)
+            self._safe_log_api(
+                endpoint,
+                payload,
+                response,
+                identifiers,
+                status="unauthorized",
+                start_ts=start_ts,
+            )
+            return response
+
+        outbox_id = payload.get("outbox_id")
+
+        if not outbox_id:
+            response = self._json_error(
+                "outbox_id requerido",
+                "OUTBOX_ID_REQUIRED",
+                400,
+            )
+            self._safe_log_api(
+                endpoint,
+                payload,
+                response,
+                identifiers,
+                status="error",
+                error_code="OUTBOX_ID_REQUIRED",
+                start_ts=start_ts,
+            )
+            return response
+
+        outbox = request.env["whatsapp.outbox"].sudo().browse(int(outbox_id)).exists()
+
+        if not outbox:
+            response = self._json_error(
+                "Outbox no encontrado",
+                "OUTBOX_NOT_FOUND",
+                404,
+            )
+            self._safe_log_api(
+                endpoint,
+                payload,
+                response,
+                identifiers,
+                status="not_found",
+                error_code="OUTBOX_NOT_FOUND",
+                start_ts=start_ts,
+            )
+            return response
+
+        outbox.action_mark_failed(
+            error_message=payload.get("error_message") or "Error reportado por n8n/Baileys",
+            error_code=payload.get("error_code") or False,
+            schedule_retry=payload.get("schedule_retry", True),
+        )
+
+        response = {
+            "ok": True,
+            "outbox_id": outbox.id,
+            "state": outbox.state,
+            "retry_count": outbox.retry_count,
+            "next_retry_at": outbox.next_retry_at,
+        }
+
+        self._safe_log_api(
+            endpoint,
+            payload,
+            response,
+            identifiers,
+            partner=outbox.partner_id,
+            session=outbox.session_id,
+            start_ts=start_ts,
+        )
+        return response
