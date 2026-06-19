@@ -343,16 +343,35 @@ class WhatsappOutbox(models.Model):
                 "error_message": False,
                 "error_code": False,
             }
+
             if external_message_id:
                 vals["external_message_id"] = external_message_id
 
             _logger.info(
                 "[WA-OUTBOX] Marcando como enviado id=%s external_id=%s",
-                rec.id, external_message_id,
+                rec.id,
+                external_message_id,
             )
+
             rec.write(vals)
 
-            # Propagar al mensaje relacionado si existe
+            # --------------------------------------------------
+            # Actualizar actividad de sesión cuando el mensaje
+            # fue enviado realmente por Baileys/n8n.
+            # --------------------------------------------------
+            try:
+                if rec.session_id:
+                    rec.session_id.sudo().touch(
+                        bot_message=rec.content or False,
+                    )
+            except Exception:
+                _logger.exception(
+                    "[WA-OUTBOX] No se pudo actualizar actividad de sesión al marcar enviado id=%s session=%s",
+                    rec.id,
+                    rec.session_id.id if rec.session_id else False,
+                )
+
+            # Propagar external_message_id al mensaje relacionado
             if rec.message_id and external_message_id:
                 try:
                     rec.message_id.sudo().write({
@@ -361,8 +380,10 @@ class WhatsappOutbox(models.Model):
                 except Exception as e:
                     _logger.warning(
                         "[WA-OUTBOX] No se pudo propagar external_id al mensaje id=%s error=%s",
-                        rec.id, str(e),
+                        rec.id,
+                        str(e),
                     )
+
         return True
 
     def action_mark_delivered(self):

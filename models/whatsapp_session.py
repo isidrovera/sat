@@ -629,3 +629,99 @@ class WhatsappSession(models.Model):
                 )
 
         return True
+        # ==========================================================
+    # Cron: liberar modo humano por inactividad
+    # ==========================================================
+    @api.model
+    def cron_auto_release_human_mode(self):
+        """
+        Libera automáticamente conversaciones en modo humano
+        después de X minutos sin actividad.
+
+        La inactividad se calcula desde whatsapp.session.last_message_at.
+
+        Parámetro configurable:
+        sat.whatsapp_human_auto_release_minutes
+
+        Valor por defecto:
+        60 minutos
+        """
+        ICP = self.env["ir.config_parameter"].sudo()
+
+        try:
+            timeout_minutes = int(
+                ICP.get_param("sat.whatsapp_human_auto_release_minutes", "60")
+            )
+        except Exception:
+            timeout_minutes = 60
+
+        if timeout_minutes < 1:
+            timeout_minutes = 60
+
+        now = fields.Datetime.now()
+        cutoff = now - timedelta(minutes=timeout_minutes)
+
+        sessions = self.search([
+            ("state", "=", "human"),
+            ("partner_id.whatsapp_human_mode", "=", True),
+            ("last_message_at", "!=", False),
+            ("last_message_at", "<=", cutoff),
+        ])
+
+        _logger.info(
+            "[WA-SESSION] cron_auto_release_human_mode: %s sesiones a liberar | timeout=%s min | cutoff=%s",
+            len(sessions),
+            timeout_minutes,
+            cutoff,
+        )
+
+        Handoff = self.env["whatsapp.handoff"].sudo()
+
+        for session in sessions:
+            try:
+                partner = session.partner_id
+
+                if not partner:
+                    continue
+
+                _logger.info(
+                    "[WA-SESSION] Liberando modo humano por inactividad | session=%s partner=%s last_message_at=%s timeout=%s",
+                    session.id,
+                    partner.id,
+                    session.last_message_at,
+                    timeout_minutes,
+                )
+
+                # 1) Liberar contacto
+                partner.sudo().whatsapp_release_human_mode_api()
+
+                # 2) Reabrir sesión
+                session.sudo().action_reopen()
+
+                # 3) Liberar handoff activo relacionado
+                handoffs = Handoff.search([
+                    ("session_id", "=", session.id),
+                    ("partner_id", "=", partner.id),
+                    ("state", "in", ["pending", "assigned", "open", "escalated"]),
+                ])
+
+                for handoff in handoffs:
+                    try:
+                        handoff.sudo().action_release()
+                    except Exception:
+                        _logger.exception(
+                            "[WA-SESSION] Error liberando handoff id=%s session=%s",
+                            handoff.id,
+                            session.id,
+                        )
+
+            except Exception as e:
+                _logger.exception(
+                    "[WA-SESSION] Error liberando modo humano session=%s error=%s",
+                    session.id,
+                    str(e),
+                )
+
+        return True
+
+    

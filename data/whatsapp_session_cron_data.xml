@@ -18,6 +18,15 @@
             <field name="active" eval="True"/>
             <field name="priority">10</field>
         </record>
+        <record id="ir_cron_whatsapp_auto_release_human_mode" model="ir.cron">
+            <field name="name">WhatsApp: Liberar modo humano por inactividad</field>
+            <field name="model_id" ref="model_whatsapp_session"/>
+            <field name="state">code</field>
+            <field name="code">model.cron_auto_release_human_mode()</field>
+            <field name="interval_number">5</field>
+            <field name="interval_type">minutes</field>
+            <field name="active">True</field>
+        </record>
         <!--
             Cron que cada 2 minutos busca outbox en estado 'failed'
             con next_retry_at vencido y los pasa a 'pending' para

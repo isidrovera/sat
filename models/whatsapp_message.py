@@ -262,6 +262,7 @@ class WhatsappMessage(models.Model):
                 preview = "[%s]" % msg.message_type
             msg.display_name = "%s %s %s" % (role_label, arrow, preview or "(vacío)")
 
+   
     # ==========================================================
     # Create
     # ==========================================================
@@ -270,15 +271,19 @@ class WhatsappMessage(models.Model):
         for vals in vals_list:
             if not vals.get("raw_payload"):
                 vals["raw_payload"] = "{}"
+
             # Si raw_payload viene como dict (legacy), serializarlo
             if isinstance(vals.get("raw_payload"), dict):
                 try:
                     vals["raw_payload"] = json.dumps(
-                        vals["raw_payload"], ensure_ascii=False, default=str,
+                        vals["raw_payload"],
+                        ensure_ascii=False,
+                        default=str,
                     )
                 except Exception as e:
                     _logger.error(
-                        "[WA-MESSAGE] No se pudo serializar raw_payload dict: %s", str(e),
+                        "[WA-MESSAGE] No se pudo serializar raw_payload dict: %s",
+                        str(e),
                     )
                     vals["raw_payload"] = "{}"
 
@@ -287,9 +292,42 @@ class WhatsappMessage(models.Model):
         for msg in messages:
             _logger.info(
                 "[WA-MESSAGE] Mensaje creado id=%s session=%s direction=%s role=%s type=%s intent=%s flow=%s step=%s",
-                msg.id, msg.session_id.id, msg.direction, msg.role,
-                msg.message_type, msg.intent, msg.current_flow, msg.flow_step,
+                msg.id,
+                msg.session_id.id if msg.session_id else False,
+                msg.direction,
+                msg.role,
+                msg.message_type,
+                msg.intent,
+                msg.current_flow,
+                msg.flow_step,
             )
+
+            # --------------------------------------------------
+            # Actualizar actividad de sesión
+            # --------------------------------------------------
+            # Esto es clave para liberar modo humano 60 minutos
+            # después de la última actividad real.
+            try:
+                if msg.session_id:
+                    touch_vals = {}
+
+                    if msg.intent:
+                        touch_vals["intent"] = msg.intent
+
+                    if msg.direction == "in" and msg.role == "user":
+                        touch_vals["user_message"] = msg.content or False
+
+                    elif msg.direction == "out":
+                        touch_vals["bot_message"] = msg.content or False
+
+                    msg.session_id.sudo().touch(**touch_vals)
+
+            except Exception:
+                _logger.exception(
+                    "[WA-MESSAGE] No se pudo actualizar actividad de sesión message=%s session=%s",
+                    msg.id,
+                    msg.session_id.id if msg.session_id else False,
+                )
 
         return messages
 
