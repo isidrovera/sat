@@ -20,44 +20,167 @@ class WhatsAppMessageMixin:
         if not partner:
             return Session
 
+        active_session = Session.search([
+            ("partner_id", "=", partner.id),
+            ("state", "in", ["open", "human"]),
+        ], order="last_message_at desc, id desc", limit=1)
+
+        # ======================================================
+        # IMPORTANTE:
+        # Si existe una sesión con flujo activo, NO debe expirar
+        # por el timeout general del partner.
+        #
+        # Ejemplo:
+        # - current_flow = toner
+        # - conversation_state = awaiting_machine_selection_toner
+        #
+        # Si el cliente responde "1", esa respuesta debe continuar
+        # el flujo activo, no iniciar nuevamente el menú/tóner.
+        # ======================================================
+        if active_session and active_session.current_flow != "none":
+            try:
+                if active_session.is_conversation_expired():
+                    _logger.info(
+                        "[WA-SESSION] Flujo activo expirado por timeout interno | session=%s flow=%s step=%s",
+                        active_session.id,
+                        active_session.current_flow,
+                        active_session.conversation_state,
+                    )
+                    active_session.reset_conversation(reason="expired")
+                else:
+                    vals = {
+                        "last_message_at": fields.Datetime.now(),
+                        "active_company_id": (
+                            partner.whatsapp_active_company_id.id
+                            if partner.whatsapp_active_company_id
+                            else False
+                        ),
+                    }
+
+                    resolved_phone = self._resolve_identifier_phone(
+                        identifiers,
+                        partner=partner,
+                    )
+                    resolved_jid = self._resolve_identifier_jid(
+                        identifiers,
+                        partner=partner,
+                    )
+                    resolved_lid = self._resolve_identifier_lid(
+                        identifiers,
+                        partner=partner,
+                    )
+                    resolved_raw_jid = self._resolve_identifier_raw_jid(
+                        identifiers,
+                        partner=partner,
+                    )
+
+                    if resolved_phone:
+                        vals["phone"] = resolved_phone
+                    if resolved_jid:
+                        vals["jid"] = resolved_jid
+                    if resolved_lid:
+                        vals["lid"] = resolved_lid
+                    if resolved_raw_jid:
+                        vals["raw_jid"] = resolved_raw_jid
+                    if intent:
+                        vals["last_intent"] = intent
+
+                    if partner.whatsapp_human_mode:
+                        vals["state"] = "human"
+                    elif active_session.state == "human" and not partner.whatsapp_human_mode:
+                        vals["state"] = "open"
+
+                    active_session.write(vals)
+
+                    _logger.info(
+                        "[WA-SESSION] Reutilizando sesión con flujo activo | session=%s flow=%s step=%s",
+                        active_session.id,
+                        active_session.current_flow,
+                        active_session.conversation_state,
+                    )
+
+                    return active_session
+
+            except Exception:
+                _logger.exception(
+                    "[WA-SESSION] Error validando sesión con flujo activo | session=%s",
+                    active_session.id,
+                )
+
+        # ======================================================
+        # Solo usar timeout general cuando NO hay flujo activo.
+        # ======================================================
         is_expired = False
         try:
             is_expired = partner._whatsapp_is_session_expired()
         except Exception:
             is_expired = False
 
-        active_session = Session.search([
-            ("partner_id", "=", partner.id),
-            ("state", "in", ["open", "human"]),
-        ], order="last_message_at desc, id desc", limit=1)
-
         if force_new_session or is_expired:
-            if active_session and active_session.state == "open":
+            if (
+                active_session
+                and active_session.state == "open"
+                and active_session.current_flow == "none"
+            ):
                 active_session.action_expire()
+
             active_session = Session
 
         if not active_session:
             active_session = Session.create({
                 "partner_id": partner.id,
-                "active_company_id": partner.whatsapp_active_company_id.id if partner.whatsapp_active_company_id else False,
-                "phone": self._resolve_identifier_phone(identifiers, partner=partner),
-                "jid": self._resolve_identifier_jid(identifiers, partner=partner),
-                "lid": self._resolve_identifier_lid(identifiers, partner=partner),
-                "raw_jid": self._resolve_identifier_raw_jid(identifiers, partner=partner),
+                "active_company_id": (
+                    partner.whatsapp_active_company_id.id
+                    if partner.whatsapp_active_company_id
+                    else False
+                ),
+                "phone": self._resolve_identifier_phone(
+                    identifiers,
+                    partner=partner,
+                ),
+                "jid": self._resolve_identifier_jid(
+                    identifiers,
+                    partner=partner,
+                ),
+                "lid": self._resolve_identifier_lid(
+                    identifiers,
+                    partner=partner,
+                ),
+                "raw_jid": self._resolve_identifier_raw_jid(
+                    identifiers,
+                    partner=partner,
+                ),
                 "state": "human" if partner.whatsapp_human_mode else "open",
                 "source": "whatsapp",
                 "last_intent": intent or False,
             })
+
         else:
             vals = {
                 "last_message_at": fields.Datetime.now(),
-                "active_company_id": partner.whatsapp_active_company_id.id if partner.whatsapp_active_company_id else False,
+                "active_company_id": (
+                    partner.whatsapp_active_company_id.id
+                    if partner.whatsapp_active_company_id
+                    else False
+                ),
             }
 
-            resolved_phone = self._resolve_identifier_phone(identifiers, partner=partner)
-            resolved_jid = self._resolve_identifier_jid(identifiers, partner=partner)
-            resolved_lid = self._resolve_identifier_lid(identifiers, partner=partner)
-            resolved_raw_jid = self._resolve_identifier_raw_jid(identifiers, partner=partner)
+            resolved_phone = self._resolve_identifier_phone(
+                identifiers,
+                partner=partner,
+            )
+            resolved_jid = self._resolve_identifier_jid(
+                identifiers,
+                partner=partner,
+            )
+            resolved_lid = self._resolve_identifier_lid(
+                identifiers,
+                partner=partner,
+            )
+            resolved_raw_jid = self._resolve_identifier_raw_jid(
+                identifiers,
+                partner=partner,
+            )
 
             if resolved_phone:
                 vals["phone"] = resolved_phone
@@ -69,6 +192,7 @@ class WhatsAppMessageMixin:
                 vals["raw_jid"] = resolved_raw_jid
             if intent:
                 vals["last_intent"] = intent
+
             if partner.whatsapp_human_mode:
                 vals["state"] = "human"
             elif active_session.state == "human" and not partner.whatsapp_human_mode:

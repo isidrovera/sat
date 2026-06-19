@@ -448,24 +448,21 @@
  ========================================================= 
 -->
         <record id="whatsapp_intent_rule_greeting_hola" model="whatsapp.intent.rule">
-            <field name="name">Saludo - hola / menú técnico</field>
-            <field name="active">True</field>
-            <field name="sequence">10</field>
-            <field name="priority">99</field>
-            <field name="intent">greeting</field>
-            <field name="action">reply</field>
-            <field name="target_flow">none</field>
-            <field name="response_template">main_menu_technical</field>
-            <field name="match_type">regex</field>
-            <field name="pattern">
-                ^\s*(hola|holas|buenas|buenos dias|buenos días|buenas tardes|buenas
-                noches|menu|menú|ayuda|opciones|inicio)\s*$
-</field>
-            <field name="applies_to">all</field>
-            <field name="only_during_idle">True</field>
-            <field name="stop_flow">False</field>
-            <field name="allow_ai_after">False</field>
-        </record>
+    <field name="name">Saludo - hola</field>
+    <field name="active">True</field>
+    <field name="sequence">10</field>
+    <field name="priority">99</field>
+    <field name="intent">greeting</field>
+    <field name="action">reply</field>
+    <field name="target_flow">none</field>
+    <field name="response_template">main_menu_technical</field>
+    <field name="match_type">regex</field>
+    <field name="pattern">^\s*(hola|holas|buenas|buenos dias|buenos días|buenas tardes|buenas noches)\s*$</field>
+    <field name="applies_to">all</field>
+    <field name="only_during_idle">True</field>
+    <field name="stop_flow">False</field>
+    <field name="allow_ai_after">False</field>
+</record>
         <record id="whatsapp_intent_rule_greeting_buenos_dias" model="whatsapp.intent.rule">
             <field name="name">Saludo - buenos días / menú técnico</field>
             <field name="active">True</field>
@@ -652,23 +649,21 @@
             <field name="allow_ai_after">False</field>
         </record>
         <record id="whatsapp_intent_rule_menu_show_again" model="whatsapp.intent.rule">
-            <field name="name">Mostrar menú nuevamente</field>
-            <field name="active">True</field>
-            <field name="sequence">67</field>
-            <field name="priority">91</field>
-            <field name="intent">greeting</field>
-            <field name="action">reply</field>
-            <field name="target_flow">none</field>
-            <field name="response_template">main_menu_technical</field>
-            <field name="match_type">regex</field>
-            <field name="pattern">
-                ^\s*(menu|menú|opciones|ayuda|inicio|volver|volver al menu|volver al menú)\s*$
-</field>
-            <field name="applies_to">all</field>
-            <field name="only_during_idle">False</field>
-            <field name="stop_flow">False</field>
-            <field name="allow_ai_after">False</field>
-        </record>
+    <field name="name">Mostrar menú nuevamente</field>
+    <field name="active">True</field>
+    <field name="sequence">1</field>
+    <field name="priority">120</field>
+    <field name="intent">menu</field>
+    <field name="action">reply</field>
+    <field name="target_flow">none</field>
+    <field name="response_template">main_menu_technical</field>
+    <field name="match_type">regex</field>
+    <field name="pattern">^\s*(menu|menú|opciones|ayuda|inicio|volver|volver al menu|volver al menú)\s*$</field>
+    <field name="applies_to">all</field>
+    <field name="only_during_idle">False</field>
+    <field name="stop_flow">False</field>
+    <field name="allow_ai_after">False</field>
+</record>
         <record id="whatsapp_intent_rule_cancel" model="whatsapp.intent.rule">
             <field name="name">Cancelar flujo activo</field>
             <field name="active">True</field>

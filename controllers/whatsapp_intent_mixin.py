@@ -481,11 +481,26 @@ class WhatsAppIntentMixin:
         # IMPORTANTE: antes de action == reply
         # ======================================================
         if intent == "greeting":
-            message = self._get_greeting_message(
-                partner=partner,
-                session=session,
-                business_status=business_status,
+            company = (
+                partner.whatsapp_active_company_id
+                if partner and partner.whatsapp_active_company_id
+                else False
             )
+
+            if template:
+                message = self._render_template(
+                    template,
+                    partner=partner,
+                    session=session,
+                    company=company,
+                    fallback=self._build_main_menu_text(partner=partner),
+                )
+            else:
+                message = self._get_greeting_message(
+                    partner=partner,
+                    session=session,
+                    business_status=business_status,
+                )
 
             return {
                 "content": message,
@@ -495,7 +510,32 @@ class WhatsAppIntentMixin:
                 "create_outbox": True,
                 "stop": False,
             }
+        # ======================================================
+        # Mostrar menú principal
+        # ======================================================
+        if intent == "menu":
+            company = (
+                partner.whatsapp_active_company_id
+                if partner and partner.whatsapp_active_company_id
+                else False
+            )
 
+            message = self._render_template(
+                template or "main_menu_technical",
+                partner=partner,
+                session=session,
+                company=company,
+                fallback=self._build_main_menu_text(partner=partner),
+            )
+
+            return {
+                "content": message,
+                "intent": "menu",
+                "action": "reply",
+                "template": template or "main_menu_technical",
+                "create_outbox": True,
+                "stop": False,
+            }
         # ======================================================
         # Handoff humano
         # IMPORTANTE: antes de action == reply
