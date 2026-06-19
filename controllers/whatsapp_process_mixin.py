@@ -30,6 +30,188 @@ class WhatsAppProcessMixin:
     - Emitir respuesta y outbox.
     """
 
+    # ==========================================================
+    # Helpers de registro para contactos existentes
+    # ==========================================================
+    def _get_partner_whatsapp_companies_safe(self, partner):
+        """
+        Devuelve empresas asociadas al contacto para WhatsApp.
+
+        Maneja:
+        - whatsapp_company_ids
+        - whatsapp_active_company_id
+        - parent_id si el contacto pertenece a una empresa
+        - el mismo partner si es empresa
+        - método _get_whatsapp_available_companies() si existe
+        """
+        Partner = request.env["res.partner"].sudo()
+
+        if not partner:
+            return Partner
+
+        companies = Partner
+
+        try:
+            if hasattr(partner, "_get_whatsapp_available_companies"):
+                available = partner._get_whatsapp_available_companies()
+                if available:
+                    companies |= available
+        except Exception:
+            _logger.exception(
+                "[WA-PROCESS] Error obteniendo empresas disponibles partner=%s",
+                partner.id if partner else False,
+            )
+
+        try:
+            if getattr(partner, "whatsapp_company_ids", False):
+                companies |= partner.whatsapp_company_ids
+        except Exception:
+            pass
+
+        try:
+            if getattr(partner, "whatsapp_active_company_id", False):
+                companies |= partner.whatsapp_active_company_id
+        except Exception:
+            pass
+
+        try:
+            if partner.parent_id and partner.parent_id.is_company:
+                companies |= partner.parent_id
+        except Exception:
+            pass
+
+        try:
+            if partner.is_company:
+                companies |= partner
+        except Exception:
+            pass
+
+        return companies
+
+    def _ensure_existing_partner_whatsapp_registration(self, partner, session=False):
+        """
+        Corrige el estado de registro WhatsApp para contactos ya existentes.
+
+        Regla:
+        1) Si el contacto ya está vinculado a una empresa:
+           - NO pedir DNI
+           - NO pedir RUC
+           - marcar como registered
+
+        2) Si el contacto ya tiene DNI/VAT pero no tiene empresa:
+           - NO pedir DNI
+           - pedir RUC
+
+        3) Si no tiene DNI/VAT ni empresa:
+           - mantener estado para pedir DNI.
+        """
+        if not partner:
+            return "none"
+
+        registration_state = (
+            getattr(partner, "whatsapp_registration_state", "none")
+            or "none"
+        )
+
+        companies = self._get_partner_whatsapp_companies_safe(partner)
+
+        active_company = False
+        try:
+            active_company = (
+                partner.whatsapp_active_company_id
+                if partner.whatsapp_active_company_id
+                else False
+            )
+        except Exception:
+            active_company = False
+
+        has_company = bool(active_company or companies)
+
+        partner_vat_digits = self._only_digits(
+            getattr(partner, "vat", "") or ""
+        )
+
+        # ======================================================
+        # Si ya tiene empresa asociada, queda registrado.
+        # No pedir DNI ni RUC.
+        # ======================================================
+        if has_company:
+            selected_company = active_company
+
+            # Solo asignar empresa automática si hay una sola.
+            # Si hay varias, se deja que luego entre a selección de empresa.
+            if not selected_company and companies and len(companies) == 1:
+                selected_company = companies[0]
+
+            vals = {}
+
+            if selected_company and not active_company:
+                vals["whatsapp_active_company_id"] = selected_company.id
+
+            if registration_state != "registered":
+                vals["whatsapp_registration_state"] = "registered"
+
+            if vals:
+                try:
+                    partner.sudo().write(vals)
+                except Exception:
+                    _logger.exception(
+                        "[WA-PROCESS] No se pudo marcar partner existente como registered | partner_id=%s vals=%s",
+                        partner.id if partner else False,
+                        vals,
+                    )
+
+            if session and selected_company:
+                try:
+                    session.sudo().write({
+                        "active_company_id": selected_company.id,
+                    })
+                except Exception:
+                    _logger.exception(
+                        "[WA-PROCESS] No se pudo actualizar empresa activa en sesión | session_id=%s company_id=%s",
+                        session.id if session else False,
+                        selected_company.id if selected_company else False,
+                    )
+
+            _logger.info(
+                "[WA-PROCESS] Partner existente con empresa. No se pide DNI/RUC | partner_id=%s state_before=%s company_id=%s companies=%s",
+                partner.id if partner else False,
+                registration_state,
+                selected_company.id if selected_company else False,
+                len(companies) if companies else 0,
+            )
+
+            return "registered"
+
+        # ======================================================
+        # Si tiene DNI/VAT pero no empresa, no pedir DNI.
+        # Pedir RUC.
+        # ======================================================
+        if partner_vat_digits:
+            if registration_state in ("none", "waiting_dni"):
+                try:
+                    partner.sudo().write({
+                        "whatsapp_registration_state": "waiting_ruc",
+                    })
+                except Exception:
+                    _logger.exception(
+                        "[WA-PROCESS] No se pudo marcar partner existente como waiting_ruc | partner_id=%s",
+                        partner.id if partner else False,
+                    )
+
+                _logger.info(
+                    "[WA-PROCESS] Partner existente con DNI/VAT y sin empresa. No se pide DNI, se pedirá RUC | partner_id=%s vat=%s",
+                    partner.id if partner else False,
+                    partner.vat,
+                )
+
+                return "waiting_ruc"
+
+        return registration_state
+
+    # ==========================================================
+    # Proceso principal
+    # ==========================================================
     def _process_whatsapp_conversation(self, endpoint, payload, identifiers, start_ts=False):
         payload = payload or {}
         identifiers = identifiers or {}
@@ -275,7 +457,30 @@ class WhatsAppProcessMixin:
         # ======================================================
         # 7) Registro DNI/RUC pendiente
         # ======================================================
-        registration_state = getattr(partner, "whatsapp_registration_state", "none")
+        registration_state = (
+            getattr(partner, "whatsapp_registration_state", "none")
+            or "none"
+        )
+
+        _logger.info(
+            "[WA-PROCESS] Estado registro inicial | partner_id=%s registration_state=%s vat=%s active_company=%s company_count=%s",
+            partner.id if partner else False,
+            registration_state,
+            getattr(partner, "vat", False),
+            partner.whatsapp_active_company_id.id if partner and partner.whatsapp_active_company_id else False,
+            len(partner.whatsapp_company_ids) if partner and partner.whatsapp_company_ids else 0,
+        )
+
+        registration_state = self._ensure_existing_partner_whatsapp_registration(
+            partner,
+            session=session,
+        )
+
+        _logger.info(
+            "[WA-PROCESS] Estado registro corregido | partner_id=%s registration_state=%s",
+            partner.id if partner else False,
+            registration_state,
+        )
 
         if registration_state in ("none", "waiting_dni"):
             if self._looks_like_dni(message_text):
@@ -358,12 +563,94 @@ class WhatsAppProcessMixin:
             return response
 
         if registration_state == "waiting_ruc":
-            if self._looks_like_ruc(message_text):
-                company, session, reply, company_created = self._register_ruc_inline(
-                    partner,
-                    identifiers,
-                    self._only_digits(message_text),
-                    payload=payload,
+            companies = self._get_partner_whatsapp_companies_safe(partner)
+            has_company = bool(partner.whatsapp_active_company_id or companies)
+
+            if has_company:
+                selected_company = partner.whatsapp_active_company_id
+
+                if not selected_company and companies and len(companies) == 1:
+                    selected_company = companies[0]
+
+                try:
+                    vals = {
+                        "whatsapp_registration_state": "registered",
+                    }
+
+                    if selected_company and not partner.whatsapp_active_company_id:
+                        vals["whatsapp_active_company_id"] = selected_company.id
+
+                    partner.sudo().write(vals)
+
+                    if session and selected_company:
+                        session.sudo().write({
+                            "active_company_id": selected_company.id,
+                        })
+
+                except Exception:
+                    _logger.exception(
+                        "[WA-PROCESS] Error marcando registered a partner con empresa existente | partner_id=%s",
+                        partner.id if partner else False,
+                    )
+
+                registration_state = "registered"
+
+                _logger.info(
+                    "[WA-PROCESS] Partner ya tenía empresa. No se pide RUC | partner_id=%s company_id=%s companies=%s",
+                    partner.id if partner else False,
+                    selected_company.id if selected_company else False,
+                    len(companies) if companies else 0,
+                )
+
+            else:
+                if self._looks_like_ruc(message_text):
+                    company, session, reply, company_created = self._register_ruc_inline(
+                        partner,
+                        identifiers,
+                        self._only_digits(message_text),
+                        payload=payload,
+                    )
+
+                    emitted = self._emit_bot_reply(
+                        session=session,
+                        partner=partner,
+                        identifiers=identifiers,
+                        content=reply,
+                        intent="ruc",
+                        payload=payload,
+                    )
+
+                    response = {
+                        "ok": True,
+                        "found": True,
+                        "registered_ruc": True,
+                        "company_created": company_created,
+                        "next_step": "registered",
+                        "partner_id": partner.id,
+                        "company_id": company.id if company else False,
+                        "session_id": session.id,
+                        "message": reply,
+                        "outbox_id": emitted.get("outbox_id"),
+                        "business": business_status,
+                        "profile": partner.get_whatsapp_profile_payload(),
+                    }
+
+                    self._safe_log_api(
+                        endpoint,
+                        payload,
+                        response,
+                        identifiers,
+                        partner=partner,
+                        session=session,
+                        start_ts=start_ts,
+                    )
+                    return response
+
+                reply = self._render_template(
+                    "ask_ruc",
+                    partner=partner,
+                    session=session,
+                    fallback="Gracias. Ahora envíame el RUC de tu empresa para completar el registro.",
                 )
 
                 emitted = self._emit_bot_reply(
@@ -371,18 +658,15 @@ class WhatsAppProcessMixin:
                     partner=partner,
                     identifiers=identifiers,
                     content=reply,
-                    intent="ruc",
+                    intent="ask_ruc",
                     payload=payload,
                 )
 
                 response = {
                     "ok": True,
                     "found": True,
-                    "registered_ruc": True,
-                    "company_created": company_created,
-                    "next_step": "registered",
+                    "next_step": "waiting_ruc",
                     "partner_id": partner.id,
-                    "company_id": company.id if company else False,
                     "session_id": session.id,
                     "message": reply,
                     "outbox_id": emitted.get("outbox_id"),
@@ -400,45 +684,6 @@ class WhatsAppProcessMixin:
                     start_ts=start_ts,
                 )
                 return response
-
-            reply = self._render_template(
-                "ask_ruc",
-                partner=partner,
-                session=session,
-                fallback="Gracias. Ahora envíame el RUC de tu empresa para completar el registro.",
-            )
-
-            emitted = self._emit_bot_reply(
-                session=session,
-                partner=partner,
-                identifiers=identifiers,
-                content=reply,
-                intent="ask_ruc",
-                payload=payload,
-            )
-
-            response = {
-                "ok": True,
-                "found": True,
-                "next_step": "waiting_ruc",
-                "partner_id": partner.id,
-                "session_id": session.id,
-                "message": reply,
-                "outbox_id": emitted.get("outbox_id"),
-                "business": business_status,
-                "profile": partner.get_whatsapp_profile_payload(),
-            }
-
-            self._safe_log_api(
-                endpoint,
-                payload,
-                response,
-                identifiers,
-                partner=partner,
-                session=session,
-                start_ts=start_ts,
-            )
-            return response
 
         # ======================================================
         # 8) Selección de empresa pendiente
