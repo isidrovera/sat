@@ -157,19 +157,15 @@
         </record>
         <record id="whatsapp_template_fallback" model="whatsapp.template">
             <field name="name">fallback</field>
-            <field name="title">Respuesta general</field>
-            <field name="category">fallback</field>
+            <field name="title">No entendido - derivar a asesor</field>
+            <field name="category">human</field>
             <field name="body">
-                No pude identificar con seguridad tu solicitud. Empresa activa: 
-                🏢
-                *{{company_name}}* 
-                Puedes elegir una opción: 
-                *1* 🖨️ Solicitar tóner 
-                *2* 🛠️ Registrar servicio técnico 
-                *3* 💻 Asistencia remota 
-                *4* 👨‍💼 Hablar con un técnico
-                *5* 🏢 Cambiar / ver empresa activa Para atención.
-</field>
+        No pude identificar con seguridad tu consulta.
+
+        Para evitar darte una respuesta incorrecta, voy a derivarte con un asesor de *ANDES SOLUTION COPIERS*. 👨‍💼
+
+        Por favor espera un momento.
+            </field>
             <field name="active">True</field>
         </record>
         <!--
@@ -267,19 +263,15 @@
         </record>
         <record id="whatsapp_template_unknown_with_menu" model="whatsapp.template">
             <field name="name">unknown_with_menu</field>
-            <field name="title">No entendido con menú técnico</field>
-            <field name="category">fallback</field>
+            <field name="title">No entendido - derivar a asesor</field>
+            <field name="category">human</field>
             <field name="body">
-                No pude identificar con seguridad tu solicitud. 
-                Empresa activa: 
-                🏢 *{{company_name}}* 
-                Puedes elegir una opción: 
-                *1* 🖨️ Solicitar tóner 
-                *2* 🛠️ Registrar servicio técnico 
-                *3* 💻 Asistencia remota 
-                *4* 👨‍💼 Hablar con un técnico
-                *5* 🏢 Cambiar / ver empresa activa Para atención.
-</field>
+        No pude identificar con seguridad tu consulta.
+
+        Para evitar darte una respuesta incorrecta, voy a derivarte con un asesor de *ANDES SOLUTION COPIERS*. 👨‍💼
+
+        Por favor espera un momento.
+            </field>
             <field name="active">True</field>
         </record>
         <record id="whatsapp_template_thanks_reply" model="whatsapp.template">
@@ -1246,7 +1238,7 @@ Puedes dejarnos tu consulta por este medio y te responderemos según disponibili
     <field name="sequence">150</field>
     <field name="priority">94</field>
     <field name="intent">business_hours</field>
-    <field name="action">reply</field>
+    <field name="action">business_hours</field>
     <field name="target_flow">none</field>
     <field name="response_template">business_hours_query</field>
     <field name="match_type">regex</field>
@@ -1267,7 +1259,7 @@ Puedes dejarnos tu consulta por este medio y te responderemos según disponibili
     <field name="sequence">151</field>
     <field name="priority">95</field>
     <field name="intent">business_hours</field>
-    <field name="action">reply</field>
+    <field name="action">business_hours</field>
     <field name="target_flow">none</field>
     <field name="response_template">business_hours_query</field>
     <field name="match_type">regex</field>
@@ -1288,7 +1280,7 @@ Puedes dejarnos tu consulta por este medio y te responderemos según disponibili
     <field name="sequence">152</field>
     <field name="priority">94</field>
     <field name="intent">business_hours</field>
-    <field name="action">reply</field>
+    <field name="action">business_hours</field>
     <field name="target_flow">none</field>
     <field name="response_template">business_hours_query</field>
     <field name="match_type">regex</field>
@@ -1309,7 +1301,7 @@ Puedes dejarnos tu consulta por este medio y te responderemos según disponibili
     <field name="sequence">153</field>
     <field name="priority">94</field>
     <field name="intent">business_hours</field>
-    <field name="action">reply</field>
+    <field name="action">business_hours</field>
     <field name="target_flow">none</field>
     <field name="response_template">business_hours_query</field>
     <field name="match_type">regex</field>
