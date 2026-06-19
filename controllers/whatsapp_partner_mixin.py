@@ -281,34 +281,100 @@ class WhatsAppPartnerMixin:
     # Buscar contacto
     # ==========================================================
     def _find_partner_by_phone(self, clean_phone):
-        Partner = request.env["res.partner"].sudo()
+        Partner = request.env["res.partner"].sudo().with_context(active_test=False)
+
+        clean_phone = self._clean_phone(clean_phone)
 
         if not clean_phone:
             return Partner
 
-        last9 = clean_phone[-9:]
+        last9 = clean_phone[-9:] if len(clean_phone) >= 9 else clean_phone
+        last6 = clean_phone[-6:] if len(clean_phone) >= 6 else clean_phone
+        last4 = clean_phone[-4:] if len(clean_phone) >= 4 else clean_phone
 
-        candidates = Partner.search([
-            "|", "|", "|",
+        # ======================================================
+        # 1) Buscar por campos WhatsApp más exactos
+        # ======================================================
+        partner = Partner.search([
+            "|",
+            ("whatsapp_number", "=", clean_phone),
+            ("whatsapp_jid", "=", "%s@s.whatsapp.net" % clean_phone),
+        ], limit=1)
+
+        if partner:
+            return partner
+
+        # ======================================================
+        # 2) Buscar candidatos amplios.
+        #
+        # Importante:
+        # No basta con ilike last9 porque en Odoo puede estar:
+        # +51 924 894 829
+        # 924 894 829
+        # 924-894-829
+        #
+        # Por eso buscamos por fragmentos y luego comparamos
+        # normalizado con _clean_phone().
+        # ======================================================
+        domain = [
+            "|", "|", "|", "|", "|", "|", "|",
+            ("whatsapp_number", "ilike", clean_phone),
             ("whatsapp_number", "ilike", last9),
+            ("mobile", "ilike", clean_phone),
             ("mobile", "ilike", last9),
+            ("phone", "ilike", clean_phone),
             ("phone", "ilike", last9),
             ("whatsapp_jid", "ilike", clean_phone),
-        ], limit=50)
+            ("mobile", "ilike", last4),
+        ]
 
-        if not candidates:
-            return Partner
+        candidates = Partner.search(domain, limit=200)
 
+        # ======================================================
+        # 3) Comparación normalizada exacta
+        # ======================================================
         for partner in candidates:
-            for number in [partner.whatsapp_number, partner.mobile, partner.phone]:
+            numbers = [
+                partner.whatsapp_number,
+                partner.mobile,
+                partner.phone,
+            ]
+
+            for number in numbers:
                 if self._clean_phone(number) == clean_phone:
                     return partner
 
-        for partner in candidates:
+                # También aceptar comparación por últimos 9 dígitos
+                # para casos donde uno tiene 51 y otro no.
+                normalized = self._clean_phone(number)
+                if normalized and normalized[-9:] == last9:
+                    return partner
+
             if partner.whatsapp_jid and clean_phone in partner.whatsapp_jid:
                 return partner
 
-        return candidates[:1]
+        # ======================================================
+        # 4) Último intento: búsqueda más amplia por últimos 4 dígitos
+        # y validación Python.
+        # ======================================================
+        broad_candidates = Partner.search([
+            "|", "|", "|",
+            ("mobile", "ilike", last4),
+            ("phone", "ilike", last4),
+            ("whatsapp_number", "ilike", last4),
+            ("whatsapp_jid", "ilike", last4),
+        ], limit=300)
+
+        for partner in broad_candidates:
+            for number in [partner.whatsapp_number, partner.mobile, partner.phone]:
+                normalized = self._clean_phone(number)
+                if normalized and normalized[-9:] == last9:
+                    return partner
+
+            if partner.whatsapp_jid and clean_phone in partner.whatsapp_jid:
+                return partner
+
+        return Partner
 
     def _find_partner_by_identifiers(self, identifiers):
         Partner = request.env["res.partner"].sudo()
