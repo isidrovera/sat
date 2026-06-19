@@ -289,157 +289,117 @@ class WhatsAppPartnerMixin:
             return Partner
 
         last9 = clean_phone[-9:] if len(clean_phone) >= 9 else clean_phone
-        last6 = clean_phone[-6:] if len(clean_phone) >= 6 else clean_phone
-        last4 = clean_phone[-4:] if len(clean_phone) >= 4 else clean_phone
 
         _logger.info(
-            "[WA-PARTNER] Buscando partner por teléfono | clean_phone=%s last9=%s last6=%s last4=%s",
+            "[WA-PARTNER] Buscando partner por teléfono normalizado SQL | clean_phone=%s last9=%s",
             clean_phone,
             last9,
-            last6,
-            last4,
         )
 
         # ======================================================
-        # 1) Búsqueda exacta por campos WhatsApp
+        # 1) Búsqueda exacta por campos WhatsApp sin formato
         # ======================================================
-        exact_partner = Partner.search([
-            "|", "|", "|",
+        partner = Partner.search([
+            "|", "|",
             ("whatsapp_number", "=", clean_phone),
             ("whatsapp_jid", "=", "%s@s.whatsapp.net" % clean_phone),
-            ("mobile", "=", clean_phone),
-            ("phone", "=", clean_phone),
+            ("whatsapp_jid", "ilike", clean_phone),
         ], limit=1)
 
-        if exact_partner:
+        if partner:
             _logger.info(
-                "[WA-PARTNER] Partner encontrado exacto | partner_id=%s name=%s phone=%s mobile=%s whatsapp_number=%s",
-                exact_partner.id,
-                exact_partner.name,
-                exact_partner.phone,
-                exact_partner.mobile,
-                exact_partner.whatsapp_number,
+                "[WA-PARTNER] Partner encontrado por campos WhatsApp | partner_id=%s name=%s",
+                partner.id,
+                partner.name,
             )
-            return exact_partner
+            return partner
 
         # ======================================================
-        # 2) Buscar candidatos por fragmentos.
-        # Esto ayuda si el número está guardado como:
+        # 2) Búsqueda SQL normalizando phone, mobile y whatsapp_number.
+        #
+        # Esto permite encontrar:
         # +51 924 894 829
+        # 51 924 894 829
         # 924 894 829
         # 924-894-829
+        # (924) 894829
+        #
+        # Comparando contra:
+        # 51924894829
+        # 924894829
         # ======================================================
-        candidates = Partner.search([
-            "|", "|", "|", "|", "|", "|", "|", "|", "|",
-            ("whatsapp_number", "ilike", clean_phone),
-            ("whatsapp_number", "ilike", last9),
-            ("whatsapp_number", "ilike", last6),
-            ("mobile", "ilike", clean_phone),
-            ("mobile", "ilike", last9),
-            ("mobile", "ilike", last6),
-            ("phone", "ilike", clean_phone),
-            ("phone", "ilike", last9),
-            ("phone", "ilike", last6),
-            ("whatsapp_jid", "ilike", clean_phone),
-        ], limit=300)
+        query = """
+            SELECT id
+            FROM res_partner
+            WHERE
+                (
+                    regexp_replace(coalesce(phone, ''), '\\D', '', 'g') = %s
+                    OR regexp_replace(coalesce(mobile, ''), '\\D', '', 'g') = %s
+                    OR regexp_replace(coalesce(whatsapp_number, ''), '\\D', '', 'g') = %s
 
-        _logger.info(
-            "[WA-PARTNER] Candidatos encontrados por teléfono | clean_phone=%s total=%s",
+                    OR right(regexp_replace(coalesce(phone, ''), '\\D', '', 'g'), 9) = %s
+                    OR right(regexp_replace(coalesce(mobile, ''), '\\D', '', 'g'), 9) = %s
+                    OR right(regexp_replace(coalesce(whatsapp_number, ''), '\\D', '', 'g'), 9) = %s
+
+                    OR whatsapp_jid ILIKE %s
+                )
+            ORDER BY
+                CASE
+                    WHEN regexp_replace(coalesce(whatsapp_number, ''), '\\D', '', 'g') = %s THEN 1
+                    WHEN right(regexp_replace(coalesce(whatsapp_number, ''), '\\D', '', 'g'), 9) = %s THEN 2
+                    WHEN regexp_replace(coalesce(mobile, ''), '\\D', '', 'g') = %s THEN 3
+                    WHEN right(regexp_replace(coalesce(mobile, ''), '\\D', '', 'g'), 9) = %s THEN 4
+                    WHEN regexp_replace(coalesce(phone, ''), '\\D', '', 'g') = %s THEN 5
+                    WHEN right(regexp_replace(coalesce(phone, ''), '\\D', '', 'g'), 9) = %s THEN 6
+                    ELSE 99
+                END,
+                active DESC,
+                id ASC
+            LIMIT 1
+        """
+
+        params = (
             clean_phone,
-            len(candidates),
+            clean_phone,
+            clean_phone,
+            last9,
+            last9,
+            last9,
+            "%" + clean_phone + "%",
+            clean_phone,
+            last9,
+            clean_phone,
+            last9,
+            clean_phone,
+            last9,
         )
 
-        # ======================================================
-        # 3) Comparación normalizada exacta
-        # ======================================================
-        for partner in candidates:
-            values_to_check = [
-                partner.whatsapp_number,
-                partner.mobile,
-                partner.phone,
-            ]
+        try:
+            request.env.cr.execute(query, params)
+            row = request.env.cr.fetchone()
+        except Exception:
+            _logger.exception(
+                "[WA-PARTNER] Error buscando partner por teléfono SQL | clean_phone=%s last9=%s",
+                clean_phone,
+                last9,
+            )
+            row = False
 
-            for value in values_to_check:
-                normalized = self._clean_phone(value)
-
+        if row:
+            partner = Partner.browse(row[0]).exists()
+            if partner:
                 _logger.info(
-                    "[WA-PARTNER] Comparando candidato | partner_id=%s name=%s raw=%s normalized=%s target=%s",
+                    "[WA-PARTNER] Partner encontrado por teléfono SQL normalizado | partner_id=%s name=%s phone=%s mobile=%s whatsapp_number=%s",
                     partner.id,
                     partner.name,
-                    value,
-                    normalized,
-                    clean_phone,
-                )
-
-                if normalized and normalized == clean_phone:
-                    _logger.info(
-                        "[WA-PARTNER] Partner encontrado por teléfono normalizado exacto | partner_id=%s name=%s",
-                        partner.id,
-                        partner.name,
-                    )
-                    return partner
-
-                if normalized and normalized[-9:] == last9:
-                    _logger.info(
-                        "[WA-PARTNER] Partner encontrado por últimos 9 dígitos | partner_id=%s name=%s normalized=%s last9=%s",
-                        partner.id,
-                        partner.name,
-                        normalized,
-                        last9,
-                    )
-                    return partner
-
-            if partner.whatsapp_jid and clean_phone in partner.whatsapp_jid:
-                _logger.info(
-                    "[WA-PARTNER] Partner encontrado por whatsapp_jid | partner_id=%s name=%s jid=%s",
-                    partner.id,
-                    partner.name,
-                    partner.whatsapp_jid,
-                )
-                return partner
-
-        # ======================================================
-        # 4) Último intento por últimos 4 dígitos
-        # ======================================================
-        broad_candidates = Partner.search([
-            "|", "|", "|",
-            ("mobile", "ilike", last4),
-            ("phone", "ilike", last4),
-            ("whatsapp_number", "ilike", last4),
-            ("whatsapp_jid", "ilike", last4),
-        ], limit=500)
-
-        _logger.info(
-            "[WA-PARTNER] Candidatos amplios por últimos 4 dígitos | last4=%s total=%s",
-            last4,
-            len(broad_candidates),
-        )
-
-        for partner in broad_candidates:
-            for value in [partner.whatsapp_number, partner.mobile, partner.phone]:
-                normalized = self._clean_phone(value)
-
-                if normalized and normalized[-9:] == last9:
-                    _logger.info(
-                        "[WA-PARTNER] Partner encontrado en búsqueda amplia | partner_id=%s name=%s raw=%s normalized=%s",
-                        partner.id,
-                        partner.name,
-                        value,
-                        normalized,
-                    )
-                    return partner
-
-            if partner.whatsapp_jid and clean_phone in partner.whatsapp_jid:
-                _logger.info(
-                    "[WA-PARTNER] Partner encontrado por whatsapp_jid en búsqueda amplia | partner_id=%s name=%s jid=%s",
-                    partner.id,
-                    partner.name,
-                    partner.whatsapp_jid,
+                    partner.phone,
+                    partner.mobile,
+                    partner.whatsapp_number,
                 )
                 return partner
 
         _logger.warning(
-            "[WA-PARTNER] No se encontró partner por teléfono | clean_phone=%s last9=%s",
+            "[WA-PARTNER] No se encontró partner por teléfono SQL normalizado | clean_phone=%s last9=%s",
             clean_phone,
             last9,
         )
