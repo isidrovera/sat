@@ -12,13 +12,65 @@ class WhatsAppOnsiteMixin:
     # ==========================================================
     # Crear ticket servicio presencial
     # ==========================================================
+    def _get_service_problem_photo_binary(self, context):
+        """
+        Devuelve la imagen en base64 para llenar ticket.alquiler.problem_photo.
+
+        El flujo presencial guarda media_id en context cuando el cliente envía foto.
+        La foto se guarda como whatsapp.media y puede tener:
+        - attachment_id ya creado
+        - url externa para descargar
+        """
+        context = context or {}
+
+        media_id = context.get("media_id")
+        if not media_id:
+            return False
+
+        try:
+            media = request.env["whatsapp.media"].sudo().browse(int(media_id)).exists()
+        except Exception:
+            media = request.env["whatsapp.media"].sudo()
+
+        if not media:
+            return False
+
+        if media.media_type and media.media_type != "image":
+            _logger.info(
+                "[WA-ONSITE] Media no es imagen, no se copia a problem_photo | media=%s type=%s",
+                media.id,
+                media.media_type,
+            )
+            return False
+
+        attachment = media.attachment_id
+
+        if not attachment:
+            try:
+                attachment = media.download_and_create_attachment()
+            except Exception:
+                _logger.exception(
+                    "[WA-ONSITE] No se pudo descargar media para problem_photo | media=%s url=%s",
+                    media.id,
+                    media.url,
+                )
+                attachment = False
+
+        if not attachment or not attachment.datas:
+            _logger.warning(
+                "[WA-ONSITE] Media sin attachment/datas para problem_photo | media=%s",
+                media.id,
+            )
+            return False
+
+        return attachment.datas
     def _create_service_ticket(self, partner, session, context, payload=False):
         company = partner.whatsapp_active_company_id if partner and partner.whatsapp_active_company_id else False
         machine = self._get_context_machine(context)
         payload = payload or {}
 
         description = context.get("service_description") or payload.get("message") or payload.get("text") or ""
-
+        problem_photo = self._get_service_problem_photo_binary(context)
         def _get_machine_value(field_names):
             if not machine:
                 return False
@@ -123,11 +175,13 @@ class WhatsAppOnsiteMixin:
             "descripcion": description,
             "problema": description,
             "falla_reportada": description,
+            # Foto del problema enviada por WhatsApp
+            "problem_photo": problem_photo or False,
             "observaciones": description,
-            "informe_id": description,
+            
 
             # Tipo de servicio
-            "tipo_servicio_id": "mantenimiento_correctivo",
+            "tipo_servicio_id": "revision",
 
             # Trazabilidad
             "origen": "whatsapp",
