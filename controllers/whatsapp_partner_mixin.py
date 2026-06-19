@@ -292,70 +292,114 @@ class WhatsAppPartnerMixin:
         last6 = clean_phone[-6:] if len(clean_phone) >= 6 else clean_phone
         last4 = clean_phone[-4:] if len(clean_phone) >= 4 else clean_phone
 
+        _logger.info(
+            "[WA-PARTNER] Buscando partner por teléfono | clean_phone=%s last9=%s last6=%s last4=%s",
+            clean_phone,
+            last9,
+            last6,
+            last4,
+        )
+
         # ======================================================
-        # 1) Buscar por campos WhatsApp más exactos
+        # 1) Búsqueda exacta por campos WhatsApp
         # ======================================================
-        partner = Partner.search([
-            "|",
+        exact_partner = Partner.search([
+            "|", "|", "|",
             ("whatsapp_number", "=", clean_phone),
             ("whatsapp_jid", "=", "%s@s.whatsapp.net" % clean_phone),
+            ("mobile", "=", clean_phone),
+            ("phone", "=", clean_phone),
         ], limit=1)
 
-        if partner:
-            return partner
+        if exact_partner:
+            _logger.info(
+                "[WA-PARTNER] Partner encontrado exacto | partner_id=%s name=%s phone=%s mobile=%s whatsapp_number=%s",
+                exact_partner.id,
+                exact_partner.name,
+                exact_partner.phone,
+                exact_partner.mobile,
+                exact_partner.whatsapp_number,
+            )
+            return exact_partner
 
         # ======================================================
-        # 2) Buscar candidatos amplios.
-        #
-        # Importante:
-        # No basta con ilike last9 porque en Odoo puede estar:
+        # 2) Buscar candidatos por fragmentos.
+        # Esto ayuda si el número está guardado como:
         # +51 924 894 829
         # 924 894 829
         # 924-894-829
-        #
-        # Por eso buscamos por fragmentos y luego comparamos
-        # normalizado con _clean_phone().
         # ======================================================
-        domain = [
-            "|", "|", "|", "|", "|", "|", "|",
+        candidates = Partner.search([
+            "|", "|", "|", "|", "|", "|", "|", "|", "|",
             ("whatsapp_number", "ilike", clean_phone),
             ("whatsapp_number", "ilike", last9),
+            ("whatsapp_number", "ilike", last6),
             ("mobile", "ilike", clean_phone),
             ("mobile", "ilike", last9),
+            ("mobile", "ilike", last6),
             ("phone", "ilike", clean_phone),
             ("phone", "ilike", last9),
+            ("phone", "ilike", last6),
             ("whatsapp_jid", "ilike", clean_phone),
-            ("mobile", "ilike", last4),
-        ]
+        ], limit=300)
 
-        candidates = Partner.search(domain, limit=200)
+        _logger.info(
+            "[WA-PARTNER] Candidatos encontrados por teléfono | clean_phone=%s total=%s",
+            clean_phone,
+            len(candidates),
+        )
 
         # ======================================================
         # 3) Comparación normalizada exacta
         # ======================================================
         for partner in candidates:
-            numbers = [
+            values_to_check = [
                 partner.whatsapp_number,
                 partner.mobile,
                 partner.phone,
             ]
 
-            for number in numbers:
-                if self._clean_phone(number) == clean_phone:
+            for value in values_to_check:
+                normalized = self._clean_phone(value)
+
+                _logger.info(
+                    "[WA-PARTNER] Comparando candidato | partner_id=%s name=%s raw=%s normalized=%s target=%s",
+                    partner.id,
+                    partner.name,
+                    value,
+                    normalized,
+                    clean_phone,
+                )
+
+                if normalized and normalized == clean_phone:
+                    _logger.info(
+                        "[WA-PARTNER] Partner encontrado por teléfono normalizado exacto | partner_id=%s name=%s",
+                        partner.id,
+                        partner.name,
+                    )
                     return partner
 
-                # También aceptar comparación por últimos 9 dígitos
-                # para casos donde uno tiene 51 y otro no.
-                normalized = self._clean_phone(number)
                 if normalized and normalized[-9:] == last9:
+                    _logger.info(
+                        "[WA-PARTNER] Partner encontrado por últimos 9 dígitos | partner_id=%s name=%s normalized=%s last9=%s",
+                        partner.id,
+                        partner.name,
+                        normalized,
+                        last9,
+                    )
                     return partner
 
             if partner.whatsapp_jid and clean_phone in partner.whatsapp_jid:
+                _logger.info(
+                    "[WA-PARTNER] Partner encontrado por whatsapp_jid | partner_id=%s name=%s jid=%s",
+                    partner.id,
+                    partner.name,
+                    partner.whatsapp_jid,
+                )
                 return partner
 
         # ======================================================
-        # 4) Último intento: búsqueda más amplia por últimos 4 dígitos
-        # y validación Python.
+        # 4) Último intento por últimos 4 dígitos
         # ======================================================
         broad_candidates = Partner.search([
             "|", "|", "|",
@@ -363,16 +407,42 @@ class WhatsAppPartnerMixin:
             ("phone", "ilike", last4),
             ("whatsapp_number", "ilike", last4),
             ("whatsapp_jid", "ilike", last4),
-        ], limit=300)
+        ], limit=500)
+
+        _logger.info(
+            "[WA-PARTNER] Candidatos amplios por últimos 4 dígitos | last4=%s total=%s",
+            last4,
+            len(broad_candidates),
+        )
 
         for partner in broad_candidates:
-            for number in [partner.whatsapp_number, partner.mobile, partner.phone]:
-                normalized = self._clean_phone(number)
+            for value in [partner.whatsapp_number, partner.mobile, partner.phone]:
+                normalized = self._clean_phone(value)
+
                 if normalized and normalized[-9:] == last9:
+                    _logger.info(
+                        "[WA-PARTNER] Partner encontrado en búsqueda amplia | partner_id=%s name=%s raw=%s normalized=%s",
+                        partner.id,
+                        partner.name,
+                        value,
+                        normalized,
+                    )
                     return partner
 
             if partner.whatsapp_jid and clean_phone in partner.whatsapp_jid:
+                _logger.info(
+                    "[WA-PARTNER] Partner encontrado por whatsapp_jid en búsqueda amplia | partner_id=%s name=%s jid=%s",
+                    partner.id,
+                    partner.name,
+                    partner.whatsapp_jid,
+                )
                 return partner
+
+        _logger.warning(
+            "[WA-PARTNER] No se encontró partner por teléfono | clean_phone=%s last9=%s",
+            clean_phone,
+            last9,
+        )
 
         return Partner
 
