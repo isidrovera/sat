@@ -42,7 +42,8 @@ class SatRevisionNotificaciones(models.Model):
                 # Solo notificar si realmente entró a para_revision.
                 if estado_anterior != 'para_revision' and record.estado_ventas_id == 'para_revision':
                     try:
-                        record._sat_notificar_para_revision()
+                        with record.env.cr.savepoint():
+                            record._sat_notificar_para_revision()
                     except Exception as e:
                         _logger.exception(
                             "[SAT NOTIF PARA_REVISION] Error notificando máquina ID %s: %s",
@@ -50,12 +51,13 @@ class SatRevisionNotificaciones(models.Model):
                             e,
                         )
                         try:
-                            record.message_post(
-                                body=_(
-                                    "⚠️ Error generando notificación de máquina para revisión:<br/>%s"
-                                ) % str(e),
-                                subtype_xmlid='mail.mt_note',
-                            )
+                            with record.env.cr.savepoint():
+                                record.message_post(
+                                    body=_(
+                                        "Error generando notificación de máquina para revisión:<br/>%s"
+                                    ) % str(e),
+                                    subtype_xmlid='mail.mt_note',
+                                )
                         except Exception:
                             pass
 
@@ -107,11 +109,44 @@ class SatRevisionNotificaciones(models.Model):
     def _sat_get_asesora_user(self):
         self.ensure_one()
 
+        asesora = False
+
         try:
             if self.cliente_id and self.cliente_id.asesora_id:
-                return self.cliente_id.asesora_id
+                asesora = self.cliente_id.asesora_id
         except Exception:
-            pass
+            asesora = False
+
+        if not asesora:
+            return False
+
+        # En algunas bases cliente.asesora_id apunta a res.partner.
+        # El log necesita res.users, por eso convertimos partner -> usuario.
+        if getattr(asesora, '_name', '') == 'res.users':
+            return asesora if asesora.exists() else False
+
+        if getattr(asesora, '_name', '') == 'res.partner':
+            user = self.env['res.users'].sudo().search([
+                ('partner_id', '=', asesora.id),
+            ], limit=1)
+            if user:
+                return user
+
+            _logger.warning(
+                "[SAT NOTIF PARA_REVISION] La asesora partner ID %s (%s) no tiene usuario asociado.",
+                asesora.id,
+                asesora.display_name,
+            )
+            return False
+
+        # Respaldo por si llega un recordset inesperado con partner_id.
+        partner = getattr(asesora, 'partner_id', False)
+        if partner:
+            user = self.env['res.users'].sudo().search([
+                ('partner_id', '=', partner.id),
+            ], limit=1)
+            if user:
+                return user
 
         return False
 
@@ -254,33 +289,36 @@ Se notificará cuando taller inicie la revisión.
         # VALIDACIONES OBLIGATORIAS
         # ------------------------------------------------------
         if not cliente:
-            self.message_post(
-                body=_(
-                    "ℹ️ No se generó notificación de <b>Para revisión</b> "
-                    "porque la máquina no tiene cliente asignado."
-                ),
-                subtype_xmlid='mail.mt_note',
-            )
+            with self.env.cr.savepoint():
+                self.message_post(
+                    body=_(
+                        "No se generó notificación de <b>Para revisión</b> "
+                        "porque la máquina no tiene cliente asignado."
+                    ),
+                    subtype_xmlid='mail.mt_note',
+                )
             return created_logs
 
         if not asesora_user:
-            self.message_post(
-                body=_(
-                    "ℹ️ No se generó notificación de <b>Para revisión</b> "
-                    "porque el cliente no tiene asesora asignada."
-                ),
-                subtype_xmlid='mail.mt_note',
-            )
+            with self.env.cr.savepoint():
+                self.message_post(
+                    body=_(
+                        "No se generó notificación de <b>Para revisión</b> "
+                        "porque el cliente no tiene asesora asignada como usuario."
+                    ),
+                    subtype_xmlid='mail.mt_note',
+                )
             return created_logs
 
         if not asesora_phone:
-            self.message_post(
-                body=_(
-                    "ℹ️ No se generó notificación de <b>Para revisión</b> "
-                    "porque la asesora no tiene celular configurado."
-                ),
-                subtype_xmlid='mail.mt_note',
-            )
+            with self.env.cr.savepoint():
+                self.message_post(
+                    body=_(
+                        "No se generó notificación de <b>Para revisión</b> "
+                        "porque la asesora no tiene celular configurado."
+                    ),
+                    subtype_xmlid='mail.mt_note',
+                )
             return created_logs
 
         msg = self._sat_build_msg_para_revision()
@@ -372,7 +410,8 @@ Se notificará cuando taller inicie la revisión.
                 'count': len(created_logs),
             }
 
-            self.message_post(body=body, subtype_xmlid='mail.mt_note')
+            with self.env.cr.savepoint():
+                self.message_post(body=body, subtype_xmlid='mail.mt_note')
 
         except Exception as e:
             _logger.warning(

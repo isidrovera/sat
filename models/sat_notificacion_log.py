@@ -339,11 +339,20 @@ class SatNotificacionLog(models.Model):
             if vals.get('phone'):
                 vals['phone'] = str(vals.get('phone')).strip()
 
+            asesora_user_id = vals.get('asesora_user_id')
+            if asesora_user_id and not self.env['res.users'].sudo().browse(asesora_user_id).exists():
+                _logger.warning(
+                    "[SAT NOTIF] asesora_user_id inválido en create: %s. Se guardará vacío.",
+                    asesora_user_id,
+                )
+                vals['asesora_user_id'] = False
+
         records = super().create(vals_list)
 
         for record in records:
             try:
-                record._evaluate_initial_schedule()
+                with record.env.cr.savepoint():
+                    record._evaluate_initial_schedule()
             except Exception as e:
                 _logger.exception(
                     "[SAT NOTIF] Error evaluando horario inicial log ID %s: %s",
@@ -892,6 +901,41 @@ class SatNotificacionLog(models.Model):
     # CREACIÓN CENTRALIZADA
     # ==========================================================
 
+    def _resolve_asesora_user(self, asesora_user=False):
+        """
+        Normaliza la asesora a res.users.
+        Algunos flujos envían el contacto res.partner; el log necesita usuario.
+        """
+        if not asesora_user:
+            return False
+
+        if getattr(asesora_user, '_name', '') == 'res.users':
+            return asesora_user if asesora_user.exists() else False
+
+        if getattr(asesora_user, '_name', '') == 'res.partner':
+            user = self.env['res.users'].sudo().search([
+                ('partner_id', '=', asesora_user.id),
+            ], limit=1)
+            if user:
+                return user
+
+            _logger.warning(
+                "[SAT NOTIF] asesora partner ID %s (%s) no tiene usuario asociado.",
+                asesora_user.id,
+                asesora_user.display_name,
+            )
+            return False
+
+        partner = getattr(asesora_user, 'partner_id', False)
+        if partner:
+            user = self.env['res.users'].sudo().search([
+                ('partner_id', '=', partner.id),
+            ], limit=1)
+            if user:
+                return user
+
+        return False
+
     @api.model
     def create_notification(
         self,
@@ -922,6 +966,8 @@ class SatNotificacionLog(models.Model):
         Si está fuera de horario y respect_business_hours=True,
         quedará como pending_out_of_hours.
         """
+        asesora_user = self._resolve_asesora_user(asesora_user)
+
         vals = {
             'event_type': event_type,
             'phone': phone,
@@ -951,7 +997,8 @@ class SatNotificacionLog(models.Model):
             })
 
         try:
-            log = self.sudo().create(vals)
+            with self.env.cr.savepoint():
+                log = self.sudo().create(vals)
         except Exception as e:
             # Si falla por unique_key duplicado, registramos omitido solo en logger.
             _logger.warning(
@@ -964,7 +1011,16 @@ class SatNotificacionLog(models.Model):
             return False
 
         if send_immediately:
-            log._send_one()
+            try:
+                with self.env.cr.savepoint():
+                    log._send_one()
+            except Exception as e:
+                _logger.warning(
+                    "[SAT NOTIF] No se pudo enviar notificación log ID %s: %s",
+                    log.id,
+                    e,
+                    exc_info=True,
+                )
 
         return log
 
