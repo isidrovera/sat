@@ -770,6 +770,27 @@ class SatSat(models.Model):
                     break
 
             record.posicion_cola = posicion
+
+    def _sat_safe_postprocess(self, label, callback):
+        """
+        Ejecuta post-procesos no críticos sin dejar abortada la transacción.
+        Si una notificación/cálculo auxiliar falla en PostgreSQL, el savepoint
+        revierte solo ese bloque y permite que el write principal continúe.
+        """
+        self.ensure_one()
+        try:
+            with self.env.cr.savepoint():
+                return callback()
+        except Exception as e:
+            _logger.error(
+                "[SAT POST] Error en %s | ID=%s | error=%s",
+                label,
+                self.id,
+                e,
+                exc_info=True,
+            )
+            return False
+
     partes_retiradas_ids = fields.One2many(
         'solicitud.parte.tecnico.linea', 'maquina_origen_sat_id',
         string='Partes Retiradas', readonly=True)
@@ -814,10 +835,13 @@ class SatSat(models.Model):
         )
 
         
-        self.message_post(
-            body=mensaje_chatter,
-            partner_ids=[isidro_partner_id] if isidro_partner_id else None,
-            subtype_xmlid='mail.mt_comment',
+        self._sat_safe_postprocess(
+            "chatter colocar en revision",
+            lambda: self.message_post(
+                body=mensaje_chatter,
+                partner_ids=[isidro_partner_id] if isidro_partner_id else None,
+                subtype_xmlid='mail.mt_comment',
+            ),
         )
 
         # Notificación visual al usuario
@@ -956,19 +980,21 @@ class SatSat(models.Model):
         if vals.get('ultima_fuente_actualizacion') == 'snmp':
             for record in self:
                 try:
-                    snmp_detail_vals = record._sat_prepare_snmp_detail_vals_from_context()
-                    vals.update(snmp_detail_vals)
+                    with record.env.cr.savepoint():
+                        snmp_detail_vals = record._sat_prepare_snmp_detail_vals_from_context()
+                        vals.update(snmp_detail_vals)
 
-                    _logger.info(
-                        "[SAT SNMP DETALLE] Valores detallados preparados para máquina ID=%s | %s",
-                        record.id,
-                        snmp_detail_vals,
-                    )
+                        _logger.info(
+                            "[SAT SNMP DETALLE] Valores detallados preparados para máquina ID=%s | %s",
+                            record.id,
+                            snmp_detail_vals,
+                        )
                 except Exception as e:
                     _logger.error(
                         "[SAT SNMP DETALLE] Error preparando contadores detallados SNMP | ID=%s | error=%s",
                         record.id,
                         e,
+                        exc_info=True,
                     )
         _logger.error(
             "SAT.WRITE → ANTES SUPER | IDS=%s | VALS=%s | INGRESO_REAPPLY=%s",
@@ -1000,29 +1026,47 @@ class SatSat(models.Model):
         # 6) Post-procesos por registro
         # ---------------------------
         for record in self:
-            record._sat_post_write_transportistas(vals)
-
-            record._sat_post_write_estado_notifications(
-                vals=vals,
-                cambios_previos=cambios_previos,
-                problem_notification_ids=problem_notification_ids,
-                availability_notification_ids=availability_notification_ids,
-                clean_description_ids=clean_description_ids,
+            record._sat_safe_postprocess(
+                "transportistas",
+                lambda record=record: record._sat_post_write_transportistas(vals),
             )
 
-            record._sat_post_write_model_counter_checks(
-                cambios_previos=cambios_previos,
+            record._sat_safe_postprocess(
+                "notificaciones estado",
+                lambda record=record: record._sat_post_write_estado_notifications(
+                    vals=vals,
+                    cambios_previos=cambios_previos,
+                    problem_notification_ids=problem_notification_ids,
+                    availability_notification_ids=availability_notification_ids,
+                    clean_description_ids=clean_description_ids,
+                ),
             )
 
-            record._sat_post_write_snmp_notifications(
-                cambios_previos=cambios_previos,
+            record._sat_safe_postprocess(
+                "revision modelo/contador",
+                lambda record=record: record._sat_post_write_model_counter_checks(
+                    cambios_previos=cambios_previos,
+                ),
             )
 
-            record._sat_post_write_ingreso_check(
-                vals_ingreso_in=vals_ingreso_in,
+            record._sat_safe_postprocess(
+                "notificaciones snmp",
+                lambda record=record: record._sat_post_write_snmp_notifications(
+                    cambios_previos=cambios_previos,
+                ),
             )
 
-            record._sat_post_write_update_prueba_from_snmp()
+            record._sat_safe_postprocess(
+                "check ingreso",
+                lambda record=record: record._sat_post_write_ingreso_check(
+                    vals_ingreso_in=vals_ingreso_in,
+                ),
+            )
+
+            record._sat_safe_postprocess(
+                "actualizar prueba snmp",
+                lambda record=record: record._sat_post_write_update_prueba_from_snmp(),
+            )
 
         return result
 
@@ -1181,7 +1225,8 @@ class SatSat(models.Model):
 
             if campos_relevantes.intersection(vals.keys()):
                 if self.disponibilidad_id == 'separada' and self.ubicacion_id in ['segundo_local', 'covida']:
-                    self.enviar_mensaje_transportistas()
+                    with self.env.cr.savepoint():
+                        self.enviar_mensaje_transportistas()
                     _logger.info("[TRANSPORTE] Notificación enviada para ID %s", self.id)
                 else:
                     _logger.info(
@@ -1215,7 +1260,8 @@ class SatSat(models.Model):
 
         if self.id in problem_notification_ids:
             try:
-                self.enviar_mensaje_problema_asesora()
+                with self.env.cr.savepoint():
+                    self.enviar_mensaje_problema_asesora()
                 _logger.info(
                     "[SAT ESTADO] Notificación de problema enviada | ID=%s | estado=%s",
                     self.id,
@@ -1230,7 +1276,8 @@ class SatSat(models.Model):
 
         if self.id in availability_notification_ids:
             try:
-                self.enviar_notificacion_disponibilidad()
+                with self.env.cr.savepoint():
+                    self.enviar_notificacion_disponibilidad()
                 _logger.info(
                     "[SAT ESTADO] Notificación de disponibilidad enviada | ID=%s | estado=%s",
                     self.id,
@@ -1253,7 +1300,8 @@ class SatSat(models.Model):
                     "Se limpió la descripción al cambiar el estado de '%s' a '%s'"
                 ) % (estado_anterior, nuevo_estado)
 
-                self.message_post(body=message)
+                with self.env.cr.savepoint():
+                    self.message_post(body=message)
 
             except Exception as e:
                 _logger.error(
@@ -1315,10 +1363,11 @@ class SatSat(models.Model):
         # 1) Si cambió el modelo
         if modelo_anterior and modelo_nuevo and modelo_anterior != modelo_nuevo:
             try:
-                self.notify_snmp_model_change(
-                    previous_model=modelo_anterior,
-                    new_model=modelo_nuevo,
-                )
+                with self.env.cr.savepoint():
+                    self.notify_snmp_model_change(
+                        previous_model=modelo_anterior,
+                        new_model=modelo_nuevo,
+                    )
             except Exception as e:
                 _logger.error("Error notificando cambio de modelo SNMP: %s", e)
 
@@ -1373,17 +1422,19 @@ class SatSat(models.Model):
 
                     # WhatsApp técnico
                     try:
-                        self._notify_tecnico_guardar_hoja_contometro_snmp(prov_val, new_val)
+                        with self.env.cr.savepoint():
+                            self._notify_tecnico_guardar_hoja_contometro_snmp(prov_val, new_val)
                     except Exception as e:
                         _logger.error("[SNMP->WA] Error alertando al técnico: %s", e)
 
                     # Correo anomalía
                     try:
-                        self.notify_snmp_counter_update(
-                            previous_counter=prov_val,
-                            new_counter=new_val,
-                            is_anomaly=True,
-                        )
+                        with self.env.cr.savepoint():
+                            self.notify_snmp_counter_update(
+                                previous_counter=prov_val,
+                                new_counter=new_val,
+                                is_anomaly=True,
+                            )
                     except Exception as e:
                         _logger.error("[SNMP->MAIL] Error enviando correo proveedor vs SNMP: %s", e)
 
@@ -1391,7 +1442,8 @@ class SatSat(models.Model):
 
                     # Marcar como alertado
                     try:
-                        self.sudo().write({'alerta_proveedor_snmp_enviada': True})
+                        with self.env.cr.savepoint():
+                            self.sudo().write({'alerta_proveedor_snmp_enviada': True})
                     except Exception as e:
                         _logger.error("[SNMP ALERT] Error marcando alerta_proveedor_snmp_enviada: %s", e)
 
@@ -1436,11 +1488,12 @@ class SatSat(models.Model):
                     )
 
                     try:
-                        self.notify_snmp_counter_update(
-                            previous_counter=old_val,
-                            new_counter=new_val,
-                            is_anomaly=True,
-                        )
+                        with self.env.cr.savepoint():
+                            self.notify_snmp_counter_update(
+                                previous_counter=old_val,
+                                new_counter=new_val,
+                                is_anomaly=True,
+                            )
                         _logger.error("[SNMP ANOMALY] ✅ Correo enviado exitosamente")
                     except Exception as e:
                         _logger.error("[SNMP ANOMALY] ❌ Error enviando correo: %s", e)
@@ -1508,11 +1561,12 @@ class SatSat(models.Model):
             if self.ultima_fuente_actualizacion != 'snmp':
                 return
 
-            Prueba = self.env['sat.prueba.maquina'].sudo()
+            with self.env.cr.savepoint():
+                Prueba = self.env['sat.prueba.maquina'].sudo()
 
-            prueba = Prueba.search([
-                ('maquina_id', '=', self.id),
-            ], order='id desc', limit=1)
+                prueba = Prueba.search([
+                    ('maquina_id', '=', self.id),
+                ], order='id desc', limit=1)
 
             if not prueba:
                 _logger.warning(
@@ -1648,11 +1702,12 @@ class SatSat(models.Model):
             # Aplicar payload a la prueba.
             # Este método debe guardar raw_payload_json y snmp_detalle_ids.
             # ======================================================
-            prueba.aplicar_snmp_payload(
-                counters=snmp_counters,
-                toner=snmp_toner,
-                payload=snmp_payload,
-            )
+            with self.env.cr.savepoint():
+                prueba.aplicar_snmp_payload(
+                    counters=snmp_counters,
+                    toner=snmp_toner,
+                    payload=snmp_payload,
+                )
 
             _logger.info(
                 "[PRUEBA SNMP] Payload aplicado en prueba ID %s | Máquina ID=%s | Serie=%s | counters=%s | toner=%s | payload_keys=%s",
