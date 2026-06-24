@@ -299,6 +299,11 @@
     <field name="code">FUSER_UPPER</field>
     <field name="tipo_id" ref="comp_tipo_fusora"/>
   </record>
+  <record id="sub_fuser_film_washers" model="componente.subparte">
+    <field name="name">Arandelas de la faja fusora</field>
+    <field name="code">FUSER_FILM_WASHERS</field>
+    <field name="tipo_id" ref="comp_tipo_fusora"/>
+</record>
   <record id="sub_fuser_lower" model="componente.subparte">
     <field name="name">Rodillo de presión (inferior)</field>
     <field name="code">FUSER_LOWER</field>
