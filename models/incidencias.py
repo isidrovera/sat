@@ -628,14 +628,10 @@ class Incidencia(models.Model):
                 if hasattr(reparacion, 'informe') and reparacion.informe:
                     vals['informe_tecnico'] = reparacion.informe
 
-                if hasattr(reparacion, 'calidad_id') and reparacion.calidad_id:
-                    vals['calidad_reparacion'] = reparacion.calidad_id.display_name
-
-                if hasattr(reparacion, 'estado_id') and reparacion.estado_id:
-                    vals['estado_reparacion'] = dict(reparacion._fields['estado_id'].selection).get(
-                        reparacion.estado_id,
-                        reparacion.estado_id
-                    )
+                if 'calidad_id' in reparacion._fields and reparacion.calidad_id:
+                    vals['calidad_reparacion'] = record._get_valor_campo_legible(reparacion, 'calidad_id')
+                if 'estado_id' in reparacion._fields and reparacion.estado_id:
+                    vals['estado_reparacion'] = record._get_valor_campo_legible(reparacion, 'estado_id')
 
                 observaciones = record._obtener_observaciones_reparacion(reparacion)
                 if observaciones:
@@ -647,7 +643,36 @@ class Incidencia(models.Model):
             else:
                 for key, value in vals.items():
                     record[key] = value
+    def _get_valor_campo_legible(self, record, campo):
+        """
+        Devuelve el valor legible de un campo.
+        Soporta Many2one, Selection, Char, Text, etc.
+        """
+        if not record or campo not in record._fields:
+            return ''
 
+        valor = record[campo]
+
+        if not valor:
+            return ''
+
+        field = record._fields[campo]
+
+        # Many2one
+        if field.type == 'many2one':
+            return valor.display_name or ''
+
+        # Selection
+        if field.type == 'selection':
+            selection = field.selection
+
+            if callable(selection):
+                selection = selection(record.env[record._name])
+
+            return dict(selection or []).get(valor, valor)
+
+        # Char, Text, Date, Datetime, Integer, etc.
+        return str(valor)
     def _buscar_reparacion_relacionada(self, equipo):
         self.ensure_one()
 
