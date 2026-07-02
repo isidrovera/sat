@@ -126,3 +126,4 @@ from . import sat_revision_notificaciones
 from . import reparaciones_notificaciones
 from . import evaluacion_personal_dashboard
 from . import sat_pruebas_dashboard
+from . import sat_name_search
