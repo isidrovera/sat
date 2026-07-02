@@ -1090,18 +1090,100 @@ La reparación continúa en revisión y requiere registrar motivo de demora.
 """
 
         return msg
+    def _avance_get_current_lima(self):
+        """
+        Devuelve fecha/hora actual en zona horaria Perú.
+        """
+        now_utc = fields.Datetime.now()
+        return fields.Datetime.context_timestamp(
+            self.with_context(tz='America/Lima'),
+            now_utc
+        )
+
+
+    def _avance_is_business_time(self):
+        """
+        Valida horario laboral usando:
+        1. whatsapp.calendar.event para feriados/cierres/horarios especiales.
+        2. whatsapp.business.hours para horario semanal normal.
+        """
+        self.ensure_one()
+
+        now_lima = self._avance_get_current_lima()
+        current_date = now_lima.date()
+        current_hour_float = now_lima.hour + (now_lima.minute / 60.0)
+
+        Calendar = self.env['whatsapp.calendar.event'].sudo()
+        Hours = self.env['whatsapp.business.hours'].sudo()
+
+        # 1) Primero validar calendario especial / feriados / cierres manuales
+        calendar_event = Calendar.search([
+            ('active', '=', True),
+            ('event_date', '=', current_date),
+        ], limit=1)
+
+        if calendar_event:
+            status = calendar_event.evaluate_status(current_hour_float)
+            return bool(status.get('is_open'))
+
+        # 2) Luego validar horario laboral normal
+        day_of_week = str(now_lima.weekday())  # 0 lunes, 6 domingo
+
+        business_hour = Hours.search([
+            ('active', '=', True),
+            ('day_of_week', '=', day_of_week),
+        ], limit=1)
+
+        if not business_hour:
+            return False
+
+        status = business_hour.evaluate_status(current_hour_float)
+        return bool(status.get('is_open'))
 
     def _send_alerta_avance_jefe(self):
         """
         Envía alerta al jefe de área usando sat.notificacion.log.
-        Esta alerta es interna, por eso NO respeta horario laboral.
+
+        Condiciones:
+        1. Solo alerta si la reparación está en revisión.
+        2. No alerta si la reparación no tiene cliente.
+        3. No alerta fuera del horario laboral configurado.
+        4. No fuerza el envío fuera de horario.
         """
         Log = self.env['sat.notificacion.log'].sudo()
 
         for record in self:
+            # ------------------------------------------------------
+            # 1) Solo alertar si está en revisión
+            # ------------------------------------------------------
             if record.estado_id != 'en_revision':
                 continue
 
+            # ------------------------------------------------------
+            # 2) No alertar si no tiene cliente
+            # ------------------------------------------------------
+            if not record.cliente_id:
+                record.message_post(
+                    body=_(
+                        "ℹ️ No se envió alerta de demora al jefe porque la reparación no tiene cliente asignado."
+                    ),
+                    subtype_xmlid='mail.mt_note',
+                )
+                continue
+
+            # ------------------------------------------------------
+            # 3) No alertar fuera de horario laboral
+            # ------------------------------------------------------
+            if not record._avance_is_business_time():
+                _logger.info(
+                    "[DEMORA REPARACIÓN] No se envía alerta ID %s porque está fuera de horario laboral.",
+                    record.id,
+                )
+                continue
+
+            # ------------------------------------------------------
+            # 4) Validar teléfono del jefe de área
+            # ------------------------------------------------------
             phone = record._get_jefe_area_phone()
 
             if not phone:
@@ -1118,6 +1200,9 @@ La reparación continúa en revisión y requiere registrar motivo de demora.
             msg = record._build_msg_alerta_jefe_avance()
             alerta_num = record.cantidad_alertas_avance_jefe + 1
 
+            # ------------------------------------------------------
+            # 5) Crear notificación respetando horario laboral
+            # ------------------------------------------------------
             log = Log.create_notification(
                 event_type='demora_jefe',
                 phone=phone,
@@ -1127,8 +1212,8 @@ La reparación continúa en revisión y requiere registrar motivo de demora.
                 maquina=record.maquina_id if record.maquina_id else False,
                 reparacion=record,
                 cliente=record.cliente_id if record.cliente_id else False,
-                respect_business_hours=False,
-                force_send=True,
+                respect_business_hours=True,
+                force_send=False,
                 unique_key='demora_jefe:reparacion:%s:alerta:%s' % (
                     record.id,
                     alerta_num,
@@ -1138,6 +1223,9 @@ La reparación continúa en revisión y requiere registrar motivo de demora.
                 note='Alerta interna de demora enviada al jefe de área.',
             )
 
+            # ------------------------------------------------------
+            # 6) Si se envió correctamente, programar próxima alerta
+            # ------------------------------------------------------
             if log and log.state == 'sent':
                 interval = record._get_avance_interval_hours()
                 now = fields.Datetime.now()
@@ -1162,6 +1250,9 @@ La reparación continúa en revisión y requiere registrar motivo de demora.
                     subtype_xmlid='mail.mt_note',
                 )
 
+            # ------------------------------------------------------
+            # 7) Si se creó pero quedó pendiente o con error
+            # ------------------------------------------------------
             elif log:
                 record.message_post(
                     body=_(
@@ -1175,6 +1266,9 @@ La reparación continúa en revisión y requiere registrar motivo de demora.
                     subtype_xmlid='mail.mt_note',
                 )
 
+            # ------------------------------------------------------
+            # 8) Si no se pudo crear el log
+            # ------------------------------------------------------
             else:
                 record.message_post(
                     body=_(
