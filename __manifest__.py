@@ -61,6 +61,7 @@
         'data/correos_informes.xml',
         'data/correos_maquinas.xml',
         'data/correos_alquiler.xml',
+        'data/incidencias_email_templates.xml',
         'data/mail_permisos.xml',
         'data/correos_evaluaciones_tecnicos.xml',
         'data/email_templates_consolidated.xml',
