@@ -1,55 +1,332 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <data>
+
+        <!-- ========================================================= -->
+        <!-- FORMULARIO INCIDENCIAS -->
+        <!-- ========================================================= -->
         <record id="view_incidencia_form" model="ir.ui.view">
             <field name="name">taller.incidencia.form</field>
             <field name="model">taller.incidencia</field>
             <field name="arch" type="xml">
                 <form string="Incidencia">
+
+                    <header>
+                        <button name="action_recargar_reparacion"
+                                type="object"
+                                string="Recargar Reparación"
+                                class="btn-secondary"/>
+
+                        <button name="action_enviar_revision"
+                                type="object"
+                                string="Enviar a Revisión"
+                                class="btn-primary"
+                                invisible="estado not in ['reportado', 'fuera_plazo']"/>
+
+                        <button name="action_marcar_procede"
+                                type="object"
+                                string="Procede"
+                                class="btn-success"
+                                invisible="estado != 'en_revision'"/>
+
+                        <button name="action_marcar_no_procede"
+                                type="object"
+                                string="No Procede"
+                                class="btn-warning"
+                                invisible="estado != 'en_revision'"/>
+
+                        <button name="action_enviar_gerencia"
+                                type="object"
+                                string="Enviar a Gerencia"
+                                class="btn-secondary"
+                                invisible="estado in ['gerencia', 'cerrado']"/>
+
+                        <button name="action_marcar_corregido"
+                                type="object"
+                                string="Marcar Corregido"
+                                class="btn-primary"
+                                invisible="estado != 'procede'"/>
+
+                        <button name="action_cerrar"
+                                type="object"
+                                string="Cerrar"
+                                class="btn-secondary"
+                                invisible="estado not in ['procede', 'no_procede', 'corregido', 'gerencia', 'fuera_plazo']"/>
+
+                        <button name="action_reabrir"
+                                type="object"
+                                string="Reabrir"
+                                class="btn-secondary"
+                                invisible="estado != 'cerrado'"/>
+
+                        <field name="estado"
+                               widget="statusbar"
+                               statusbar_visible="reportado,en_revision,procede,no_procede,corregido,cerrado"/>
+                    </header>
+
                     <sheet>
+
+                        <div class="oe_button_box" name="button_box">
+                            <button name="action_ver_equipo"
+                                    type="object"
+                                    class="oe_stat_button"
+                                    icon="fa-print"
+                                    invisible="not equipo_id">
+                                <field name="equipo_id" widget="statinfo" string="Equipo"/>
+                            </button>
+
+                            <button name="action_ver_reparacion"
+                                    type="object"
+                                    class="oe_stat_button"
+                                    icon="fa-wrench"
+                                    invisible="not reparacion_id">
+                                <field name="reparacion_id" widget="statinfo" string="Reparación"/>
+                            </button>
+                        </div>
+
+                        <div class="oe_title">
+                            <label for="name"/>
+                            <h1>
+                                <field name="name" readonly="1"/>
+                            </h1>
+                        </div>
+
                         <group>
-                            <group>
-                                <field name="name" />
-                                <field name="fecha_hora" />
-                                <field name="tipo" />
-                                <field name="cliente_id" />
-                                <field name="equipo_id" />
-                                <field name="descripcion" />
+                            <group string="Datos del Reclamo">
+                                <field name="fecha_hora"/>
+                                <field name="tipo"/>
+                                <field name="prioridad"/>
+                                <field name="equipo_id"
+                                       options="{'no_create': True, 'no_open': False}"
+                                       placeholder="Buscar y seleccionar serie/equipo"/>
+                                <field name="serie" readonly="1"/>
+                                <field name="modelo_equipo" readonly="1"/>
+                                <field name="marca" readonly="1"/>
+                                <field name="cliente_id" readonly="1"/>
+                                <field name="factura_venta" readonly="1"/>
                             </group>
-                            <group>
-                                <field name="estado" />
-                                <field name="prioridad" />
-                                <field name="empleado_id" />
-                                <field name="acciones" />
-                                <field name="fecha_resolucion" />
-                                <field name="comentarios_cliente" />
-                                <field name="costos" />
+
+                            <group string="Control de Plazo">
+                                <field name="fecha_entrega"/>
+                                <field name="plazo_maximo_dias"/>
+                                <field name="dias_desde_entrega" readonly="1"/>
+                                <field name="dentro_plazo" readonly="1"/>
+                                <field name="estado" readonly="1"/>
                             </group>
                         </group>
+
+                        <group>
+                            <group string="Reparación Relacionada">
+                                <field name="reparacion_id" readonly="1"/>
+                                <field name="tecnico_id" readonly="1"/>
+                                <field name="fecha_finalizacion_reparacion" readonly="1"/>
+                                <field name="estado_reparacion" readonly="1"/>
+                                <field name="calidad_reparacion" readonly="1"/>
+                            </group>
+
+                            <group string="Resultado del Análisis">
+                                <field name="tipo_reclamo"/>
+                                <field name="responsable_determinado"/>
+                                <field name="procede"/>
+                                <field name="afecta_tecnico" readonly="1"/>
+                                <field name="revisado_por_id" readonly="1"/>
+                                <field name="fecha_revision" readonly="1"/>
+                                <field name="fecha_resolucion" readonly="1"/>
+                            </group>
+                        </group>
+
+                        <notebook>
+
+                            <page string="Descripción del Reclamo">
+                                <group>
+                                    <field name="descripcion"
+                                           placeholder="Detalle del reclamo reportado por el cliente"/>
+                                    <field name="comentarios_cliente"
+                                           placeholder="Comentarios adicionales del cliente"/>
+                                </group>
+                            </page>
+
+                            <page string="Informe Técnico">
+                                <group>
+                                    <field name="informe_tecnico"
+                                           readonly="1"
+                                           nolabel="1"/>
+                                </group>
+                            </page>
+
+                            <page string="Observaciones de Reparación">
+                                <group>
+                                    <field name="observaciones_reparacion"
+                                           readonly="1"
+                                           nolabel="1"/>
+                                </group>
+                            </page>
+
+                            <page string="Validación">
+                                <group>
+                                    <field name="observacion_validacion"
+                                           placeholder="Sustento de la revisión técnica"/>
+                                    <field name="motivo_no_afecta"
+                                           placeholder="Indicar por qué no afecta al técnico, si corresponde"/>
+                                    <field name="acciones"
+                                           placeholder="Acciones tomadas para corregir o cerrar la incidencia"/>
+                                </group>
+                            </page>
+
+                            <page string="Evidencias">
+                                <group>
+                                    <field name="evidencia_ids"
+                                           widget="many2many_binary"/>
+                                </group>
+                            </page>
+
+                            <page string="Costos">
+                                <group>
+                                    <field name="costos"/>
+                                    <field name="empleado_id"/>
+                                </group>
+                            </page>
+
+                        </notebook>
+
                     </sheet>
+
+                    <chatter/>
+
                 </form>
             </field>
         </record>
+
+
+        <!-- ========================================================= -->
+        <!-- LISTA INCIDENCIAS -->
+        <!-- ========================================================= -->
         <record id="view_incidencia_tree" model="ir.ui.view">
-            <field name="name">taller.incidencia.tree</field>
+            <field name="name">taller.incidencia.list</field>
             <field name="model">taller.incidencia</field>
             <field name="arch" type="xml">
-                <list string="Incidencia">
-                    <field name="name" />
-                    <field name="fecha_hora" />
-                    <field name="tipo" />
-                    <field name="cliente_id" />
-                    <field name="equipo_id" />
-                    <field name="descripcion" />
-                    <field name="estado" />
-                    <field name="prioridad" />
-                    <field name="empleado_id" />
-                    <field name="acciones" />
-                    <field name="fecha_resolucion" />
-                    <field name="comentarios_cliente" />
-                    <field name="costos" />
+                <list string="Incidencias"
+                      decoration-danger="afecta_tecnico == True"
+                      decoration-warning="estado == 'fuera_plazo'"
+                      decoration-success="estado == 'no_procede'"
+                      decoration-muted="estado == 'cerrado'">
+
+                    <field name="name"/>
+                    <field name="fecha_hora"/>
+                    <field name="tipo"/>
+                    <field name="estado"/>
+                    <field name="prioridad"/>
+                    <field name="equipo_id"/>
+                    <field name="serie"/>
+                    <field name="cliente_id"/>
+                    <field name="reparacion_id"/>
+                    <field name="tecnico_id"/>
+                    <field name="fecha_entrega"/>
+                    <field name="dias_desde_entrega"/>
+                    <field name="dentro_plazo"/>
+                    <field name="tipo_reclamo"/>
+                    <field name="responsable_determinado"/>
+                    <field name="procede"/>
+                    <field name="afecta_tecnico"/>
+                    <field name="fecha_revision"/>
+                    <field name="fecha_resolucion"/>
+
                 </list>
             </field>
         </record>
-    </data>
+
+
+        <!-- ========================================================= -->
+        <!-- BÚSQUEDA INCIDENCIAS -->
+        <!-- ========================================================= -->
+        <record id="view_incidencia_search" model="ir.ui.view">
+            <field name="name">taller.incidencia.search</field>
+            <field name="model">taller.incidencia</field>
+            <field name="arch" type="xml">
+                <search string="Buscar Incidencias">
+
+                    <field name="name"/>
+                    <field name="equipo_id"/>
+                    <field name="serie"/>
+                    <field name="cliente_id"/>
+                    <field name="reparacion_id"/>
+                    <field name="tecnico_id"/>
+                    <field name="tipo_reclamo"/>
+                    <field name="responsable_determinado"/>
+                    <field name="estado"/>
+
+                    <filter string="Reportadas"
+                            name="filter_reportado"
+                            domain="[('estado','=','reportado')]"/>
+
+                    <filter string="En Revisión"
+                            name="filter_en_revision"
+                            domain="[('estado','=','en_revision')]"/>
+
+                    <filter string="Fuera de Plazo"
+                            name="filter_fuera_plazo"
+                            domain="[('estado','=','fuera_plazo')]"/>
+
+                    <filter string="En Gerencia"
+                            name="filter_gerencia"
+                            domain="[('estado','=','gerencia')]"/>
+
+                    <filter string="Procede"
+                            name="filter_procede"
+                            domain="[('procede','=','si')]"/>
+
+                    <filter string="No Procede"
+                            name="filter_no_procede"
+                            domain="[('procede','=','no')]"/>
+
+                    <filter string="Afecta Técnico"
+                            name="filter_afecta_tecnico"
+                            domain="[('afecta_tecnico','=',True)]"/>
+
+                    <filter string="No Afecta Técnico"
+                            name="filter_no_afecta_tecnico"
+                            domain="[('afecta_tecnico','=',False)]"/>
+
+                    <separator/>
+
+                    <filter string="Dentro de Plazo"
+                            name="filter_dentro_plazo"
+                            domain="[('dentro_plazo','=',True)]"/>
+
+                    <filter string="Fuera de los 10 días"
+                            name="filter_no_dentro_plazo"
+                            domain="[('dentro_plazo','=',False)]"/>
+
+                    <group expand="0" string="Agrupar por">
+                        <filter string="Estado"
+                                name="group_estado"
+                                context="{'group_by':'estado'}"/>
+
+                        <filter string="Técnico"
+                                name="group_tecnico"
+                                context="{'group_by':'tecnico_id'}"/>
+
+                        <filter string="Cliente"
+                                name="group_cliente"
+                                context="{'group_by':'cliente_id'}"/>
+
+                        <filter string="Tipo de Reclamo"
+                                name="group_tipo_reclamo"
+                                context="{'group_by':'tipo_reclamo'}"/>
+
+                        <filter string="Responsable"
+                                name="group_responsable"
+                                context="{'group_by':'responsable_determinado'}"/>
+
+                        <filter string="Afecta Técnico"
+                                name="group_afecta_tecnico"
+                                context="{'group_by':'afecta_tecnico'}"/>
+                    </group>
+
+                </search>
+            </field>
+        </record>
+
+
+      
 </odoo>
