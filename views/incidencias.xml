@@ -147,8 +147,8 @@
                             <group string="Reparación Relacionada">
                                 <field name="reparacion_id" readonly="1"/>
                                 <field name="tecnico_nombre" readonly="1"/>
-                                <field name="tecnico_id" readonly="1"/>
-                                <field name="tecnico_empleado_id" readonly="1"/>
+                               <!-- <field name="tecnico_id" readonly="1"/>
+                                <field name="tecnico_empleado_id" readonly="1"/>-->
                                 <field name="fecha_finalizacion_reparacion" readonly="1"/>
                                 <field name="estado_reparacion" readonly="1"/>
                                 <field name="calidad_reparacion" readonly="1"/>

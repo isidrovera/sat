@@ -816,6 +816,11 @@ action = env["sat.import.line"].browse(env.context.get("active_ids", [])).action
               parent="menu_corapsac_root"
               action="action_solicitud_parte_tecnico"
               sequence="40"/>
+     <menuitem id="sat.menu_incidencia"
+              name="Incidencias"
+              parent="menu_corapsac_root"
+              action="action_incidencias"
+              sequence="50"/>
 
     <!-- seq 50-200: libres para futuras adiciones en Corapsac -->
 
@@ -1147,11 +1152,7 @@ action = env["sat.import.line"].browse(env.context.get("active_ids", [])).action
               sequence="120"/>
 
     <!-- ── Operaciones y seguimiento (seq 130-140) ────────────────────── -->
-    <menuitem id="sat.menu_incidencia"
-              name="Incidencias"
-              parent="sat.ajustes"
-              action="action_incidencias"
-              sequence="130"/>
+   
 
     <menuitem id="menu_inspeccion_resultado"
               name="Inspecciones"
