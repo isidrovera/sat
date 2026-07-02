@@ -657,9 +657,16 @@ class Incidencia(models.Model):
     @api.onchange('fecha_entrega', 'fecha_hora', 'plazo_maximo_dias')
     def _onchange_plazo(self):
         for record in self:
-            if record.tipo == 'reclamo':
-                record._actualizar_estado_por_plazo()
-                return record._get_warning_plazo()
+            if record.tipo != 'reclamo':
+                continue
+
+            record._actualizar_estado_por_plazo()
+
+            # No mostrar alerta al abrir un registro nuevo sin equipo seleccionado
+            if not record.equipo_id:
+                return False
+
+            return record._get_warning_plazo()
 
     @api.onchange('tipo_reclamo')
     def _onchange_tipo_reclamo(self):
@@ -1302,11 +1309,18 @@ class Incidencia(models.Model):
     def _get_warning_plazo(self):
         self.ensure_one()
 
+        # No mostrar alerta si todavía no se seleccionó equipo
+        if not self.equipo_id:
+            return False
+
         if not self.fecha_entrega:
             return {
                 'warning': {
                     'title': _('Sin fecha de entrega'),
-                    'message': _('No se puede calcular el plazo del reclamo.'),
+                    'message': _(
+                        'La máquina seleccionada no tiene fecha de entrega. '
+                        'No se puede calcular si el reclamo está dentro de los 10 días.'
+                    ),
                 }
             }
 
@@ -1314,7 +1328,9 @@ class Incidencia(models.Model):
             return {
                 'warning': {
                     'title': _('Fuera de plazo'),
-                    'message': _('El reclamo queda para análisis de gerencia y no afecta al técnico.'),
+                    'message': _(
+                        'El reclamo queda para análisis de gerencia y no afecta al técnico.'
+                    ),
                 }
             }
 
