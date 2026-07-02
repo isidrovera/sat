@@ -817,10 +817,10 @@ action = env["sat.import.line"].browse(env.context.get("active_ids", [])).action
               action="action_solicitud_parte_tecnico"
               sequence="40"/>
      <menuitem id="sat.menu_incidencia"
-              name="Incidencias"
-              parent="menu_corapsac_root"
-              action="action_incidencias"
-              sequence="50"/>
+          name="Reclamos y Garantías"
+          parent="menu_corapsac_root"
+          action="action_incidencias"
+          sequence="50"/>
 
     <!-- seq 50-200: libres para futuras adiciones en Corapsac -->
 
