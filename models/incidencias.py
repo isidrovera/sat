@@ -266,19 +266,18 @@ class Incidencia(models.Model):
 
     motivo_no_afecta = fields.Html(
         string='Motivo por el que no afecta al Técnico',
-        tracking=True,
         sanitize=False
     )
 
     observacion_validacion = fields.Html(
         string='Observación de Validación',
-        tracking=True,
+    
         sanitize=False
     )
 
     acciones = fields.Html(
         string='Acciones Tomadas',
-        tracking=True,
+      
         sanitize=False
     )
 
