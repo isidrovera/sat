@@ -1886,41 +1886,48 @@ class EvaluacionPersonal(models.Model):
     
     def action_generar_detalle_diario(self):
         """
-        Genera el análisis diario de productividad
-        Se ejecuta automáticamente al crear/actualizar la evaluación
+        Genera el análisis diario de productividad.
+        Se ejecuta automáticamente al crear/actualizar la evaluación.
+        Usa sudo para poder borrar/crear el detalle diario técnico generado por el sistema.
         """
+        DetalleDiario = self.env['evaluacion.personal.detalle.diario'].sudo()
+
         for record in self:
             if not record.usuario_id or not record.fecha:
                 continue
-            
-            _logger.info(f"📊 Generando análisis diario para {record.nombre_usuario} - {record.mes} {record.anio}")
-            
-            # Eliminar detalles existentes
-            record.detalle_diario_ids.unlink()
-            
+
+            _logger.info(
+                f"📊 Generando análisis diario para {record.nombre_usuario} - {record.mes} {record.anio}"
+            )
+
+            # Eliminar detalles existentes con sudo para evitar error de permisos
+            detalles_existentes = DetalleDiario.search([
+                ('evaluacion_id', '=', record.id)
+            ])
+
+            if detalles_existentes:
+                detalles_existentes.unlink()
+
             # Calcular rango del mes
             inicio_mes = record.fecha.replace(day=1)
             fin_mes = inicio_mes + relativedelta(months=1)
-            
+
             # Iterar cada día del mes
             current_date = inicio_mes
             detalles_creados = 0
-            
+
             while current_date < fin_mes:
-                # Crear detalle para este día
-                detalle_vals = {
+                DetalleDiario.create({
                     'evaluacion_id': record.id,
                     'fecha': current_date,
-                }
-                
-                self.env['evaluacion.personal.detalle.diario'].create(detalle_vals)
+                })
+
                 detalles_creados += 1
-                
-                # Siguiente día
                 current_date += relativedelta(days=1)
-            
-            _logger.info(f"✅ Análisis diario generado: {detalles_creados} días procesados")
-    
+
+            _logger.info(
+                f"✅ Análisis diario generado: {detalles_creados} días procesados"
+            )
     def action_regenerar_detalle_diario(self):
         """
         Botón manual para regenerar el análisis diario
