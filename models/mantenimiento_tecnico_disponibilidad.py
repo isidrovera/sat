@@ -56,7 +56,23 @@ class MantenimientoTecnicoPerfil(models.Model):
         tracking=True,
         help='Duración estimada estándar de un mantenimiento preventivo.'
     )
+    tipo_operativo = fields.Selection([
+        ('taller', 'Técnico fijo de taller'),
+        ('servicios', 'Técnico exclusivo de servicios / alquiler'),
+        ('mixto', 'Técnico mixto / servicios eventuales'),
+    ], string='Tipo operativo aplicado', default='mixto', tracking=True)
 
+    meta_base_taller = fields.Float(
+        string='Meta base taller',
+        default=50.0,
+        tracking=True
+    )
+
+    meta_base_servicios = fields.Float(
+        string='Meta base servicios',
+        default=45.0,
+        tracking=True
+    )
     trabaja_lunes = fields.Boolean(string='Lunes', default=True)
     trabaja_martes = fields.Boolean(string='Martes', default=True)
     trabaja_miercoles = fields.Boolean(string='Miércoles', default=True)

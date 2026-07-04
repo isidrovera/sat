@@ -2902,30 +2902,3 @@ class EvaluacionPersonalEnvioMasivo(models.TransientModel):
                 )
             else:
                 raise ValidationError(f"Error al enviar el correo:\n{error_msg}")
-
-# ============================================================
-# PERFIL TÉCNICO - CAMPOS PARA BONO
-# ============================================================
-
-class MantenimientoTecnicoPerfil(models.Model):
-    _inherit = 'mantenimiento.tecnico.perfil'
-
-    tipo_operativo = fields.Selection([
-        ('taller', 'Técnico fijo de taller'),
-        ('servicios', 'Técnico exclusivo de servicios / alquiler'),
-        ('mixto', 'Técnico mixto / servicios eventuales'),
-    ], string='Perfil operativo para bono', default='mixto', tracking=True)
-
-    meta_mensual_taller = fields.Float(
-        string='Meta mensual taller',
-        default=50.0,
-        tracking=True,
-        help='Meta mensual base de máquinas para técnicos de taller. 50 máquinas = 100%.'
-    )
-
-    meta_mensual_servicios = fields.Float(
-        string='Meta mensual servicios',
-        default=45.0,
-        tracking=True,
-        help='Meta mensual base de tickets/servicios para técnicos exclusivos de campo.'
-    )
