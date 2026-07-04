@@ -30,6 +30,12 @@ class EvaluacionPersonal(models.Model):
         readonly=True,
         tracking=True
     )
+    bono_extra_sobreproduccion = fields.Float(
+        string='Extra por sobreproducción',
+        compute='_compute_resultado_bono',
+        store=True,
+        help='Puntos adicionales por producción superior al 100%, máximo 20 puntos.'
+    )
     
     fecha = fields.Date(
         string='Fecha de evaluación',
@@ -388,21 +394,19 @@ class EvaluacionPersonal(models.Model):
         ('taller', 'Técnico fijo de taller'),
         ('servicios', 'Técnico exclusivo de servicios / alquiler'),
         ('mixto', 'Técnico mixto / servicios eventuales'),
-    ], string='Tipo operativo aplicado', compute='_compute_perfil_bono', store=True, readonly=True)
+    ], string='Tipo operativo aplicado', default='mixto', tracking=True)
 
     meta_base_taller = fields.Float(
         string='Meta base taller',
-        compute='_compute_perfil_bono',
-        store=True,
-        readonly=True,
+        default=50.0,
+        tracking=True,
         help='Meta mensual base para taller. Gerencia define 50 máquinas como 100%.'
     )
 
     meta_base_servicios = fields.Float(
         string='Meta base servicios',
-        compute='_compute_perfil_bono',
-        store=True,
-        readonly=True,
+        default=45.0,
+        tracking=True,
         help='Meta mensual base para técnicos de servicios / alquiler.'
     )
 
@@ -668,22 +672,8 @@ class EvaluacionPersonal(models.Model):
     # MÉTODOS COMPUTE - BONO MENSUAL
     # ============================================================
 
-    @api.depends('usuario_id')
-    def _compute_perfil_bono(self):
-        Perfil = self.env['mantenimiento.tecnico.perfil'] if self.env.registry.get('mantenimiento.tecnico.perfil') else False
-        for record in self:
-            perfil = False
-            if Perfil and record.usuario_id:
-                perfil = Perfil.search([
-                    ('tecnico_id', '=', record.usuario_id.id),
-                    ('active', '=', True),
-                ], limit=1)
-            record.perfil_tecnico_id = perfil.id if perfil else False
-            record.tipo_operativo = perfil.tipo_operativo if perfil and perfil.tipo_operativo else 'mixto'
-            record.meta_base_taller = perfil.meta_mensual_taller if perfil and perfil.meta_mensual_taller else 50.0
-            record.meta_base_servicios = perfil.meta_mensual_servicios if perfil and perfil.meta_mensual_servicios else 45.0
-
-    @api.depends('usuario_id', 'fecha', 'perfil_tecnico_id', 'tipo_operativo')
+  
+    @api.depends('usuario_id', 'fecha', 'tipo_operativo')
     def _compute_disponibilidad_bono(self):
         for record in self:
             record.dias_laborables_equivalentes = 0.0
@@ -813,19 +803,36 @@ class EvaluacionPersonal(models.Model):
             valor = int(record.apoyo_calificacion or '4')
             record.puntaje_apoyo_real = (valor / 5.0) * 100.0
 
-    @api.depends('porcentaje_produccion_total', 'puntaje_calidad_real', 'puntaje_asistencia_real', 'puntaje_apoyo_real')
+    @api.depends(
+    'porcentaje_produccion_total',
+    'puntaje_calidad_real',
+    'puntaje_asistencia_real',
+    'puntaje_apoyo_real'
+)
     def _compute_resultado_bono(self):
         for record in self:
             produccion = min(120.0, record.porcentaje_produccion_total or 0.0)
             calidad = min(100.0, record.puntaje_calidad_real or 0.0)
             asistencia = min(100.0, record.puntaje_asistencia_real or 0.0)
             apoyo = min(100.0, record.puntaje_apoyo_real or 0.0)
+
             record.puntaje_produccion_bono = produccion * 0.45
             record.puntaje_calidad_bono = calidad * 0.30
             record.puntaje_asistencia_bono = asistencia * 0.15
             record.puntaje_apoyo_bono = apoyo * 0.10
-            record.puntaje_total_bono = min(120.0, record.puntaje_produccion_bono + record.puntaje_calidad_bono + record.puntaje_asistencia_bono + record.puntaje_apoyo_bono)
 
+            base = (
+                record.puntaje_produccion_bono +
+                record.puntaje_calidad_bono +
+                record.puntaje_asistencia_bono +
+                record.puntaje_apoyo_bono
+            )
+
+            extra = max(0.0, produccion - 100.0)
+            extra = min(20.0, extra)
+
+            record.bono_extra_sobreproduccion = extra
+            record.puntaje_total_bono = min(120.0, base + extra)
     @api.depends('puntaje_total_bono', 'reclamos_procedentes_count', 'evaluaciones_criticas_count', 'faltas_injustificadas_equivalentes')
     def _compute_monto_bono(self):
         for record in self:
@@ -1489,7 +1496,16 @@ class EvaluacionPersonal(models.Model):
         return min(horas_dia, horas_dia / 2.0)
 
     def _ticket_sin_retorno(self, ticket):
-        posibles_campos = ['retorno_taller', 'retorno', 'retorno_tecnico', 'regreso_taller', 'tecnico_retorno', 'retorno_al_taller', 'volvio_taller']
+        posibles_campos = [
+            'retorno_id',
+            'retorno_taller',
+            'retorno',
+            'retorno_tecnico',
+            'regreso_taller',
+            'tecnico_retorno',
+            'retorno_al_taller',
+            'volvio_taller',
+        ]
         for campo in posibles_campos:
             if campo not in ticket._fields:
                 continue

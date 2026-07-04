@@ -401,7 +401,9 @@
                             <page string="💰 Bono Mensual" name="bono_mensual">
                                 <group>
                                     <group string="Perfil aplicado">
-                                        <field name="perfil_tecnico_id" readonly="1"/>
+                                        <field name="tipo_operativo"/>
+                                        <field name="meta_base_taller"/>
+                                        <field name="meta_base_servicios"/>
                                         <field name="tipo_operativo" readonly="1"
                                                widget="badge"
                                                decoration-info="tipo_operativo == 'taller'"
