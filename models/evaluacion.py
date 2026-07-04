@@ -1329,17 +1329,30 @@ class EvaluacionPersonal(models.Model):
 
     def _get_horas_laborales_fecha(self, fecha):
         self.ensure_one()
-        if self.perfil_tecnico_id and hasattr(self.perfil_tecnico_id, 'get_disponibilidad_fecha'):
+
+        perfil_tecnico = getattr(self, 'perfil_tecnico_id', False)
+
+        if perfil_tecnico and hasattr(perfil_tecnico, 'get_disponibilidad_fecha'):
             try:
-                disp = self.perfil_tecnico_id.get_disponibilidad_fecha(fecha)
+                disp = perfil_tecnico.get_disponibilidad_fecha(fecha)
                 if disp and disp.get('disponible'):
-                    return max(0.0, (disp.get('hora_fin') or 0.0) - (disp.get('hora_inicio') or 0.0))
+                    return max(
+                        0.0,
+                        (disp.get('hora_fin') or 0.0) - (disp.get('hora_inicio') or 0.0)
+                    )
             except Exception:
-                _logger.warning('[BONO] No se pudo obtener disponibilidad para %s', fecha, exc_info=True)
+                _logger.warning(
+                    '[BONO] No se pudo obtener disponibilidad para %s',
+                    fecha,
+                    exc_info=True
+                )
+
         if fecha.weekday() == 5:
             return 4.0
+
         if fecha.weekday() < 5:
             return 8.0
+
         return 0.0
 
     def _get_ausencias_equivalentes(self, inicio_mes, fin_mes):
@@ -1473,20 +1486,36 @@ class EvaluacionPersonal(models.Model):
         return False
 
     def _get_ticket_horas_estimadas(self, ticket, horas_dia):
-        for inicio_field, fin_field in [('hora_inicio', 'hora_fin'), ('hora_inicio_servicio', 'hora_fin_servicio'), ('hora_llegada', 'hora_salida')]:
+        for inicio_field, fin_field in [
+            ('hora_inicio', 'hora_fin'),
+            ('hora_inicio_servicio', 'hora_fin_servicio'),
+            ('hora_llegada', 'hora_salida')
+        ]:
             if inicio_field in ticket._fields and fin_field in ticket._fields:
                 inicio = ticket[inicio_field] or 0.0
                 fin = ticket[fin_field] or 0.0
                 if fin > inicio:
                     return min(horas_dia, max(0.0, fin - inicio))
-        for inicio_field, fin_field in [('fecha_inicio', 'fecha_fin'), ('fecha_inicio_servicio', 'fecha_fin_servicio'), ('hora_inicio_real', 'hora_fin_real')]:
+
+        for inicio_field, fin_field in [
+            ('fecha_inicio', 'fecha_fin'),
+            ('fecha_inicio_servicio', 'fecha_fin_servicio'),
+            ('hora_inicio_real', 'hora_fin_real')
+        ]:
             if inicio_field in ticket._fields and fin_field in ticket._fields:
                 inicio = ticket[inicio_field]
                 fin = ticket[fin_field]
                 if inicio and fin and isinstance(inicio, datetime) and isinstance(fin, datetime) and fin > inicio:
-                    return min(horas_dia, max(0.0, (fin - inicio).total_seconds() / 3600.0))
-        if self.perfil_tecnico_id and getattr(self.perfil_tecnico_id, 'duracion_servicio_horas', False):
-            return min(horas_dia, self.perfil_tecnico_id.duracion_servicio_horas)
+                    return min(
+                        horas_dia,
+                        max(0.0, (fin - inicio).total_seconds() / 3600.0)
+                    )
+
+        perfil_tecnico = getattr(self, 'perfil_tecnico_id', False)
+
+        if perfil_tecnico and getattr(perfil_tecnico, 'duracion_servicio_horas', False):
+            return min(horas_dia, perfil_tecnico.duracion_servicio_horas)
+
         return min(horas_dia, horas_dia / 2.0)
 
     def _ticket_sin_retorno(self, ticket):
