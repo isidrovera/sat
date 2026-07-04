@@ -371,6 +371,263 @@ class EvaluacionPersonal(models.Model):
         store=True
     )
 
+
+    # ============================================================
+    # BONO MENSUAL / PRODUCCIÓN AJUSTADA
+    # ============================================================
+
+    perfil_tecnico_id = fields.Many2one(
+        'mantenimiento.tecnico.perfil',
+        string='Perfil técnico aplicado',
+        compute='_compute_perfil_bono',
+        store=True,
+        readonly=True
+    )
+
+    tipo_operativo = fields.Selection([
+        ('taller', 'Técnico fijo de taller'),
+        ('servicios', 'Técnico exclusivo de servicios / alquiler'),
+        ('mixto', 'Técnico mixto / servicios eventuales'),
+    ], string='Tipo operativo aplicado', compute='_compute_perfil_bono', store=True, readonly=True)
+
+    meta_base_taller = fields.Float(
+        string='Meta base taller',
+        compute='_compute_perfil_bono',
+        store=True,
+        readonly=True,
+        help='Meta mensual base para taller. Gerencia define 50 máquinas como 100%.'
+    )
+
+    meta_base_servicios = fields.Float(
+        string='Meta base servicios',
+        compute='_compute_perfil_bono',
+        store=True,
+        readonly=True,
+        help='Meta mensual base para técnicos de servicios / alquiler.'
+    )
+
+    dias_laborables_equivalentes = fields.Float(
+        string='Días laborables equivalentes',
+        compute='_compute_disponibilidad_bono',
+        store=True
+    )
+
+    dias_ausencia_equivalentes = fields.Float(
+        string='Días descontados por ausencias',
+        compute='_compute_disponibilidad_bono',
+        store=True
+    )
+
+    dias_servicio_equivalentes = fields.Float(
+        string='Días ocupados en servicios',
+        compute='_compute_disponibilidad_bono',
+        store=True
+    )
+
+    dias_taller_disponibles = fields.Float(
+        string='Días disponibles para taller',
+        compute='_compute_disponibilidad_bono',
+        store=True
+    )
+
+    dias_servicios_disponibles = fields.Float(
+        string='Días disponibles para servicios',
+        compute='_compute_disponibilidad_bono',
+        store=True
+    )
+
+    tickets_sin_retorno_count = fields.Integer(
+        string='Tickets sin retorno a taller',
+        compute='_compute_disponibilidad_bono',
+        store=True
+    )
+
+    horas_servicio_mes = fields.Float(
+        string='Horas estimadas en servicios',
+        compute='_compute_disponibilidad_bono',
+        store=True
+    )
+
+    meta_taller_ajustada = fields.Float(
+        string='Meta taller ajustada',
+        compute='_compute_metas_bono',
+        store=True
+    )
+
+    meta_servicios_ajustada = fields.Float(
+        string='Meta servicios ajustada',
+        compute='_compute_metas_bono',
+        store=True
+    )
+
+    reparaciones_validas_bono = fields.Integer(
+        string='Reparaciones válidas bono',
+        compute='_compute_produccion_bono',
+        store=True
+    )
+
+    tickets_validos_bono = fields.Integer(
+        string='Tickets válidos bono',
+        compute='_compute_produccion_bono',
+        store=True
+    )
+
+    porcentaje_produccion_taller = fields.Float(
+        string='% Producción taller',
+        compute='_compute_produccion_bono',
+        store=True
+    )
+
+    porcentaje_produccion_servicios = fields.Float(
+        string='% Producción servicios',
+        compute='_compute_produccion_bono',
+        store=True
+    )
+
+    porcentaje_produccion_total = fields.Float(
+        string='% Producción total ajustada',
+        compute='_compute_produccion_bono',
+        store=True,
+        help='Puede superar el 100% hasta un máximo de 120% para bono.'
+    )
+
+    incidencia_ids = fields.Many2many(
+        'taller.incidencia',
+        'evaluacion_personal_incidencia_rel',
+        'evaluacion_id',
+        'incidencia_id',
+        string='Reclamos que afectan',
+        compute='_compute_calidad_bono',
+        store=True
+    )
+
+    reclamos_procedentes_count = fields.Integer(
+        string='Reclamos procedentes',
+        compute='_compute_calidad_bono',
+        store=True
+    )
+
+    evaluacion_servicio_ids = fields.Many2many(
+        'client.service.evaluation',
+        'evaluacion_personal_servicio_rel',
+        'evaluacion_id',
+        'servicio_eval_id',
+        string='Evaluaciones de servicio',
+        compute='_compute_calidad_bono',
+        store=True
+    )
+
+    evaluaciones_servicio_count = fields.Integer(
+        string='Evaluaciones de servicio',
+        compute='_compute_calidad_bono',
+        store=True
+    )
+
+    promedio_evaluacion_servicio = fields.Float(
+        string='Promedio evaluación servicio',
+        compute='_compute_calidad_bono',
+        store=True
+    )
+
+    evaluaciones_criticas_count = fields.Integer(
+        string='Evaluaciones críticas',
+        compute='_compute_calidad_bono',
+        store=True,
+        help='Evaluaciones de servicio menores a 70%.'
+    )
+
+    puntaje_calidad_real = fields.Float(
+        string='Puntaje calidad real',
+        compute='_compute_calidad_bono',
+        store=True
+    )
+
+    faltas_injustificadas_equivalentes = fields.Float(
+        string='Faltas injustificadas equivalentes',
+        compute='_compute_asistencia_bono',
+        store=True
+    )
+
+    puntaje_asistencia_real = fields.Float(
+        string='Puntaje asistencia real',
+        compute='_compute_asistencia_bono',
+        store=True
+    )
+
+    apoyo_calificacion = fields.Selection([
+        ('1', 'Deficiente'),
+        ('2', 'Bajo'),
+        ('3', 'Aceptable'),
+        ('4', 'Bueno'),
+        ('5', 'Excelente'),
+    ], string='Apoyo / Trabajo en equipo bono', default='4', tracking=True)
+
+    puntaje_apoyo_real = fields.Float(
+        string='Puntaje apoyo real',
+        compute='_compute_apoyo_bono',
+        store=True
+    )
+
+    puntaje_produccion_bono = fields.Float(
+        string='Producción 45%',
+        compute='_compute_resultado_bono',
+        store=True
+    )
+
+    puntaje_calidad_bono = fields.Float(
+        string='Calidad 30%',
+        compute='_compute_resultado_bono',
+        store=True
+    )
+
+    puntaje_asistencia_bono = fields.Float(
+        string='Asistencia 15%',
+        compute='_compute_resultado_bono',
+        store=True
+    )
+
+    puntaje_apoyo_bono = fields.Float(
+        string='Apoyo 10%',
+        compute='_compute_resultado_bono',
+        store=True
+    )
+
+    puntaje_total_bono = fields.Float(
+        string='Resultado total bono',
+        compute='_compute_resultado_bono',
+        store=True
+    )
+
+    bono_base = fields.Float(
+        string='Bono base S/',
+        compute='_compute_monto_bono',
+        store=True
+    )
+
+    aplica_acelerador = fields.Boolean(
+        string='Aplica acelerador',
+        compute='_compute_monto_bono',
+        store=True
+    )
+
+    monto_acelerador = fields.Float(
+        string='Acelerador S/',
+        compute='_compute_monto_bono',
+        store=True
+    )
+
+    bono_final = fields.Float(
+        string='Bono final S/',
+        compute='_compute_monto_bono',
+        store=True
+    )
+
+    motivo_bono = fields.Text(
+        string='Resumen cálculo bono',
+        compute='_compute_monto_bono',
+        store=True
+    )
+
     # ============================================================
     # CONSTRAINTS Y VALIDACIONES
     # ============================================================
@@ -405,6 +662,212 @@ class EvaluacionPersonal(models.Model):
                         f"Ya existe una evaluación para {record.usuario_id.name} "
                         f"en el mes de {record.mes} {record.anio}."
                     )
+
+
+    # ============================================================
+    # MÉTODOS COMPUTE - BONO MENSUAL
+    # ============================================================
+
+    @api.depends('usuario_id')
+    def _compute_perfil_bono(self):
+        Perfil = self.env['mantenimiento.tecnico.perfil'] if self.env.registry.get('mantenimiento.tecnico.perfil') else False
+        for record in self:
+            perfil = False
+            if Perfil and record.usuario_id:
+                perfil = Perfil.search([
+                    ('tecnico_id', '=', record.usuario_id.id),
+                    ('active', '=', True),
+                ], limit=1)
+            record.perfil_tecnico_id = perfil.id if perfil else False
+            record.tipo_operativo = perfil.tipo_operativo if perfil and perfil.tipo_operativo else 'mixto'
+            record.meta_base_taller = perfil.meta_mensual_taller if perfil and perfil.meta_mensual_taller else 50.0
+            record.meta_base_servicios = perfil.meta_mensual_servicios if perfil and perfil.meta_mensual_servicios else 45.0
+
+    @api.depends('usuario_id', 'fecha', 'perfil_tecnico_id', 'tipo_operativo')
+    def _compute_disponibilidad_bono(self):
+        for record in self:
+            record.dias_laborables_equivalentes = 0.0
+            record.dias_ausencia_equivalentes = 0.0
+            record.dias_servicio_equivalentes = 0.0
+            record.dias_taller_disponibles = 0.0
+            record.dias_servicios_disponibles = 0.0
+            record.tickets_sin_retorno_count = 0
+            record.horas_servicio_mes = 0.0
+            if not record.usuario_id or not record.fecha:
+                continue
+            inicio_mes, fin_mes = record._get_rango_mes_bono()
+            dias_laborables = record._get_dias_laborables_equivalentes(inicio_mes, fin_mes)
+            ausencias = record._get_ausencias_equivalentes(inicio_mes, fin_mes)
+            servicios = record._get_servicios_equivalentes(inicio_mes, fin_mes)
+            dias_base = max(0.0, dias_laborables - ausencias)
+            dias_servicio = min(dias_base, servicios.get('dias_equivalentes', 0.0))
+            if record.tipo_operativo == 'servicios':
+                dias_taller = 0.0
+                dias_servicios = dias_base
+            elif record.tipo_operativo == 'taller':
+                dias_taller = max(0.0, dias_base - dias_servicio)
+                dias_servicios = dias_servicio
+            else:
+                dias_taller = max(0.0, dias_base - dias_servicio)
+                dias_servicios = dias_servicio
+            record.dias_laborables_equivalentes = dias_laborables
+            record.dias_ausencia_equivalentes = ausencias
+            record.dias_servicio_equivalentes = dias_servicio
+            record.dias_taller_disponibles = dias_taller
+            record.dias_servicios_disponibles = dias_servicios
+            record.horas_servicio_mes = servicios.get('horas', 0.0)
+            record.tickets_sin_retorno_count = servicios.get('sin_retorno', 0)
+
+    @api.depends('dias_laborables_equivalentes', 'dias_taller_disponibles', 'dias_servicios_disponibles', 'meta_base_taller', 'meta_base_servicios', 'tipo_operativo')
+    def _compute_metas_bono(self):
+        for record in self:
+            record.meta_taller_ajustada = 0.0
+            record.meta_servicios_ajustada = 0.0
+            dias_mes = record.dias_laborables_equivalentes or 0.0
+            if dias_mes <= 0:
+                continue
+            if record.tipo_operativo in ('taller', 'mixto'):
+                record.meta_taller_ajustada = (record.meta_base_taller or 50.0) * (record.dias_taller_disponibles / dias_mes)
+            if record.tipo_operativo in ('servicios', 'mixto'):
+                record.meta_servicios_ajustada = (record.meta_base_servicios or 45.0) * (record.dias_servicios_disponibles / dias_mes)
+
+    @api.depends('usuario_id', 'fecha', 'tipo_operativo', 'meta_taller_ajustada', 'meta_servicios_ajustada')
+    def _compute_produccion_bono(self):
+        for record in self:
+            record.reparaciones_validas_bono = 0
+            record.tickets_validos_bono = 0
+            record.porcentaje_produccion_taller = 0.0
+            record.porcentaje_produccion_servicios = 0.0
+            record.porcentaje_produccion_total = 0.0
+            if not record.usuario_id or not record.fecha:
+                continue
+            inicio_mes, fin_mes = record._get_rango_mes_bono()
+            reparaciones = record._get_reparaciones_bono(inicio_mes, fin_mes)
+            tickets = record._get_tickets_bono(inicio_mes, fin_mes)
+            record.reparaciones_validas_bono = len(reparaciones)
+            record.tickets_validos_bono = len(tickets)
+            pct_taller = (len(reparaciones) / record.meta_taller_ajustada * 100.0) if record.meta_taller_ajustada else 0.0
+            pct_servicios = (len(tickets) / record.meta_servicios_ajustada * 100.0) if record.meta_servicios_ajustada else 0.0
+            pct_taller = min(120.0, pct_taller)
+            pct_servicios = min(120.0, pct_servicios)
+            if record.tipo_operativo == 'taller':
+                total = pct_taller
+            elif record.tipo_operativo == 'servicios':
+                total = pct_servicios
+            else:
+                peso_taller = record.meta_taller_ajustada or 0.0
+                peso_servicios = record.meta_servicios_ajustada or 0.0
+                peso_total = peso_taller + peso_servicios
+                total = ((pct_taller * peso_taller) + (pct_servicios * peso_servicios)) / peso_total if peso_total else 0.0
+            record.porcentaje_produccion_taller = pct_taller
+            record.porcentaje_produccion_servicios = pct_servicios
+            record.porcentaje_produccion_total = min(120.0, total)
+
+    @api.depends('usuario_id', 'fecha')
+    def _compute_calidad_bono(self):
+        for record in self:
+            record.incidencia_ids = [(5, 0, 0)]
+            record.reclamos_procedentes_count = 0
+            record.evaluacion_servicio_ids = [(5, 0, 0)]
+            record.evaluaciones_servicio_count = 0
+            record.promedio_evaluacion_servicio = 100.0
+            record.evaluaciones_criticas_count = 0
+            record.puntaje_calidad_real = 100.0
+            if not record.usuario_id or not record.fecha:
+                continue
+            inicio_mes, fin_mes = record._get_rango_mes_bono()
+            reclamos = record._get_reclamos_que_afectan(inicio_mes, fin_mes)
+            evaluaciones = record._get_evaluaciones_servicio(inicio_mes, fin_mes)
+            record.incidencia_ids = [(6, 0, reclamos.ids)]
+            record.reclamos_procedentes_count = len(reclamos)
+            record.evaluacion_servicio_ids = [(6, 0, evaluaciones.ids)]
+            record.evaluaciones_servicio_count = len(evaluaciones)
+            promedio_servicio = 100.0
+            criticas = 0
+            if evaluaciones:
+                puntajes = [ev.puntaje_servicio or 0.0 for ev in evaluaciones]
+                promedio_servicio = sum(puntajes) / len(puntajes) if puntajes else 100.0
+                criticas = len([p for p in puntajes if p < 70.0])
+            penalidad_reclamos = min(40.0, len(reclamos) * 10.0)
+            calidad_base = max(0.0, 100.0 - penalidad_reclamos)
+            calidad = (calidad_base * 0.60 + promedio_servicio * 0.40) if evaluaciones else calidad_base
+            record.promedio_evaluacion_servicio = promedio_servicio
+            record.evaluaciones_criticas_count = criticas
+            record.puntaje_calidad_real = max(0.0, min(100.0, calidad))
+
+    @api.depends('usuario_id', 'fecha')
+    def _compute_asistencia_bono(self):
+        for record in self:
+            record.faltas_injustificadas_equivalentes = 0.0
+            record.puntaje_asistencia_real = 100.0
+            if not record.usuario_id or not record.fecha:
+                continue
+            inicio_mes, fin_mes = record._get_rango_mes_bono()
+            faltas = record._get_faltas_equivalentes(inicio_mes, fin_mes)
+            record.faltas_injustificadas_equivalentes = faltas
+            record.puntaje_asistencia_real = max(0.0, 100.0 - (faltas * 20.0))
+
+    @api.depends('apoyo_calificacion')
+    def _compute_apoyo_bono(self):
+        for record in self:
+            valor = int(record.apoyo_calificacion or '4')
+            record.puntaje_apoyo_real = (valor / 5.0) * 100.0
+
+    @api.depends('porcentaje_produccion_total', 'puntaje_calidad_real', 'puntaje_asistencia_real', 'puntaje_apoyo_real')
+    def _compute_resultado_bono(self):
+        for record in self:
+            produccion = min(120.0, record.porcentaje_produccion_total or 0.0)
+            calidad = min(100.0, record.puntaje_calidad_real or 0.0)
+            asistencia = min(100.0, record.puntaje_asistencia_real or 0.0)
+            apoyo = min(100.0, record.puntaje_apoyo_real or 0.0)
+            record.puntaje_produccion_bono = produccion * 0.45
+            record.puntaje_calidad_bono = calidad * 0.30
+            record.puntaje_asistencia_bono = asistencia * 0.15
+            record.puntaje_apoyo_bono = apoyo * 0.10
+            record.puntaje_total_bono = min(120.0, record.puntaje_produccion_bono + record.puntaje_calidad_bono + record.puntaje_asistencia_bono + record.puntaje_apoyo_bono)
+
+    @api.depends('puntaje_total_bono', 'reclamos_procedentes_count', 'evaluaciones_criticas_count', 'faltas_injustificadas_equivalentes')
+    def _compute_monto_bono(self):
+        for record in self:
+            resultado = record.puntaje_total_bono or 0.0
+            if resultado >= 110.0:
+                bono = 350.0
+            elif resultado >= 100.0:
+                bono = 250.0
+            elif resultado >= 95.0:
+                bono = 150.0
+            else:
+                bono = 0.0
+            aplica_acelerador = (
+                resultado >= 110.0 and
+                record.reclamos_procedentes_count == 0 and
+                record.evaluaciones_criticas_count == 0 and
+                record.faltas_injustificadas_equivalentes == 0
+            )
+            acelerador = 100.0 if aplica_acelerador else 0.0
+            resumen = [
+                'Resultado total bono: %.2f%%' % resultado,
+                'Bono base: S/ %.2f' % bono,
+            ]
+            if aplica_acelerador:
+                resumen.append('Acelerador aplicado: S/ 100.00')
+                resumen.append('Motivo: resultado mayor o igual a 110%, sin reclamos procedentes, sin evaluaciones críticas y sin faltas injustificadas.')
+            else:
+                razones = []
+                if resultado < 110.0:
+                    razones.append('resultado menor a 110%')
+                if record.reclamos_procedentes_count > 0:
+                    razones.append('reclamos procedentes')
+                if record.evaluaciones_criticas_count > 0:
+                    razones.append('evaluaciones críticas')
+                if record.faltas_injustificadas_equivalentes > 0:
+                    razones.append('faltas injustificadas')
+                resumen.append('Acelerador no aplicado: %s.' % (', '.join(razones) if razones else 'no cumple condiciones'))
+            record.bono_base = bono
+            record.aplica_acelerador = aplica_acelerador
+            record.monto_acelerador = acelerador
+            record.bono_final = bono + acelerador
+            record.motivo_bono = '\n'.join(resumen)
 
     # ============================================================
     # MÉTODOS COMPUTE - ANÁLISIS DIARIO (NUEVO)
@@ -830,6 +1293,279 @@ class EvaluacionPersonal(models.Model):
             # === ASIGNAR RESULTADOS ===
             record.necesita_capacitacion = necesita_capacitacion
             record.temas_capacitacion = "\n".join(temas) if temas else "No se requieren capacitaciones específicas en este momento. Continuar con el desarrollo profesional regular."
+
+
+    # ============================================================
+    # HELPERS BONO MENSUAL
+    # ============================================================
+
+    def _get_rango_mes_bono(self):
+        self.ensure_one()
+        inicio_mes = self.fecha.replace(day=1)
+        fin_mes = inicio_mes + relativedelta(months=1)
+        return inicio_mes, fin_mes
+
+    def _model_exists(self, model_name):
+        return bool(self.env.registry.get(model_name))
+
+    def _get_dias_laborables_equivalentes(self, inicio_mes, fin_mes):
+        dias = 0.0
+        current = inicio_mes
+        while current < fin_mes:
+            if current.weekday() < 5:
+                dias += 1.0
+            elif current.weekday() == 5:
+                dias += 0.5
+            current += timedelta(days=1)
+        return dias
+
+    def _get_factor_dia_bono(self, fecha):
+        if fecha.weekday() < 5:
+            return 1.0
+        if fecha.weekday() == 5:
+            return 0.5
+        return 0.0
+
+    def _get_horas_laborales_fecha(self, fecha):
+        self.ensure_one()
+        if self.perfil_tecnico_id and hasattr(self.perfil_tecnico_id, 'get_disponibilidad_fecha'):
+            try:
+                disp = self.perfil_tecnico_id.get_disponibilidad_fecha(fecha)
+                if disp and disp.get('disponible'):
+                    return max(0.0, (disp.get('hora_fin') or 0.0) - (disp.get('hora_inicio') or 0.0))
+            except Exception:
+                _logger.warning('[BONO] No se pudo obtener disponibilidad para %s', fecha, exc_info=True)
+        if fecha.weekday() == 5:
+            return 4.0
+        if fecha.weekday() < 5:
+            return 8.0
+        return 0.0
+
+    def _get_ausencias_equivalentes(self, inicio_mes, fin_mes):
+        self.ensure_one()
+        if not self._model_exists('mantenimiento.tecnico.ausencia'):
+            return 0.0
+        ausencias = self.env['mantenimiento.tecnico.ausencia'].search([
+            ('tecnico_id', '=', self.usuario_id.id),
+            ('estado', 'in', ['aprobado', 'ausente_activo', 'cerrado']),
+            ('tipo', 'in', ['permiso', 'vacaciones', 'enfermedad', 'descanso_medico', 'capacitacion', 'bloqueo_admin']),
+            ('fecha_inicio', '<', fin_mes),
+            '|',
+            ('fecha_fin', '=', False),
+            ('fecha_fin', '>=', inicio_mes),
+        ])
+        return self._sumar_dias_ausencia(ausencias, inicio_mes, fin_mes)
+
+    def _get_faltas_equivalentes(self, inicio_mes, fin_mes):
+        self.ensure_one()
+        if not self._model_exists('mantenimiento.tecnico.ausencia'):
+            return 0.0
+        faltas = self.env['mantenimiento.tecnico.ausencia'].search([
+            ('tecnico_id', '=', self.usuario_id.id),
+            ('tipo', '=', 'falta'),
+            ('estado', 'in', ['aprobado', 'ausente_activo', 'cerrado']),
+            ('fecha_inicio', '<', fin_mes),
+            '|',
+            ('fecha_fin', '=', False),
+            ('fecha_fin', '>=', inicio_mes),
+        ])
+        return self._sumar_dias_ausencia(faltas, inicio_mes, fin_mes)
+
+    def _sumar_dias_ausencia(self, ausencias, inicio_mes, fin_mes):
+        total = 0.0
+        for ausencia in ausencias:
+            fecha_inicio = max(ausencia.fecha_inicio, inicio_mes)
+            fecha_fin = ausencia.fecha_fin or fecha_inicio
+            fecha_fin = min(fecha_fin, fin_mes - timedelta(days=1))
+            current = fecha_inicio
+            while current <= fecha_fin:
+                factor = self._get_factor_dia_bono(current)
+                if factor > 0:
+                    if ausencia.dia_completo:
+                        total += factor
+                    else:
+                        horas_dia = self._get_horas_laborales_fecha(current)
+                        horas_ausencia = max(0.0, (ausencia.hora_fin or 0.0) - (ausencia.hora_inicio or 0.0))
+                        if horas_dia > 0:
+                            total += min(factor, horas_ausencia / horas_dia)
+                current += timedelta(days=1)
+        return total
+
+    def _get_reparaciones_bono(self, inicio_mes, fin_mes):
+        self.ensure_one()
+        if not self._model_exists('reparaciones.reparaciones'):
+            return self.env['reparaciones.reparaciones']
+        inicio_dt = datetime.combine(inicio_mes, time.min)
+        fin_dt = datetime.combine(fin_mes, time.min)
+        return self.env['reparaciones.reparaciones'].search([
+            ('responsable_id', '=', self.usuario_id.id),
+            ('create_date', '>=', inicio_dt),
+            ('create_date', '<', fin_dt),
+        ])
+
+    def _get_tickets_bono(self, inicio_mes, fin_mes):
+        self.ensure_one()
+        if not self._model_exists('ticket.alquiler'):
+            return self.env['ticket.alquiler']
+        Ticket = self.env['ticket.alquiler']
+        agenda_field = Ticket._fields.get('agenda')
+        if agenda_field and agenda_field.type == 'date':
+            domain_fecha = [('agenda', '>=', inicio_mes), ('agenda', '<', fin_mes)]
+        else:
+            domain_fecha = [('agenda', '>=', datetime.combine(inicio_mes, time.min)), ('agenda', '<', datetime.combine(fin_mes, time.min))]
+        return Ticket.search([('responsable', '=', self.usuario_id.id)] + domain_fecha)
+
+    def _get_servicios_equivalentes(self, inicio_mes, fin_mes):
+        self.ensure_one()
+        result = {'dias_equivalentes': 0.0, 'horas': 0.0, 'sin_retorno': 0}
+        if not self._model_exists('ticket.alquiler'):
+            return result
+        agrupado_por_fecha = {}
+        for ticket in self._get_tickets_bono(inicio_mes, fin_mes):
+            fecha_ticket = self._get_ticket_fecha(ticket)
+            if not fecha_ticket:
+                continue
+            agrupado_por_fecha.setdefault(fecha_ticket, []).append(ticket)
+        for fecha_ticket, tickets in agrupado_por_fecha.items():
+            horas_dia = self._get_horas_laborales_fecha(fecha_ticket)
+            if horas_dia <= 0:
+                continue
+            horas_fecha = 0.0
+            sin_retorno_fecha = False
+            for ticket in tickets:
+                horas_ticket = self._get_ticket_horas_estimadas(ticket, horas_dia)
+                if self._ticket_sin_retorno(ticket):
+                    sin_retorno_fecha = True
+                    result['sin_retorno'] += 1
+                    hora_agenda = self._get_ticket_hora_agenda(ticket)
+                    if hora_agenda is not False and hora_agenda >= 13.0:
+                        horas_ticket = max(horas_ticket, horas_dia / 2.0)
+                    else:
+                        horas_ticket = horas_dia
+                horas_fecha += horas_ticket
+            if sin_retorno_fecha:
+                horas_fecha = min(horas_dia, max(horas_fecha, horas_dia))
+            horas_fecha = min(horas_dia, horas_fecha)
+            result['horas'] += horas_fecha
+            result['dias_equivalentes'] += min(1.0, horas_fecha / horas_dia)
+        return result
+
+    def _get_ticket_fecha(self, ticket):
+        if 'agenda' not in ticket._fields or not ticket.agenda:
+            return False
+        agenda = ticket.agenda
+        if isinstance(agenda, datetime):
+            return agenda.date()
+        if isinstance(agenda, date):
+            return agenda
+        try:
+            return fields.Date.to_date(agenda)
+        except Exception:
+            return False
+
+    def _get_ticket_hora_agenda(self, ticket):
+        if 'agenda' not in ticket._fields or not ticket.agenda:
+            return False
+        agenda = ticket.agenda
+        if isinstance(agenda, datetime):
+            return agenda.hour + (agenda.minute / 60.0)
+        return False
+
+    def _get_ticket_horas_estimadas(self, ticket, horas_dia):
+        for inicio_field, fin_field in [('hora_inicio', 'hora_fin'), ('hora_inicio_servicio', 'hora_fin_servicio'), ('hora_llegada', 'hora_salida')]:
+            if inicio_field in ticket._fields and fin_field in ticket._fields:
+                inicio = ticket[inicio_field] or 0.0
+                fin = ticket[fin_field] or 0.0
+                if fin > inicio:
+                    return min(horas_dia, max(0.0, fin - inicio))
+        for inicio_field, fin_field in [('fecha_inicio', 'fecha_fin'), ('fecha_inicio_servicio', 'fecha_fin_servicio'), ('hora_inicio_real', 'hora_fin_real')]:
+            if inicio_field in ticket._fields and fin_field in ticket._fields:
+                inicio = ticket[inicio_field]
+                fin = ticket[fin_field]
+                if inicio and fin and isinstance(inicio, datetime) and isinstance(fin, datetime) and fin > inicio:
+                    return min(horas_dia, max(0.0, (fin - inicio).total_seconds() / 3600.0))
+        if self.perfil_tecnico_id and getattr(self.perfil_tecnico_id, 'duracion_servicio_horas', False):
+            return min(horas_dia, self.perfil_tecnico_id.duracion_servicio_horas)
+        return min(horas_dia, horas_dia / 2.0)
+
+    def _ticket_sin_retorno(self, ticket):
+        posibles_campos = ['retorno_taller', 'retorno', 'retorno_tecnico', 'regreso_taller', 'tecnico_retorno', 'retorno_al_taller', 'volvio_taller']
+        for campo in posibles_campos:
+            if campo not in ticket._fields:
+                continue
+            valor = ticket[campo]
+            field = ticket._fields[campo]
+            if field.type == 'boolean':
+                return not bool(valor)
+            if field.type == 'selection':
+                return valor in ['no', 'no_retorno', 'sin_retorno', 'no_volvio', 'no_retornado']
+            if field.type in ('char', 'text'):
+                return (valor or '').strip().lower() in ['no', 'no retorno', 'no retornó', 'sin retorno', 'no volvio', 'no volvió']
+        return False
+
+    def _get_reclamos_que_afectan(self, inicio_mes, fin_mes):
+        self.ensure_one()
+        if not self._model_exists('taller.incidencia'):
+            return self.env['taller.incidencia']
+        return self.env['taller.incidencia'].search([
+            ('tipo', '=', 'reclamo'),
+            ('afecta_tecnico', '=', True),
+            ('estado', 'in', ['procede', 'corregido', 'cerrado']),
+            ('fecha_hora', '>=', datetime.combine(inicio_mes, time.min)),
+            ('fecha_hora', '<', datetime.combine(fin_mes, time.min)),
+            '|',
+            ('tecnico_id', '=', self.usuario_id.id),
+            ('empleado_id.user_id', '=', self.usuario_id.id),
+        ])
+
+    def _get_evaluaciones_servicio(self, inicio_mes, fin_mes):
+        self.ensure_one()
+        if not self._model_exists('client.service.evaluation'):
+            return self.env['client.service.evaluation']
+        return self.env['client.service.evaluation'].search([
+            ('technician_id', '=', self.usuario_id.id),
+            ('state', '=', 'completed'),
+            '|',
+            '&', ('visit_date', '>=', inicio_mes), ('visit_date', '<', fin_mes),
+            '&', ('evaluation_date', '>=', datetime.combine(inicio_mes, time.min)), ('evaluation_date', '<', datetime.combine(fin_mes, time.min)),
+        ])
+
+    def action_recalcular_bono(self):
+        for record in self:
+            if record.detalle_diario_ids:
+                record.detalle_diario_ids._compute_bono_detalle()
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': 'Bono recalculado',
+                'message': 'Se recalculó la información de bono mensual.',
+                'type': 'success',
+                'sticky': False,
+            }
+        }
+
+    def action_ver_reclamos_bono(self):
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Reclamos que afectan bono',
+            'res_model': 'taller.incidencia',
+            'view_mode': 'tree,form',
+            'domain': [('id', 'in', self.incidencia_ids.ids)],
+            'context': {'create': False}
+        }
+
+    def action_ver_evaluaciones_servicio_bono(self):
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Evaluaciones de servicio',
+            'res_model': 'client.service.evaluation',
+            'view_mode': 'tree,form',
+            'domain': [('id', 'in', self.evaluacion_servicio_ids.ids)],
+            'context': {'create': False}
+        }
 
     # ============================================================
     # MÉTODOS AUXILIARES
@@ -1427,9 +2163,125 @@ class EvaluacionPersonalDetalleDiario(models.Model):
         store=True
     )
     
+
+    # ============================================================
+    # BONO MENSUAL - ANÁLISIS DIARIO
+    # ============================================================
+
+    dia_equivalente_bono = fields.Float(
+        string='Día equivalente bono',
+        compute='_compute_bono_detalle',
+        store=True
+    )
+
+    horas_servicio_dia = fields.Float(
+        string='Horas servicio día',
+        compute='_compute_bono_detalle',
+        store=True
+    )
+
+    servicio_equivalente_dia = fields.Float(
+        string='Servicio equivalente día',
+        compute='_compute_bono_detalle',
+        store=True
+    )
+
+    taller_disponible_dia = fields.Float(
+        string='Taller disponible día',
+        compute='_compute_bono_detalle',
+        store=True
+    )
+
+    ticket_sin_retorno_dia = fields.Boolean(
+        string='Sin retorno a taller',
+        compute='_compute_bono_detalle',
+        store=True
+    )
+
+    meta_taller_dia = fields.Float(
+        string='Meta taller día',
+        compute='_compute_bono_detalle',
+        store=True
+    )
+
+    meta_servicio_dia = fields.Float(
+        string='Meta servicio día',
+        compute='_compute_bono_detalle',
+        store=True
+    )
+
+    cumplimiento_taller_dia = fields.Float(
+        string='% Taller día',
+        compute='_compute_bono_detalle',
+        store=True
+    )
+
+    cumplimiento_servicio_dia = fields.Float(
+        string='% Servicio día',
+        compute='_compute_bono_detalle',
+        store=True
+    )
+
     # ============================================================
     # MÉTODOS COMPUTE
     # ============================================================
+
+    @api.depends(
+        'fecha', 'usuario_id', 'cantidad_reparaciones', 'cantidad_tickets',
+        'ticket_ids', 'evaluacion_id.tipo_operativo', 'evaluacion_id.meta_base_taller',
+        'evaluacion_id.meta_base_servicios', 'evaluacion_id.dias_laborables_equivalentes'
+    )
+    def _compute_bono_detalle(self):
+        for record in self:
+            record.dia_equivalente_bono = 0.0
+            record.horas_servicio_dia = 0.0
+            record.servicio_equivalente_dia = 0.0
+            record.taller_disponible_dia = 0.0
+            record.ticket_sin_retorno_dia = False
+            record.meta_taller_dia = 0.0
+            record.meta_servicio_dia = 0.0
+            record.cumplimiento_taller_dia = 0.0
+            record.cumplimiento_servicio_dia = 0.0
+            if not record.evaluacion_id or not record.fecha:
+                continue
+            evaluacion = record.evaluacion_id
+            dia_equiv = evaluacion._get_factor_dia_bono(record.fecha)
+            horas_dia = evaluacion._get_horas_laborales_fecha(record.fecha)
+            if dia_equiv <= 0 or horas_dia <= 0:
+                continue
+            horas_servicio = 0.0
+            sin_retorno = False
+            for ticket in record.ticket_ids:
+                horas_ticket = evaluacion._get_ticket_horas_estimadas(ticket, horas_dia)
+                if evaluacion._ticket_sin_retorno(ticket):
+                    sin_retorno = True
+                    hora_agenda = evaluacion._get_ticket_hora_agenda(ticket)
+                    if hora_agenda is not False and hora_agenda >= 13.0:
+                        horas_ticket = max(horas_ticket, horas_dia / 2.0)
+                    else:
+                        horas_ticket = horas_dia
+                horas_servicio += horas_ticket
+            horas_servicio = min(horas_dia, horas_servicio)
+            servicio_equiv = min(dia_equiv, horas_servicio / horas_dia) if horas_dia else 0.0
+            taller_disponible = 0.0 if evaluacion.tipo_operativo == 'servicios' else max(0.0, dia_equiv - servicio_equiv)
+            dias_mes = evaluacion.dias_laborables_equivalentes or 0.0
+            meta_taller_dia = 0.0
+            meta_servicio_dia = 0.0
+            if dias_mes > 0:
+                if evaluacion.tipo_operativo in ('taller', 'mixto'):
+                    meta_taller_dia = ((evaluacion.meta_base_taller or 50.0) / dias_mes) * taller_disponible
+                if evaluacion.tipo_operativo in ('servicios', 'mixto'):
+                    meta_servicio_dia = ((evaluacion.meta_base_servicios or 45.0) / dias_mes) * servicio_equiv
+            record.dia_equivalente_bono = dia_equiv
+            record.horas_servicio_dia = horas_servicio
+            record.servicio_equivalente_dia = servicio_equiv
+            record.taller_disponible_dia = taller_disponible
+            record.ticket_sin_retorno_dia = sin_retorno
+            record.meta_taller_dia = meta_taller_dia
+            record.meta_servicio_dia = meta_servicio_dia
+            record.cumplimiento_taller_dia = min(120.0, (record.cantidad_reparaciones / meta_taller_dia * 100.0) if meta_taller_dia else 0.0)
+            record.cumplimiento_servicio_dia = min(120.0, (record.cantidad_tickets / meta_servicio_dia * 100.0) if meta_servicio_dia else 0.0)
+
     
     @api.depends('fecha')
     def _compute_info_dia(self):
@@ -2050,3 +2902,30 @@ class EvaluacionPersonalEnvioMasivo(models.TransientModel):
                 )
             else:
                 raise ValidationError(f"Error al enviar el correo:\n{error_msg}")
+
+# ============================================================
+# PERFIL TÉCNICO - CAMPOS PARA BONO
+# ============================================================
+
+class MantenimientoTecnicoPerfil(models.Model):
+    _inherit = 'mantenimiento.tecnico.perfil'
+
+    tipo_operativo = fields.Selection([
+        ('taller', 'Técnico fijo de taller'),
+        ('servicios', 'Técnico exclusivo de servicios / alquiler'),
+        ('mixto', 'Técnico mixto / servicios eventuales'),
+    ], string='Perfil operativo para bono', default='mixto', tracking=True)
+
+    meta_mensual_taller = fields.Float(
+        string='Meta mensual taller',
+        default=50.0,
+        tracking=True,
+        help='Meta mensual base de máquinas para técnicos de taller. 50 máquinas = 100%.'
+    )
+
+    meta_mensual_servicios = fields.Float(
+        string='Meta mensual servicios',
+        default=45.0,
+        tracking=True,
+        help='Meta mensual base de tickets/servicios para técnicos exclusivos de campo.'
+    )
