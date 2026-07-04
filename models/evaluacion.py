@@ -382,13 +382,7 @@ class EvaluacionPersonal(models.Model):
     # BONO MENSUAL / PRODUCCIÓN AJUSTADA
     # ============================================================
 
-    perfil_tecnico_id = fields.Many2one(
-        'mantenimiento.tecnico.perfil',
-        string='Perfil técnico aplicado',
-        compute='_compute_perfil_bono',
-        store=True,
-        readonly=True
-    )
+ 
 
     tipo_operativo = fields.Selection([
         ('taller', 'Técnico fijo de taller'),
