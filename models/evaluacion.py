@@ -405,7 +405,7 @@ class EvaluacionPersonal(models.Model):
 
     meta_base_servicios = fields.Float(
         string='Meta base servicios',
-        default=45.0,
+        default=40.0,
         tracking=True,
         help='Meta mensual base para técnicos de servicios / alquiler.'
     )
@@ -719,7 +719,7 @@ class EvaluacionPersonal(models.Model):
             if record.tipo_operativo in ('taller', 'mixto'):
                 record.meta_taller_ajustada = (record.meta_base_taller or 50.0) * (record.dias_taller_disponibles / dias_mes)
             if record.tipo_operativo in ('servicios', 'mixto'):
-                record.meta_servicios_ajustada = (record.meta_base_servicios or 45.0) * (record.dias_servicios_disponibles / dias_mes)
+                record.meta_servicios_ajustada = (record.meta_base_servicios or 40.0) * (record.dias_servicios_disponibles / dias_mes)
 
     @api.depends('usuario_id', 'fecha', 'tipo_operativo', 'meta_taller_ajustada', 'meta_servicios_ajustada')
     def _compute_produccion_bono(self):
@@ -2323,7 +2323,7 @@ class EvaluacionPersonalDetalleDiario(models.Model):
                 if evaluacion.tipo_operativo in ('taller', 'mixto'):
                     meta_taller_dia = ((evaluacion.meta_base_taller or 50.0) / dias_mes) * taller_disponible
                 if evaluacion.tipo_operativo in ('servicios', 'mixto'):
-                    meta_servicio_dia = ((evaluacion.meta_base_servicios or 45.0) / dias_mes) * servicio_equiv
+                    meta_servicio_dia = ((evaluacion.meta_base_servicios or 40.0) / dias_mes) * servicio_equiv
             record.dia_equivalente_bono = dia_equiv
             record.horas_servicio_dia = horas_servicio
             record.servicio_equivalente_dia = servicio_equiv

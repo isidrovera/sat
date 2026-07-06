@@ -70,7 +70,7 @@ class MantenimientoTecnicoPerfil(models.Model):
 
     meta_base_servicios = fields.Float(
         string='Meta base servicios',
-        default=45.0,
+        default=40.0,
         tracking=True
     )
     trabaja_lunes = fields.Boolean(string='Lunes', default=True)
