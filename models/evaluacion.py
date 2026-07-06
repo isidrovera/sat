@@ -30,6 +30,12 @@ class EvaluacionPersonal(models.Model):
         readonly=True,
         tracking=True
     )
+    currency_id = fields.Many2one(
+        'res.currency',
+        string='Moneda',
+        default=lambda self: self.env.company.currency_id,
+        readonly=True
+    )
     bono_extra_sobreproduccion = fields.Float(
         string='Extra por sobreproducción',
         compute='_compute_resultado_bono',
