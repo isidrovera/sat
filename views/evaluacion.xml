@@ -475,6 +475,10 @@
                                     <group string="Reclamos">
                                         <field name="reclamos_procedentes_count" readonly="1"/>
                                         <field name="puntaje_calidad_real" readonly="1"/>
+                                        <field name="evaluaciones_servicio_minimas" readonly="1"/>
+                                        <field name="evaluaciones_servicio_faltantes" readonly="1"/>
+                                        <field name="cumple_minimo_evaluaciones" readonly="1"/>
+                                        <field name="penalidad_evaluaciones_servicio" readonly="1"/>
                                     </group>
                                     <group string="Evaluaciones de servicio">
                                         <field name="evaluaciones_servicio_count" readonly="1"/>

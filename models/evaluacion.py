@@ -539,6 +539,32 @@ class EvaluacionPersonal(models.Model):
         store=True,
         help='Evaluaciones de servicio menores a 70%.'
     )
+    evaluaciones_servicio_minimas = fields.Integer(
+        string='Evaluaciones mínimas requeridas',
+        compute='_compute_calidad_bono',
+        store=True,
+        help='Cantidad mínima de encuestas requeridas según servicios realizados.'
+    )
+
+    evaluaciones_servicio_faltantes = fields.Integer(
+        string='Evaluaciones faltantes',
+        compute='_compute_calidad_bono',
+        store=True,
+        help='Cantidad de encuestas faltantes para cumplir el mínimo requerido.'
+    )
+
+    cumple_minimo_evaluaciones = fields.Boolean(
+        string='Cumple mínimo de evaluaciones',
+        compute='_compute_calidad_bono',
+        store=True
+    )
+
+    penalidad_evaluaciones_servicio = fields.Float(
+        string='Penalidad por evaluaciones',
+        compute='_compute_calidad_bono',
+        store=True,
+        help='Penalidad aplicada por encuestas faltantes o evaluaciones críticas.'
+    )
 
     puntaje_calidad_real = fields.Float(
         string='Puntaje calidad real',
@@ -753,36 +779,126 @@ class EvaluacionPersonal(models.Model):
             record.porcentaje_produccion_servicios = pct_servicios
             record.porcentaje_produccion_total = min(120.0, total)
 
-    @api.depends('usuario_id', 'fecha')
+    @api.depends(
+        'usuario_id',
+        'fecha',
+        'tipo_operativo',
+        'tickets_validos_bono'
+    )
     def _compute_calidad_bono(self):
         for record in self:
             record.incidencia_ids = [(5, 0, 0)]
             record.reclamos_procedentes_count = 0
+
             record.evaluacion_servicio_ids = [(5, 0, 0)]
             record.evaluaciones_servicio_count = 0
             record.promedio_evaluacion_servicio = 100.0
             record.evaluaciones_criticas_count = 0
+
+            record.evaluaciones_servicio_minimas = 0
+            record.evaluaciones_servicio_faltantes = 0
+            record.cumple_minimo_evaluaciones = True
+            record.penalidad_evaluaciones_servicio = 0.0
+
             record.puntaje_calidad_real = 100.0
+
             if not record.usuario_id or not record.fecha:
                 continue
+
             inicio_mes, fin_mes = record._get_rango_mes_bono()
+
             reclamos = record._get_reclamos_que_afectan(inicio_mes, fin_mes)
             evaluaciones = record._get_evaluaciones_servicio(inicio_mes, fin_mes)
+
             record.incidencia_ids = [(6, 0, reclamos.ids)]
             record.reclamos_procedentes_count = len(reclamos)
+
             record.evaluacion_servicio_ids = [(6, 0, evaluaciones.ids)]
             record.evaluaciones_servicio_count = len(evaluaciones)
+
+            # ============================================================
+            # REGLA DE MÍNIMO DE EVALUACIONES DE SERVICIO
+            # ============================================================
+            # Aplica para:
+            # - técnico exclusivo de servicios
+            # - técnico mixto
+            # - técnico de taller que haya realizado servicios eventuales
+            #
+            # Regla:
+            # 0 servicios  = 0 evaluaciones requeridas
+            # 1 a 2 servicios = mínimo 1 evaluación
+            # 3 a 4 servicios = mínimo 2 evaluaciones
+            # 5 o más servicios = mínimo 5 evaluaciones
+            # ============================================================
+
+            tickets_servicio = record.tickets_validos_bono or 0
+
+            if tickets_servicio <= 0:
+                minimo_evaluaciones = 0
+            elif tickets_servicio <= 2:
+                minimo_evaluaciones = 1
+            elif tickets_servicio <= 4:
+                minimo_evaluaciones = 2
+            else:
+                minimo_evaluaciones = 5
+
+            evaluaciones_recibidas = len(evaluaciones)
+            evaluaciones_faltantes = max(0, minimo_evaluaciones - evaluaciones_recibidas)
+            cumple_minimo = evaluaciones_faltantes == 0
+
+            record.evaluaciones_servicio_minimas = minimo_evaluaciones
+            record.evaluaciones_servicio_faltantes = evaluaciones_faltantes
+            record.cumple_minimo_evaluaciones = cumple_minimo
+
+            # ============================================================
+            # PROMEDIO Y EVALUACIONES EN ROJO
+            # ============================================================
             promedio_servicio = 100.0
             criticas = 0
+
             if evaluaciones:
                 puntajes = [ev.puntaje_servicio or 0.0 for ev in evaluaciones]
                 promedio_servicio = sum(puntajes) / len(puntajes) if puntajes else 100.0
                 criticas = len([p for p in puntajes if p < 70.0])
-            penalidad_reclamos = min(40.0, len(reclamos) * 10.0)
-            calidad_base = max(0.0, 100.0 - penalidad_reclamos)
-            calidad = (calidad_base * 0.60 + promedio_servicio * 0.40) if evaluaciones else calidad_base
+
             record.promedio_evaluacion_servicio = promedio_servicio
             record.evaluaciones_criticas_count = criticas
+
+            # ============================================================
+            # PENALIDADES
+            # ============================================================
+            # Reclamo procedente: -10 puntos, máximo -40
+            # Evaluación faltante: -5 puntos
+            # Evaluación roja: -10 puntos
+            # Penalidad total por encuestas: máximo -50
+            # ============================================================
+
+            penalidad_reclamos = min(40.0, len(reclamos) * 10.0)
+
+            penalidad_faltantes = evaluaciones_faltantes * 5.0
+            penalidad_rojas = criticas * 10.0
+
+            penalidad_evaluaciones = min(
+                50.0,
+                penalidad_faltantes + penalidad_rojas
+            )
+
+            record.penalidad_evaluaciones_servicio = penalidad_evaluaciones
+
+            calidad_base = 100.0
+            calidad_base -= penalidad_reclamos
+            calidad_base -= penalidad_evaluaciones
+            calidad_base = max(0.0, calidad_base)
+
+            # Si tuvo servicios y tiene evaluaciones, se combina:
+            # 60% calidad interna + 40% promedio cliente.
+            # Si no tiene evaluaciones pero sí debía tenerlas, queda afectado
+            # por las evaluaciones faltantes.
+            if minimo_evaluaciones > 0 and evaluaciones:
+                calidad = (calidad_base * 0.60) + (promedio_servicio * 0.40)
+            else:
+                calidad = calidad_base
+
             record.puntaje_calidad_real = max(0.0, min(100.0, calidad))
 
     @api.depends('usuario_id', 'fecha')
@@ -833,10 +949,18 @@ class EvaluacionPersonal(models.Model):
 
             record.bono_extra_sobreproduccion = extra
             record.puntaje_total_bono = min(120.0, base + extra)
-    @api.depends('puntaje_total_bono', 'reclamos_procedentes_count', 'evaluaciones_criticas_count', 'faltas_injustificadas_equivalentes')
+    @api.depends(
+        'puntaje_total_bono',
+        'reclamos_procedentes_count',
+        'evaluaciones_criticas_count',
+        'faltas_injustificadas_equivalentes',
+        'cumple_minimo_evaluaciones',
+        'evaluaciones_servicio_faltantes'
+    )
     def _compute_monto_bono(self):
         for record in self:
             resultado = record.puntaje_total_bono or 0.0
+
             if resultado >= 110.0:
                 bono = 350.0
             elif resultado >= 100.0:
@@ -845,37 +969,60 @@ class EvaluacionPersonal(models.Model):
                 bono = 150.0
             else:
                 bono = 0.0
+
             aplica_acelerador = (
                 resultado >= 110.0 and
                 record.reclamos_procedentes_count == 0 and
                 record.evaluaciones_criticas_count == 0 and
-                record.faltas_injustificadas_equivalentes == 0
+                record.faltas_injustificadas_equivalentes == 0 and
+                record.cumple_minimo_evaluaciones
             )
+
             acelerador = 100.0 if aplica_acelerador else 0.0
+
             resumen = [
                 'Resultado total bono: %.2f%%' % resultado,
                 'Bono base: S/ %.2f' % bono,
             ]
+
             if aplica_acelerador:
                 resumen.append('Acelerador aplicado: S/ 100.00')
-                resumen.append('Motivo: resultado mayor o igual a 110%, sin reclamos procedentes, sin evaluaciones críticas y sin faltas injustificadas.')
+                resumen.append(
+                    'Motivo: resultado mayor o igual a 110%, sin reclamos procedentes, '
+                    'sin evaluaciones críticas, sin faltas injustificadas y con mínimo '
+                    'de evaluaciones de servicio cumplido.'
+                )
             else:
                 razones = []
+
                 if resultado < 110.0:
                     razones.append('resultado menor a 110%')
+
                 if record.reclamos_procedentes_count > 0:
                     razones.append('reclamos procedentes')
+
                 if record.evaluaciones_criticas_count > 0:
                     razones.append('evaluaciones críticas')
+
                 if record.faltas_injustificadas_equivalentes > 0:
                     razones.append('faltas injustificadas')
-                resumen.append('Acelerador no aplicado: %s.' % (', '.join(razones) if razones else 'no cumple condiciones'))
+
+                if not record.cumple_minimo_evaluaciones:
+                    razones.append(
+                        'no cumple mínimo de evaluaciones de servicio; faltan %s'
+                        % record.evaluaciones_servicio_faltantes
+                    )
+
+                resumen.append(
+                    'Acelerador no aplicado: %s.'
+                    % (', '.join(razones) if razones else 'no cumple condiciones')
+                )
+
             record.bono_base = bono
             record.aplica_acelerador = aplica_acelerador
             record.monto_acelerador = acelerador
             record.bono_final = bono + acelerador
             record.motivo_bono = '\n'.join(resumen)
-
     # ============================================================
     # MÉTODOS COMPUTE - ANÁLISIS DIARIO (NUEVO)
     # ============================================================
@@ -1425,15 +1572,34 @@ class EvaluacionPersonal(models.Model):
 
     def _get_tickets_bono(self, inicio_mes, fin_mes):
         self.ensure_one()
+
         if not self._model_exists('ticket.alquiler'):
             return self.env['ticket.alquiler']
+
         Ticket = self.env['ticket.alquiler']
+
         agenda_field = Ticket._fields.get('agenda')
+
         if agenda_field and agenda_field.type == 'date':
-            domain_fecha = [('agenda', '>=', inicio_mes), ('agenda', '<', fin_mes)]
+            domain_fecha = [
+                ('agenda', '>=', inicio_mes),
+                ('agenda', '<', fin_mes),
+            ]
         else:
-            domain_fecha = [('agenda', '>=', datetime.combine(inicio_mes, time.min)), ('agenda', '<', datetime.combine(fin_mes, time.min))]
-        return Ticket.search([('responsable', '=', self.usuario_id.id)] + domain_fecha)
+            domain_fecha = [
+                ('agenda', '>=', datetime.combine(inicio_mes, time.min)),
+                ('agenda', '<', datetime.combine(fin_mes, time.min)),
+            ]
+
+        domain = [
+            ('responsable', '=', self.usuario_id.id),
+        ] + domain_fecha
+
+        # Para bono solo deben contar tickets finalizados.
+        if 'estado' in Ticket._fields:
+            domain.append(('estado', '=', 'finalizado'))
+
+        return Ticket.search(domain)
 
     def _get_servicios_equivalentes(self, inicio_mes, fin_mes):
         self.ensure_one()
