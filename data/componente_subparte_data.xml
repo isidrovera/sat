@@ -47,19 +47,37 @@
     <field name="code">UI_BUSHINGS</field>
     <field name="tipo_id" ref="comp_tipo_ui"/>
   </record>
-  <record id="sub_ui_drum_bushings" model="componente.subparte">
+    <record id="sub_ui_bearings" model="componente.subparte">
+    <field name="name">Rodajes de la unidad de imagen</field>
+    <field name="code">UI_BEARINGS</field>
+    <field name="tipo_id" ref="comp_tipo_ui"/>
+  </record>
+
+<record id="sub_ui_drum_bushings" model="componente.subparte">
     <field name="name">Bocinas del tambor OPC</field>
     <field name="code">UI_DRUM_BUSHINGS</field>
     <field name="tipo_id" ref="comp_tipo_ui"/>
   </record>
-  <record id="sub_ui_pcr_bushings" model="componente.subparte">
+    <record id="sub_ui_drum_bearings" model="componente.subparte">
+    <field name="name">Rodajes del tambor OPC</field>
+    <field name="code">UI_DRUM_BEARINGS</field>
+    <field name="tipo_id" ref="comp_tipo_ui"/>
+  </record>
+
+<record id="sub_ui_pcr_bushings" model="componente.subparte">
     <field name="name">Bocinas del rodillo PCR</field>
     <field name="code">UI_PCR_BUSHINGS</field>
     <field name="tipo_id" ref="comp_tipo_ui"/>
   </record>
 
 
-  <record id="sub_ui_gear" model="componente.subparte">
+    <record id="sub_ui_pcr_bearings" model="componente.subparte">
+    <field name="name">Rodajes del rodillo PCR</field>
+    <field name="code">UI_PCR_BEARINGS</field>
+    <field name="tipo_id" ref="comp_tipo_ui"/>
+  </record>
+
+<record id="sub_ui_gear" model="componente.subparte">
     <field name="name">Engranajes de IU</field>
     <field name="code">UI_GEARS</field>
     <field name="tipo_id" ref="comp_tipo_ui"/>
@@ -127,7 +145,13 @@
   </record>
 
 
-  <record id="sub_dev_sensors" model="componente.subparte">
+    <record id="sub_dev_mag_roller_bearings" model="componente.subparte">
+    <field name="name">Rodajes del rodillo magnético</field>
+    <field name="code">DEV_MAG_ROLLER_BEARINGS</field>
+    <field name="tipo_id" ref="comp_tipo_developer"/>
+  </record>
+
+<record id="sub_dev_sensors" model="componente.subparte">
     <field name="name">Sensores de mezcla/tóner</field>
     <field name="code">DEV_SENSORS</field>
     <field name="tipo_id" ref="comp_tipo_developer"/>
@@ -261,7 +285,13 @@
     <field name="tipo_id" ref="comp_tipo_faja"/>
   </record>
 
-  <record id="sub_itb_sensors" model="componente.subparte">
+    <record id="sub_itb_bearings" model="componente.subparte">
+    <field name="name">Rodajes de faja ITB</field>
+    <field name="code">ITB_BEARINGS</field>
+    <field name="tipo_id" ref="comp_tipo_faja"/>
+  </record>
+
+<record id="sub_itb_sensors" model="componente.subparte">
     <field name="name">Sensores / parches</field>
     <field name="code">ITB_SENSORS</field>
     <field name="tipo_id" ref="comp_tipo_faja"/>
@@ -301,7 +331,13 @@
     <field name="tipo_id" ref="comp_tipo_transfer_roller"/>
   </record>
 
-  <record id="sub_transfer_springs" model="componente.subparte">
+    <record id="sub_transfer_bearings" model="componente.subparte">
+    <field name="name">Rodajes del rodillo de transferencia</field>
+    <field name="code">TR_BEARINGS</field>
+    <field name="tipo_id" ref="comp_tipo_transfer_roller"/>
+  </record>
+
+<record id="sub_transfer_springs" model="componente.subparte">
     <field name="name">Resortes / Soportes</field>
     <field name="code">TR_SPRINGS</field>
     <field name="tipo_id" ref="comp_tipo_transfer_roller"/>
@@ -335,7 +371,13 @@
   </record>
 
 
-  <!-- ====== FUSORA ====== -->
+    <record id="sub_secondary_transfer_bearings" model="componente.subparte">
+    <field name="name">Rodajes de transferencia secundaria</field>
+    <field name="code">STR_BEARINGS</field>
+    <field name="tipo_id" ref="comp_tipo_transfer_sec"/>
+  </record>
+
+<!-- ====== FUSORA ====== -->
   <record id="sub_fuser_upper" model="componente.subparte">
     <field name="name">Faja / film superior</field>
     <field name="code">FUSER_UPPER</field>
@@ -389,13 +431,25 @@
     <field name="code">FUSER_BUSHINGS</field>
     <field name="tipo_id" ref="comp_tipo_fusora"/>
   </record>
-  <record id="sub_fuser_film_bushings" model="componente.subparte">
+    <record id="sub_fuser_bearings" model="componente.subparte">
+    <field name="name">Rodajes de la unidad de fusión</field>
+    <field name="code">FUSER_BEARINGS</field>
+    <field name="tipo_id" ref="comp_tipo_fusora"/>
+  </record>
+
+<record id="sub_fuser_film_bushings" model="componente.subparte">
     <field name="name">Bocinas de la faja fusora</field>
     <field name="code">FUSER_FILM_BUSHINGS</field>
     <field name="tipo_id" ref="comp_tipo_fusora"/>
   </record>
 
-  <record id="sub_fuser_gears" model="componente.subparte">
+    <record id="sub_fuser_film_bearings" model="componente.subparte">
+    <field name="name">Rodajes de la faja fusora</field>
+    <field name="code">FUSER_FILM_BEARINGS</field>
+    <field name="tipo_id" ref="comp_tipo_fusora"/>
+  </record>
+
+<record id="sub_fuser_gears" model="componente.subparte">
     <field name="name">Engranajes</field>
     <field name="code">FUSER_GEARS</field>
     <field name="tipo_id" ref="comp_tipo_fusora"/>
@@ -437,12 +491,24 @@
     <field name="tipo_id" ref="comp_tipo_fusora"/>
 </record>
 
+  <record id="sub_fuser_sponge_bearings" model="componente.subparte">
+    <field name="name">Rodajes del rodillo de esponja</field>
+    <field name="code">FUSER_SPONGE_BEARINGS</field>
+    <field name="tipo_id" ref="comp_tipo_fusora"/>
+  </record>
+
 <!-- Bocinas del rodillo de calor -->
 <record id="sub_fuser_heat_bushings" model="componente.subparte">
     <field name="name">Bocinas del rodillo de calor</field>
     <field name="code">FUSER_HEAT_BUSHINGS</field>
     <field name="tipo_id" ref="comp_tipo_fusora"/>
 </record>
+  <record id="sub_fuser_heat_bearings" model="componente.subparte">
+    <field name="name">Rodajes del rodillo de calor</field>
+    <field name="code">FUSER_HEAT_BEARINGS</field>
+    <field name="tipo_id" ref="comp_tipo_fusora"/>
+  </record>
+
 <!-- Uñas de separación del rodillo de calor -->
 <record id="sub_fuser_heat_fingers" model="componente.subparte">
     <field name="name">Uñas de separación del rodillo de calor</field>
@@ -469,7 +535,13 @@
     <field name="code">FUSER_PRESSURE_BUSHINGS</field>
     <field name="tipo_id" ref="comp_tipo_fusora"/>
 </record>
-  <!-- ====== ADF ====== -->
+    <record id="sub_fuser_pressure_bearings" model="componente.subparte">
+    <field name="name">Rodajes del rodillo de presión</field>
+    <field name="code">FUSER_PRESSURE_BEARINGS</field>
+    <field name="tipo_id" ref="comp_tipo_fusora"/>
+  </record>
+
+<!-- ====== ADF ====== -->
 <record id="sub_adf_pickup" model="componente.subparte">
     <field name="name">Rodillo de alimentación</field>
     <field name="code">ADF_PICKUP_ROLLER</field>
@@ -499,6 +571,12 @@
     <field name="tipo_id" ref="comp_tipo_adf"/>
   </record>
 
+
+  <record id="sub_adf_bearings" model="componente.subparte">
+    <field name="name">Rodajes del ADF</field>
+    <field name="code">ADF_BEARINGS</field>
+    <field name="tipo_id" ref="comp_tipo_adf"/>
+  </record>
 
 <record id="sub_adf_belt" model="componente.subparte">
     <field name="name">Correa</field>
@@ -553,7 +631,13 @@
     <field name="tipo_id" ref="comp_tipo_tray"/>
   </record>
 
-  <record id="sub_tray_separation" model="componente.subparte">
+    <record id="sub_tray_bearings" model="componente.subparte">
+    <field name="name">Rodajes de casetera</field>
+    <field name="code">TRAY_BEARINGS</field>
+    <field name="tipo_id" ref="comp_tipo_tray"/>
+  </record>
+
+<record id="sub_tray_separation" model="componente.subparte">
     <field name="name">Almohadilla / rodillo de separación</field>
     <field name="code">TRAY_SEPARATION</field>
     <field name="tipo_id" ref="comp_tipo_tray"/>
@@ -603,7 +687,13 @@
     <field name="tipo_id" ref="comp_tipo_bypass"/>
   </record>
 
-  <record id="sub_bypass_guides" model="componente.subparte">
+    <record id="sub_bypass_bearings" model="componente.subparte">
+    <field name="name">Rodajes de bypass</field>
+    <field name="code">BYPASS_BEARINGS</field>
+    <field name="tipo_id" ref="comp_tipo_bypass"/>
+  </record>
+
+<record id="sub_bypass_guides" model="componente.subparte">
     <field name="name">Guías de bypass</field>
     <field name="code">BYPASS_GUIDES</field>
     <field name="tipo_id" ref="comp_tipo_bypass"/>
@@ -621,7 +711,13 @@
     <field name="tipo_id" ref="comp_tipo_registro_papel"/>
   </record>
 
-  <record id="sub_reg_clutch" model="componente.subparte">
+    <record id="sub_reg_bearings" model="componente.subparte">
+    <field name="name">Rodajes de rodillos de registro</field>
+    <field name="code">REG_BEARINGS</field>
+    <field name="tipo_id" ref="comp_tipo_registro_papel"/>
+  </record>
+
+<record id="sub_reg_clutch" model="componente.subparte">
     <field name="name">Embrague / sincronización de registro</field>
     <field name="code">REG_CLUTCH</field>
     <field name="tipo_id" ref="comp_tipo_registro_papel"/>
@@ -649,7 +745,13 @@
     <field name="tipo_id" ref="comp_tipo_duplex"/>
   </record>
 
-  <record id="sub_duplex_gates" model="componente.subparte">
+    <record id="sub_duplex_bearings" model="componente.subparte">
+    <field name="name">Rodajes de dúplex</field>
+    <field name="code">DUP_BEARINGS</field>
+    <field name="tipo_id" ref="comp_tipo_duplex"/>
+  </record>
+
+<record id="sub_duplex_gates" model="componente.subparte">
     <field name="name">Compuertas / Puertas</field>
     <field name="code">DUP_GATES</field>
     <field name="tipo_id" ref="comp_tipo_duplex"/>
@@ -684,7 +786,13 @@
     <field name="tipo_id" ref="comp_tipo_salida_std"/>
   </record>
 
-  <record id="sub_std_output_tray" model="componente.subparte">
+    <record id="sub_std_exit_bearings" model="componente.subparte">
+    <field name="name">Rodajes de rodillos de salida</field>
+    <field name="code">STD_EXIT_BEARINGS</field>
+    <field name="tipo_id" ref="comp_tipo_salida_std"/>
+  </record>
+
+<record id="sub_std_output_tray" model="componente.subparte">
     <field name="name">Bandeja de salida</field>
     <field name="code">STD_OUTPUT_TRAY</field>
     <field name="tipo_id" ref="comp_tipo_salida_std"/>
@@ -727,7 +835,13 @@
     <field name="tipo_id" ref="comp_tipo_finisher"/>
   </record>
 
-  <record id="sub_fin_sensors" model="componente.subparte">
+    <record id="sub_fin_exit_bearings" model="componente.subparte">
+    <field name="name">Rodajes de salida del acabador</field>
+    <field name="code">FIN_EXIT_BEARINGS</field>
+    <field name="tipo_id" ref="comp_tipo_finisher"/>
+  </record>
+
+<record id="sub_fin_sensors" model="componente.subparte">
     <field name="name">Sensores del finalizador</field>
     <field name="code">FIN_SENSORS</field>
     <field name="tipo_id" ref="comp_tipo_finisher"/>
@@ -814,7 +928,13 @@
     <field name="tipo_id" ref="comp_tipo_scanner"/>
   </record>
 
-  <record id="sub_sc_motor" model="componente.subparte">
+    <record id="sub_sc_carriage_bearings" model="componente.subparte">
+    <field name="name">Rodajes del carro del escáner</field>
+    <field name="code">SC_CARRIAGE_BEARINGS</field>
+    <field name="tipo_id" ref="comp_tipo_scanner"/>
+  </record>
+
+<record id="sub_sc_motor" model="componente.subparte">
     <field name="name">Motor escáner</field>
     <field name="code">SC_MOTOR</field>
     <field name="tipo_id" ref="comp_tipo_scanner"/>
@@ -1112,7 +1232,13 @@
     <field name="tipo_id" ref="comp_tipo_plot_carriage"/>
   </record>
 
-  <record id="sub_carriage_board" model="componente.subparte">
+    <record id="sub_carriage_bearings" model="componente.subparte">
+    <field name="name">Rodajes del carro</field>
+    <field name="code">CARRIAGE_BEARINGS</field>
+    <field name="tipo_id" ref="comp_tipo_plot_carriage"/>
+  </record>
+
+<record id="sub_carriage_board" model="componente.subparte">
     <field name="name">Placa del carro</field>
     <field name="code">CARRIAGE_PCB</field>
     <field name="tipo_id" ref="comp_tipo_plot_carriage"/>
@@ -1163,7 +1289,13 @@
     <field name="tipo_id" ref="comp_tipo_plot_feed"/>
   </record>
 
-  <record id="sub_feed_platen" model="componente.subparte">
+    <record id="sub_feed_bearings" model="componente.subparte">
+    <field name="name">Rodajes de alimentación de papel</field>
+    <field name="code">FEED_BEARINGS</field>
+    <field name="tipo_id" ref="comp_tipo_plot_feed"/>
+  </record>
+
+<record id="sub_feed_platen" model="componente.subparte">
     <field name="name">Rodillo de platina</field>
     <field name="code">FEED_PLATEN</field>
     <field name="tipo_id" ref="comp_tipo_plot_feed"/>
@@ -1220,7 +1352,13 @@
     <field name="tipo_id" ref="comp_tipo_dup_drum"/>
   </record>
 
-  <record id="sub_dup_drum_screen" model="componente.subparte">
+    <record id="sub_dup_drum_bearings" model="componente.subparte">
+    <field name="name">Rodajes del tambor duplicadora</field>
+    <field name="code">DUP_DRUM_BEARINGS</field>
+    <field name="tipo_id" ref="comp_tipo_dup_drum"/>
+  </record>
+
+<record id="sub_dup_drum_screen" model="componente.subparte">
     <field name="name">Malla del tambor</field>
     <field name="code">DUP_DRUM_SCREEN</field>
     <field name="tipo_id" ref="comp_tipo_dup_drum"/>
@@ -1269,7 +1407,13 @@
     <field name="tipo_id" ref="comp_tipo_dup_feeder"/>
   </record>
 
-  <record id="sub_dup_register" model="componente.subparte">
+    <record id="sub_dup_feed_bearings" model="componente.subparte">
+    <field name="name">Rodajes del alimentador duplicadora</field>
+    <field name="code">DUP_FEED_BEARINGS</field>
+    <field name="tipo_id" ref="comp_tipo_dup_feeder"/>
+  </record>
+
+<record id="sub_dup_register" model="componente.subparte">
     <field name="name">Rodillos de registro</field>
     <field name="code">DUP_REGISTER_ROLLERS</field>
     <field name="tipo_id" ref="comp_tipo_dup_feeder"/>
