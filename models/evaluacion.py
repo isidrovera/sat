@@ -7,9 +7,13 @@ from datetime import datetime, date, timedelta, time
 import calendar
 import babel
 import base64
+import pytz
 import traceback
 
 _logger = logging.getLogger(__name__)
+
+# Zona horaria local de operación (Perú no usa horario de verano)
+LIMA_TZ = 'America/Lima'
 
 
 class EvaluacionPersonal(models.Model):
@@ -80,7 +84,7 @@ class EvaluacionPersonal(models.Model):
     ], default='borrador', tracking=True, string='Estado', required=True)
 
     # ============================================================
-    # ANÁLISIS DIARIO (NUEVO)
+    # ANÁLISIS DIARIO
     # ============================================================
     
     detalle_diario_ids = fields.One2many(
@@ -310,10 +314,13 @@ class EvaluacionPersonal(models.Model):
         store=True
     )
     
-    dias_evaluados = fields.Integer(
+    # CORREGIDO: era Integer y truncaba los 0.5 de los sábados,
+    # con lo cual los medios días nunca contaban en los objetivos.
+    dias_evaluados = fields.Float(
         'Días Evaluados',
         compute='_compute_dias_evaluados',
-        store=True
+        store=True,
+        digits=(6, 1)
     )
     
     promedio_diario_reparaciones = fields.Float(
@@ -693,6 +700,33 @@ class EvaluacionPersonal(models.Model):
                         f"en el mes de {record.mes} {record.anio}."
                     )
 
+    # ============================================================
+    # HELPERS DE ZONA HORARIA (NUEVO)
+    # ============================================================
+    # Los campos Datetime (create_date, fecha_hora, evaluation_date, agenda
+    # cuando es Datetime) se guardan en UTC en la base de datos.
+    # Comparar directamente contra fechas locales (America/Lima, UTC-5)
+    # desplaza registros de fin de día al día/mes siguiente.
+    # Estos helpers convierten rangos de fecha local a datetimes UTC.
+    # ============================================================
+
+    @api.model
+    def _lima_a_utc(self, fecha_local, hora=time.min):
+        """Convierte una fecha local (America/Lima) a datetime UTC naive."""
+        tz = pytz.timezone(LIMA_TZ)
+        dt_local = tz.localize(datetime.combine(fecha_local, hora))
+        return dt_local.astimezone(pytz.utc).replace(tzinfo=None)
+
+    @api.model
+    def _rango_utc(self, fecha_inicio, fecha_fin):
+        """
+        Convierte un rango de fechas locales [inicio, fin) a datetimes UTC
+        para comparar contra campos Datetime almacenados en UTC.
+        """
+        return (
+            self._lima_a_utc(fecha_inicio),
+            self._lima_a_utc(fecha_fin),
+        )
 
     # ============================================================
     # MÉTODOS COMPUTE - BONO MENSUAL
@@ -920,11 +954,11 @@ class EvaluacionPersonal(models.Model):
             record.puntaje_apoyo_real = (valor / 5.0) * 100.0
 
     @api.depends(
-    'porcentaje_produccion_total',
-    'puntaje_calidad_real',
-    'puntaje_asistencia_real',
-    'puntaje_apoyo_real'
-)
+        'porcentaje_produccion_total',
+        'puntaje_calidad_real',
+        'puntaje_asistencia_real',
+        'puntaje_apoyo_real'
+    )
     def _compute_resultado_bono(self):
         for record in self:
             produccion = min(120.0, record.porcentaje_produccion_total or 0.0)
@@ -949,6 +983,7 @@ class EvaluacionPersonal(models.Model):
 
             record.bono_extra_sobreproduccion = extra
             record.puntaje_total_bono = min(120.0, base + extra)
+
     @api.depends(
         'puntaje_total_bono',
         'reclamos_procedentes_count',
@@ -1023,8 +1058,9 @@ class EvaluacionPersonal(models.Model):
             record.monto_acelerador = acelerador
             record.bono_final = bono + acelerador
             record.motivo_bono = '\n'.join(resumen)
+
     # ============================================================
-    # MÉTODOS COMPUTE - ANÁLISIS DIARIO (NUEVO)
+    # MÉTODOS COMPUTE - ANÁLISIS DIARIO
     # ============================================================
     
     @api.depends('detalle_diario_ids')
@@ -1076,16 +1112,21 @@ class EvaluacionPersonal(models.Model):
     
     @api.depends('usuario_id', 'fecha')
     def _compute_reparaciones(self):
-        """Calcula la cantidad de reparaciones realizadas en el mes"""
+        """
+        Calcula la cantidad de reparaciones realizadas en el mes.
+        CORREGIDO: create_date está en UTC; el rango del mes se convierte
+        de America/Lima a UTC para no desplazar registros de fin de mes.
+        """
         for record in self:
             if record.usuario_id and record.fecha:
                 inicio_mes = record.fecha.replace(day=1)
                 fin_mes = inicio_mes + relativedelta(months=1)
+                inicio_utc, fin_utc = self._rango_utc(inicio_mes, fin_mes)
                 
                 reparaciones = self.env['reparaciones.reparaciones'].search_count([
                     ('responsable_id', '=', record.usuario_id.id),
-                    ('create_date', '>=', inicio_mes),
-                    ('create_date', '<', fin_mes),
+                    ('create_date', '>=', inicio_utc),
+                    ('create_date', '<', fin_utc),
                 ])
                 record.cantidad_reparaciones = reparaciones
             else:
@@ -1093,17 +1134,34 @@ class EvaluacionPersonal(models.Model):
 
     @api.depends('usuario_id', 'fecha')
     def _compute_tickets(self):
-        """Calcula la cantidad de tickets atendidos en el mes"""
+        """
+        Calcula la cantidad de tickets atendidos en el mes.
+        CORREGIDO: si 'agenda' es Datetime (UTC), el rango se convierte
+        de America/Lima a UTC. Si es Date, se compara directo.
+        """
         for record in self:
             if record.usuario_id and record.fecha:
                 inicio_mes = record.fecha.replace(day=1)
                 fin_mes = inicio_mes + relativedelta(months=1)
-                
-                tickets = self.env['ticket.alquiler'].search_count([
+
+                Ticket = self.env['ticket.alquiler']
+                agenda_field = Ticket._fields.get('agenda')
+
+                if agenda_field and agenda_field.type == 'date':
+                    domain_fecha = [
+                        ('agenda', '>=', inicio_mes),
+                        ('agenda', '<', fin_mes),
+                    ]
+                else:
+                    inicio_utc, fin_utc = self._rango_utc(inicio_mes, fin_mes)
+                    domain_fecha = [
+                        ('agenda', '>=', inicio_utc),
+                        ('agenda', '<', fin_utc),
+                    ]
+
+                tickets = Ticket.search_count([
                     ('responsable', '=', record.usuario_id.id),
-                    ('agenda', '>=', inicio_mes),
-                    ('agenda', '<', fin_mes),
-                ])
+                ] + domain_fecha)
                 record.cantidad_tickets = tickets
             else:
                 record.cantidad_tickets = 0
@@ -1131,12 +1189,12 @@ class EvaluacionPersonal(models.Model):
             if record.fecha:
                 inicio_mes = record.fecha.replace(day=1)
                 fin_mes = inicio_mes + relativedelta(months=1)
-                dias = 0
+                dias = 0.0
                 current = inicio_mes
                 
                 while current < fin_mes:
                     if current.weekday() < 5:  # Lunes a Viernes
-                        dias += 1
+                        dias += 1.0
                     elif current.weekday() == 5:  # Sábado
                         dias += 0.5
                     # Domingo no cuenta (weekday() == 6)
@@ -1144,7 +1202,7 @@ class EvaluacionPersonal(models.Model):
                     
                 record.dias_evaluados = dias
             else:
-                record.dias_evaluados = 0
+                record.dias_evaluados = 0.0
 
     @api.depends('fecha', 'dias_evaluados')
     def _compute_objetivos(self):
@@ -1559,11 +1617,14 @@ class EvaluacionPersonal(models.Model):
         return total
 
     def _get_reparaciones_bono(self, inicio_mes, fin_mes):
+        """
+        CORREGIDO: create_date está en UTC; el rango del mes se convierte
+        de America/Lima a UTC.
+        """
         self.ensure_one()
         if not self._model_exists('reparaciones.reparaciones'):
             return self.env['reparaciones.reparaciones']
-        inicio_dt = datetime.combine(inicio_mes, time.min)
-        fin_dt = datetime.combine(fin_mes, time.min)
+        inicio_dt, fin_dt = self._rango_utc(inicio_mes, fin_mes)
         return self.env['reparaciones.reparaciones'].search([
             ('responsable_id', '=', self.usuario_id.id),
             ('create_date', '>=', inicio_dt),
@@ -1586,9 +1647,11 @@ class EvaluacionPersonal(models.Model):
                 ('agenda', '<', fin_mes),
             ]
         else:
+            # CORREGIDO: agenda Datetime está en UTC; se convierte el rango local.
+            inicio_utc, fin_utc = self._rango_utc(inicio_mes, fin_mes)
             domain_fecha = [
-                ('agenda', '>=', datetime.combine(inicio_mes, time.min)),
-                ('agenda', '<', datetime.combine(fin_mes, time.min)),
+                ('agenda', '>=', inicio_utc),
+                ('agenda', '<', fin_utc),
             ]
 
         domain = [
@@ -1617,31 +1680,39 @@ class EvaluacionPersonal(models.Model):
             if horas_dia <= 0:
                 continue
             horas_fecha = 0.0
-            sin_retorno_fecha = False
             for ticket in tickets:
                 horas_ticket = self._get_ticket_horas_estimadas(ticket, horas_dia)
                 if self._ticket_sin_retorno(ticket):
-                    sin_retorno_fecha = True
                     result['sin_retorno'] += 1
                     hora_agenda = self._get_ticket_hora_agenda(ticket)
                     if hora_agenda is not False and hora_agenda >= 13.0:
+                        # Sin retorno agendado en la tarde: consume al menos medio día
                         horas_ticket = max(horas_ticket, horas_dia / 2.0)
                     else:
+                        # Sin retorno agendado en la mañana: consume el día completo
                         horas_ticket = horas_dia
                 horas_fecha += horas_ticket
-            if sin_retorno_fecha:
-                horas_fecha = min(horas_dia, max(horas_fecha, horas_dia))
+            # CORREGIDO: se eliminó la línea que forzaba horas_fecha = horas_dia
+            # cuando había algún ticket sin retorno, lo cual anulaba la regla
+            # de "sin retorno después de la 1pm = medio día". Ahora solo se
+            # limita al máximo de horas del día, igual que en el detalle diario.
             horas_fecha = min(horas_dia, horas_fecha)
             result['horas'] += horas_fecha
             result['dias_equivalentes'] += min(1.0, horas_fecha / horas_dia)
         return result
 
     def _get_ticket_fecha(self, ticket):
+        """
+        CORREGIDO: si agenda es Datetime (UTC), se convierte a hora local
+        de Lima antes de extraer la fecha, para que el ticket caiga en el
+        día local correcto.
+        """
         if 'agenda' not in ticket._fields or not ticket.agenda:
             return False
         agenda = ticket.agenda
         if isinstance(agenda, datetime):
-            return agenda.date()
+            tz = pytz.timezone(LIMA_TZ)
+            return pytz.utc.localize(agenda).astimezone(tz).date()
         if isinstance(agenda, date):
             return agenda
         try:
@@ -1650,11 +1721,18 @@ class EvaluacionPersonal(models.Model):
             return False
 
     def _get_ticket_hora_agenda(self, ticket):
+        """
+        CORREGIDO: la hora se evalúa en hora local de Lima, no en UTC.
+        Un ticket agendado a las 14:00 Lima se guarda como 19:00 UTC;
+        sin conversión, la regla de la 1pm evaluaba la hora equivocada.
+        """
         if 'agenda' not in ticket._fields or not ticket.agenda:
             return False
         agenda = ticket.agenda
         if isinstance(agenda, datetime):
-            return agenda.hour + (agenda.minute / 60.0)
+            tz = pytz.timezone(LIMA_TZ)
+            agenda_local = pytz.utc.localize(agenda).astimezone(tz)
+            return agenda_local.hour + (agenda_local.minute / 60.0)
         return False
 
     def _get_ticket_horas_estimadas(self, ticket, horas_dia):
@@ -1715,30 +1793,40 @@ class EvaluacionPersonal(models.Model):
         return False
 
     def _get_reclamos_que_afectan(self, inicio_mes, fin_mes):
+        """
+        CORREGIDO: fecha_hora es Datetime en UTC; el rango del mes se
+        convierte de America/Lima a UTC.
+        """
         self.ensure_one()
         if not self._model_exists('taller.incidencia'):
             return self.env['taller.incidencia']
+        inicio_utc, fin_utc = self._rango_utc(inicio_mes, fin_mes)
         return self.env['taller.incidencia'].search([
             ('tipo', '=', 'reclamo'),
             ('afecta_tecnico', '=', True),
             ('estado', 'in', ['procede', 'corregido', 'cerrado']),
-            ('fecha_hora', '>=', datetime.combine(inicio_mes, time.min)),
-            ('fecha_hora', '<', datetime.combine(fin_mes, time.min)),
+            ('fecha_hora', '>=', inicio_utc),
+            ('fecha_hora', '<', fin_utc),
             '|',
             ('tecnico_id', '=', self.usuario_id.id),
             ('empleado_id.user_id', '=', self.usuario_id.id),
         ])
 
     def _get_evaluaciones_servicio(self, inicio_mes, fin_mes):
+        """
+        CORREGIDO: evaluation_date es Datetime en UTC; su rango se convierte
+        de America/Lima a UTC. visit_date es Date y se compara directo.
+        """
         self.ensure_one()
         if not self._model_exists('client.service.evaluation'):
             return self.env['client.service.evaluation']
+        inicio_utc, fin_utc = self._rango_utc(inicio_mes, fin_mes)
         return self.env['client.service.evaluation'].search([
             ('technician_id', '=', self.usuario_id.id),
             ('state', '=', 'completed'),
             '|',
             '&', ('visit_date', '>=', inicio_mes), ('visit_date', '<', fin_mes),
-            '&', ('evaluation_date', '>=', datetime.combine(inicio_mes, time.min)), ('evaluation_date', '<', datetime.combine(fin_mes, time.min)),
+            '&', ('evaluation_date', '>=', inicio_utc), ('evaluation_date', '<', fin_utc),
         ])
 
     def action_recalcular_bono(self):
@@ -1750,6 +1838,7 @@ class EvaluacionPersonal(models.Model):
         for record in self:
             # Recalcular detalle diario si existe
             if record.detalle_diario_ids:
+                record.detalle_diario_ids._compute_trabajos()
                 record.detalle_diario_ids._compute_bono_detalle()
 
             # Recalcular en orden correcto
@@ -1847,26 +1936,36 @@ class EvaluacionPersonal(models.Model):
     # MÉTODOS CRUD
     # ============================================================
     
-    @api.model
-    def create(self, vals):
-        """Genera secuencia automática y crea detalle diario"""
-        if vals.get('name', 'New') == 'New':
-            vals['name'] = self.env['ir.sequence'].next_by_code('evaluacion.personal') or 'New'
+    @api.model_create_multi
+    def create(self, vals_list):
+        """
+        Genera secuencia automática y crea detalle diario.
+        CORREGIDO: firma model_create_multi (Odoo 18) para soportar
+        creación en lote sin warnings de deprecación.
+        """
+        for vals in vals_list:
+            if vals.get('name', 'New') == 'New':
+                vals['name'] = self.env['ir.sequence'].next_by_code('evaluacion.personal') or 'New'
         
-        evaluacion = super(EvaluacionPersonal, self).create(vals)
+        evaluaciones = super(EvaluacionPersonal, self).create(vals_list)
         
         # Generar detalle diario automáticamente
-        evaluacion.action_generar_detalle_diario()
+        evaluaciones.action_generar_detalle_diario()
         
-        return evaluacion
+        return evaluaciones
 
     def write(self, vals):
-        """Actualiza y regenera detalle diario si cambia usuario o fecha"""
+        """
+        Actualiza y regenera detalle diario si cambia usuario o fecha.
+        CORREGIDO: se llama action_generar_detalle_diario (multi-registro)
+        en lugar de action_regenerar_detalle_diario (ensure_one), que
+        rompía en escrituras sobre varios registros.
+        """
         result = super(EvaluacionPersonal, self).write(vals)
         
         # Si cambió el usuario o la fecha, regenerar detalle
         if 'usuario_id' in vals or 'fecha' in vals:
-            self.action_regenerar_detalle_diario()
+            self.action_generar_detalle_diario()
         
         return result
 
@@ -2070,7 +2169,7 @@ class EvaluacionPersonal(models.Model):
         }
 
     # ============================================================
-    # ACCIONES ANÁLISIS DIARIO (NUEVO)
+    # ACCIONES ANÁLISIS DIARIO
     # ============================================================
     
     def action_generar_detalle_diario(self):
@@ -2117,6 +2216,7 @@ class EvaluacionPersonal(models.Model):
             _logger.info(
                 f"✅ Análisis diario generado: {detalles_creados} días procesados"
             )
+
     def action_regenerar_detalle_diario(self):
         """
         Botón manual para regenerar el análisis diario
@@ -2241,7 +2341,7 @@ class EvaluacionPersonal(models.Model):
 
 
 # ============================================================
-# MODELO DE DETALLE DIARIO (NUEVO)
+# MODELO DE DETALLE DIARIO
 # ============================================================
 
 class EvaluacionPersonalDetalleDiario(models.Model):
@@ -2544,27 +2644,47 @@ class EvaluacionPersonalDetalleDiario(models.Model):
     
     @api.depends('usuario_id', 'fecha')
     def _compute_trabajos(self):
-        """Busca las reparaciones y tickets realizados este día"""
+        """
+        Busca las reparaciones y tickets realizados este día.
+        CORREGIDO:
+        - create_date (UTC) se compara contra el día local convertido a UTC.
+        - agenda: si es Date se compara por igualdad de fecha; si es Datetime
+          (UTC) se compara contra el rango del día local convertido a UTC.
+          Antes se usaba >= fecha y <= fecha, que con Datetime solo capturaba
+          tickets exactamente a medianoche.
+        """
+        Evaluacion = self.env['evaluacion.personal']
         for record in self:
             if record.usuario_id and record.fecha:
-                # Inicio y fin del día
-                inicio_dia = datetime.combine(record.fecha, time.min)
-                fin_dia = datetime.combine(record.fecha, time.max)
+                dia_siguiente = record.fecha + timedelta(days=1)
+                inicio_utc, fin_utc = Evaluacion._rango_utc(record.fecha, dia_siguiente)
                 
-                # Buscar reparaciones creadas este día
+                # Buscar reparaciones creadas este día (día local Lima)
                 reparaciones = self.env['reparaciones.reparaciones'].search([
                     ('responsable_id', '=', record.usuario_id.id),
-                    ('create_date', '>=', inicio_dia),
-                    ('create_date', '<=', fin_dia)
+                    ('create_date', '>=', inicio_utc),
+                    ('create_date', '<', fin_utc)
                 ])
                 record.reparacion_ids = [(6, 0, reparaciones.ids)]
                 
                 # Buscar tickets agendados para este día
-                tickets = self.env['ticket.alquiler'].search([
+                Ticket = self.env['ticket.alquiler']
+                agenda_field = Ticket._fields.get('agenda')
+
+                if agenda_field and agenda_field.type == 'date':
+                    domain_fecha = [
+                        ('agenda', '>=', record.fecha),
+                        ('agenda', '<', dia_siguiente),
+                    ]
+                else:
+                    domain_fecha = [
+                        ('agenda', '>=', inicio_utc),
+                        ('agenda', '<', fin_utc),
+                    ]
+
+                tickets = Ticket.search([
                     ('responsable', '=', record.usuario_id.id),
-                    ('agenda', '>=', record.fecha),
-                    ('agenda', '<=', record.fecha)
-                ])
+                ] + domain_fecha)
                 record.ticket_ids = [(6, 0, tickets.ids)]
             else:
                 record.reparacion_ids = [(5, 0, 0)]
@@ -2608,9 +2728,13 @@ class EvaluacionPersonalDetalleDiario(models.Model):
                 record.porcentaje_cumplimiento = 0
                 record.cumple_objetivo = False
     
-    @api.depends('total_trabajos', 'objetivo_dia', 'es_dia_laboral')
+    @api.depends('total_trabajos', 'objetivo_dia', 'es_dia_laboral', 'porcentaje_cumplimiento')
     def _compute_estado(self):
-        """Clasifica el estado del día según productividad"""
+        """
+        Clasifica el estado del día según productividad.
+        CORREGIDO: se agregó porcentaje_cumplimiento a los depends porque
+        el método lo usa; antes dependía del recomputo en cascada.
+        """
         for record in self:
             if not record.es_dia_laboral:
                 record.estado_dia = 'sin_actividad'
