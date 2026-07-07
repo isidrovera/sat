@@ -1742,15 +1742,32 @@ class EvaluacionPersonal(models.Model):
         ])
 
     def action_recalcular_bono(self):
+        """
+        Recalcula todo el bono mensual:
+        disponibilidad, metas, producción, calidad, asistencia,
+        resultado final y detalle diario.
+        """
         for record in self:
+            # Recalcular detalle diario si existe
             if record.detalle_diario_ids:
                 record.detalle_diario_ids._compute_bono_detalle()
+
+            # Recalcular en orden correcto
+            record._compute_disponibilidad_bono()
+            record._compute_metas_bono()
+            record._compute_produccion_bono()
+            record._compute_calidad_bono()
+            record._compute_asistencia_bono()
+            record._compute_apoyo_bono()
+            record._compute_resultado_bono()
+            record._compute_monto_bono()
+
         return {
             'type': 'ir.actions.client',
             'tag': 'display_notification',
             'params': {
                 'title': 'Bono recalculado',
-                'message': 'Se recalculó la información de bono mensual.',
+                'message': 'Se recalculó la producción, calidad, encuestas, penalidades y bono mensual.',
                 'type': 'success',
                 'sticky': False,
             }
