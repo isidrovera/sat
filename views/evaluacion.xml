@@ -614,6 +614,9 @@
                                                decoration-info="tipo_operativo == 'taller'"
                                                decoration-success="tipo_operativo == 'servicios'"
                                                decoration-warning="tipo_operativo == 'mixto'"/>
+
+                                        <field name="tipo_operativo"
+                                               />
                                         <field name="meta_base_taller"/>
                                         <field name="meta_base_servicios"/>
                                     </group>
