@@ -8,8 +8,8 @@
         <record id="email_template_taller_incidencia_creada" model="mail.template">
             <field name="name">Taller Incidencia - Creada</field>
             <field name="model_id" ref="model_taller_incidencia"/>
-            <field name="email_from">{{ user.email or '' }}</field>
-            <field name="email_to">{{ object.cliente_id.email or '' }}</field>
+            <field name="email_from">{{ ctx.get('incidencia_email_from') or 'soporte@andescopiers.com.pe' }}</field>
+            <field name="email_to">{{ ctx.get('incidencia_email_to') or 'soporte@andescopiers.com.pe' }}</field>
             <field name="subject">📌 Incidencia registrada {{ object.name }} - Serie {{ object.serie or '' }}</field>
             <field name="auto_delete" eval="False"/>
             <field name="body_html"><![CDATA[
@@ -69,8 +69,8 @@
         <record id="email_template_taller_incidencia_revision" model="mail.template">
             <field name="name">Taller Incidencia - En Revisión</field>
             <field name="model_id" ref="model_taller_incidencia"/>
-            <field name="email_from">{{ user.email or '' }}</field>
-            <field name="email_to">{{ object.cliente_id.email or '' }}</field>
+            <field name="email_from">{{ ctx.get('incidencia_email_from') or 'soporte@andescopiers.com.pe' }}</field>
+            <field name="email_to">{{ ctx.get('incidencia_email_to') or 'soporte@andescopiers.com.pe' }}</field>
             <field name="subject">🔍 Incidencia en revisión {{ object.name }} - Serie {{ object.serie or '' }}</field>
             <field name="auto_delete" eval="False"/>
             <field name="body_html"><![CDATA[
@@ -130,8 +130,8 @@
         <record id="email_template_taller_incidencia_fuera_plazo" model="mail.template">
             <field name="name">Taller Incidencia - Fuera de Plazo</field>
             <field name="model_id" ref="model_taller_incidencia"/>
-            <field name="email_from">{{ user.email or '' }}</field>
-            <field name="email_to">{{ object.cliente_id.email or '' }}</field>
+            <field name="email_from">{{ ctx.get('incidencia_email_from') or 'soporte@andescopiers.com.pe' }}</field>
+            <field name="email_to">{{ ctx.get('incidencia_email_to') or 'soporte@andescopiers.com.pe' }}</field>
             <field name="subject">⚠️ Incidencia fuera de plazo {{ object.name }} - Serie {{ object.serie or '' }}</field>
             <field name="auto_delete" eval="False"/>
             <field name="body_html"><![CDATA[
@@ -190,8 +190,8 @@
         <record id="email_template_taller_incidencia_procede" model="mail.template">
             <field name="name">Taller Incidencia - Procede</field>
             <field name="model_id" ref="model_taller_incidencia"/>
-            <field name="email_from">{{ user.email or '' }}</field>
-            <field name="email_to">{{ object.cliente_id.email or '' }}</field>
+            <field name="email_from">{{ ctx.get('incidencia_email_from') or 'soporte@andescopiers.com.pe' }}</field>
+            <field name="email_to">{{ ctx.get('incidencia_email_to') or 'soporte@andescopiers.com.pe' }}</field>
             <field name="subject">✅ Incidencia procede {{ object.name }} - Serie {{ object.serie or '' }}</field>
             <field name="auto_delete" eval="False"/>
             <field name="body_html"><![CDATA[
@@ -250,8 +250,8 @@
         <record id="email_template_taller_incidencia_no_procede" model="mail.template">
             <field name="name">Taller Incidencia - No Procede</field>
             <field name="model_id" ref="model_taller_incidencia"/>
-            <field name="email_from">{{ user.email or '' }}</field>
-            <field name="email_to">{{ object.cliente_id.email or '' }}</field>
+            <field name="email_from">{{ ctx.get('incidencia_email_from') or 'soporte@andescopiers.com.pe' }}</field>
+            <field name="email_to">{{ ctx.get('incidencia_email_to') or 'soporte@andescopiers.com.pe' }}</field>
             <field name="subject">🟢 Incidencia no procede {{ object.name }} - Serie {{ object.serie or '' }}</field>
             <field name="auto_delete" eval="False"/>
             <field name="body_html"><![CDATA[
@@ -309,8 +309,8 @@
         <record id="email_template_taller_incidencia_gerencia" model="mail.template">
             <field name="name">Taller Incidencia - Gerencia</field>
             <field name="model_id" ref="model_taller_incidencia"/>
-            <field name="email_from">{{ user.email or '' }}</field>
-            <field name="email_to">{{ object.cliente_id.email or '' }}</field>
+            <field name="email_from">{{ ctx.get('incidencia_email_from') or 'soporte@andescopiers.com.pe' }}</field>
+            <field name="email_to">{{ ctx.get('incidencia_email_to') or 'soporte@andescopiers.com.pe' }}</field>
             <field name="subject">👔 Incidencia enviada a gerencia {{ object.name }} - Serie {{ object.serie or '' }}</field>
             <field name="auto_delete" eval="False"/>
             <field name="body_html"><![CDATA[
@@ -367,8 +367,8 @@
         <record id="email_template_taller_incidencia_corregida" model="mail.template">
             <field name="name">Taller Incidencia - Corregida</field>
             <field name="model_id" ref="model_taller_incidencia"/>
-            <field name="email_from">{{ user.email or '' }}</field>
-            <field name="email_to">{{ object.cliente_id.email or '' }}</field>
+            <field name="email_from">{{ ctx.get('incidencia_email_from') or 'soporte@andescopiers.com.pe' }}</field>
+            <field name="email_to">{{ ctx.get('incidencia_email_to') or 'soporte@andescopiers.com.pe' }}</field>
             <field name="subject">🛠️ Incidencia corregida {{ object.name }} - Serie {{ object.serie or '' }}</field>
             <field name="auto_delete" eval="False"/>
             <field name="body_html"><![CDATA[
@@ -424,8 +424,8 @@
         <record id="email_template_taller_incidencia_cerrada" model="mail.template">
             <field name="name">Taller Incidencia - Cerrada</field>
             <field name="model_id" ref="model_taller_incidencia"/>
-            <field name="email_from">{{ user.email or '' }}</field>
-            <field name="email_to">{{ object.cliente_id.email or '' }}</field>
+            <field name="email_from">{{ ctx.get('incidencia_email_from') or 'soporte@andescopiers.com.pe' }}</field>
+            <field name="email_to">{{ ctx.get('incidencia_email_to') or 'soporte@andescopiers.com.pe' }}</field>
             <field name="subject">✅ Incidencia cerrada {{ object.name }} - Serie {{ object.serie or '' }}</field>
             <field name="auto_delete" eval="False"/>
             <field name="body_html"><![CDATA[

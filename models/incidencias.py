@@ -4,11 +4,24 @@ from odoo import _, api, fields, models
 from odoo.exceptions import ValidationError, UserError
 from datetime import datetime, date
 import logging
+import re
 
 _logger = logging.getLogger(__name__)
 
 
 class Incidencia(models.Model):
+    # ============================================================
+    # CONFIGURACIÓN DE CORREOS DE INCIDENCIA
+    # ============================================================
+    INCIDENCIA_EMAIL_FROM = 'soporte@andescopiers.com.pe'
+    INCIDENCIA_JEFE_TALLER_EMAILS = [
+        'soporte@andescopiers.com.pe',
+    ]
+    INCIDENCIA_GERENCIA_EMAILS = [
+        'lincoln@corapsac.com',
+        'campuero@corapsac.com.pe',
+        'salvarez@andescopiers.com.pe',
+    ]
     _name = 'taller.incidencia'
     _description = 'Registro de Incidencias en el Taller'
     _inherit = ['mail.thread', 'mail.activity.mixin']
@@ -1122,11 +1135,151 @@ class Incidencia(models.Model):
     # CORREOS POR PLANTILLA XML
     # ============================================================
 
+    def _normalize_email(self, email):
+        """Devuelve un correo limpio o False."""
+        if not email:
+            return False
+
+        email = str(email).strip()
+        if not email or '@' not in email:
+            return False
+
+        # Si viene con formato "Nombre <correo@dominio.com>", tomar solo el correo.
+        match = re.search(r'<([^>]+)>', email)
+        if match:
+            email = match.group(1).strip()
+
+        return email.lower()
+
+    def _append_email(self, emails, email):
+        email = self._normalize_email(email)
+        if email and email not in emails:
+            emails.append(email)
+
+    def _append_emails_from_record(self, emails, rec):
+        """Agrega correos desde res.users, hr.employee, res.partner u otro registro con campos de email."""
+        if not rec:
+            return
+
+        for item in rec:
+            for field_name in ['email', 'work_email', 'private_email', 'email_normalized']:
+                if field_name in item._fields and item[field_name]:
+                    self._append_email(emails, item[field_name])
+
+            # hr.employee -> user_id / address_home_id
+            if 'user_id' in item._fields and item.user_id:
+                self._append_emails_from_record(emails, item.user_id)
+
+            if 'address_home_id' in item._fields and item.address_home_id:
+                self._append_emails_from_record(emails, item.address_home_id)
+
+            # res.users -> partner_id
+            if 'partner_id' in item._fields and item.partner_id:
+                self._append_emails_from_record(emails, item.partner_id)
+
+    def _get_cliente_email_list(self):
+        """
+        Correos del cliente para exclusión.
+        IMPORTANTE: al cliente no se le envía ningún correo de incidencia;
+        la comunicación externa la maneja la asesora.
+        """
+        self.ensure_one()
+        emails = []
+        clientes = self.env['res.partner']
+
+        if self.cliente_id:
+            clientes |= self.cliente_id
+        if self.equipo_id and self.equipo_id.cliente_id:
+            clientes |= self.equipo_id.cliente_id
+        if self.reparacion_id and 'cliente_id' in self.reparacion_id._fields and self.reparacion_id.cliente_id:
+            clientes |= self.reparacion_id.cliente_id
+
+        for cliente in clientes:
+            for field_name in ['email', 'email_normalized']:
+                if field_name in cliente._fields and cliente[field_name]:
+                    self._append_email(emails, cliente[field_name])
+
+        return emails
+
+    def _remove_cliente_emails(self, emails):
+        """Elimina cualquier correo que pertenezca al cliente."""
+        cliente_emails = set(self._get_cliente_email_list())
+        return [email for email in emails if email not in cliente_emails]
+
+    def _get_tecnico_email_list(self):
+        """Obtiene el correo del técnico desde la reparación relacionada."""
+        self.ensure_one()
+        emails = []
+
+        if self.tecnico_id:
+            self._append_emails_from_record(emails, self.tecnico_id)
+
+        if self.tecnico_empleado_id:
+            self._append_emails_from_record(emails, self.tecnico_empleado_id)
+
+        if self.reparacion_id and 'responsable_id' in self.reparacion_id._fields and self.reparacion_id.responsable_id:
+            self._append_emails_from_record(emails, self.reparacion_id.responsable_id)
+
+        return emails
+
+    def _get_asesora_email_list(self):
+        """
+        Obtiene correo de asesora:
+        1) usuario que creó la incidencia,
+        2) asesora configurada en el cliente/equipo.
+
+        No agrega el correo del cliente; solo usa el cliente para encontrar su asesora.
+        """
+        self.ensure_one()
+        emails = []
+
+        if self.create_uid:
+            self._append_emails_from_record(emails, self.create_uid)
+
+        partners = self.env['res.partner']
+        if self.cliente_id:
+            partners |= self.cliente_id
+        if self.equipo_id and self.equipo_id.cliente_id:
+            partners |= self.equipo_id.cliente_id
+
+        for partner in partners:
+            if 'asesora_id' in partner._fields and partner.asesora_id:
+                self._append_emails_from_record(emails, partner.asesora_id)
+
+        return emails
+
+    def _get_incidencia_email_recipients(self, evento):
+        """
+        Reglas de destinatarios:
+        - Soporte/Jefe de taller recibe todo el proceso.
+        - Técnico recibe desde creación hasta cierre, según reparación relacionada.
+        - Asesora recibe todo el proceso, desde creador o asesora del cliente/equipo.
+        - Gerencia recibe los casos fuera de plazo / gerencia.
+        - Cliente NO recibe correo; todo lo maneja la asesora.
+        """
+        self.ensure_one()
+        emails = []
+
+        for email in self.INCIDENCIA_JEFE_TALLER_EMAILS:
+            self._append_email(emails, email)
+
+        for email in self._get_tecnico_email_list():
+            self._append_email(emails, email)
+
+        for email in self._get_asesora_email_list():
+            self._append_email(emails, email)
+
+        if evento in ['fuera_plazo', 'gerencia']:
+            for email in self.INCIDENCIA_GERENCIA_EMAILS:
+                self._append_email(emails, email)
+
+        # Seguridad adicional: aunque algún origen devuelva el correo del cliente, se elimina.
+        return self._remove_cliente_emails(emails)
+
     def _send_event_email(self, evento):
         """
         Envía correos usando plantillas XML.
-        No define cuerpo de correo en Python.
-        Las plantillas deben existir en XML.
+        El cuerpo queda en XML, pero remitente y destinatarios se controlan aquí.
         """
         template_map = {
             'creada': ('sat.email_template_taller_incidencia_creada', 'email_creacion_enviado'),
@@ -1158,11 +1311,32 @@ class Incidencia(models.Model):
                 _logger.warning('[INCIDENCIA] No se encontró plantilla XML: %s', template_xmlid)
                 continue
 
+            recipients = record._get_incidencia_email_recipients(evento)
+            if not recipients:
+                record.with_context(
+                    skip_incidencia_auto_load=True,
+                    skip_incidencia_auto_state=True
+                ).write({
+                    'correo_error': 'No se encontraron destinatarios para el evento: %s' % evento,
+                })
+                _logger.warning('[INCIDENCIA] Sin destinatarios para %s - %s', evento, record.name)
+                continue
+
             try:
                 template.with_context(
                     incidencia_evento=evento,
                     incidencia_url=record._get_record_url(),
-                ).send_mail(record.id, force_send=True)
+                    incidencia_email_from=record.INCIDENCIA_EMAIL_FROM,
+                    incidencia_email_to=', '.join(recipients),
+                ).send_mail(
+                    record.id,
+                    force_send=True,
+                    email_values={
+                        'email_from': record.INCIDENCIA_EMAIL_FROM,
+                        'email_to': ', '.join(recipients),
+                        'reply_to': record.INCIDENCIA_EMAIL_FROM,
+                    }
+                )
 
                 vals = {
                     'ultimo_correo_fecha': fields.Datetime.now(),
