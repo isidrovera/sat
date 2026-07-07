@@ -8,9 +8,9 @@
         <record id="email_template_taller_incidencia_creada" model="mail.template">
             <field name="name">Taller Incidencia - Creada</field>
             <field name="model_id" ref="model_taller_incidencia"/>
-            <field name="email_from">${(user.email or '')|safe}</field>
-            <field name="email_to">${object.cliente_id.email or ''}</field>
-            <field name="subject">📌 Incidencia registrada ${object.name} - Serie ${object.serie or ''}</field>
+            <field name="email_from">{{ user.email or '' }}</field>
+            <field name="email_to">{{ object.cliente_id.email or '' }}</field>
+            <field name="subject">📌 Incidencia registrada {{ object.name }} - Serie {{ object.serie or '' }}</field>
             <field name="auto_delete" eval="False"/>
             <field name="body_html"><![CDATA[
 <!DOCTYPE html>
@@ -29,22 +29,22 @@
 
             <div style="background-color:#ebf8ff; padding:18px; margin:15px 0;">
                 <div style="font-size:18px; font-weight:bold; margin-bottom:12px;">📋 Datos de la incidencia</div>
-                <div>🆔 Incidencia: <strong>${object.name}</strong></div>
-                <div>🔢 Serie: <strong>${object.serie or ''}</strong></div>
-                <div>🖨️ Modelo: <strong>${object.modelo_equipo or ''}</strong></div>
-                <div>🏢 Cliente: <strong>${object.cliente_id.name or ''}</strong></div>
-                <div>👩‍💼 Asesora: <strong>${object.asesora_nombre or ''}</strong></div>
-                <div>📅 Fecha entrega: <strong>${object.fecha_entrega or ''}</strong></div>
-                <div>📌 Estado: <strong>${object.resumen_estado or ''}</strong></div>
+                <div>🆔 Incidencia: <strong><t t-out="object.name or ''"/></strong></div>
+                <div>🔢 Serie: <strong><t t-out="object.serie or ''"/></strong></div>
+                <div>🖨️ Modelo: <strong><t t-out="object.modelo_equipo or ''"/></strong></div>
+                <div>🏢 Cliente: <strong><t t-out="object.cliente_id.name or ''"/></strong></div>
+                <div>👩‍💼 Asesora: <strong><t t-out="object.asesora_nombre or ''"/></strong></div>
+                <div>📅 Fecha entrega: <strong><t t-out="object.fecha_entrega or ''"/></strong></div>
+                <div>📌 Estado: <strong><t t-out="dict(object._fields['estado'].selection).get(object.estado) or object.estado or ''"/></strong></div>
             </div>
 
             <div style="background-color:#fffaf0; padding:18px; margin:15px 0;">
                 <div style="font-size:18px; font-weight:bold; margin-bottom:12px;">📝 Descripción del reclamo</div>
-                <div>${object.descripcion or ''}</div>
+                <div><t t-out="object.descripcion or ''"/></div>
             </div>
 
             <p style="margin-top:25px;">
-                <a href="${ctx.get('incidencia_url') or '#'}"
+                <a t-att-href="ctx.get('incidencia_url') or '#'"
                    style="background-color:#875A7B; color:#ffffff; padding:10px 14px; text-decoration:none; border-radius:4px;">
                     Ver incidencia
                 </a>
@@ -69,9 +69,9 @@
         <record id="email_template_taller_incidencia_revision" model="mail.template">
             <field name="name">Taller Incidencia - En Revisión</field>
             <field name="model_id" ref="model_taller_incidencia"/>
-            <field name="email_from">${(user.email or '')|safe}</field>
-            <field name="email_to">${object.cliente_id.email or ''}</field>
-            <field name="subject">🔍 Incidencia en revisión ${object.name} - Serie ${object.serie or ''}</field>
+            <field name="email_from">{{ user.email or '' }}</field>
+            <field name="email_to">{{ object.cliente_id.email or '' }}</field>
+            <field name="subject">🔍 Incidencia en revisión {{ object.name }} - Serie {{ object.serie or '' }}</field>
             <field name="auto_delete" eval="False"/>
             <field name="body_html"><![CDATA[
 <!DOCTYPE html>
@@ -89,23 +89,23 @@
             <p>La incidencia ha pasado a revisión técnica.</p>
 
             <div style="background-color:#ebf8ff; padding:18px; margin:15px 0;">
-                <div>🆔 Incidencia: <strong>${object.name}</strong></div>
-                <div>🔢 Serie: <strong>${object.serie or ''}</strong></div>
-                <div>🏢 Cliente: <strong>${object.cliente_id.name or ''}</strong></div>
-                <div>👩‍💼 Asesora: <strong>${object.asesora_nombre or ''}</strong></div>
-                <div>👨‍🔧 Técnico: <strong>${object.tecnico_nombre or ''}</strong></div>
-                <div>📅 Fecha entrega: <strong>${object.fecha_entrega or ''}</strong></div>
-                <div>⏱️ Días desde entrega: <strong>${object.dias_desde_entrega}</strong></div>
-                <div>✅ Dentro de plazo: <strong>${'Sí' if object.dentro_plazo else 'No'}</strong></div>
+                <div>🆔 Incidencia: <strong><t t-out="object.name or ''"/></strong></div>
+                <div>🔢 Serie: <strong><t t-out="object.serie or ''"/></strong></div>
+                <div>🏢 Cliente: <strong><t t-out="object.cliente_id.name or ''"/></strong></div>
+                <div>👩‍💼 Asesora: <strong><t t-out="object.asesora_nombre or ''"/></strong></div>
+                <div>👨‍🔧 Técnico: <strong><t t-out="object.tecnico_nombre or ''"/></strong></div>
+                <div>📅 Fecha entrega: <strong><t t-out="object.fecha_entrega or ''"/></strong></div>
+                <div>⏱️ Días desde entrega: <strong><t t-out="object.dias_desde_entrega or 0"/></strong></div>
+                <div>✅ Dentro de plazo: <strong><t t-if="object.dentro_plazo">Sí</t><t t-else="">No</t></strong></div>
             </div>
 
             <div style="background-color:#f7fafc; padding:18px; margin:15px 0;">
                 <div style="font-size:18px; font-weight:bold; margin-bottom:12px;">📌 Resumen</div>
-                <div>${object.alerta_resumen or ''}</div>
+                <div><t t-out="object.alerta_resumen or ''"/></div>
             </div>
 
             <p style="margin-top:25px;">
-                <a href="${ctx.get('incidencia_url') or '#'}"
+                <a t-att-href="ctx.get('incidencia_url') or '#'"
                    style="background-color:#875A7B; color:#ffffff; padding:10px 14px; text-decoration:none; border-radius:4px;">
                     Revisar incidencia
                 </a>
@@ -130,9 +130,9 @@
         <record id="email_template_taller_incidencia_fuera_plazo" model="mail.template">
             <field name="name">Taller Incidencia - Fuera de Plazo</field>
             <field name="model_id" ref="model_taller_incidencia"/>
-            <field name="email_from">${(user.email or '')|safe}</field>
-            <field name="email_to">${object.cliente_id.email or ''}</field>
-            <field name="subject">⚠️ Incidencia fuera de plazo ${object.name} - Serie ${object.serie or ''}</field>
+            <field name="email_from">{{ user.email or '' }}</field>
+            <field name="email_to">{{ object.cliente_id.email or '' }}</field>
+            <field name="subject">⚠️ Incidencia fuera de plazo {{ object.name }} - Serie {{ object.serie or '' }}</field>
             <field name="auto_delete" eval="False"/>
             <field name="body_html"><![CDATA[
 <!DOCTYPE html>
@@ -150,13 +150,13 @@
             <p>La incidencia fue registrada fuera del plazo permitido de reclamo de taller.</p>
 
             <div style="background-color:#fffaf0; padding:18px; margin:15px 0;">
-                <div>🆔 Incidencia: <strong>${object.name}</strong></div>
-                <div>🔢 Serie: <strong>${object.serie or ''}</strong></div>
-                <div>🏢 Cliente: <strong>${object.cliente_id.name or ''}</strong></div>
-                <div>👩‍💼 Asesora: <strong>${object.asesora_nombre or ''}</strong></div>
-                <div>📅 Fecha entrega: <strong>${object.fecha_entrega or ''}</strong></div>
-                <div>📅 Fecha límite: <strong>${object.fecha_limite_reclamo or ''}</strong></div>
-                <div>⏱️ Días desde entrega: <strong>${object.dias_desde_entrega}</strong></div>
+                <div>🆔 Incidencia: <strong><t t-out="object.name or ''"/></strong></div>
+                <div>🔢 Serie: <strong><t t-out="object.serie or ''"/></strong></div>
+                <div>🏢 Cliente: <strong><t t-out="object.cliente_id.name or ''"/></strong></div>
+                <div>👩‍💼 Asesora: <strong><t t-out="object.asesora_nombre or ''"/></strong></div>
+                <div>📅 Fecha entrega: <strong><t t-out="object.fecha_entrega or ''"/></strong></div>
+                <div>📅 Fecha límite: <strong><t t-out="object.fecha_limite_reclamo or ''"/></strong></div>
+                <div>⏱️ Días desde entrega: <strong><t t-out="object.dias_desde_entrega or 0"/></strong></div>
             </div>
 
             <div style="background-color:#fff5f5; padding:18px; margin:15px 0;">
@@ -165,7 +165,7 @@
             </div>
 
             <p style="margin-top:25px;">
-                <a href="${ctx.get('incidencia_url') or '#'}"
+                <a t-att-href="ctx.get('incidencia_url') or '#'"
                    style="background-color:#875A7B; color:#ffffff; padding:10px 14px; text-decoration:none; border-radius:4px;">
                     Ver incidencia
                 </a>
@@ -190,9 +190,9 @@
         <record id="email_template_taller_incidencia_procede" model="mail.template">
             <field name="name">Taller Incidencia - Procede</field>
             <field name="model_id" ref="model_taller_incidencia"/>
-            <field name="email_from">${(user.email or '')|safe}</field>
-            <field name="email_to">${object.cliente_id.email or ''}</field>
-            <field name="subject">✅ Incidencia procede ${object.name} - Serie ${object.serie or ''}</field>
+            <field name="email_from">{{ user.email or '' }}</field>
+            <field name="email_to">{{ object.cliente_id.email or '' }}</field>
+            <field name="subject">✅ Incidencia procede {{ object.name }} - Serie {{ object.serie or '' }}</field>
             <field name="auto_delete" eval="False"/>
             <field name="body_html"><![CDATA[
 <!DOCTYPE html>
@@ -210,22 +210,22 @@
             <p>La incidencia fue revisada y marcada como procedente.</p>
 
             <div style="background-color:#f0fff4; padding:18px; margin:15px 0;">
-                <div>🆔 Incidencia: <strong>${object.name}</strong></div>
-                <div>🔢 Serie: <strong>${object.serie or ''}</strong></div>
-                <div>🏢 Cliente: <strong>${object.cliente_id.name or ''}</strong></div>
-                <div>👩‍💼 Asesora: <strong>${object.asesora_nombre or ''}</strong></div>
-                <div>👨‍🔧 Técnico: <strong>${object.tecnico_nombre or ''}</strong></div>
-                <div>📌 Responsable determinado: <strong>${dict(object._fields['responsable_determinado'].selection).get(object.responsable_determinado, '')}</strong></div>
-                <div>📊 Afecta al técnico: <strong>${'Sí' if object.afecta_tecnico else 'No'}</strong></div>
+                <div>🆔 Incidencia: <strong><t t-out="object.name or ''"/></strong></div>
+                <div>🔢 Serie: <strong><t t-out="object.serie or ''"/></strong></div>
+                <div>🏢 Cliente: <strong><t t-out="object.cliente_id.name or ''"/></strong></div>
+                <div>👩‍💼 Asesora: <strong><t t-out="object.asesora_nombre or ''"/></strong></div>
+                <div>👨‍🔧 Técnico: <strong><t t-out="object.tecnico_nombre or ''"/></strong></div>
+                <div>📌 Responsable determinado: <strong><t t-out="dict(object._fields['responsable_determinado'].selection).get(object.responsable_determinado) or object.responsable_determinado or ''"/></strong></div>
+                <div>📊 Afecta al técnico: <strong><t t-if="object.afecta_tecnico">Sí</t><t t-else="">No</t></strong></div>
             </div>
 
             <div style="background-color:#f7fafc; padding:18px; margin:15px 0;">
                 <div style="font-size:18px; font-weight:bold; margin-bottom:12px;">📝 Observación de validación</div>
-                <div>${(object.observacion_validacion or '')|safe}</div>
+                <div><t t-out="object.observacion_validacion or ''"/></div>
             </div>
 
             <p style="margin-top:25px;">
-                <a href="${ctx.get('incidencia_url') or '#'}"
+                <a t-att-href="ctx.get('incidencia_url') or '#'"
                    style="background-color:#875A7B; color:#ffffff; padding:10px 14px; text-decoration:none; border-radius:4px;">
                     Ver incidencia
                 </a>
@@ -250,9 +250,9 @@
         <record id="email_template_taller_incidencia_no_procede" model="mail.template">
             <field name="name">Taller Incidencia - No Procede</field>
             <field name="model_id" ref="model_taller_incidencia"/>
-            <field name="email_from">${(user.email or '')|safe}</field>
-            <field name="email_to">${object.cliente_id.email or ''}</field>
-            <field name="subject">🟢 Incidencia no procede ${object.name} - Serie ${object.serie or ''}</field>
+            <field name="email_from">{{ user.email or '' }}</field>
+            <field name="email_to">{{ object.cliente_id.email or '' }}</field>
+            <field name="subject">🟢 Incidencia no procede {{ object.name }} - Serie {{ object.serie or '' }}</field>
             <field name="auto_delete" eval="False"/>
             <field name="body_html"><![CDATA[
 <!DOCTYPE html>
@@ -270,21 +270,21 @@
             <p>La incidencia fue revisada y marcada como no procedente.</p>
 
             <div style="background-color:#f0fff4; padding:18px; margin:15px 0;">
-                <div>🆔 Incidencia: <strong>${object.name}</strong></div>
-                <div>🔢 Serie: <strong>${object.serie or ''}</strong></div>
-                <div>🏢 Cliente: <strong>${object.cliente_id.name or ''}</strong></div>
-                <div>👩‍💼 Asesora: <strong>${object.asesora_nombre or ''}</strong></div>
-                <div>👨‍🔧 Técnico: <strong>${object.tecnico_nombre or ''}</strong></div>
+                <div>🆔 Incidencia: <strong><t t-out="object.name or ''"/></strong></div>
+                <div>🔢 Serie: <strong><t t-out="object.serie or ''"/></strong></div>
+                <div>🏢 Cliente: <strong><t t-out="object.cliente_id.name or ''"/></strong></div>
+                <div>👩‍💼 Asesora: <strong><t t-out="object.asesora_nombre or ''"/></strong></div>
+                <div>👨‍🔧 Técnico: <strong><t t-out="object.tecnico_nombre or ''"/></strong></div>
                 <div>📊 Resultado: <strong>No afecta al técnico</strong></div>
             </div>
 
             <div style="background-color:#f7fafc; padding:18px; margin:15px 0;">
                 <div style="font-size:18px; font-weight:bold; margin-bottom:12px;">📝 Motivo</div>
-                <div>${(object.motivo_no_afecta or '')|safe}</div>
+                <div><t t-out="object.motivo_no_afecta or ''"/></div>
             </div>
 
             <p style="margin-top:25px;">
-                <a href="${ctx.get('incidencia_url') or '#'}"
+                <a t-att-href="ctx.get('incidencia_url') or '#'"
                    style="background-color:#875A7B; color:#ffffff; padding:10px 14px; text-decoration:none; border-radius:4px;">
                     Ver incidencia
                 </a>
@@ -309,9 +309,9 @@
         <record id="email_template_taller_incidencia_gerencia" model="mail.template">
             <field name="name">Taller Incidencia - Gerencia</field>
             <field name="model_id" ref="model_taller_incidencia"/>
-            <field name="email_from">${(user.email or '')|safe}</field>
-            <field name="email_to">${object.cliente_id.email or ''}</field>
-            <field name="subject">👔 Incidencia enviada a gerencia ${object.name} - Serie ${object.serie or ''}</field>
+            <field name="email_from">{{ user.email or '' }}</field>
+            <field name="email_to">{{ object.cliente_id.email or '' }}</field>
+            <field name="subject">👔 Incidencia enviada a gerencia {{ object.name }} - Serie {{ object.serie or '' }}</field>
             <field name="auto_delete" eval="False"/>
             <field name="body_html"><![CDATA[
 <!DOCTYPE html>
@@ -329,12 +329,12 @@
             <p>La incidencia fue enviada a análisis de gerencia.</p>
 
             <div style="background-color:#faf5ff; padding:18px; margin:15px 0;">
-                <div>🆔 Incidencia: <strong>${object.name}</strong></div>
-                <div>🔢 Serie: <strong>${object.serie or ''}</strong></div>
-                <div>🏢 Cliente: <strong>${object.cliente_id.name or ''}</strong></div>
-                <div>👩‍💼 Asesora: <strong>${object.asesora_nombre or ''}</strong></div>
-                <div>👨‍🔧 Técnico: <strong>${object.tecnico_nombre or ''}</strong></div>
-                <div>⏱️ Días desde entrega: <strong>${object.dias_desde_entrega}</strong></div>
+                <div>🆔 Incidencia: <strong><t t-out="object.name or ''"/></strong></div>
+                <div>🔢 Serie: <strong><t t-out="object.serie or ''"/></strong></div>
+                <div>🏢 Cliente: <strong><t t-out="object.cliente_id.name or ''"/></strong></div>
+                <div>👩‍💼 Asesora: <strong><t t-out="object.asesora_nombre or ''"/></strong></div>
+                <div>👨‍🔧 Técnico: <strong><t t-out="object.tecnico_nombre or ''"/></strong></div>
+                <div>⏱️ Días desde entrega: <strong><t t-out="object.dias_desde_entrega or 0"/></strong></div>
             </div>
 
             <div style="background-color:#fffaf0; padding:18px; margin:15px 0;">
@@ -342,7 +342,7 @@
             </div>
 
             <p style="margin-top:25px;">
-                <a href="${ctx.get('incidencia_url') or '#'}"
+                <a t-att-href="ctx.get('incidencia_url') or '#'"
                    style="background-color:#875A7B; color:#ffffff; padding:10px 14px; text-decoration:none; border-radius:4px;">
                     Ver incidencia
                 </a>
@@ -367,9 +367,9 @@
         <record id="email_template_taller_incidencia_corregida" model="mail.template">
             <field name="name">Taller Incidencia - Corregida</field>
             <field name="model_id" ref="model_taller_incidencia"/>
-            <field name="email_from">${(user.email or '')|safe}</field>
-            <field name="email_to">${object.cliente_id.email or ''}</field>
-            <field name="subject">🛠️ Incidencia corregida ${object.name} - Serie ${object.serie or ''}</field>
+            <field name="email_from">{{ user.email or '' }}</field>
+            <field name="email_to">{{ object.cliente_id.email or '' }}</field>
+            <field name="subject">🛠️ Incidencia corregida {{ object.name }} - Serie {{ object.serie or '' }}</field>
             <field name="auto_delete" eval="False"/>
             <field name="body_html"><![CDATA[
 <!DOCTYPE html>
@@ -387,19 +387,19 @@
             <p>La incidencia fue marcada como corregida.</p>
 
             <div style="background-color:#ebf8ff; padding:18px; margin:15px 0;">
-                <div>🆔 Incidencia: <strong>${object.name}</strong></div>
-                <div>🔢 Serie: <strong>${object.serie or ''}</strong></div>
-                <div>🏢 Cliente: <strong>${object.cliente_id.name or ''}</strong></div>
-                <div>📅 Fecha resolución: <strong>${object.fecha_resolucion or ''}</strong></div>
+                <div>🆔 Incidencia: <strong><t t-out="object.name or ''"/></strong></div>
+                <div>🔢 Serie: <strong><t t-out="object.serie or ''"/></strong></div>
+                <div>🏢 Cliente: <strong><t t-out="object.cliente_id.name or ''"/></strong></div>
+                <div>📅 Fecha resolución: <strong><t t-out="object.fecha_resolucion or ''"/></strong></div>
             </div>
 
             <div style="background-color:#f7fafc; padding:18px; margin:15px 0;">
                 <div style="font-size:18px; font-weight:bold; margin-bottom:12px;">📝 Acciones tomadas</div>
-                <div>${(object.acciones or '')|safe}</div>
+                <div><t t-out="object.acciones or ''"/></div>
             </div>
 
             <p style="margin-top:25px;">
-                <a href="${ctx.get('incidencia_url') or '#'}"
+                <a t-att-href="ctx.get('incidencia_url') or '#'"
                    style="background-color:#875A7B; color:#ffffff; padding:10px 14px; text-decoration:none; border-radius:4px;">
                     Ver incidencia
                 </a>
@@ -424,9 +424,9 @@
         <record id="email_template_taller_incidencia_cerrada" model="mail.template">
             <field name="name">Taller Incidencia - Cerrada</field>
             <field name="model_id" ref="model_taller_incidencia"/>
-            <field name="email_from">${(user.email or '')|safe}</field>
-            <field name="email_to">${object.cliente_id.email or ''}</field>
-            <field name="subject">✅ Incidencia cerrada ${object.name} - Serie ${object.serie or ''}</field>
+            <field name="email_from">{{ user.email or '' }}</field>
+            <field name="email_to">{{ object.cliente_id.email or '' }}</field>
+            <field name="subject">✅ Incidencia cerrada {{ object.name }} - Serie {{ object.serie or '' }}</field>
             <field name="auto_delete" eval="False"/>
             <field name="body_html"><![CDATA[
 <!DOCTYPE html>
@@ -444,19 +444,19 @@
             <p>La incidencia fue cerrada.</p>
 
             <div style="background-color:#f0fff4; padding:18px; margin:15px 0;">
-                <div>🆔 Incidencia: <strong>${object.name}</strong></div>
-                <div>🔢 Serie: <strong>${object.serie or ''}</strong></div>
-                <div>🏢 Cliente: <strong>${object.cliente_id.name or ''}</strong></div>
-                <div>👩‍💼 Asesora: <strong>${object.asesora_nombre or ''}</strong></div>
-                <div>👨‍🔧 Técnico: <strong>${object.tecnico_nombre or ''}</strong></div>
-                <div>📌 Resultado: <strong>${object.resumen_estado or ''}</strong></div>
-                <div>📊 Afecta técnico: <strong>${'Sí' if object.afecta_tecnico else 'No'}</strong></div>
-                <div>👤 Cerrado por: <strong>${object.cerrado_por_id.name or ''}</strong></div>
-                <div>📅 Fecha resolución: <strong>${object.fecha_resolucion or ''}</strong></div>
+                <div>🆔 Incidencia: <strong><t t-out="object.name or ''"/></strong></div>
+                <div>🔢 Serie: <strong><t t-out="object.serie or ''"/></strong></div>
+                <div>🏢 Cliente: <strong><t t-out="object.cliente_id.name or ''"/></strong></div>
+                <div>👩‍💼 Asesora: <strong><t t-out="object.asesora_nombre or ''"/></strong></div>
+                <div>👨‍🔧 Técnico: <strong><t t-out="object.tecnico_nombre or ''"/></strong></div>
+                <div>📌 Resultado: <strong><t t-out="object.resumen_estado or dict(object._fields['estado'].selection).get(object.estado) or object.estado or ''"/></strong></div>
+                <div>📊 Afecta técnico: <strong><t t-if="object.afecta_tecnico">Sí</t><t t-else="">No</t></strong></div>
+                <div>👤 Cerrado por: <strong><t t-out="object.cerrado_por_id.name or ''"/></strong></div>
+                <div>📅 Fecha resolución: <strong><t t-out="object.fecha_resolucion or ''"/></strong></div>
             </div>
 
             <p style="margin-top:25px;">
-                <a href="${ctx.get('incidencia_url') or '#'}"
+                <a t-att-href="ctx.get('incidencia_url') or '#'"
                    style="background-color:#875A7B; color:#ffffff; padding:10px 14px; text-decoration:none; border-radius:4px;">
                     Ver incidencia
                 </a>
