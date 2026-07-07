@@ -50,9 +50,10 @@
                            decoration-warning="total_trabajos &gt;= objetivo_dia * 0.7 and total_trabajos &lt; objetivo_dia"
                            decoration-danger="total_trabajos &lt; objetivo_dia * 0.7 and total_trabajos &gt; 0"/>
                     <field name="objetivo_dia" string="Objetivo"/>
+                    <!-- CORREGIDO: el campo ya está en escala 0-100; el widget
+                         percentage espera 0-1 y mostraba valores x100 -->
                     <field name="porcentaje_cumplimiento"
                            string="% Cumplimiento"
-                           widget="percentage"
                            optional="show"/>
                     <field name="cumple_objetivo"
                            string="Cumple"
@@ -397,20 +398,224 @@
 
                         <notebook>
 
+                            <!-- ============================================ -->
+                            <!-- TAB: RESUMEN GERENCIAL (NUEVO)               -->
+                            <!-- Lectura fácil de resultados + explicación    -->
+                            <!-- de cómo funciona el cálculo del bono.        -->
+                            <!-- ============================================ -->
+                            <page string="👔 Resumen Gerencial" name="resumen_gerencial">
+
+                                <!-- SEMÁFORO DE RESULTADO -->
+                                <div class="row mb-3">
+                                    <div class="col-md-3">
+                                        <div class="card text-center h-100">
+                                            <div class="card-body">
+                                                <div class="text-muted small">RESULTADO DEL MES</div>
+                                                <h2 class="mb-0">
+                                                    <field name="puntaje_total_bono" readonly="1" class="fw-bold"/>%
+                                                </h2>
+                                                <div class="small text-muted">de 120% máximo</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="card text-center h-100">
+                                            <div class="card-body">
+                                                <div class="text-muted small">BONO DEL TÉCNICO</div>
+                                                <h2 class="mb-0 text-success">
+                                                    S/ <field name="bono_final" readonly="1" class="fw-bold"/>
+                                                </h2>
+                                                <div class="small text-muted">
+                                                    <span invisible="not aplica_acelerador">✅ incluye acelerador</span>
+                                                    <span invisible="aplica_acelerador">sin acelerador</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="card text-center h-100">
+                                            <div class="card-body">
+                                                <div class="text-muted small">PRODUCCIÓN</div>
+                                                <h2 class="mb-0">
+                                                    <field name="porcentaje_produccion_total" readonly="1"/>%
+                                                </h2>
+                                                <div class="small text-muted">
+                                                    <field name="reparaciones_validas_bono" readonly="1"/> rep. /
+                                                    <field name="tickets_validos_bono" readonly="1"/> serv.
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="card text-center h-100">
+                                            <div class="card-body">
+                                                <div class="text-muted small">ALERTAS</div>
+                                                <h2 class="mb-0 text-danger">
+                                                    <field name="reclamos_procedentes_count" readonly="1"/>
+                                                </h2>
+                                                <div class="small text-muted">
+                                                    reclamos ·
+                                                    <field name="evaluaciones_criticas_count" readonly="1"/> encuestas rojas ·
+                                                    <field name="faltas_injustificadas_equivalentes" readonly="1"/> faltas
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- COMPONENTES DEL RESULTADO -->
+                                <group string="¿De dónde sale el resultado? (los 4 componentes + extra)">
+                                    <group>
+                                        <field name="puntaje_produccion_bono"
+                                               string="1. Producción (pesa 45%)"
+                                               readonly="1"/>
+                                        <field name="puntaje_calidad_bono"
+                                               string="2. Calidad (pesa 30%)"
+                                               readonly="1"/>
+                                        <field name="puntaje_asistencia_bono"
+                                               string="3. Asistencia (pesa 15%)"
+                                               readonly="1"/>
+                                    </group>
+                                    <group>
+                                        <field name="puntaje_apoyo_bono"
+                                               string="4. Apoyo/Equipo (pesa 10%)"
+                                               readonly="1"/>
+                                        <field name="bono_extra_sobreproduccion"
+                                               string="+ Extra sobreproducción (máx 20)"
+                                               readonly="1"/>
+                                        <field name="puntaje_total_bono"
+                                               string="= RESULTADO TOTAL"
+                                               readonly="1"
+                                               class="fw-bold"/>
+                                    </group>
+                                </group>
+
+                                <!-- EXPLICACIÓN DEL RESULTADO DE ESTE MES -->
+                                <group string="Explicación automática de este mes">
+                                    <field name="motivo_bono" readonly="1" nolabel="1" widget="text"/>
+                                </group>
+
+                                <!-- GUÍA: CÓMO FUNCIONA -->
+                                <separator string="📖 Guía: ¿Cómo se calcula el bono? (referencia para gerencia)"/>
+
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="alert alert-light border" role="alert">
+                                            <h5>1️⃣ Producción (45% del resultado)</h5>
+                                            <p class="mb-1">
+                                                Se compara lo producido contra una <strong>meta ajustada</strong> a los
+                                                días realmente disponibles del técnico:
+                                            </p>
+                                            <ul class="mb-1">
+                                                <li><strong>Taller:</strong> 50 reparaciones al mes = 100%.</li>
+                                                <li><strong>Servicios/Alquiler:</strong> 45 servicios finalizados al mes = 100%.</li>
+                                                <li><strong>Mixto:</strong> combina ambas metas según el tiempo dedicado a cada área.</li>
+                                            </ul>
+                                            <p class="mb-0 small text-muted">
+                                                La meta baja si el técnico tuvo vacaciones, permisos, descansos médicos,
+                                                capacitaciones o estuvo ocupado en servicios en campo (incluye días sin
+                                                retorno al taller). Solo cuentan tickets <strong>finalizados</strong>.
+                                                La producción puede llegar hasta 120%.
+                                            </p>
+                                        </div>
+
+                                        <div class="alert alert-light border" role="alert">
+                                            <h5>2️⃣ Calidad (30% del resultado)</h5>
+                                            <p class="mb-1">Parte de 100 puntos y se descuenta por:</p>
+                                            <ul class="mb-1">
+                                                <li><strong>Reclamos procedentes del cliente:</strong> −10 puntos cada uno (máximo −40).</li>
+                                                <li><strong>Encuestas de servicio faltantes:</strong> −5 puntos cada una.</li>
+                                                <li><strong>Encuestas "en rojo"</strong> (cliente calificó menos de 70%): −10 puntos cada una.</li>
+                                            </ul>
+                                            <p class="mb-1 small">
+                                                <strong>Encuestas mínimas según servicios del mes:</strong>
+                                                1–2 servicios → 1 encuesta · 3–4 servicios → 2 encuestas ·
+                                                5 o más servicios → 5 encuestas.
+                                            </p>
+                                            <p class="mb-0 small text-muted">
+                                                Si el técnico tiene encuestas, la nota final de calidad combina
+                                                60% la calidad interna + 40% el promedio que le dieron los clientes.
+                                                Un técnico con muchos servicios y cero encuestas queda penalizado
+                                                y pierde el acelerador.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <div class="alert alert-light border" role="alert">
+                                            <h5>3️⃣ Asistencia (15%) y 4️⃣ Apoyo (10%)</h5>
+                                            <ul class="mb-0">
+                                                <li><strong>Asistencia:</strong> cada falta injustificada descuenta 20 puntos de este bloque.</li>
+                                                <li><strong>Apoyo/Trabajo en equipo:</strong> calificación del jefe de área de 1 a 5.</li>
+                                            </ul>
+                                        </div>
+
+                                        <div class="alert alert-light border" role="alert">
+                                            <h5>💵 Escala de bono según resultado</h5>
+                                            <table class="table table-sm table-bordered mb-1">
+                                                <thead>
+                                                    <tr class="table-light">
+                                                        <th>Resultado del mes</th>
+                                                        <th>Bono</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <tr class="table-danger">
+                                                        <td>Menos de 95%</td>
+                                                        <td><strong>S/ 0</strong></td>
+                                                    </tr>
+                                                    <tr class="table-warning">
+                                                        <td>95% a 99.99%</td>
+                                                        <td><strong>S/ 150</strong></td>
+                                                    </tr>
+                                                    <tr class="table-info">
+                                                        <td>100% a 109.99%</td>
+                                                        <td><strong>S/ 250</strong></td>
+                                                    </tr>
+                                                    <tr class="table-success">
+                                                        <td>110% a 120%</td>
+                                                        <td><strong>S/ 350</strong></td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                            <p class="mb-0 small">
+                                                <strong>🚀 Acelerador de S/ 100 adicionales</strong> solo si cumple TODO:
+                                                resultado ≥ 110%, cero reclamos procedentes, cero encuestas en rojo,
+                                                cero faltas injustificadas y encuestas mínimas completas.
+                                            </p>
+                                        </div>
+
+                                        <div class="alert alert-light border" role="alert">
+                                            <h5>➕ Extra por sobreproducción</h5>
+                                            <p class="mb-0 small">
+                                                Si la producción supera el 100%, cada punto por encima suma
+                                                directo al resultado (máximo 20 puntos extra). Así, un técnico
+                                                muy productivo puede alcanzar el tramo de S/ 350 y el acelerador.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="alert alert-secondary" role="alert">
+                                    <strong>ℹ️ Nota:</strong> la pestaña "Métricas Objetivas" muestra el sistema de
+                                    evaluación anterior (objetivos diarios de 4 reparaciones + 3 tickets). Es solo
+                                    referencial y <strong>no afecta el cálculo del bono</strong>.
+                                </div>
+                            </page>
+
                             <!-- TAB: BONO MENSUAL -->
                             <page string="💰 Bono Mensual" name="bono_mensual">
                                 <group>
                                     <group string="Perfil aplicado">
-                                        <field name="tipo_operativo"/>
-                                        <field name="meta_base_taller"/>
-                                        <field name="meta_base_servicios"/>
-                                        <field name="tipo_operativo" readonly="1"
+                                        <!-- CORREGIDO: se eliminaron los campos duplicados
+                                             (aparecían dos veces: editable y readonly) -->
+                                        <field name="tipo_operativo"
                                                widget="badge"
                                                decoration-info="tipo_operativo == 'taller'"
                                                decoration-success="tipo_operativo == 'servicios'"
                                                decoration-warning="tipo_operativo == 'mixto'"/>
-                                        <field name="meta_base_taller" readonly="1"/>
-                                        <field name="meta_base_servicios" readonly="1"/>
+                                        <field name="meta_base_taller"/>
+                                        <field name="meta_base_servicios"/>
                                     </group>
                                     <group string="Escala y monto">
                                         <field name="puntaje_total_bono" readonly="1"/>
@@ -558,7 +763,8 @@
                                         <field name="cantidad_tickets" sum="Total"/>
                                         <field name="total_trabajos" sum="Total" widget="badge"/>
                                         <field name="objetivo_dia"/>
-                                        <field name="porcentaje_cumplimiento" widget="percentage"/>
+                                        <!-- CORREGIDO: sin widget percentage (campo ya en 0-100) -->
+                                        <field name="porcentaje_cumplimiento"/>
                                         <field name="estado_dia" widget="badge"/>
                                         <field name="horas_servicio_dia" optional="show"/>
                                         <field name="taller_disponible_dia" optional="show"/>
@@ -587,6 +793,10 @@
 
                             <!-- TAB: MÉTRICAS OBJETIVAS ANTERIORES -->
                             <page string="📈 Métricas Objetivas" name="metricas_objetivas">
+                                <div class="alert alert-secondary" role="alert">
+                                    <strong>ℹ️ Referencial:</strong> este es el sistema de evaluación anterior.
+                                    <strong>No afecta el cálculo del bono mensual.</strong>
+                                </div>
                                 <group>
                                     <group string="Reparaciones anteriores">
                                         <field name="cantidad_reparaciones" readonly="1"/>
@@ -603,9 +813,12 @@
                                 </group>
                                 <group>
                                     <group string="Puntajes anteriores">
-                                        <field name="puntaje_objetivos" widget="percentage" readonly="1"/>
-                                        <field name="puntaje_desempeno" widget="percentage" readonly="1"/>
-                                        <field name="puntaje_total" readonly="1"/>
+                                        <!-- CORREGIDO: los campos están en escala 0-100;
+                                             widget percentage espera 0-1 y mostraba 1187.5%.
+                                             progressbar sí espera 0-100. -->
+                                        <field name="puntaje_objetivos" widget="progressbar" readonly="1"/>
+                                        <field name="puntaje_desempeno" widget="progressbar" readonly="1"/>
+                                        <field name="puntaje_total" widget="progressbar" readonly="1"/>
                                     </group>
                                 </group>
                             </page>
