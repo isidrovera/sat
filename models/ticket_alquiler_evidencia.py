@@ -138,3 +138,48 @@ class TicketAlquilerEvidencia(models.Model):
             'url': whatsapp_url,
             'target': 'new',
         }
+
+
+
+    def _validar_evidencia_minima_para_finalizar(self):
+        """
+        Valida que el ticket tenga mínimo:
+        - 3 fotos ANTES
+        - 3 fotos DESPUÉS
+
+        Si no cumple, no permite finalizar.
+        """
+        for ticket in self:
+            fotos_antes = ticket.evidencia_foto_ids.filtered(
+                lambda f: f.momento == 'antes' and f.imagen_original
+            )
+
+            fotos_despues = ticket.evidencia_foto_ids.filtered(
+                lambda f: f.momento == 'despues' and f.imagen_original
+            )
+
+            cantidad_antes = len(fotos_antes)
+            cantidad_despues = len(fotos_despues)
+
+            errores = []
+
+            if cantidad_antes < 3:
+                errores.append(
+                    "• Fotos ANTES: %s de 3 requeridas" % cantidad_antes
+                )
+
+            if cantidad_despues < 3:
+                errores.append(
+                    "• Fotos DESPUÉS: %s de 3 requeridas" % cantidad_despues
+                )
+
+            if errores:
+                raise UserError(_(
+                    "No se puede finalizar el ticket %s.\n\n"
+                    "Debe subir como mínimo 3 fotos ANTES y 3 fotos DESPUÉS.\n\n"
+                    "%s\n\n"
+                    "Solicite al técnico completar la evidencia fotográfica desde el link enviado."
+                ) % (
+                    ticket.name or '',
+                    "\n".join(errores),
+                ))

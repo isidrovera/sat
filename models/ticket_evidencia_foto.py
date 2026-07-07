@@ -76,8 +76,10 @@ class TicketEvidenciaFoto(models.Model):
     @api.depends('latitud', 'longitud')
     def _compute_tiene_coordenadas(self):
         for rec in self:
-            rec.tiene_coordenadas = bool(rec.latitud and rec.longitud)
-
+            rec.tiene_coordenadas = (
+                rec.latitud not in (False, None)
+                and rec.longitud not in (False, None)
+            )
     @api.depends('momento', 'timestamp_captura', 'ticket_id')
     def _compute_nombre_display(self):
         for rec in self:

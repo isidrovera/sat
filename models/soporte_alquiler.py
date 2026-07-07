@@ -916,7 +916,8 @@ class TicketAlquiler(models.Model):
                     "No se puede finalizar el ticket:\n\n" + "\n".join(errors) +
                     "\n\nComplete todos los campos requeridos."
                 )
-    
+            # ---- VALIDAR EVIDENCIA FOTOGRÁFICA ----
+            ticket._validar_evidencia_minima_para_finalizar()
             # ---- VALIDAR CONTÓMETROS ----
             try:
                 if ticket.estado == 'en_revision':
