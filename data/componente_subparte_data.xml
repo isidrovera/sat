@@ -543,34 +543,39 @@
 
 <!-- ====== ADF ====== -->
 <record id="sub_adf_pickup" model="componente.subparte">
-    <field name="name">Rodillo de alimentación</field>
+    <field name="name">Rueda de alimentación ADF / ADF pickup wheel</field>
     <field name="code">ADF_PICKUP_ROLLER</field>
     <field name="tipo_id" ref="comp_tipo_adf"/>
 </record>
 
 <record id="sub_adf_separation" model="componente.subparte">
-    <field name="name">Almohadilla de separación</field>
+    <field name="name">Pad de separación ADF / ADF separation pad</field>
     <field name="code">ADF_SEPARATION_PAD</field>
     <field name="tipo_id" ref="comp_tipo_adf"/>
 </record>
 
 <record id="sub_adf_separation_roller" model="componente.subparte">
-    <field name="name">Rodillo de separación</field>
+    <field name="name">Rueda de separación ADF / ADF separation wheel</field>
     <field name="code">ADF_SEPARATION_ROLLER</field>
     <field name="tipo_id" ref="comp_tipo_adf"/>
 </record>
 
 <record id="sub_adf_feed" model="componente.subparte">
-    <field name="name">Rodillos de arrastre</field>
+    <field name="name">Rueda de arrastre ADF / ADF feed wheel</field>
     <field name="code">ADF_FEED_ROLLERS</field>
     <field name="tipo_id" ref="comp_tipo_adf"/>
 </record>
-  <record id="sub_adf_bushings" model="componente.subparte">
+
+<record id="sub_adf_belt" model="componente.subparte">
+    <field name="name">Faja del ADF / ADF belt</field>
+    <field name="code">ADF_BELT</field>
+    <field name="tipo_id" ref="comp_tipo_adf"/>
+</record>
+ <record id="sub_adf_bushings" model="componente.subparte">
     <field name="name">Bocinas del ADF</field>
     <field name="code">ADF_BUSHINGS</field>
     <field name="tipo_id" ref="comp_tipo_adf"/>
   </record>
-
 
   <record id="sub_adf_bearings" model="componente.subparte">
     <field name="name">Rodajes del ADF</field>
@@ -578,11 +583,7 @@
     <field name="tipo_id" ref="comp_tipo_adf"/>
   </record>
 
-<record id="sub_adf_belt" model="componente.subparte">
-    <field name="name">Correa</field>
-    <field name="code">ADF_BELT</field>
-    <field name="tipo_id" ref="comp_tipo_adf"/>
-</record>
+
 
 <record id="sub_adf_sensors" model="componente.subparte">
     <field name="name">Sensores / banderas</field>
@@ -614,17 +615,7 @@
     <field name="code">ADF_MYLAR_GUIDES</field>
     <field name="tipo_id" ref="comp_tipo_adf"/>
 </record>
-  <!-- ====== TRAY / CASETERAS ====== -->
-  <record id="sub_tray_pickup" model="componente.subparte">
-    <field name="name">Rodillo de alimentación</field>
-    <field name="code">TRAY_PICKUP</field>
-    <field name="tipo_id" ref="comp_tipo_tray"/>
-  </record>
-  <record id="sub_tray_feed" model="componente.subparte">
-    <field name="name">Rodillos de arrastre</field>
-    <field name="code">TRAY_FEED</field>
-    <field name="tipo_id" ref="comp_tipo_tray"/>
-  </record>
+  
   <record id="sub_tray_bushings" model="componente.subparte">
     <field name="name">Bocinas de casetera</field>
     <field name="code">TRAY_BUSHINGS</field>
@@ -636,12 +627,24 @@
     <field name="code">TRAY_BEARINGS</field>
     <field name="tipo_id" ref="comp_tipo_tray"/>
   </record>
+  <!-- ====== TRAY / CASETERAS ====== -->
+<record id="sub_tray_pickup" model="componente.subparte">
+    <field name="name">Rueda de alimentación / Pickup roller</field>
+    <field name="code">TRAY_PICKUP</field>
+    <field name="tipo_id" ref="comp_tipo_tray"/>
+</record>
+
+<record id="sub_tray_feed" model="componente.subparte">
+    <field name="name">Ruedas de arrastre / Feed rollers</field>
+    <field name="code">TRAY_FEED</field>
+    <field name="tipo_id" ref="comp_tipo_tray"/>
+</record>
 
 <record id="sub_tray_separation" model="componente.subparte">
-    <field name="name">Almohadilla / rodillo de separación</field>
+    <field name="name">Rueda de separación / Separation roller</field>
     <field name="code">TRAY_SEPARATION</field>
     <field name="tipo_id" ref="comp_tipo_tray"/>
-  </record>
+</record>
   <record id="sub_tray_sensors" model="componente.subparte">
     <field name="name">Sensores (fin de papel / tamaño)</field>
     <field name="code">TRAY_SENSORS</field>
@@ -665,19 +668,21 @@
     <field name="tipo_id" ref="comp_tipo_tray"/>
   </record>
 
-  <!-- ====== BYPASS ====== -->
-  <record id="sub_bypass_pickup" model="componente.subparte">
-    <field name="name">Rodillo de alimentación bypass</field>
+ <!-- ====== BYPASS ====== -->
+<record id="sub_bypass_pickup" model="componente.subparte">
+    <field name="name">Rueda de alimentación bypass / Bypass pickup roller</field>
     <field name="code">BYPASS_PICKUP</field>
     <field name="tipo_id" ref="comp_tipo_bypass"/>
-  </record>
-  <record id="sub_bypass_sep" model="componente.subparte">
-    <field name="name">Separación bypass</field>
+</record>
+
+<record id="sub_bypass_sep" model="componente.subparte">
+    <field name="name">Rueda de separación bypass / Bypass separation roller</field>
     <field name="code">BYPASS_SEPARATION</field>
     <field name="tipo_id" ref="comp_tipo_bypass"/>
-  </record>
-  <record id="sub_bypass_feed" model="componente.subparte">
-    <field name="name">Rodillo de arrastre bypass</field>
+</record>
+
+<record id="sub_bypass_feed" model="componente.subparte">
+    <field name="name">Rueda de arrastre bypass / Bypass feed roller</field>
     <field name="code">BYPASS_FEED</field>
     <field name="tipo_id" ref="comp_tipo_bypass"/>
 </record>
