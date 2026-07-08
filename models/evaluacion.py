@@ -854,16 +854,19 @@ class EvaluacionPersonal(models.Model):
             # ============================================================
             # REGLA DE MÍNIMO DE EVALUACIONES DE SERVICIO
             # ============================================================
-            # Aplica para:
-            # - técnico exclusivo de servicios
-            # - técnico mixto
-            # - técnico de taller que haya realizado servicios eventuales
+            # 0 servicios       = 0 evaluaciones requeridas
+            # 1 a 2 servicios   = mínimo 1 evaluación positiva
+            # 3 a 4 servicios   = mínimo 2 evaluaciones positivas
+            # 5 o más servicios = mínimo 5 evaluaciones positivas
             #
-            # Regla:
-            # 0 servicios  = 0 evaluaciones requeridas
-            # 1 a 2 servicios = mínimo 1 evaluación
-            # 3 a 4 servicios = mínimo 2 evaluaciones
-            # 5 o más servicios = mínimo 5 evaluaciones
+            # IMPORTANTE:
+            # Para cumplir el mínimo SOLO cuentan las evaluaciones positivas.
+            #
+            # Evaluación positiva: >= 80
+            # Evaluación regular : >= 70 y < 80
+            # Evaluación roja    : < 70
+            #
+            # Las evaluaciones rojas NO cuentan para el mínimo y además penalizan.
             # ============================================================
 
             tickets_servicio = record.tickets_validos_bono or 0
@@ -877,24 +880,38 @@ class EvaluacionPersonal(models.Model):
             else:
                 minimo_evaluaciones = 5
 
-            evaluaciones_recibidas = len(evaluaciones)
-            evaluaciones_faltantes = max(0, minimo_evaluaciones - evaluaciones_recibidas)
+            # ============================================================
+            # PROMEDIO, EVALUACIONES POSITIVAS Y EVALUACIONES EN ROJO
+            # ============================================================
+
+            promedio_servicio = 100.0
+            criticas = 0
+            evaluaciones_positivas_count = 0
+
+            if evaluaciones:
+                puntajes = [ev.puntaje_servicio or 0.0 for ev in evaluaciones]
+
+                promedio_servicio = (
+                    sum(puntajes) / len(puntajes)
+                    if puntajes else 100.0
+                )
+
+                # Evaluaciones críticas / rojas: menor a 70%
+                criticas = len([p for p in puntajes if p < 70.0])
+
+                # Solo estas cuentan para cumplir el mínimo exigido
+                evaluaciones_positivas_count = len([p for p in puntajes if p >= 80.0])
+
+            evaluaciones_faltantes = max(
+                0,
+                minimo_evaluaciones - evaluaciones_positivas_count
+            )
+
             cumple_minimo = evaluaciones_faltantes == 0
 
             record.evaluaciones_servicio_minimas = minimo_evaluaciones
             record.evaluaciones_servicio_faltantes = evaluaciones_faltantes
             record.cumple_minimo_evaluaciones = cumple_minimo
-
-            # ============================================================
-            # PROMEDIO Y EVALUACIONES EN ROJO
-            # ============================================================
-            promedio_servicio = 100.0
-            criticas = 0
-
-            if evaluaciones:
-                puntajes = [ev.puntaje_servicio or 0.0 for ev in evaluaciones]
-                promedio_servicio = sum(puntajes) / len(puntajes) if puntajes else 100.0
-                criticas = len([p for p in puntajes if p < 70.0])
 
             record.promedio_evaluacion_servicio = promedio_servicio
             record.evaluaciones_criticas_count = criticas
@@ -903,7 +920,7 @@ class EvaluacionPersonal(models.Model):
             # PENALIDADES
             # ============================================================
             # Reclamo procedente: -10 puntos, máximo -40
-            # Evaluación faltante: -5 puntos
+            # Evaluación positiva faltante: -5 puntos
             # Evaluación roja: -10 puntos
             # Penalidad total por encuestas: máximo -50
             # ============================================================
@@ -925,10 +942,16 @@ class EvaluacionPersonal(models.Model):
             calidad_base -= penalidad_evaluaciones
             calidad_base = max(0.0, calidad_base)
 
-            # Si tuvo servicios y tiene evaluaciones, se combina:
+            # ============================================================
+            # CÁLCULO FINAL DE CALIDAD
+            # ============================================================
+            # Si tuvo servicios y tiene evaluaciones:
             # 60% calidad interna + 40% promedio cliente.
-            # Si no tiene evaluaciones pero sí debía tenerlas, queda afectado
-            # por las evaluaciones faltantes.
+            #
+            # Si no tiene evaluaciones pero debía tenerlas:
+            # queda afectado por las evaluaciones faltantes.
+            # ============================================================
+
             if minimo_evaluaciones > 0 and evaluaciones:
                 calidad = (calidad_base * 0.60) + (promedio_servicio * 0.40)
             else:
