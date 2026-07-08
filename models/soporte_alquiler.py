@@ -2522,7 +2522,48 @@ class TicketAlquiler(models.Model):
             self._enviar_notificacion_pendientes(tech_data['tecnico'], tech_data['tickets'])
         return True
     
+    def action_crear_pedido_manual(self):
+        self.ensure_one()
 
+        if not self.product_alquiler:
+            raise UserError(_("Debe seleccionar un equipo antes de crear el pedido manual."))
+
+        if not self.responsable:
+            raise UserError(_("Debe asignar un técnico antes de crear el pedido manual."))
+
+        pedido = self.env['ticket.repuesto.pedido'].create({
+            'ticket_id': self.id,
+            'observaciones': _(
+                "Pedido manual creado desde el ticket %s.\n"
+                "Agregue las líneas manualmente y luego envíelo a Gerencia."
+            ) % (self.name or ''),
+        })
+
+        self.message_post(body=_(
+            "📦 <b>Pedido manual creado:</b> %s<br/>"
+            "Estado: Borrador<br/>"
+            "Técnico: %s<br/>"
+            "Contómetro K: %s<br/>"
+            "Contómetro Color: %s<br/>"
+            "Agregue las líneas manualmente y luego envíelo a Gerencia."
+        ) % (
+            pedido.name,
+            self.responsable.name or '—',
+            self.contometrok_id or '—',
+            self.contometroc_id or '—',
+        ))
+
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Pedido Manual de Repuestos'),
+            'res_model': 'ticket.repuesto.pedido',
+            'res_id': pedido.id,
+            'view_mode': 'form',
+            'target': 'current',
+            'context': {
+                'default_ticket_id': self.id,
+            },
+        }
 
 class ReportTicketAlquiler(models.AbstractModel):
     _name = 'report.sat.ticket_alquiler'

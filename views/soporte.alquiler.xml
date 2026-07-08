@@ -79,6 +79,13 @@
                                 class="btn-primary"
                                 
                                 confirm="¿Enviar el informe técnico al área de administración para decisión?"/>
+
+
+                        <button name="action_crear_pedido_manual"
+                                type="object"
+                                string="Crear Pedido Manual"
+                                class="btn-primary"
+                                invisible="estado == 'finalizado' or not product_alquiler"/>
                     </header>
                     <sheet>
                         <field name="name"
