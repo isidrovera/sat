@@ -1014,13 +1014,35 @@ class EvaluacionPersonal(models.Model):
         'evaluaciones_criticas_count',
         'faltas_injustificadas_equivalentes',
         'cumple_minimo_evaluaciones',
-        'evaluaciones_servicio_faltantes'
+        'evaluaciones_servicio_faltantes',
+        'evaluaciones_servicio_minimas',
+        'tickets_validos_bono'
     )
     def _compute_monto_bono(self):
         for record in self:
             resultado = record.puntaje_total_bono or 0.0
 
-            if resultado >= 110.0:
+            # ============================================================
+            # BLOQUEO DE BONO POR NO CUMPLIR MÍNIMO DE EVALUACIONES
+            # ============================================================
+            # Si el técnico realizó servicios y debía tener evaluaciones,
+            # pero no cumple el mínimo de evaluaciones positivas, no cobra bono.
+            # Esto evita que una producción alta compense la falta de encuestas.
+            # ============================================================
+
+            requiere_evaluaciones = (
+                (record.tickets_validos_bono or 0) > 0 and
+                (record.evaluaciones_servicio_minimas or 0) > 0
+            )
+
+            bloqueado_por_evaluaciones = (
+                requiere_evaluaciones and
+                not record.cumple_minimo_evaluaciones
+            )
+
+            if bloqueado_por_evaluaciones:
+                bono = 0.0
+            elif resultado >= 110.0:
                 bono = 350.0
             elif resultado >= 100.0:
                 bono = 250.0
@@ -1030,6 +1052,7 @@ class EvaluacionPersonal(models.Model):
                 bono = 0.0
 
             aplica_acelerador = (
+                not bloqueado_por_evaluaciones and
                 resultado >= 110.0 and
                 record.reclamos_procedentes_count == 0 and
                 record.evaluaciones_criticas_count == 0 and
@@ -1044,6 +1067,18 @@ class EvaluacionPersonal(models.Model):
                 'Bono base: S/ %.2f' % bono,
             ]
 
+            if bloqueado_por_evaluaciones:
+                resumen.append(
+                    'Bono bloqueado: no cumple el mínimo de evaluaciones positivas de servicio.'
+                )
+                resumen.append(
+                    'Evaluaciones mínimas requeridas: %s. Evaluaciones faltantes: %s.'
+                    % (
+                        record.evaluaciones_servicio_minimas,
+                        record.evaluaciones_servicio_faltantes
+                    )
+                )
+
             if aplica_acelerador:
                 resumen.append('Acelerador aplicado: S/ 100.00')
                 resumen.append(
@@ -1053,6 +1088,9 @@ class EvaluacionPersonal(models.Model):
                 )
             else:
                 razones = []
+
+                if bloqueado_por_evaluaciones:
+                    razones.append('bono bloqueado por mínimo de evaluaciones no cumplido')
 
                 if resultado < 110.0:
                     razones.append('resultado menor a 110%')
@@ -1068,7 +1106,7 @@ class EvaluacionPersonal(models.Model):
 
                 if not record.cumple_minimo_evaluaciones:
                     razones.append(
-                        'no cumple mínimo de evaluaciones de servicio; faltan %s'
+                        'no cumple mínimo de evaluaciones positivas; faltan %s'
                         % record.evaluaciones_servicio_faltantes
                     )
 
