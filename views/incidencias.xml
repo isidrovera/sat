@@ -3,7 +3,7 @@
     <data>
 
         <!-- ========================================================= -->
-        <!-- FORMULARIO INCIDENCIAS -->
+        <!-- FORMULARIO INCIDENCIAS (Odoo 18)                          -->
         <!-- ========================================================= -->
         <record id="view_incidencia_form" model="ir.ui.view">
             <field name="name">taller.incidencia.form</field>
@@ -12,40 +12,40 @@
                 <form string="Incidencia de Taller">
 
                     <header>
-                        <button name="action_recargar_reparacion"
-                                type="object"
-                                string="Recargar Datos"
-                                class="btn-secondary"/>
-
                         <button name="action_enviar_revision"
                                 type="object"
                                 string="Enviar a Revisión"
                                 class="btn-primary"
-                                invisible="estado not in ['reportado', 'fuera_plazo']"/>
+                                invisible="estado not in ['reportado', 'fuera_plazo']"
+                                help="Valida el plazo: si está dentro de los días permitidos pasa a revisión técnica; si no, se deriva automáticamente a gerencia."/>
 
                         <button name="action_marcar_procede"
                                 type="object"
                                 string="Procede"
                                 class="btn-success"
-                                invisible="estado != 'en_revision'"/>
+                                invisible="estado != 'en_revision'"
+                                help="Confirma que el reclamo procede. Requiere haber determinado el responsable."/>
 
                         <button name="action_marcar_no_procede"
                                 type="object"
                                 string="No Procede"
                                 class="btn-warning"
-                                invisible="estado != 'en_revision'"/>
-
-                        <button name="action_enviar_gerencia"
-                                type="object"
-                                string="Enviar a Gerencia"
-                                class="btn-secondary"
-                                invisible="estado in ['gerencia', 'cerrado']"/>
+                                invisible="estado != 'en_revision'"
+                                help="El reclamo fue revisado y no procede técnicamente. No afecta al técnico."/>
 
                         <button name="action_marcar_corregido"
                                 type="object"
                                 string="Marcar Corregido"
                                 class="btn-primary"
-                                invisible="estado != 'procede'"/>
+                                invisible="estado != 'procede'"
+                                help="Registra que la causa del reclamo fue corregida."/>
+
+                        <button name="action_enviar_gerencia"
+                                type="object"
+                                string="Enviar a Gerencia"
+                                class="btn-secondary"
+                                invisible="estado in ['gerencia', 'cerrado']"
+                                help="Deriva el caso a gerencia. No afecta al técnico mientras no exista validación formal."/>
 
                         <button name="action_cerrar"
                                 type="object"
@@ -59,24 +59,49 @@
                                 class="btn-secondary"
                                 invisible="estado != 'cerrado'"/>
 
+                        <button name="action_recargar_reparacion"
+                                type="object"
+                                string="Recargar Datos"
+                                icon="fa-refresh"
+                                class="btn-secondary"
+                                invisible="not equipo_id"
+                                help="Vuelve a cargar cliente, fecha de entrega, reparación y técnico desde la serie/equipo."/>
+
                         <button name="action_reenviar_correo_estado"
                                 type="object"
                                 string="Reenviar Correo"
+                                icon="fa-envelope"
                                 class="btn-secondary"/>
 
                         <field name="estado"
                                widget="statusbar"
-                               statusbar_visible="reportado,en_revision,fuera_plazo,gerencia,procede,no_procede,corregido,cerrado"/>
+                               statusbar_visible="reportado,en_revision,procede,corregido,cerrado"/>
                     </header>
 
                     <sheet>
 
+                        <!-- Campos técnicos necesarios para condiciones -->
+                        <field name="active" invisible="1"/>
+                        <field name="alerta_nivel" invisible="1"/>
+
+                        <!-- Ribbons -->
+                        <widget name="web_ribbon" title="Archivado" bg_color="text-bg-danger"
+                                invisible="active"/>
+                        <widget name="web_ribbon" title="Afecta al Técnico" bg_color="text-bg-danger"
+                                invisible="not afecta_tecnico or estado == 'cerrado'"/>
+                        <widget name="web_ribbon" title="Fuera de Plazo" bg_color="text-bg-warning"
+                                invisible="estado != 'fuera_plazo'"/>
+                        <widget name="web_ribbon" title="Cerrado" bg_color="text-bg-success"
+                                invisible="estado != 'cerrado'"/>
+
+                        <!-- Botones inteligentes -->
                         <div class="oe_button_box" name="button_box">
                             <button name="action_ver_equipo"
                                     type="object"
                                     class="oe_stat_button"
                                     icon="fa-print"
-                                    invisible="not equipo_id">
+                                    invisible="not equipo_id"
+                                    help="Abrir la ficha completa del equipo afectado.">
                                 <field name="equipo_id" widget="statinfo" string="Equipo"/>
                             </button>
 
@@ -84,138 +109,182 @@
                                     type="object"
                                     class="oe_stat_button"
                                     icon="fa-wrench"
-                                    invisible="not reparacion_id">
+                                    invisible="not reparacion_id"
+                                    help="Abrir la reparación relacionada detectada automáticamente.">
                                 <field name="reparacion_id" widget="statinfo" string="Reparación"/>
                             </button>
                         </div>
 
+                        <!-- Banner de alerta según nivel -->
+                        <div class="alert alert-danger mb-3" role="alert"
+                             invisible="alerta_nivel != 'danger'">
+                            <strong><field name="alerta_titulo" readonly="1" nolabel="1"/></strong>
+                            <field name="alerta_resumen" readonly="1" nolabel="1"/>
+                        </div>
+
+                        <div class="alert alert-warning mb-3" role="alert"
+                             invisible="alerta_nivel != 'warning'">
+                            <strong><field name="alerta_titulo" readonly="1" nolabel="1"/></strong>
+                            <field name="alerta_resumen" readonly="1" nolabel="1"/>
+                        </div>
+
+                        <div class="alert alert-info mb-3" role="alert"
+                             invisible="alerta_nivel not in ['info', 'ok']">
+                            <strong><field name="alerta_titulo" readonly="1" nolabel="1"/></strong>
+                            <field name="alerta_resumen" readonly="1" nolabel="1"/>
+                        </div>
+
+                        <!-- Título -->
                         <div class="oe_title">
                             <label for="name"/>
-                            <h1>
-                                <field name="semaforo" readonly="1"/>
+                            <h1 class="d-flex align-items-center">
+                                <field name="semaforo" readonly="1" nolabel="1" class="me-2"/>
                                 <field name="name" readonly="1"/>
                             </h1>
-                            <h3>
+                            <div class="text-muted">
                                 <field name="resumen_estado" readonly="1"/>
-                            </h3>
+                            </div>
                         </div>
 
                         <group>
-                            <group string="Alerta">
-                                <field name="alerta_nivel" readonly="1"/>
-                                <field name="alerta_titulo" readonly="1"/>
-                                <field name="alerta_resumen" widget="html" readonly="1" nolabel="1"/>
-                            </group>
-
-                            <group string="Indicadores">
-                                <field name="indicador_plazo" readonly="1"/>
-                                <field name="indicador_impacto" readonly="1"/>
-                                <field name="aplica_evaluacion" readonly="1"/>
-                                <field name="evaluacion_periodo" readonly="1"/>
-                            </group>
-                        </group>
-
-                        <group>
-                            <group string="Datos del Reclamo">
-                                <field name="fecha_hora"/>
-                                <field name="tipo"/>
-                                <field name="prioridad"/>
+                            <group string="Datos del Reclamo" name="grupo_reclamo">
+                                <field name="fecha_hora"
+                                       help="Momento exacto en que el cliente reportó el reclamo. Desde aquí se cuentan los días transcurridos desde la entrega."/>
+                                <field name="tipo"
+                                       help="Reclamo: aplica el flujo completo con control de plazo. Reparación/Mantenimiento: registro interno sin validación de plazo."/>
+                                <field name="prioridad"
+                                       widget="priority"
+                                       help="Urgencia de atención: Baja, Media, Alta o Crítica."/>
                                 <field name="equipo_id"
                                        options="{'no_create': True, 'no_open': False}"
                                        placeholder="Buscar por serie/equipo"/>
-                                <field name="serie" readonly="1"/>
-                                <field name="modelo_equipo" readonly="1"/>
-                                <field name="marca" readonly="1"/>
+                                <field name="serie" readonly="1"
+                                       help="Número de serie del equipo. Se carga automáticamente al seleccionar el equipo."/>
+                                <field name="modelo_equipo" readonly="1"
+                                       help="Modelo de máquina cargado automáticamente desde el equipo."/>
+                                <field name="marca" readonly="1"
+                                       help="Marca del equipo, cargada automáticamente."/>
                             </group>
 
-                            <group string="Cliente y Asesora">
-                                <field name="cliente_id" readonly="1"/>
-                                <field name="asesora_nombre" readonly="1"/>
-                                <field name="factura_venta" readonly="1"/>
-                                <field name="fecha_entrega"/>
-                                <field name="fecha_limite_reclamo" readonly="1"/>
+                            <group string="Cliente y Asesora" name="grupo_cliente">
+                                <field name="cliente_id" readonly="1"
+                                       help="Cliente dueño del equipo. Se carga automáticamente. El cliente NO recibe correos: la comunicación externa la maneja la asesora."/>
+                                <field name="asesora_nombre" readonly="1"
+                                       help="Asesora comercial asignada al equipo. Recibe los correos de todo el proceso."/>
+                                <field name="factura_venta" readonly="1"
+                                       help="Factura de venta asociada al equipo."/>
+                                <field name="fecha_entrega"
+                                       help="Fecha de entrega de la máquina. Desde esta fecha se cuentan los días permitidos para que el reclamo pueda afectar al técnico."/>
+                                <field name="fecha_limite_reclamo" readonly="1"
+                                       help="Último día en que un reclamo puede afectar al técnico (fecha de entrega + plazo máximo)."/>
                             </group>
                         </group>
 
                         <group>
-                            <group string="Control de Plazo">
+                            <group string="Control de Plazo" name="grupo_plazo">
                                 <field name="plazo_maximo_dias"/>
-                                <field name="dias_desde_entrega" readonly="1"/>
-                                <field name="dentro_plazo" readonly="1"/>
+                                <field name="dias_desde_entrega" readonly="1"
+                                       help="Días transcurridos entre la entrega y la fecha del reclamo."/>
+                                <field name="dentro_plazo" readonly="1"
+                                       help="Marcado si el reclamo se registró dentro del plazo. Solo los reclamos dentro de plazo pueden afectar al técnico."/>
+                                <field name="indicador_plazo" readonly="1" widget="badge"
+                                       decoration-success="indicador_plazo == 'dentro'"
+                                       decoration-warning="indicador_plazo == 'sin_fecha'"
+                                       decoration-danger="indicador_plazo == 'fuera'"
+                                       help="Resumen visual del estado del plazo."/>
                             </group>
 
-                            <group string="Reparación Relacionada">
+                            <group string="Reparación Relacionada" name="grupo_reparacion">
                                 <field name="reparacion_id" readonly="1"/>
-                                <field name="tecnico_nombre" readonly="1"/>
-                               <!-- <field name="tecnico_id" readonly="1"/>
-                                <field name="tecnico_empleado_id" readonly="1"/>-->
-                                <field name="fecha_finalizacion_reparacion" readonly="1"/>
+                                <field name="tecnico_nombre" readonly="1"
+                                       help="Técnico responsable de la última reparación de este equipo. Se determina automáticamente."/>
+                                <field name="fecha_finalizacion_reparacion" readonly="1"
+                                       help="Fecha en que se finalizó la reparación relacionada."/>
                                 <field name="estado_reparacion" readonly="1"/>
-                                <field name="calidad_reparacion" readonly="1"/>
+                                <field name="calidad_reparacion" readonly="1"
+                                       help="Calidad registrada en la reparación relacionada."/>
                             </group>
                         </group>
 
                         <group>
-                            <group string="Análisis del Reclamo">
-                                <field name="tipo_reclamo"/>
-                                <field name="responsable_determinado"/>
-                                <field name="procede"/>
-                                <field name="afecta_tecnico" readonly="1"/>
+                            <group string="Análisis del Reclamo" name="grupo_analisis">
+                                <field name="tipo_reclamo"
+                                       help="Clasificación de la causa. Los tipos de suministros/tóner/accesorios sugieren automáticamente responsabilidad de asesora."/>
+                                <field name="responsable_determinado"
+                                       help="Área o persona responsable determinada tras la revisión. Obligatorio antes de marcar que procede."/>
+                                <field name="procede" readonly="1" widget="badge"
+                                       decoration-danger="procede == 'si'"
+                                       decoration-success="procede == 'no'"
+                                       decoration-info="procede == 'pendiente'"
+                                       help="Resultado de la revisión técnica. Se define con los botones Procede / No Procede."/>
+                                <field name="afecta_tecnico" readonly="1"
+                                       help="Se activa solo si: es reclamo, está dentro de plazo, procede y el responsable determinado es el técnico."/>
+                                <field name="indicador_impacto" readonly="1" widget="badge"
+                                       decoration-danger="indicador_impacto == 'afecta_tecnico'"
+                                       decoration-success="indicador_impacto == 'no_afecta_tecnico'"
+                                       decoration-warning="indicador_impacto == 'gerencia'"
+                                       decoration-info="indicador_impacto == 'pendiente'"/>
                             </group>
 
-                            <group string="Revisión">
-                                <field name="revisado_por_id" readonly="1"/>
+                            <group string="Revisión y Evaluación" name="grupo_revision">
+                                <field name="revisado_por_id" readonly="1"
+                                       help="Usuario que realizó la revisión técnica."/>
                                 <field name="fecha_revision" readonly="1"/>
                                 <field name="fecha_resolucion" readonly="1"/>
                                 <field name="cerrado_por_id" readonly="1"/>
+                                <field name="aplica_evaluacion" readonly="1"
+                                       help="Marcado cuando la incidencia debe considerarse en la evaluación mensual del técnico."/>
+                                <field name="evaluacion_periodo" readonly="1"
+                                       help="Periodo (año-mes) de evaluación al que se asigna la incidencia, según la fecha de revisión."/>
                             </group>
                         </group>
 
                         <notebook>
 
-                            <page string="Descripción del Reclamo">
+                            <page string="Descripción" name="page_descripcion">
                                 <group>
                                     <field name="descripcion"
-                                           placeholder="Detalle del reclamo reportado"/>
+                                           placeholder="Detalle del reclamo reportado por el cliente..."
+                                           help="Descripción del problema tal como lo reportó el cliente o la asesora."/>
                                     <field name="comentarios_cliente"
-                                           placeholder="Comentarios adicionales del cliente"/>
+                                           placeholder="Comentarios adicionales del cliente..."
+                                           help="Comentarios textuales del cliente que ayuden al análisis."/>
                                 </group>
                             </page>
 
-                            <page string="Informe Técnico">
+                            <page string="Informe Técnico" name="page_informe">
                                 <field name="informe_tecnico"
-                                       widget="html"
                                        readonly="1"
                                        nolabel="1"/>
                             </page>
 
-                            <page string="Observaciones de Reparación">
+                            <page string="Observaciones de Reparación" name="page_observaciones">
                                 <field name="observaciones_reparacion"
-                                       widget="html"
                                        readonly="1"
                                        nolabel="1"/>
                             </page>
 
-                            <page string="Validación y Acciones">
+                            <page string="Validación y Acciones" name="page_validacion">
                                 <group>
                                     <field name="observacion_validacion"
-                                           widget="html"
-                                           placeholder="Sustento de la revisión técnica"/>
+                                           placeholder="Sustento de la revisión técnica..."
+                                           help="Fundamento técnico de la decisión Procede / No Procede."/>
                                     <field name="motivo_no_afecta"
-                                           widget="html"
-                                           placeholder="Motivo por el cual no afecta al técnico"/>
+                                           placeholder="Motivo por el cual no afecta al técnico..."
+                                           help="Se genera automáticamente en varios casos (fuera de plazo, otro responsable), pero puede editarse."/>
                                     <field name="acciones"
-                                           widget="html"
-                                           placeholder="Acciones tomadas"/>
+                                           placeholder="Acciones correctivas tomadas..."
+                                           help="Acciones realizadas para resolver el reclamo y evitar recurrencia."/>
                                 </group>
                             </page>
 
-                            <page string="Evidencias">
+                            <page string="Evidencias" name="page_evidencias">
                                 <field name="evidencia_ids"
-                                       widget="many2many_binary"/>
+                                       widget="many2many_binary"
+                                       help="Fotos, documentos o archivos que sustentan el reclamo y su revisión."/>
                             </page>
 
-                            <page string="Correos">
+                            <page string="Correos" name="page_correos">
                                 <group>
                                     <group string="Correos Enviados">
                                         <field name="email_creacion_enviado" readonly="1"/>
@@ -234,10 +303,13 @@
                                 </group>
                             </page>
 
-                            <page string="Costos y Responsable Operativo">
+                            <page string="Costos y Responsable Operativo" name="page_costos">
                                 <group>
-                                    <field name="costos"/>
-                                    <field name="empleado_id"/>
+                                    <group>
+                                        <field name="costos"
+                                               help="Costo total asociado a la atención del reclamo (repuestos, traslados, horas)."/>
+                                        <field name="empleado_id"/>
+                                    </group>
                                 </group>
                             </page>
 
@@ -253,41 +325,56 @@
 
 
         <!-- ========================================================= -->
-        <!-- LISTA INCIDENCIAS -->
+        <!-- LISTA INCIDENCIAS                                         -->
         <!-- ========================================================= -->
         <record id="view_incidencia_tree" model="ir.ui.view">
             <field name="name">taller.incidencia.list</field>
             <field name="model">taller.incidencia</field>
             <field name="arch" type="xml">
                 <list string="Incidencias de Taller"
+                      multi_edit="1"
+                      sample="1"
                       decoration-danger="alerta_nivel == 'danger'"
                       decoration-warning="alerta_nivel == 'warning'"
-                      decoration-success="alerta_nivel == 'ok'"
                       decoration-muted="estado == 'cerrado'">
 
-                    <field name="semaforo"/>
-                    <field name="name"/>
-                    <field name="fecha_hora"/>
-                    <field name="estado"/>
-                    <field name="prioridad"/>
-                    <field name="equipo_id"/>
+                    <field name="alerta_nivel" column_invisible="1"/>
+
+                    <field name="semaforo" string=" " width="30px"/>
+                    <field name="name" readonly="1"/>
+                    <field name="fecha_hora" widget="datetime"/>
+                    <field name="estado" widget="badge"
+                           decoration-info="estado in ['reportado', 'en_revision']"
+                           decoration-warning="estado in ['fuera_plazo', 'gerencia']"
+                           decoration-danger="estado == 'procede'"
+                           decoration-success="estado in ['no_procede', 'corregido', 'cerrado']"/>
+                    <field name="prioridad" widget="priority" optional="show"/>
                     <field name="serie"/>
-                    <field name="modelo_equipo"/>
-                    <field name="cliente_id"/>
-                    <field name="asesora_nombre"/>
-                    <field name="reparacion_id"/>
-                    <field name="tecnico_nombre"/>
-                    <field name="fecha_entrega"/>
-                    <field name="dias_desde_entrega"/>
-                    <field name="dentro_plazo"/>
-                    <field name="tipo_reclamo"/>
-                    <field name="responsable_determinado"/>
-                    <field name="procede"/>
-                    <field name="afecta_tecnico"/>
-                    <field name="indicador_impacto"/>
-                    <field name="resumen_estado"/>
-                    <field name="aplica_evaluacion"/>
-                    <field name="ultimo_correo_fecha"/>
+                    <field name="modelo_equipo" optional="show"/>
+                    <field name="cliente_id" optional="show"/>
+                    <field name="asesora_nombre" optional="show"/>
+                    <field name="tecnico_nombre" optional="show"/>
+                    <field name="fecha_entrega" optional="hide"/>
+                    <field name="dias_desde_entrega" optional="show"/>
+                    <field name="dentro_plazo" widget="boolean_icon" optional="show"/>
+                    <field name="tipo_reclamo" optional="hide"/>
+                    <field name="responsable_determinado" optional="hide"/>
+                    <field name="procede" widget="badge" optional="show"
+                           decoration-danger="procede == 'si'"
+                           decoration-success="procede == 'no'"/>
+                    <field name="afecta_tecnico" widget="boolean_icon" optional="show"/>
+                    <field name="indicador_impacto" widget="badge" optional="hide"
+                           decoration-danger="indicador_impacto == 'afecta_tecnico'"
+                           decoration-success="indicador_impacto == 'no_afecta_tecnico'"
+                           decoration-warning="indicador_impacto == 'gerencia'"/>
+                    <field name="aplica_evaluacion" widget="boolean_icon" optional="hide"/>
+                    <field name="evaluacion_periodo" optional="hide"/>
+                    <field name="costos" optional="hide" sum="Total Costos"/>
+                    <field name="equipo_id" optional="hide"/>
+                    <field name="reparacion_id" optional="hide"/>
+                    <field name="resumen_estado" optional="hide"/>
+                    <field name="ultimo_correo_fecha" optional="hide"/>
+                    <field name="activity_ids" widget="list_activity" optional="hide"/>
 
                 </list>
             </field>
@@ -295,56 +382,88 @@
 
 
         <!-- ========================================================= -->
-        <!-- KANBAN INCIDENCIAS -->
+        <!-- KANBAN INCIDENCIAS                                        -->
         <!-- ========================================================= -->
         <record id="view_incidencia_kanban" model="ir.ui.view">
             <field name="name">taller.incidencia.kanban</field>
             <field name="model">taller.incidencia</field>
             <field name="arch" type="xml">
-                <kanban default_group_by="estado" class="o_kanban_small_column">
-                    <field name="name"/>
-                    <field name="semaforo"/>
-                    <field name="estado"/>
-                    <field name="alerta_titulo"/>
-                    <field name="resumen_estado"/>
-                    <field name="serie"/>
-                    <field name="cliente_id"/>
-                    <field name="asesora_nombre"/>
-                    <field name="tecnico_nombre"/>
-                    <field name="dias_desde_entrega"/>
+                <kanban default_group_by="estado"
+                        highlight_color="color"
+                        quick_create="false"
+                        sample="1"
+                        class="o_kanban_small_column">
+
+                    <field name="color"/>
+                    <field name="alerta_nivel"/>
                     <field name="afecta_tecnico"/>
+                    <field name="dentro_plazo"/>
+
+                    <progressbar field="alerta_nivel"
+                                 colors='{"danger": "danger", "warning": "warning", "ok": "success", "info": "info"}'/>
+
                     <templates>
                         <t t-name="card">
-                            <div class="oe_kanban_card">
-                                <div class="o_kanban_record_top">
-                                    <strong>
+                            <div class="p-2">
+
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <strong class="o_kanban_record_title">
                                         <field name="semaforo"/>
                                         <field name="name"/>
                                     </strong>
+                                    <field name="prioridad" widget="priority"/>
                                 </div>
+
+                                <div class="text-muted small mb-1">
+                                    <field name="fecha_hora" widget="datetime"/>
+                                </div>
+
                                 <div>
-                                    <span>Serie: </span>
+                                    <i class="fa fa-barcode me-1" title="Serie"/>
                                     <field name="serie"/>
+                                    <span t-if="record.modelo_equipo.raw_value" class="text-muted">
+                                        · <field name="modelo_equipo"/>
+                                    </span>
                                 </div>
-                                <div>
-                                    <span>Cliente: </span>
+
+                                <div t-if="record.cliente_id.raw_value">
+                                    <i class="fa fa-building-o me-1" title="Cliente"/>
                                     <field name="cliente_id"/>
                                 </div>
-                                <div>
-                                    <span>Asesora: </span>
-                                    <field name="asesora_nombre"/>
-                                </div>
-                                <div>
-                                    <span>Técnico: </span>
+
+                                <div t-if="record.tecnico_nombre.raw_value">
+                                    <i class="fa fa-wrench me-1" title="Técnico"/>
                                     <field name="tecnico_nombre"/>
                                 </div>
-                                <div>
-                                    <span>Días entrega: </span>
-                                    <field name="dias_desde_entrega"/>
+
+                                <div t-if="record.asesora_nombre.raw_value">
+                                    <i class="fa fa-user-o me-1" title="Asesora"/>
+                                    <field name="asesora_nombre"/>
                                 </div>
-                                <div>
+
+                                <div class="d-flex flex-wrap gap-1 mt-2">
+                                    <span t-if="record.afecta_tecnico.raw_value"
+                                          class="badge text-bg-danger">Afecta Técnico</span>
+                                    <span t-if="!record.dentro_plazo.raw_value and record.dias_desde_entrega.raw_value"
+                                          class="badge text-bg-warning">Fuera de Plazo</span>
+                                    <span t-if="record.tipo_reclamo.raw_value"
+                                          class="badge text-bg-light">
+                                        <field name="tipo_reclamo"/>
+                                    </span>
+                                    <span class="badge text-bg-secondary">
+                                        <field name="dias_desde_entrega"/> días
+                                    </span>
+                                </div>
+
+                                <div class="text-muted small mt-1">
                                     <field name="resumen_estado"/>
                                 </div>
+
+                                <footer class="d-flex justify-content-between align-items-center mt-2">
+                                    <field name="activity_ids" widget="kanban_activity"/>
+                                    <field name="revisado_por_id" widget="many2one_avatar_user"/>
+                                </footer>
+
                             </div>
                         </t>
                     </templates>
@@ -354,7 +473,63 @@
 
 
         <!-- ========================================================= -->
-        <!-- BÚSQUEDA INCIDENCIAS -->
+        <!-- GRÁFICO INCIDENCIAS                                       -->
+        <!-- ========================================================= -->
+        <record id="view_incidencia_graph" model="ir.ui.view">
+            <field name="name">taller.incidencia.graph</field>
+            <field name="model">taller.incidencia</field>
+            <field name="arch" type="xml">
+                <graph string="Análisis de Incidencias" type="bar" stacked="1" sample="1">
+                    <field name="tipo_reclamo" type="row"/>
+                    <field name="estado" type="col"/>
+                    <field name="costos" type="measure"/>
+                </graph>
+            </field>
+        </record>
+
+
+        <!-- ========================================================= -->
+        <!-- PIVOT INCIDENCIAS                                         -->
+        <!-- ========================================================= -->
+        <record id="view_incidencia_pivot" model="ir.ui.view">
+            <field name="name">taller.incidencia.pivot</field>
+            <field name="model">taller.incidencia</field>
+            <field name="arch" type="xml">
+                <pivot string="Análisis de Incidencias" sample="1">
+                    <field name="tecnico_nombre" type="row"/>
+                    <field name="tipo_reclamo" type="row"/>
+                    <field name="estado" type="col"/>
+                    <field name="costos" type="measure"/>
+                </pivot>
+            </field>
+        </record>
+
+
+        <!-- ========================================================= -->
+        <!-- ACTIVIDADES INCIDENCIAS                                   -->
+        <!-- ========================================================= -->
+        <record id="view_incidencia_activity" model="ir.ui.view">
+            <field name="name">taller.incidencia.activity</field>
+            <field name="model">taller.incidencia</field>
+            <field name="arch" type="xml">
+                <activity string="Incidencias de Taller">
+                    <templates>
+                        <div t-name="activity-box">
+                            <div class="ms-2">
+                                <strong><field name="name"/></strong>
+                                <div class="text-muted">
+                                    <field name="serie"/> · <field name="cliente_id"/>
+                                </div>
+                            </div>
+                        </div>
+                    </templates>
+                </activity>
+            </field>
+        </record>
+
+
+        <!-- ========================================================= -->
+        <!-- BÚSQUEDA INCIDENCIAS                                      -->
         <!-- ========================================================= -->
         <record id="view_incidencia_search" model="ir.ui.view">
             <field name="name">taller.incidencia.search</field>
@@ -362,7 +537,8 @@
             <field name="arch" type="xml">
                 <search string="Buscar Incidencias">
 
-                    <field name="name"/>
+                    <field name="name" string="Incidencia / Serie / Cliente"
+                           filter_domain="['|', '|', ('name', 'ilike', self), ('serie', 'ilike', self), ('cliente_id', 'ilike', self)]"/>
                     <field name="equipo_id"/>
                     <field name="serie"/>
                     <field name="cliente_id"/>
@@ -371,92 +547,122 @@
                     <field name="tecnico_nombre"/>
                     <field name="tipo_reclamo"/>
                     <field name="responsable_determinado"/>
-                    <field name="estado"/>
+
+                    <filter string="Mis Incidencias"
+                            name="filter_mias"
+                            domain="[('create_uid', '=', uid)]"/>
+
+                    <separator/>
 
                     <filter string="Reportadas"
                             name="filter_reportado"
-                            domain="[('estado','=','reportado')]"/>
+                            domain="[('estado', '=', 'reportado')]"/>
 
                     <filter string="En Revisión"
                             name="filter_en_revision"
-                            domain="[('estado','=','en_revision')]"/>
+                            domain="[('estado', '=', 'en_revision')]"/>
 
                     <filter string="Fuera de Plazo"
                             name="filter_fuera_plazo"
-                            domain="[('estado','=','fuera_plazo')]"/>
+                            domain="[('estado', '=', 'fuera_plazo')]"/>
 
-                    <filter string="Gerencia"
+                    <filter string="En Gerencia"
                             name="filter_gerencia"
-                            domain="[('estado','=','gerencia')]"/>
+                            domain="[('estado', '=', 'gerencia')]"/>
+
+                    <filter string="Abiertas"
+                            name="filter_abiertas"
+                            domain="[('estado', '!=', 'cerrado')]"/>
+
+                    <separator/>
 
                     <filter string="Procede"
                             name="filter_procede"
-                            domain="[('procede','=','si')]"/>
+                            domain="[('procede', '=', 'si')]"/>
 
                     <filter string="No Procede"
                             name="filter_no_procede"
-                            domain="[('procede','=','no')]"/>
+                            domain="[('procede', '=', 'no')]"/>
 
                     <filter string="Afecta Técnico"
                             name="filter_afecta_tecnico"
-                            domain="[('afecta_tecnico','=',True)]"/>
+                            domain="[('afecta_tecnico', '=', True)]"/>
 
                     <filter string="No Afecta Técnico"
                             name="filter_no_afecta_tecnico"
-                            domain="[('afecta_tecnico','=',False)]"/>
+                            domain="[('afecta_tecnico', '=', False)]"/>
 
                     <separator/>
 
                     <filter string="Dentro de Plazo"
                             name="filter_dentro_plazo"
-                            domain="[('dentro_plazo','=',True)]"/>
+                            domain="[('dentro_plazo', '=', True)]"/>
 
-                    <filter string="Fuera de 10 días"
+                    <filter string="Fuera del Plazo Permitido"
                             name="filter_no_dentro_plazo"
-                            domain="[('dentro_plazo','=',False)]"/>
+                            domain="[('dentro_plazo', '=', False)]"/>
 
                     <filter string="Aplica Evaluación"
                             name="filter_aplica_evaluacion"
-                            domain="[('aplica_evaluacion','=',True)]"/>
+                            domain="[('aplica_evaluacion', '=', True)]"/>
+
+                    <separator/>
+
+                    <filter string="Fecha del Reclamo"
+                            name="filter_fecha_hora"
+                            date="fecha_hora"/>
+
+                    <filter string="Archivadas"
+                            name="filter_inactivas"
+                            domain="[('active', '=', False)]"/>
 
                     <group expand="0" string="Agrupar por">
                         <filter string="Estado"
                                 name="group_estado"
-                                context="{'group_by':'estado'}"/>
+                                context="{'group_by': 'estado'}"/>
 
                         <filter string="Técnico"
                                 name="group_tecnico"
-                                context="{'group_by':'tecnico_nombre'}"/>
+                                context="{'group_by': 'tecnico_nombre'}"/>
 
                         <filter string="Cliente"
                                 name="group_cliente"
-                                context="{'group_by':'cliente_id'}"/>
+                                context="{'group_by': 'cliente_id'}"/>
 
                         <filter string="Asesora"
                                 name="group_asesora"
-                                context="{'group_by':'asesora_nombre'}"/>
+                                context="{'group_by': 'asesora_nombre'}"/>
 
-                        <filter string="Tipo Reclamo"
+                        <filter string="Tipo de Reclamo"
                                 name="group_tipo_reclamo"
-                                context="{'group_by':'tipo_reclamo'}"/>
+                                context="{'group_by': 'tipo_reclamo'}"/>
 
                         <filter string="Responsable"
                                 name="group_responsable"
-                                context="{'group_by':'responsable_determinado'}"/>
+                                context="{'group_by': 'responsable_determinado'}"/>
 
                         <filter string="Impacto"
                                 name="group_impacto"
-                                context="{'group_by':'indicador_impacto'}"/>
+                                context="{'group_by': 'indicador_impacto'}"/>
 
                         <filter string="Periodo Evaluación"
                                 name="group_periodo"
-                                context="{'group_by':'evaluacion_periodo'}"/>
+                                context="{'group_by': 'evaluacion_periodo'}"/>
+
+                        <filter string="Mes del Reclamo"
+                                name="group_mes"
+                                context="{'group_by': 'fecha_hora:month'}"/>
                     </group>
+
+                    <searchpanel>
+                        <field name="estado" icon="fa-tasks" enable_counters="1"/>
+                        <field name="indicador_impacto" icon="fa-exclamation-triangle"
+                               select="multi" enable_counters="1"/>
+                    </searchpanel>
 
                 </search>
             </field>
         </record>
-
 
     </data>
 </odoo>
