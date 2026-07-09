@@ -21,6 +21,9 @@
                     <field name="fecha_fin"/>
                     <field name="fecha_retorno_real"/>
                     <field name="dia_completo"/>
+                    <field name="horas_permiso"/>
+                    <field name="evaluacion_administrativa"/>
+                    <field name="horas_a_recuperar"/>
                     <field name="estado"/>
                     <field name="ticket_afectado_count"/>
                     
@@ -142,13 +145,21 @@
                                 <field name="hora_fin"
                                        widget="float_time"
                                        invisible="dia_completo"/>
+                                <field name="horas_permiso"
+                                       readonly="1"
+                                       invisible="dia_completo"/>
                                 <field name="evaluacion_administrativa"
-                                        invisible="tipo not in ['permiso', 'falta']"
-                                        required="tipo in ['permiso', 'falta']"/>
+                                       invisible="tipo not in ['permiso', 'falta']"
+                                       required="tipo in ['permiso', 'falta']"/>
                             </group>
 
-                            <group string="Notificación">
-                                
+                            <group string="Recuperación de horas"
+                                   invisible="evaluacion_administrativa != 'recuperar_horas'">
+                                <field name="horas_a_recuperar"
+                                       required="evaluacion_administrativa == 'recuperar_horas'"/>
+                                <field name="fecha_limite_recuperacion"/>
+                                <field name="detalle_recuperacion"
+                                       placeholder="Ejemplo: Recuperará 1 hora diaria después de su jornada durante 2 días."/>
                             </group>
                         </group>
 
@@ -225,6 +236,13 @@
                     <field name="fecha_inicio"/>
                     <field name="fecha_fin"/>
                     <field name="fecha_retorno_real"/>
+                    <field name="dia_completo"/>
+                    <field name="hora_inicio"/>
+                    <field name="hora_fin"/>
+                    <field name="horas_permiso"/>
+                    <field name="evaluacion_administrativa"/>
+                    <field name="horas_a_recuperar"/>
+                    <field name="fecha_limite_recuperacion"/>
                     <field name="estado"/>
                     <field name="ticket_afectado_count"/>
                     <field name="es_abierta"/>
@@ -278,6 +296,21 @@
                                             Por definir
                                         </t>
                                     </div>
+
+                                    <div>
+                                        <strong>Jornada:</strong>
+                                        <t t-if="record.dia_completo.raw_value">
+                                            Día completo
+                                        </t>
+                                        <t t-if="!record.dia_completo.raw_value">
+                                            Por horas
+                                        </t>
+                                    </div>
+
+                                    <div t-if="record.evaluacion_administrativa.raw_value == 'recuperar_horas'">
+                                        <strong>Recuperación:</strong>
+                                        <field name="horas_a_recuperar"/> horas
+                                    </div>
                                 </div>
 
                                 <div class="row g-2 mt-3">
@@ -322,6 +355,8 @@
                     <field name="name"/>
                     <field name="tecnico_id"/>
                     <field name="tipo"/>
+                    <field name="evaluacion_administrativa"/>
+                    <field name="horas_a_recuperar"/>
                     <field name="estado"/>
                 </calendar>
             </field>
@@ -339,6 +374,7 @@
                     <field name="tecnico_id"/>
                     <field name="tipo"/>
                     <field name="estado"/>
+                    <field name="evaluacion_administrativa"/>
                     <field name="fecha_inicio"/>
                     <field name="fecha_fin"/>
 
@@ -370,6 +406,10 @@
                             string="Faltas"
                             domain="[('tipo', '=', 'falta')]"/>
 
+                    <filter name="filter_recuperar_horas"
+                            string="Por recuperar horas"
+                            domain="[('evaluacion_administrativa', '=', 'recuperar_horas')]"/>
+
                     <separator/>
 
                     <filter name="filter_hoy"
@@ -397,6 +437,9 @@
                         <filter name="group_estado"
                                 string="Estado"
                                 context="{'group_by': 'estado'}"/>
+                        <filter name="group_evaluacion_administrativa"
+                                string="Evaluación administrativa"
+                                context="{'group_by': 'evaluacion_administrativa'}"/>
                         <filter name="group_fecha_inicio"
                                 string="Fecha inicio"
                                 context="{'group_by': 'fecha_inicio'}"/>

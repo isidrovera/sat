@@ -190,12 +190,39 @@ class MantenimientoTecnicoAusencia(models.Model):
         help='Se activa solo cuando es enfermedad y no tiene fecha fin.'
     )
     evaluacion_administrativa = fields.Selection([
-        ('pendiente', 'Evaluar descuento o vacaciones'),
+        ('pendiente', 'Evaluar descuento, vacaciones o recuperación'),
         ('descuento', 'Corresponde descuento'),
         ('cuenta_vacaciones', 'A cuenta de vacaciones'),
+        ('recuperar_horas', 'Por recuperar horas'),
         ('no_aplica', 'No aplica'),
     ], string='Evaluación administrativa', default='pendiente', tracking=True,
-       help='Define si el permiso corresponde a descuento o si será tomado a cuenta de vacaciones. No aplica para salud.')
+       help='Define si el permiso corresponde a descuento, vacaciones o recuperación de horas. No aplica para salud.')
+
+    horas_permiso = fields.Float(
+        string='Horas de permiso',
+        compute='_compute_horas_permiso',
+        store=True,
+        readonly=True,
+        tracking=True,
+    )
+
+    horas_a_recuperar = fields.Float(
+        string='Horas a recuperar',
+        tracking=True,
+        help='Cantidad de horas que el trabajador deberá recuperar cuando la evaluación administrativa sea por recuperación de horas.'
+    )
+
+    fecha_limite_recuperacion = fields.Date(
+        string='Fecha límite para recuperar',
+        tracking=True,
+    )
+
+    detalle_recuperacion = fields.Text(
+        string='Detalle de recuperación',
+        tracking=True,
+        help='Ejemplo: Recuperará 1 hora diaria después de su jornada durante 2 días.'
+    )
+
     active = fields.Boolean(
         string='Activo',
         default=True,
@@ -229,6 +256,21 @@ class MantenimientoTecnicoAusencia(models.Model):
     def _compute_es_abierta(self):
         for rec in self:
             rec.es_abierta = bool(rec.tipo == 'enfermedad' and not rec.fecha_fin)
+
+    @api.depends('dia_completo', 'hora_inicio', 'hora_fin')
+    def _compute_horas_permiso(self):
+        for rec in self:
+            if rec.dia_completo:
+                rec.horas_permiso = 0.0
+                continue
+
+            hora_inicio = rec.hora_inicio or 0.0
+            hora_fin = rec.hora_fin or 0.0
+
+            if hora_fin > hora_inicio:
+                rec.horas_permiso = hora_fin - hora_inicio
+            else:
+                rec.horas_permiso = 0.0
 
     def _compute_correo_contabilidad(self):
         """
@@ -327,6 +369,19 @@ class MantenimientoTecnicoAusencia(models.Model):
                 if not rec.hora_fin or rec.hora_fin == 24.0:
                     rec.hora_fin = 17.0
 
+    @api.onchange('evaluacion_administrativa', 'dia_completo', 'hora_inicio', 'hora_fin')
+    def _onchange_evaluacion_administrativa(self):
+        for rec in self:
+            if rec.evaluacion_administrativa == 'recuperar_horas':
+                if not rec.dia_completo and rec.hora_fin > rec.hora_inicio:
+                    rec.horas_a_recuperar = rec.hora_fin - rec.hora_inicio
+                else:
+                    rec.horas_a_recuperar = 0.0
+            else:
+                rec.horas_a_recuperar = 0.0
+                rec.fecha_limite_recuperacion = False
+                rec.detalle_recuperacion = False
+
     # ============================================================
     # NORMALIZACIÓN
     # ============================================================
@@ -378,8 +433,10 @@ class MantenimientoTecnicoAusencia(models.Model):
         Antes de aprobar, gerencia debe decidir si el permiso/falta será:
         - descuento
         - a cuenta de vacaciones
+        - por recuperar horas
 
         Si es enfermedad o descanso médico, no aplica.
+        La recuperación de horas solo aplica para permisos personales por horas.
         """
         for rec in self:
             if not rec._requiere_evaluacion_administrativa():
@@ -389,8 +446,40 @@ class MantenimientoTecnicoAusencia(models.Model):
                 raise UserError(_(
                     "Antes de aprobar la solicitud %s, gerencia debe indicar la evaluación administrativa:\n\n"
                     "- Corresponde descuento\n"
-                    "- A cuenta de vacaciones"
+                    "- A cuenta de vacaciones\n"
+                    "- Por recuperar horas"
                 ) % (rec.name or ''))
+
+            if rec.evaluacion_administrativa == 'recuperar_horas':
+                if rec.tipo != 'permiso':
+                    raise UserError(_(
+                        "La opción 'Por recuperar horas' solo aplica para permisos personales."
+                    ))
+
+                if rec.dia_completo:
+                    raise UserError(_(
+                        "La opción 'Por recuperar horas' solo aplica cuando el permiso es por horas, no por día completo."
+                    ))
+
+                if rec.hora_fin <= rec.hora_inicio:
+                    raise UserError(_(
+                        "Debe ingresar un horario válido para calcular las horas a recuperar."
+                    ))
+
+                horas_permiso = rec.hora_fin - rec.hora_inicio
+
+                if horas_permiso <= 0:
+                    raise UserError(_(
+                        "No se pudo calcular las horas del permiso."
+                    ))
+
+                if not rec.horas_a_recuperar:
+                    rec.horas_a_recuperar = horas_permiso
+
+                if rec.horas_a_recuperar <= 0:
+                    raise UserError(_(
+                        "Debe indicar la cantidad de horas a recuperar."
+                    ))
 
     def _get_evaluacion_administrativa_label(self):
         self.ensure_one()
@@ -1050,7 +1139,6 @@ class MantenimientoTecnicoAusencia(models.Model):
             "📅 *Fin:* %s\n"
             "🕒 *Jornada:* %s\n"
             "🏢 *Evaluación administrativa:* %s\n"
-            "👤 *Aprobado por:* %s\n"
         ) % (
             self.tecnico_id.name or 'Solicitante',
             self.name or 'No definido',
@@ -1059,7 +1147,21 @@ class MantenimientoTecnicoAusencia(models.Model):
             self._format_fecha_whatsapp(self.fecha_fin),
             self._format_horario_whatsapp(),
             self._get_evaluacion_administrativa_label(),
-            self.aprobado_por_id.name or self.env.user.name or 'No definido',
+        )
+
+        if self.evaluacion_administrativa == 'recuperar_horas':
+            mensaje += "⏱️ *Horas a recuperar:* %.2f\n" % (self.horas_a_recuperar or 0.0)
+
+            if self.fecha_limite_recuperacion:
+                mensaje += "📅 *Fecha límite recuperación:* %s\n" % self._format_fecha_whatsapp(
+                    self.fecha_limite_recuperacion
+                )
+
+            if self.detalle_recuperacion:
+                mensaje += "📝 *Detalle recuperación:* %s\n" % self.detalle_recuperacion
+
+        mensaje += "👤 *Aprobado por:* %s\n" % (
+            self.aprobado_por_id.name or self.env.user.name or 'No definido'
         )
 
         if self.motivo:
