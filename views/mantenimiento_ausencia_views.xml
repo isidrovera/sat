@@ -137,31 +137,49 @@
                         </group>
 
                         <group>
-                            <group string="Horario">
-                                <field name="dia_completo"/>
-                                <field name="hora_inicio"
-                                       widget="float_time"
-                                       invisible="dia_completo"/>
-                                <field name="hora_fin"
-                                       widget="float_time"
-                                       invisible="dia_completo"/>
-                                <field name="horas_permiso"
-                                       readonly="1"
-                                       invisible="dia_completo"/>
-                                <field name="evaluacion_administrativa"
-                                       invisible="tipo not in ['permiso', 'falta']"
-                                       required="tipo in ['permiso', 'falta']"/>
-                            </group>
+    <group string="Horario">
+        <field name="dia_completo"/>
+        <field name="hora_inicio"
+               widget="float_time"
+               invisible="dia_completo"/>
+        <field name="hora_fin"
+               widget="float_time"
+               invisible="dia_completo"/>
+        <field name="horas_permiso"
+               readonly="1"
+               invisible="dia_completo"/>
+        <field name="evaluacion_administrativa"
+               invisible="tipo not in ['permiso', 'falta']"
+               required="tipo in ['permiso', 'falta']"/>
+    </group>
 
-                            <group string="Recuperación de horas"
-                                   invisible="evaluacion_administrativa != 'recuperar_horas'">
-                                <field name="horas_a_recuperar"
-                                       required="evaluacion_administrativa == 'recuperar_horas'"/>
-                                <field name="fecha_limite_recuperacion"/>
-                                <field name="detalle_recuperacion"
-                                       placeholder="Ejemplo: Recuperará 1 hora diaria después de su jornada durante 2 días."/>
-                            </group>
-                        </group>
+    <group string="Recuperación de horas"
+           invisible="evaluacion_administrativa != 'recuperar_horas'">
+        <field name="horas_a_recuperar"
+               required="evaluacion_administrativa == 'recuperar_horas'"/>
+        <field name="fecha_limite_recuperacion"/>
+        <field name="detalle_recuperacion"
+               placeholder="Ejemplo: Recuperará 1 hora diaria después de su jornada durante 2 días."/>
+    </group>
+</group>
+
+<group>
+    <group string="Impacto en evaluación mensual">
+        <field name="impacto_evaluacion"/>
+        <field name="dias_ajuste_meta"
+               readonly="1"
+               invisible="impacto_evaluacion != 'reduce_meta'"/>
+        <field name="horas_ajuste_meta"
+               readonly="1"
+               invisible="impacto_evaluacion != 'reduce_meta'"/>
+    </group>
+
+    <group string="Observación administrativa">
+        <field name="observacion_impacto_evaluacion"
+               nolabel="1"
+               placeholder="Ejemplo: No reduce meta porque corresponde a falta injustificada. La falta será evaluada por asistencia/puntualidad."/>
+    </group>
+</group>
 
                         <notebook>
 

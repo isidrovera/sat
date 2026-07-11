@@ -222,6 +222,37 @@ class MantenimientoTecnicoAusencia(models.Model):
         tracking=True,
         help='Ejemplo: Recuperará 1 hora diaria después de su jornada durante 2 días.'
     )
+    impacto_evaluacion = fields.Selection([
+        ('no_afecta_meta', 'No afecta meta mensual'),
+        ('reduce_meta', 'Reduce meta proporcionalmente'),
+        ('cuenta_actividad', 'Cuenta como actividad laboral'),
+        ('revision_manual', 'Revisión manual'),
+    ], string='Impacto en evaluación mensual',
+    default='no_afecta_meta',
+    tracking=True,
+    help='Define si esta ausencia debe ajustar o no la meta mensual de reparaciones o servicios.')
+
+    dias_ajuste_meta = fields.Float(
+        string='Días para ajuste de meta',
+        compute='_compute_ajuste_meta',
+        store=True,
+        readonly=True,
+        tracking=True,
+    )
+
+    horas_ajuste_meta = fields.Float(
+        string='Horas para ajuste de meta',
+        compute='_compute_ajuste_meta',
+        store=True,
+        readonly=True,
+        tracking=True,
+    )
+
+    observacion_impacto_evaluacion = fields.Text(
+        string='Observación impacto evaluación',
+        tracking=True,
+        help='Comentario administrativo sobre cómo debe considerarse esta ausencia en la evaluación mensual.'
+    )
 
     active = fields.Boolean(
         string='Activo',
@@ -271,7 +302,35 @@ class MantenimientoTecnicoAusencia(models.Model):
                 rec.horas_permiso = hora_fin - hora_inicio
             else:
                 rec.horas_permiso = 0.0
+    @api.depends('impacto_evaluacion', 'fecha_inicio', 'fecha_fin', 'dia_completo', 'hora_inicio', 'hora_fin')
+    def _compute_ajuste_meta(self):
+        for rec in self:
+            rec.dias_ajuste_meta = 0.0
+            rec.horas_ajuste_meta = 0.0
 
+            if rec.impacto_evaluacion != 'reduce_meta':
+                continue
+
+            if not rec.fecha_inicio:
+                continue
+
+            fecha_fin = rec.fecha_fin or rec.fecha_inicio
+
+            if fecha_fin < rec.fecha_inicio:
+                continue
+
+            total_dias = (fecha_fin - rec.fecha_inicio).days + 1
+
+            if rec.dia_completo:
+                rec.dias_ajuste_meta = total_dias
+                rec.horas_ajuste_meta = total_dias * 8.0
+            else:
+                horas = 0.0
+                if rec.hora_fin > rec.hora_inicio:
+                    horas = rec.hora_fin - rec.hora_inicio
+
+                rec.horas_ajuste_meta = horas
+                rec.dias_ajuste_meta = horas / 8.0 if horas else 0.0
     def _compute_correo_contabilidad(self):
         """
         Campo de compatibilidad.
@@ -297,6 +356,7 @@ class MantenimientoTecnicoAusencia(models.Model):
                 rec.dia_completo = True
                 rec.hora_inicio = 0.0
                 rec.hora_fin = 24.0
+                rec.impacto_evaluacion = 'no_afecta_meta'
 
                 if not rec.evaluacion_administrativa or rec.evaluacion_administrativa == 'no_aplica':
                     rec.evaluacion_administrativa = 'pendiente'
@@ -309,6 +369,7 @@ class MantenimientoTecnicoAusencia(models.Model):
                 rec.hora_inicio = 0.0
                 rec.hora_fin = 24.0
                 rec.evaluacion_administrativa = 'no_aplica'
+                rec.impacto_evaluacion = 'reduce_meta'
 
                 if rec.fecha_inicio and not rec.fecha_fin:
                     rec.fecha_fin = rec.fecha_inicio
@@ -318,6 +379,7 @@ class MantenimientoTecnicoAusencia(models.Model):
                 rec.hora_inicio = 0.0
                 rec.hora_fin = 24.0
                 rec.evaluacion_administrativa = 'no_aplica'
+                rec.impacto_evaluacion = 'reduce_meta'
 
             elif rec.tipo == 'descanso_medico':
                 rec.dia_completo = True
@@ -331,6 +393,7 @@ class MantenimientoTecnicoAusencia(models.Model):
             elif rec.tipo == 'capacitacion':
                 rec.dia_completo = False
                 rec.evaluacion_administrativa = 'no_aplica'
+                rec.impacto_evaluacion = 'cuenta_actividad'
 
                 if not rec.hora_inicio:
                     rec.hora_inicio = 8.0
@@ -343,6 +406,7 @@ class MantenimientoTecnicoAusencia(models.Model):
 
             elif rec.tipo == 'bloqueo_admin':
                 rec.evaluacion_administrativa = 'no_aplica'
+                rec.impacto_evaluacion = 'revision_manual'
 
                 if rec.fecha_inicio and not rec.fecha_fin:
                     rec.fecha_fin = rec.fecha_inicio
@@ -373,6 +437,8 @@ class MantenimientoTecnicoAusencia(models.Model):
     def _onchange_evaluacion_administrativa(self):
         for rec in self:
             if rec.evaluacion_administrativa == 'recuperar_horas':
+                rec.impacto_evaluacion = 'no_afecta_meta'
+
                 if not rec.dia_completo and rec.hora_fin > rec.hora_inicio:
                     rec.horas_a_recuperar = rec.hora_fin - rec.hora_inicio
                 else:
@@ -408,6 +474,28 @@ class MantenimientoTecnicoAusencia(models.Model):
             elif tipo in ('permiso', 'falta'):
                 if not vals.get('evaluacion_administrativa'):
                     vals['evaluacion_administrativa'] = 'pendiente'
+
+            if tipo in ('vacaciones', 'enfermedad', 'descanso_medico'):
+                vals.setdefault('impacto_evaluacion', 'reduce_meta')
+
+            elif tipo in ('permiso', 'falta'):
+                vals.setdefault('impacto_evaluacion', 'no_afecta_meta')
+
+            elif tipo == 'capacitacion':
+                vals.setdefault('impacto_evaluacion', 'cuenta_actividad')
+
+            elif tipo == 'bloqueo_admin':
+                vals.setdefault('impacto_evaluacion', 'revision_manual')
+
+        if vals.get('evaluacion_administrativa') == 'recuperar_horas':
+            vals['impacto_evaluacion'] = 'no_afecta_meta'
+
+            dia_completo = vals.get('dia_completo')
+            hora_inicio = vals.get('hora_inicio')
+            hora_fin = vals.get('hora_fin')
+
+            if dia_completo in (False, 'false', '0', 0) and hora_fin and hora_inicio is not None and hora_fin > hora_inicio:
+                vals.setdefault('horas_a_recuperar', hora_fin - hora_inicio)
 
         return vals
     def _requiere_evaluacion_administrativa(self):
