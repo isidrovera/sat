@@ -1353,7 +1353,7 @@ class EvaluacionPersonal(models.Model):
             record.aplica_acelerador = aplica_acelerador
             record.monto_acelerador = acelerador
             record.bono_final = bono + acelerador
-            record.motivo_bono = '\\n'.join(resumen)
+            record.motivo_bono = '\n'.join(resumen)
 
     @api.depends('detalle_diario_ids')
     def _compute_tiene_detalle(self):
