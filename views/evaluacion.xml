@@ -229,6 +229,9 @@
                     <field name="fecha"/>
                     <field name="usuario_id"/>
                     <field name="tipo_operativo" optional="show"/>
+                    <field name="cierre_confirmado_disponible"
+                           string="Cierre confirmado"
+                           optional="show"/>
                     <field name="cantidad_reparaciones" optional="show"/>
                     <field name="cantidad_tickets" optional="show"/>
                     <field name="porcentaje_produccion_total" string="% Producción" optional="show"/>
@@ -251,56 +254,78 @@
 
         <!-- ============================================================ -->
         <!-- VISTA FORM PRINCIPAL                                         -->
+        <!-- Odoo 18: sin attrs ni states                                 -->
         <!-- ============================================================ -->
         <record id="view_evaluacion_personal_form" model="ir.ui.view">
             <field name="name">evaluacion.personal.form</field>
             <field name="model">evaluacion.personal</field>
             <field name="arch" type="xml">
-                <form>
+                <form string="Evaluación Mensual de Personal">
                     <header>
                         <button name="action_regenerar_detalle_diario"
-                                string="🔄 Regenerar Análisis Diario"
+                                string="Regenerar análisis diario"
                                 type="object"
                                 class="btn-secondary"
                                 confirm="¿Desea regenerar el análisis diario? Esto recalculará todos los datos."/>
+
                         <button name="action_recalcular_bono"
-                                string="💰 Recalcular Bono"
+                                string="Recalcular evaluación y bono"
                                 type="object"
                                 class="btn-primary"/>
+
                         <button name="action_duplicar_mes_anterior"
-                                string="📋 Duplicar del Mes Anterior"
+                                string="Duplicar mes anterior"
                                 type="object"
                                 class="btn-secondary"/>
-                        <field name="state" widget="statusbar"
+
+                        <field name="state"
+                               widget="statusbar"
                                statusbar_visible="borrador,en_revision,aprobado,enviado,finalizado"/>
                     </header>
 
                     <sheet>
+                        <!-- Campos técnicos necesarios para condiciones visuales -->
+                        <field name="cierre_confirmado_disponible" invisible="1"/>
+                        <field name="tiene_detalle_diario" invisible="1"/>
+                        <field name="aplica_acelerador" invisible="1"/>
+
                         <div class="oe_button_box" name="button_box">
                             <button name="ver_reparaciones"
                                     type="object"
                                     class="oe_stat_button"
                                     icon="fa-wrench">
-                                <field name="cantidad_reparaciones" widget="statinfo" string="Reparaciones"/>
+                                <field name="cantidad_reparaciones"
+                                       widget="statinfo"
+                                       string="Reparaciones"/>
                             </button>
+
                             <button name="ver_tickets"
                                     type="object"
                                     class="oe_stat_button"
                                     icon="fa-ticket">
-                                <field name="cantidad_tickets" widget="statinfo" string="Tickets"/>
+                                <field name="cantidad_tickets"
+                                       widget="statinfo"
+                                       string="Tickets"/>
                             </button>
+
                             <button name="action_ver_reclamos_bono"
                                     type="object"
                                     class="oe_stat_button"
                                     icon="fa-exclamation-triangle">
-                                <field name="reclamos_procedentes_count" widget="statinfo" string="Reclamos"/>
+                                <field name="reclamos_procedentes_count"
+                                       widget="statinfo"
+                                       string="Reclamos"/>
                             </button>
+
                             <button name="action_ver_evaluaciones_servicio_bono"
                                     type="object"
                                     class="oe_stat_button"
                                     icon="fa-star">
-                                <field name="evaluaciones_servicio_count" widget="statinfo" string="Encuestas"/>
+                                <field name="evaluaciones_servicio_count"
+                                       widget="statinfo"
+                                       string="Encuestas"/>
                             </button>
+
                             <button name="action_ver_dia_detalle"
                                     type="object"
                                     class="oe_stat_button"
@@ -310,9 +335,10 @@
                                     <span class="o_stat_value">
                                         <field name="total_dias_trabajados"/>
                                     </span>
-                                    <span class="o_stat_text">Días Trabajados</span>
+                                    <span class="o_stat_text">Días trabajados</span>
                                 </div>
                             </button>
+
                             <button name="%(action_evaluacion_personal_detalle_diario)d"
                                     type="action"
                                     class="oe_stat_button"
@@ -321,305 +347,452 @@
                                     invisible="not tiene_detalle_diario">
                                 <div class="o_field_widget o_stat_info">
                                     <span class="o_stat_value">Ver</span>
-                                    <span class="o_stat_text">Análisis Diario</span>
+                                    <span class="o_stat_text">Análisis diario</span>
                                 </div>
                             </button>
                         </div>
 
                         <div class="oe_title">
+                            <label for="name"/>
                             <h1>
                                 <field name="name" readonly="1"/>
                             </h1>
                         </div>
 
-                        <!-- Resumen visual bono -->
-                        <div class="alert alert-success" role="alert" invisible="bono_final == 0">
-                            <strong>💰 Bono calculado:</strong>
+                        <!-- ================================================= -->
+                        <!-- ALERTAS PRINCIPALES                                -->
+                        <!-- ================================================= -->
+
+                        <div class="alert alert-danger"
+                             role="alert"
+                             invisible="tipo_operativo == 'servicios' or cierre_confirmado_disponible">
+                            <strong>Evaluación pendiente de cierre mensual.</strong>
+                            <br/>
+                            Para técnicos de taller o mixtos debe existir un cierre mensual
+                            confirmado con una meta asignada. Mientras falte el cierre,
+                            la evaluación no debe aprobarse ni generar bono.
+                            <br/>
+                            <field name="mensaje_cierre_mensual"
+                                   readonly="1"
+                                   nolabel="1"/>
+                        </div>
+
+                        <div class="alert alert-success"
+                             role="alert"
+                             invisible="tipo_operativo == 'servicios' or not cierre_confirmado_disponible">
+                            <strong>Meta de taller tomada de un cierre mensual confirmado.</strong>
+                            <br/>
+                            <field name="mensaje_cierre_mensual"
+                                   readonly="1"
+                                   nolabel="1"/>
+                        </div>
+
+                        <div class="alert alert-success"
+                             role="alert"
+                             invisible="bono_final == 0">
+                            <strong>Bono calculado:</strong>
                             S/ <field name="bono_final" readonly="1"/>
                             <span invisible="not aplica_acelerador">
-                                — incluye acelerador de S/ 100.00
+                                — incluye acelerador.
                             </span>
                         </div>
 
-                        <div class="alert alert-warning" role="alert" invisible="bono_final != 0">
-                            <strong>⚠️ Sin bono:</strong>
-                            el resultado total de bono aún no llega al mínimo de 95%.
-                        </div>
-
-                        <!-- Resumen Visual diario -->
-                        <div class="alert alert-info" role="alert" invisible="not tiene_detalle_diario">
-                            <div class="row">
-                                <div class="col-md-3">
-                                    <strong>🎯 Mejor Día:</strong>
-                                    <br/>
-                                    <field name="mejor_dia_fecha" readonly="1"/>
-                                    (
-                                    <field name="mejor_dia_total" readonly="1"/> trabajos)
-                                </div>
-                                <div class="col-md-3">
-                                    <strong>⚠️ Día Más Bajo:</strong>
-                                    <br/>
-                                    <field name="peor_dia_fecha" readonly="1"/>
-                                    (
-                                    <field name="peor_dia_total" readonly="1"/> trabajos)
-                                </div>
-                                <div class="col-md-3">
-                                    <strong>✅ Días con Actividad:</strong>
-                                    <br/>
-                                    <field name="total_dias_trabajados" readonly="1"/> días
-                                </div>
-                                <div class="col-md-3">
-                                    <strong>❌ Días sin Actividad:</strong>
-                                    <br/>
-                                    <field name="total_dias_sin_actividad" readonly="1"/> días
-                                </div>
-                            </div>
+                        <div class="alert alert-warning"
+                             role="alert"
+                             invisible="bono_final != 0">
+                            <strong>Sin bono.</strong>
+                            Revise el resultado, el cierre mensual, reclamos, encuestas,
+                            asistencia y demás motivos explicados en el resumen gerencial.
                         </div>
 
                         <group>
-                            <group string="Datos Generales">
+                            <group string="Datos generales">
                                 <field name="usuario_id"/>
                                 <field name="evaluador_id"/>
                                 <field name="fecha"/>
                                 <field name="mes" readonly="1"/>
                                 <field name="anio" readonly="1"/>
+                                <field name="tipo_operativo"
+                                       widget="badge"
+                                       decoration-info="tipo_operativo == 'taller'"
+                                       decoration-success="tipo_operativo == 'servicios'"
+                                       decoration-warning="tipo_operativo == 'mixto'"/>
                             </group>
-                            <group string="Resultado">
-                                <field name="puntaje_total_bono" string="Resultado Bono" readonly="1"/>
+
+                            <group string="Resultado mensual">
+                                <field name="puntaje_total_bono"
+                                       string="Resultado total"
+                                       readonly="1"/>
                                 <field name="bono_base" readonly="1"/>
                                 <field name="monto_acelerador" readonly="1"/>
                                 <field name="bono_final" readonly="1"/>
-                                <field name="puntaje_total" widget="progressbar" readonly="1"/>
                                 <field name="nivel_desempeno" readonly="1"/>
                                 <field name="dias_evaluados" readonly="1"/>
-                                <field name="tiene_detalle_diario" invisible="1"/>
                             </group>
                         </group>
 
                         <notebook>
 
-                            <!-- ============================================ -->
-                            <!-- TAB: RESUMEN GERENCIAL (NUEVO)               -->
-                            <!-- Lectura fácil de resultados + explicación    -->
-                            <!-- de cómo funciona el cálculo del bono.        -->
-                            <!-- ============================================ -->
-                            <page string="👔 Resumen Gerencial" name="resumen_gerencial">
+                            <!-- ================================================= -->
+                            <!-- RESUMEN GERENCIAL                                  -->
+                            <!-- ================================================= -->
+                            <page string="Resumen Gerencial" name="resumen_gerencial">
 
-                                <!-- SEMÁFORO DE RESULTADO -->
                                 <div class="row mb-3">
                                     <div class="col-md-3">
                                         <div class="card text-center h-100">
                                             <div class="card-body">
-                                                <div class="text-muted small">RESULTADO DEL MES</div>
+                                                <div class="text-muted small">
+                                                    RESULTADO DEL MES
+                                                </div>
                                                 <h2 class="mb-0">
-                                                    <field name="puntaje_total_bono" readonly="1" class="fw-bold"/>%
+                                                    <field name="puntaje_total_bono"
+                                                           readonly="1"
+                                                           class="fw-bold"/>%
                                                 </h2>
-                                                <div class="small text-muted">de 120% máximo</div>
+                                                <div class="small text-muted">
+                                                    máximo 120%
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
+
                                     <div class="col-md-3">
                                         <div class="card text-center h-100">
                                             <div class="card-body">
-                                                <div class="text-muted small">BONO DEL TÉCNICO</div>
+                                                <div class="text-muted small">
+                                                    BONO DEL TÉCNICO
+                                                </div>
                                                 <h2 class="mb-0 text-success">
-                                                    S/ <field name="bono_final" readonly="1" class="fw-bold"/>
+                                                    S/ <field name="bono_final"
+                                                              readonly="1"
+                                                              class="fw-bold"/>
                                                 </h2>
                                                 <div class="small text-muted">
-                                                    <span invisible="not aplica_acelerador">✅ incluye acelerador</span>
-                                                    <span invisible="aplica_acelerador">sin acelerador</span>
+                                                    <span invisible="not aplica_acelerador">
+                                                        incluye acelerador
+                                                    </span>
+                                                    <span invisible="aplica_acelerador">
+                                                        sin acelerador
+                                                    </span>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
+
                                     <div class="col-md-3">
                                         <div class="card text-center h-100">
                                             <div class="card-body">
-                                                <div class="text-muted small">PRODUCCIÓN</div>
+                                                <div class="text-muted small">
+                                                    PRODUCCIÓN
+                                                </div>
                                                 <h2 class="mb-0">
-                                                    <field name="porcentaje_produccion_total" readonly="1"/>%
+                                                    <field name="porcentaje_produccion_total"
+                                                           readonly="1"/>%
                                                 </h2>
                                                 <div class="small text-muted">
-                                                    <field name="reparaciones_validas_bono" readonly="1"/> rep. /
-                                                    <field name="tickets_validos_bono" readonly="1"/> serv.
+                                                    <field name="reparaciones_validas_bono"
+                                                           readonly="1"/>
+                                                    reparaciones /
+                                                    <field name="tickets_validos_bono"
+                                                           readonly="1"/>
+                                                    servicios
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
+
                                     <div class="col-md-3">
                                         <div class="card text-center h-100">
                                             <div class="card-body">
-                                                <div class="text-muted small">ALERTAS</div>
+                                                <div class="text-muted small">
+                                                    ALERTAS
+                                                </div>
                                                 <h2 class="mb-0 text-danger">
-                                                    <field name="reclamos_procedentes_count" readonly="1"/>
+                                                    <field name="reclamos_procedentes_count"
+                                                           readonly="1"/>
                                                 </h2>
                                                 <div class="small text-muted">
                                                     reclamos ·
-                                                    <field name="evaluaciones_criticas_count" readonly="1"/> encuestas rojas ·
-                                                    <field name="faltas_injustificadas_equivalentes" readonly="1"/> faltas
+                                                    <field name="evaluaciones_criticas_count"
+                                                           readonly="1"/>
+                                                    encuestas rojas ·
+                                                    <field name="faltas_injustificadas_equivalentes"
+                                                           readonly="1"/>
+                                                    faltas
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
 
-                                <!-- COMPONENTES DEL RESULTADO -->
-                                <group string="¿De dónde sale el resultado? (los 4 componentes + extra)">
+                                <!-- CIERRE MENSUAL APLICADO -->
+                                <group string="Origen de la meta de producción">
+                                    <group>
+                                        <field name="cierre_mensual_id"
+                                               string="Cierre mensual aplicado"
+                                               readonly="1"
+                                               invisible="tipo_operativo == 'servicios'"/>
+
+                                        <field name="cierre_tecnico_line_id"
+                                               string="Línea del técnico"
+                                               readonly="1"
+                                               invisible="tipo_operativo == 'servicios'"/>
+
+                                        <field name="cierre_confirmado_disponible"
+                                               string="Cierre válido"
+                                               readonly="1"
+                                               invisible="tipo_operativo == 'servicios'"/>
+
+                                        <field name="pool_total_exigible_cierre"
+                                               string="Pool total exigible"
+                                               readonly="1"
+                                               invisible="tipo_operativo == 'servicios'"/>
+                                    </group>
+
+                                    <group>
+                                        <field name="meta_taller_ajustada"
+                                               string="Meta de taller asignada"
+                                               readonly="1"
+                                               invisible="tipo_operativo == 'servicios'"/>
+
+                                        <field name="horas_taller_disponibles_cierre"
+                                               string="Horas disponibles de taller"
+                                               readonly="1"
+                                               invisible="tipo_operativo == 'servicios'"/>
+
+                                        <field name="porcentaje_participacion_pool"
+                                               string="Participación en el pool (%)"
+                                               readonly="1"
+                                               invisible="tipo_operativo == 'servicios'"/>
+
+                                        <field name="reparaciones_validas_bono"
+                                               string="Producción finalizada"
+                                               readonly="1"
+                                               invisible="tipo_operativo == 'servicios'"/>
+                                    </group>
+                                </group>
+
+                                <group string="Explicación de la meta asignada"
+                                       invisible="tipo_operativo == 'servicios'">
+                                    <field name="explicacion_meta_gerencia"
+                                           readonly="1"
+                                           nolabel="1"
+                                           placeholder="El cierre mensual todavía no tiene explicación para este técnico."/>
+                                </group>
+
+                                <!-- COMPONENTES -->
+                                <group string="Cómo se forma el resultado">
                                     <group>
                                         <field name="puntaje_produccion_bono"
-                                               string="1. Producción (pesa 45%)"
+                                               string="1. Producción — 45%"
                                                readonly="1"/>
                                         <field name="puntaje_calidad_bono"
-                                               string="2. Calidad (pesa 30%)"
+                                               string="2. Calidad — 30%"
                                                readonly="1"/>
                                         <field name="puntaje_asistencia_bono"
-                                               string="3. Asistencia (pesa 15%)"
+                                               string="3. Asistencia — 15%"
                                                readonly="1"/>
                                     </group>
+
                                     <group>
                                         <field name="puntaje_apoyo_bono"
-                                               string="4. Apoyo/Equipo (pesa 10%)"
+                                               string="4. Apoyo y equipo — 10%"
                                                readonly="1"/>
                                         <field name="bono_extra_sobreproduccion"
-                                               string="+ Extra sobreproducción (máx 20)"
+                                               string="Extra por sobreproducción"
                                                readonly="1"/>
                                         <field name="puntaje_total_bono"
-                                               string="= RESULTADO TOTAL"
+                                               string="Resultado total"
                                                readonly="1"
                                                class="fw-bold"/>
                                     </group>
                                 </group>
 
-                                <!-- EXPLICACIÓN DEL RESULTADO DE ESTE MES -->
                                 <group string="Explicación automática de este mes">
-                                    <field name="motivo_bono" readonly="1" nolabel="1" widget="text"/>
+                                    <field name="motivo_bono"
+                                           readonly="1"
+                                           nolabel="1"
+                                           widget="text"/>
                                 </group>
 
-                                <!-- GUÍA: CÓMO FUNCIONA -->
-                                <separator string="📖 Guía: ¿Cómo se calcula el bono? (referencia para gerencia)"/>
+                                <separator string="Guía para gerencia"/>
 
                                 <div class="row">
                                     <div class="col-md-6">
+
                                         <div class="alert alert-light border" role="alert">
-                                            <h5>1️⃣ Producción (45% del resultado)</h5>
+                                            <h5>1. Producción — 45%</h5>
                                             <p class="mb-1">
-                                                Se compara lo producido contra una <strong>meta ajustada</strong> a los
-                                                días realmente disponibles del técnico:
+                                                Para técnicos de <strong>taller</strong> y
+                                                <strong>mixtos</strong>, la meta se obtiene del
+                                                cierre mensual confirmado.
                                             </p>
                                             <ul class="mb-1">
-                                                <li><strong>Taller:</strong> 50 reparaciones al mes = 100%.</li>
-                                                <li><strong>Servicios/Alquiler:</strong> 45 servicios finalizados al mes = 100%.</li>
-                                                <li><strong>Mixto:</strong> combina ambas metas según el tiempo dedicado a cada área.</li>
+                                                <li>
+                                                    El cierre reúne máquinas descargadas,
+                                                    backlog válido y máquinas reactivadas.
+                                                </li>
+                                                <li>
+                                                    Excluye máquinas de partes, con problemas
+                                                    y entregadas sin una revisión finalizada.
+                                                </li>
+                                                <li>
+                                                    Reparte el pool según las horas disponibles
+                                                    de taller de cada técnico.
+                                                </li>
+                                                <li>
+                                                    La producción cuenta en el mes de
+                                                    <strong>fecha de finalización</strong>.
+                                                </li>
                                             </ul>
                                             <p class="mb-0 small text-muted">
-                                                La meta baja si el técnico tuvo vacaciones, permisos, descansos médicos,
-                                                capacitaciones o estuvo ocupado en servicios en campo (incluye días sin
-                                                retorno al taller). Solo cuentan tickets <strong>finalizados</strong>.
-                                                La producción puede llegar hasta 120%.
+                                                Los técnicos exclusivos de servicios continúan
+                                                evaluándose con su meta de servicios. Los técnicos
+                                                mixtos combinan taller y servicios.
                                             </p>
                                         </div>
 
                                         <div class="alert alert-light border" role="alert">
-                                            <h5>2️⃣ Calidad (30% del resultado)</h5>
-                                            <p class="mb-1">Parte de 100 puntos y se descuenta por:</p>
-                                            <ul class="mb-1">
-                                                <li><strong>Reclamos procedentes del cliente:</strong> −10 puntos cada uno (máximo −40).</li>
-                                                <li><strong>Encuestas de servicio faltantes:</strong> −5 puntos cada una.</li>
-                                                <li><strong>Encuestas "en rojo"</strong> (cliente calificó menos de 70%): −10 puntos cada una.</li>
-                                            </ul>
-                                            <p class="mb-1 small">
-                                                <strong>Encuestas mínimas según servicios del mes:</strong>
-                                                1–2 servicios → 1 encuesta · 3–4 servicios → 2 encuestas ·
-                                                5 o más servicios → 5 encuestas.
+                                            <h5>2. Calidad — 30%</h5>
+                                            <p class="mb-1">
+                                                La calidad considera reclamos procedentes y
+                                                evaluaciones de servicio respondidas.
                                             </p>
+                                            <p class="mb-1">
+                                                <strong>Reclamos acumulados:</strong>
+                                            </p>
+                                            <ul class="mb-1">
+                                                <li>1 reclamo: −5 puntos.</li>
+                                                <li>2 reclamos: −15 puntos acumulados.</li>
+                                                <li>3 reclamos: −30 puntos acumulados.</li>
+                                                <li>4 reclamos: −50 puntos acumulados.</li>
+                                                <li>5 o más: el bono queda bloqueado.</li>
+                                            </ul>
                                             <p class="mb-0 small text-muted">
-                                                Si el técnico tiene encuestas, la nota final de calidad combina
-                                                60% la calidad interna + 40% el promedio que le dieron los clientes.
-                                                Un técnico con muchos servicios y cero encuestas queda penalizado
-                                                y pierde el acelerador.
+                                                Solo afectan los reclamos marcados por el sistema
+                                                como procedentes y que realmente afectan al técnico.
                                             </p>
                                         </div>
                                     </div>
 
                                     <div class="col-md-6">
+
                                         <div class="alert alert-light border" role="alert">
-                                            <h5>3️⃣ Asistencia (15%) y 4️⃣ Apoyo (10%)</h5>
-                                            <ul class="mb-0">
-                                                <li><strong>Asistencia:</strong> cada falta injustificada descuenta 20 puntos de este bloque.</li>
-                                                <li><strong>Apoyo/Trabajo en equipo:</strong> calificación del jefe de área de 1 a 5.</li>
+                                            <h5>Encuestas de servicio</h5>
+                                            <p class="mb-1">
+                                                Solo se exigen encuestas cuando el técnico tiene
+                                                tickets finalizados durante el mes.
+                                            </p>
+                                            <ul class="mb-1">
+                                                <li>
+                                                    Encuestas requeridas =
+                                                    mínimo entre tickets finalizados y 5.
+                                                </li>
+                                                <li>
+                                                    Solo cuentan evaluaciones completadas y respondidas.
+                                                </li>
+                                                <li>
+                                                    Una evaluación puede cubrir varios tickets.
+                                                </li>
+                                                <li>
+                                                    Una encuesta roja cubre el ticket, pero resta
+                                                    10 puntos de calidad.
+                                                </li>
+                                                <li>
+                                                    Cada ticket requerido sin evaluación respondida
+                                                    resta 5 puntos.
+                                                </li>
+                                            </ul>
+                                            <p class="mb-0 small text-muted">
+                                                Una encuesta roja no se penaliza nuevamente como
+                                                encuesta faltante.
+                                            </p>
+                                        </div>
+
+                                        <div class="alert alert-light border" role="alert">
+                                            <h5>3. Asistencia y 4. Apoyo</h5>
+                                            <ul class="mb-1">
+                                                <li>
+                                                    La falta injustificada afecta asistencia,
+                                                    pero no reduce la meta de producción.
+                                                </li>
+                                                <li>
+                                                    Permisos personales no reducen la meta.
+                                                </li>
+                                                <li>
+                                                    Vacaciones, enfermedad, descanso médico y
+                                                    capacitación sí reducen disponibilidad/meta.
+                                                </li>
+                                                <li>
+                                                    Apoyo y trabajo en equipo se califican por el
+                                                    responsable del área.
+                                                </li>
                                             </ul>
                                         </div>
 
                                         <div class="alert alert-light border" role="alert">
-                                            <h5>💵 Escala de bono según resultado</h5>
+                                            <h5>Escala del bono</h5>
                                             <table class="table table-sm table-bordered mb-1">
                                                 <thead>
                                                     <tr class="table-light">
-                                                        <th>Resultado del mes</th>
-                                                        <th>Bono</th>
+                                                        <th>Resultado</th>
+                                                        <th>Bono base</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
                                                     <tr class="table-danger">
                                                         <td>Menos de 95%</td>
-                                                        <td><strong>S/ 0</strong></td>
+                                                        <td>S/ 0</td>
                                                     </tr>
                                                     <tr class="table-warning">
                                                         <td>95% a 99.99%</td>
-                                                        <td><strong>S/ 150</strong></td>
+                                                        <td>S/ 150</td>
                                                     </tr>
                                                     <tr class="table-info">
                                                         <td>100% a 109.99%</td>
-                                                        <td><strong>S/ 250</strong></td>
+                                                        <td>S/ 250</td>
                                                     </tr>
                                                     <tr class="table-success">
                                                         <td>110% a 120%</td>
-                                                        <td><strong>S/ 350</strong></td>
+                                                        <td>S/ 350</td>
                                                     </tr>
                                                 </tbody>
                                             </table>
                                             <p class="mb-0 small">
-                                                <strong>🚀 Acelerador de S/ 100 adicionales</strong> solo si cumple TODO:
-                                                resultado ≥ 110%, cero reclamos procedentes, cero encuestas en rojo,
-                                                cero faltas injustificadas y encuestas mínimas completas.
-                                            </p>
-                                        </div>
-
-                                        <div class="alert alert-light border" role="alert">
-                                            <h5>➕ Extra por sobreproducción</h5>
-                                            <p class="mb-0 small">
-                                                Si la producción supera el 100%, cada punto por encima suma
-                                                directo al resultado (máximo 20 puntos extra). Así, un técnico
-                                                muy productivo puede alcanzar el tramo de S/ 350 y el acelerador.
+                                                El acelerador de S/ 100 requiere resultado mínimo,
+                                                encuestas completas, cero reclamos procedentes,
+                                                cero encuestas rojas y cero faltas injustificadas.
                                             </p>
                                         </div>
                                     </div>
                                 </div>
 
                                 <div class="alert alert-secondary" role="alert">
-                                    <strong>ℹ️ Nota:</strong> la pestaña "Métricas Objetivas" muestra el sistema de
-                                    evaluación anterior (objetivos diarios de 4 reparaciones + 3 tickets). Es solo
-                                    referencial y <strong>no afecta el cálculo del bono</strong>.
+                                    <strong>Nota:</strong>
+                                    la pestaña “Métricas Objetivas” conserva el sistema anterior
+                                    únicamente como referencia. No debe reemplazar la meta del
+                                    cierre mensual ni el cálculo actual del bono.
                                 </div>
                             </page>
 
-                            <!-- TAB: BONO MENSUAL -->
-                            <page string="💰 Bono Mensual" name="bono_mensual">
+                            <!-- ================================================= -->
+                            <!-- BONO MENSUAL                                       -->
+                            <!-- ================================================= -->
+                            <page string="Bono Mensual" name="bono_mensual">
                                 <group>
                                     <group string="Perfil aplicado">
-                                        <!-- CORREGIDO: se eliminaron los campos duplicados
-                                             (aparecían dos veces: editable y readonly) -->
                                         <field name="tipo_operativo"
                                                widget="badge"
                                                decoration-info="tipo_operativo == 'taller'"
                                                decoration-success="tipo_operativo == 'servicios'"
                                                decoration-warning="tipo_operativo == 'mixto'"/>
-
-                                        <field name="tipo_operativo"
-                                               />
-                                        <field name="meta_base_taller"/>
-                                        <field name="meta_base_servicios"/>
+                                        <field name="meta_base_taller"
+                                               readonly="1"/>
+                                        <field name="meta_base_servicios"
+                                               readonly="1"/>
                                     </group>
+
                                     <group string="Escala y monto">
                                         <field name="puntaje_total_bono" readonly="1"/>
                                         <field name="bono_base" readonly="1"/>
@@ -629,7 +802,7 @@
                                     </group>
                                 </group>
 
-                                <group string="Ponderación del resultado">
+                                <group string="Ponderación">
                                     <group>
                                         <field name="puntaje_produccion_bono" readonly="1"/>
                                         <field name="puntaje_calidad_bono" readonly="1"/>
@@ -641,13 +814,58 @@
                                     </group>
                                 </group>
 
-                                <group string="Resumen del cálculo">
-                                    <field name="motivo_bono" readonly="1" nolabel="1" widget="text"/>
+                                <group string="Motivo completo del resultado">
+                                    <field name="motivo_bono"
+                                           readonly="1"
+                                           nolabel="1"
+                                           widget="text"/>
                                 </group>
                             </page>
 
-                            <!-- TAB: PRODUCCIÓN AJUSTADA -->
-                            <page string="📈 Producción Ajustada" name="produccion_ajustada">
+                            <!-- ================================================= -->
+                            <!-- PRODUCCIÓN Y CIERRE                                -->
+                            <!-- ================================================= -->
+                            <page string="Producción y Cierre" name="produccion_ajustada">
+
+                                <div class="alert alert-danger"
+                                     role="alert"
+                                     invisible="tipo_operativo == 'servicios' or cierre_confirmado_disponible">
+                                    <strong>No existe cierre mensual confirmado para este técnico y periodo.</strong>
+                                    La meta de taller no debe aprobarse hasta completar el cierre.
+                                </div>
+
+                                <group string="Cierre mensual aplicado"
+                                       invisible="tipo_operativo == 'servicios'">
+                                    <group>
+                                        <field name="cierre_mensual_id" readonly="1"/>
+                                        <field name="cierre_tecnico_line_id" readonly="1"/>
+                                        <field name="pool_total_exigible_cierre" readonly="1"/>
+                                        <field name="porcentaje_participacion_pool"
+                                               string="Participación del técnico (%)"
+                                               readonly="1"/>
+                                    </group>
+
+                                    <group>
+                                        <field name="horas_taller_disponibles_cierre"
+                                               readonly="1"/>
+                                        <field name="meta_taller_ajustada"
+                                               string="Meta asignada por cierre"
+                                               readonly="1"/>
+                                        <field name="reparaciones_validas_bono"
+                                               string="Máquinas finalizadas"
+                                               readonly="1"/>
+                                        <field name="porcentaje_produccion_taller"
+                                               readonly="1"/>
+                                    </group>
+                                </group>
+
+                                <group string="Motivo del reparto"
+                                       invisible="tipo_operativo == 'servicios'">
+                                    <field name="explicacion_meta_gerencia"
+                                           readonly="1"
+                                           nolabel="1"/>
+                                </group>
+
                                 <group>
                                     <group string="Disponibilidad del mes">
                                         <field name="dias_laborables_equivalentes" readonly="1"/>
@@ -656,48 +874,70 @@
                                         <field name="dias_taller_disponibles" readonly="1"/>
                                         <field name="dias_servicios_disponibles" readonly="1"/>
                                     </group>
+
                                     <group string="Servicios externos">
                                         <field name="horas_servicio_mes" readonly="1"/>
                                         <field name="tickets_sin_retorno_count" readonly="1"/>
                                         <field name="tickets_validos_bono" readonly="1"/>
+                                        <field name="meta_servicios_ajustada" readonly="1"/>
                                         <field name="porcentaje_produccion_servicios" readonly="1"/>
                                     </group>
                                 </group>
-                                <group>
-                                    <group string="Taller">
-                                        <field name="meta_taller_ajustada" readonly="1"/>
-                                        <field name="reparaciones_validas_bono" readonly="1"/>
-                                        <field name="porcentaje_produccion_taller" readonly="1"/>
-                                    </group>
-                                    <group string="Producción total">
-                                        <field name="meta_servicios_ajustada" readonly="1"/>
-                                        <field name="porcentaje_produccion_total" readonly="1"/>
-                                        <field name="bono_extra_sobreproduccion" readonly="1"/>
-                                    </group>
+
+                                <group string="Resultado combinado">
+                                    <field name="porcentaje_produccion_total" readonly="1"/>
+                                    <field name="bono_extra_sobreproduccion" readonly="1"/>
                                 </group>
                             </page>
 
-                            <!-- TAB: CALIDAD Y RECLAMOS -->
-                            <page string="🛡️ Calidad y Reclamos" name="calidad_reclamos">
+                            <!-- ================================================= -->
+                            <!-- CALIDAD, RECLAMOS Y ENCUESTAS                      -->
+                            <!-- ================================================= -->
+                            <page string="Calidad y Reclamos" name="calidad_reclamos">
                                 <group>
-                                    <group string="Reclamos">
+                                    <group string="Reclamos procedentes">
                                         <field name="reclamos_procedentes_count" readonly="1"/>
                                         <field name="puntaje_calidad_real" readonly="1"/>
-                                        <field name="evaluaciones_servicio_minimas" readonly="1"/>
-                                        <field name="evaluaciones_servicio_faltantes" readonly="1"/>
-                                        <field name="cumple_minimo_evaluaciones" readonly="1"/>
-                                        <field name="penalidad_evaluaciones_servicio" readonly="1"/>
                                     </group>
-                                    <group string="Evaluaciones de servicio">
-                                        <field name="evaluaciones_servicio_count" readonly="1"/>
-                                        <field name="promedio_evaluacion_servicio" readonly="1"/>
-                                        <field name="evaluaciones_criticas_count" readonly="1"/>
+
+                                    <group string="Cobertura de encuestas">
+                                        <field name="tickets_validos_bono"
+                                               string="Tickets finalizados"
+                                               readonly="1"/>
+                                        <field name="evaluaciones_servicio_minimas"
+                                               string="Tickets que deben estar cubiertos"
+                                               readonly="1"/>
+                                        <field name="evaluaciones_servicio_count"
+                                               string="Evaluaciones respondidas consideradas"
+                                               readonly="1"/>
+                                        <field name="evaluaciones_servicio_faltantes"
+                                               string="Tickets requeridos sin cobertura"
+                                               readonly="1"/>
+                                        <field name="cumple_minimo_evaluaciones"
+                                               string="Cobertura completa"
+                                               readonly="1"/>
+                                        <field name="penalidad_evaluaciones_servicio"
+                                               readonly="1"/>
                                     </group>
                                 </group>
 
+                                <group string="Resultado del cliente">
+                                    <field name="promedio_evaluacion_servicio"
+                                           string="Promedio de evaluaciones"
+                                           readonly="1"/>
+                                    <field name="evaluaciones_criticas_count"
+                                           string="Evaluaciones rojas"
+                                           readonly="1"/>
+                                </group>
+
                                 <group string="Reclamos que afectan al técnico">
-                                    <field name="incidencia_ids" readonly="1" nolabel="1">
-                                        <list create="0" delete="0" edit="0">
+                                    <field name="incidencia_ids"
+                                           readonly="1"
+                                           nolabel="1">
+                                        <list create="0"
+                                              delete="0"
+                                              edit="0"
+                                              decoration-danger="afecta_tecnico and procede">
                                             <field name="name"/>
                                             <field name="fecha_hora"/>
                                             <field name="cliente_id"/>
@@ -712,8 +952,13 @@
                                 </group>
 
                                 <group string="Evaluaciones de servicio consideradas">
-                                    <field name="evaluacion_servicio_ids" readonly="1" nolabel="1">
-                                        <list create="0" delete="0" edit="0">
+                                    <field name="evaluacion_servicio_ids"
+                                           readonly="1"
+                                           nolabel="1">
+                                        <list create="0"
+                                              delete="0"
+                                              edit="0"
+                                              decoration-danger="puntaje_servicio &lt; 70">
                                             <field name="name"/>
                                             <field name="partner_id"/>
                                             <field name="technician_id"/>
@@ -727,46 +972,70 @@
                                 </group>
                             </page>
 
-                            <!-- TAB: ASISTENCIA Y APOYO -->
-                            <page string="⏱️ Asistencia y Apoyo" name="asistencia_apoyo">
+                            <!-- ================================================= -->
+                            <!-- ASISTENCIA Y APOYO                                 -->
+                            <!-- ================================================= -->
+                            <page string="Asistencia y Apoyo" name="asistencia_apoyo">
+                                <div class="alert alert-info" role="alert">
+                                    <strong>Regla aplicada:</strong>
+                                    permisos personales y faltas injustificadas no reducen la meta.
+                                    La falta injustificada afecta asistencia. Vacaciones, enfermedad,
+                                    descanso médico y capacitación sí reducen disponibilidad.
+                                </div>
+
                                 <group>
                                     <group string="Asistencia">
-                                        <field name="faltas_injustificadas_equivalentes" readonly="1"/>
-                                        <field name="puntaje_asistencia_real" readonly="1"/>
+                                        <field name="faltas_injustificadas_equivalentes"
+                                               readonly="1"/>
+                                        <field name="puntaje_asistencia_real"
+                                               readonly="1"/>
                                     </group>
-                                    <group string="Apoyo / Trabajo en equipo">
+
+                                    <group string="Apoyo y trabajo en equipo">
                                         <field name="apoyo_calificacion"/>
-                                        <field name="puntaje_apoyo_real" readonly="1"/>
+                                        <field name="puntaje_apoyo_real"
+                                               readonly="1"/>
                                     </group>
                                 </group>
                             </page>
 
-                            <!-- TAB: ANÁLISIS DIARIO -->
-                            <page string="📊 Análisis Diario"
+                            <!-- ================================================= -->
+                            <!-- ANÁLISIS DIARIO                                    -->
+                            <!-- ================================================= -->
+                            <page string="Análisis Diario"
                                   name="analisis_diario"
                                   invisible="not id">
-                                <div class="alert alert-warning" role="alert" invisible="tiene_detalle_diario">
-                                    <strong>⚠️ Análisis Diario no Generado</strong>
+                                <div class="alert alert-warning"
+                                     role="alert"
+                                     invisible="tiene_detalle_diario">
+                                    <strong>Análisis diario no generado.</strong>
                                     <br/>
-                                    Haga clic en "Regenerar Análisis Diario" para generar el desglose día por día.
+                                    Use “Regenerar análisis diario” para crear el desglose.
                                 </div>
+
                                 <field name="detalle_diario_ids"
                                        mode="list"
                                        context="{'default_evaluacion_id': id}">
-                                    <list string="Desglose Diario"
+                                    <list string="Desglose diario"
                                           decoration-success="cumple_objetivo and es_dia_laboral"
                                           decoration-warning="porcentaje_cumplimiento &gt;= 70 and porcentaje_cumplimiento &lt; 100 and es_dia_laboral"
                                           decoration-danger="porcentaje_cumplimiento &lt; 70 and es_dia_laboral and total_trabajos &gt; 0"
                                           decoration-muted="not es_dia_laboral or total_trabajos == 0"
-                                          create="0" delete="0" edit="0">
+                                          create="0"
+                                          delete="0"
+                                          edit="0">
                                         <field name="fecha"/>
                                         <field name="dia_semana"/>
-                                        <field name="es_dia_laboral" column_invisible="1"/>
-                                        <field name="cantidad_reparaciones" sum="Total"/>
-                                        <field name="cantidad_tickets" sum="Total"/>
-                                        <field name="total_trabajos" sum="Total" widget="badge"/>
+                                        <field name="es_dia_laboral"
+                                               column_invisible="1"/>
+                                        <field name="cantidad_reparaciones"
+                                               sum="Total"/>
+                                        <field name="cantidad_tickets"
+                                               sum="Total"/>
+                                        <field name="total_trabajos"
+                                               sum="Total"
+                                               widget="badge"/>
                                         <field name="objetivo_dia"/>
-                                        <!-- CORREGIDO: sin widget percentage (campo ya en 0-100) -->
                                         <field name="porcentaje_cumplimiento"/>
                                         <field name="estado_dia" widget="badge"/>
                                         <field name="horas_servicio_dia" optional="show"/>
@@ -778,106 +1047,147 @@
                                         <field name="cumplimiento_servicio_dia" optional="show"/>
                                         <field name="clientes_atendidos" optional="hide"/>
                                         <field name="modelos_trabajados" optional="hide"/>
+
                                         <button name="action_ver_reparaciones_dia"
                                                 type="object"
                                                 string=""
                                                 icon="fa-wrench"
                                                 invisible="cantidad_reparaciones == 0"
-                                                title="Ver Reparaciones"/>
+                                                title="Ver reparaciones"/>
+
                                         <button name="action_ver_tickets_dia"
                                                 type="object"
                                                 string=""
                                                 icon="fa-ticket"
                                                 invisible="cantidad_tickets == 0"
-                                                title="Ver Tickets"/>
+                                                title="Ver tickets"/>
                                     </list>
                                 </field>
                             </page>
 
-                            <!-- TAB: MÉTRICAS OBJETIVAS ANTERIORES -->
-                            <page string="📈 Métricas Objetivas" name="metricas_objetivas">
+                            <!-- ================================================= -->
+                            <!-- MÉTRICAS ANTERIORES                                -->
+                            <!-- ================================================= -->
+                            <page string="Métricas Objetivas"
+                                  name="metricas_objetivas">
                                 <div class="alert alert-secondary" role="alert">
-                                    <strong>ℹ️ Referencial:</strong> este es el sistema de evaluación anterior.
-                                    <strong>No afecta el cálculo del bono mensual.</strong>
+                                    <strong>Referencial:</strong>
+                                    estos indicadores pertenecen al sistema anterior y
+                                    no sustituyen el cierre mensual ni el cálculo actual.
                                 </div>
+
                                 <group>
                                     <group string="Reparaciones anteriores">
                                         <field name="cantidad_reparaciones" readonly="1"/>
                                         <field name="objetivo_reparaciones" readonly="1"/>
-                                        <field name="porcentaje_reparaciones" widget="percentpie" readonly="1"/>
-                                        <field name="promedio_diario_reparaciones" widget="float" digits="[16,2]" readonly="1"/>
+                                        <field name="porcentaje_reparaciones"
+                                               widget="percentpie"
+                                               readonly="1"/>
+                                        <field name="promedio_diario_reparaciones"
+                                               widget="float"
+                                               digits="[16,2]"
+                                               readonly="1"/>
                                     </group>
+
                                     <group string="Tickets anteriores">
                                         <field name="cantidad_tickets" readonly="1"/>
                                         <field name="objetivo_tickets" readonly="1"/>
-                                        <field name="porcentaje_tickets" widget="percentpie" readonly="1"/>
-                                        <field name="promedio_diario_tickets" widget="float" digits="[16,2]" readonly="1"/>
+                                        <field name="porcentaje_tickets"
+                                               widget="percentpie"
+                                               readonly="1"/>
+                                        <field name="promedio_diario_tickets"
+                                               widget="float"
+                                               digits="[16,2]"
+                                               readonly="1"/>
                                     </group>
                                 </group>
-                                <group>
-                                    <group string="Puntajes anteriores">
-                                        <!-- CORREGIDO: los campos están en escala 0-100;
-                                             widget percentage espera 0-1 y mostraba 1187.5%.
-                                             progressbar sí espera 0-100. -->
-                                        <field name="puntaje_objetivos" widget="progressbar" readonly="1"/>
-                                        <field name="puntaje_desempeno" widget="progressbar" readonly="1"/>
-                                        <field name="puntaje_total" widget="progressbar" readonly="1"/>
-                                    </group>
+
+                                <group string="Puntajes anteriores">
+                                    <field name="puntaje_objetivos"
+                                           widget="progressbar"
+                                           readonly="1"/>
+                                    <field name="puntaje_desempeno"
+                                           widget="progressbar"
+                                           readonly="1"/>
+                                    <field name="puntaje_total"
+                                           widget="progressbar"
+                                           readonly="1"/>
                                 </group>
                             </page>
 
-                            <!-- TAB: EVALUACIÓN TÉCNICA -->
-                            <page string="🔧 Evaluación Técnica" name="evaluacion_tecnica">
+                            <!-- ================================================= -->
+                            <!-- EVALUACIÓN TÉCNICA                                 -->
+                            <!-- ================================================= -->
+                            <page string="Evaluación Técnica"
+                                  name="evaluacion_tecnica">
                                 <group>
-                                    <group string="Calidad del Trabajo">
+                                    <group string="Calidad del trabajo">
                                         <field name="calidad_trabajo"/>
                                         <field name="conocimiento_tecnico"/>
                                         <field name="resolucion_problemas"/>
                                         <field name="uso_herramientas"/>
                                     </group>
-                                    <group string="Actitud y Comportamiento">
+
+                                    <group string="Actitud y comportamiento">
                                         <field name="puntualidad"/>
                                         <field name="compromiso"/>
                                         <field name="trabajo_equipo"/>
                                     </group>
                                 </group>
-                                <group>
-                                    <group string="Atención al Cliente">
-                                        <field name="trato_cliente"/>
-                                        <field name="comunicacion_cliente"/>
-                                        <field name="manejo_conflictos"/>
-                                    </group>
+
+                                <group string="Atención al cliente">
+                                    <field name="trato_cliente"/>
+                                    <field name="comunicacion_cliente"/>
+                                    <field name="manejo_conflictos"/>
                                 </group>
                             </page>
 
-                            <!-- TAB: RETROALIMENTACIÓN -->
-                            <page string="💬 Retroalimentación" name="retroalimentacion">
+                            <!-- ================================================= -->
+                            <!-- RETROALIMENTACIÓN                                   -->
+                            <!-- ================================================= -->
+                            <page string="Retroalimentación"
+                                  name="retroalimentacion">
                                 <group>
-                                    <field name="fortalezas" widget="text" readonly="1"/>
-                                    <field name="areas_mejora" widget="text" readonly="1"/>
-                                    <field name="plan_accion" widget="text" readonly="1"/>
-                                    <field name="comentarios" widget="text"/>
+                                    <field name="fortalezas"
+                                           widget="text"
+                                           readonly="1"/>
+                                    <field name="areas_mejora"
+                                           widget="text"
+                                           readonly="1"/>
+                                    <field name="plan_accion"
+                                           widget="text"
+                                           readonly="1"/>
+                                    <field name="comentarios"
+                                           widget="text"/>
                                 </group>
                             </page>
 
-                            <!-- TAB: SEGUIMIENTO -->
-                            <page string="📅 Seguimiento" name="seguimiento">
+                            <!-- ================================================= -->
+                            <!-- SEGUIMIENTO                                        -->
+                            <!-- ================================================= -->
+                            <page string="Seguimiento" name="seguimiento">
                                 <group>
                                     <field name="proxima_evaluacion" readonly="1"/>
-                                    <field name="objetivos_proximos" widget="text" readonly="1"/>
-                                    <field name="necesita_capacitacion" readonly="1"/>
-                                    <field name="temas_capacitacion" widget="text"
-                                           invisible="not necesita_capacitacion" readonly="1"/>
+                                    <field name="objetivos_proximos"
+                                           widget="text"
+                                           readonly="1"/>
+                                    <field name="necesita_capacitacion"
+                                           readonly="1"/>
+                                    <field name="temas_capacitacion"
+                                           widget="text"
+                                           invisible="not necesita_capacitacion"
+                                           readonly="1"/>
                                 </group>
                             </page>
                         </notebook>
                     </sheet>
+
                     <chatter/>
                 </form>
             </field>
         </record>
 
-        <!-- ============================================================ -->
+<!-- ============================================================ -->
         <!-- VISTA KANBAN                                                 -->
         <!-- ============================================================ -->
         <record id="view_evaluacion_personal_kanban" model="ir.ui.view">

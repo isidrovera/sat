@@ -460,6 +460,64 @@ class EvaluacionPersonal(models.Model):
         store=True
     )
 
+
+    # ============================================================
+    # CIERRE MENSUAL DE PRODUCCIÓN
+    # ============================================================
+
+    cierre_mensual_id = fields.Many2one(
+        'evaluacion.cierre.mensual',
+        string='Cierre mensual aplicado',
+        compute='_compute_datos_cierre_mensual',
+        readonly=True,
+        help='Cierre mensual confirmado usado para definir la meta de taller.'
+    )
+
+    cierre_tecnico_line_id = fields.Many2one(
+        'evaluacion.cierre.mensual.tecnico',
+        string='Línea del técnico en el cierre',
+        compute='_compute_datos_cierre_mensual',
+        readonly=True
+    )
+
+    cierre_confirmado_disponible = fields.Boolean(
+        string='Tiene cierre confirmado',
+        compute='_compute_datos_cierre_mensual',
+        readonly=True
+    )
+
+    pool_total_exigible_cierre = fields.Integer(
+        string='Pool mensual exigible',
+        compute='_compute_datos_cierre_mensual',
+        readonly=True
+    )
+
+    horas_taller_disponibles_cierre = fields.Float(
+        string='Horas disponibles de taller según cierre',
+        compute='_compute_datos_cierre_mensual',
+        readonly=True,
+        digits=(16, 2)
+    )
+
+    porcentaje_participacion_pool = fields.Float(
+        string='% participación en el pool',
+        compute='_compute_datos_cierre_mensual',
+        readonly=True,
+        digits=(16, 2)
+    )
+
+    explicacion_meta_gerencia = fields.Text(
+        string='Explicación de la meta para gerencia',
+        compute='_compute_datos_cierre_mensual',
+        readonly=True
+    )
+
+    mensaje_cierre_mensual = fields.Char(
+        string='Estado del cierre mensual',
+        compute='_compute_datos_cierre_mensual',
+        readonly=True
+    )
+
     meta_taller_ajustada = fields.Float(
         string='Meta taller ajustada',
         compute='_compute_metas_bono',
@@ -734,6 +792,80 @@ class EvaluacionPersonal(models.Model):
     # ============================================================
 
   
+
+    def _buscar_linea_cierre_confirmado(self):
+        """Devuelve el cierre confirmado del mes y la línea del técnico."""
+        self.ensure_one()
+
+        Cierre = self.env['evaluacion.cierre.mensual']
+        Linea = self.env['evaluacion.cierre.mensual.tecnico']
+
+        if not self.usuario_id or not self.fecha:
+            return Cierre, Linea
+
+        inicio_mes = self.fecha.replace(day=1)
+        cierre = Cierre.search([
+            ('fecha_inicio', '=', inicio_mes),
+            ('state', '=', 'confirmado'),
+        ], limit=1)
+
+        if not cierre:
+            return Cierre, Linea
+
+        linea = Linea.search([
+            ('cierre_id', '=', cierre.id),
+            ('tecnico_id', '=', self.usuario_id.id),
+        ], limit=1)
+
+        return cierre, linea
+
+    @api.depends('usuario_id', 'fecha', 'tipo_operativo')
+    def _compute_datos_cierre_mensual(self):
+        for record in self:
+            record.cierre_mensual_id = False
+            record.cierre_tecnico_line_id = False
+            record.cierre_confirmado_disponible = False
+            record.pool_total_exigible_cierre = 0
+            record.horas_taller_disponibles_cierre = 0.0
+            record.porcentaje_participacion_pool = 0.0
+            record.explicacion_meta_gerencia = False
+            record.mensaje_cierre_mensual = 'No aplica para técnico exclusivo de servicios.'
+
+            if not record.usuario_id or not record.fecha:
+                record.mensaje_cierre_mensual = 'Debe seleccionar técnico y fecha.'
+                continue
+
+            if record.tipo_operativo == 'servicios':
+                continue
+
+            cierre, linea = record._buscar_linea_cierre_confirmado()
+
+            if not cierre:
+                record.mensaje_cierre_mensual = (
+                    'No existe un cierre mensual confirmado para este periodo. '
+                    'La meta de taller permanecerá en cero hasta confirmar el cierre.'
+                )
+                continue
+
+            record.cierre_mensual_id = cierre
+            record.pool_total_exigible_cierre = cierre.pool_total_exigible or 0
+
+            if not linea:
+                record.mensaje_cierre_mensual = (
+                    'Existe el cierre confirmado %s, pero el técnico no tiene una línea '
+                    'de meta dentro de ese cierre.' % cierre.name
+                )
+                continue
+
+            record.cierre_tecnico_line_id = linea
+            record.cierre_confirmado_disponible = True
+            record.horas_taller_disponibles_cierre = linea.horas_taller_disponibles or 0.0
+            record.porcentaje_participacion_pool = linea.porcentaje_participacion or 0.0
+            record.explicacion_meta_gerencia = linea.motivo_calculo or False
+            record.mensaje_cierre_mensual = (
+                'Meta obtenida del cierre confirmado %s.' % cierre.name
+            )
+
     @api.depends('usuario_id', 'fecha', 'tipo_operativo')
     def _compute_disponibilidad_bono(self):
         for record in self:
@@ -769,38 +901,86 @@ class EvaluacionPersonal(models.Model):
             record.horas_servicio_mes = servicios.get('horas', 0.0)
             record.tickets_sin_retorno_count = servicios.get('sin_retorno', 0)
 
-    @api.depends('dias_laborables_equivalentes', 'dias_taller_disponibles', 'dias_servicios_disponibles', 'meta_base_taller', 'meta_base_servicios', 'tipo_operativo')
+    @api.depends(
+        'usuario_id',
+        'fecha',
+        'tipo_operativo',
+        'dias_laborables_equivalentes',
+        'dias_servicios_disponibles',
+        'meta_base_servicios'
+    )
     def _compute_metas_bono(self):
+        """
+        La meta de taller proviene únicamente del cierre mensual confirmado.
+        La meta de servicios mantiene el cálculo proporcional por disponibilidad.
+        """
         for record in self:
             record.meta_taller_ajustada = 0.0
             record.meta_servicios_ajustada = 0.0
-            dias_mes = record.dias_laborables_equivalentes or 0.0
-            if dias_mes <= 0:
-                continue
-            if record.tipo_operativo in ('taller', 'mixto'):
-                record.meta_taller_ajustada = (record.meta_base_taller or 50.0) * (record.dias_taller_disponibles / dias_mes)
-            if record.tipo_operativo in ('servicios', 'mixto'):
-                record.meta_servicios_ajustada = (record.meta_base_servicios or 45.0) * (record.dias_servicios_disponibles / dias_mes)
 
-    @api.depends('usuario_id', 'fecha', 'tipo_operativo', 'meta_taller_ajustada', 'meta_servicios_ajustada')
+            if not record.usuario_id or not record.fecha:
+                continue
+
+            if record.tipo_operativo in ('taller', 'mixto'):
+                cierre, linea = record._buscar_linea_cierre_confirmado()
+                if cierre and linea:
+                    record.meta_taller_ajustada = linea.meta_asignada or 0.0
+
+            dias_mes = record.dias_laborables_equivalentes or 0.0
+            if (
+                record.tipo_operativo in ('servicios', 'mixto')
+                and dias_mes > 0
+            ):
+                record.meta_servicios_ajustada = (
+                    (record.meta_base_servicios or 40.0)
+                    * (record.dias_servicios_disponibles / dias_mes)
+                )
+
+    @api.depends(
+        'usuario_id',
+        'fecha',
+        'tipo_operativo',
+        'meta_taller_ajustada',
+        'meta_servicios_ajustada'
+    )
     def _compute_produccion_bono(self):
+        """Usa la producción congelada del cierre para taller."""
         for record in self:
             record.reparaciones_validas_bono = 0
             record.tickets_validos_bono = 0
             record.porcentaje_produccion_taller = 0.0
             record.porcentaje_produccion_servicios = 0.0
             record.porcentaje_produccion_total = 0.0
+
             if not record.usuario_id or not record.fecha:
                 continue
+
             inicio_mes, fin_mes = record._get_rango_mes_bono()
-            reparaciones = record._get_reparaciones_bono(inicio_mes, fin_mes)
             tickets = record._get_tickets_bono(inicio_mes, fin_mes)
-            record.reparaciones_validas_bono = len(reparaciones)
             record.tickets_validos_bono = len(tickets)
-            pct_taller = (len(reparaciones) / record.meta_taller_ajustada * 100.0) if record.meta_taller_ajustada else 0.0
-            pct_servicios = (len(tickets) / record.meta_servicios_ajustada * 100.0) if record.meta_servicios_ajustada else 0.0
+
+            produccion_taller = 0
+            if record.tipo_operativo in ('taller', 'mixto'):
+                cierre, linea = record._buscar_linea_cierre_confirmado()
+                if cierre and linea:
+                    produccion_taller = linea.produccion_finalizada or 0
+
+            record.reparaciones_validas_bono = produccion_taller
+
+            pct_taller = (
+                produccion_taller / record.meta_taller_ajustada * 100.0
+                if record.meta_taller_ajustada
+                else 0.0
+            )
+            pct_servicios = (
+                len(tickets) / record.meta_servicios_ajustada * 100.0
+                if record.meta_servicios_ajustada
+                else 0.0
+            )
+
             pct_taller = min(120.0, pct_taller)
             pct_servicios = min(120.0, pct_servicios)
+
             if record.tipo_operativo == 'taller':
                 total = pct_taller
             elif record.tipo_operativo == 'servicios':
@@ -809,7 +989,13 @@ class EvaluacionPersonal(models.Model):
                 peso_taller = record.meta_taller_ajustada or 0.0
                 peso_servicios = record.meta_servicios_ajustada or 0.0
                 peso_total = peso_taller + peso_servicios
-                total = ((pct_taller * peso_taller) + (pct_servicios * peso_servicios)) / peso_total if peso_total else 0.0
+                total = (
+                    ((pct_taller * peso_taller) + (pct_servicios * peso_servicios))
+                    / peso_total
+                    if peso_total
+                    else 0.0
+                )
+
             record.porcentaje_produccion_taller = pct_taller
             record.porcentaje_produccion_servicios = pct_servicios
             record.porcentaje_produccion_total = min(120.0, total)
@@ -978,7 +1164,10 @@ class EvaluacionPersonal(models.Model):
         'cumple_minimo_evaluaciones',
         'evaluaciones_servicio_faltantes',
         'evaluaciones_servicio_minimas',
-        'tickets_validos_bono'
+        'tickets_validos_bono',
+        'tipo_operativo',
+        'usuario_id',
+        'fecha'
     )
     def _compute_monto_bono(self):
         """Calcula el monto y genera una explicación legible para gerencia."""
@@ -996,7 +1185,14 @@ class EvaluacionPersonal(models.Model):
             bloqueado_por_reclamos = (
                 (record.reclamos_procedentes_count or 0) >= 5
             )
-            bono_bloqueado = bloqueado_por_evaluaciones or bloqueado_por_reclamos
+            requiere_cierre = record.tipo_operativo in ('taller', 'mixto')
+            cierre, linea_cierre = record._buscar_linea_cierre_confirmado()
+            bloqueado_por_cierre = requiere_cierre and not (cierre and linea_cierre)
+            bono_bloqueado = (
+                bloqueado_por_evaluaciones
+                or bloqueado_por_reclamos
+                or bloqueado_por_cierre
+            )
 
             if bono_bloqueado:
                 bono = 0.0
@@ -1066,7 +1262,26 @@ class EvaluacionPersonal(models.Model):
                 '- Días ocupados en tickets de servicio: %.2f.' % record.dias_servicio_equivalentes,
                 '- Permisos personales y faltas no reducen la meta de producción.',
                 '',
-                '3. CALIDAD',
+                '3. CIERRE MENSUAL DE PRODUCCIÓN',
+                '- Cierre aplicado: %s.' % (
+                    cierre.name if cierre else 'No existe cierre confirmado'
+                ),
+                '- Pool mensual exigible: %s máquinas.' % (
+                    cierre.pool_total_exigible if cierre else 0
+                ),
+                '- Participación del técnico: %.2f%%.' % (
+                    linea_cierre.porcentaje_participacion if linea_cierre else 0.0
+                ),
+                '- Horas disponibles de taller: %.2f.' % (
+                    linea_cierre.horas_taller_disponibles if linea_cierre else 0.0
+                ),
+                '- Explicación de la meta: %s' % (
+                    linea_cierre.motivo_calculo
+                    if linea_cierre and linea_cierre.motivo_calculo
+                    else 'Sin explicación disponible.'
+                ),
+                '',
+                '4. CALIDAD',
                 '- Reclamos procedentes que afectan al técnico: %s. Penalidad escalonada: -%s puntos.' % (
                     reclamos,
                     penalidad_reclamos,
@@ -1081,7 +1296,7 @@ class EvaluacionPersonal(models.Model):
                     record.puntaje_calidad_bono,
                 ),
                 '',
-                '4. ASISTENCIA Y APOYO',
+                '5. ASISTENCIA Y APOYO',
                 '- Faltas injustificadas equivalentes: %.2f. Puntaje asistencia: %.2f%%.' % (
                     record.faltas_injustificadas_equivalentes,
                     record.puntaje_asistencia_real,
@@ -1105,6 +1320,11 @@ class EvaluacionPersonal(models.Model):
                 resumen.append(
                     '- BONO BLOQUEADO: tiene %s reclamos procedentes; desde 5 reclamos no corresponde bono.'
                     % reclamos
+                )
+
+            if bloqueado_por_cierre:
+                resumen.append(
+                    '- BONO BLOQUEADO: no existe un cierre mensual confirmado con una meta asignada para este técnico.'
                 )
 
             if aplica_acelerador:
@@ -1932,6 +2152,7 @@ class EvaluacionPersonal(models.Model):
                 record.detalle_diario_ids._compute_bono_detalle()
 
             # Recalcular en orden correcto
+            record._compute_datos_cierre_mensual()
             record._compute_disponibilidad_bono()
             record._compute_metas_bono()
             record._compute_produccion_bono()
@@ -1946,7 +2167,7 @@ class EvaluacionPersonal(models.Model):
             'tag': 'display_notification',
             'params': {
                 'title': 'Bono recalculado',
-                'message': 'Se recalculó la producción, calidad, encuestas, penalidades y bono mensual.',
+                'message': 'Se recalculó el cierre aplicado, la producción, calidad, encuestas, penalidades y bono mensual.',
                 'type': 'success',
                 'sticky': False,
             }
