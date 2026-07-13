@@ -613,7 +613,7 @@
                                     <field name="motivo_bono"
                                            readonly="1"
                                            nolabel="1"
-                                           widget="text"/>
+                                           />
                                 </group>
 
                                 <separator string="Guía para gerencia"/>
