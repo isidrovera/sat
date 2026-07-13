@@ -49,6 +49,13 @@
                         <group>
                             <group string="Técnico">
                                 <field name="tecnico_id"/>
+
+                                <field name="tipo_operativo"
+                                    widget="badge"
+                                    decoration-info="tipo_operativo == 'taller'"
+                                    decoration-success="tipo_operativo == 'servicios'"
+                                    decoration-warning="tipo_operativo == 'mixto'"/>
+
                                 <field name="active"/>
                                 <field name="zona_preferida_ids" widget="many2many_tags"/>
                             </group>
