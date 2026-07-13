@@ -303,3 +303,6 @@ access_sat_prueba_maquina_snmp_detalle_user,sat.prueba.maquina.snmp.detalle user
 access_sat_prueba_maquina_snmp_detalle_manager,sat.prueba.maquina.snmp.detalle manager,model_sat_prueba_maquina_snmp_detalle,base.group_system,1,1,1,1
 access_sat_prueba_maquina_snmp_alerta_user,sat.prueba.maquina.snmp.alerta user,model_sat_prueba_maquina_snmp_alerta,base.group_user,1,1,1,0
 access_sat_prueba_maquina_snmp_alerta_manager,sat.prueba.maquina.snmp.alerta manager,model_sat_prueba_maquina_snmp_alerta,base.group_system,1,1,1,1
+access_evaluacion_cierre_mensual_user,evaluacion.cierre.mensual usuario,model_evaluacion_cierre_mensual,base.group_user,1,1,1,1
+access_evaluacion_cierre_mensual_maquina_user,evaluacion.cierre.mensual.maquina usuario,model_evaluacion_cierre_mensual_maquina,base.group_user,1,1,1,1
+access_evaluacion_cierre_mensual_tecnico_user,evaluacion.cierre.mensual.tecnico usuario,model_evaluacion_cierre_mensual_tecnico,base.group_user,1,1,1,1

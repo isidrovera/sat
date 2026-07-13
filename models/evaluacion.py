@@ -821,141 +821,103 @@ class EvaluacionPersonal(models.Model):
         'tickets_validos_bono'
     )
     def _compute_calidad_bono(self):
+        """
+        Calcula la calidad usando reclamos escalonados y encuestas respondidas.
+
+        Cobertura de encuestas:
+        - Se exige un ticket cubierto por cada ticket finalizado, hasta 5.
+        - Una evaluación puede cubrir varios tickets mediante ticket_ids.
+        - Una evaluación roja sí cubre el ticket, pero penaliza su puntaje.
+        """
         for record in self:
             record.incidencia_ids = [(5, 0, 0)]
             record.reclamos_procedentes_count = 0
-
             record.evaluacion_servicio_ids = [(5, 0, 0)]
             record.evaluaciones_servicio_count = 0
             record.promedio_evaluacion_servicio = 100.0
             record.evaluaciones_criticas_count = 0
-
             record.evaluaciones_servicio_minimas = 0
             record.evaluaciones_servicio_faltantes = 0
             record.cumple_minimo_evaluaciones = True
             record.penalidad_evaluaciones_servicio = 0.0
-
             record.puntaje_calidad_real = 100.0
 
             if not record.usuario_id or not record.fecha:
                 continue
 
             inicio_mes, fin_mes = record._get_rango_mes_bono()
-
             reclamos = record._get_reclamos_que_afectan(inicio_mes, fin_mes)
+            tickets_periodo = record._get_tickets_bono(inicio_mes, fin_mes)
             evaluaciones = record._get_evaluaciones_servicio(inicio_mes, fin_mes)
 
             record.incidencia_ids = [(6, 0, reclamos.ids)]
             record.reclamos_procedentes_count = len(reclamos)
-
             record.evaluacion_servicio_ids = [(6, 0, evaluaciones.ids)]
             record.evaluaciones_servicio_count = len(evaluaciones)
 
-            # ============================================================
-            # REGLA DE MÍNIMO DE EVALUACIONES DE SERVICIO
-            # ============================================================
-            # 0 servicios       = 0 evaluaciones requeridas
-            # 1 a 2 servicios   = mínimo 1 evaluación positiva
-            # 3 a 4 servicios   = mínimo 2 evaluaciones positivas
-            # 5 o más servicios = mínimo 5 evaluaciones positivas
-            #
-            # IMPORTANTE:
-            # Para cumplir el mínimo SOLO cuentan las evaluaciones positivas.
-            #
-            # Evaluación positiva: >= 80
-            # Evaluación regular : >= 70 y < 80
-            # Evaluación roja    : < 70
-            #
-            # Las evaluaciones rojas NO cuentan para el mínimo y además penalizan.
-            # ============================================================
-
-            tickets_servicio = record.tickets_validos_bono or 0
-
-            if tickets_servicio <= 0:
-                minimo_evaluaciones = 0
-            elif tickets_servicio <= 2:
-                minimo_evaluaciones = 1
-            elif tickets_servicio <= 4:
-                minimo_evaluaciones = 2
-            else:
-                minimo_evaluaciones = 5
-
-            # ============================================================
-            # PROMEDIO, EVALUACIONES POSITIVAS Y EVALUACIONES EN ROJO
-            # ============================================================
-
-            promedio_servicio = 100.0
-            criticas = 0
-            evaluaciones_positivas_count = 0
-
-            if evaluaciones:
-                puntajes = [ev.puntaje_servicio or 0.0 for ev in evaluaciones]
-
-                promedio_servicio = (
-                    sum(puntajes) / len(puntajes)
-                    if puntajes else 100.0
+            tickets_validos_ids = set(tickets_periodo.ids)
+            tickets_cubiertos_ids = set()
+            for evaluacion in evaluaciones:
+                tickets_cubiertos_ids.update(
+                    ticket.id
+                    for ticket in evaluacion.ticket_ids
+                    if ticket.id in tickets_validos_ids
                 )
 
-                # Evaluaciones críticas / rojas: menor a 70%
-                criticas = len([p for p in puntajes if p < 70.0])
-
-                # Solo estas cuentan para cumplir el mínimo exigido
-                evaluaciones_positivas_count = len([p for p in puntajes if p >= 80.0])
-
+            tickets_servicio = len(tickets_periodo)
+            minimo_evaluaciones = min(tickets_servicio, 5)
+            cobertura_respondida = min(len(tickets_cubiertos_ids), 5)
             evaluaciones_faltantes = max(
                 0,
-                minimo_evaluaciones - evaluaciones_positivas_count
+                minimo_evaluaciones - cobertura_respondida
             )
-
-            cumple_minimo = evaluaciones_faltantes == 0
 
             record.evaluaciones_servicio_minimas = minimo_evaluaciones
             record.evaluaciones_servicio_faltantes = evaluaciones_faltantes
-            record.cumple_minimo_evaluaciones = cumple_minimo
+            record.cumple_minimo_evaluaciones = evaluaciones_faltantes == 0
+
+            promedio_servicio = 100.0
+            criticas = 0
+            if evaluaciones:
+                puntajes = [ev.puntaje_servicio or 0.0 for ev in evaluaciones]
+                promedio_servicio = sum(puntajes) / len(puntajes)
+                criticas = len([puntaje for puntaje in puntajes if puntaje < 70.0])
 
             record.promedio_evaluacion_servicio = promedio_servicio
             record.evaluaciones_criticas_count = criticas
 
-            # ============================================================
-            # PENALIDADES
-            # ============================================================
-            # Reclamo procedente: -10 puntos, máximo -40
-            # Evaluación positiva faltante: -5 puntos
-            # Evaluación roja: -10 puntos
-            # Penalidad total por encuestas: máximo -50
-            # ============================================================
-
-            penalidad_reclamos = min(40.0, len(reclamos) * 10.0)
+            # Penalidad progresiva acumulada por reincidencia.
+            cantidad_reclamos = len(reclamos)
+            if cantidad_reclamos <= 0:
+                penalidad_reclamos = 0.0
+            elif cantidad_reclamos == 1:
+                penalidad_reclamos = 5.0
+            elif cantidad_reclamos == 2:
+                penalidad_reclamos = 15.0
+            elif cantidad_reclamos == 3:
+                penalidad_reclamos = 30.0
+            else:
+                penalidad_reclamos = 50.0
 
             penalidad_faltantes = evaluaciones_faltantes * 5.0
             penalidad_rojas = criticas * 10.0
-
             penalidad_evaluaciones = min(
                 50.0,
                 penalidad_faltantes + penalidad_rojas
             )
-
             record.penalidad_evaluaciones_servicio = penalidad_evaluaciones
 
-            calidad_base = 100.0
-            calidad_base -= penalidad_reclamos
-            calidad_base -= penalidad_evaluaciones
-            calidad_base = max(0.0, calidad_base)
+            calidad_interna = max(
+                0.0,
+                100.0 - penalidad_reclamos - penalidad_evaluaciones
+            )
 
-            # ============================================================
-            # CÁLCULO FINAL DE CALIDAD
-            # ============================================================
-            # Si tuvo servicios y tiene evaluaciones:
-            # 60% calidad interna + 40% promedio cliente.
-            #
-            # Si no tiene evaluaciones pero debía tenerlas:
-            # queda afectado por las evaluaciones faltantes.
-            # ============================================================
-
-            if minimo_evaluaciones > 0 and evaluaciones:
-                calidad = (calidad_base * 0.60) + (promedio_servicio * 0.40)
+            # El promedio del cliente solo interviene cuando existe una
+            # evaluación respondida. Si no hubo tickets, encuestas no aplican.
+            if tickets_servicio > 0 and evaluaciones:
+                calidad = (calidad_interna * 0.60) + (promedio_servicio * 0.40)
             else:
-                calidad = calidad_base
+                calidad = calidad_interna
 
             record.puntaje_calidad_real = max(0.0, min(100.0, calidad))
 
@@ -1019,28 +981,24 @@ class EvaluacionPersonal(models.Model):
         'tickets_validos_bono'
     )
     def _compute_monto_bono(self):
+        """Calcula el monto y genera una explicación legible para gerencia."""
         for record in self:
             resultado = record.puntaje_total_bono or 0.0
-
-            # ============================================================
-            # BLOQUEO DE BONO POR NO CUMPLIR MÍNIMO DE EVALUACIONES
-            # ============================================================
-            # Si el técnico realizó servicios y debía tener evaluaciones,
-            # pero no cumple el mínimo de evaluaciones positivas, no cobra bono.
-            # Esto evita que una producción alta compense la falta de encuestas.
-            # ============================================================
 
             requiere_evaluaciones = (
                 (record.tickets_validos_bono or 0) > 0 and
                 (record.evaluaciones_servicio_minimas or 0) > 0
             )
-
             bloqueado_por_evaluaciones = (
                 requiere_evaluaciones and
                 not record.cumple_minimo_evaluaciones
             )
+            bloqueado_por_reclamos = (
+                (record.reclamos_procedentes_count or 0) >= 5
+            )
+            bono_bloqueado = bloqueado_por_evaluaciones or bloqueado_por_reclamos
 
-            if bloqueado_por_evaluaciones:
+            if bono_bloqueado:
                 bono = 0.0
             elif resultado >= 110.0:
                 bono = 350.0
@@ -1052,79 +1010,131 @@ class EvaluacionPersonal(models.Model):
                 bono = 0.0
 
             aplica_acelerador = (
-                not bloqueado_por_evaluaciones and
+                not bono_bloqueado and
                 resultado >= 110.0 and
                 record.reclamos_procedentes_count == 0 and
                 record.evaluaciones_criticas_count == 0 and
                 record.faltas_injustificadas_equivalentes == 0 and
                 record.cumple_minimo_evaluaciones
             )
-
             acelerador = 100.0 if aplica_acelerador else 0.0
 
+            if record.tipo_operativo == 'taller':
+                tipo_texto = 'Técnico fijo de taller'
+            elif record.tipo_operativo == 'servicios':
+                tipo_texto = 'Técnico exclusivo de servicios / alquiler'
+            else:
+                tipo_texto = 'Técnico mixto'
+
+            reclamos = record.reclamos_procedentes_count or 0
+            if reclamos <= 0:
+                penalidad_reclamos = 0
+            elif reclamos == 1:
+                penalidad_reclamos = 5
+            elif reclamos == 2:
+                penalidad_reclamos = 15
+            elif reclamos == 3:
+                penalidad_reclamos = 30
+            else:
+                penalidad_reclamos = 50
+
             resumen = [
-                'Resultado total bono: %.2f%%' % resultado,
-                'Bono base: S/ %.2f' % bono,
+                'RESUMEN PARA GERENCIA',
+                'Técnico: %s' % (record.usuario_id.name or 'Sin técnico'),
+                'Periodo: %s %s' % (record.mes or '', record.anio or ''),
+                'Perfil aplicado: %s.' % tipo_texto,
+                '',
+                '1. PRODUCCIÓN',
+                '- Taller: %s reparaciones finalizadas / meta ajustada %.2f = %.2f%%.' % (
+                    record.reparaciones_validas_bono,
+                    record.meta_taller_ajustada,
+                    record.porcentaje_produccion_taller,
+                ),
+                '- Servicios: %s tickets finalizados / meta ajustada %.2f = %.2f%%.' % (
+                    record.tickets_validos_bono,
+                    record.meta_servicios_ajustada,
+                    record.porcentaje_produccion_servicios,
+                ),
+                '- Producción total aplicada: %.2f%%. Aporta %.2f puntos de 45.' % (
+                    record.porcentaje_produccion_total,
+                    record.puntaje_produccion_bono,
+                ),
+                '',
+                '2. DISPONIBILIDAD Y AJUSTES',
+                '- Días laborables equivalentes: %.2f.' % record.dias_laborables_equivalentes,
+                '- Días descontados por vacaciones, salud o capacitación: %.2f.' % record.dias_ausencia_equivalentes,
+                '- Días ocupados en tickets de servicio: %.2f.' % record.dias_servicio_equivalentes,
+                '- Permisos personales y faltas no reducen la meta de producción.',
+                '',
+                '3. CALIDAD',
+                '- Reclamos procedentes que afectan al técnico: %s. Penalidad escalonada: -%s puntos.' % (
+                    reclamos,
+                    penalidad_reclamos,
+                ),
+                '- Tickets que requieren respuesta de cliente: %s (máximo 5).' % record.evaluaciones_servicio_minimas,
+                '- Evaluaciones respondidas registradas: %s.' % record.evaluaciones_servicio_count,
+                '- Tickets aún sin evaluación respondida: %s.' % record.evaluaciones_servicio_faltantes,
+                '- Evaluaciones críticas menores a 70%%: %s.' % record.evaluaciones_criticas_count,
+                '- Promedio de evaluaciones respondidas: %.2f%%.' % record.promedio_evaluacion_servicio,
+                '- Puntaje final de calidad: %.2f%%. Aporta %.2f puntos de 30.' % (
+                    record.puntaje_calidad_real,
+                    record.puntaje_calidad_bono,
+                ),
+                '',
+                '4. ASISTENCIA Y APOYO',
+                '- Faltas injustificadas equivalentes: %.2f. Puntaje asistencia: %.2f%%.' % (
+                    record.faltas_injustificadas_equivalentes,
+                    record.puntaje_asistencia_real,
+                ),
+                '- Puntaje apoyo / trabajo en equipo: %.2f%%.' % record.puntaje_apoyo_real,
+                '',
+                '5. RESULTADO',
+                '- Resultado total: %.2f%%.' % resultado,
+                '- Bono base calculado: S/ %.2f.' % bono,
             ]
 
             if bloqueado_por_evaluaciones:
-                resumen.append(
-                    'Bono bloqueado: no cumple el mínimo de evaluaciones positivas de servicio.'
-                )
-                resumen.append(
-                    'Evaluaciones mínimas requeridas: %s. Evaluaciones faltantes: %s.'
-                    % (
-                        record.evaluaciones_servicio_minimas,
+                resumen.extend([
+                    '- BONO BLOQUEADO: faltan %s tickets con evaluación respondida.' % (
                         record.evaluaciones_servicio_faltantes
-                    )
+                    ),
+                    '  Solo cuentan evaluaciones en estado Completada y con fecha de respuesta.',
+                ])
+
+            if bloqueado_por_reclamos:
+                resumen.append(
+                    '- BONO BLOQUEADO: tiene %s reclamos procedentes; desde 5 reclamos no corresponde bono.'
+                    % reclamos
                 )
 
             if aplica_acelerador:
-                resumen.append('Acelerador aplicado: S/ 100.00')
-                resumen.append(
-                    'Motivo: resultado mayor o igual a 110%, sin reclamos procedentes, '
-                    'sin evaluaciones críticas, sin faltas injustificadas y con mínimo '
-                    'de evaluaciones de servicio cumplido.'
-                )
+                resumen.append('- Acelerador aplicado: S/ 100.00.')
             else:
                 razones = []
-
-                if bloqueado_por_evaluaciones:
-                    razones.append('bono bloqueado por mínimo de evaluaciones no cumplido')
-
+                if bono_bloqueado:
+                    razones.append('el bono se encuentra bloqueado')
                 if resultado < 110.0:
-                    razones.append('resultado menor a 110%')
-
-                if record.reclamos_procedentes_count > 0:
-                    razones.append('reclamos procedentes')
-
+                    razones.append('el resultado es menor a 110%')
+                if reclamos > 0:
+                    razones.append('tiene reclamos procedentes')
                 if record.evaluaciones_criticas_count > 0:
-                    razones.append('evaluaciones críticas')
-
+                    razones.append('tiene evaluaciones críticas')
                 if record.faltas_injustificadas_equivalentes > 0:
-                    razones.append('faltas injustificadas')
-
+                    razones.append('tiene faltas injustificadas')
                 if not record.cumple_minimo_evaluaciones:
-                    razones.append(
-                        'no cumple mínimo de evaluaciones positivas; faltan %s'
-                        % record.evaluaciones_servicio_faltantes
-                    )
-
+                    razones.append('no completó la cobertura de encuestas')
                 resumen.append(
-                    'Acelerador no aplicado: %s.'
-                    % (', '.join(razones) if razones else 'no cumple condiciones')
+                    '- Acelerador no aplicado: %s.' % (
+                        ', '.join(razones) if razones else 'no cumple todas las condiciones'
+                    )
                 )
 
             record.bono_base = bono
             record.aplica_acelerador = aplica_acelerador
             record.monto_acelerador = acelerador
             record.bono_final = bono + acelerador
-            record.motivo_bono = '\n'.join(resumen)
+            record.motivo_bono = '\\n'.join(resumen)
 
-    # ============================================================
-    # MÉTODOS COMPUTE - ANÁLISIS DIARIO
-    # ============================================================
-    
     @api.depends('detalle_diario_ids')
     def _compute_tiene_detalle(self):
         """Verifica si ya se generó el detalle diario"""
@@ -1174,25 +1184,17 @@ class EvaluacionPersonal(models.Model):
     
     @api.depends('usuario_id', 'fecha')
     def _compute_reparaciones(self):
-        """
-        Calcula la cantidad de reparaciones realizadas en el mes.
-        CORREGIDO: create_date está en UTC; el rango del mes se convierte
-        de America/Lima a UTC para no desplazar registros de fin de mes.
-        """
+        """Calcula reparaciones finalizadas en el mes, no registros creados."""
         for record in self:
-            if record.usuario_id and record.fecha:
-                inicio_mes = record.fecha.replace(day=1)
-                fin_mes = inicio_mes + relativedelta(months=1)
-                inicio_utc, fin_utc = self._rango_utc(inicio_mes, fin_mes)
-                
-                reparaciones = self.env['reparaciones.reparaciones'].search_count([
-                    ('responsable_id', '=', record.usuario_id.id),
-                    ('create_date', '>=', inicio_utc),
-                    ('create_date', '<', fin_utc),
-                ])
-                record.cantidad_reparaciones = reparaciones
-            else:
+            if not record.usuario_id or not record.fecha:
                 record.cantidad_reparaciones = 0
+                continue
+
+            inicio_mes = record.fecha.replace(day=1)
+            fin_mes = inicio_mes + relativedelta(months=1)
+            record.cantidad_reparaciones = len(
+                record._get_reparaciones_bono(inicio_mes, fin_mes)
+            )
 
     @api.depends('usuario_id', 'fecha')
     def _compute_tickets(self):
@@ -1601,41 +1603,48 @@ class EvaluacionPersonal(models.Model):
         return 0.0
 
     def _get_horas_laborales_fecha(self, fecha):
+        """Devuelve las horas laborales reales del técnico para una fecha."""
         self.ensure_one()
 
-        perfil_tecnico = getattr(self, 'perfil_tecnico_id', False)
+        perfil_tecnico = False
+        if self._model_exists('mantenimiento.tecnico.perfil') and self.usuario_id:
+            perfil_tecnico = self.env['mantenimiento.tecnico.perfil'].search([
+                ('tecnico_id', '=', self.usuario_id.id),
+                ('active', '=', True),
+            ], limit=1)
 
-        if perfil_tecnico and hasattr(perfil_tecnico, 'get_disponibilidad_fecha'):
+        if perfil_tecnico:
             try:
-                disp = perfil_tecnico.get_disponibilidad_fecha(fecha)
-                if disp and disp.get('disponible'):
-                    return max(
-                        0.0,
-                        (disp.get('hora_fin') or 0.0) - (disp.get('hora_inicio') or 0.0)
-                    )
+                trabaja, hora_inicio, hora_fin = perfil_tecnico._get_horario_base_fecha(fecha)
+                if trabaja and hora_fin > hora_inicio:
+                    return max(0.0, hora_fin - hora_inicio)
             except Exception:
                 _logger.warning(
-                    '[BONO] No se pudo obtener disponibilidad para %s',
+                    '[BONO] No se pudo obtener horario del perfil para %s',
                     fecha,
                     exc_info=True
                 )
 
         if fecha.weekday() == 5:
             return 4.0
-
         if fecha.weekday() < 5:
             return 8.0
-
         return 0.0
 
     def _get_ausencias_equivalentes(self, inicio_mes, fin_mes):
+        """
+        Solo reducen la meta las ausencias aprobadas cuyo impacto sea
+        ``reduce_meta``. Los permisos personales y las faltas mantienen
+        la meta completa; las faltas se penalizan por separado en asistencia.
+        """
         self.ensure_one()
         if not self._model_exists('mantenimiento.tecnico.ausencia'):
             return 0.0
+
         ausencias = self.env['mantenimiento.tecnico.ausencia'].search([
             ('tecnico_id', '=', self.usuario_id.id),
             ('estado', 'in', ['aprobado', 'ausente_activo', 'cerrado']),
-            ('tipo', 'in', ['permiso', 'vacaciones', 'enfermedad', 'descanso_medico', 'capacitacion', 'bloqueo_admin']),
+            ('impacto_evaluacion', '=', 'reduce_meta'),
             ('fecha_inicio', '<', fin_mes),
             '|',
             ('fecha_fin', '=', False),
@@ -1680,17 +1689,29 @@ class EvaluacionPersonal(models.Model):
 
     def _get_reparaciones_bono(self, inicio_mes, fin_mes):
         """
-        CORREGIDO: create_date está en UTC; el rango del mes se convierte
-        de America/Lima a UTC.
+        Cuenta la producción de taller por la fecha real de finalización.
+        Una máquina ingresada en un mes anterior cuenta cuando su revisión
+        se finaliza, evitando atribuir producción por la creación del registro.
         """
         self.ensure_one()
         if not self._model_exists('reparaciones.reparaciones'):
             return self.env['reparaciones.reparaciones']
+
         inicio_dt, fin_dt = self._rango_utc(inicio_mes, fin_mes)
-        return self.env['reparaciones.reparaciones'].search([
+        Reparacion = self.env['reparaciones.reparaciones']
+
+        if 'fecha_finalizacion' not in Reparacion._fields:
+            _logger.warning(
+                '[BONO] reparaciones.reparaciones no tiene fecha_finalizacion; '
+                'no se contabilizará producción para evitar usar create_date.'
+            )
+            return Reparacion.browse()
+
+        return Reparacion.search([
             ('responsable_id', '=', self.usuario_id.id),
-            ('create_date', '>=', inicio_dt),
-            ('create_date', '<', fin_dt),
+            ('fecha_finalizacion', '!=', False),
+            ('fecha_finalizacion', '>=', inicio_dt),
+            ('fecha_finalizacion', '<', fin_dt),
         ])
 
     def _get_tickets_bono(self, inicio_mes, fin_mes):
@@ -1876,19 +1897,26 @@ class EvaluacionPersonal(models.Model):
 
     def _get_evaluaciones_servicio(self, inicio_mes, fin_mes):
         """
-        CORREGIDO: evaluation_date es Datetime en UTC; su rango se convierte
-        de America/Lima a UTC. visit_date es Date y se compara directo.
+        Devuelve únicamente evaluaciones realmente respondidas.
+
+        La evaluación debe estar completada, tener fecha de respuesta y cubrir
+        al menos un ticket finalizado del técnico dentro del periodo. Esto evita
+        contar encuestas solo creadas, enviadas o expiradas.
         """
         self.ensure_one()
         if not self._model_exists('client.service.evaluation'):
             return self.env['client.service.evaluation']
-        inicio_utc, fin_utc = self._rango_utc(inicio_mes, fin_mes)
-        return self.env['client.service.evaluation'].search([
+
+        Evaluacion = self.env['client.service.evaluation']
+        tickets_periodo = self._get_tickets_bono(inicio_mes, fin_mes)
+        if not tickets_periodo:
+            return Evaluacion.browse()
+
+        return Evaluacion.search([
             ('technician_id', '=', self.usuario_id.id),
             ('state', '=', 'completed'),
-            '|',
-            '&', ('visit_date', '>=', inicio_mes), ('visit_date', '<', fin_mes),
-            '&', ('evaluation_date', '>=', inicio_utc), ('evaluation_date', '<', fin_utc),
+            ('response_date', '!=', False),
+            ('ticket_ids', 'in', tickets_periodo.ids),
         ])
 
     def action_recalcular_bono(self):
@@ -2706,52 +2734,51 @@ class EvaluacionPersonalDetalleDiario(models.Model):
     
     @api.depends('usuario_id', 'fecha')
     def _compute_trabajos(self):
-        """
-        Busca las reparaciones y tickets realizados este día.
-        CORREGIDO:
-        - create_date (UTC) se compara contra el día local convertido a UTC.
-        - agenda: si es Date se compara por igualdad de fecha; si es Datetime
-          (UTC) se compara contra el rango del día local convertido a UTC.
-          Antes se usaba >= fecha y <= fecha, que con Datetime solo capturaba
-          tickets exactamente a medianoche.
-        """
+        """Busca reparaciones finalizadas y tickets finalizados en cada día."""
         Evaluacion = self.env['evaluacion.personal']
         for record in self:
-            if record.usuario_id and record.fecha:
-                dia_siguiente = record.fecha + timedelta(days=1)
-                inicio_utc, fin_utc = Evaluacion._rango_utc(record.fecha, dia_siguiente)
-                
-                # Buscar reparaciones creadas este día (día local Lima)
-                reparaciones = self.env['reparaciones.reparaciones'].search([
-                    ('responsable_id', '=', record.usuario_id.id),
-                    ('create_date', '>=', inicio_utc),
-                    ('create_date', '<', fin_utc)
-                ])
-                record.reparacion_ids = [(6, 0, reparaciones.ids)]
-                
-                # Buscar tickets agendados para este día
-                Ticket = self.env['ticket.alquiler']
-                agenda_field = Ticket._fields.get('agenda')
-
-                if agenda_field and agenda_field.type == 'date':
-                    domain_fecha = [
-                        ('agenda', '>=', record.fecha),
-                        ('agenda', '<', dia_siguiente),
-                    ]
-                else:
-                    domain_fecha = [
-                        ('agenda', '>=', inicio_utc),
-                        ('agenda', '<', fin_utc),
-                    ]
-
-                tickets = Ticket.search([
-                    ('responsable', '=', record.usuario_id.id),
-                ] + domain_fecha)
-                record.ticket_ids = [(6, 0, tickets.ids)]
-            else:
+            if not record.usuario_id or not record.fecha:
                 record.reparacion_ids = [(5, 0, 0)]
                 record.ticket_ids = [(5, 0, 0)]
-    
+                continue
+
+            dia_siguiente = record.fecha + timedelta(days=1)
+            inicio_utc, fin_utc = Evaluacion._rango_utc(record.fecha, dia_siguiente)
+
+            Reparacion = self.env['reparaciones.reparaciones']
+            if 'fecha_finalizacion' in Reparacion._fields:
+                reparaciones = Reparacion.search([
+                    ('responsable_id', '=', record.usuario_id.id),
+                    ('fecha_finalizacion', '!=', False),
+                    ('fecha_finalizacion', '>=', inicio_utc),
+                    ('fecha_finalizacion', '<', fin_utc),
+                ])
+            else:
+                reparaciones = Reparacion.browse()
+            record.reparacion_ids = [(6, 0, reparaciones.ids)]
+
+            Ticket = self.env['ticket.alquiler']
+            agenda_field = Ticket._fields.get('agenda')
+            if agenda_field and agenda_field.type == 'date':
+                domain_fecha = [
+                    ('agenda', '>=', record.fecha),
+                    ('agenda', '<', dia_siguiente),
+                ]
+            else:
+                domain_fecha = [
+                    ('agenda', '>=', inicio_utc),
+                    ('agenda', '<', fin_utc),
+                ]
+
+            domain = [
+                ('responsable', '=', record.usuario_id.id),
+            ] + domain_fecha
+            if 'estado' in Ticket._fields:
+                domain.append(('estado', '=', 'finalizado'))
+
+            tickets = Ticket.search(domain)
+            record.ticket_ids = [(6, 0, tickets.ids)]
+
     @api.depends('reparacion_ids', 'ticket_ids')
     def _compute_cantidades(self):
         """Cuenta la cantidad de trabajos"""

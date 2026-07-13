@@ -225,12 +225,12 @@ class MantenimientoTecnicoAusencia(models.Model):
     impacto_evaluacion = fields.Selection([
         ('no_afecta_meta', 'No afecta meta mensual'),
         ('reduce_meta', 'Reduce meta proporcionalmente'),
-        ('cuenta_actividad', 'Cuenta como actividad laboral'),
+        ('cuenta_actividad', 'Cuenta como actividad laboral (compatibilidad)'),
         ('revision_manual', 'Revisión manual'),
     ], string='Impacto en evaluación mensual',
     default='no_afecta_meta',
     tracking=True,
-    help='Define si esta ausencia debe ajustar o no la meta mensual de reparaciones o servicios.')
+    help='Permisos y faltas no reducen la meta. Vacaciones, enfermedad, descanso médico y capacitación la reducen proporcionalmente.')
 
     dias_ajuste_meta = fields.Float(
         string='Días para ajuste de meta',
@@ -393,7 +393,7 @@ class MantenimientoTecnicoAusencia(models.Model):
             elif rec.tipo == 'capacitacion':
                 rec.dia_completo = False
                 rec.evaluacion_administrativa = 'no_aplica'
-                rec.impacto_evaluacion = 'cuenta_actividad'
+                rec.impacto_evaluacion = 'reduce_meta'
 
                 if not rec.hora_inicio:
                     rec.hora_inicio = 8.0
@@ -482,7 +482,7 @@ class MantenimientoTecnicoAusencia(models.Model):
                 vals.setdefault('impacto_evaluacion', 'no_afecta_meta')
 
             elif tipo == 'capacitacion':
-                vals.setdefault('impacto_evaluacion', 'cuenta_actividad')
+                vals.setdefault('impacto_evaluacion', 'reduce_meta')
 
             elif tipo == 'bloqueo_admin':
                 vals.setdefault('impacto_evaluacion', 'revision_manual')

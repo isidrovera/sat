@@ -178,6 +178,7 @@
         'views/reparaciones_avance_templates.xml',
         'views/sat_notificacion_log_views.xml',
         'views/evaluacion_personal_dashboard_views.xml',
+        'views/evaluacion_cierre_mensual_views.xml',
         'views/acciones_menus.xml',
         
     ],
