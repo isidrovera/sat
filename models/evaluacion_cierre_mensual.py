@@ -369,19 +369,94 @@ class EvaluacionCierreMensual(models.Model):
 
         inicio_utc, fin_utc = self._get_rango_utc()
 
-        return self.env['sat.sat'].search([
+        Sat = self.env['sat.sat']
+        Reparacion = self.env['reparaciones.reparaciones']
+
+        # ============================================================
+        # 1. MÁQUINAS INGRESADAS DURANTE EL MES
+        # ============================================================
+        maquinas_ingresadas_mes = Sat.search([
+            ('check_ingreso', '=', True),
+            ('ingreso_fecha', '>=', inicio_utc),
+            ('ingreso_fecha', '<', fin_utc),
+        ])
+
+        # ============================================================
+        # 2. BACKLOG ACTIVO DE MESES ANTERIORES
+        # Solo máquinas que siguen pendientes de revisión.
+        # No se incluyen entregadas, con problemas ni de partes.
+        # ============================================================
+        maquinas_backlog = Sat.search([
             ('check_ingreso', '=', True),
             ('ingreso_fecha', '!=', False),
-            ('ingreso_fecha', '<', fin_utc),
-        ], order='ingreso_fecha asc, id asc')
+            ('ingreso_fecha', '<', inicio_utc),
+            ('estado_ventas_id', 'in', [
+                'sin_revisar',
+                'para_revision',
+                'en_revision',
+                'finalizado',
+            ]),
+        ])
 
+        # ============================================================
+        # 3. MÁQUINAS ENTREGADAS DURANTE EL MES
+        # Se incluyen solamente para comprobar si fueron entregadas
+        # sin una reparación finalizada.
+        # ============================================================
+        maquinas_entregadas_mes = Sat.browse()
+
+        if 'fecha_entrega' in Sat._fields:
+            maquinas_entregadas_mes = Sat.search([
+                ('check_ingreso', '=', True),
+                ('estado_ventas_id', '=', 'entregada'),
+                ('fecha_entrega', '>=', self.fecha_inicio),
+                ('fecha_entrega', '<=', self.fecha_fin),
+            ])
+
+        # ============================================================
+        # 4. MÁQUINAS CON REPARACIÓN FINALIZADA DURANTE EL MES
+        # Aunque actualmente estén entregadas, deben contar como
+        # producción del periodo en que fueron finalizadas.
+        # ============================================================
+        maquinas_finalizadas_mes = Sat.browse()
+
+        if (
+            'fecha_finalizacion' in Reparacion._fields
+            and 'maquina_id' in Reparacion._fields
+        ):
+            reparaciones_mes = Reparacion.search([
+                ('fecha_finalizacion', '>=', inicio_utc),
+                ('fecha_finalizacion', '<', fin_utc),
+                ('maquina_id', '!=', False),
+            ])
+
+            maquinas_finalizadas_mes = reparaciones_mes.mapped('maquina_id')
+
+        # La unión de recordsets elimina duplicados automáticamente.
+        maquinas = (
+            maquinas_ingresadas_mes
+            | maquinas_backlog
+            | maquinas_entregadas_mes
+            | maquinas_finalizadas_mes
+        )
+
+        return maquinas.sorted(
+            key=lambda maquina: (
+                maquina.ingreso_fecha or fields.Datetime.from_string(
+                    '1970-01-01 00:00:00'
+                ),
+                maquina.id,
+            )
+        )
     def _clasificar_maquina(self, maquina, inicio_utc, fin_utc):
         reparaciones = self._get_reparaciones_maquina(maquina)
+
         reparacion_mes = self._get_reparacion_finalizada_mes(
             maquina,
             inicio_utc,
             fin_utc,
         )
+
         reparacion_anterior = self._get_reparacion_finalizada_antes(
             maquina,
             inicio_utc,
@@ -389,14 +464,38 @@ class EvaluacionCierreMensual(models.Model):
 
         estado = maquina.estado_ventas_id or 'sin_revisar'
         ingreso_fecha = fields.Datetime.to_datetime(maquina.ingreso_fecha)
-        es_ingreso_mes = bool(inicio_utc <= ingreso_fecha < fin_utc)
-        es_backlog = bool(ingreso_fecha < inicio_utc and not reparacion_anterior)
+
+        es_ingreso_mes = bool(
+            ingreso_fecha
+            and inicio_utc <= ingreso_fecha < fin_utc
+        )
+
+        es_ingreso_anterior = bool(
+            ingreso_fecha
+            and ingreso_fecha < inicio_utc
+        )
+
+        fecha_entrega = False
+        entrega_en_mes = False
+
+        if 'fecha_entrega' in maquina._fields and maquina.fecha_entrega:
+            fecha_entrega = fields.Date.to_date(maquina.fecha_entrega)
+
+            entrega_en_mes = bool(
+                self.fecha_inicio
+                <= fecha_entrega
+                <= self.fecha_fin
+            )
 
         valores = {
             'maquina_id': maquina.id,
             'ingreso_fecha': maquina.ingreso_fecha,
             'estado_cierre': estado,
-            'origen_pool': 'ingreso_mes' if es_ingreso_mes else 'backlog',
+            'origen_pool': (
+                'ingreso_mes'
+                if es_ingreso_mes
+                else 'backlog'
+            ),
             'incluida_pool': False,
             'excluida': False,
             'motivo_exclusion': False,
@@ -407,50 +506,45 @@ class EvaluacionCierreMensual(models.Model):
             'fecha_finalizacion': False,
         }
 
-        # Una máquina ya finalizada antes de iniciar el periodo no pertenece
-        # al cierre actual, salvo que hubiera sido reactivada y tenga una nueva
-        # reparación finalizada durante el mes.
-        if reparacion_anterior and not reparacion_mes:
-            return False
-
-        # Producción finalizada dentro del mes.
+        # ============================================================
+        # 1. FINALIZADA DURANTE EL MES
+        # Siempre cuenta como producción del mes de finalización.
+        # ============================================================
         if reparacion_mes:
             usuario = self._get_usuario_reparacion(reparacion_mes)
+
             valores.update({
                 'incluida_pool': True,
                 'finalizada_mes': True,
                 'pendiente_cierre': False,
-                'origen_pool': (
-                    'reactivada'
-                    if estado in ('para_revision', 'en_revision')
-                    and not es_ingreso_mes
-                    else valores['origen_pool']
-                ),
                 'reparacion_id': reparacion_mes.id,
                 'tecnico_id': usuario.id if usuario else False,
-                'fecha_finalizacion': self._get_fecha_finalizacion_reparacion(
-                    reparacion_mes
-                ),
+                'fecha_finalizacion':
+                    self._get_fecha_finalizacion_reparacion(reparacion_mes),
             })
+
             return valores
 
-        # Estados que salen temporalmente del pool.
-        if estado == 'con_problemas':
-            valores.update({
-                'excluida': True,
-                'motivo_exclusion': 'con_problemas',
-            })
-            return valores
+        # ============================================================
+        # 2. YA HABÍA FINALIZADO ANTES DEL MES
+        # No pertenece al cierre actual.
+        # ============================================================
+        if reparacion_anterior:
+            return False
 
-        if estado == 'de_partes':
-            valores.update({
-                'excluida': True,
-                'motivo_exclusion': 'de_partes',
-            })
-            return valores
-
-        # Entregada sin una revisión finalizada registrada.
+        # ============================================================
+        # 3. ENTREGADA SIN REPARACIÓN FINALIZADA
+        #
+        # Solo se registra cuando:
+        # - ingresó durante el mes, o
+        # - su fecha de entrega pertenece al mes.
+        #
+        # Así se evita traer entregas históricas.
+        # ============================================================
         if estado == 'entregada':
+            if not es_ingreso_mes and not entrega_en_mes:
+                return False
+
             valores.update({
                 'excluida': True,
                 'motivo_exclusion': (
@@ -459,29 +553,60 @@ class EvaluacionCierreMensual(models.Model):
                     else 'entregada_sin_finalizacion'
                 ),
             })
+
             return valores
 
-        # Estados activos o pendientes que sí forman parte del pool.
+        # ============================================================
+        # 4. CON PROBLEMAS O DE PARTES
+        #
+        # Si ingresaron durante el mes, se muestran como exclusión.
+        # Las históricas no se arrastran indefinidamente al cierre.
+        # ============================================================
+        if estado == 'con_problemas':
+            if not es_ingreso_mes:
+                return False
+
+            valores.update({
+                'excluida': True,
+                'motivo_exclusion': 'con_problemas',
+            })
+
+            return valores
+
+        if estado == 'de_partes':
+            if not es_ingreso_mes:
+                return False
+
+            valores.update({
+                'excluida': True,
+                'motivo_exclusion': 'de_partes',
+            })
+
+            return valores
+
+        # ============================================================
+        # 5. MÁQUINAS ACTIVAS DEL POOL
+        # ============================================================
         if estado in (
             'sin_revisar',
             'para_revision',
             'en_revision',
             'finalizado',
         ):
-            if not es_ingreso_mes and not es_backlog:
-                valores['origen_pool'] = 'reactivada'
-
             valores.update({
                 'incluida_pool': True,
                 'pendiente_cierre': True,
+                'origen_pool': (
+                    'ingreso_mes'
+                    if es_ingreso_mes
+                    else 'backlog'
+                ),
             })
+
             return valores
 
-        valores.update({
-            'excluida': True,
-            'motivo_exclusion': 'estado_no_exigible',
-        })
-        return valores
+        # Cualquier estado no reconocido queda fuera del cierre.
+        return False
 
     def _calcular_lineas_maquinas(self):
         self.ensure_one()
