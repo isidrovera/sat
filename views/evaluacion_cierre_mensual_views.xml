@@ -110,7 +110,7 @@
 
                         <field name="state"
                                widget="statusbar"
-                               statusbar_visible="borrador,calculado,confirmado,cancelado"/>
+                               statusbar_visible="borrador,calculado,confirmado,cancelado" options="{'clickable': 1}"/>
                     </header>
 
                     <sheet>
