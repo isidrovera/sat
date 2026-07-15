@@ -1803,6 +1803,26 @@ class EvaluacionPersonal(models.Model):
 
     def _model_exists(self, model_name):
         return bool(self.env.registry.get(model_name))
+    def _get_tipo_operativo_desde_perfil(self, usuario_id):
+        """Devuelve el tipo operativo del perfil técnico activo, o False."""
+        if not usuario_id or not self._model_exists('mantenimiento.tecnico.perfil'):
+            return False
+        perfil = self.env['mantenimiento.tecnico.perfil'].search([
+            ('tecnico_id', '=', usuario_id),
+            ('active', '=', True),
+        ], limit=1)
+        return perfil.tipo_operativo if perfil else False
+
+
+    @api.onchange('usuario_id')
+    def _onchange_usuario_id_tipo_operativo(self):
+        """Al seleccionar el técnico, jala el tipo operativo desde su perfil."""
+        for record in self:
+            tipo = self._get_tipo_operativo_desde_perfil(
+                record.usuario_id.id if record.usuario_id else False
+            )
+            if tipo:
+                record.tipo_operativo = tipo
 
     def _get_dias_laborables_equivalentes(self, inicio_mes, fin_mes):
         dias = 0.0
@@ -2253,16 +2273,24 @@ class EvaluacionPersonal(models.Model):
         Genera secuencia automática y crea detalle diario.
         CORREGIDO: firma model_create_multi (Odoo 18) para soportar
         creación en lote sin warnings de deprecación.
+        NUEVO: si no se especifica tipo_operativo, se toma automáticamente
+        del perfil técnico activo (mantenimiento.tecnico.perfil).
         """
         for vals in vals_list:
             if vals.get('name', 'New') == 'New':
                 vals['name'] = self.env['ir.sequence'].next_by_code('evaluacion.personal') or 'New'
-        
+
+            # Autocompletar tipo operativo desde el perfil del técnico
+            if not vals.get('tipo_operativo') and vals.get('usuario_id'):
+                tipo = self._get_tipo_operativo_desde_perfil(vals['usuario_id'])
+                if tipo:
+                    vals['tipo_operativo'] = tipo
+
         evaluaciones = super(EvaluacionPersonal, self).create(vals_list)
-        
+
         # Generar detalle diario automáticamente
         evaluaciones.action_generar_detalle_diario()
-        
+
         return evaluaciones
 
     def write(self, vals):
@@ -2406,13 +2434,15 @@ class EvaluacionPersonal(models.Model):
         Duplica evaluaciones del mes anterior para el mes actual.
         Útil para ejecutar manualmente si el cron automático falló.
         Puede ejecutarse sobre varios registros a la vez.
+        NUEVO: el tipo operativo se refresca desde el perfil vigente del
+        técnico; si no tiene perfil, se conserva el de la evaluación copiada.
         """
         _logger.info("📌 Acción manual: Duplicar Evaluaciones del Mes Anterior")
 
         hoy = fields.Date.today()
         inicio_mes_actual = hoy.replace(day=1)
         fin_mes_actual = inicio_mes_actual + relativedelta(months=1)
-        
+
         mes_anterior = inicio_mes_actual - relativedelta(months=1)
         mes_nombre = babel.dates.format_date(mes_anterior, format='MMMM', locale='es_ES').capitalize()
         anio_texto = mes_anterior.strftime('%Y')
@@ -2436,17 +2466,24 @@ class EvaluacionPersonal(models.Model):
                 ('fecha', '>=', inicio_mes_actual),
                 ('fecha', '<', fin_mes_actual),
             ])
-            
+
             if ya_existe:
                 _logger.info(f"⏭️ Ya existe evaluación de {mes_nombre} para {eval.usuario_id.name}. Se omite.")
                 omitidas += 1
                 continue
+
+            # Tipo operativo vigente según el perfil del técnico
+            tipo_actual = (
+                self._get_tipo_operativo_desde_perfil(eval.usuario_id.id)
+                or eval.tipo_operativo
+            )
 
             # Duplicar evaluación
             nueva = eval.copy({
                 'name': 'New',
                 'fecha': hoy,
                 'state': 'borrador',
+                'tipo_operativo': tipo_actual,
                 'cantidad_reparaciones': False,
                 'cantidad_tickets': False,
                 'porcentaje_reparaciones': False,
@@ -2573,6 +2610,8 @@ class EvaluacionPersonal(models.Model):
         Cron que se ejecuta el último día de cada mes a las 23:59.
         Duplica evaluaciones del mes anterior para crear borradores del mes actual.
         Solo duplica si el técnico no tiene evaluación este mes.
+        NUEVO: el tipo operativo se refresca desde el perfil vigente del
+        técnico; si no tiene perfil, se conserva el de la evaluación copiada.
         """
         hoy = fields.Date.today()
         ultimo_dia = calendar.monthrange(hoy.year, hoy.month)[1]
@@ -2620,12 +2659,19 @@ class EvaluacionPersonal(models.Model):
                     omitidas += 1
                     continue
 
+                # Tipo operativo vigente según el perfil del técnico
+                tipo_actual = (
+                    self._get_tipo_operativo_desde_perfil(eval.usuario_id.id)
+                    or eval.tipo_operativo
+                )
+
                 # Duplicar evaluación
                 nueva = eval.copy({
                     'name': 'New',
                     'fecha': hoy,
                     'state': 'borrador',
                     'evaluador_id': eval.evaluador_id.id,
+                    'tipo_operativo': tipo_actual,
                     'cantidad_reparaciones': False,
                     'cantidad_tickets': False,
                     'porcentaje_reparaciones': False,
