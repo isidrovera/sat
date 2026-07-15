@@ -161,7 +161,7 @@ class ClientServiceEvaluation(models.Model):
         ('3', 'Bueno'),
         ('4', 'Muy Bueno'),
         ('5', 'Excelente')
-    ], string='¿Cómo califica el cierre del servicio? (explicación, limpieza y orden)',
+    ], string='¿Cómo califica la atención brindada por el técnico? (explicación, limpieza y orden)',
        tracking=True,
        help='Pregunta fusionada: incluye la explicación del trabajo realizado y la limpieza/orden.')
 
