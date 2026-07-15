@@ -230,6 +230,12 @@ class ClientServiceEvaluation(models.Model):
     comentarios = fields.Text('Comentarios o Sugerencias', tracking=True)
     token = fields.Char('Token de Evaluación', copy=False, index=True)
 
+    evaluation_url = fields.Char(
+        'Enlace de Evaluación',
+        compute='_compute_evaluation_url',
+        help='URL pública del formulario de evaluación. Es el mismo enlace que recibe el cliente por correo.'
+    )
+
     # ==================== CAMPOS CALCULADOS ====================
     puntaje_servicio = fields.Float(
         'Puntaje del Servicio (%)',
@@ -375,6 +381,16 @@ class ClientServiceEvaluation(models.Model):
                 record.expiration_date = record.evaluation_date + timedelta(days=expiration_days)
             else:
                 record.expiration_date = False
+
+    @api.depends('token')
+    def _compute_evaluation_url(self):
+        base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url') or ''
+        base_url = base_url.rstrip('/')
+        for record in self:
+            if record.token:
+                record.evaluation_url = f"{base_url}/evaluation/submit/{record.token}"
+            else:
+                record.evaluation_url = False
 
     @api.depends('email_sent_date', 'response_date')
     def _compute_response_time(self):

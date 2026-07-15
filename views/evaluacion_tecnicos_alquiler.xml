@@ -61,6 +61,9 @@
                                 <field name="evaluation_date"/>
                                 <field name="visit_date"/>
                                 <field name="expiration_date" readonly="1"/>
+                                <field name="evaluation_url" widget="CopyClipboardChar"
+                                       readonly="1"
+                                       invisible="not evaluation_url or state in ['completed', 'expired']"/>
                             </group>
                             <group string="Resultados">
                                 <field name="puntaje_servicio" widget="percentpie"/>
