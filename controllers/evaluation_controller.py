@@ -5,8 +5,34 @@ import logging
 
 _logger = logging.getLogger(__name__)
 
+# Valores permitidos por campo: se descarta cualquier valor manipulado en el POST
+# que no pertenezca a la selección, evitando errores de escritura o datos basura.
+ALLOWED_VALUES = {
+    'solucion_problema': {'1', '2', '3', '4', '5'},
+    'explicacion_trabajo': {'1', '2', '3', '4', '5'},
+    'realizo_pruebas': {'si', 'no'},
+    'consulto_suministros': {'si', 'no'},
+}
+
+# Preguntas obligatorias de la encuesta simplificada
+REQUIRED_FIELDS = [
+    'solucion_problema',
+    'explicacion_trabajo',
+    'realizo_pruebas',
+    'consulto_suministros',
+]
+
 
 class EvaluationController(http.Controller):
+
+    def _get_evaluation_by_token(self, token):
+        if not token:
+            return request.env['client.service.evaluation'].sudo().browse()
+
+        return request.env['client.service.evaluation'].sudo().search([
+            ('token', '=', token),
+            ('state', '=', 'sent')
+        ], limit=1)
 
     @http.route(
         ['/evaluation/submit/<string:token>'],
@@ -15,10 +41,7 @@ class EvaluationController(http.Controller):
         website=True
     )
     def evaluation_form(self, token, **kw):
-        evaluation = request.env['client.service.evaluation'].sudo().search([
-            ('token', '=', token),
-            ('state', '=', 'sent')
-        ], limit=1)
+        evaluation = self._get_evaluation_by_token(token)
 
         if not evaluation:
             return request.render('sat.evaluation_expired', {})
@@ -51,31 +74,42 @@ class EvaluationController(http.Controller):
         if not token:
             return request.render('sat.evaluation_expired', {})
 
-        evaluation = request.env['client.service.evaluation'].sudo().search([
-            ('token', '=', token),
-            ('state', '=', 'sent')
-        ], limit=1)
+        evaluation = self._get_evaluation_by_token(token)
 
         if not evaluation:
             return request.render('sat.evaluation_expired', {})
 
         try:
-            values = {
-                'saludo_presentacion': post.get('saludo_presentacion') or False,
-                'diagnostico_problema': post.get('diagnostico_problema') or False,
-                'solucion_problema': post.get('solucion_problema') or False,
-                'explicacion_trabajo': post.get('explicacion_trabajo') or False,
-                'limpieza_orden': post.get('limpieza_orden') or False,
-                'revision_adicional': post.get('revision_adicional') or False,
-                'realizo_pruebas': post.get('realizo_pruebas') or False,
-                'consulto_suministros': post.get('consulto_suministros') or False,
-                'consulto_problemas': post.get('consulto_problemas') or False,
-                'retiro_tecnico': post.get('retiro_tecnico') or False,
-                'comentarios': post.get('comentarios') or False,
-            }
+            # Sanear: solo aceptar valores válidos de cada selección
+            values = {}
+            for field_name, allowed in ALLOWED_VALUES.items():
+                raw_value = (post.get(field_name) or '').strip()
+                values[field_name] = raw_value if raw_value in allowed else False
 
-            # Completar desde portal.
-            # Este método debe existir en el modelo client.service.evaluation mejorado.
+            # Validación servidor: las 4 preguntas son obligatorias.
+            # El formulario ya las exige en el navegador, pero un POST
+            # incompleto no debe completar la evaluación a medias.
+            missing_fields = [
+                field_name for field_name in REQUIRED_FIELDS
+                if not values.get(field_name)
+            ]
+
+            if missing_fields:
+                _logger.warning(
+                    "POST incompleto para evaluación token %s. Faltan: %s",
+                    token,
+                    ', '.join(missing_fields)
+                )
+                return request.render('sat.evaluation_form_template', {
+                    'evaluation': evaluation,
+                    'error_message': 'Por favor responda todas las preguntas antes de enviar.',
+                })
+
+            comentarios = (post.get('comentarios') or '').strip()
+            values['comentarios'] = comentarios or False
+
+            # Completar desde portal: guarda respuestas, IP, navegador,
+            # fecha real de respuesta y fuente de completado.
             evaluation.sudo().action_complete_from_portal(
                 vals=values,
                 request=request

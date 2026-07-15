@@ -59,6 +59,7 @@
                                 <field name="partner_id" readonly="context.get('from_portal', False) or state == 'completed'"/>
                                 <field name="technician_id" readonly="context.get('from_portal', False) or state == 'completed'"/>
                                 <field name="evaluation_date"/>
+                                <field name="visit_date"/>
                                 <field name="expiration_date" readonly="1"/>
                             </group>
                             <group string="Resultados">
@@ -131,23 +132,13 @@
                                     </group>
                                 </group>
                             </page>
-                            <!-- Pestaña de Evaluación -->
+                            <!-- Pestaña de Evaluación (encuesta simplificada) -->
                             <page string="⭐ Evaluación" name="evaluation">
                                 <group>
                                     <group string="Aspectos del Servicio">
-                                        <field name="saludo_presentacion" widget="radio"
-                                               readonly="state == 'completed'"/>
-                                        <field name="diagnostico_problema" widget="radio"
-                                               readonly="state == 'completed'"/>
                                         <field name="solucion_problema" widget="radio"
                                                readonly="state == 'completed'"/>
                                         <field name="explicacion_trabajo" widget="radio"
-                                               readonly="state == 'completed'"/>
-                                        <field name="limpieza_orden" widget="radio"
-                                               readonly="state == 'completed'"/>
-                                        <field name="revision_adicional" widget="radio"
-                                               readonly="state == 'completed'"/>
-                                        <field name="retiro_tecnico" widget="radio"
                                                readonly="state == 'completed'"/>
                                     </group>
                                     <group string="Verificación de Protocolos">
@@ -155,14 +146,33 @@
                                                readonly="state == 'completed'"/>
                                         <field name="consulto_suministros" widget="radio"
                                                readonly="state == 'completed'"/>
-                                        <field name="consulto_problemas" widget="radio"
-                                               readonly="state == 'completed'"/>
                                     </group>
                                 </group>
                                 <group string="Comentarios">
                                     <field name="comentarios" nolabel="1"
                                         placeholder="Ingrese comentarios adicionales..."
                                         readonly="state == 'completed'"/>
+                                </group>
+                                <!-- Respuestas de la encuesta anterior: solo lectura,
+                                     visibles únicamente en registros antiguos que las tengan -->
+                                <group string="📜 Respuestas de Encuesta Anterior (Historial)"
+                                       invisible="not saludo_presentacion and not diagnostico_problema and not limpieza_orden and not revision_adicional and not retiro_tecnico and not consulto_problemas">
+                                    <group>
+                                        <field name="saludo_presentacion" readonly="1"
+                                               invisible="not saludo_presentacion"/>
+                                        <field name="diagnostico_problema" readonly="1"
+                                               invisible="not diagnostico_problema"/>
+                                        <field name="limpieza_orden" readonly="1"
+                                               invisible="not limpieza_orden"/>
+                                    </group>
+                                    <group>
+                                        <field name="revision_adicional" readonly="1"
+                                               invisible="not revision_adicional"/>
+                                        <field name="retiro_tecnico" readonly="1"
+                                               invisible="not retiro_tecnico"/>
+                                        <field name="consulto_problemas" readonly="1"
+                                               invisible="not consulto_problemas"/>
+                                    </group>
                                 </group>
                             </page>
                             <!-- Pestaña de Análisis -->
@@ -216,6 +226,7 @@
                     <field name="partner_id"/>
                     <field name="technician_id"/>
                     <field name="evaluation_date"/>
+                    <field name="visit_date" optional="hide"/>
                     <field name="expiration_date" optional="hide"/>
                     <field name="email_sent" optional="show" widget="boolean_toggle"/>
                     <field name="email_sent_date" optional="hide"/>
@@ -290,7 +301,7 @@
                                         <h5 class="mb-0 text-primary fw-bold">
                                             <field name="name"/>
                                         </h5>
-                                        <div class="text-center">
+                                        <div class="text-center" t-if="record.state.raw_value == 'completed'">
                                             <div class="badge rounded-circle p-3 fs-5"
                                                 t-attf-class="bg-#{record.nivel_atencion.raw_value == 'excelente' ? 'success' : 
                                                                 record.nivel_atencion.raw_value == 'bueno' ? 'info' :
@@ -434,6 +445,8 @@
                             context="{'group_by': 'email_delivery_status'}"/>
                         <filter string="📅 Fecha de Evaluación" name="date"
                             context="{'group_by': 'evaluation_date:day'}"/>
+                        <filter string="📅 Fecha de Visita" name="group_visit_date"
+                            context="{'group_by': 'visit_date:day'}"/>
                         <filter string="📅 Fecha de Respuesta" name="response_date"
                             context="{'group_by': 'response_date:day'}"/>
                     </group>

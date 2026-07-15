@@ -13,6 +13,21 @@ class ClientServiceEvaluation(models.Model):
     _description = 'Evaluación de Servicio Técnico'
     _order = 'evaluation_date desc'
 
+    # Campos de calificación que componen el puntaje.
+    # Se mantienen TODOS los nombres históricos para no romper datos previos
+    # ni integraciones (evaluacion.personal). Las evaluaciones nuevas solo
+    # llenan 'solucion_problema' y 'explicacion_trabajo'; el puntaje promedia
+    # únicamente los campos respondidos, por lo que registros antiguos y
+    # nuevos conviven sin recálculos incorrectos.
+    RATING_FIELDS = [
+        'saludo_presentacion',      # LEGADO - ya no se pregunta
+        'diagnostico_problema',     # LEGADO - fusionado en solucion_problema
+        'solucion_problema',        # ACTIVO - fusión de revisión + solución
+        'explicacion_trabajo',      # ACTIVO - fusión de explicación + limpieza
+        'limpieza_orden',           # LEGADO - fusionado en explicacion_trabajo
+        'revision_adicional',       # LEGADO - ya no se pregunta
+    ]
+
     # ==================== CAMPOS BÁSICOS ====================
     name = fields.Char('Referencia', default='New', readonly=True, tracking=True)
 
@@ -130,30 +145,15 @@ class ClientServiceEvaluation(models.Model):
         ('multiple', 'Múltiples Canales')
     ], string='Canal de Notificación', default='email')
 
-    # ==================== ASPECTOS DE EVALUACIÓN ====================
-    saludo_presentacion = fields.Selection([
-        ('1', 'No saludó ni se presentó'),
-        ('2', 'Saludo y presentación básica'),
-        ('3', 'Saludo correcto y profesional'),
-        ('4', 'Saludo profesional y actitud positiva'),
-        ('5', 'Saludo excelente, mostró cortesía y empatía')
-    ], string='¿Cómo califica el saludo y presentación del técnico?', tracking=True)
-
-    diagnostico_problema = fields.Selection([
-        ('1', 'Malo'),
-        ('2', 'Regular'),
-        ('3', 'Bueno'),
-        ('4', 'Muy Bueno'),
-        ('5', 'Excelente')
-    ], string='¿Cómo califica la revisión del problema?', tracking=True)
-
+    # ==================== ASPECTOS DE EVALUACIÓN (ENCUESTA ACTIVA) ====================
     solucion_problema = fields.Selection([
         ('1', 'Malo'),
         ('2', 'Regular'),
         ('3', 'Bueno'),
         ('4', 'Muy Bueno'),
         ('5', 'Excelente')
-    ], string='¿Cómo califica la solución brindada?', tracking=True)
+    ], string='¿Cómo califica la solución del problema?', tracking=True,
+       help='Pregunta fusionada: incluye la revisión/diagnóstico y la solución brindada.')
 
     explicacion_trabajo = fields.Selection([
         ('1', 'Malo'),
@@ -161,7 +161,38 @@ class ClientServiceEvaluation(models.Model):
         ('3', 'Bueno'),
         ('4', 'Muy Bueno'),
         ('5', 'Excelente')
-    ], string='¿Cómo califica la explicación del trabajo realizado?', tracking=True)
+    ], string='¿Cómo califica el cierre del servicio? (explicación, limpieza y orden)',
+       tracking=True,
+       help='Pregunta fusionada: incluye la explicación del trabajo realizado y la limpieza/orden.')
+
+    realizo_pruebas = fields.Selection([
+        ('si', 'Sí'),
+        ('no', 'No')
+    ], string='¿El técnico probó el equipo antes de retirarse?', tracking=True)
+
+    consulto_suministros = fields.Selection([
+        ('si', 'Sí'),
+        ('no', 'No')
+    ], string='¿Le consultó si necesitaba tóner u otros suministros?', tracking=True)
+
+    # ==================== CAMPOS LEGADO (solo historial, no se preguntan) ====================
+    saludo_presentacion = fields.Selection([
+        ('1', 'No saludó ni se presentó'),
+        ('2', 'Saludo y presentación básica'),
+        ('3', 'Saludo correcto y profesional'),
+        ('4', 'Saludo profesional y actitud positiva'),
+        ('5', 'Saludo excelente, mostró cortesía y empatía')
+    ], string='(Legado) Saludo y presentación', tracking=True,
+       help='Campo legado. Ya no forma parte de la encuesta; se conserva por historial.')
+
+    diagnostico_problema = fields.Selection([
+        ('1', 'Malo'),
+        ('2', 'Regular'),
+        ('3', 'Bueno'),
+        ('4', 'Muy Bueno'),
+        ('5', 'Excelente')
+    ], string='(Legado) Revisión del problema', tracking=True,
+       help='Campo legado. Fusionado con "solución del problema"; se conserva por historial.')
 
     limpieza_orden = fields.Selection([
         ('1', 'Malo'),
@@ -169,7 +200,8 @@ class ClientServiceEvaluation(models.Model):
         ('3', 'Bueno'),
         ('4', 'Muy Bueno'),
         ('5', 'Excelente')
-    ], string='¿Cómo califica la limpieza y orden después del servicio?', tracking=True)
+    ], string='(Legado) Limpieza y orden', tracking=True,
+       help='Campo legado. Fusionado con "cierre del servicio"; se conserva por historial.')
 
     revision_adicional = fields.Selection([
         ('1', 'No revisó otros equipos ni consultó sobre más impresoras'),
@@ -177,29 +209,22 @@ class ClientServiceEvaluation(models.Model):
         ('3', 'Bueno - Verificó estado básico de otros equipos'),
         ('4', 'Muy Bueno - Revisó estado y funcionamiento de equipos adicionales'),
         ('5', 'Excelente - Revisión completa de todos los equipos e impresoras, verificó operatividad')
-    ], string='¿Realizó revisión de equipos adicionales?', tracking=True)
+    ], string='(Legado) Revisión de equipos adicionales', tracking=True,
+       help='Campo legado. Ya no forma parte de la encuesta; se conserva por historial.')
 
     retiro_tecnico = fields.Selection([
         ('con_visto', 'Con Visto Bueno'),
         ('sin_visto', 'Sin Visto Bueno'),
         ('sin_aviso', 'Se Retiró Sin Avisar')
-    ], string='Conformidad de Retiro', tracking=True, required=True)
-
-    # ==================== PREGUNTAS ESPECÍFICAS ====================
-    realizo_pruebas = fields.Selection([
-        ('si', 'Sí'),
-        ('no', 'No')
-    ], string='¿Realizó pruebas del equipo?', tracking=True)
-
-    consulto_suministros = fields.Selection([
-        ('si', 'Sí'),
-        ('no', 'No')
-    ], string='¿Consultó sobre el stock de suministros?', tracking=True)
+    ], string='(Legado) Conformidad de Retiro', tracking=True,
+       help='Campo legado. Ya no forma parte de la encuesta; el factor de penalización '
+            'solo aplica a evaluaciones antiguas que lo tengan registrado.')
 
     consulto_problemas = fields.Selection([
         ('si', 'Sí'),
         ('no', 'No')
-    ], string='¿Preguntó si había problemas adicionales?', tracking=True)
+    ], string='(Legado) ¿Preguntó si había problemas adicionales?', tracking=True,
+       help='Campo legado. Ya no forma parte de la encuesta; se conserva por historial.')
 
     # ==================== CAMPOS ADICIONALES ====================
     comentarios = fields.Text('Comentarios o Sugerencias', tracking=True)
@@ -253,67 +278,75 @@ class ClientServiceEvaluation(models.Model):
     ]
 
     # ==================== MÉTODOS CREATE Y WRITE ====================
-    @api.model
-    def create(self, vals):
-        if vals.get('name', 'New') == 'New':
-            vals['name'] = self.env['ir.sequence'].next_by_code('client.service.evaluation') or 'New'
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            if vals.get('name', 'New') == 'New':
+                vals['name'] = self.env['ir.sequence'].next_by_code('client.service.evaluation') or 'New'
 
-        if not vals.get('token'):
-            vals['token'] = self._generate_token()
+            if not vals.get('token'):
+                vals['token'] = self._generate_token()
 
-        if not vals.get('visit_date') and vals.get('ticket_ids'):
-            visit_date = self._get_visit_date_from_ticket_commands(vals.get('ticket_ids'))
-            if visit_date:
-                vals['visit_date'] = visit_date
+            if not vals.get('visit_date') and vals.get('ticket_ids'):
+                visit_date = self._get_visit_date_from_ticket_commands(vals.get('ticket_ids'))
+                if visit_date:
+                    vals['visit_date'] = visit_date
 
-        record = super(ClientServiceEvaluation, self).create(vals)
+        records = super(ClientServiceEvaluation, self).create(vals_list)
 
-        partner_name = record.partner_id.name or 'Sin cliente'
-        technician_name = record.technician_id.name or 'Sin técnico'
+        for record in records:
+            partner_name = record.partner_id.name or 'Sin cliente'
+            technician_name = record.technician_id.name or 'Sin técnico'
 
-        evaluation_date_text = ''
-        if record.evaluation_date:
-            evaluation_date_text = fields.Datetime.context_timestamp(
-                record,
-                record.evaluation_date
-            ).strftime('%d/%m/%Y %H:%M')
+            evaluation_date_text = ''
+            if record.evaluation_date:
+                evaluation_date_text = fields.Datetime.context_timestamp(
+                    record,
+                    record.evaluation_date
+                ).strftime('%d/%m/%Y %H:%M')
 
-        record.message_post(
-            body=f"""<p><strong>📋 Evaluación de Servicio Creada</strong></p>
-                    <ul>
-                        <li><strong>Cliente:</strong> {partner_name}</li>
-                        <li><strong>Técnico:</strong> {technician_name}</li>
-                        <li><strong>Tickets:</strong> {len(record.ticket_ids)} ticket(s)</li>
-                        <li><strong>Fecha:</strong> {evaluation_date_text}</li>
-                    </ul>""",
-            message_type='notification',
-            subtype_xmlid='mail.mt_note'
-        )
+            record.message_post(
+                body=f"""<p><strong>📋 Evaluación de Servicio Creada</strong></p>
+                        <ul>
+                            <li><strong>Cliente:</strong> {partner_name}</li>
+                            <li><strong>Técnico:</strong> {technician_name}</li>
+                            <li><strong>Tickets:</strong> {len(record.ticket_ids)} ticket(s)</li>
+                            <li><strong>Fecha:</strong> {evaluation_date_text}</li>
+                        </ul>""",
+                message_type='notification',
+                subtype_xmlid='mail.mt_note'
+            )
 
-        return record
+        return records
 
     def write(self, vals):
         old_states = {record.id: record.state for record in self}
 
         vals = dict(vals or {})
 
-        if vals.get('state') == 'completed':
-            if not vals.get('response_date'):
-                records_without_response = self.filtered(lambda rec: not rec.response_date)
-                if records_without_response:
-                    vals['response_date'] = fields.Datetime.now()
-
-            if not vals.get('completed_by'):
-                records_without_completed_by = self.filtered(lambda rec: not rec.completed_by)
-                if records_without_completed_by:
-                    vals['completed_by'] = self.env.user.id
-
-            if not vals.get('completion_source'):
-                records_without_source = self.filtered(lambda rec: not rec.completion_source)
-                if records_without_source:
-                    vals['completion_source'] = 'portal'
-
         result = super(ClientServiceEvaluation, self).write(vals)
+
+        # Al completar, rellenar datos de auditoría faltantes POR REGISTRO.
+        # Antes se inyectaban en 'vals' compartido y se sobreescribían valores
+        # existentes en escrituras multi-registro.
+        if vals.get('state') == 'completed':
+            now = fields.Datetime.now()
+            user_is_valid = self.env.user and not self.env.user._is_public()
+
+            for record in self:
+                fill_vals = {}
+
+                if not record.response_date:
+                    fill_vals['response_date'] = now
+
+                if not record.completed_by and user_is_valid:
+                    fill_vals['completed_by'] = self.env.user.id
+
+                if not record.completion_source:
+                    fill_vals['completion_source'] = 'portal'
+
+                if fill_vals:
+                    super(ClientServiceEvaluation, record).write(fill_vals)
 
         for record in self:
             old_state = old_states.get(record.id)
@@ -336,9 +369,10 @@ class ClientServiceEvaluation(models.Model):
 
     @api.depends('evaluation_date')
     def _compute_expiration_date(self):
+        expiration_days = self._get_expiration_days()
         for record in self:
             if record.evaluation_date:
-                record.expiration_date = record.evaluation_date + timedelta(days=2)
+                record.expiration_date = record.evaluation_date + timedelta(days=expiration_days)
             else:
                 record.expiration_date = False
 
@@ -368,6 +402,19 @@ class ClientServiceEvaluation(models.Model):
             else:
                 record.is_on_time = False
 
+    def _get_answered_scores(self):
+        """
+        Devuelve dict {campo: puntaje int} SOLO de los campos de calificación
+        respondidos. Compatible con formato antiguo (6 preguntas) y nuevo (2).
+        """
+        self.ensure_one()
+        scores = {}
+        for field_name in self.RATING_FIELDS:
+            value = getattr(self, field_name)
+            if value and str(value).isdigit():
+                scores[field_name] = int(value)
+        return scores
+
     @api.depends(
         'saludo_presentacion',
         'diagnostico_problema',
@@ -379,21 +426,10 @@ class ClientServiceEvaluation(models.Model):
     )
     def _compute_puntaje(self):
         for record in self:
-            scores = []
-            fields_to_evaluate = [
-                'saludo_presentacion',
-                'diagnostico_problema',
-                'solucion_problema',
-                'explicacion_trabajo',
-                'limpieza_orden',
-                'revision_adicional'
-            ]
+            scores = list(record._get_answered_scores().values())
 
-            for field_name in fields_to_evaluate:
-                value = getattr(record, field_name)
-                if value and str(value).isdigit():
-                    scores.append(int(value))
-
+            # Factor de penalización solo aplica a evaluaciones antiguas
+            # que registraron conformidad de retiro (campo legado).
             retiro_factor = 1.0
             if record.retiro_tecnico == 'sin_visto':
                 retiro_factor = 0.8
@@ -406,10 +442,14 @@ class ClientServiceEvaluation(models.Model):
             else:
                 record.puntaje_servicio = 0
 
-    @api.depends('puntaje_servicio')
+    @api.depends('puntaje_servicio', 'state')
     def _compute_niveles(self):
         for record in self:
-            if record.puntaje_servicio >= 90:
+            # Sin respuestas y sin completar, no clasificar: evita que los
+            # borradores figuren como "Deficiente" en reportes gerenciales.
+            if record.state != 'completed' and not record.puntaje_servicio:
+                record.nivel_atencion = False
+            elif record.puntaje_servicio >= 90:
                 record.nivel_atencion = 'excelente'
             elif record.puntaje_servicio >= 80:
                 record.nivel_atencion = 'bueno'
@@ -419,18 +459,23 @@ class ClientServiceEvaluation(models.Model):
                 record.nivel_atencion = 'deficiente'
 
     @api.depends(
+        'state',
         'puntaje_servicio',
         'realizo_pruebas',
-        'consulto_suministros',
-        'consulto_problemas'
+        'consulto_suministros'
     )
     def _compute_requiere_atencion(self):
         for record in self:
+            # Solo evaluaciones completadas pueden requerir atención:
+            # evita falsas alertas por borradores con puntaje 0.
+            if record.state != 'completed':
+                record.requiere_atencion = False
+                continue
+
             record.requiere_atencion = (
                 record.puntaje_servicio < 70 or
                 record.realizo_pruebas == 'no' or
-                record.consulto_suministros == 'no' or
-                record.consulto_problemas == 'no'
+                record.consulto_suministros == 'no'
             )
 
     @api.depends('state', 'nivel_atencion', 'requiere_atencion')
@@ -471,20 +516,21 @@ class ClientServiceEvaluation(models.Model):
         'puntaje_servicio',
         'response_date',
         'response_time',
-        'is_on_time'
+        'is_on_time',
+        'visit_date'
     )
     def _compute_analisis(self):
+        area_labels = {
+            'saludo_presentacion': 'Atención Inicial',
+            'diagnostico_problema': 'Diagnóstico',
+            'solucion_problema': 'Solución del Problema',
+            'explicacion_trabajo': 'Cierre del Servicio',
+            'limpieza_orden': 'Limpieza',
+            'revision_adicional': 'Revisión Adicional',
+        }
+
         for record in self:
             analisis = []
-
-            areas = {
-                'Atención Inicial': int(record.saludo_presentacion or '0'),
-                'Diagnóstico': int(record.diagnostico_problema or '0'),
-                'Solución': int(record.solucion_problema or '0'),
-                'Explicación': int(record.explicacion_trabajo or '0'),
-                'Limpieza': int(record.limpieza_orden or '0'),
-                'Revisión Adicional': int(record.revision_adicional or '0')
-            }
 
             analisis.append("ANÁLISIS DE SERVICIO")
             analisis.append(f"Técnico: {record.technician_id.name or 'Sin técnico'}")
@@ -503,152 +549,107 @@ class ClientServiceEvaluation(models.Model):
                     f"  Servicio: {ticket.tipo_servicio if hasattr(ticket, 'tipo_servicio') else 'N/A'}"
                 )
 
-            retiro_texto = {
-                'con_visto': '✓ Se retiró con visto bueno del cliente',
-                'sin_visto': '⚠ Se retiró sin obtener visto bueno',
-                'sin_aviso': '✗ Se retiró sin avisar al cliente'
-            }
+            # Conformidad de retiro: solo para evaluaciones antiguas que la registraron
+            if record.retiro_tecnico:
+                retiro_texto = {
+                    'con_visto': '✓ Se retiró con visto bueno del cliente',
+                    'sin_visto': '⚠ Se retiró sin obtener visto bueno',
+                    'sin_aviso': '✗ Se retiró sin avisar al cliente'
+                }
 
-            analisis.append("\nCONFORMIDAD DE RETIRO:")
-            analisis.append(retiro_texto.get(record.retiro_tecnico, 'No especificado'))
+                analisis.append("\nCONFORMIDAD DE RETIRO:")
+                analisis.append(retiro_texto.get(record.retiro_tecnico, 'No especificado'))
 
-            if record.retiro_tecnico in ['sin_visto', 'sin_aviso']:
-                analisis.append(
-                    "⚠ El puntaje ha sido ajustado debido a la falta de conformidad en el retiro"
-                )
+                if record.retiro_tecnico == 'sin_visto':
+                    analisis.append(
+                        "⚠ La calificación fue reducida en 20% por falta de visto bueno del cliente"
+                    )
+                elif record.retiro_tecnico == 'sin_aviso':
+                    analisis.append(
+                        "⚠ La calificación fue reducida en 50% por retiro sin aviso"
+                    )
 
-            analisis.append("\nDESGLOSE POR ÁREAS:")
-            for area, puntaje in areas.items():
-                porcentaje = (puntaje / 5) * 100 if puntaje else 0
-                nivel = (
-                    "✓ Excelente" if porcentaje >= 90 else
-                    "✓ Bueno" if porcentaje >= 80 else
-                    "⚠ Regular" if porcentaje >= 70 else
-                    "✗ Deficiente"
-                )
-                analisis.append(f"{area}: {porcentaje:.1f}% - {nivel}")
+            # Desglose solo de áreas efectivamente respondidas
+            answered_scores = record._get_answered_scores()
 
-            analisis.append("\nCUMPLIMIENTO DE PROTOCOLO:")
-            protocolos = {
-                'Pruebas del equipo': record.realizo_pruebas == 'si',
-                'Verificación de suministros': record.consulto_suministros == 'si',
-                'Consulta de problemas adicionales': record.consulto_problemas == 'si'
-            }
+            if answered_scores:
+                analisis.append("\nDESGLOSE POR ÁREAS:")
+                for field_name, puntaje in answered_scores.items():
+                    porcentaje = (puntaje / 5) * 100
+                    nivel = (
+                        "✓ Excelente" if porcentaje >= 90 else
+                        "✓ Bueno" if porcentaje >= 80 else
+                        "⚠ Regular" if porcentaje >= 70 else
+                        "✗ Deficiente"
+                    )
+                    analisis.append(f"{area_labels.get(field_name, field_name)}: {porcentaje:.1f}% - {nivel}")
 
-            for protocolo, cumplido in protocolos.items():
-                analisis.append(f"{'✓' if cumplido else '✗'} {protocolo}")
+            # Protocolo: solo preguntas respondidas
+            protocolos = []
+            if record.realizo_pruebas:
+                protocolos.append(('Pruebas del equipo antes de retirarse', record.realizo_pruebas == 'si'))
+            if record.consulto_suministros:
+                protocolos.append(('Consulta de tóner/suministros', record.consulto_suministros == 'si'))
+            if record.consulto_problemas:
+                protocolos.append(('Consulta de problemas adicionales (legado)', record.consulto_problemas == 'si'))
+
+            if protocolos:
+                analisis.append("\nCUMPLIMIENTO DE PROTOCOLO:")
+                for protocolo, cumplido in protocolos:
+                    analisis.append(f"{'✓' if cumplido else '✗'} {protocolo}")
 
             if record.response_date:
                 analisis.append("\nTIEMPO DE RESPUESTA:")
                 analisis.append(f"Respondió en: {record.response_time:.1f} horas")
                 analisis.append(f"{'✓ A tiempo' if record.is_on_time else '✗ Fuera de tiempo'}")
 
-            if record.retiro_tecnico == 'sin_visto':
-                analisis.append(
-                    "\nNOTA: La calificación final ha sido reducida en 20% por falta de visto bueno del cliente"
-                )
-            elif record.retiro_tecnico == 'sin_aviso':
-                analisis.append(
-                    "\nNOTA: La calificación final ha sido reducida en 50% por retiro sin aviso"
-                )
-
             record.analisis_detallado = '\n'.join(analisis)
 
     @api.depends(
-        'analisis_detallado',
         'puntaje_servicio',
-        'nivel_atencion',
-        'saludo_presentacion',
-        'diagnostico_problema',
         'solucion_problema',
         'explicacion_trabajo',
-        'limpieza_orden',
-        'revision_adicional',
         'realizo_pruebas',
         'consulto_suministros',
-        'consulto_problemas',
-        'retiro_tecnico'
+        'state'
     )
     def _compute_recomendaciones(self):
         for record in self:
+            # Solo generar recomendaciones sobre preguntas respondidas:
+            # antes, un campo vacío ('0' <= 3) generaba recomendaciones falsas.
+            if record.state != 'completed':
+                record.recomendaciones_mejora = False
+                continue
+
             recomendaciones = ["RECOMENDACIONES DE MEJORA:"]
 
-            if int(record.saludo_presentacion or '0') <= 3:
+            if record.solucion_problema and int(record.solucion_problema) <= 3:
                 recomendaciones.append("""
-- Protocolo de Atención:
-  - Mejorar saludo inicial
-  - Presentarse adecuadamente
-  - Explicar el proceso a realizar""")
+- Diagnóstico y Solución:
+  - Realizar revisión más detallada del problema
+  - Asegurar solución completa y verificar funcionamiento
+  - Documentar el diagnóstico y la solución aplicada""")
 
-            if int(record.diagnostico_problema or '0') <= 3:
+            if record.explicacion_trabajo and int(record.explicacion_trabajo) <= 3:
                 recomendaciones.append("""
-- Diagnóstico:
-  - Realizar revisión más detallada
-  - Documentar los problemas encontrados
-  - Explicar el diagnóstico al cliente""")
-
-            if int(record.solucion_problema or '0') <= 3:
-                recomendaciones.append("""
-- Solución Técnica:
-  - Asegurar solución completa
-  - Verificar funcionamiento
-  - Documentar la solución aplicada""")
-
-            if int(record.explicacion_trabajo or '0') <= 3:
-                recomendaciones.append("""
-- Comunicación:
-  - Mejorar explicación del servicio
-  - Usar lenguaje comprensible
-  - Verificar entendimiento del cliente""")
-
-            if int(record.limpieza_orden or '0') <= 3:
-                recomendaciones.append("""
-- Limpieza:
-  - Mejorar orden del área
-  - Limpiar equipo después del servicio
-  - Verificar área de trabajo""")
-
-            if int(record.revision_adicional or '0') <= 3:
-                recomendaciones.append("""
-- Revisión adicional:
-  - Revisar equipos adicionales cuando corresponda
-  - Consultar al cliente si existen otras impresoras con problemas
-  - Registrar observaciones preventivas""")
+- Cierre del Servicio:
+  - Explicar el trabajo realizado en lenguaje comprensible
+  - Verificar entendimiento del cliente
+  - Dejar el área y el equipo limpios y ordenados""")
 
             if record.realizo_pruebas == 'no':
                 recomendaciones.append("""
 - Pruebas:
-  - Implementar protocolo de pruebas
-  - Realizar pruebas con cliente
+  - Implementar protocolo de pruebas antes de retirarse
+  - Realizar pruebas con el cliente presente
   - Documentar resultados""")
 
             if record.consulto_suministros == 'no':
                 recomendaciones.append("""
 - Suministros:
-  - Verificar stock de consumibles
-  - Registrar necesidades
+  - Consultar stock de tóner y consumibles
+  - Registrar necesidades detectadas
   - Informar al cliente""")
-
-            if record.consulto_problemas == 'no':
-                recomendaciones.append("""
-- Revisión General:
-  - Consultar problemas adicionales
-  - Revisar otros equipos
-  - Ofrecer mantenimiento preventivo""")
-
-            if record.retiro_tecnico == 'sin_visto':
-                recomendaciones.append("""
-- Retiro del técnico:
-  - Solicitar visto bueno antes de retirarse
-  - Confirmar conformidad del cliente
-  - Registrar observaciones finales""")
-
-            if record.retiro_tecnico == 'sin_aviso':
-                recomendaciones.append("""
-- Retiro del técnico:
-  - No retirarse sin avisar al cliente
-  - Confirmar cierre del servicio
-  - Solicitar conformidad antes de finalizar""")
 
             if record.puntaje_servicio < 70:
                 recomendaciones.insert(1, """
@@ -659,6 +660,9 @@ ACCIONES URGENTES:
   - Habilidades técnicas
 - Seguimiento semanal
 - Supervisión directa""")
+
+            if len(recomendaciones) == 1:
+                recomendaciones.append("\nSin observaciones. El servicio cumplió con los estándares esperados.")
 
             record.recomendaciones_mejora = '\n'.join(recomendaciones)
 
@@ -700,7 +704,7 @@ ACCIONES URGENTES:
     def _get_visit_date_from_ticket_commands(self, commands):
         """
         Intenta obtener visit_date desde comandos many2many.
-        Soporta principalmente [(6, 0, ids)].
+        Soporta [(6, 0, ids)] y [(4, id)] / [(4, id, 0)].
         """
         ticket_ids = []
 
@@ -708,8 +712,8 @@ ACCIONES URGENTES:
             return False
 
         for command in commands:
-            if isinstance(command, (list, tuple)) and len(command) >= 3:
-                if command[0] == 6:
+            if isinstance(command, (list, tuple)) and len(command) >= 2:
+                if command[0] == 6 and len(command) >= 3:
                     ticket_ids.extend(command[2])
                 elif command[0] == 4:
                     ticket_ids.append(command[1])
@@ -729,6 +733,19 @@ ACCIONES URGENTES:
             self.env['ir.config_parameter'].sudo().get_param(
                 'sat.service_evaluation_window_days',
                 default='7'
+            )
+        )
+        return max(days, 1)
+
+    def _get_expiration_days(self):
+        """
+        Días de vigencia de la evaluación antes de expirar.
+        Configurable vía ir.config_parameter (default: 2, comportamiento original).
+        """
+        days = int(
+            self.env['ir.config_parameter'].sudo().get_param(
+                'sat.service_evaluation_expiration_days',
+                default='2'
             )
         )
         return max(days, 1)
@@ -844,24 +861,34 @@ ACCIONES URGENTES:
         self.ensure_one()
 
         supervisor_group = self.env.ref('sat.group_sat_supervisor', raise_if_not_found=False)
-        if supervisor_group:
-            for supervisor in supervisor_group.users:
-                self.activity_schedule(
-                    'mail.mail_activity_data_warning',
-                    user_id=supervisor.id,
-                    summary=f'⚠️ Evaluación deficiente requiere atención - {self.technician_id.name or "Sin técnico"}',
-                    note=f"""Una evaluación de servicio requiere atención inmediata:
-                            
-                            Técnico: {self.technician_id.name or 'Sin técnico'}
-                            Cliente: {self.partner_id.name or 'Sin cliente'}
-                            Puntaje: {self.puntaje_servicio:.1f}%
-                            
-                            Motivos de alerta:
-                            - {'Puntaje bajo (<70%)' if self.puntaje_servicio < 70 else ''}
-                            - {'No realizó pruebas' if self.realizo_pruebas == 'no' else ''}
-                            - {'No consultó suministros' if self.consulto_suministros == 'no' else ''}
-                            - {'No consultó problemas adicionales' if self.consulto_problemas == 'no' else ''}"""
-                )
+        if not supervisor_group:
+            return
+
+        # Construir motivos dinámicamente: evita líneas vacías en la nota
+        motivos = []
+        if self.puntaje_servicio < 70:
+            motivos.append('- Puntaje bajo (<70%)')
+        if self.realizo_pruebas == 'no':
+            motivos.append('- No probó el equipo antes de retirarse')
+        if self.consulto_suministros == 'no':
+            motivos.append('- No consultó sobre tóner/suministros')
+
+        motivos_texto = '\n                            '.join(motivos) or '- Revisar evaluación'
+
+        for supervisor in supervisor_group.users:
+            self.activity_schedule(
+                'mail.mail_activity_data_warning',
+                user_id=supervisor.id,
+                summary=f'⚠️ Evaluación deficiente requiere atención - {self.technician_id.name or "Sin técnico"}',
+                note=f"""Una evaluación de servicio requiere atención inmediata:
+                        
+                        Técnico: {self.technician_id.name or 'Sin técnico'}
+                        Cliente: {self.partner_id.name or 'Sin cliente'}
+                        Puntaje: {self.puntaje_servicio:.1f}%
+                        
+                        Motivos de alerta:
+                        {motivos_texto}"""
+            )
 
     def _register_portal_access(self, request=None):
         self.ensure_one()
@@ -977,6 +1004,13 @@ ACCIONES URGENTES:
 
     def action_send_reminder(self):
         self.ensure_one()
+
+        # Guard: solo tiene sentido recordar evaluaciones enviadas y vigentes
+        if self.state != 'sent':
+            _logger.warning(
+                f"Recordatorio omitido para {self.name}: estado '{self.state}' no es 'sent'"
+            )
+            return False
 
         template = self.env.ref('sat.email_template_service_evaluation_reminder', False)
         if template:
@@ -1122,12 +1156,11 @@ ACCIONES URGENTES:
         """
         Cron para enviar evaluaciones.
 
-        Mejora aplicada:
-        - Ya no depende solo de tickets cuya agenda sea hoy.
         - Busca tickets finalizados dentro de una ventana configurable.
-        - Si la visita fue hoy pero el ticket se finalizó después, igual puede generar evaluación.
         - Agrupa por cliente + técnico + fecha de visita.
-        - Envía una sola evaluación aunque existan 2, 3, 4 o más tickets/máquinas en esa visita.
+        - Envía una sola evaluación aunque existan varios tickets/máquinas en esa visita.
+        - Ya NO inyecta 'retiro_tecnico' (campo legado, fuera de la encuesta):
+          las evaluaciones nacen sin respuestas pre-llenadas.
         """
         _logger.info("📧 Iniciando envío de evaluaciones de servicio...")
 
@@ -1223,7 +1256,6 @@ ACCIONES URGENTES:
                         'technician_id': technician_id,
                         'visit_date': visit_date,
                         'state': 'draft',
-                        'retiro_tecnico': 'con_visto',
                     })
 
                     _logger.info(
@@ -1339,13 +1371,21 @@ ACCIONES URGENTES:
         _logger.info("🔔 Iniciando envío de recordatorios automáticos...")
 
         try:
-            yesterday = fields.Datetime.now() - timedelta(hours=24)
+            now = fields.Datetime.now()
+            yesterday = now - timedelta(hours=24)
+            reminder_gap = now - timedelta(hours=20)
 
+            # Guard adicional: no repetir recordatorio si ya se envió uno en
+            # las últimas 20 horas (evita ráfagas si el cron corre varias veces
+            # al día o se ejecuta manualmente).
             domain = [
                 ('state', '=', 'sent'),
                 ('email_sent_date', '<=', yesterday),
                 ('reminder_count', '<', 2),
-                ('expiration_date', '>', fields.Datetime.now())
+                ('expiration_date', '>', now),
+                '|',
+                ('last_reminder_date', '=', False),
+                ('last_reminder_date', '<=', reminder_gap),
             ]
 
             pending_evaluations = self.search(domain)
