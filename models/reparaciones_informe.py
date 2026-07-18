@@ -407,7 +407,7 @@ class ReparacionesInforme(models.Model):
         alertas = []
         alertas_vistas = set()
         if 'snmp_alerta_ids' in prueba._fields:
-            for alerta in prueba.snmp_alerta_ids.filtered(lambda a: a.activa):
+            for alertas = prueba.snmp_alerta_ids
                 descripcion = str(getattr(alerta, 'descripcion', '') or '').strip()
                 codigo = str(getattr(alerta, 'codigo', '') or '').strip()
                 ubicacion = str(getattr(alerta, 'ubicacion', '') or '').strip()
