@@ -20,7 +20,7 @@ except ImportError:
 
 class ReparacionesInforme(models.Model):
     _inherit = 'reparaciones.reparaciones'
-    _description = 'Informe Reparaciones (Generación automática/IA con hallazgos)'
+    _description = 'Informe Reparaciones (Generación automática/IA con checklist y apoyo SNMP)'
 
     # ========================================
     # CAMPOS EXISTENTES
@@ -354,26 +354,156 @@ class ReparacionesInforme(models.Model):
                 'observaciones': self._rep__get_observation(accesorio),
             })
 
+        data['snmp'] = self._rep__get_snmp_test_data()
         return data
 
+    def _rep__get_snmp_test_data(self):
+        """
+        Obtiene la prueba SNMP asociada a la reparación como fuente secundaria.
+
+        Reglas:
+        - Solo confirma actividad registrada en contadores: copia, impresión,
+          escaneo, dúplex, B/N y color.
+        - No usa porcentajes de tóner ni niveles de unidades para determinar
+          condición, calidad, desgaste o cambio recomendado.
+        - El checklist y las observaciones del técnico siempre tienen prioridad.
+        - Si el modelo SNMP no está instalado o no existe una prueba, retorna
+          una estructura vacía y el informe continúa normalmente.
+        """
+        self.ensure_one()
+        result = {
+            'disponible': False,
+            'prueba_id': False,
+            'fecha': False,
+            'actividades': [],
+            'cantidad_alertas': 0,
+            'alertas': [],
+        }
+
+        Prueba = self.env.get('sat.prueba.maquina')
+        if not Prueba:
+            return result
+
+        prueba = Prueba.sudo().search([
+            ('reparacion_id', '=', self.id),
+        ], order='fecha_ultima_actualizacion desc, id desc', limit=1)
+
+        if not prueba:
+            return result
+
+        actividades = []
+        campos = [
+            ('prueba_copia_ok', 'copia'),
+            ('prueba_impresion_ok', 'impresión'),
+            ('prueba_scanner_ok', 'escaneo'),
+            ('prueba_duplex_ok', 'dúplex'),
+            ('prueba_bn_ok', 'blanco y negro'),
+            ('prueba_color_ok', 'color'),
+        ]
+        for field_name, label in campos:
+            if field_name in prueba._fields and bool(prueba[field_name]):
+                actividades.append(label)
+
+        alertas = []
+        alertas_vistas = set()
+        if 'snmp_alerta_ids' in prueba._fields:
+            for alerta in prueba.snmp_alerta_ids.filtered(lambda a: a.activa):
+                descripcion = str(getattr(alerta, 'descripcion', '') or '').strip()
+                codigo = str(getattr(alerta, 'codigo', '') or '').strip()
+                ubicacion = str(getattr(alerta, 'ubicacion', '') or '').strip()
+                severidad = str(getattr(alerta, 'severidad', '') or '').strip()
+
+                # No mostrar OID, claves internas, source_name ni JSON en el informe.
+                if not descripcion and not codigo:
+                    continue
+
+                clave = (descripcion.lower(), codigo.lower(), ubicacion.lower())
+                if clave in alertas_vistas:
+                    continue
+                alertas_vistas.add(clave)
+
+                alertas.append({
+                    'descripcion': descripcion or codigo,
+                    'codigo': codigo,
+                    'ubicacion': ubicacion,
+                    'severidad': severidad,
+                })
+
+        result.update({
+            'disponible': True,
+            'prueba_id': prueba.id,
+            'fecha': prueba.fecha_ultima_actualizacion or prueba.fecha_inicio,
+            'actividades': actividades,
+            'cantidad_alertas': len(alertas),
+            'alertas': alertas,
+        })
+        return result
+
+    def _rep__join_human_list(self, values):
+        """Une una lista corta en español sin modificar sus valores."""
+        values = [str(value).strip() for value in (values or []) if str(value).strip()]
+        if not values:
+            return ''
+        if len(values) == 1:
+            return values[0]
+        if len(values) == 2:
+            return '%s y %s' % (values[0], values[1])
+        return '%s y %s' % (', '.join(values[:-1]), values[-1])
+
     def _rep__general_status_text(self, data):
-        """Redacción prudente del resultado general, sin afirmar pruebas inexistentes."""
+        """
+        Redacción prudente del resultado general.
+
+        El checklist determina si una función está correcta, con falla o
+        pendiente. SNMP solamente confirma que hubo actividad durante la prueba.
+        """
+        snmp = data.get('snmp') or self._rep__get_snmp_test_data()
+        actividades = snmp.get('actividades') or []
+        actividad_texto = self._rep__join_human_list(actividades)
+
         if data['funciones_falla']:
+            if actividad_texto:
+                return (
+                    'Durante la evaluación se registró actividad de %s. De acuerdo con '
+                    'la revisión del técnico, se detectaron incidencias en las funciones '
+                    'señaladas.'
+                ) % actividad_texto
             return (
                 'Durante la revisión y las pruebas realizadas se detectaron incidencias '
-                'de funcionamiento que deben ser atendidas.'
+                'en las funciones señaladas por el técnico.'
             )
+
         if data['funciones_ok'] and data['funciones_pendientes']:
+            if actividad_texto:
+                return (
+                    'Durante la evaluación se registró actividad de %s. Las funciones '
+                    'verificadas por el técnico respondieron operativamente y quedaron '
+                    'algunas pruebas pendientes.'
+                ) % actividad_texto
             return (
-                'Se realizaron pruebas generales de funcionamiento. Las funciones probadas '
-                'respondieron operativamente, aunque quedaron verificaciones pendientes.'
+                'Se realizaron pruebas generales de funcionamiento. Las funciones '
+                'verificadas por el técnico respondieron operativamente, aunque quedaron '
+                'pruebas pendientes.'
             )
+
         if data['funciones_ok']:
+            if actividad_texto:
+                return (
+                    'Durante la evaluación se registró actividad de %s. Las funciones '
+                    'verificadas por el técnico respondieron operativamente.'
+                ) % actividad_texto
             return (
-                'Se realizaron pruebas generales de funcionamiento y las funciones verificadas '
-                'respondieron operativamente.'
+                'Se realizaron pruebas generales de funcionamiento y las funciones '
+                'verificadas por el técnico respondieron operativamente.'
             )
-        return 'Se realizó una revisión general del equipo y pruebas básicas de funcionamiento.'
+
+        if actividad_texto:
+            return (
+                'Durante la evaluación se registró actividad de %s. La condición de las '
+                'funciones y componentes corresponde a la revisión registrada por el técnico.'
+            ) % actividad_texto
+
+        return 'Se realizó una revisión general del equipo de acuerdo con el checklist técnico.'
 
     # ========================================
     # EXTRACCIÓN DE DATOS DESDE EVALUACIONES
@@ -489,6 +619,65 @@ class ReparacionesInforme(models.Model):
         parts.append('</div>')
         return ''.join(parts)
 
+    def _rep__build_snmp_alerts_block(self, snmp_data):
+        """
+        Construye un bloque informativo con las alertas mostradas por el equipo
+        durante la revisión.
+
+        Las alertas son referenciales y no se presentan como diagnóstico final,
+        obligación de reparación ni comunicación obligatoria al cliente.
+        """
+        alertas = (snmp_data or {}).get('alertas') or []
+        if not alertas:
+            return ''
+
+        parts = [
+            '<div style="margin:12px 0;padding:11px 14px;border-left:5px solid #546e7a;'
+            'background:#eceff1;border-radius:6px;color:#263238;">',
+            '<div style="font-weight:bold;color:#37474f;margin-bottom:5px;">'
+            'Alertas mostradas durante la revisión</div>',
+            '<div style="margin-bottom:7px;color:#455a64;">'
+            'Durante el proceso de pruebas, el equipo mostró las siguientes alertas. '
+            'Se incluyen únicamente como referencia de la condición observada al momento de la evaluación.'
+            '</div>',
+            '<ul style="margin:0 0 0 24px;padding:0;color:#263238;">',
+        ]
+
+        for alerta in alertas:
+            if isinstance(alerta, dict):
+                descripcion = str(alerta.get('descripcion') or '').strip()
+                codigo = str(alerta.get('codigo') or '').strip()
+                ubicacion = str(alerta.get('ubicacion') or '').strip()
+            else:
+                descripcion = str(alerta or '').strip()
+                codigo = ''
+                ubicacion = ''
+
+            if not descripcion and not codigo:
+                continue
+
+            partes_linea = []
+            if descripcion:
+                partes_linea.append(self._rep__escape(descripcion))
+            if ubicacion:
+                partes_linea.append('Ubicación: %s' % self._rep__escape(ubicacion))
+            if codigo and codigo.lower() not in descripcion.lower():
+                partes_linea.append('Código: %s' % self._rep__escape(codigo))
+
+            parts.append(
+                '<li style="margin:4px 0;">%s</li>' % ' — '.join(partes_linea)
+            )
+
+        parts.extend([
+            '</ul>',
+            '<div style="margin-top:8px;font-size:12px;color:#607d8b;">'
+            'Información referencial registrada durante las pruebas; puede variar después de instalar '
+            'consumibles, reiniciar el equipo o realizar una nueva evaluación.'
+            '</div>',
+            '</div>',
+        ])
+        return ''.join(parts)
+
     def _rep__default_conclusion(self, calidad):
         """Conclusión comercial sin convertir las recomendaciones en trabajos obligatorios."""
         if calidad == 'buena':
@@ -503,8 +692,8 @@ class ReparacionesInforme(models.Model):
             )
         return (
             'El equipo presenta observaciones relevantes en los componentes indicados. Puede '
-            'ofrecerse en su condición evaluada, informando estos hallazgos, o incluir los '
-            'repuestos recomendados según el acuerdo de venta.'
+            'ofrecerse en su condición evaluada o incluir los repuestos recomendados, según el '
+            'acuerdo de venta.'
         )
 
     def _rep__build_informe_html_from_data(self, data, calidad, resumen=None, conclusion=None):
@@ -590,8 +779,14 @@ class ReparacionesInforme(models.Model):
                 'La revisión de esta unidad quedó pendiente.', item.get('observaciones', '')
             ))
 
-        if cards:            
+        if cards:
             parts.extend(cards)
+
+        # Las alertas SNMP se muestran como referencia de lo observado durante
+        # las pruebas, sin convertirlas en diagnóstico ni condición obligatoria.
+        alertas_html = self._rep__build_snmp_alerts_block(data.get('snmp') or {})
+        if alertas_html:
+            parts.append(alertas_html)
 
         observacion_general = self._rep__html_to_text(self.observaciones_tecnico)
         if observacion_general:
@@ -917,6 +1112,7 @@ class ReparacionesInforme(models.Model):
             'toners_relevantes': data['toners_relevantes'],
             'estado_fisico': data['estado_fisico'],
             'accesorios_relevantes': data['accesorios_relevantes'],
+            'prueba_snmp': data.get('snmp') or {},
             'observaciones_tecnico': self._rep__html_to_text(self.observaciones_tecnico),
         }
 
@@ -936,6 +1132,12 @@ class ReparacionesInforme(models.Model):
             'consumibles_relevantes': datos['toners_relevantes'],
             'estado_fisico_relevante': datos['estado_fisico'],
             'accesorios_relevantes': datos['accesorios_relevantes'],
+            'prueba_snmp_secundaria': {
+                'disponible': bool((datos.get('prueba_snmp') or {}).get('disponible')),
+                'actividades_registradas': (datos.get('prueba_snmp') or {}).get('actividades') or [],
+                'cantidad_alertas': (datos.get('prueba_snmp') or {}).get('cantidad_alertas') or 0,
+                'alertas_mostradas_durante_revision': (datos.get('prueba_snmp') or {}).get('alertas') or [],
+            },
             'observaciones_generales': datos['observaciones_tecnico'],
         }
         hechos_json = json.dumps(hechos, ensure_ascii=False, indent=2)
@@ -956,8 +1158,14 @@ REGLAS OBLIGATORIAS:
 7. No cambies nombres técnicos ni colores de componentes.
 8. No afirmes que el equipo está inoperativo salvo que exista una falla funcional registrada.
 9. Si hay daño físico, menciona revisar las fotografías sin inventar la tapa afectada.
-10. Redacta un resumen general de máximo 55 palabras y una conclusión de máximo 70 palabras.
-11. La conclusión debe ser coherente con la calidad y presentar las alternativas comerciales sin imponer una reparación.
+10. La información SNMP es secundaria: solo confirma actividad registrada durante las pruebas.
+11. No uses niveles SNMP de tóner o unidades para afirmar condición, desgaste, vida útil, vacío o buen estado.
+12. Que SNMP registre impresión, copia u otra actividad no significa que el resultado haya sido correcto; el resultado lo determina el checklist del técnico.
+13. Si SNMP y checklist pudieran contradecirse, utiliza siempre el checklist y omite la contradicción del informe comercial.
+14. Las alertas SNMP corresponden únicamente a mensajes mostrados por el equipo durante la revisión; no las conviertas en diagnóstico definitivo ni en obligación de informar al cliente.
+15. Python mostrará las alertas en un bloque referencial separado. No las enumeres nuevamente en el resumen ni en la conclusión, salvo que sean indispensables para explicar una prueba incompleta.
+16. Redacta un resumen general de máximo 55 palabras y una conclusión de máximo 70 palabras.
+17. La conclusión debe ser coherente con la calidad y presentar las alternativas comerciales sin imponer una reparación.
 
 DATOS DEL EQUIPO:
 Marca/modelo: {datos['maquina']}
