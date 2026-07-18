@@ -5,6 +5,7 @@ import logging
 import re
 import unicodedata
 import json
+import html as html_lib
 
 _logger = logging.getLogger(__name__)
 
@@ -179,213 +180,395 @@ class ReparacionesInforme(models.Model):
         return txt  # para logging cuando no matchea ningún alias
 
     # ========================================
+    # HELPERS PARA INFORME DINÁMICO
+    # ========================================
+    def _rep__safe_code(self, value):
+        """Normaliza códigos técnicos sin depender de mayúsculas o espacios."""
+        return str(value or '').strip().lower()
+
+    def _rep__html_to_text(self, value):
+        """Convierte observaciones HTML en texto limpio para informe y prompt."""
+        if not value:
+            return ''
+        txt = re.sub(r'<br\s*/?>', '\n', str(value), flags=re.I)
+        txt = re.sub(r'</p\s*>', '\n', txt, flags=re.I)
+        txt = re.sub(r'<[^>]+>', '', txt)
+        txt = html_lib.unescape(txt).replace('\xa0', ' ')
+        txt = re.sub(r'[ \t]+', ' ', txt)
+        txt = re.sub(r'\n\s*\n+', '\n', txt)
+        return txt.strip()
+
+    def _rep__unique(self, values):
+        """Elimina duplicados conservando el orden."""
+        result = []
+        seen = set()
+        for value in values:
+            key = str(value or '').strip().lower()
+            if not key or key in seen:
+                continue
+            seen.add(key)
+            result.append(value)
+        return result
+
+    def _rep__escape(self, value):
+        return html_lib.escape(str(value or ''), quote=True)
+
+    def _rep__get_accessory_records(self):
+        """
+        Obtiene las evaluaciones de accesorios sin romper instalaciones donde
+        el campo tenga otro nombre. Solo usa campos realmente existentes.
+        """
+        for field_name in ('accesorio_eval_ids', 'accesorio_evaluacion_ids', 'evaluacion_accesorio_ids'):
+            if field_name in self._fields:
+                return self[field_name]
+        return self.env['ir.model'].browse([])
+
+    def _rep__get_accessory_type(self, record):
+        for field_name in ('accesorio_tipo_id', 'tipo_id', 'accesorio_id'):
+            if field_name in record._fields and record[field_name]:
+                return record[field_name]
+        return False
+
+    def _rep__get_accessory_state(self, record):
+        for field_name in ('estado_id', 'accesorio_estado_id'):
+            if field_name in record._fields and record[field_name]:
+                return record[field_name]
+        return False
+
+    def _rep__get_observation(self, record):
+        for field_name in ('observaciones', 'observacion', 'nota', 'detalle'):
+            if field_name in record._fields and record[field_name]:
+                return self._rep__html_to_text(record[field_name])
+        return ''
+
+    def _rep__get_component_subparts(self, evaluacion):
+        """Devuelve las subpartes seleccionadas para una recomendación."""
+        return self._rep__unique(self.get_subpartes_componente(evaluacion))
+
+    def _rep__component_dict(self, evaluacion):
+        tipo = evaluacion.componente_tipo_id
+        estado = evaluacion.estado_id
+        return {
+            'evaluacion_id': evaluacion.id,
+            'tipo_code': self._rep__safe_code(tipo.code if tipo else ''),
+            'nombre': self._get_nombre_componente_con_color(evaluacion),
+            'estado_code': self._rep__safe_code(estado.code if estado else ''),
+            'estado_nombre': estado.name if estado else 'Sin estado',
+            'observaciones': self._rep__get_observation(evaluacion),
+            'subpartes': self._rep__get_component_subparts(evaluacion),
+        }
+
+    def _rep__collect_relevant_data(self):
+        """
+        Lee todo el checklist, pero devuelve únicamente información útil para
+        redactar el informe. Los estados normales se usan para saber si hubo
+        pruebas, pero no se enumeran.
+        """
+        self.ensure_one()
+        data = {
+            'requiere_cambio': [],
+            'desgaste': [],
+            'mantenimiento': [],
+            'fallas_componentes': [],
+            'pendientes_componentes': [],
+            'funciones_ok': [],
+            'funciones_falla': [],
+            'funciones_pendientes': [],
+            'toners_relevantes': [],
+            'estado_fisico': [],
+            'accesorios_relevantes': [],
+            'componentes_ok_count': 0,
+            'evaluados_count': 0,
+        }
+
+        ok_codes = {'correcto', 'revisado', 'nuevo', 'bueno', 'operativo'}
+        desgaste_codes = {'regular', 'gastada_pero_puede_trabajar'}
+        mantenimiento_codes = {'mantenimiento'}
+        cambio_codes = {'requiere_cambio', 'cambio_de_repuestos'}
+        falla_codes = {'falla'}
+        pendiente_codes = {'sin_revisar', 'sin_probar'}
+        toner_relevante = {
+            'toner_40', 'toner_30', 'toner_25', 'toner_20', 'toner_10',
+            'toner_vacio', 'toner_sin_contenedor', 'vacio', 'sin_botella',
+        }
+        fisicos = {
+            'carcasa_amarilla', 'carcasa_rota', 'carcasa_faltante',
+            'panel_amarillo',
+        }
+
+        for evaluacion in self.evaluacion_ids:
+            if not evaluacion.componente_tipo_id:
+                continue
+            item = self._rep__component_dict(evaluacion)
+            tipo_code = item['tipo_code'].upper()
+            estado_code = item['estado_code']
+            data['evaluados_count'] += 1
+
+            if tipo_code.startswith('FUNCION_'):
+                if estado_code in falla_codes:
+                    data['funciones_falla'].append(item)
+                elif estado_code in pendiente_codes or not estado_code:
+                    data['funciones_pendientes'].append(item)
+                elif estado_code not in {'no_aplica', 'no_instalado'}:
+                    data['funciones_ok'].append(item)
+                continue
+
+            if tipo_code == 'TONER_SYSTEM':
+                if estado_code in toner_relevante:
+                    data['toners_relevantes'].append(item)
+                continue
+
+            if tipo_code in {'CARCASA', 'PANEL_CONTROL'}:
+                if estado_code in fisicos:
+                    data['estado_fisico'].append(item)
+                continue
+
+            if estado_code in cambio_codes:
+                data['requiere_cambio'].append(item)
+            elif estado_code in desgaste_codes:
+                data['desgaste'].append(item)
+            elif estado_code in mantenimiento_codes:
+                data['mantenimiento'].append(item)
+            elif estado_code in falla_codes:
+                data['fallas_componentes'].append(item)
+            elif estado_code in pendiente_codes or not estado_code:
+                data['pendientes_componentes'].append(item)
+            elif estado_code in ok_codes:
+                data['componentes_ok_count'] += 1
+
+        for accesorio in self._rep__get_accessory_records():
+            tipo = self._rep__get_accessory_type(accesorio)
+            estado = self._rep__get_accessory_state(accesorio)
+            if not tipo or not estado:
+                continue
+            code = self._rep__safe_code(estado.code)
+            if code in {'instalado_operativo', 'no_aplica'}:
+                continue
+            if code not in {'instalado_con_falla', 'no_instalado', 'wifi_sin_senal'}:
+                continue
+            data['accesorios_relevantes'].append({
+                'nombre': tipo.name,
+                'tipo_code': self._rep__safe_code(getattr(tipo, 'code', '')),
+                'estado_code': code,
+                'estado_nombre': estado.name,
+                'observaciones': self._rep__get_observation(accesorio),
+            })
+
+        return data
+
+    def _rep__general_status_text(self, data):
+        """Redacción prudente del resultado general, sin afirmar pruebas inexistentes."""
+        if data['funciones_falla']:
+            return (
+                'Durante la revisión y las pruebas realizadas se detectaron incidencias '
+                'de funcionamiento que deben ser atendidas.'
+            )
+        if data['funciones_ok'] and data['funciones_pendientes']:
+            return (
+                'Se realizaron pruebas generales de funcionamiento. Las funciones probadas '
+                'respondieron operativamente, aunque quedaron verificaciones pendientes.'
+            )
+        if data['funciones_ok']:
+            return (
+                'Se realizaron pruebas generales de funcionamiento y las funciones verificadas '
+                'respondieron operativamente.'
+            )
+        return 'Se realizó una revisión general del equipo y pruebas básicas de funcionamiento.'
+
+    # ========================================
     # EXTRACCIÓN DE DATOS DESDE EVALUACIONES
     # ========================================
     def _rep__funciones_con_falla(self):
-        """Lista funciones con falla (tipo FUNCION_*, estado 'falla')."""
-        funciones_falla = []
-        for eval_comp in self.evaluacion_ids:
-            if not eval_comp.estado_id:
-                continue
-            tipo_code = (eval_comp.componente_tipo_id.code or '').strip().upper() if eval_comp.componente_tipo_id else ''
-            if tipo_code.startswith('FUNCION_') and eval_comp.estado_id.code == 'falla':
-                funciones_falla.append(eval_comp.componente_tipo_id.name)
-        _logger.debug("[_rep__funciones_con_falla] id=%s -> %s", self.id, funciones_falla)
-        return funciones_falla
+        data = self._rep__collect_relevant_data()
+        return [item['nombre'] for item in data['funciones_falla']]
 
     def _rep__toners_criticos(self):
-        """Lista consumibles críticos (TONER_SYSTEM con estado 'vacio'/'sin_botella')."""
-        toners_criticos = []
-        for eval_comp in self.evaluacion_ids:
-            if not eval_comp.estado_id:
-                continue
-            tipo_code = (eval_comp.componente_tipo_id.code or '').strip().upper() if eval_comp.componente_tipo_id else ''
-            if tipo_code == 'TONER_SYSTEM' and eval_comp.estado_id.code in ('vacio', 'sin_botella'):
-                nombre = eval_comp.componente_tipo_id.name
-                if eval_comp.color_id:
-                    nombre = f"{nombre} {eval_comp.color_id.name}"
-                toners_criticos.append(nombre)
-        _logger.debug("[_rep__toners_criticos] id=%s -> %s", self.id, toners_criticos)
-        return toners_criticos
+        data = self._rep__collect_relevant_data()
+        return [item['nombre'] for item in data['toners_relevantes']]
 
     def _rep__collect_findings(self):
-        """
-        Clasifica hallazgos desde evaluaciones.
-        Retorna: cambio_inmediato, desgaste, pendientes, no_aplica, score.
-        """
-        cambio_inmediato, desgaste, pendientes, no_aplica = [], [], [], []
-        score = 0
-
-        # Componentes
-        for eval_comp in self.evaluacion_ids:
-            # Usar el método para obtener el nombre con color
-            nombre = self._get_nombre_componente_con_color(eval_comp)
-            
-            if not eval_comp.estado_id:
-                pendientes.append(nombre)
-                score += 1
-                continue
-
-            estado_code = eval_comp.estado_id.code
-
-            peso = 2
-            if hasattr(eval_comp.componente_tipo_id, 'prioridad'):
-                prioridad = eval_comp.componente_tipo_id.prioridad
-                peso = {'1': 3, '2': 2, '3': 1}.get(prioridad, 2)
-
-            if estado_code in ('requiere_cambio', 'cambio_de_repuestos', 'vacio', 'sin_botella', 'carcasa_rota', 'carcasa_faltante'):
-                cambio_inmediato.append(nombre); score += 3 * peso
-            elif estado_code in ('regular', 'gastada_pero_puede_trabajar', 'mantenimiento', 'carcasa_amarilla', 'panel_amarillo'):
-                desgaste.append(nombre); score += 2 * peso
-            elif estado_code in ('sin_revisar', 'sin_probar'):
-                pendientes.append(nombre); score += 1 * peso
-            elif estado_code == 'no_aplica':
-                no_aplica.append(nombre)
-
-        # NO incluir accesorios en el informe (como solicitaste)
-        # for eval_acc in getattr(self, 'accesorio_eval_ids', self.env['reparacion.accesorio.evaluacion']):
-        #     ...
-
-        findings = {
-            'cambio_inmediato': cambio_inmediato,
-            'desgaste': desgaste,
-            'pendientes': pendientes,
-            'no_aplica': no_aplica,
-            'score': score,
+        """Compatibilidad con la lógica anterior usando la nueva clasificación."""
+        data = self._rep__collect_relevant_data()
+        cambio = [x['nombre'] for x in data['requiere_cambio']]
+        cambio += [x['nombre'] for x in data['fallas_componentes']]
+        desgaste = [x['nombre'] for x in data['desgaste'] + data['mantenimiento']]
+        pendientes = [x['nombre'] for x in data['pendientes_componentes']]
+        pendientes += [x['nombre'] for x in data['funciones_pendientes']]
+        return {
+            'cambio_inmediato': self._rep__unique(cambio),
+            'desgaste': self._rep__unique(desgaste),
+            'pendientes': self._rep__unique(pendientes),
+            'no_aplica': [],
+            'score': (
+                len(cambio) * 6
+                + len(desgaste) * 3
+                + len(pendientes)
+            ),
         }
-        _logger.debug("[_rep__collect_findings] id=%s -> %s", self.id, findings)
-        return findings
 
     def _rep__calc_calidad(self, findings, funciones_falla, toners_criticos):
-        """Calcula calidad general."""
+        """Calidad de respaldo; calidad_id sigue teniendo prioridad."""
         if findings['cambio_inmediato'] or funciones_falla or toners_criticos:
             return 'mala'
         if findings['desgaste'] or findings['pendientes']:
             return 'regular'
         return 'buena'
 
-    # ========================================
-    # CONSTRUCCIÓN DEL INFORME HTML (AUTOMÁTICO)
-    # ========================================
     def _rep__build_informe_html(self):
-        """Construye el HTML del informe técnico (método automático sin IA)."""
+        """Genera un informe dinámico, humano y basado solo en datos registrados."""
         self.ensure_one()
-        _logger.info("[_rep__build_informe_html] Iniciando para reparacion id=%s", self.id)
-
-        # Hallazgos estructurados
-        f = self._rep__collect_findings()
-        funciones_no = self._rep__funciones_con_falla()
-        toners_crit = self._rep__toners_criticos()
-
-        # Calidad: usar SIEMPRE lo que ya está en calidad_id; si no hay, calcular como respaldo
+        data = self._rep__collect_relevant_data()
+        findings = self._rep__collect_findings()
         calidad = self._rep__get_calidad_actual(
-            findings=f,
-            funciones_falla=funciones_no,
-            toners_criticos=toners_crit,
-        )
-        _logger.debug("[_rep__build_informe_html] calidad_usada=%s", calidad)
-
-        html_parts = []
-
-        # Texto inicial, corto y natural
-        html_parts.append(
-            '<p>Se realizó una revisión general de la máquina y pruebas básicas de funcionamiento.</p>'
+            findings=findings,
+            funciones_falla=[x['nombre'] for x in data['funciones_falla']],
+            toners_criticos=[x['nombre'] for x in data['toners_relevantes']],
         )
 
-        # Subpartes específicas SOLO para componentes que requieren cambio
-        subpartes_html = self._generar_subpartes_estructuradas()
-        if subpartes_html:
-            html_parts.append(
-                '<p><strong>Se identifican los siguientes componentes que requieren cambio, con sus subpartes asociadas:</strong></p>'
-            )
-            html_parts.append(subpartes_html)
+        parts = [
+            '<div data-autogen="1" style="font-family:Arial;line-height:1.55;">',
+            f'<p>{self._rep__escape(self._rep__general_status_text(data))}</p>',
+        ]
 
-        # Funciones con falla (si las hay)
-        if funciones_no:
-            html_parts.append('<p><strong>Funciones con incidencia detectada:</strong></p>')
-            html_parts.append('<ul style="margin:5px 0 10px 20px;">')
-            for fun in funciones_no:
-                html_parts.append(f'<li>{fun}</li>')
-            html_parts.append('</ul>')
+        hallazgos = []
 
-        # Toners críticos (si los hay)
-        if toners_crit:
-            html_parts.append('<p><strong>Consumibles en estado crítico:</strong></p>')
-            html_parts.append('<ul style="margin:5px 0 10px 20px;">')
-            for t in toners_crit:
-                html_parts.append(f'<li>{t}</li>')
-            html_parts.append('</ul>')
+        for item in data['requiere_cambio']:
+            nombre = self._rep__escape(item['nombre'])
+            subpartes = item['subpartes']
+            if subpartes:
+                lista = ', '.join(self._rep__escape(x) for x in subpartes)
+                texto = f'Se recomienda atender <strong>{nombre}</strong> y considerar el cambio de: {lista}.'
+            else:
+                texto = f'<strong>{nombre}</strong> requiere cambio según la evaluación realizada.'
+            if item['observaciones']:
+                texto += f' Observación del técnico: {self._rep__escape(item["observaciones"])}.'
+            hallazgos.append(texto)
 
-        # Conclusión basada en la calidad ya definida
-        if calidad == 'mala':
-            html_parts.append(
-                '<p>El equipo requiere inversión inmediata en repuestos antes de ser entregado.</p>'
-            )
+        for item in data['desgaste']:
+            nombre = self._rep__escape(item['nombre'])
+            texto = f'<strong>{nombre}</strong> presenta desgaste, pero puede continuar trabajando.'
+            if item['subpartes']:
+                lista = ', '.join(self._rep__escape(x) for x in item['subpartes'])
+                texto += f' Se recomienda revisar preventivamente: {lista}.'
+            if item['observaciones']:
+                texto += f' Observación del técnico: {self._rep__escape(item["observaciones"])}.'
+            hallazgos.append(texto)
+
+        for item in data['mantenimiento']:
+            texto = f'<strong>{self._rep__escape(item["nombre"])}</strong> requiere mantenimiento preventivo.'
+            if item['observaciones']:
+                texto += f' Observación del técnico: {self._rep__escape(item["observaciones"])}.'
+            hallazgos.append(texto)
+
+        for item in data['fallas_componentes']:
+            texto = f'Se detectó una falla en <strong>{self._rep__escape(item["nombre"])}</strong>.'
+            if item['observaciones']:
+                texto += f' Detalle: {self._rep__escape(item["observaciones"])}.'
+            hallazgos.append(texto)
+
+        for item in data['funciones_falla']:
+            texto = f'La función <strong>{self._rep__escape(item["nombre"])}</strong> presentó una incidencia durante las pruebas.'
+            if item['observaciones']:
+                texto += f' Detalle: {self._rep__escape(item["observaciones"])}.'
+            hallazgos.append(texto)
+
+        for item in data['toners_relevantes']:
+            estado = item['estado_code']
+            nombre = self._rep__escape(item['nombre'])
+            if estado in {'toner_vacio', 'vacio'}:
+                texto = f'El <strong>{nombre}</strong> se encuentra vacío.'
+            elif estado in {'toner_sin_contenedor', 'sin_botella'}:
+                texto = f'El equipo no cuenta con <strong>{nombre}</strong> instalado.'
+            else:
+                texto = f'El nivel de <strong>{nombre}</strong> es bajo ({self._rep__escape(item["estado_nombre"])}).'
+            if item['observaciones']:
+                texto += f' Observación del técnico: {self._rep__escape(item["observaciones"])}.'
+            hallazgos.append(texto)
+
+        for item in data['estado_fisico']:
+            code = item['estado_code']
+            if code == 'carcasa_rota':
+                texto = 'Se observan roturas en la carcasa o tapas del equipo. Revisar las fotografías adjuntas.'
+            elif code == 'carcasa_faltante':
+                texto = 'La carcasa presenta piezas o tapas faltantes. Revisar las fotografías adjuntas.'
+            elif code == 'carcasa_amarilla':
+                texto = 'La carcasa presenta decoloración amarillenta por uso, sin que ello determine por sí solo una falla funcional.'
+            elif code == 'panel_amarillo':
+                texto = 'El panel de control presenta decoloración por uso.'
+            else:
+                texto = f'{self._rep__escape(item["nombre"])}: {self._rep__escape(item["estado_nombre"])}.'
+            if item['observaciones']:
+                texto += f' Observación del técnico: {self._rep__escape(item["observaciones"])}.'
+            hallazgos.append(texto)
+
+        for item in data['accesorios_relevantes']:
+            code = item['estado_code']
+            nombre = self._rep__escape(item['nombre'])
+            if code == 'instalado_con_falla':
+                texto = f'El accesorio <strong>{nombre}</strong> está instalado, pero presenta una falla.'
+            elif code == 'wifi_sin_senal':
+                texto = f'El accesorio <strong>{nombre}</strong> está instalado, pero no se detectó señal durante la evaluación.'
+            else:
+                texto = f'El equipo no cuenta con el accesorio <strong>{nombre}</strong> instalado.'
+            if item['observaciones']:
+                texto += f' Detalle: {self._rep__escape(item["observaciones"])}.'
+            hallazgos.append(texto)
+
+        if data['funciones_pendientes']:
+            nombres = ', '.join(self._rep__escape(x['nombre']) for x in data['funciones_pendientes'])
+            hallazgos.append(f'Quedaron pruebas pendientes en: {nombres}.')
+
+        if data['pendientes_componentes']:
+            nombres = ', '.join(self._rep__escape(x['nombre']) for x in data['pendientes_componentes'])
+            hallazgos.append(f'Quedó pendiente revisar: {nombres}.')
+
+        observacion_general = self._rep__html_to_text(self.observaciones_tecnico)
+        if observacion_general:
+            hallazgos.append(f'Observación general del técnico: {self._rep__escape(observacion_general)}.')
+
+        if hallazgos:
+            parts.append('<h5 style="margin:12px 0 6px;">Hallazgos y recomendaciones</h5>')
+            parts.append('<ul style="margin:5px 0 10px 20px;">')
+            parts.extend(f'<li style="margin-bottom:6px;">{x}</li>' for x in hallazgos)
+            parts.append('</ul>')
+
+        if calidad == 'buena':
+            conclusion = 'De acuerdo con la evaluación realizada, el equipo presenta una condición general adecuada para su entrega, considerando el mantenimiento estándar de instalación.'
+            bg, fg = '#e8f5e9', '#2e7d32'
         elif calidad == 'regular':
-            html_parts.append(
-                '<p>El equipo se encuentra operativo, pero se recomienda realizar los cambios preventivos indicados.</p>'
-            )
-        else:  # 'buena' u otro valor
-            html_parts.append(
-                '<p>El equipo presenta una calidad de impresión acorde y está listo para entrega con mantenimiento estándar.</p>'
-            )
+            conclusion = 'El equipo puede encontrarse operativo, pero conviene atender las observaciones y recomendaciones indicadas antes de la entrega.'
+            bg, fg = '#fff8e1', '#ef6c00'
+        else:
+            conclusion = 'La condición evaluada requiere atender los hallazgos indicados y repetir las pruebas correspondientes antes de la entrega.'
+            bg, fg = '#ffebee', '#c62828'
 
-        # Construir HTML final
-        html = f'''
-    <div data-autogen="1" style="font-family: Arial; line-height:1.6;">
-        {''.join(html_parts)}
-    </div>
-    '''
-        _logger.info(
-            "[_rep__build_informe_html] HTML construido (len=%s) para id=%s",
-            len(html),
-            self.id,
+        parts.append('<h5 style="margin:12px 0 6px;">Conclusión</h5>')
+        parts.append(
+            f'<div style="padding:10px;border-radius:6px;background:{bg};color:{fg};">'
+            f'<strong style="text-transform:capitalize;">{self._rep__escape(calidad)}</strong>: '
+            f'{self._rep__escape(conclusion)}</div>'
         )
-        # ⚠️ Importante: devolvemos la calidad usada SOLO como dato, no se escribe a la BD aquí
-        return html, calidad
-
+        parts.append('</div>')
+        return ''.join(parts), calidad
 
     def _generar_subpartes_estructuradas(self):
-        """Genera HTML con viñetas de componentes y sus subpartes SOLO para los que requieren cambio"""
-        if not self.intervencion_ids:
-            return ""
-
-        # Filtrar solo intervenciones que tienen detalles Y cuya acción es 'cambiado'
-        intervenciones_cambio = self.intervencion_ids.filtered(
-            lambda x: x.detalle_ids and x.accion == 'cambiado'
-        )
-        
-        if not intervenciones_cambio:
-            return ""
-
-        html_parts = []
-        html_parts.append('<ul style="margin:5px 0 10px 20px; list-style-type: disc;">')
-        
-        for intervencion in intervenciones_cambio:
-            # Obtener nombre del componente
-            codigo = intervencion.componente_code if intervencion.componente_code else intervencion.componente
-            componente_nombre = self._get_component_display_name(codigo)
-            
-            # Obtener subpartes
-            subpartes = [d.subparte_id.name for d in intervencion.detalle_ids if d.subparte_id]
-            
-            if subpartes:
-                # Componente como item de lista
-                html_parts.append(f'<li style="margin-bottom:8px;"><strong>{componente_nombre}:</strong>')
-                
-                # Sub-lista de subpartes
-                html_parts.append('<ul style="margin:3px 0 0 20px; list-style-type: circle;">')
-                for subparte in subpartes:
-                    html_parts.append(f'<li>{subparte}</li>')
-                html_parts.append('</ul>')
-                html_parts.append('</li>')
-        
+        """
+        Compatibilidad: lista subpartes asociadas a evaluaciones marcadas como
+        requiere cambio. No interpreta la intervención como trabajo realizado.
+        """
+        items = self._rep__collect_relevant_data()['requiere_cambio']
+        con_subpartes = [x for x in items if x['subpartes']]
+        if not con_subpartes:
+            return ''
+        html_parts = ['<ul style="margin:5px 0 10px 20px;">']
+        for item in con_subpartes:
+            html_parts.append(f'<li><strong>{self._rep__escape(item["nombre"])}</strong><ul>')
+            for subparte in item['subpartes']:
+                html_parts.append(f'<li>{self._rep__escape(subparte)}</li>')
+            html_parts.append('</ul></li>')
         html_parts.append('</ul>')
-        
-        if len(html_parts) == 2:  # Solo etiquetas de apertura/cierre, sin contenido
-            return ""
-        
         return ''.join(html_parts)
+
     def _generar_texto_repuestos(self):
         """Genera texto corto de subpartes que requieren cambio"""
         if not self.intervencion_ids:
@@ -567,75 +750,43 @@ class ReparacionesInforme(models.Model):
     # GENERACIÓN CON IA
     # ========================================
     def _generar_informe_con_ia(self):
-        """Genera informe con IA (NUEVA SINTAXIS) usando la calidad ya definida en checklist."""
+        """Genera informe con IA y devuelve si realmente se utilizó la API."""
         self.ensure_one()
-        
         if not GEMINI_AVAILABLE:
-            raise UserError("google-genai no instalado")
-        
-        _logger.info("[_generar_informe_con_ia] Iniciando para id=%s", self.id)
-        
+            html, calidad = self._rep__build_informe_html()
+            return html, calidad, 'Generado automáticamente: google-genai no está instalado.', False
+
         try:
-            # 1) Configuración
             config_gemini = self.env['gemini.configuracion'].get_config_activa()
             gemini_setup = self._init_gemini_model(config_gemini)
-            
-            # 2) Preparar datos (incluye calidad_actual desde checklist)
             datos = self._preparar_datos_para_ia()
-            
-            # 3) Construir prompt
             prompt = self._construir_prompt_ia(datos)
-            
-            _logger.debug("[_generar_informe_con_ia] Prompt len=%s", len(prompt))
-            
-            # 4) Llamar API (NUEVA SINTAXIS)
-            _logger.info("[_generar_informe_con_ia] Llamando Gemini...")
-            
+
             response = gemini_setup['client'].models.generate_content(
                 model=gemini_setup['modelo'],
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     temperature=gemini_setup['temperature'],
                     max_output_tokens=gemini_setup['max_tokens'],
-                    response_mime_type='application/json',  # Forzar JSON
+                    response_mime_type='application/json',
                 )
             )
-            
-            # 5) Parsear respuesta
             resultado = self._parsear_respuesta_ia(response.text)
-            
-            # 6) Determinar calidad efectiva (SIEMPRE desde checklist / lógica interna)
-            calidad_efectiva = datos.get('calidad_actual') or 'regular'
-            
-            # 7) Registrar uso
+            calidad = datos['calidad_actual']
+
+            if self._rep__safe_code(resultado.get('calidad')) != self._rep__safe_code(calidad):
+                raise ValueError('La IA devolvió una calidad distinta a la definida en el checklist.')
+
+            informe_html = resultado['informe_html']
+            if 'data-autogen="1"' not in informe_html.lower():
+                informe_html = f'<div data-autogen="1">{informe_html}</div>'
+
             config_gemini.incrementar_contador()
-            
-            # 8) Log en chatter (clarificando que la calidad viene del checklist)
-            self.message_post(
-                body=(
-                    f"<b>✨ Informe generado con IA</b><br/>"
-                    f"Modelo: {gemini_setup['modelo']}<br/>"
-                    f"Calidad (desde checklist): <b>{calidad_efectiva.upper()}</b><br/>"
-                    f"Justificación IA: {resultado.get('justificacion_calidad', '')}"
-                )
-            )
-            
-            _logger.info(
-                "[_generar_informe_con_ia] ✅ Éxito. Calidad_usada=%s", calidad_efectiva
-            )
-            
-            return (
-                resultado['informe_html'],
-                calidad_efectiva,
-                resultado.get('justificacion_calidad', ''),
-            )
-            
+            return informe_html, calidad, resultado.get('justificacion_calidad', ''), True
         except Exception as e:
-            _logger.error("[_generar_informe_con_ia] ❌ Error: %s", str(e))
-            # Fallback
-            _logger.warning("Usando método automático como fallback")
+            _logger.exception('Error generando informe con IA: %s', e)
             html, calidad = self._rep__build_informe_html()
-            return (html, calidad, 'Generado automáticamente (error en IA)')
+            return html, calidad, f'Generado automáticamente por error en IA: {e}', False
 
     def _init_gemini_model(self, config):
         """Inicializa cliente de Gemini (NUEVA SINTAXIS)"""
@@ -651,279 +802,130 @@ class ReparacionesInforme(models.Model):
         }
     
     def _preparar_datos_para_ia(self):
-        """
-        Prepara todos los datos necesarios para el prompt de IA.
-        Retorna diccionario con datos estructurados.
-        Usa la calidad ya definida en calidad_id (checklist) cuando exista.
-        """
+        """Prepara únicamente hechos relevantes; no envía el checklist completo."""
         self.ensure_one()
-        
-        # Recolectar hallazgos
+        data = self._rep__collect_relevant_data()
         findings = self._rep__collect_findings()
-        funciones_falla = self._rep__funciones_con_falla()
-        toners_crit = self._rep__toners_criticos()
-        
-        # Calidad actual DESDE CHECKLIST (o calculada como fallback)
-        calidad_actual = self._rep__get_calidad_actual(
+        calidad = self._rep__get_calidad_actual(
             findings=findings,
-            funciones_falla=funciones_falla,
-            toners_criticos=toners_crit,
-        )
-        
-        # Obtener estados de carcasa y panel (usar solo el primero si hay varios)
-        carcasa_eval = self.evaluacion_ids.filtered(
-            lambda e: e.componente_tipo_id.code == 'CARCASA'
-        )
-        panel_eval = self.evaluacion_ids.filtered(
-            lambda e: e.componente_tipo_id.code == 'PANEL_CONTROL'
+            funciones_falla=[x['nombre'] for x in data['funciones_falla']],
+            toners_criticos=[x['nombre'] for x in data['toners_relevantes']],
         )
 
-        carcasa_estado = carcasa_eval[:1].estado_id.name if carcasa_eval else 'No evaluado'
-        panel_estado = panel_eval[:1].estado_id.name if panel_eval else 'No evaluado'
-
-        # Contador: evitar mandar un Many2one raro al prompt
         contador_val = '0'
         if self.contometrok_id:
-            try:
-                # Ajusta estos nombres según tu modelo real de contómetro
-                if hasattr(self.contometrok_id, 'contador'):
-                    contador_val = str(self.contometrok_id.contador or 0)
-                elif hasattr(self.contometrok_id, 'name'):
-                    contador_val = str(self.contometrok_id.name)
-                else:
-                    contador_val = str(self.contometrok_id)
-            except Exception as cex:
-                _logger.warning(
-                    "[_preparar_datos_para_ia] No se pudo obtener contador limpio de contometrok_id (%s). Usando '0'.",
-                    cex,
-                )
-                contador_val = '0'
+            if hasattr(self.contometrok_id, 'contador'):
+                contador_val = str(self.contometrok_id.contador or 0)
+            elif hasattr(self.contometrok_id, 'name'):
+                contador_val = str(self.contometrok_id.name or '0')
 
-        # Formatear componentes críticos con sus subpartes (según intervenciones reales)
-        componentes_criticos_detalle = []
-        for comp_nombre in findings['cambio_inmediato']:
-            for eval_comp in self.evaluacion_ids:
-                nombre_eval = self._get_nombre_componente_con_color(eval_comp)
-                if nombre_eval == comp_nombre:
-                    subpartes = self.get_subpartes_componente(eval_comp)
-                    if subpartes:
-                        componentes_criticos_detalle.append({
-                            'nombre': comp_nombre,
-                            'subpartes': subpartes,
-                            'observaciones': eval_comp.observaciones or ''
-                        })
-                    else:
-                        componentes_criticos_detalle.append({
-                            'nombre': comp_nombre,
-                            'subpartes': [],
-                            'observaciones': eval_comp.observaciones or ''
-                        })
-                    break
-        
-        # Formatear componentes con desgaste
-        componentes_desgaste_detalle = []
-        for comp_nombre in findings['desgaste']:
-            for eval_comp in self.evaluacion_ids:
-                nombre_eval = self._get_nombre_componente_con_color(eval_comp)
-                if nombre_eval == comp_nombre:
-                    componentes_desgaste_detalle.append({
-                        'nombre': comp_nombre,
-                        'observaciones': eval_comp.observaciones or ''
-                    })
-                    break
-        
-        # Observaciones del técnico (limpiar HTML si existe)
-        observaciones_texto = ''
-        if self.observaciones_tecnico:
-            observaciones_texto = re.sub(r'<[^>]+>', '', self.observaciones_tecnico or '')
-            observaciones_texto = observaciones_texto.strip()
-        
-        datos = {
+        return {
             'maquina': f"{self.marca or ''} {self.nombre_maquina or ''}".strip(),
-            'serie': self.serie_id or 'N/A',
+            'serie': str(self.serie_id or 'N/A'),
             'contador': contador_val,
-            'componentes_criticos': componentes_criticos_detalle,
-            'componentes_desgaste': componentes_desgaste_detalle,
-            'funciones_falla': funciones_falla,
-            'toners_criticos': toners_crit,
-            'observaciones_tecnico': observaciones_texto,
-            'estado_carcasa': carcasa_estado,
-            'estado_panel': panel_estado,
-            'calidad_actual': calidad_actual or 'regular',
+            'calidad_actual': calidad or 'regular',
+            'resultado_general': self._rep__general_status_text(data),
+            'requiere_cambio': data['requiere_cambio'],
+            'desgaste': data['desgaste'],
+            'mantenimiento': data['mantenimiento'],
+            'fallas_componentes': data['fallas_componentes'],
+            'funciones_falla': data['funciones_falla'],
+            'funciones_pendientes': data['funciones_pendientes'],
+            'toners_relevantes': data['toners_relevantes'],
+            'estado_fisico': data['estado_fisico'],
+            'accesorios_relevantes': data['accesorios_relevantes'],
+            'observaciones_tecnico': self._rep__html_to_text(self.observaciones_tecnico),
         }
-        
-        _logger.debug(
-            "[_preparar_datos_para_ia] Datos preparados: criticos=%s, desgaste=%s, calidad_actual=%s",
-            len(componentes_criticos_detalle),
-            len(componentes_desgaste_detalle),
-            datos['calidad_actual'],
-        )
-        
-        return datos
 
-    
     def _construir_prompt_ia(self, datos):
-        """Construye el prompt para Gemini (usando la calidad ya definida en checklist)."""
-        
-        # Formatear componentes críticos
-        criticos_text = ""
-        if datos['componentes_criticos']:
-            for comp in datos['componentes_criticos']:
-                criticos_text += f"- {comp['nombre']}\n"
-                if comp['subpartes']:
-                    criticos_text += f"  Subpartes: {', '.join(comp['subpartes'])}\n"
-                if comp['observaciones']:
-                    criticos_text += f"  Observaciones: {comp['observaciones']}\n"
-        else:
-            criticos_text = "(ninguno)"
-        
-        # Formatear componentes con desgaste
-        desgaste_text = ""
-        if datos['componentes_desgaste']:
-            for comp in datos['componentes_desgaste']:
-                desgaste_text += f"- {comp['nombre']}\n"
-                if comp['observaciones']:
-                    desgaste_text += f"  Observaciones: {comp['observaciones']}\n"
-        else:
-            desgaste_text = "(ninguno)"
-        
-        # Formatear funciones con falla
-        funciones_text = ", ".join(datos['funciones_falla']) if datos['funciones_falla'] else "(ninguna)"
-        
-        # Formatear toners críticos
-        toners_text = ", ".join(datos['toners_criticos']) if datos['toners_criticos'] else "(ninguno)"
-        
-        calidad_actual = datos.get('calidad_actual', 'regular')
+        """Prompt estricto: redactar solo hechos relevantes y no inventar."""
+        hechos = {
+            'resultado_general': datos['resultado_general'],
+            'componentes_que_requieren_cambio': datos['requiere_cambio'],
+            'componentes_con_desgaste': datos['desgaste'],
+            'componentes_que_requieren_mantenimiento': datos['mantenimiento'],
+            'fallas_de_componentes': datos['fallas_componentes'],
+            'funciones_con_falla': datos['funciones_falla'],
+            'funciones_pendientes': datos['funciones_pendientes'],
+            'consumibles_relevantes': datos['toners_relevantes'],
+            'estado_fisico_relevante': datos['estado_fisico'],
+            'accesorios_relevantes': datos['accesorios_relevantes'],
+            'observaciones_generales': datos['observaciones_tecnico'],
+        }
+        hechos_json = json.dumps(hechos, ensure_ascii=False, indent=2)
+        calidad = datos['calidad_actual']
 
-        prompt = f"""
-    Eres un técnico experto de fotocopiadoras. Analiza esta evaluación técnica y genera un informe CORTO para VENTAS MAYORISTAS.
+        return f"""
+Eres un técnico especialista que redacta informes de evaluación de fotocopiadoras,
+impresoras, plotters y duplicadoras para ventas mayoristas.
 
-    INSTRUCCIONES IMPORTANTES:
-    1. La calidad general YA ESTÁ DEFINIDA como: "{calidad_actual}". Úsala tal cual y no la cambies.
-    2. Genera un informe HTML conciso (máximo 150 palabras), en tono humano y profesional.
-    3. Corrige errores ortográficos en las observaciones del técnico.
-    4. Normaliza términos técnicos (ejemplo: "rodillo negro" → "Unidad de Imagen Black") solo cuando sea evidente.
-    5. NO inventes detalles técnicos, ni componentes, ni subpartes que no estén en los datos.
-    6. Usa lenguaje profesional pero directo.
-    7. El enfoque es para DISTRIBUIDORES (no usuario final).
+Redacta un informe natural, profesional y concreto usando EXCLUSIVAMENTE los hechos
+entregados. No inventes causas, piezas, pruebas, daños, ubicaciones ni trabajos realizados.
 
-    CRITERIOS (SOLO DE CONTEXTO, NO PARA QUE CAMBIES LA CALIDAD):
-    - BUENA: Equipo listo para entrega. Solo requiere mantenimiento estándar en instalación.
-    - REGULAR: Equipo operativo pero requiere cambios preventivos recomendados antes de entrega.
-    - MALA: Equipo requiere inversión inmediata en repuestos críticos antes de entregarse a distribuidor.
+REGLAS OBLIGATORIAS:
+1. La calidad ya está definida como \"{calidad}\". No la cambies.
+2. \"Requiere cambio\" significa recomendación pendiente. Nunca escribas que la pieza fue cambiada.
+3. No enumeres componentes o accesorios normales. Resume las pruebas correctas en una frase general.
+4. Menciona solamente fallas, desgaste, mantenimiento, cambios recomendados, consumibles bajos o faltantes,
+   daños físicos, accesorios relevantes, pruebas pendientes y observaciones del técnico.
+5. Si hay carcasa rota o piezas faltantes, indica revisar las fotografías adjuntas; no inventes qué tapa es.
+6. Si falta tóner, indica el color y el estado exacto. No afirmes que esa falta causó una prueba pendiente
+   salvo que la observación del técnico lo diga expresamente.
+7. Las subpartes solo pueden aparecer dentro del componente al que pertenecen.
+8. Máximo 260 palabras. Evita frases genéricas como \"requiere inversión inmediata\".
+9. La conclusión debe describir qué debe atenderse antes de la entrega, sin declarar inoperativo el equipo
+   salvo que exista una falla funcional registrada.
+10. Corrige ortografía, pero conserva el significado técnico.
 
-    ═══════════════════════════════════════════════════════════════
-    DATOS DE LA MÁQUINA:
-    ═══════════════════════════════════════════════════════════════
-    Marca/Modelo: {datos['maquina']}
-    Serie: {datos['serie']}
-    Contador: {datos['contador']} copias
-    Calidad actual (definida por checklist): {calidad_actual}
+DATOS DEL EQUIPO:
+Marca/modelo: {datos['maquina']}
+Serie: {datos['serie']}
+Contador: {datos['contador']}
+Calidad definida: {calidad}
 
-    ═══════════════════════════════════════════════════════════════
-    EVALUACIÓN TÉCNICA:
-    ═══════════════════════════════════════════════════════════════
+HECHOS RELEVANTES:
+{hechos_json}
 
-    COMPONENTES CRÍTICOS (requieren cambio inmediato):
-    {criticos_text}
+Devuelve JSON estricto con esta estructura:
+{{
+  \"calidad\": \"{calidad}\",
+  \"justificacion_calidad\": \"Una oración breve basada únicamente en los hechos\",
+  \"informe_html\": \"<div data-autogen=\\\"1\\\" style=\\\"font-family:Arial;line-height:1.55;\\\">...</div>\"
+}}
 
-    COMPONENTES CON DESGASTE (cambio preventivo recomendado):
-    {desgaste_text}
+El HTML debe contener:
+- un primer párrafo con el resultado general;
+- el título \"Hallazgos y recomendaciones\" solo si existen hallazgos;
+- una lista breve agrupada por componente cuando existan subpartes;
+- el título \"Conclusión\";
+- una conclusión coherente con la calidad definida.
 
-    FUNCIONES CON FALLA:
-    {funciones_text}
+Responde únicamente con JSON válido.
+"""
 
-    CONSUMIBLES CRÍTICOS (tóners vacíos o sin botella):
-    {toners_text}
-
-    ESTADO FÍSICO:
-    - Carcasa: {datos['estado_carcasa']}
-    - Panel de control: {datos['estado_panel']}
-
-    OBSERVACIONES DEL TÉCNICO:
-    {datos['observaciones_tecnico'] or 'Sin observaciones adicionales'}
-
-    ═══════════════════════════════════════════════════════════════
-    GENERA (en formato JSON estricto):
-    ═══════════════════════════════════════════════════════════════
-
-    IMPORTANTE:
-    - El campo "calidad" del JSON DEBE ser exactamente "{calidad_actual}".
-    - No propongas otra calidad distinta.
-
-    {{
-    "calidad": "{calidad_actual}",
-    "justificacion_calidad": "Una línea de máximo 100 caracteres explicando por qué esa calidad, basada SOLO en los datos entregados",
-    "informe_html": "HTML del informe aquí"
-    }}
-
-    ESTRUCTURA REQUERIDA DEL INFORME HTML:
-    <div data-autogen="1" style="font-family: Arial; line-height:1.5;">
-    <p>[Resumen general del estado en 1-2 líneas, coherente con la calidad {calidad_actual}]</p>
-
-    <h5 style="margin:12px 0 6px;">Observaciones para entrega a distribuidor</h5>
-    [SI hay componentes críticos, listar sólo esos componentes y sus subpartes específicas indicadas en los datos]
-    [SI hay desgaste, listar componentes con desgaste sin inventar elementos nuevos]
-    [SI hay tóners críticos, listarlos]
-
-    <h5 style="margin:12px 0 6px;">Conclusión</h5>
-    <div style="padding:10px; border-radius:6px; background:[color según calidad]; color:[texto según calidad];">
-    <strong style="text-transform:capitalize;">[calidad]</strong>: [justificacion_calidad]
-    </div>
-
-    </div>
-
-    COLORES PARA LA CONCLUSIÓN:
-    - buena: background:#e8f5e9; color:#2e7d32;
-    - regular: background:#fff8e1; color:#ef6c00;
-    - mala: background:#ffebee; color:#c62828;
-
-    RESPONDE SOLO CON EL JSON, SIN TEXTO ADICIONAL.
-    """
-        
-        return prompt
-
-    
     def _parsear_respuesta_ia(self, response_text):
-        """Parsea la respuesta JSON de Gemini (informe_html + justificación)."""
+        """Parsea y valida la respuesta JSON de Gemini."""
         try:
-            # Limpiar posibles markdown wrappings
-            texto_limpio = response_text.strip()
-            if texto_limpio.startswith('```json'):
-                texto_limpio = texto_limpio[7:]
-            if texto_limpio.startswith('```'):
-                texto_limpio = texto_limpio[3:]
-            if texto_limpio.endswith('```'):
-                texto_limpio = texto_limpio[:-3]
-            texto_limpio = texto_limpio.strip()
-            
-            # Parsear JSON
-            resultado = json.loads(texto_limpio)
-            
-            # Validar campos requeridos mínimos
-            if 'informe_html' not in resultado:
-                raise ValueError("Respuesta sin campo 'informe_html'")
-            if 'calidad' not in resultado:
-                _logger.warning("[_parsear_respuesta_ia] Respuesta sin campo 'calidad' (se ignorará para la BD)")
-            if 'justificacion_calidad' not in resultado:
-                resultado['justificacion_calidad'] = ''
-            
+            texto = (response_text or '').strip()
+            texto = re.sub(r'^```(?:json)?\s*', '', texto, flags=re.I)
+            texto = re.sub(r'\s*```$', '', texto)
+            resultado = json.loads(texto)
+            if not isinstance(resultado, dict):
+                raise ValueError('La respuesta no es un objeto JSON.')
+            if not resultado.get('informe_html'):
+                raise ValueError("Respuesta sin 'informe_html'.")
+            resultado.setdefault('calidad', '')
+            resultado.setdefault('justificacion_calidad', '')
+            html = str(resultado['informe_html'])
+            if re.search(r'<\s*(script|iframe|object|embed)\b', html, flags=re.I):
+                raise ValueError('La respuesta contiene etiquetas HTML no permitidas.')
+            if re.search(r'\son\w+\s*=', html, flags=re.I):
+                raise ValueError('La respuesta contiene eventos HTML no permitidos.')
             return resultado
-            
-        except json.JSONDecodeError as e:
-            _logger.error("[_parsear_respuesta_ia] Error parseando JSON: %s", e)
-            _logger.error("[_parsear_respuesta_ia] Respuesta recibida: %s", response_text[:500])
-            raise UserError(_(
-                "La IA generó una respuesta inválida.\n\n"
-                "Intenta nuevamente o usa el modo automático."
-            ))
         except Exception as e:
-            _logger.error("[_parsear_respuesta_ia] Error inesperado: %s", e)
-            raise
+            _logger.error('Respuesta IA inválida: %s', (response_text or '')[:800])
+            raise UserError(_('La IA generó una respuesta inválida: %s') % e)
 
-    # ========================================
-    # VALIDACIÓN PARA WIZARD
-    # ========================================
     def _check_campos_requieren_cambio_sin_intervencion(self):
         """
         Devuelve evaluaciones que requieren cambio y NO tienen intervención con subpartes.
@@ -1285,107 +1287,69 @@ class ReparacionesInforme(models.Model):
     # ACCIÓN DEL BOTÓN
     # ========================================
     def action_generar_informe(self):
-        """Genera el informe técnico (con o sin IA según configuración) y/o abre wizard"""
-        _logger.info("[action_generar_informe] >>> INICIO batch ids=%s", self.ids)
-
+        """Genera el informe o abre el wizard de subpartes requeridas."""
         acciones = []
+        errores = []
+
         for rec in self:
             try:
-                _logger.info(
-                    "[action_generar_informe] Procesando rep.id=%s modo=%s",
-                    rec.id,
-                    rec.modo_generacion_informe,
-                )
-
-                # 1) Juntar TODOS los que requieren cambio y no tienen intervención (primer uso)
-                campos_pendientes = rec._check_campos_requieren_cambio_sin_intervencion()
-                if campos_pendientes:
-                    _logger.info(
-                        "[action_generar_informe] rep.id=%s -> abre wizard por pendientes=%s",
-                        rec.id,
-                        len(campos_pendientes),
-                    )
-                    # Versión con contexto (ya la tienes implementada)
+                pendientes = rec._check_campos_requieren_cambio_sin_intervencion()
+                if pendientes:
                     return rec._abrir_wizard_multiple_componentes_con_contexto(
-                        campos_pendientes,
+                        pendientes,
                         origen_accion='generar_informe',
                         auto_finalize=False,
                     )
 
-                # 2) Si hay contenido manual, no sobrescribir
-                if (
-                    rec.informe
-                    and not rec._rep__html_is_empty(rec.informe)
-                    and not rec._rep__is_autogen_informe()
-                ):
-                    rec.message_post(
-                        body=_("El informe ya fue editado manualmente. No se sobrescribió.")
-                    )
-                    _logger.info(
-                        "[action_generar_informe] rep.id=%s -> informe manual existente, no se toca",
-                        rec.id,
-                    )
+                if rec.informe and not rec._rep__html_is_empty(rec.informe) and not rec._rep__is_autogen_informe():
+                    rec.message_post(body=_('El informe fue editado manualmente y no se sobrescribió.'))
                     continue
 
-                # 3) Generar según modo (IA o automático)
                 if rec.modo_generacion_informe == 'ia':
-                    html, calidad, justificacion = rec._generar_informe_con_ia()
+                    html, calidad, justificacion, generado_con_ia = rec._generar_informe_con_ia()
                 else:
                     html, calidad = rec._rep__build_informe_html()
                     justificacion = ''
+                    generado_con_ia = False
 
-                # 4) Guardar resultados (SIN tocar calidad_id)
-                vals = {
+                rec.write({
                     'informe': html,
-                    'informe_generado_por_ia': (rec.modo_generacion_informe == 'ia'),
+                    'informe_generado_por_ia': generado_con_ia,
                     'calidad_justificacion': justificacion,
-                }
-
-                rec.write(vals)
-
-                mensaje = (
-                    _("✨ Informe técnico generado con IA.")
-                    if rec.modo_generacion_informe == 'ia'
-                    else _("Informe técnico generado automáticamente.")
-                )
-                rec.message_post(body=mensaje)
-
-                _logger.info(
-                    "[action_generar_informe] rep.id=%s -> informe generado (len=%s)",
-                    rec.id,
-                    len(html),
-                )
+                })
+                rec.message_post(body=(
+                    _('✨ Informe técnico generado con IA.')
+                    if generado_con_ia
+                    else _('Informe técnico generado automáticamente.')
+                ))
                 acciones.append(rec.id)
-
             except Exception as e:
-                _logger.exception("[action_generar_informe] rep.id=%s ERROR %s", rec.id, e)
-                rec.message_post(body=_("❌ No se pudo generar el informe: %s") % e)
+                _logger.exception('No se pudo generar el informe de %s', rec.id)
+                errores.append(f'{rec.display_name}: {e}')
+                rec.message_post(body=_('❌ No se pudo generar el informe: %s') % e)
 
-        _logger.info("[action_generar_informe] <<< FIN. generados=%s", len(acciones))
-
-        # ⚠️ NUEVO: si se llamó desde action_finalizar_reparacion, no devolver notificación
         if self.env.context.get('from_finalizar_reparacion'):
             return False
 
-        # Comportamiento normal del botón "Generar informe"
+        if errores and len(self) == 1:
+            raise UserError(errores[0])
+
         return {
             'type': 'ir.actions.client',
             'tag': 'display_notification',
             'params': {
                 'title': _('Informe técnico'),
-                'message': _(
-                    '✅ Informe generado correctamente.'
-                ) if acciones else _(
-                    '⚠️ No se generó ningún informe.'
+                'message': (
+                    _('✅ Informe generado correctamente.')
+                    if acciones and not errores
+                    else _('Se generaron %s informes y ocurrieron %s errores.') % (len(acciones), len(errores))
+                    if acciones
+                    else _('⚠️ No se generó ningún informe.')
                 ),
-                'type': 'success' if acciones else 'warning'
+                'type': 'success' if acciones and not errores else 'warning',
             }
         }
 
-
-    # ========================================
-    # HELPERS PARA SUBPARTES
-    # ========================================
     def get_subpartes_accesorio(self, accesorio_eval):
         """
         Retorna lista de nombres de subpartes para un accesorio evaluado
@@ -1424,27 +1388,21 @@ class ReparacionesInforme(models.Model):
         return subpartes
 
     def _get_nombre_componente_con_color(self, eval_comp):
-        """
-        Retorna el nombre completo del componente con su color formateado correctamente.
-        """
-        nombre = eval_comp.componente_tipo_id.name
-        
-        if eval_comp.color_id:
-            color_nombre = eval_comp.color_id.name
-            # Traducir nombres de colores si es necesario
+        """Nombre del componente con color, sin fallar en registros incompletos."""
+        tipo = eval_comp.componente_tipo_id
+        nombre = tipo.name if tipo else _('Componente sin definir')
+        color_id = getattr(eval_comp, 'color_id', False)
+        if color_id:
             color_map = {
-                'k': 'Negro', 'black': 'Negro', 'negro': 'Negro',
+                'k': 'Black', 'black': 'Black', 'negro': 'Black',
                 'c': 'Cyan', 'cyan': 'Cyan',
                 'm': 'Magenta', 'magenta': 'Magenta',
-                'y': 'Amarillo', 'yellow': 'Amarillo', 'amarillo': 'Amarillo',
+                'y': 'Yellow', 'yellow': 'Yellow', 'amarillo': 'Yellow',
             }
-            color_code = eval_comp.color_id.code or ''
-            color_display = color_map.get(color_code.lower(), color_nombre)
-            nombre = f"{nombre} ({color_display})"
-        
+            code = self._rep__safe_code(getattr(color_id, 'code', ''))
+            display = color_map.get(code, color_id.name)
+            nombre = f'{nombre} ({display})'
         return nombre
-
-
 
     def _handle_subpartes_pendientes(self, origen_accion='generar_informe', auto_finalize=False):
         """
