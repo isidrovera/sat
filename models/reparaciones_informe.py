@@ -590,15 +590,7 @@ class ReparacionesInforme(models.Model):
                 'La revisión de esta unidad quedó pendiente.', item.get('observaciones', '')
             ))
 
-        if cards:
-            parts.append('<h5 style="margin:14px 0 7px;font-size:15px;">Hallazgos y recomendaciones</h5>')
-            parts.append(
-                '<div style="margin:0 0 10px 0;padding:9px 12px;background:#f4f7fa;'
-                'border-left:4px solid #607d8b;border-radius:5px;color:#37474f;">'
-                'Los hallazgos indicados sirven como referencia para ofrecer el equipo en su condición '
-                'evaluada, incluir los repuestos recomendados o coordinar una intervención de taller '
-                'según el acuerdo de venta.</div>'
-            )
+        if cards:            
             parts.extend(cards)
 
         observacion_general = self._rep__html_to_text(self.observaciones_tecnico)
