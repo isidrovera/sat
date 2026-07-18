@@ -418,12 +418,12 @@ class ReparacionesInforme(models.Model):
         """Devuelve etiqueta y colores del estado para tarjetas HTML."""
         code = self._rep__safe_code(estado_code)
         mapping = {
-            'requiere_cambio': ('Requiere cambio', '#c62828', '#ffebee'),
-            'cambio_de_repuestos': ('Requiere cambio', '#c62828', '#ffebee'),
+            'requiere_cambio': ('Cambio recomendado', '#c62828', '#ffebee'),
+            'cambio_de_repuestos': ('Cambio recomendado', '#c62828', '#ffebee'),
             'falla': ('Falla detectada', '#b71c1c', '#fce4ec'),
             'gastada_pero_puede_trabajar': ('Presenta desgaste, pero puede trabajar', '#ef6c00', '#fff3e0'),
             'regular': ('Estado regular', '#ef6c00', '#fff8e1'),
-            'mantenimiento': ('Requiere mantenimiento', '#8d6e00', '#fffde7'),
+            'mantenimiento': ('Mantenimiento recomendado', '#8d6e00', '#fffde7'),
             'sin_revisar': ('Sin revisar', '#616161', '#f5f5f5'),
             'sin_probar': ('Sin probar', '#616161', '#f5f5f5'),
             'toner_vacio': ('Tóner vacío', '#c62828', '#ffebee'),
@@ -490,19 +490,21 @@ class ReparacionesInforme(models.Model):
         return ''.join(parts)
 
     def _rep__default_conclusion(self, calidad):
+        """Conclusión comercial sin convertir las recomendaciones en trabajos obligatorios."""
         if calidad == 'buena':
             return (
-                'De acuerdo con la evaluación realizada, el equipo presenta una condición general '
-                'adecuada para su entrega, considerando el mantenimiento estándar de instalación.'
+                'El equipo presenta una condición general favorable y puede ofrecerse en su '
+                'condición evaluada, considerando el mantenimiento estándar que corresponda.'
             )
         if calidad == 'regular':
             return (
-                'El equipo puede encontrarse operativo, pero conviene atender las observaciones y '
-                'recomendaciones indicadas antes de la entrega.'
+                'El equipo presenta observaciones preventivas. Puede ofrecerse en su condición '
+                'evaluada o considerando los repuestos recomendados, según el acuerdo de venta.'
             )
         return (
-            'La condición evaluada requiere atender los hallazgos indicados y repetir las pruebas '
-            'correspondientes antes de la entrega.'
+            'El equipo presenta observaciones relevantes en los componentes indicados. Puede '
+            'ofrecerse en su condición evaluada, informando estos hallazgos, o incluir los '
+            'repuestos recomendados según el acuerdo de venta.'
         )
 
     def _rep__build_informe_html_from_data(self, data, calidad, resumen=None, conclusion=None):
@@ -516,7 +518,8 @@ class ReparacionesInforme(models.Model):
         for item in data['requiere_cambio']:
             cards.append(self._rep__build_component_card(
                 item,
-                'Se recomienda atender esta unidad antes de la entrega.'
+                'Esta unidad presenta subpartes con cambio recomendado. El equipo puede ofrecerse '
+                'en su condición evaluada o con los repuestos indicados, según el acuerdo de venta.'
             ))
         for item in data['desgaste']:
             cards.append(self._rep__build_component_card(
@@ -526,7 +529,7 @@ class ReparacionesInforme(models.Model):
         for item in data['mantenimiento']:
             cards.append(self._rep__build_component_card(
                 item,
-                'Se recomienda realizar mantenimiento preventivo.'
+                'Se recomienda considerar mantenimiento preventivo, de acuerdo con la condición de venta.'
             ))
         for item in data['fallas_componentes']:
             cards.append(self._rep__build_component_card(
@@ -589,6 +592,13 @@ class ReparacionesInforme(models.Model):
 
         if cards:
             parts.append('<h5 style="margin:14px 0 7px;font-size:15px;">Hallazgos y recomendaciones</h5>')
+            parts.append(
+                '<div style="margin:0 0 10px 0;padding:9px 12px;background:#f4f7fa;'
+                'border-left:4px solid #607d8b;border-radius:5px;color:#37474f;">'
+                'Los hallazgos indicados sirven como referencia para ofrecer el equipo en su condición '
+                'evaluada, incluir los repuestos recomendados o coordinar una intervención de taller '
+                'según el acuerdo de venta.</div>'
+            )
             parts.extend(cards)
 
         observacion_general = self._rep__html_to_text(self.observaciones_tecnico)
@@ -946,14 +956,16 @@ ubicaciones ni trabajos realizados.
 
 REGLAS OBLIGATORIAS:
 1. La calidad ya está definida como "{calidad}". No la cambies.
-2. "Requiere cambio" significa recomendación pendiente; nunca indiques que una pieza fue cambiada.
-3. No enumeres componentes normales ni repitas todas las subpartes.
-4. No cambies nombres técnicos ni colores de componentes.
-5. No afirmes que el equipo está inoperativo salvo que exista una falla funcional registrada.
-6. Si hay daño físico, menciona revisar las fotografías sin inventar la tapa afectada.
-7. Evita expresiones genéricas como "requiere inversión inmediata".
-8. Redacta un resumen general de máximo 55 palabras y una conclusión de máximo 60 palabras.
-9. La conclusión debe ser coherente con la calidad y los hallazgos reales.
+2. "Requiere cambio" significa una recomendación comercial pendiente; nunca indiques que una pieza fue cambiada.
+3. La evaluación informa a técnicos y asesoras de ventas. No conviertas una recomendación en una reparación obligatoria.
+4. El equipo puede ofrecerse en su condición evaluada, con repuestos adicionales o con intervención de taller, según el acuerdo de venta.
+5. No uses frases como "debe repararse antes de la entrega", "no puede entregarse", "requiere atención obligatoria" o "requiere inversión inmediata", salvo que un hecho explícito lo indique.
+6. No enumeres componentes normales ni repitas todas las subpartes.
+7. No cambies nombres técnicos ni colores de componentes.
+8. No afirmes que el equipo está inoperativo salvo que exista una falla funcional registrada.
+9. Si hay daño físico, menciona revisar las fotografías sin inventar la tapa afectada.
+10. Redacta un resumen general de máximo 55 palabras y una conclusión de máximo 70 palabras.
+11. La conclusión debe ser coherente con la calidad y presentar las alternativas comerciales sin imponer una reparación.
 
 DATOS DEL EQUIPO:
 Marca/modelo: {datos['maquina']}
