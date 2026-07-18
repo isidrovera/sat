@@ -359,18 +359,16 @@ class ReparacionesInforme(models.Model):
 
     def _rep__get_snmp_test_data(self):
         """
-        Obtiene la prueba SNMP asociada a la reparación como fuente secundaria.
+        Obtiene la prueba SNMP vinculada a la reparación o a la máquina.
 
-        Reglas:
-        - Solo confirma actividad registrada en contadores: copia, impresión,
-          escaneo, dúplex, B/N y color.
-        - No usa porcentajes de tóner ni niveles de unidades para determinar
-          condición, calidad, desgaste o cambio recomendado.
-        - El checklist y las observaciones del técnico siempre tienen prioridad.
-        - Si el modelo SNMP no está instalado o no existe una prueba, retorna
-          una estructura vacía y el informe continúa normalmente.
+        SNMP se usa únicamente como evidencia secundaria:
+        - confirma actividad durante las pruebas;
+        - muestra alertas registradas durante la revisión;
+        - no determina calidad, desgaste ni necesidad de cambio;
+        - no utiliza porcentajes de tóner o vida de unidades.
         """
         self.ensure_one()
+
         result = {
             'disponible': False,
             'prueba_id': False,
@@ -382,17 +380,43 @@ class ReparacionesInforme(models.Model):
 
         Prueba = self.env.get('sat.prueba.maquina')
         if not Prueba:
+            _logger.warning(
+                "[INFORME SNMP] reparación=%s: no existe el modelo sat.prueba.maquina",
+                self.id,
+            )
             return result
 
-        prueba = Prueba.sudo().search([
-            ('reparacion_id', '=', self.id),
-        ], order='fecha_ultima_actualizacion desc, id desc', limit=1)
+        # 1. Buscar directamente por reparación.
+        prueba = Prueba.sudo().search(
+            [('reparacion_id', '=', self.id)],
+            order='fecha_ultima_actualizacion desc, fecha_inicio desc, id desc',
+            limit=1,
+        )
+
+        origen_busqueda = 'reparacion_id'
+
+        # 2. Respaldo por máquina.
+        # En este flujo cada máquina tiene una sola reparación.
+        if not prueba and self.maquina_id:
+            prueba = Prueba.sudo().search(
+                [('maquina_id', '=', self.maquina_id.id)],
+                order='fecha_ultima_actualizacion desc, fecha_inicio desc, id desc',
+                limit=1,
+            )
+            origen_busqueda = 'maquina_id'
 
         if not prueba:
+            _logger.warning(
+                "[INFORME SNMP] reparación=%s máquina=%s: no se encontró prueba",
+                self.id,
+                self.maquina_id.id if self.maquina_id else False,
+            )
             return result
 
+        # Actividad registrada.
         actividades = []
-        campos = [
+
+        campos_actividad = [
             ('prueba_copia_ok', 'copia'),
             ('prueba_impresion_ok', 'impresión'),
             ('prueba_scanner_ok', 'escaneo'),
@@ -400,12 +424,17 @@ class ReparacionesInforme(models.Model):
             ('prueba_bn_ok', 'blanco y negro'),
             ('prueba_color_ok', 'color'),
         ]
-        for field_name, label in campos:
-            if field_name in prueba._fields and bool(prueba[field_name]):
-                actividades.append(label)
 
+        for field_name, etiqueta in campos_actividad:
+            if field_name in prueba._fields and bool(prueba[field_name]):
+                actividades.append(etiqueta)
+
+        # Todas las alertas registradas durante la revisión.
+        # No se filtra por activa porque una alerta pudo desaparecer
+        # en una lectura posterior, pero sí fue mostrada durante la prueba.
         alertas = []
         alertas_vistas = set()
+
         if 'snmp_alerta_ids' in prueba._fields:
             for alerta in prueba.snmp_alerta_ids:
                 descripcion = str(
@@ -424,7 +453,6 @@ class ReparacionesInforme(models.Model):
                     getattr(alerta, 'severidad', '') or ''
                 ).strip()
 
-                # No mostrar OID, claves internas, source_name ni JSON.
                 if not descripcion and not codigo:
                     continue
 
@@ -449,11 +477,27 @@ class ReparacionesInforme(models.Model):
         result.update({
             'disponible': True,
             'prueba_id': prueba.id,
-            'fecha': prueba.fecha_ultima_actualizacion or prueba.fecha_inicio,
+            'fecha': (
+                prueba.fecha_ultima_actualizacion
+                or prueba.fecha_inicio
+                or False
+            ),
             'actividades': actividades,
             'cantidad_alertas': len(alertas),
             'alertas': alertas,
         })
+
+        _logger.info(
+            "[INFORME SNMP] reparación=%s máquina=%s prueba=%s "
+            "búsqueda=%s actividades=%s alertas=%s",
+            self.id,
+            self.maquina_id.id if self.maquina_id else False,
+            prueba.id,
+            origen_busqueda,
+            actividades,
+            len(alertas),
+        )
+
         return result
 
     def _rep__join_human_list(self, values):
