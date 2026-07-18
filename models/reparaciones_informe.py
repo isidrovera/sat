@@ -359,13 +359,13 @@ class ReparacionesInforme(models.Model):
 
     def _rep__get_snmp_test_data(self):
         """
-        Obtiene la prueba SNMP vinculada a la reparación o a la máquina.
+        Obtiene información SNMP relacionada con la reparación.
 
-        SNMP se usa únicamente como evidencia secundaria:
-        - confirma actividad durante las pruebas;
-        - muestra alertas registradas durante la revisión;
-        - no determina calidad, desgaste ni necesidad de cambio;
-        - no utiliza porcentajes de tóner o vida de unidades.
+        La información SNMP es secundaria:
+        - confirma actividad registrada;
+        - muestra alertas observadas durante la revisión;
+        - no determina la calidad técnica;
+        - no utiliza niveles de tóner ni vida de unidades.
         """
         self.ensure_one()
 
@@ -381,98 +381,136 @@ class ReparacionesInforme(models.Model):
         Prueba = self.env.get('sat.prueba.maquina')
         if not Prueba:
             _logger.warning(
-                "[INFORME SNMP] reparación=%s: no existe el modelo sat.prueba.maquina",
+                '[INFORME SNMP] No existe sat.prueba.maquina | reparación=%s',
                 self.id,
             )
             return result
 
-        # 1. Buscar directamente por reparación.
+        # ======================================================
+        # BUSCAR PRUEBA
+        # ======================================================
         prueba = Prueba.sudo().search(
             [('reparacion_id', '=', self.id)],
             order='fecha_ultima_actualizacion desc, fecha_inicio desc, id desc',
             limit=1,
         )
 
-        origen_busqueda = 'reparacion_id'
+        origen = 'reparacion_id'
 
-        # 2. Respaldo por máquina.
-        # En este flujo cada máquina tiene una sola reparación.
         if not prueba and self.maquina_id:
             prueba = Prueba.sudo().search(
                 [('maquina_id', '=', self.maquina_id.id)],
                 order='fecha_ultima_actualizacion desc, fecha_inicio desc, id desc',
                 limit=1,
             )
-            origen_busqueda = 'maquina_id'
+            origen = 'maquina_id'
 
         if not prueba:
             _logger.warning(
-                "[INFORME SNMP] reparación=%s máquina=%s: no se encontró prueba",
+                '[INFORME SNMP] Sin prueba | reparación=%s máquina=%s',
                 self.id,
                 self.maquina_id.id if self.maquina_id else False,
             )
             return result
 
-        # Actividad registrada.
+        # ======================================================
+        # ACTIVIDADES REGISTRADAS
+        # ======================================================
         actividades = []
 
         campos_actividad = [
-            ('prueba_copia_ok', 'copia'),
-            ('prueba_impresion_ok', 'impresión'),
-            ('prueba_scanner_ok', 'escaneo'),
-            ('prueba_duplex_ok', 'dúplex'),
-            ('prueba_bn_ok', 'blanco y negro'),
-            ('prueba_color_ok', 'color'),
+            ('prueba_copia_ok', 'Copia'),
+            ('prueba_impresion_ok', 'Impresión'),
+            ('prueba_scanner_ok', 'Escaneo'),
+            ('prueba_duplex_ok', 'Dúplex'),
+            ('prueba_bn_ok', 'Blanco y negro'),
+            ('prueba_color_ok', 'Color'),
         ]
 
         for field_name, etiqueta in campos_actividad:
-            if field_name in prueba._fields and bool(prueba[field_name]):
+            if field_name in prueba._fields and prueba[field_name]:
                 actividades.append(etiqueta)
 
-        # Todas las alertas registradas durante la revisión.
-        # No se filtra por activa porque una alerta pudo desaparecer
-        # en una lectura posterior, pero sí fue mostrada durante la prueba.
+        # Respaldo directo mediante deltas.
+        campos_delta = [
+            ('delta_copias', 'Copia'),
+            ('delta_impresiones', 'Impresión'),
+            ('delta_scanner', 'Escaneo'),
+            ('delta_duplex', 'Dúplex'),
+            ('delta_bn', 'Blanco y negro'),
+            ('delta_color', 'Color'),
+        ]
+
+        for field_name, etiqueta in campos_delta:
+            if (
+                field_name in prueba._fields
+                and (prueba[field_name] or 0) > 0
+                and etiqueta not in actividades
+            ):
+                actividades.append(etiqueta)
+
+        # ======================================================
+        # BUSCAR ALERTAS DIRECTAMENTE
+        # ======================================================
+        AlertModel = self.env.get('sat.prueba.maquina.snmp.alerta')
+        registros_alerta = self.env['ir.model'].browse([])
+
+        if AlertModel:
+            dominio_alertas = ['|', '|',
+                ('prueba_id', '=', prueba.id),
+                ('reparacion_id', '=', self.id),
+                ('maquina_id', '=', self.maquina_id.id if self.maquina_id else False),
+            ]
+
+            registros_alerta = AlertModel.sudo().search(
+                dominio_alertas,
+                order='fecha asc, id asc',
+            )
+
+        # Respaldo desde el One2many.
+        if not registros_alerta and 'snmp_alerta_ids' in prueba._fields:
+            registros_alerta = prueba.snmp_alerta_ids.sudo()
+
         alertas = []
         alertas_vistas = set()
 
-        if 'snmp_alerta_ids' in prueba._fields:
-            for alerta in prueba.snmp_alerta_ids:
-                descripcion = str(
-                    getattr(alerta, 'descripcion', '') or ''
-                ).strip()
+        for alerta in registros_alerta:
+            descripcion = str(
+                getattr(alerta, 'descripcion', '') or ''
+            ).strip()
 
-                codigo = str(
-                    getattr(alerta, 'codigo', '') or ''
-                ).strip()
+            codigo = str(
+                getattr(alerta, 'codigo', '') or ''
+            ).strip()
 
-                ubicacion = str(
-                    getattr(alerta, 'ubicacion', '') or ''
-                ).strip()
+            ubicacion = str(
+                getattr(alerta, 'ubicacion', '') or ''
+            ).strip()
 
-                severidad = str(
-                    getattr(alerta, 'severidad', '') or ''
-                ).strip()
+            severidad = str(
+                getattr(alerta, 'severidad', '') or ''
+            ).strip()
 
-                if not descripcion and not codigo:
-                    continue
+            if not descripcion and not codigo:
+                continue
 
-                clave = (
-                    descripcion.lower(),
-                    codigo.lower(),
-                    ubicacion.lower(),
-                )
+            clave = (
+                descripcion.lower(),
+                codigo.lower(),
+                ubicacion.lower(),
+            )
 
-                if clave in alertas_vistas:
-                    continue
+            if clave in alertas_vistas:
+                continue
 
-                alertas_vistas.add(clave)
+            alertas_vistas.add(clave)
 
-                alertas.append({
-                    'descripcion': descripcion or codigo,
-                    'codigo': codigo,
-                    'ubicacion': ubicacion,
-                    'severidad': severidad,
-                })
+            alertas.append({
+                'descripcion': descripcion or codigo,
+                'codigo': codigo,
+                'ubicacion': ubicacion,
+                'severidad': severidad,
+            })
 
         result.update({
             'disponible': True,
@@ -487,14 +525,16 @@ class ReparacionesInforme(models.Model):
             'alertas': alertas,
         })
 
-        _logger.info(
-            "[INFORME SNMP] reparación=%s máquina=%s prueba=%s "
-            "búsqueda=%s actividades=%s alertas=%s",
+        _logger.warning(
+            '[INFORME SNMP RESULTADO] reparación=%s máquina=%s '
+            'prueba=%s origen=%s actividades=%s '
+            'registros_alerta=%s alertas_finales=%s',
             self.id,
             self.maquina_id.id if self.maquina_id else False,
             prueba.id,
-            origen_busqueda,
+            origen,
             actividades,
+            len(registros_alerta),
             len(alertas),
         )
 
@@ -682,61 +722,137 @@ class ReparacionesInforme(models.Model):
 
     def _rep__build_snmp_alerts_block(self, snmp_data):
         """
-        Construye un bloque informativo con las alertas mostradas por el equipo
-        durante la revisión.
+        Muestra la actividad y las alertas registradas durante la revisión.
 
-        Las alertas son referenciales y no se presentan como diagnóstico final,
-        obligación de reparación ni comunicación obligatoria al cliente.
+        La información se presenta únicamente como referencia de la evaluación.
         """
-        alertas = (snmp_data or {}).get('alertas') or []
-        if not alertas:
+        snmp_data = snmp_data or {}
+
+        if not snmp_data.get('disponible'):
             return ''
 
+        actividades = snmp_data.get('actividades') or []
+        alertas = snmp_data.get('alertas') or []
+
         parts = [
-            '<div style="margin:12px 0;padding:11px 14px;border-left:5px solid #546e7a;'
+            '<div style="margin:12px 0;padding:11px 14px;'
+            'border-left:5px solid #546e7a;'
             'background:#eceff1;border-radius:6px;color:#263238;">',
-            '<div style="font-weight:bold;color:#37474f;margin-bottom:5px;">'
-            'Alertas mostradas durante la revisión</div>',
-            '<div style="margin-bottom:7px;color:#455a64;">'
-            'Durante el proceso de pruebas, el equipo mostró las siguientes alertas. '
-            'Se incluyen únicamente como referencia de la condición observada al momento de la evaluación.'
+
+            '<div style="font-weight:bold;color:#37474f;'
+            'margin-bottom:6px;">'
+            'Información registrada durante las pruebas'
             '</div>',
-            '<ul style="margin:0 0 0 24px;padding:0;color:#263238;">',
+
+            '<div style="margin-bottom:8px;color:#455a64;">'
+            'La siguiente información fue registrada mientras se realizaba '
+            'la revisión del equipo y se incluye únicamente como referencia.'
+            '</div>',
         ]
 
-        for alerta in alertas:
-            if isinstance(alerta, dict):
-                descripcion = str(alerta.get('descripcion') or '').strip()
-                codigo = str(alerta.get('codigo') or '').strip()
-                ubicacion = str(alerta.get('ubicacion') or '').strip()
-            else:
-                descripcion = str(alerta or '').strip()
-                codigo = ''
-                ubicacion = ''
+        # ======================================================
+        # ACTIVIDADES
+        # ======================================================
+        if actividades:
+            parts.append(
+                '<div style="font-weight:bold;margin:7px 0 4px 0;">'
+                'Actividad detectada:</div>'
+            )
+            parts.append(
+                '<ul style="margin:0 0 8px 24px;padding:0;">'
+            )
 
-            if not descripcion and not codigo:
-                continue
+            for actividad in actividades:
+                parts.append(
+                    '<li style="margin:3px 0;">%s</li>'
+                    % self._rep__escape(actividad)
+                )
 
-            partes_linea = []
-            if descripcion:
-                partes_linea.append(self._rep__escape(descripcion))
-            if ubicacion:
-                partes_linea.append('Ubicación: %s' % self._rep__escape(ubicacion))
-            if codigo and codigo.lower() not in descripcion.lower():
-                partes_linea.append('Código: %s' % self._rep__escape(codigo))
+            parts.append('</ul>')
+        else:
+            parts.append(
+                '<div style="margin:6px 0;color:#607d8b;">'
+                'Se encontró el registro de prueba, pero no se detectaron '
+                'incrementos de actividad en los contadores consultados.'
+                '</div>'
+            )
+
+        # ======================================================
+        # ALERTAS
+        # ======================================================
+        if alertas:
+            parts.append(
+                '<div style="font-weight:bold;margin:9px 0 4px 0;">'
+                'Alertas mostradas durante la revisión:</div>'
+            )
 
             parts.append(
-                '<li style="margin:4px 0;">%s</li>' % ' — '.join(partes_linea)
+                '<ul style="margin:0 0 0 24px;padding:0;">'
+            )
+
+            for alerta in alertas:
+                if isinstance(alerta, dict):
+                    descripcion = str(
+                        alerta.get('descripcion') or ''
+                    ).strip()
+
+                    codigo = str(
+                        alerta.get('codigo') or ''
+                    ).strip()
+
+                    ubicacion = str(
+                        alerta.get('ubicacion') or ''
+                    ).strip()
+                else:
+                    descripcion = str(alerta or '').strip()
+                    codigo = ''
+                    ubicacion = ''
+
+                if not descripcion and not codigo:
+                    continue
+
+                linea = []
+
+                if descripcion:
+                    linea.append(self._rep__escape(descripcion))
+
+                if ubicacion:
+                    linea.append(
+                        'Ubicación: %s'
+                        % self._rep__escape(ubicacion)
+                    )
+
+                if (
+                    codigo
+                    and codigo.lower() not in descripcion.lower()
+                ):
+                    linea.append(
+                        'Código: %s'
+                        % self._rep__escape(codigo)
+                    )
+
+                parts.append(
+                    '<li style="margin:4px 0;">%s</li>'
+                    % ' — '.join(linea)
+                )
+
+            parts.append('</ul>')
+        else:
+            parts.append(
+                '<div style="margin-top:8px;color:#607d8b;">'
+                'No se registraron alertas SNMP en esta prueba.'
+                '</div>'
             )
 
         parts.extend([
-            '</ul>',
-            '<div style="margin-top:8px;font-size:12px;color:#607d8b;">'
-            'Información referencial registrada durante las pruebas; puede variar después de instalar '
-            'consumibles, reiniciar el equipo o realizar una nueva evaluación.'
+            '<div style="margin-top:9px;font-size:12px;color:#607d8b;">'
+            'Esta información corresponde al momento de la revisión y puede '
+            'variar después de instalar consumibles, cerrar cubiertas, '
+            'reiniciar el equipo o repetir las pruebas.'
             '</div>',
             '</div>',
         ])
+
         return ''.join(parts)
 
     def _rep__default_conclusion(self, calidad):

@@ -1565,13 +1565,8 @@ class SatSat(models.Model):
                 Prueba = self.env['sat.prueba.maquina'].sudo()
 
                 prueba = Prueba.search([
-                    ('reparacion_id', '=', self.id),
-                ], order='fecha_ultima_actualizacion desc, id desc', limit=1)
-
-                if not prueba and self.maquina_id:
-                    prueba = Prueba.search([
-                        ('maquina_id', '=', self.maquina_id.id),
-                    ], order='fecha_ultima_actualizacion desc, id desc', limit=1)
+                    ('maquina_id', '=', self.id),
+                ], order='id desc', limit=1)
 
             if not prueba:
                 _logger.warning(
