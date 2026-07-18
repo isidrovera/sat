@@ -407,19 +407,36 @@ class ReparacionesInforme(models.Model):
         alertas = []
         alertas_vistas = set()
         if 'snmp_alerta_ids' in prueba._fields:
-            for alertas = prueba.snmp_alerta_ids
-                descripcion = str(getattr(alerta, 'descripcion', '') or '').strip()
-                codigo = str(getattr(alerta, 'codigo', '') or '').strip()
-                ubicacion = str(getattr(alerta, 'ubicacion', '') or '').strip()
-                severidad = str(getattr(alerta, 'severidad', '') or '').strip()
+            for alerta in prueba.snmp_alerta_ids:
+                descripcion = str(
+                    getattr(alerta, 'descripcion', '') or ''
+                ).strip()
 
-                # No mostrar OID, claves internas, source_name ni JSON en el informe.
+                codigo = str(
+                    getattr(alerta, 'codigo', '') or ''
+                ).strip()
+
+                ubicacion = str(
+                    getattr(alerta, 'ubicacion', '') or ''
+                ).strip()
+
+                severidad = str(
+                    getattr(alerta, 'severidad', '') or ''
+                ).strip()
+
+                # No mostrar OID, claves internas, source_name ni JSON.
                 if not descripcion and not codigo:
                     continue
 
-                clave = (descripcion.lower(), codigo.lower(), ubicacion.lower())
+                clave = (
+                    descripcion.lower(),
+                    codigo.lower(),
+                    ubicacion.lower(),
+                )
+
                 if clave in alertas_vistas:
                     continue
+
                 alertas_vistas.add(clave)
 
                 alertas.append({
