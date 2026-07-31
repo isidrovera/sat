@@ -1,354 +1,819 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <data>
-    <!-- Vista Lista de Reportes de Contadores y Tóner -->
-    <record id="view_toner_counter_submission_list" model="ir.ui.view">
-        <field name="name">toner.counter.submission.list</field>
-        <field name="model">toner.counter.submission</field>
-        <field name="arch" type="xml">
-            <list string="Reportes de Contadores y Tóner" 
-                  default_order="submission_date desc"
-                  sample="1">
-                <field name="secuencia"/>
-                <field name="submission_date"/>
-                <field name="equipment_id"/>
-                <field name="partner_id"/>
-                <field name="client_name"/>
-                <field name="counter_bn" string="Contador B/N"/>
-                <field name="counter_color" string="Contador Color"/>
-                <field name="total_copies_period" string="Copias Período"/>
-                <field name="requiere_entrega_automatica" 
-                       decoration-info="requiere_entrega_automatica == True"/>
-                <field name="urgente" 
-                       decoration-warning="urgente == True"/>
-                <field name="state" 
-                       decoration-bf="state == 'pending'"
-                       decoration-success="state == 'approved'"
-                       decoration-info="state == 'processed'"
-                       decoration-muted="state == 'rejected'"/>
-            </list>
-        </field>
-    </record>
 
-    <!-- Vista Formulario de Reportes de Contadores y Tóner -->
-    <record id="view_toner_counter_submission_form" model="ir.ui.view">
-        <field name="name">toner.counter.submission.form</field>
-        <field name="model">toner.counter.submission</field>
-        <field name="arch" type="xml">
-            <form string="Reporte de Contadores y Tóner">
-                <header>
-                    <button name="action_review" 
-                            type="object" 
-                            string="Marcar como Revisado" 
-                            class="btn-secondary"
-                            invisible="state != 'pending'"/>
-                    <button name="action_approve" 
-                            type="object" 
-                            string="Aprobar Reporte" 
+        <!-- =========================================================
+             VISTA LISTA
+             No incluye acciones ni menús.
+        ========================================================== -->
+
+        <record id="view_toner_counter_submission_list" model="ir.ui.view">
+            <field name="name">toner.counter.submission.list</field>
+            <field name="model">toner.counter.submission</field>
+            <field name="arch" type="xml">
+                <list
+                    string="Solicitudes de Tóner"
+                    default_order="submission_date desc, id desc"
+                    sample="1"
+                    decoration-muted="state in ['rechazada_gerencia', 'cancelada']"
+                    decoration-success="state == 'entregada'"
+                    decoration-warning="requires_evidence"
+                    decoration-info="state in ['pendiente_gerencia', 'confirmacion_ventas', 'lista_despacho', 'en_despacho']"
+                >
+                    <field name="secuencia" string="Solicitud"/>
+                    <field name="submission_date" string="Fecha"/>
+                    <field name="partner_id" string="Cliente"/>
+                    <field name="equipment_id" string="Equipo"/>
+                    <field name="client_name" string="Solicitante"/>
+
+                    <field name="counter_bn" string="Contador B/N"/>
+                    <field name="counter_color" string="Contador Color" optional="show"/>
+
+                    <field name="previous_counter_bn" string="Base B/N" optional="hide"/>
+                    <field name="previous_counter_color" string="Base Color" optional="hide"/>
+
+                    <field name="consumed_copies" string="Copias Consumidas"/>
+                    <field name="expected_yield" string="Rendimiento"/>
+                    <field name="consumption_percent" string="% Consumido"/>
+
+                    <field name="days_since_last_delivery" string="Días"/>
+                    <field name="last_delivery_date" string="Última Entrega" optional="hide"/>
+
+                    <field
+                        name="analysis_result"
+                        string="Análisis"
+                        widget="badge"
+                        decoration-success="analysis_result == 'normal'"
+                        decoration-warning="analysis_result == 'early_consumption'"
+                        decoration-info="analysis_result == 'no_history'"
+                        decoration-danger="analysis_result == 'duplicate'"
+                    />
+
+                    <field
+                        name="requires_evidence"
+                        string="Evidencia"
+                        widget="boolean_toggle"
+                        optional="show"
+                    />
+
+                    <field
+                        name="state"
+                        string="Estado"
+                        widget="badge"
+                        decoration-info="state in ['recibida', 'evaluacion', 'pendiente_gerencia', 'confirmacion_ventas']"
+                        decoration-success="state in ['aprobada_gerencia', 'lista_despacho', 'entregada']"
+                        decoration-warning="state in ['devuelta', 'en_despacho']"
+                        decoration-danger="state in ['rechazada_gerencia', 'cancelada']"
+                    />
+                </list>
+            </field>
+        </record>
+
+
+        <!-- =========================================================
+             VISTA FORMULARIO
+             Organizada como pedido/factura:
+             cabecera, cliente/equipo, líneas de tóner, análisis y flujo.
+        ========================================================== -->
+
+        <record id="view_toner_counter_submission_form" model="ir.ui.view">
+            <field name="name">toner.counter.submission.form</field>
+            <field name="model">toner.counter.submission</field>
+            <field name="arch" type="xml">
+                <form string="Solicitud de Tóner">
+
+                    <header>
+
+                        <button
+                            name="action_start_review"
+                            type="object"
+                            string="Iniciar Evaluación"
                             class="btn-primary"
-                            invisible="state not in ['pending', 'reviewed']"/>
-                    <button name="action_process_delivery" 
-                            type="object" 
-                            string="Procesar Entrega" 
+                            invisible="state not in ['recibida', 'devuelta']"
+                        />
+
+                        <button
+                            name="action_send_to_management"
+                            type="object"
+                            string="Enviar a Gerencia"
+                            class="btn-primary"
+                            invisible="state != 'evaluacion'"
+                        />
+
+                        <button
+                            name="action_management_approve"
+                            type="object"
+                            string="Aprobar"
                             class="btn-success"
-                            invisible="state != 'approved' or not requiere_entrega_automatica"/>
-                    <button name="action_reject" 
-                            type="object" 
-                            string="Rechazar" 
+                            invisible="state != 'pendiente_gerencia'"
+                        />
+
+                        <button
+                            name="action_return_for_correction"
+                            type="object"
+                            string="Devolver"
+                            class="btn-secondary"
+                            invisible="state != 'pendiente_gerencia'"
+                        />
+
+                        <button
+                            name="action_management_reject"
+                            type="object"
+                            string="Rechazar"
                             class="btn-danger"
-                            invisible="state not in ['pending', 'reviewed']"/>
-                    <button name="action_reset_to_pending" 
-                            type="object" 
-                            string="Regresar a Pendiente" 
-                            invisible="state == 'processed'"/>
-                    <field name="state" widget="statusbar" 
-                           statusbar_visible="pending,reviewed,approved,processed"/>
-                </header>
+                            invisible="state != 'pendiente_gerencia'"
+                        />
 
-                <sheet>
-                    <div class="oe_button_box" name="button_box">
-                      <!--  <button class="oe_stat_button" 
-                                type="object" 
-                                name="action_view_equipment" 
-                                icon="fa-print">
-                            <div class="o_field_widget o_stat_info">
-                                <span class="o_stat_text">Ver</span>
-                                <span class="o_stat_text">Equipo</span>
-                            </div>
-                        </button>
-                        <button class="oe_stat_button" 
-                                type="object" 
-                                name="action_view_delivery" 
+                        <button
+                            name="action_send_to_sales_confirmation"
+                            type="object"
+                            string="Enviar a Comercial"
+                            class="btn-primary"
+                            invisible="state != 'aprobada_gerencia'"
+                        />
+
+                        <button
+                            name="action_sales_confirm"
+                            type="object"
+                            string="Confirmar Coordinación"
+                            class="btn-success"
+                            invisible="state != 'confirmacion_ventas'"
+                        />
+
+                        <button
+                            name="action_create_dispatch"
+                            type="object"
+                            string="Crear Despacho"
+                            class="btn-primary"
+                            invisible="state != 'lista_despacho'"
+                        />
+
+                        <button
+                            name="action_mark_delivered"
+                            type="object"
+                            string="Cerrar como Entregada"
+                            class="btn-success"
+                            invisible="state != 'en_despacho'"
+                        />
+
+                        <button
+                            name="action_cancel"
+                            type="object"
+                            string="Cancelar"
+                            class="btn-secondary"
+                            invisible="state in ['entregada', 'cancelada']"
+                        />
+
+                        <field
+                            name="state"
+                            widget="statusbar"
+                            statusbar_visible="recibida,evaluacion,pendiente_gerencia,aprobada_gerencia,confirmacion_ventas,lista_despacho,en_despacho,entregada"
+                        />
+
+                    </header>
+
+                    <sheet>
+
+                        <div class="oe_button_box" name="button_box">
+                            <button
+                                name="action_view_delivery"
+                                type="object"
+                                class="oe_stat_button"
                                 icon="fa-truck"
-                                invisible="not delivery_scheduled_id">
-                            <div class="o_field_widget o_stat_info">
-                                <span class="o_stat_text">Ver</span>
-                                <span class="o_stat_text">Entrega</span>
+                                invisible="not delivery_scheduled_id"
+                            >
+                                <div class="o_field_widget o_stat_info">
+                                    <span class="o_stat_text">Ver</span>
+                                    <span class="o_stat_text">Despacho</span>
+                                </div>
+                            </button>
+                        </div>
+
+                        <div class="oe_title">
+                            <label for="secuencia" string="Solicitud"/>
+                            <h1>
+                                <field name="secuencia" readonly="1"/>
+                            </h1>
+                        </div>
+
+                        <!-- Cabecera tipo pedido -->
+                        <group>
+                            <group string="Cliente y Equipo">
+                                <field name="partner_id" readonly="1"/>
+                                <field name="equipment_id" readonly="state != 'recibida'"/>
+                                <field name="submission_date" readonly="1"/>
+                                <field name="delivery_scheduled_id" readonly="1" invisible="not delivery_scheduled_id"/>
+                            </group>
+
+                            <group string="Solicitante">
+                                <field name="client_name" readonly="state != 'recibida'"/>
+                                <field name="client_phone" readonly="state != 'recibida'"/>
+                                <field name="client_email" readonly="state != 'recibida'"/>
+                                <field name="client_phone_clean" readonly="1"/>
+                            </group>
+                        </group>
+
+                        <!-- Avisos para comercial -->
+                        <div
+                            class="alert alert-warning"
+                            role="alert"
+                            invisible="not requires_evidence"
+                        >
+                            <strong>Revisión obligatoria:</strong>
+                            el consumo detectado es menor al esperado.
+                            Antes de enviarlo a gerencia, registre el motivo o adjunte evidencia.
+                        </div>
+
+                        <div
+                            class="alert alert-info"
+                            role="alert"
+                            invisible="analysis_result != 'no_history'"
+                        >
+                            <strong>Sin historial suficiente:</strong>
+                            no existe una entrega anterior confirmada del mismo tóner.
+                            Comercial debe revisar manualmente la primera referencia.
+                        </div>
+
+                        <div
+                            class="alert alert-danger"
+                            role="alert"
+                            invisible="analysis_result != 'duplicate'"
+                        >
+                            <strong>Solicitud duplicada:</strong>
+                            ya existe otra solicitud activa para el mismo equipo y color.
+                        </div>
+
+                        <!-- Tabla principal tipo líneas de pedido -->
+                        <notebook>
+
+                            <page string="Pedido de Tóner" name="order_lines">
+
+                                <group string="Resumen de Contadores">
+                                    <group>
+                                        <field name="counter_bn" readonly="state != 'recibida'"/>
+                                        <field name="previous_counter_bn" readonly="1"/>
+                                        <field name="copies_bn_period" readonly="1"/>
+                                    </group>
+
+                                    <group>
+                                        <field name="counter_color" readonly="state != 'recibida'"/>
+                                        <field name="previous_counter_color" readonly="1"/>
+                                        <field name="copies_color_period" readonly="1"/>
+                                    </group>
+                                </group>
+
+                                <separator string="Detalle por Tóner"/>
+
+                                <group col="4">
+
+                                    <group string="Negro">
+                                        <field name="requiere_toner_black" readonly="1"/>
+                                        <field name="cantidad_solicitada_black" readonly="1"/>
+                                        <field
+                                            name="cantidad_sugerida_black"
+                                            readonly="state not in ['evaluacion', 'devuelta']"
+                                        />
+                                        <field
+                                            name="cantidad_aprobada_black"
+                                            readonly="state != 'pendiente_gerencia'"
+                                        />
+                                    </group>
+
+                                    <group
+                                        string="Cian"
+                                        invisible="equipment_id.tipo_maquina_id == 'monocromatica'"
+                                    >
+                                        <field name="requiere_toner_cyan" readonly="1"/>
+                                        <field name="cantidad_solicitada_cyan" readonly="1"/>
+                                        <field
+                                            name="cantidad_sugerida_cyan"
+                                            readonly="state not in ['evaluacion', 'devuelta']"
+                                        />
+                                        <field
+                                            name="cantidad_aprobada_cyan"
+                                            readonly="state != 'pendiente_gerencia'"
+                                        />
+                                    </group>
+
+                                    <group
+                                        string="Magenta"
+                                        invisible="equipment_id.tipo_maquina_id == 'monocromatica'"
+                                    >
+                                        <field name="requiere_toner_magenta" readonly="1"/>
+                                        <field name="cantidad_solicitada_magenta" readonly="1"/>
+                                        <field
+                                            name="cantidad_sugerida_magenta"
+                                            readonly="state not in ['evaluacion', 'devuelta']"
+                                        />
+                                        <field
+                                            name="cantidad_aprobada_magenta"
+                                            readonly="state != 'pendiente_gerencia'"
+                                        />
+                                    </group>
+
+                                    <group
+                                        string="Amarillo"
+                                        invisible="equipment_id.tipo_maquina_id == 'monocromatica'"
+                                    >
+                                        <field name="requiere_toner_yellow" readonly="1"/>
+                                        <field name="cantidad_solicitada_yellow" readonly="1"/>
+                                        <field
+                                            name="cantidad_sugerida_yellow"
+                                            readonly="state not in ['evaluacion', 'devuelta']"
+                                        />
+                                        <field
+                                            name="cantidad_aprobada_yellow"
+                                            readonly="state != 'pendiente_gerencia'"
+                                        />
+                                    </group>
+
+                                </group>
+
+                                <separator string="Instrucciones para el Área Comercial"/>
+
+                                <div class="alert alert-light border" role="alert">
+                                    <p>
+                                        <strong>1. Verifique el contador actual:</strong>
+                                        debe ser igual o mayor al contador base de la última entrega.
+                                    </p>
+                                    <p>
+                                        <strong>2. Revise la duración:</strong>
+                                        compare copias consumidas, rendimiento esperado,
+                                        porcentaje utilizado y días transcurridos.
+                                    </p>
+                                    <p>
+                                        <strong>3. Si el consumo es anticipado:</strong>
+                                        solicite explicación, foto del tóner o foto del contador.
+                                    </p>
+                                    <p>
+                                        <strong>4. Defina la cantidad sugerida:</strong>
+                                        esta cantidad será la recomendación que recibirá gerencia.
+                                    </p>
+                                    <p class="mb-0">
+                                        <strong>5. No confirme despacho:</strong>
+                                        comercial evalúa y recomienda; gerencia es quien aprueba.
+                                    </p>
+                                </div>
+
+                            </page>
+
+
+                            <page string="Análisis de Consumo" name="consumption_analysis">
+
+                                <group>
+                                    <group string="Resultado Automático">
+                                        <field
+                                            name="analysis_result"
+                                            widget="badge"
+                                            readonly="1"
+                                            decoration-success="analysis_result == 'normal'"
+                                            decoration-warning="analysis_result == 'early_consumption'"
+                                            decoration-info="analysis_result == 'no_history'"
+                                            decoration-danger="analysis_result == 'duplicate'"
+                                        />
+                                        <field name="requires_evidence" readonly="1"/>
+                                        <field name="duplicate_submission_id" readonly="1" invisible="not duplicate_submission_id"/>
+                                    </group>
+
+                                    <group string="Rendimiento">
+                                        <field name="last_delivery_date" readonly="1"/>
+                                        <field name="days_since_last_delivery" readonly="1"/>
+                                        <field name="expected_yield" readonly="1"/>
+                                        <field name="consumed_copies" readonly="1"/>
+                                        <field name="consumption_percent" readonly="1"/>
+                                    </group>
+                                </group>
+
+                                <group string="Resumen del Sistema">
+                                    <field
+                                        name="analysis_summary"
+                                        nolabel="1"
+                                        readonly="1"
+                                    />
+                                </group>
+
+                                <group string="Detalle Técnico">
+                                    <field
+                                        name="analysis_json"
+                                        nolabel="1"
+                                        readonly="1"
+                                        widget="text"
+                                    />
+                                </group>
+
+                            </page>
+
+
+                            <page string="Evaluación Comercial" name="commercial_review">
+
+                                <group>
+                                    <group string="Responsable de Evaluación">
+                                        <field name="reviewer_id" readonly="1"/>
+                                        <field name="review_date" readonly="1"/>
+                                    </group>
+
+                                    <group string="Control">
+                                        <field name="requires_evidence" readonly="1"/>
+                                        <field name="early_request_reason"/>
+                                    </group>
+                                </group>
+
+                                <group string="Evaluación y Recomendación">
+                                    <field
+                                        name="review_notes"
+                                        nolabel="1"
+                                        placeholder="Explique si el consumo es razonable, si existe una incidencia, qué cantidad recomienda y por qué..."
+                                        readonly="state not in ['evaluacion', 'devuelta']"
+                                    />
+                                </group>
+
+                                <div class="alert alert-info" role="alert">
+                                    Comercial debe dejar una recomendación clara:
+                                    aprobar, solicitar evidencia, tratar como incidencia
+                                    o no recomendar el envío.
+                                </div>
+
+                            </page>
+
+
+                            <page string="Gerencia" name="management">
+
+                                <group>
+                                    <group string="Decisión">
+                                        <field name="management_user_id" readonly="1"/>
+                                        <field name="management_date" readonly="1"/>
+                                    </group>
+
+                                    <group string="Estado">
+                                        <field name="state" readonly="1"/>
+                                    </group>
+                                </group>
+
+                                <group string="Observación de Gerencia">
+                                    <field
+                                        name="management_notes"
+                                        nolabel="1"
+                                        placeholder="Indique motivo de aprobación, modificación, devolución o rechazo..."
+                                        readonly="state != 'pendiente_gerencia'"
+                                    />
+                                </group>
+
+                                <div class="alert alert-light border" role="alert">
+                                    Gerencia debe revisar la cantidad solicitada,
+                                    la sugerencia comercial, los contadores,
+                                    el rendimiento y la evidencia antes de decidir.
+                                </div>
+
+                            </page>
+
+
+                            <page string="Coordinación y Despacho" name="dispatch">
+
+                                <group>
+                                    <group string="Confirmación Comercial">
+                                        <field name="sales_user_id" readonly="1"/>
+                                        <field name="sales_confirmation_date" readonly="1"/>
+                                        <field name="sales_notes" readonly="state != 'confirmacion_ventas'"/>
+                                    </group>
+
+                                    <group string="Despacho">
+                                        <field name="delivery_scheduled_id" readonly="1"/>
+                                        <field name="state" readonly="1"/>
+                                    </group>
+                                </group>
+
+                                <div class="alert alert-info" role="alert">
+                                    Comercial debe confirmar contacto, dirección,
+                                    disponibilidad del cliente y fecha tentativa
+                                    antes de liberar el pedido para despacho.
+                                </div>
+
+                            </page>
+
+
+                            <page string="Stock y Nivel Reportado" name="stock">
+
+                                <group string="Stock del Cliente">
+                                    <group>
+                                        <field name="stock_reportado_black"/>
+                                        <field
+                                            name="stock_reportado_cyan"
+                                            invisible="equipment_id.tipo_maquina_id == 'monocromatica'"
+                                        />
+                                        <field
+                                            name="stock_reportado_magenta"
+                                            invisible="equipment_id.tipo_maquina_id == 'monocromatica'"
+                                        />
+                                        <field
+                                            name="stock_reportado_yellow"
+                                            invisible="equipment_id.tipo_maquina_id == 'monocromatica'"
+                                        />
+                                    </group>
+
+                                    <group string="Nivel Instalado">
+                                        <field name="nivel_toner_black"/>
+                                        <field
+                                            name="nivel_toner_cyan"
+                                            invisible="equipment_id.tipo_maquina_id == 'monocromatica'"
+                                        />
+                                        <field
+                                            name="nivel_toner_magenta"
+                                            invisible="equipment_id.tipo_maquina_id == 'monocromatica'"
+                                        />
+                                        <field
+                                            name="nivel_toner_yellow"
+                                            invisible="equipment_id.tipo_maquina_id == 'monocromatica'"
+                                        />
+                                    </group>
+                                </group>
+
+                            </page>
+
+
+                            <page string="Evidencia y Observaciones" name="evidence">
+
+                                <group>
+                                    <group string="Foto del Contador">
+                                        <field
+                                            name="photo_counter"
+                                            widget="image"
+                                            class="oe_avatar"
+                                        />
+                                        <field name="photo_counter_filename" invisible="1"/>
+                                    </group>
+
+                                    <group string="Foto del Tóner">
+                                        <field
+                                            name="photo_toner"
+                                            widget="image"
+                                            class="oe_avatar"
+                                        />
+                                        <field name="photo_toner_filename" invisible="1"/>
+                                    </group>
+                                </group>
+
+                                <group string="Observaciones del Cliente">
+                                    <field
+                                        name="notes"
+                                        nolabel="1"
+                                        placeholder="Observaciones recibidas desde el portal..."
+                                    />
+                                </group>
+
+                            </page>
+
+                        </notebook>
+
+                    </sheet>
+
+                    <chatter/>
+
+                </form>
+            </field>
+        </record>
+
+
+        <!-- =========================================================
+             VISTA KANBAN
+             Compacta para seguimiento del flujo.
+        ========================================================== -->
+
+        <record id="view_toner_counter_submission_kanban" model="ir.ui.view">
+            <field name="name">toner.counter.submission.kanban</field>
+            <field name="model">toner.counter.submission</field>
+            <field name="arch" type="xml">
+                <kanban
+                    default_group_by="state"
+                    class="o_kanban_small_column"
+                    quick_create="false"
+                >
+                    <field name="secuencia"/>
+                    <field name="submission_date"/>
+                    <field name="partner_id"/>
+                    <field name="equipment_id"/>
+                    <field name="client_name"/>
+                    <field name="state"/>
+                    <field name="analysis_result"/>
+                    <field name="requires_evidence"/>
+                    <field name="consumed_copies"/>
+                    <field name="expected_yield"/>
+                    <field name="consumption_percent"/>
+                    <field name="days_since_last_delivery"/>
+                    <field name="activity_ids"/>
+
+                    <templates>
+                        <t t-name="card">
+
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <strong>
+                                    <field name="secuencia"/>
+                                </strong>
+
+                                <field
+                                    name="analysis_result"
+                                    widget="label_selection"
+                                />
                             </div>
-                        </button>-->
-                    </div>
 
-                    <div class="oe_title">
-                        <h1>
-                            <field name="secuencia" readonly="1"/>
-                        </h1>
-                        <h2>
-                            <field name="display_name" readonly="1"/>
-                        </h2>
-                    </div>
+                            <div class="mb-2">
+                                <div>
+                                    <strong>Cliente:</strong>
+                                    <field name="partner_id"/>
+                                </div>
 
-                    <group>
-                        <group string="Información del Equipo">
-                            <field name="equipment_id" 
-                                   domain="[('estado_alquiler_id', '=', 'alquilada')]"
-                                   readonly="state != 'pending'"/>
-                            <field name="partner_id" readonly="1"/>
-                            
-                        </group>
-                        <group string="Información del Reporte">
-                            <field name="submission_date" readonly="state != 'pending'"/>
-                            <field name="urgente" readonly="state != 'pending'"/>
-                            <field name="requiere_entrega_automatica" readonly="1"/>
-                            <field name="delivery_scheduled_id" readonly="1"
-                                   invisible="not delivery_scheduled_id"/>
-                        </group>
+                                <div>
+                                    <strong>Equipo:</strong>
+                                    <field name="equipment_id"/>
+                                </div>
+                            </div>
+
+                            <div class="row g-1 small">
+                                <div class="col-6">
+                                    <span class="text-muted">Copias</span><br/>
+                                    <strong>
+                                        <field name="consumed_copies"/>
+                                    </strong>
+                                </div>
+
+                                <div class="col-6">
+                                    <span class="text-muted">Rendimiento</span><br/>
+                                    <strong>
+                                        <field name="expected_yield"/>
+                                    </strong>
+                                </div>
+
+                                <div class="col-6 mt-2">
+                                    <span class="text-muted">% consumido</span><br/>
+                                    <strong>
+                                        <field name="consumption_percent"/>
+                                    </strong>
+                                </div>
+
+                                <div class="col-6 mt-2">
+                                    <span class="text-muted">Días</span><br/>
+                                    <strong>
+                                        <field name="days_since_last_delivery"/>
+                                    </strong>
+                                </div>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center mt-3">
+                                <div>
+                                    <t t-if="record.requires_evidence.raw_value">
+                                        <span class="badge text-bg-warning">
+                                            Requiere evidencia
+                                        </span>
+                                    </t>
+                                </div>
+
+                                <field name="activity_ids" widget="kanban_activity"/>
+                            </div>
+
+                        </t>
+                    </templates>
+                </kanban>
+            </field>
+        </record>
+
+
+        <!-- =========================================================
+             VISTA DE BÚSQUEDA
+        ========================================================== -->
+
+        <record id="view_toner_counter_submission_search" model="ir.ui.view">
+            <field name="name">toner.counter.submission.search</field>
+            <field name="model">toner.counter.submission</field>
+            <field name="arch" type="xml">
+                <search string="Buscar Solicitudes de Tóner">
+
+                    <field name="secuencia"/>
+                    <field name="partner_id"/>
+                    <field name="equipment_id"/>
+                    <field name="client_name"/>
+                    <field name="client_phone"/>
+                    <field name="analysis_result"/>
+
+                    <separator/>
+
+                    <filter
+                        string="Recibidas"
+                        name="received"
+                        domain="[('state', '=', 'recibida')]"
+                    />
+
+                    <filter
+                        string="En evaluación"
+                        name="review"
+                        domain="[('state', '=', 'evaluacion')]"
+                    />
+
+                    <filter
+                        string="Pendientes de gerencia"
+                        name="management"
+                        domain="[('state', '=', 'pendiente_gerencia')]"
+                    />
+
+                    <filter
+                        string="Pendientes de comercial"
+                        name="sales"
+                        domain="[('state', '=', 'confirmacion_ventas')]"
+                    />
+
+                    <filter
+                        string="Listas para despacho"
+                        name="ready_dispatch"
+                        domain="[('state', '=', 'lista_despacho')]"
+                    />
+
+                    <filter
+                        string="En despacho"
+                        name="dispatch"
+                        domain="[('state', '=', 'en_despacho')]"
+                    />
+
+                    <separator/>
+
+                    <filter
+                        string="Consumo anticipado"
+                        name="early"
+                        domain="[('analysis_result', '=', 'early_consumption')]"
+                    />
+
+                    <filter
+                        string="Requiere evidencia"
+                        name="evidence"
+                        domain="[('requires_evidence', '=', True)]"
+                    />
+
+                    <filter
+                        string="Sin historial"
+                        name="no_history"
+                        domain="[('analysis_result', '=', 'no_history')]"
+                    />
+
+                    <filter
+                        string="Duplicadas"
+                        name="duplicates"
+                        domain="[('analysis_result', '=', 'duplicate')]"
+                    />
+
+                    <separator/>
+
+                    <filter
+                        string="Hoy"
+                        name="today"
+                        domain="[('submission_date', '&gt;=', context_today())]"
+                    />
+
+                    <filter
+                        string="Últimos 7 días"
+                        name="last_7_days"
+                        domain="[('submission_date', '&gt;=', (context_today() - datetime.timedelta(days=7)).strftime('%Y-%m-%d'))]"
+                    />
+
+                    <filter
+                        string="Este mes"
+                        name="month"
+                        domain="[('submission_date', '&gt;=', context_today().replace(day=1).strftime('%Y-%m-%d'))]"
+                    />
+
+                    <group expand="0" string="Agrupar por">
+
+                        <filter
+                            string="Estado"
+                            name="group_state"
+                            context="{'group_by': 'state'}"
+                        />
+
+                        <filter
+                            string="Resultado"
+                            name="group_analysis"
+                            context="{'group_by': 'analysis_result'}"
+                        />
+
+                        <filter
+                            string="Cliente"
+                            name="group_partner"
+                            context="{'group_by': 'partner_id'}"
+                        />
+
+                        <filter
+                            string="Equipo"
+                            name="group_equipment"
+                            context="{'group_by': 'equipment_id'}"
+                        />
+
+                        <filter
+                            string="Fecha"
+                            name="group_date"
+                            context="{'group_by': 'submission_date:day'}"
+                        />
+
                     </group>
 
-                    <notebook>
-                        <page string="Datos del Contacto" name="contact_info">
-                            <group>
-                                <group string="Persona que Reporta">
-                                    <field name="client_name" readonly="state != 'pending'"/>
-                                    <field name="client_email" readonly="state != 'pending'"/>
-                                    <field name="client_phone" readonly="state != 'pending'"/>
-                                    <field name="client_phone_clean" readonly="1"/>
-                                </group>
-                            </group>
-                        </page>
+                </search>
+            </field>
+        </record>
 
-                        <page string="Contadores" name="counters">
-                            <group>
-                                <group string="Contadores Actuales">
-                                    <field name="counter_bn" readonly="state != 'pending'"/>
-                                    <field name="counter_color" readonly="state != 'pending'"/>
-                                </group>
-                                <group string="Contadores Anteriores">
-                                    <field name="previous_counter_bn" readonly="1"/>
-                                    <field name="previous_counter_color" readonly="1"/>
-                                </group>
-                                <group string="Copias del Período">
-                                    <field name="copies_bn_period" readonly="1"/>
-                                    <field name="copies_color_period" readonly="1"/>
-                                    <field name="total_copies_period" readonly="1"/>
-                                </group>
-                            </group>
-                        </page>
-
-                        <page string="Stock de Tóner" name="toner_stock">
-                            <group string="Stock Reportado por Cliente">
-                                <group>
-                                    <field name="stock_reportado_black" readonly="state != 'pending'"/>
-                                    <field name="stock_reportado_cyan" readonly="state != 'pending'"
-                                           invisible="equipment_id and equipment_id.tipo_maquina_id == 'monocromatica'"/>
-                                    <field name="stock_reportado_magenta" readonly="state != 'pending'"
-                                           invisible="equipment_id and equipment_id.tipo_maquina_id == 'monocromatica'"/>
-                                    <field name="stock_reportado_yellow" readonly="state != 'pending'"
-                                           invisible="equipment_id and equipment_id.tipo_maquina_id == 'monocromatica'"/>
-                                </group>
-                                <group>
-                                    <field name="stock_total_black" readonly="1"/>
-                                    <field name="stock_total_cyan" readonly="1"
-                                           invisible="equipment_id and equipment_id.tipo_maquina_id == 'monocromatica'"/>
-                                    <field name="stock_total_magenta" readonly="1"
-                                           invisible="equipment_id and equipment_id.tipo_maquina_id == 'monocromatica'"/>
-                                    <field name="stock_total_yellow" readonly="1"
-                                           invisible="equipment_id and equipment_id.tipo_maquina_id == 'monocromatica'"/>
-                                </group>
-                            </group>
-                        </page>
-
-                        <page string="Nivel de Tóner Instalado" name="toner_levels">
-                            <group>
-                                <group string="Estado del Tóner Instalado">
-                                    <field name="nivel_toner_black" readonly="state != 'pending'"/>
-                                    <field name="nivel_toner_cyan" readonly="state != 'pending'"
-                                           invisible="equipment_id and equipment_id.tipo_maquina_id == 'monocromatica'"/>
-                                    <field name="nivel_toner_magenta" readonly="state != 'pending'"
-                                           invisible="equipment_id and equipment_id.tipo_maquina_id == 'monocromatica'"/>
-                                    <field name="nivel_toner_yellow" readonly="state != 'pending'"
-                                           invisible="equipment_id and equipment_id.tipo_maquina_id == 'monocromatica'"/>
-                                </group>
-                            </group>
-                        </page>
-
-                        <page string="Solicitudes Urgentes" name="urgent_requests">
-                            <group>
-                                <group string="Tóner Solicitado Urgente">
-                                    <field name="requiere_toner_black" readonly="state != 'pending'"/>
-                                    <field name="requiere_toner_cyan" readonly="state != 'pending'"
-                                           invisible="equipment_id and equipment_id.tipo_maquina_id == 'monocromatica'"/>
-                                    <field name="requiere_toner_magenta" readonly="state != 'pending'"
-                                           invisible="equipment_id and equipment_id.tipo_maquina_id == 'monocromatica'"/>
-                                    <field name="requiere_toner_yellow" readonly="state != 'pending'"
-                                           invisible="equipment_id and equipment_id.tipo_maquina_id == 'monocromatica'"/>
-                                </group>
-                            </group>
-                        </page>
-
-                        <page string="Evidencia" name="evidence">
-                            <group>
-                                <group string="Fotos de Evidencia">
-                                    <field name="photo_counter" widget="image" class="oe_avatar"/>
-                                    <field name="photo_counter_filename" invisible="1"/>
-                                    <field name="photo_toner" widget="image" class="oe_avatar"/>
-                                    <field name="photo_toner_filename" invisible="1"/>
-                                </group>
-                                <group string="Observaciones">
-                                    <field name="notes" nolabel="1" placeholder="Observaciones del cliente..."/>
-                                </group>
-                            </group>
-                        </page>
-
-                        <page string="Revisión" name="review" invisible="state == 'pending'">
-                            <group>
-                                <group string="Información de Revisión">
-                                    <field name="reviewer_id" readonly="1"/>
-                                    <field name="review_date" readonly="1"/>
-                                </group>
-                                <group string="Análisis Automático">
-                                    <field name="fecha_sugerida_entrega" readonly="1"/>
-                                    <field name="fecha_estimada_agotamiento_black" readonly="1"/>
-                                </group>
-                            </group>
-                            <group string="Notas de Revisión">
-                                <field name="review_notes" nolabel="1" 
-                                       placeholder="Notas del revisor..."/>
-                            </group>
-                        </page>
-                    </notebook>
-                </sheet>
-
-                <chatter/>
-            </form>
-        </field>
-    </record>
-
-    <!-- Vista Kanban de Reportes de Contadores y Tóner -->
-    <record id="view_toner_counter_submission_kanban" model="ir.ui.view">
-        <field name="name">toner.counter.submission.kanban</field>
-        <field name="model">toner.counter.submission</field>
-        <field name="arch" type="xml">
-            <kanban default_group_by="state" class="o_kanban_small_column">
-                <field name="secuencia"/>
-                <field name="client_name"/>
-                <field name="submission_date"/>
-                <field name="equipment_id"/>
-                <field name="partner_id"/>
-                <field name="state"/>
-                <field name="urgente"/>
-                <field name="requiere_entrega_automatica"/>
-                <field name="total_copies_period"/>
-                <templates>
-                    <t t-name="kanban-box">
-                        <div class="oe_kanban_card oe_kanban_global_click">
-                            <div class="o_kanban_content">
-                                <div class="o_kanban_record_top">
-                                    <div class="o_kanban_record_headings">
-                                        <strong class="o_kanban_record_title">
-                                            <field name="secuencia"/>
-                                        </strong>
-                                        <br/>
-                                        <small class="o_kanban_record_subtitle text-muted">
-                                            <field name="client_name"/>
-                                        </small>
-                                    </div>
-                                    <div class="o_kanban_manage_button_section">
-                                        <a class="o_kanban_manage_toggle_button" href="#">
-                                            <i class="fa fa-ellipsis-v" role="img" aria-label="Manage" title="Manage"/>
-                                        </a>
-                                    </div>
-                                </div>
-                                <div class="o_kanban_record_body">
-                                    <div class="row">
-                                        <div class="col-6">
-                                            <strong>Equipo:</strong><br/>
-                                            <field name="equipment_id"/>
-                                        </div>
-                                        <div class="col-6">
-                                            <strong>Cliente:</strong><br/>
-                                            <field name="partner_id"/>
-                                        </div>
-                                    </div>
-                                    <div class="row mt8">
-                                        <div class="col-6">
-                                            <strong>Fecha:</strong><br/>
-                                            <field name="submission_date"/>
-                                        </div>
-                                        <div class="col-6">
-                                            <strong>Copias:</strong><br/>
-                                            <field name="total_copies_period"/>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="o_kanban_record_bottom">
-                                    <div class="oe_kanban_bottom_left">
-                                        <t t-if="record.urgente.raw_value">
-                                            <span class="badge badge-warning">Urgente</span>
-                                        </t>
-                                        <t t-if="record.requiere_entrega_automatica.raw_value">
-                                            <span class="badge badge-info">Requiere Entrega</span>
-                                        </t>
-                                    </div>
-                                    <div class="oe_kanban_bottom_right">
-                                        <field name="activity_ids" widget="kanban_activity"/>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </t>
-                </templates>
-            </kanban>
-        </field>
-    </record>
-
-    <!-- Vista de Búsqueda -->
-    <record id="view_toner_counter_submission_search" model="ir.ui.view">
-        <field name="name">toner.counter.submission.search</field>
-        <field name="model">toner.counter.submission</field>
-        <field name="arch" type="xml">
-            <search string="Buscar Reportes de Tóner">
-                <field name="secuencia"/>
-                <field name="client_name"/>
-                <field name="equipment_id"/>
-                <field name="partner_id"/>
-                <separator/>
-                <filter string="Pendientes" name="pending" 
-                        domain="[('state', '=', 'pending')]"/>
-                <filter string="Aprobados" name="approved" 
-                        domain="[('state', '=', 'approved')]"/>
-                <filter string="Procesados" name="processed" 
-                        domain="[('state', '=', 'processed')]"/>
-                <separator/>
-                <filter string="Urgentes" name="urgent" 
-                        domain="[('urgente', '=', True)]"/>
-                <filter string="Requiere Entrega" name="requires_delivery" 
-                        domain="[('requiere_entrega_automatica', '=', True)]"/>
-                <separator/>
-                <filter string="Hoy" name="today" 
-                        domain="[('submission_date', '&gt;=', datetime.datetime.combine(context_today(), datetime.time(0,0,0))), ('submission_date', '&lt;=', datetime.datetime.combine(context_today(), datetime.time(23,59,59)))]"/>
-                <filter string="Esta Semana" name="week" 
-                        domain="[('submission_date', '&gt;=', (context_today() - datetime.timedelta(days=7)).strftime('%%Y-%%m-%%d'))]"/>
-                <filter string="Este Mes" name="month" 
-                        domain="[('submission_date', '&gt;=', (context_today().replace(day=1)).strftime('%%Y-%%m-%%d'))]"/>
-                <group expand="0" string="Agrupar Por">
-                    <filter string="Estado" name="group_state" context="{'group_by': 'state'}"/>
-                    <filter string="Cliente" name="group_partner" context="{'group_by': 'partner_id'}"/>
-                    <filter string="Equipo" name="group_equipment" context="{'group_by': 'equipment_id'}"/>
-                    <filter string="Fecha" name="group_date" context="{'group_by': 'submission_date:day'}"/>
-                </group>
-            </search>
-        </field>
-    </record>
-</data>
-    
+    </data>
 </odoo>

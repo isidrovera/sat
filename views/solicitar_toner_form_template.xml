@@ -1,927 +1,1613 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- FORMULARIO PRINCIPAL -->
-    <template id="solicitar_toner_form_template" name="Solicitar Toner Form">
+
+    <!-- =========================================================
+         FORMULARIO PRINCIPAL
+    ========================================================== -->
+
+    <template id="solicitar_toner_form_template" name="Solicitar Tóner">
         <t t-call="website.layout">
-            
-            <!-- Custom CSS -->
+
             <style>
-                @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap');
-                
-                .toner-container {
-                    font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
-                    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+                :root {
+                    --toner-primary: #0891b2;
+                    --toner-primary-dark: #0e7490;
+                    --toner-primary-soft: #ecfeff;
+                    --toner-success: #059669;
+                    --toner-success-soft: #ecfdf5;
+                    --toner-warning: #d97706;
+                    --toner-warning-soft: #fffbeb;
+                    --toner-danger: #dc2626;
+                    --toner-danger-soft: #fef2f2;
+                    --toner-info: #2563eb;
+                    --toner-info-soft: #eff6ff;
+                    --toner-text: #172033;
+                    --toner-text-soft: #64748b;
+                    --toner-border: #e2e8f0;
+                    --toner-surface: #ffffff;
+                    --toner-surface-soft: #f8fafc;
+                    --toner-background: #f1f5f9;
+                    --toner-radius-sm: 10px;
+                    --toner-radius-md: 14px;
+                    --toner-radius-lg: 18px;
+                    --toner-shadow: 0 8px 28px rgba(15, 23, 42, 0.08);
+                }
+
+                .toner-portal,
+                .toner-portal * {
+                    box-sizing: border-box;
+                }
+
+                .toner-portal {
                     min-height: 100vh;
-                    padding: 2rem 0;
+                    color: var(--toner-text);
+                    background:
+                        radial-gradient(
+                            circle at top right,
+                            rgba(8, 145, 178, 0.09),
+                            transparent 28rem
+                        ),
+                        var(--toner-background);
+                    padding: 18px 0 40px;
                 }
-                
+
+                .toner-page {
+                    width: min(1180px, calc(100% - 28px));
+                    margin: 0 auto;
+                }
+
                 .toner-hero {
-                    background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%);
-                    border-radius: 24px;
-                    padding: 3rem 2rem;
-                    margin-bottom: 2rem;
-                    box-shadow: 0 20px 60px rgba(8, 145, 178, 0.25);
                     position: relative;
                     overflow: hidden;
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 24px;
+                    min-height: 132px;
+                    padding: 24px 28px;
+                    margin-bottom: 16px;
+                    border-radius: var(--toner-radius-lg);
+                    color: #ffffff;
+                    background:
+                        linear-gradient(
+                            135deg,
+                            var(--toner-primary),
+                            var(--toner-primary-dark)
+                        );
+                    box-shadow: 0 16px 35px rgba(8, 145, 178, 0.23);
                 }
-                
-                .toner-hero::before {
-                    content: '';
+
+                .toner-hero::before,
+                .toner-hero::after {
+                    content: "";
                     position: absolute;
-                    top: -50%;
-                    right: -20%;
-                    width: 400px;
-                    height: 400px;
-                    background: radial-gradient(circle, rgba(165, 243, 252, 0.15) 0%, transparent 70%);
                     border-radius: 50%;
+                    background: rgba(255, 255, 255, 0.08);
                 }
-                
-                .toner-hero h2 {
-                    color: #fff;
-                    font-weight: 700;
-                    font-size: 2.25rem;
-                    margin: 0 0 0.75rem 0;
-                    letter-spacing: -0.5px;
+
+                .toner-hero::before {
+                    width: 240px;
+                    height: 240px;
+                    top: -150px;
+                    right: -30px;
+                }
+
+                .toner-hero::after {
+                    width: 130px;
+                    height: 130px;
+                    right: 160px;
+                    bottom: -90px;
+                }
+
+                .toner-hero-content {
                     position: relative;
-                    z-index: 1;
+                    z-index: 2;
                 }
-                
-                .toner-hero-subtitle {
-                    color: rgba(255,255,255,0.85);
-                    font-size: 1.1rem;
+
+                .toner-hero-eyebrow {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 7px;
+                    margin-bottom: 6px;
+                    font-size: 0.78rem;
+                    font-weight: 800;
+                    text-transform: uppercase;
+                    letter-spacing: 0.09em;
+                    color: rgba(255, 255, 255, 0.78);
+                }
+
+                .toner-hero h1 {
+                    margin: 0 0 5px;
+                    font-size: clamp(1.45rem, 3vw, 2rem);
+                    line-height: 1.12;
+                }
+
+                .toner-hero p {
+                    max-width: 650px;
                     margin: 0;
-                    position: relative;
-                    z-index: 1;
+                    font-size: 0.95rem;
+                    color: rgba(255, 255, 255, 0.83);
                 }
-                
-                .info-card {
-                    background: #fff;
-                    border-radius: 20px;
-                    border: none;
-                    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-                    margin-bottom: 1.5rem;
+
+                .toner-hero-icon {
+                    position: relative;
+                    z-index: 2;
+                    flex: 0 0 auto;
+                    display: grid;
+                    place-items: center;
+                    width: 74px;
+                    height: 74px;
+                    border: 1px solid rgba(255, 255, 255, 0.24);
+                    border-radius: 22px;
+                    background: rgba(255, 255, 255, 0.13);
+                    backdrop-filter: blur(8px);
+                    font-size: 2rem;
+                }
+
+                .toner-active-request {
+                    display: flex;
+                    align-items: flex-start;
+                    gap: 12px;
+                    padding: 14px 16px;
+                    margin-bottom: 16px;
+                    border: 1px solid #fdba74;
+                    border-radius: var(--toner-radius-md);
+                    background: var(--toner-warning-soft);
+                    color: #9a3412;
+                }
+
+                .toner-active-request i {
+                    margin-top: 2px;
+                    font-size: 1.1rem;
+                }
+
+                .toner-active-request strong {
+                    display: block;
+                    margin-bottom: 3px;
+                }
+
+                .toner-active-request p {
+                    margin: 0;
+                    font-size: 0.9rem;
+                    line-height: 1.45;
+                }
+
+                .toner-equipment-summary {
+                    display: grid;
+                    grid-template-columns:
+                        minmax(0, 1.3fr)
+                        minmax(150px, 0.7fr)
+                        minmax(150px, 0.7fr)
+                        auto;
+                    gap: 12px;
+                    align-items: stretch;
+                    padding: 14px;
+                    margin-bottom: 16px;
+                    border: 1px solid var(--toner-border);
+                    border-radius: var(--toner-radius-lg);
+                    background: var(--toner-surface);
+                    box-shadow: var(--toner-shadow);
+                }
+
+                .toner-summary-main,
+                .toner-summary-item {
+                    min-width: 0;
+                    padding: 11px 13px;
+                    border-radius: var(--toner-radius-md);
+                    background: var(--toner-surface-soft);
+                }
+
+                .toner-summary-label {
+                    display: block;
+                    margin-bottom: 4px;
+                    font-size: 0.7rem;
+                    font-weight: 800;
+                    text-transform: uppercase;
+                    letter-spacing: 0.07em;
+                    color: var(--toner-text-soft);
+                }
+
+                .toner-summary-value {
+                    overflow: hidden;
+                    display: block;
+                    font-size: 0.96rem;
+                    font-weight: 750;
+                    white-space: nowrap;
+                    text-overflow: ellipsis;
+                }
+
+                .toner-series-badge {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                    max-width: 100%;
+                    padding: 5px 9px;
+                    border-radius: 999px;
+                    color: #ffffff;
+                    background: #273449;
+                    font-family: "SFMono-Regular", Consolas, monospace;
+                    font-size: 0.82rem;
+                }
+
+                .toner-expand-all {
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 7px;
+                    align-self: center;
+                    min-height: 42px;
+                    padding: 0 14px;
+                    border: 1px solid var(--toner-border);
+                    border-radius: 12px;
+                    color: var(--toner-primary-dark);
+                    background: #ffffff;
+                    font-size: 0.84rem;
+                    font-weight: 800;
+                    transition:
+                        transform 0.2s ease,
+                        border-color 0.2s ease,
+                        background 0.2s ease;
+                }
+
+                .toner-expand-all:hover {
+                    transform: translateY(-1px);
+                    border-color: var(--toner-primary);
+                    background: var(--toner-primary-soft);
+                }
+
+                .toner-card {
+                    margin-bottom: 16px;
+                    overflow: hidden;
+                    border: 1px solid var(--toner-border);
+                    border-radius: var(--toner-radius-lg);
+                    background: var(--toner-surface);
+                    box-shadow: var(--toner-shadow);
+                }
+
+                .toner-card-header {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 16px;
+                    min-height: 54px;
+                    padding: 12px 16px;
+                    border-bottom: 1px solid var(--toner-border);
+                }
+
+                .toner-card-title {
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    min-width: 0;
+                }
+
+                .toner-card-title-icon {
+                    display: grid;
+                    place-items: center;
+                    flex: 0 0 auto;
+                    width: 34px;
+                    height: 34px;
+                    border-radius: 10px;
+                    color: var(--toner-primary-dark);
+                    background: var(--toner-primary-soft);
+                }
+
+                .toner-card-title h2 {
+                    margin: 0;
+                    font-size: 1rem;
+                }
+
+                .toner-card-title small {
+                    display: block;
+                    margin-top: 2px;
+                    color: var(--toner-text-soft);
+                    font-size: 0.74rem;
+                }
+
+                .toner-card-body {
+                    padding: 16px;
+                }
+
+                .toner-accordion-card {
+                    box-shadow: none;
+                }
+
+                .toner-accordion-trigger {
+                    width: 100%;
+                    border: 0;
+                    text-align: left;
+                    background: transparent;
+                }
+
+                .toner-accordion-trigger:hover {
+                    background: #fbfdff;
+                }
+
+                .toner-accordion-arrow {
+                    flex: 0 0 auto;
+                    color: var(--toner-text-soft);
+                    transition: transform 0.24s ease;
+                }
+
+                .toner-accordion-card.open .toner-accordion-arrow {
+                    transform: rotate(180deg);
+                }
+
+                .toner-accordion-content {
+                    display: grid;
+                    grid-template-rows: 0fr;
+                    transition: grid-template-rows 0.28s ease;
+                }
+
+                .toner-accordion-card.open .toner-accordion-content {
+                    grid-template-rows: 1fr;
+                }
+
+                .toner-accordion-inner {
+                    min-height: 0;
                     overflow: hidden;
                 }
-                
-                .info-card-header {
-                    padding: 1.5rem 2rem;
-                    border-bottom: 1px solid #f3f4f6;
-                    display: flex;
-                    align-items: center;
-                    gap: 1rem;
+
+                .toner-accordion-body {
+                    padding: 16px;
+                    border-top: 1px solid var(--toner-border);
                 }
-                
-                .info-card-header.primary {
-                    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-                    color: #fff;
-                    border: none;
-                }
-                
-                .info-card-header.info {
-                    background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%);
-                    color: #fff;
-                    border: none;
-                }
-                
-                .info-card-header.secondary {
-                    background: linear-gradient(135deg, #64748b 0%, #475569 100%);
-                    color: #fff;
-                    border: none;
-                }
-                
-                .info-card-header h3,
-                .info-card-header h5 {
-                    margin: 0;
-                    font-weight: 700;
-                    font-size: 1.25rem;
-                }
-                
-                .info-card-body {
-                    padding: 2rem;
-                }
-                
-                .section-title {
-                    display: flex;
-                    align-items: center;
-                    gap: 0.5rem;
-                    font-size: 1rem;
-                    font-weight: 700;
-                    color: #6366f1;
-                    text-transform: uppercase;
-                    letter-spacing: 0.5px;
-                    margin-bottom: 1.25rem;
-                    padding-bottom: 0.75rem;
-                    border-bottom: 2px solid #f3f4f6;
-                }
-                
-                .info-grid {
+
+                .toner-form-grid {
                     display: grid;
-                    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-                    gap: 1.5rem;
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                    gap: 14px;
                 }
-                
-                .info-item {
-                    background: #f9fafb;
-                    padding: 1.25rem;
-                    border-radius: 12px;
-                    border-left: 3px solid #6366f1;
+
+                .toner-field {
+                    min-width: 0;
                 }
-                
-                .info-label {
-                    font-size: 0.75rem;
-                    text-transform: uppercase;
-                    letter-spacing: 0.5px;
-                    color: #6b7280;
-                    margin-bottom: 0.5rem;
-                    font-weight: 600;
+
+                .toner-field.full {
+                    grid-column: 1 / -1;
                 }
-                
-                .info-value {
-                    font-size: 1.1rem;
-                    font-weight: 600;
-                    color: #1a1f3a;
-                }
-                
-                .status-badge {
-                    display: inline-flex;
-                    align-items: center;
-                    gap: 0.4rem;
-                    padding: 0.5rem 1rem;
-                    border-radius: 50px;
-                    font-size: 0.875rem;
-                    font-weight: 600;
-                    border: 2px solid;
-                }
-                
-                .badge-success-custom {
-                    background: #d1fae5;
-                    color: #065f46;
-                    border-color: #10b981;
-                }
-                
-                .badge-info-custom {
-                    background: #dbeafe;
-                    color: #1e40af;
-                    border-color: #3b82f6;
-                }
-                
-                .badge-secondary-custom {
-                    background: #f3f4f6;
-                    color: #374151;
-                    border-color: #9ca3af;
-                }
-                
-                .stock-display {
-                    display: grid;
-                    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-                    gap: 1.25rem;
-                    margin-bottom: 1.5rem;
-                }
-                
-                .stock-item {
-                    background: #f9fafb;
-                    border-radius: 16px;
-                    padding: 1.5rem;
-                    text-align: center;
-                    border: 2px solid #e5e7eb;
-                    transition: all 0.2s;
-                }
-                
-                .stock-item:hover {
-                    transform: translateY(-2px);
-                    border-color: #0891b2;
-                    box-shadow: 0 8px 20px rgba(8, 145, 178, 0.15);
-                }
-                
-                .stock-color-indicator {
-                    width: 48px;
-                    height: 48px;
-                    border-radius: 50%;
-                    margin: 0 auto 1rem;
+
+                .toner-field label {
                     display: flex;
                     align-items: center;
-                    justify-content: center;
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                    gap: 7px;
+                    margin-bottom: 7px;
+                    color: #334155;
+                    font-size: 0.83rem;
+                    font-weight: 800;
                 }
-                
-                .stock-name {
-                    font-weight: 700;
-                    font-size: 1rem;
-                    margin-bottom: 0.75rem;
-                    color: #1a1f3a;
+
+                .toner-required {
+                    color: var(--toner-danger);
                 }
-                
-                .stock-amount {
-                    font-size: 1.75rem;
-                    font-weight: 700;
-                    font-family: 'JetBrains Mono', monospace;
-                    margin-bottom: 0.5rem;
-                }
-                
-                .stock-min {
-                    font-size: 0.8rem;
-                    color: #6b7280;
-                }
-                
-                .alert-custom {
-                    border-radius: 14px;
-                    padding: 1.25rem;
-                    border: none;
-                    display: flex;
-                    align-items: start;
-                    gap: 1rem;
-                    margin-bottom: 1.5rem;
-                }
-                
-                .alert-info-custom {
-                    background: #f0f9ff;
-                    color: #0c4a6e;
-                }
-                
-                .alert-warning-custom {
-                    background: #fef3c7;
-                    color: #92400e;
-                }
-                
-                .form-label {
-                    font-weight: 600;
-                    color: #374151;
-                    margin-bottom: 0.5rem;
-                    font-size: 0.9rem;
-                    display: flex;
-                    align-items: center;
-                    gap: 0.5rem;
-                }
-                
-                .form-control {
-                    border: 2px solid #e5e7eb;
-                    border-radius: 12px;
-                    padding: 0.875rem 1rem;
-                    font-size: 1rem;
-                    transition: all 0.2s;
-                    background: #f9fafb;
-                }
-                
-                .form-control:focus {
-                    border-color: #0891b2;
-                    box-shadow: 0 0 0 4px rgba(8, 145, 178, 0.1);
-                    background: #fff;
+
+                .toner-control {
+                    width: 100%;
+                    min-height: 43px;
+                    padding: 9px 12px;
+                    border: 1.5px solid var(--toner-border);
+                    border-radius: 11px;
                     outline: none;
+                    color: var(--toner-text);
+                    background: #ffffff;
+                    transition:
+                        border-color 0.2s ease,
+                        box-shadow 0.2s ease;
                 }
-                
-                textarea.form-control {
+
+                .toner-control:focus {
+                    border-color: var(--toner-primary);
+                    box-shadow: 0 0 0 3px rgba(8, 145, 178, 0.12);
+                }
+
+                textarea.toner-control {
+                    min-height: 90px;
                     resize: vertical;
-                    min-height: 120px;
                 }
-                
-                .toner-card {
-                    background: #fff;
-                    border: 2px solid #e5e7eb;
-                    border-radius: 16px;
-                    padding: 1.5rem;
-                    text-align: center;
-                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                    cursor: pointer;
-                    height: 100%;
+
+                .toner-field-help {
+                    display: block;
+                    margin-top: 5px;
+                    color: var(--toner-text-soft);
+                    font-size: 0.73rem;
                 }
-                
-                .toner-card:hover {
-                    transform: translateY(-4px);
-                    border-color: #0891b2;
-                    box-shadow: 0 12px 24px rgba(8, 145, 178, 0.2);
+
+                .toner-counter-grid {
+                    display: grid;
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                    gap: 12px;
                 }
-                
-                .toner-card.selected {
-                    border-color: #0891b2;
-                    background: linear-gradient(135deg, #ecfeff 0%, #cffafe 100%);
-                    box-shadow: 0 8px 20px rgba(8, 145, 178, 0.25);
-                }
-                
-                .toner-color-circle {
-                    width: 64px;
-                    height: 64px;
-                    border-radius: 50%;
-                    margin: 0 auto 1rem;
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+
+                .toner-automatic-counter {
                     display: flex;
                     align-items: center;
-                    justify-content: center;
+                    justify-content: space-between;
+                    gap: 14px;
+                    min-height: 64px;
+                    padding: 12px 14px;
+                    border: 1px solid #bae6fd;
+                    border-radius: var(--toner-radius-md);
+                    background: #f0f9ff;
                 }
-                
-                .toner-name {
-                    font-weight: 700;
-                    font-size: 1.1rem;
-                    margin-bottom: 1rem;
-                    color: #1a1f3a;
-                }
-                
-                .toner-checkbox-wrapper {
+
+                .toner-automatic-counter-info {
                     display: flex;
                     align-items: center;
-                    justify-content: center;
-                    gap: 0.5rem;
-                    margin-top: 1rem;
+                    gap: 10px;
+                    min-width: 0;
                 }
-                
-                .form-check-input {
-                    width: 20px;
-                    height: 20px;
-                    border: 2px solid #0891b2;
-                    cursor: pointer;
+
+                .toner-automatic-counter-icon {
+                    display: grid;
+                    place-items: center;
+                    flex: 0 0 auto;
+                    width: 36px;
+                    height: 36px;
+                    border-radius: 11px;
+                    color: var(--toner-info);
+                    background: #dbeafe;
                 }
-                
-                .form-check-input:checked {
-                    background-color: #0891b2;
-                    border-color: #0891b2;
+
+                .toner-automatic-counter strong {
+                    display: block;
+                    font-size: 0.84rem;
                 }
-                
-                .btn-action-primary {
-                    background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%);
-                    color: #fff;
-                    border: none;
-                    border-radius: 12px;
-                    padding: 1rem 1.5rem;
-                    font-weight: 700;
+
+                .toner-automatic-counter span {
+                    display: block;
+                    margin-top: 2px;
+                    color: var(--toner-text-soft);
+                    font-size: 0.73rem;
+                }
+
+                .toner-counter-value {
+                    flex: 0 0 auto;
+                    font-family: "SFMono-Regular", Consolas, monospace;
                     font-size: 1rem;
-                    transition: all 0.2s;
+                    font-weight: 900;
+                }
+
+                .toner-status-pill {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                    padding: 4px 9px;
+                    border-radius: 999px;
+                    font-size: 0.74rem;
+                    font-weight: 850;
+                }
+
+                .toner-status-pill.success {
+                    color: #065f46;
+                    background: #d1fae5;
+                }
+
+                .toner-status-pill.info {
+                    color: #1e40af;
+                    background: #dbeafe;
+                }
+
+                .toner-selection-grid {
+                    display: grid;
+                    grid-template-columns: repeat(4, minmax(0, 1fr));
+                    gap: 10px;
+                }
+
+                .toner-option {
+                    position: relative;
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    min-height: 64px;
+                    padding: 10px 12px;
+                    border: 1.5px solid var(--toner-border);
+                    border-radius: var(--toner-radius-md);
+                    background: #ffffff;
+                    cursor: pointer;
+                    user-select: none;
+                    transition:
+                        transform 0.2s ease,
+                        border-color 0.2s ease,
+                        box-shadow 0.2s ease,
+                        background 0.2s ease;
+                }
+
+                .toner-option:hover {
+                    transform: translateY(-1px);
+                    border-color: #94a3b8;
+                }
+
+                .toner-option.selected {
+                    border-color: var(--toner-primary);
+                    background: var(--toner-primary-soft);
+                    box-shadow: 0 0 0 3px rgba(8, 145, 178, 0.08);
+                }
+
+                .toner-color-shape {
+                    position: relative;
+                    flex: 0 0 auto;
+                    width: 28px;
+                    height: 38px;
+                    border: 2px solid rgba(15, 23, 42, 0.14);
+                    border-radius: 7px 7px 10px 10px;
+                    box-shadow: inset 0 -6px 0 rgba(0, 0, 0, 0.08);
+                }
+
+                .toner-color-shape::before {
+                    content: "";
+                    position: absolute;
+                    width: 15px;
+                    height: 5px;
+                    top: -6px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    border-radius: 3px 3px 0 0;
+                    background: #475569;
+                }
+
+                .toner-color-shape.black {
+                    background: #111827;
+                }
+
+                .toner-color-shape.cyan {
+                    background: #22d3ee;
+                }
+
+                .toner-color-shape.magenta {
+                    background: #ec4899;
+                }
+
+                .toner-color-shape.yellow {
+                    background: #facc15;
+                }
+
+                .toner-option-data {
+                    min-width: 0;
+                    flex: 1;
+                }
+
+                .toner-option-name {
+                    display: block;
+                    font-size: 0.84rem;
+                    font-weight: 850;
+                }
+
+                .toner-option-stock {
+                    display: block;
+                    overflow: hidden;
+                    margin-top: 2px;
+                    color: var(--toner-text-soft);
+                    font-size: 0.7rem;
+                    white-space: nowrap;
+                    text-overflow: ellipsis;
+                }
+
+                .toner-option input {
+                    flex: 0 0 auto;
+                    width: 18px;
+                    height: 18px;
+                    accent-color: var(--toner-primary);
+                }
+
+                .toner-details-grid {
+                    display: grid;
+                    grid-template-columns: repeat(3, minmax(0, 1fr));
+                    gap: 10px;
+                }
+
+                .toner-detail-item {
+                    min-width: 0;
+                    padding: 11px 12px;
+                    border-radius: 12px;
+                    background: var(--toner-surface-soft);
+                }
+
+                .toner-detail-item strong {
+                    display: block;
+                    margin-top: 3px;
+                    font-size: 0.87rem;
+                    overflow-wrap: anywhere;
+                }
+
+                .toner-stock-grid {
+                    display: grid;
+                    grid-template-columns: repeat(4, minmax(0, 1fr));
+                    gap: 10px;
+                }
+
+                .toner-stock-item {
+                    min-width: 0;
+                    padding: 12px;
+                    border: 1px solid var(--toner-border);
+                    border-radius: 13px;
+                    background: var(--toner-surface-soft);
+                }
+
+                .toner-stock-header {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    margin-bottom: 9px;
+                }
+
+                .toner-stock-dot {
+                    width: 13px;
+                    height: 13px;
+                    border-radius: 50%;
+                    border: 1px solid rgba(15, 23, 42, 0.15);
+                }
+
+                .toner-stock-dot.black {
+                    background: #111827;
+                }
+
+                .toner-stock-dot.cyan {
+                    background: #22d3ee;
+                }
+
+                .toner-stock-dot.magenta {
+                    background: #ec4899;
+                }
+
+                .toner-stock-dot.yellow {
+                    background: #facc15;
+                }
+
+                .toner-stock-title {
+                    font-size: 0.8rem;
+                    font-weight: 850;
+                }
+
+                .toner-stock-number {
+                    font-size: 1.35rem;
+                    font-weight: 900;
+                }
+
+                .toner-stock-description {
+                    margin-top: 3px;
+                    color: var(--toner-text-soft);
+                    font-size: 0.69rem;
+                    line-height: 1.35;
+                }
+
+                .toner-validation-result {
+                    display: none;
+                    align-items: flex-start;
+                    gap: 12px;
+                    padding: 13px 14px;
+                    margin-top: 14px;
+                    border-radius: var(--toner-radius-md);
+                    font-size: 0.84rem;
+                    line-height: 1.45;
+                }
+
+                .toner-validation-result.visible {
+                    display: flex;
+                }
+
+                .toner-validation-result.info {
+                    border: 1px solid #bfdbfe;
+                    color: #1e3a8a;
+                    background: var(--toner-info-soft);
+                }
+
+                .toner-validation-result.warning {
+                    border: 1px solid #fed7aa;
+                    color: #9a3412;
+                    background: var(--toner-warning-soft);
+                }
+
+                .toner-validation-result.danger {
+                    border: 1px solid #fecaca;
+                    color: #991b1b;
+                    background: var(--toner-danger-soft);
+                }
+
+                .toner-actions {
+                    position: sticky;
+                    bottom: 10px;
+                    z-index: 20;
+                    display: grid;
+                    grid-template-columns:
+                        minmax(120px, 0.55fr)
+                        minmax(170px, 0.8fr)
+                        minmax(190px, 1fr);
+                    gap: 10px;
+                    padding: 10px;
+                    margin-top: 16px;
+                    border: 1px solid rgba(226, 232, 240, 0.95);
+                    border-radius: 16px;
+                    background: rgba(255, 255, 255, 0.9);
+                    box-shadow: 0 14px 35px rgba(15, 23, 42, 0.13);
+                    backdrop-filter: blur(12px);
+                }
+
+                .toner-button {
                     display: inline-flex;
                     align-items: center;
                     justify-content: center;
-                    gap: 0.5rem;
+                    gap: 8px;
+                    min-height: 44px;
+                    padding: 9px 14px;
+                    border-radius: 11px;
+                    font-size: 0.85rem;
+                    font-weight: 850;
+                    transition:
+                        transform 0.2s ease,
+                        box-shadow 0.2s ease,
+                        background 0.2s ease;
                 }
-                
-                .btn-action-primary:hover {
-                    transform: translateY(-2px);
-                    box-shadow: 0 12px 24px rgba(8, 145, 178, 0.3);
-                    color: #fff;
+
+                .toner-button:hover {
+                    transform: translateY(-1px);
                 }
-                
-                .btn-action-primary:disabled {
+
+                .toner-button.secondary {
+                    border: 1px solid var(--toner-border);
+                    color: #334155;
+                    background: #ffffff;
+                }
+
+                .toner-button.warning {
+                    border: 1px solid #fdba74;
+                    color: #9a3412;
+                    background: var(--toner-warning-soft);
+                }
+
+                .toner-button.primary {
+                    border: 0;
+                    color: #ffffff;
+                    background:
+                        linear-gradient(
+                            135deg,
+                            var(--toner-primary),
+                            var(--toner-primary-dark)
+                        );
+                    box-shadow: 0 9px 20px rgba(8, 145, 178, 0.22);
+                }
+
+                .toner-button:disabled {
                     opacity: 0.6;
                     cursor: not-allowed;
                     transform: none;
                 }
-                
-                .btn-action-secondary {
-                    background: #fff;
-                    color: #374151;
-                    border: 2px solid #e5e7eb;
-                    border-radius: 12px;
-                    padding: 1rem 1.5rem;
-                    font-weight: 600;
-                    font-size: 1rem;
-                    transition: all 0.2s;
-                    display: inline-flex;
-                    align-items: center;
-                    justify-content: center;
-                    gap: 0.5rem;
+
+                @media (max-width: 960px) {
+                    .toner-equipment-summary {
+                        grid-template-columns: repeat(3, minmax(0, 1fr));
+                    }
+
+                    .toner-expand-all {
+                        grid-column: 1 / -1;
+                    }
+
+                    .toner-selection-grid,
+                    .toner-stock-grid {
+                        grid-template-columns: repeat(2, minmax(0, 1fr));
+                    }
+
+                    .toner-details-grid {
+                        grid-template-columns: repeat(2, minmax(0, 1fr));
+                    }
                 }
-                
-                .btn-action-secondary:hover {
-                    background: #f9fafb;
-                    border-color: #d1d5db;
-                    transform: translateY(-2px);
-                    color: #374151;
-                }
-                
-                .btn-action-warning {
-                    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-                    color: #fff;
-                    border: none;
-                    border-radius: 12px;
-                    padding: 1rem 1.5rem;
-                    font-weight: 700;
-                    font-size: 1rem;
-                    transition: all 0.2s;
-                    display: inline-flex;
-                    align-items: center;
-                    justify-content: center;
-                    gap: 0.5rem;
-                }
-                
-                .btn-action-warning:hover {
-                    transform: translateY(-2px);
-                    box-shadow: 0 12px 24px rgba(245, 158, 11, 0.3);
-                    color: #fff;
-                }
-                
-                .divider {
-                    height: 1px;
-                    background: linear-gradient(to right, transparent, #e5e7eb, transparent);
-                    margin: 2rem 0;
-                }
-                
-                #validationAlert {
-                    border-radius: 14px;
-                    border: none;
-                    padding: 1.25rem;
-                }
-                
-                @media (max-width: 768px) {
+
+                @media (max-width: 680px) {
+                    .toner-portal {
+                        padding-top: 9px;
+                    }
+
+                    .toner-page {
+                        width: min(100% - 18px, 1180px);
+                    }
+
                     .toner-hero {
-                        padding: 2rem 1.5rem;
+                        min-height: auto;
+                        padding: 20px 18px;
+                        border-radius: 16px;
                     }
-                    
-                    .toner-hero h2 {
-                        font-size: 1.75rem;
+
+                    .toner-hero-icon {
+                        width: 56px;
+                        height: 56px;
+                        border-radius: 17px;
+                        font-size: 1.45rem;
                     }
-                    
-                    .info-card-body {
-                        padding: 1.5rem;
+
+                    .toner-equipment-summary {
+                        grid-template-columns: 1fr;
+                        gap: 8px;
+                        padding: 10px;
+                    }
+
+                    .toner-summary-main,
+                    .toner-summary-item {
+                        padding: 9px 11px;
+                    }
+
+                    .toner-form-grid,
+                    .toner-counter-grid,
+                    .toner-details-grid {
+                        grid-template-columns: 1fr;
+                    }
+
+                    .toner-selection-grid,
+                    .toner-stock-grid {
+                        grid-template-columns: repeat(2, minmax(0, 1fr));
+                        gap: 8px;
+                    }
+
+                    .toner-option {
+                        min-height: 58px;
+                        padding: 9px;
+                    }
+
+                    .toner-option-stock {
+                        display: none;
+                    }
+
+                    .toner-card-header,
+                    .toner-card-body,
+                    .toner-accordion-body {
+                        padding-left: 12px;
+                        padding-right: 12px;
+                    }
+
+                    .toner-actions {
+                        grid-template-columns: repeat(2, minmax(0, 1fr));
+                        bottom: 5px;
+                    }
+
+                    .toner-actions .primary {
+                        grid-column: 1 / -1;
+                        grid-row: 1;
+                    }
+                }
+
+                @media (max-width: 420px) {
+                    .toner-hero {
+                        gap: 12px;
+                    }
+
+                    .toner-hero p {
+                        font-size: 0.8rem;
+                    }
+
+                    .toner-hero-icon {
+                        display: none;
+                    }
+
+                    .toner-selection-grid,
+                    .toner-stock-grid {
+                        grid-template-columns: 1fr;
+                    }
+
+                    .toner-actions {
+                        grid-template-columns: 1fr;
+                    }
+
+                    .toner-actions .primary {
+                        grid-column: auto;
                     }
                 }
             </style>
 
-            <div class="toner-container">
-                <div class="container">
-                    
-                    <!-- Hero Section -->
-                    <div class="toner-hero text-center">
-                        <h2>
-                            <i class="fa fa-fill-drip me-2"></i>
-                            Solicitud de Tóner
-                        </h2>
-                        <p class="toner-hero-subtitle">
-                            Complete la información para solicitar suministros de su equipo
-                        </p>
-                    </div>
+            <div class="toner-portal">
+                <div class="toner-page">
 
-                    <!-- Información del equipo -->
-                    <div class="info-card">
-                        <div class="info-card-header primary">
-                            <i class="fa fa-desktop" style="font-size: 1.5rem;"></i>
-                            <h3>Información del Equipo</h3>
-                        </div>
-                        <div class="info-card-body">
-                            <div class="row">
-                                <!-- Datos del Cliente -->
-                                <div class="col-md-6 mb-3 mb-md-0">
-                                    <div class="section-title">
-                                        <i class="fa fa-user-circle"></i>
-                                        Datos del Cliente
-                                    </div>
-                                    
-                                    <div class="info-item mb-3">
-                                        <div class="info-label">Cliente</div>
-                                        <div class="info-value">
-                                            <t t-esc="values.get('cliente', 'Sin cliente')"/>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="info-item mb-3">
-                                        <div class="info-label">Modelo</div>
-                                        <div class="info-value">
-                                            <t t-esc="values.get('modelo_maquina', 'Sin modelo')"/>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="info-item">
-                                        <div class="info-label">Serie</div>
-                                        <div class="info-value">
-                                            <span class="badge badge-dark" style="font-size: 1rem; padding: 0.5rem 1rem;">
-                                                <t t-esc="values.get('serie', 'Sin serie')"/>
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Configuración -->
-                                <div class="col-md-6">
-                                    <div class="section-title">
-                                        <i class="fa fa-cog"></i>
-                                        Configuración
-                                    </div>
-                                    
-                                    <div class="info-item mb-3">
-                                        <div class="info-label">Tipo de equipo</div>
-                                        <div class="info-value">
-                                            <t t-if="values.get('tipo_maquina_id') == 'color'">
-                                                <span class="status-badge badge-info-custom">
-                                                    <i class="fa fa-palette"></i>
-                                                    Color
-                                                </span>
-                                            </t>
-                                            <t t-else="">
-                                                <span class="status-badge badge-secondary-custom">
-                                                    <i class="fa fa-circle"></i>
-                                                    Monocromática
-                                                </span>
-                                            </t>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="info-item mb-3">
-                                        <div class="info-label">Ubicación de instalación</div>
-                                        <div class="info-value">
-                                            <t t-esc="values.get('ubicacion_instalacion', 'No especificada')"/>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="info-item">
-                                        <div class="info-label">Gestión de tóner</div>
-                                        <div class="info-value">
-                                            <t t-if="values.get('gestion_automatica', True)">
-                                                <span class="status-badge badge-success-custom">
-                                                    <i class="fa fa-magic"></i>
-                                                    Automática
-                                                </span>
-                                            </t>
-                                            <t t-else="">
-                                                <span class="status-badge badge-secondary-custom">
-                                                    <i class="fa fa-hand-paper"></i>
-                                                    Manual
-                                                </span>
-                                            </t>
-                                        </div>
-                                    </div>
-                                </div>
+                    <header class="toner-hero">
+                        <div class="toner-hero-content">
+                            <div class="toner-hero-eyebrow">
+                                <i class="fa fa-print"></i>
+                                Portal de suministros
                             </div>
+
+                            <h1>Solicitud de tóner</h1>
+
+                            <p>
+                                Registre el suministro requerido.
+                                La solicitud será evaluada antes de autorizar el despacho.
+                            </p>
                         </div>
-                    </div>
 
-                    <!-- Stock actual -->
-                    <t t-if="values.get('stock_info')">
-                        <div class="info-card">
-                            <div class="info-card-header info">
-                                <i class="fa fa-boxes" style="font-size: 1.5rem;"></i>
-                                <h5>Stock Actual de Tóner</h5>
-                            </div>
-                            <div class="info-card-body">
-                                <div class="stock-display">
-                                    <!-- Tóner Negro -->
-                                    <div class="stock-item">
-                                        <div class="stock-color-indicator" style="background-color: #000;">
-                                        </div>
-                                        <div class="stock-name">Negro</div>
-                                        <div class="stock-amount" t-attf-style="color: {{'#10b981' if values['stock_info']['black']['stock_total'] >= values['stock_info']['black']['stock_minimo'] else '#f59e0b' if values['stock_info']['black']['stock_total'] > 0 else '#ef4444'}}">
-                                            <t t-esc="values['stock_info']['black']['stock_total']"/>
-                                        </div>
-                                        <div class="stock-min">
-                                            Mínimo: <t t-esc="values['stock_info']['black']['stock_minimo']"/>
-                                        </div>
-                                    </div>
+                        <div class="toner-hero-icon">
+                            <i class="fa fa-archive"></i>
+                        </div>
+                    </header>
 
-                                    <!-- Tóners Color -->
-                                    <t t-if="values['stock_info']['has_color']">
-                                        <div class="stock-item">
-                                            <div class="stock-color-indicator" style="background-color: cyan;">
-                                            </div>
-                                            <div class="stock-name">Cian</div>
-                                            <div class="stock-amount" t-attf-style="color: {{'#10b981' if values['stock_info']['cyan']['stock_total'] >= values['stock_info']['cyan']['stock_minimo'] else '#f59e0b' if values['stock_info']['cyan']['stock_total'] > 0 else '#ef4444'}}">
-                                                <t t-esc="values['stock_info']['cyan']['stock_total']"/>
-                                            </div>
-                                            <div class="stock-min">
-                                                Mínimo: <t t-esc="values['stock_info']['cyan']['stock_minimo']"/>
-                                            </div>
-                                        </div>
+                    <t t-if="values.get('active_request', {}).get('exists')">
+                        <div class="toner-active-request">
+                            <i class="fa fa-history"></i>
 
-                                        <div class="stock-item">
-                                            <div class="stock-color-indicator" style="background-color: magenta;">
-                                            </div>
-                                            <div class="stock-name">Magenta</div>
-                                            <div class="stock-amount" t-attf-style="color: {{'#10b981' if values['stock_info']['magenta']['stock_total'] >= values['stock_info']['magenta']['stock_minimo'] else '#f59e0b' if values['stock_info']['magenta']['stock_total'] > 0 else '#ef4444'}}">
-                                                <t t-esc="values['stock_info']['magenta']['stock_total']"/>
-                                            </div>
-                                            <div class="stock-min">
-                                                Mínimo: <t t-esc="values['stock_info']['magenta']['stock_minimo']"/>
-                                            </div>
-                                        </div>
+                            <div>
+                                <strong>Existe una solicitud activa</strong>
 
-                                        <div class="stock-item">
-                                            <div class="stock-color-indicator" style="background-color: yellow; border: 2px solid #cbd5e1;">
-                                            </div>
-                                            <div class="stock-name">Amarillo</div>
-                                            <div class="stock-amount" t-attf-style="color: {{'#10b981' if values['stock_info']['yellow']['stock_total'] >= values['stock_info']['yellow']['stock_minimo'] else '#f59e0b' if values['stock_info']['yellow']['stock_total'] > 0 else '#ef4444'}}">
-                                                <t t-esc="values['stock_info']['yellow']['stock_total']"/>
-                                            </div>
-                                            <div class="stock-min">
-                                                Mínimo: <t t-esc="values['stock_info']['yellow']['stock_minimo']"/>
-                                            </div>
-                                        </div>
-                                    </t>
-                                </div>
-
-                                <!-- Mensaje informativo -->
-                                <t t-if="values.get('gestion_automatica', True)">
-                                    <div class="alert-custom alert-info-custom">
-                                        <i class="fa fa-info-circle" style="font-size: 1.25rem;"></i>
-                                        <div>
-                                            <strong>Sistema inteligente activo:</strong>
-                                            Su solicitud será evaluada automáticamente según el stock actual.
-                                        </div>
-                                    </div>
-                                </t>
-                                <t t-else="">
-                                    <div class="alert-custom alert-warning-custom">
-                                        <i class="fa fa-exclamation-triangle" style="font-size: 1.25rem;"></i>
-                                        <div>
-                                            <strong>Gestión manual:</strong>
-                                            Su solicitud será procesada sin validación automática.
-                                        </div>
-                                    </div>
-                                </t>
+                                <p>
+                                    La solicitud
+                                    <b>
+                                        <t t-esc="values['active_request'].get('sequence')"/>
+                                    </b>
+                                    todavía se encuentra en proceso.
+                                    El sistema validará cada color antes de registrar otro pedido.
+                                </p>
                             </div>
                         </div>
                     </t>
 
-                    <!-- Formulario -->
-                    <div class="info-card">
-                        <div class="info-card-header secondary">
-                            <i class="fa fa-edit" style="font-size: 1.5rem;"></i>
-                            <div class="d-flex justify-content-between align-items-center w-100">
-                                <h5>Datos de la Solicitud</h5>
-                                <small style="opacity: 0.9;">
-                                    Los campos marcados con <strong>*</strong> son obligatorios
-                                </small>
-                            </div>
+                    <section class="toner-equipment-summary">
+
+                        <div class="toner-summary-main">
+                            <span class="toner-summary-label">Cliente</span>
+                            <span class="toner-summary-value">
+                                <t t-esc="values.get('cliente') or 'Sin cliente'"/>
+                            </span>
                         </div>
-                        <div class="info-card-body">
-                            <form id="tonerForm" action="/toner/enviar_solicitud" method="post" class="solicitar_toner_form">
-                                <!-- Hidden fields -->
-                                <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
-                                <input type="hidden" name="modelo_maquina" t-att-value="values['modelo_maquina']"/>
-                                <input type="hidden" name="cliente" t-att-value="values['cliente']"/>
-                                <input type="hidden" name="serie" t-att-value="values['serie']"/>
-                                <input type="hidden" name="id_registro" t-att-value="values['id_registro']"/>
-                                <input type="hidden" name="tipo_maquina_id" t-att-value="values['tipo_maquina_id']"/>
 
-                                <!-- Datos del solicitante -->
-                                <div class="mb-4">
-                                    <div class="section-title">
+                        <div class="toner-summary-item">
+                            <span class="toner-summary-label">Modelo</span>
+                            <span class="toner-summary-value">
+                                <t t-esc="values.get('modelo_maquina') or 'Sin modelo'"/>
+                            </span>
+                        </div>
+
+                        <div class="toner-summary-item">
+                            <span class="toner-summary-label">Serie</span>
+
+                            <span class="toner-series-badge">
+                                <i class="fa fa-barcode"></i>
+                                <t t-esc="values.get('serie') or 'Sin serie'"/>
+                            </span>
+                        </div>
+
+                        <button
+                            id="tonerExpandAllButton"
+                            class="toner-expand-all"
+                            type="button"
+                        >
+                            <i class="fa fa-expand"></i>
+                            Expandir todo
+                        </button>
+
+                    </section>
+
+                    <form
+                        id="tonerRequestForm"
+                        action="/toner/enviar_solicitud"
+                        method="post"
+                        class="solicitar_toner_form"
+                    >
+
+                        <input
+                            type="hidden"
+                            name="csrf_token"
+                            t-att-value="request.csrf_token()"
+                        />
+
+                        <input
+                            type="hidden"
+                            name="modelo_maquina"
+                            t-att-value="values.get('modelo_maquina', '')"
+                        />
+
+                        <input
+                            type="hidden"
+                            name="cliente"
+                            t-att-value="values.get('cliente', '')"
+                        />
+
+                        <input
+                            type="hidden"
+                            name="serie"
+                            t-att-value="values.get('serie', '')"
+                        />
+
+                        <input
+                            type="hidden"
+                            name="id_registro"
+                            t-att-value="values.get('id_registro')"
+                        />
+
+                        <input
+                            type="hidden"
+                            name="tipo_maquina_id"
+                            t-att-value="values.get('tipo_maquina_id')"
+                        />
+
+                        <section class="toner-card">
+                            <div class="toner-card-header">
+                                <div class="toner-card-title">
+                                    <span class="toner-card-title-icon">
                                         <i class="fa fa-user"></i>
-                                        Datos del Solicitante
-                                    </div>
-                                    <div class="row">
-                                        <div class="col-md-6 mb-3">
-                                            <label for="nombre" class="form-label">
-                                                <i class="fa fa-id-card"></i>
-                                                Nombre completo *
-                                            </label>
-                                            <input type="text"
-                                                   class="form-control"
-                                                   id="nombre"
-                                                   name="nombre"
-                                                   t-att-value="values.get('nombre', '')"
-                                                   required="1"
-                                                   placeholder="Ingrese su nombre completo"/>
-                                        </div>
+                                    </span>
 
-                                        <div class="col-md-6 mb-3">
-                                            <label for="celular" class="form-label">
-                                                <i class="fa fa-phone"></i>
-                                                Número de celular *
-                                            </label>
-                                            <input type="tel"
-                                                   class="form-control"
-                                                   id="celular"
-                                                   name="celular"
-                                                   t-att-value="values.get('celular', '')"
-                                                   required="1"
-                                                   placeholder="Ej: 999123456"/>
-                                        </div>
+                                    <div>
+                                        <h2>Datos del solicitante</h2>
+                                        <small>Información de contacto</small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="toner-card-body">
+                                <div class="toner-form-grid">
+
+                                    <div class="toner-field">
+                                        <label for="nombre">
+                                            <i class="fa fa-id-card-o"></i>
+                                            Nombre completo
+                                            <span class="toner-required">*</span>
+                                        </label>
+
+                                        <input
+                                            id="nombre"
+                                            class="toner-control"
+                                            type="text"
+                                            name="nombre"
+                                            t-att-value="values.get('nombre', '')"
+                                            required="required"
+                                            placeholder="Ingrese su nombre completo"
+                                        />
+                                    </div>
+
+                                    <div class="toner-field">
+                                        <label for="celular">
+                                            <i class="fa fa-phone"></i>
+                                            Número de celular
+                                            <span class="toner-required">*</span>
+                                        </label>
+
+                                        <input
+                                            id="celular"
+                                            class="toner-control"
+                                            type="tel"
+                                            name="celular"
+                                            t-att-value="values.get('celular', '')"
+                                            required="required"
+                                            placeholder="Ejemplo: 999123456"
+                                        />
+                                    </div>
+
+                                </div>
+                            </div>
+                        </section>
+
+                        <section class="toner-card">
+                            <div class="toner-card-header">
+                                <div class="toner-card-title">
+                                    <span class="toner-card-title-icon">
+                                        <i class="fa fa-tachometer"></i>
+                                    </span>
+
+                                    <div>
+                                        <h2>Lectura de contadores</h2>
+                                        <small>Valores utilizados para evaluar el consumo</small>
                                     </div>
                                 </div>
 
-                                <div class="divider"></div>
+                                <t t-if="values.get('has_auto_counters')">
+                                    <span class="toner-status-pill success">
+                                        <i class="fa fa-wifi"></i>
+                                        Automáticos
+                                    </span>
+                                </t>
 
-                                <!-- Contadores -->
-                                <div class="mb-4">
-                                    <div class="section-title">
-                                        <i class="fa fa-tachometer-alt"></i>
-                                        Lectura de Contadores
-                                    </div>
+                                <t t-else="">
+                                    <span class="toner-status-pill info">
+                                        <i class="fa fa-pencil"></i>
+                                        Manuales
+                                    </span>
+                                </t>
+                            </div>
 
-                                    <t t-if="not values.get('has_auto_counters')">
-                                        <div class="alert-custom alert-info-custom mb-3">
-                                            <i class="fa fa-lightbulb" style="font-size: 1.25rem;"></i>
-                                            <div>
-                                                <small>
-                                                    Ingrese la lectura actual de su equipo. Estos datos nos ayudan a validar el uso del tóner.
-                                                </small>
-                                            </div>
-                                        </div>
-                                        <div class="row">
-                                            <div class="col-md-6 mb-3">
-                                                <label for="contometro_black" class="form-label">
-                                                    <i class="fa fa-circle"></i>
-                                                    Contador Blanco y Negro *
-                                                </label>
-                                                <input type="number"
-                                                       class="form-control"
-                                                       id="contometro_black"
-                                                       name="contometro_black"
-                                                       t-att-value="values.get('contador_actual_bn', 0)"
-                                                       min="1"
-                                                       required="1"
-                                                       placeholder="Lectura actual del contador B/N"
-                                                       oninvalid="this.setCustomValidity('El contador no puede ser 0 o menor.')"
-                                                       oninput="this.setCustomValidity('')"/>
-                                            </div>
+                            <div class="toner-card-body">
 
-                                            <t t-if="values['tipo_maquina_id'] == 'color'">
-                                                <div class="col-md-6 mb-3">
-                                                    <label for="contometro_color" class="form-label">
-                                                        <i class="fa fa-palette"></i>
-                                                        Contador Color
-                                                    </label>
-                                                    <input type="number"
-                                                           class="form-control"
-                                                           id="contometro_color"
-                                                           name="contometro_color"
-                                                           t-att-value="values.get('contador_actual_color', 0)"
-                                                           min="0"
-                                                           placeholder="Lectura actual del contador color"/>
+                                <t t-if="values.get('has_auto_counters')">
+                                    <div class="toner-counter-grid">
+
+                                        <div class="toner-automatic-counter">
+                                            <div class="toner-automatic-counter-info">
+                                                <span class="toner-automatic-counter-icon">
+                                                    <i class="fa fa-file-text-o"></i>
+                                                </span>
+
+                                                <div>
+                                                    <strong>Contador B/N</strong>
+                                                    <span>Última sincronización disponible</span>
                                                 </div>
-                                            </t>
-                                        </div>
-                                    </t>
-                                    <t t-else="">
-                                        <div class="alert-custom alert-info-custom">
-                                            <i class="fa fa-wifi" style="font-size: 1.25rem;"></i>
-                                            <div>
-                                                <h6 class="mb-2" style="font-weight: 700;">Contadores detectados automáticamente</h6>
-                                                <p class="mb-1">
-                                                    <strong>B/N:</strong>
-                                                    <span t-esc="values.get('contador_actual_bn', 'N/D')"/>
-                                                    <t t-if="values['tipo_maquina_id'] == 'color'">
-                                                        &#160;&#160;|&#160;&#160;
-                                                        <strong>Color:</strong>
-                                                        <span t-esc="values.get('contador_actual_color', 'N/D')"/>
-                                                    </t>
-                                                </p>
-                                                <small style="opacity: 0.8;">
-                                                    Estos valores provienen de sistemas automáticos de monitoreo.
-                                                    No es necesario que ingrese la lectura manual.
-                                                </small>
                                             </div>
-                                        </div>
-                                    </t>
-                                </div>
 
-                                <div class="divider"></div>
-
-                                <!-- Tóners solicitados -->
-                                <div class="mb-4">
-                                    <div class="section-title">
-                                        <i class="fa fa-box-open"></i>
-                                        Seleccione los Tóners que Necesita
-                                    </div>
-                                    <div class="row">
-                                        <!-- Tóner Negro -->
-                                        <div class="col-md-6 col-lg-3 mb-3">
-                                            <div class="toner-card" data-color="black">
-                                                <div class="toner-color-circle" style="background-color: #000;">
-                                                </div>
-                                                <div class="toner-name">Tóner Negro</div>
-                                                <div class="toner-checkbox-wrapper">
-                                                    <input class="form-check-input toner-checkbox"
-                                                           type="checkbox"
-                                                           id="toner_black"
-                                                           name="toner_black"
-                                                           value="1"/>
-                                                    <label class="form-check-label" for="toner_black" style="font-weight: 600; cursor: pointer;">
-                                                        Solicitar
-                                                    </label>
-                                                </div>
-                                                <t t-if="values.get('stock_info')">
-                                                    <div class="mt-3" style="font-size: 0.85rem; color: #6b7280;">
-                                                        Stock actual: <strong><t t-esc="values['stock_info']['black']['stock_total']"/> unidades</strong>
-                                                    </div>
-                                                </t>
-                                            </div>
+                                            <span class="toner-counter-value">
+                                                <t t-esc="values.get('contador_actual_bn', 0)"/>
+                                            </span>
                                         </div>
 
-                                        <!-- Tóners Color -->
-                                        <t t-if="values['tipo_maquina_id'] == 'color'">
-                                            <div class="col-md-6 col-lg-3 mb-3">
-                                                <div class="toner-card" data-color="cyan">
-                                                    <div class="toner-color-circle" style="background-color: cyan;">
-                                                    </div>
-                                                    <div class="toner-name">Tóner Cian</div>
-                                                    <div class="toner-checkbox-wrapper">
-                                                        <input class="form-check-input toner-checkbox"
-                                                               type="checkbox"
-                                                               id="toner_cyan"
-                                                               name="toner_cyan"
-                                                               value="1"/>
-                                                        <label class="form-check-label" for="toner_cyan" style="font-weight: 600; cursor: pointer;">
-                                                            Solicitar
-                                                        </label>
-                                                    </div>
-                                                    <t t-if="values.get('stock_info')">
-                                                        <div class="mt-3" style="font-size: 0.85rem; color: #6b7280;">
-                                                            Stock actual: <strong><t t-esc="values['stock_info']['cyan']['stock_total']"/> unidades</strong>
-                                                        </div>
-                                                    </t>
-                                                </div>
-                                            </div>
+                                        <t t-if="values.get('tipo_maquina_id') == 'color'">
+                                            <div class="toner-automatic-counter">
+                                                <div class="toner-automatic-counter-info">
+                                                    <span class="toner-automatic-counter-icon">
+                                                        <i class="fa fa-paint-brush"></i>
+                                                    </span>
 
-                                            <div class="col-md-6 col-lg-3 mb-3">
-                                                <div class="toner-card" data-color="magenta">
-                                                    <div class="toner-color-circle" style="background-color: magenta;">
+                                                    <div>
+                                                        <strong>Contador color</strong>
+                                                        <span>Última sincronización disponible</span>
                                                     </div>
-                                                    <div class="toner-name">Tóner Magenta</div>
-                                                    <div class="toner-checkbox-wrapper">
-                                                        <input class="form-check-input toner-checkbox"
-                                                               type="checkbox"
-                                                               id="toner_magenta"
-                                                               name="toner_magenta"
-                                                               value="1"/>
-                                                        <label class="form-check-label" for="toner_magenta" style="font-weight: 600; cursor: pointer;">
-                                                            Solicitar
-                                                        </label>
-                                                    </div>
-                                                    <t t-if="values.get('stock_info')">
-                                                        <div class="mt-3" style="font-size: 0.85rem; color: #6b7280;">
-                                                            Stock actual: <strong><t t-esc="values['stock_info']['magenta']['stock_total']"/> unidades</strong>
-                                                        </div>
-                                                    </t>
                                                 </div>
-                                            </div>
 
-                                            <div class="col-md-6 col-lg-3 mb-3">
-                                                <div class="toner-card" data-color="yellow">
-                                                    <div class="toner-color-circle" style="background-color: yellow; border: 2px solid #cbd5e1;">
-                                                    </div>
-                                                    <div class="toner-name">Tóner Amarillo</div>
-                                                    <div class="toner-checkbox-wrapper">
-                                                        <input class="form-check-input toner-checkbox"
-                                                               type="checkbox"
-                                                               id="toner_yellow"
-                                                               name="toner_yellow"
-                                                               value="1"/>
-                                                        <label class="form-check-label" for="toner_yellow" style="font-weight: 600; cursor: pointer;">
-                                                            Solicitar
-                                                        </label>
-                                                    </div>
-                                                    <t t-if="values.get('stock_info')">
-                                                        <div class="mt-3" style="font-size: 0.85rem; color: #6b7280;">
-                                                            Stock actual: <strong><t t-esc="values['stock_info']['yellow']['stock_total']"/> unidades</strong>
-                                                        </div>
-                                                    </t>
-                                                </div>
+                                                <span class="toner-counter-value">
+                                                    <t t-esc="values.get('contador_actual_color', 0)"/>
+                                                </span>
                                             </div>
                                         </t>
+
+                                    </div>
+                                </t>
+
+                                <t t-else="">
+                                    <div class="toner-form-grid">
+
+                                        <div class="toner-field">
+                                            <label for="contometro_black">
+                                                <i class="fa fa-circle"></i>
+                                                Contador B/N
+                                                <span class="toner-required">*</span>
+                                            </label>
+
+                                            <input
+                                                id="contometro_black"
+                                                class="toner-control"
+                                                type="number"
+                                                name="contometro_black"
+                                                t-att-value="values.get('contador_actual_bn', 0)"
+                                                min="1"
+                                                required="required"
+                                                placeholder="Lectura actual B/N"
+                                            />
+                                        </div>
+
+                                        <t t-if="values.get('tipo_maquina_id') == 'color'">
+                                            <div class="toner-field">
+                                                <label for="contometro_color">
+                                                    <i class="fa fa-paint-brush"></i>
+                                                    Contador color
+                                                </label>
+
+                                                <input
+                                                    id="contometro_color"
+                                                    class="toner-control"
+                                                    type="number"
+                                                    name="contometro_color"
+                                                    t-att-value="values.get('contador_actual_color', 0)"
+                                                    min="0"
+                                                    placeholder="Lectura actual color"
+                                                />
+                                            </div>
+                                        </t>
+
+                                    </div>
+                                </t>
+
+                            </div>
+                        </section>
+
+                        <section class="toner-card">
+                            <div class="toner-card-header">
+                                <div class="toner-card-title">
+                                    <span class="toner-card-title-icon">
+                                        <i class="fa fa-tint"></i>
+                                    </span>
+
+                                    <div>
+                                        <h2>Seleccione el tóner requerido</h2>
+                                        <small>Puede seleccionar uno o varios colores</small>
                                     </div>
                                 </div>
+                            </div>
 
-                                <div class="divider"></div>
+                            <div class="toner-card-body">
+                                <div class="toner-selection-grid">
 
-                                <!-- Observaciones -->
-                                <div class="mb-4">
-                                    <label for="observaciones" class="form-label">
-                                        <i class="fa fa-comment-dots"></i>
-                                        Observaciones adicionales (opcional)
+                                    <label class="toner-option">
+                                        <span class="toner-color-shape black"></span>
+
+                                        <span class="toner-option-data">
+                                            <span class="toner-option-name">Negro</span>
+
+                                            <t t-if="values.get('stock_info')">
+                                                <span class="toner-option-stock">
+                                                    Stock registrado:
+                                                    <t t-esc="values['stock_info']['black']['stock_total']"/>
+                                                </span>
+                                            </t>
+                                        </span>
+
+                                        <input
+                                            id="toner_black"
+                                            class="toner-checkbox"
+                                            type="checkbox"
+                                            name="toner_black"
+                                            value="1"
+                                        />
                                     </label>
-                                    <textarea class="form-control"
-                                              id="observaciones"
-                                              name="observaciones"
-                                              rows="4"
-                                              placeholder="Comentarios adicionales sobre la solicitud..."></textarea>
+
+                                    <t t-if="values.get('tipo_maquina_id') == 'color'">
+
+                                        <label class="toner-option">
+                                            <span class="toner-color-shape cyan"></span>
+
+                                            <span class="toner-option-data">
+                                                <span class="toner-option-name">Cian</span>
+
+                                                <t t-if="values.get('stock_info')">
+                                                    <span class="toner-option-stock">
+                                                        Stock registrado:
+                                                        <t t-esc="values['stock_info']['cyan']['stock_total']"/>
+                                                    </span>
+                                                </t>
+                                            </span>
+
+                                            <input
+                                                id="toner_cyan"
+                                                class="toner-checkbox"
+                                                type="checkbox"
+                                                name="toner_cyan"
+                                                value="1"
+                                            />
+                                        </label>
+
+                                        <label class="toner-option">
+                                            <span class="toner-color-shape magenta"></span>
+
+                                            <span class="toner-option-data">
+                                                <span class="toner-option-name">Magenta</span>
+
+                                                <t t-if="values.get('stock_info')">
+                                                    <span class="toner-option-stock">
+                                                        Stock registrado:
+                                                        <t t-esc="values['stock_info']['magenta']['stock_total']"/>
+                                                    </span>
+                                                </t>
+                                            </span>
+
+                                            <input
+                                                id="toner_magenta"
+                                                class="toner-checkbox"
+                                                type="checkbox"
+                                                name="toner_magenta"
+                                                value="1"
+                                            />
+                                        </label>
+
+                                        <label class="toner-option">
+                                            <span class="toner-color-shape yellow"></span>
+
+                                            <span class="toner-option-data">
+                                                <span class="toner-option-name">Amarillo</span>
+
+                                                <t t-if="values.get('stock_info')">
+                                                    <span class="toner-option-stock">
+                                                        Stock registrado:
+                                                        <t t-esc="values['stock_info']['yellow']['stock_total']"/>
+                                                    </span>
+                                                </t>
+                                            </span>
+
+                                            <input
+                                                id="toner_yellow"
+                                                class="toner-checkbox"
+                                                type="checkbox"
+                                                name="toner_yellow"
+                                                value="1"
+                                            />
+                                        </label>
+
+                                    </t>
                                 </div>
 
-                                <!-- Validación en tiempo real -->
-                                <div id="validationAlert" class="alert d-none" role="alert"></div>
+                                <div
+                                    id="tonerValidationResult"
+                                    class="toner-validation-result"
+                                    role="alert"
+                                ></div>
+                            </div>
+                        </section>
 
-                                <!-- Botones -->
-                                <div class="row g-3 mt-2">
-                                    <div class="col-12 col-md-4 order-md-1 order-3">
-                                        <button type="button"
-                                                class="btn-action-secondary w-100"
-                                                onclick="goBack()">
-                                            <i class="fa fa-arrow-left"></i>
-                                            Volver
-                                        </button>
-                                    </div>
+                        <section class="toner-card toner-accordion-card">
+                            <button
+                                class="toner-card-header toner-accordion-trigger"
+                                type="button"
+                            >
+                                <span class="toner-card-title">
+                                    <span class="toner-card-title-icon">
+                                        <i class="fa fa-info-circle"></i>
+                                    </span>
 
-                                    <div class="col-12 col-md-4 order-md-2 order-2">
-                                        <button type="button"
-                                                id="validateBtn"
-                                                class="btn-action-warning w-100"
-                                                style="display: none;">
-                                            <i class="fa fa-check-circle"></i>
-                                            Validar Solicitud
-                                        </button>
-                                    </div>
+                                    <span>
+                                        <h2>Detalles del equipo</h2>
+                                        <small>Tipo, ubicación y configuración</small>
+                                    </span>
+                                </span>
 
-                                    <div class="col-12 col-md-4 order-md-3 order-1">
-                                        <button class="btn-action-primary w-100"
-                                                type="submit"
-                                                id="submitBtn">
-                                            <i class="fa fa-paper-plane"></i>
-                                            Enviar Solicitud
-                                        </button>
+                                <i class="fa fa-chevron-down toner-accordion-arrow"></i>
+                            </button>
+
+                            <div class="toner-accordion-content">
+                                <div class="toner-accordion-inner">
+                                    <div class="toner-accordion-body">
+
+                                        <div class="toner-details-grid">
+
+                                            <div class="toner-detail-item">
+                                                <span class="toner-summary-label">
+                                                    Tipo de equipo
+                                                </span>
+
+                                                <strong>
+                                                    <t t-if="values.get('tipo_maquina_id') == 'color'">
+                                                        Multifuncional color
+                                                    </t>
+
+                                                    <t t-else="">
+                                                        Monocromática
+                                                    </t>
+                                                </strong>
+                                            </div>
+
+                                            <div class="toner-detail-item">
+                                                <span class="toner-summary-label">
+                                                    Ubicación
+                                                </span>
+
+                                                <strong>
+                                                    <t t-esc="values.get('ubicacion_instalacion') or 'No especificada'"/>
+                                                </strong>
+                                            </div>
+
+                                            <div class="toner-detail-item">
+                                                <span class="toner-summary-label">
+                                                    Gestión de tóner
+                                                </span>
+
+                                                <strong>
+                                                    <t t-if="values.get('gestion_automatica')">
+                                                        <span class="toner-status-pill success">
+                                                            <i class="fa fa-cogs"></i>
+                                                            Automática
+                                                        </span>
+                                                    </t>
+
+                                                    <t t-else="">
+                                                        <span class="toner-status-pill info">
+                                                            <i class="fa fa-hand-paper-o"></i>
+                                                            Manual
+                                                        </span>
+                                                    </t>
+                                                </strong>
+                                            </div>
+
+                                            <div class="toner-detail-item">
+                                                <span class="toner-summary-label">
+                                                    Cliente
+                                                </span>
+
+                                                <strong>
+                                                    <t t-esc="values.get('cliente') or 'Sin cliente'"/>
+                                                </strong>
+                                            </div>
+
+                                            <div class="toner-detail-item">
+                                                <span class="toner-summary-label">
+                                                    Modelo
+                                                </span>
+
+                                                <strong>
+                                                    <t t-esc="values.get('modelo_maquina') or 'Sin modelo'"/>
+                                                </strong>
+                                            </div>
+
+                                            <div class="toner-detail-item">
+                                                <span class="toner-summary-label">
+                                                    Serie
+                                                </span>
+
+                                                <strong>
+                                                    <t t-esc="values.get('serie') or 'Sin serie'"/>
+                                                </strong>
+                                            </div>
+
+                                        </div>
+
                                     </div>
                                 </div>
-                            </form>
+                            </div>
+                        </section>
+
+                        <t t-if="values.get('stock_info')">
+                            <section class="toner-card toner-accordion-card">
+                                <button
+                                    class="toner-card-header toner-accordion-trigger"
+                                    type="button"
+                                >
+                                    <span class="toner-card-title">
+                                        <span class="toner-card-title-icon">
+                                            <i class="fa fa-cubes"></i>
+                                        </span>
+
+                                        <span>
+                                            <h2>Stock registrado</h2>
+                                            <small>Información de stock, mínimo e instalación</small>
+                                        </span>
+                                    </span>
+
+                                    <i class="fa fa-chevron-down toner-accordion-arrow"></i>
+                                </button>
+
+                                <div class="toner-accordion-content">
+                                    <div class="toner-accordion-inner">
+                                        <div class="toner-accordion-body">
+
+                                            <div class="toner-stock-grid">
+
+                                                <div class="toner-stock-item">
+                                                    <div class="toner-stock-header">
+                                                        <span class="toner-stock-dot black"></span>
+                                                        <span class="toner-stock-title">Negro</span>
+                                                    </div>
+
+                                                    <div class="toner-stock-number">
+                                                        <t t-esc="values['stock_info']['black']['stock_total']"/>
+                                                    </div>
+
+                                                    <div class="toner-stock-description">
+                                                        Mínimo:
+                                                        <t t-esc="values['stock_info']['black']['stock_minimo']"/>
+                                                        · Instalado:
+                                                        <t t-if="values['stock_info']['black']['instalado']">Sí</t>
+                                                        <t t-else="">No</t>
+                                                    </div>
+                                                </div>
+
+                                                <t t-if="values['stock_info'].get('has_color')">
+
+                                                    <div class="toner-stock-item">
+                                                        <div class="toner-stock-header">
+                                                            <span class="toner-stock-dot cyan"></span>
+                                                            <span class="toner-stock-title">Cian</span>
+                                                        </div>
+
+                                                        <div class="toner-stock-number">
+                                                            <t t-esc="values['stock_info']['cyan']['stock_total']"/>
+                                                        </div>
+
+                                                        <div class="toner-stock-description">
+                                                            Mínimo:
+                                                            <t t-esc="values['stock_info']['cyan']['stock_minimo']"/>
+                                                            · Instalado:
+                                                            <t t-if="values['stock_info']['cyan']['instalado']">Sí</t>
+                                                            <t t-else="">No</t>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="toner-stock-item">
+                                                        <div class="toner-stock-header">
+                                                            <span class="toner-stock-dot magenta"></span>
+                                                            <span class="toner-stock-title">Magenta</span>
+                                                        </div>
+
+                                                        <div class="toner-stock-number">
+                                                            <t t-esc="values['stock_info']['magenta']['stock_total']"/>
+                                                        </div>
+
+                                                        <div class="toner-stock-description">
+                                                            Mínimo:
+                                                            <t t-esc="values['stock_info']['magenta']['stock_minimo']"/>
+                                                            · Instalado:
+                                                            <t t-if="values['stock_info']['magenta']['instalado']">Sí</t>
+                                                            <t t-else="">No</t>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="toner-stock-item">
+                                                        <div class="toner-stock-header">
+                                                            <span class="toner-stock-dot yellow"></span>
+                                                            <span class="toner-stock-title">Amarillo</span>
+                                                        </div>
+
+                                                        <div class="toner-stock-number">
+                                                            <t t-esc="values['stock_info']['yellow']['stock_total']"/>
+                                                        </div>
+
+                                                        <div class="toner-stock-description">
+                                                            Mínimo:
+                                                            <t t-esc="values['stock_info']['yellow']['stock_minimo']"/>
+                                                            · Instalado:
+                                                            <t t-if="values['stock_info']['yellow']['instalado']">Sí</t>
+                                                            <t t-else="">No</t>
+                                                        </div>
+                                                    </div>
+
+                                                </t>
+
+                                            </div>
+
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+                        </t>
+
+                        <section class="toner-card">
+                            <div class="toner-card-header">
+                                <div class="toner-card-title">
+                                    <span class="toner-card-title-icon">
+                                        <i class="fa fa-comment-o"></i>
+                                    </span>
+
+                                    <div>
+                                        <h2>Observaciones</h2>
+                                        <small>Opcional</small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="toner-card-body">
+                                <div class="toner-field full">
+                                    <label for="observaciones">
+                                        Comentario adicional
+                                    </label>
+
+                                    <textarea
+                                        id="observaciones"
+                                        class="toner-control"
+                                        name="observaciones"
+                                        placeholder="Ejemplo: el tóner presenta fuga, impresión tenue o agotamiento anticipado..."
+                                    ></textarea>
+
+                                    <span class="toner-field-help">
+                                        En una solicitud anticipada se podrá requerir
+                                        una explicación o evidencia.
+                                    </span>
+                                </div>
+                            </div>
+                        </section>
+
+                        <div class="toner-actions">
+
+                            <button
+                                class="toner-button secondary"
+                                type="button"
+                                onclick="tonerGoBack()"
+                            >
+                                <i class="fa fa-arrow-left"></i>
+                                Volver
+                            </button>
+
+                            <button
+                                id="tonerValidateButton"
+                                class="toner-button warning"
+                                type="button"
+                            >
+                                <i class="fa fa-search"></i>
+                                Revisar solicitud
+                            </button>
+
+                            <button
+                                id="tonerSubmitButton"
+                                class="toner-button primary"
+                                type="submit"
+                            >
+                                <i class="fa fa-paper-plane-o"></i>
+                                Registrar solicitud
+                            </button>
+
                         </div>
-                    </div>
+
+                    </form>
+
                 </div>
             </div>
 
             <script>
 //<![CDATA[
-function goBack() {
+function tonerGoBack() {
     if (document.referrer) {
         window.location.href = document.referrer;
     } else {
@@ -929,956 +1615,907 @@ function goBack() {
     }
 }
 
-document.addEventListener('DOMContentLoaded', function() {
-    const tonerCards = document.querySelectorAll('.toner-card');
-    const checkboxes = document.querySelectorAll('.toner-checkbox');
-    const validateBtn = document.getElementById('validateBtn');
-    const submitBtn = document.getElementById('submitBtn');
-    const validationAlert = document.getElementById('validationAlert');
+document.addEventListener("DOMContentLoaded", function () {
+    const accordionCards = document.querySelectorAll(".toner-accordion-card");
+    const expandAllButton = document.getElementById("tonerExpandAllButton");
+    const tonerOptions = document.querySelectorAll(".toner-option");
+    const tonerCheckboxes = document.querySelectorAll(".toner-checkbox");
+    const validateButton = document.getElementById("tonerValidateButton");
+    const submitButton = document.getElementById("tonerSubmitButton");
+    const validationResult = document.getElementById("tonerValidationResult");
+    const form = document.getElementById("tonerRequestForm");
 
-    tonerCards.forEach(function(card) {
-        card.addEventListener('click', function(e) {
-            if (e.target.type !== 'checkbox' && e.target.tagName !== 'LABEL') {
-                const checkbox = card.querySelector('.toner-checkbox');
-                checkbox.checked = !checkbox.checked;
-                card.classList.toggle('selected', checkbox.checked);
-                checkTonerSelection();
-            }
+    let allExpanded = false;
+    let validationCompleted = false;
+
+    accordionCards.forEach(function (card) {
+        const trigger = card.querySelector(".toner-accordion-trigger");
+
+        trigger.addEventListener("click", function () {
+            card.classList.toggle("open");
+            updateExpandAllButton();
         });
     });
 
-    checkboxes.forEach(function(checkbox) {
-        checkbox.addEventListener('change', function() {
-            const card = checkbox.closest('.toner-card');
-            card.classList.toggle('selected', checkbox.checked);
-            checkTonerSelection();
-        });
-    });
+    if (expandAllButton) {
+        expandAllButton.addEventListener("click", function () {
+            allExpanded = !allExpanded;
 
-    function checkTonerSelection() {
-        const hasSelection = Array.from(checkboxes).some(cb => cb.checked);
-        
-        if (hasSelection && validateBtn) {
-            validateBtn.style.display = 'inline-flex';
-            submitBtn.innerHTML = '<i class="fa fa-paper-plane me-2"></i>Enviar sin Validar';
-            submitBtn.className = 'btn-action-secondary w-100';
-        } else {
-            if (validateBtn) {
-                validateBtn.style.display = 'none';
-            }
-            submitBtn.innerHTML = '<i class="fa fa-paper-plane me-2"></i>Enviar Solicitud';
-            submitBtn.className = 'btn-action-primary w-100';
-            hideValidationAlert();
-        }
-    }
-
-    if (validateBtn) {
-        validateBtn.addEventListener('click', function() {
-            console.log("=== INICIANDO VALIDACIÓN ===");
-            
-            validateBtn.disabled = true;
-            validateBtn.innerHTML = '<i class="fa fa-spinner fa-spin me-2"></i>Validando...';
-            
-            const formData = new FormData();
-            formData.append('equipment_id', document.querySelector('input[name="id_registro"]').value);
-            formData.append('toner_black', document.getElementById('toner_black').checked);
-            formData.append('toner_cyan', document.getElementById('toner_cyan') ? document.getElementById('toner_cyan').checked : false);
-            formData.append('toner_magenta', document.getElementById('toner_magenta') ? document.getElementById('toner_magenta').checked : false);
-            formData.append('toner_yellow', document.getElementById('toner_yellow') ? document.getElementById('toner_yellow').checked : false);
-            formData.append('counter_bn', document.getElementById('contometro_black') ? document.getElementById('contometro_black').value : 0);
-            formData.append('counter_color', document.getElementById('contometro_color') ? document.getElementById('contometro_color').value : 0);
-
-            console.log("Datos enviados:");
-            for (let pair of formData.entries()) {
-                console.log(pair[0] + ': ' + pair[1]);
-            }
-
-            fetch('/toner/validate_request_http', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => {
-                console.log("Status:", response.status);
-                if (!response.ok) {
-                    throw new Error('Error HTTP: ' + response.status);
-                }
-                return response.json();
-            })
-            .then(data => {
-                console.log("Respuesta:", data);
-                showValidationResult(data);
-                validateBtn.disabled = false;
-                validateBtn.innerHTML = '<i class="fa fa-check-circle me-2"></i>Validar Solicitud';
-            })
-            .catch(error => {
-                console.error('Error completo:', error);
-                showValidationAlert('Error al validar: ' + error.message, 'danger');
-                validateBtn.disabled = false;
-                validateBtn.innerHTML = '<i class="fa fa-check-circle me-2"></i>Validar Solicitud';
+            accordionCards.forEach(function (card) {
+                card.classList.toggle("open", allExpanded);
             });
+
+            updateExpandAllButton();
         });
     }
 
-    function showValidationResult(result) {
-        console.log("Mostrando resultado:", result);
-        
-        if (result.valid) {
-            showValidationAlert('✅ Solicitud válida. Puede proceder con el envío.', 'success');
-            submitBtn.innerHTML = '<i class="fa fa-paper-plane me-2"></i>Enviar Solicitud Validada';
-            submitBtn.className = 'btn-action-primary w-100';
-            submitBtn.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+    function updateExpandAllButton() {
+        const openCards = document.querySelectorAll(
+            ".toner-accordion-card.open"
+        ).length;
+
+        allExpanded = accordionCards.length > 0 &&
+            openCards === accordionCards.length;
+
+        if (!expandAllButton) {
+            return;
+        }
+
+        if (allExpanded) {
+            expandAllButton.innerHTML =
+                '<i class="fa fa-compress"></i> Contraer todo';
         } else {
-            let message = '⚠️ ' + result.message;
-            if (result.blocked_toners && result.blocked_toners.length > 0) {
-                message += '<br><strong>Tóners no necesarios:</strong> ';
-                const blockedList = result.blocked_toners.map(function(blocked) {
-                    return blocked.color + ' (' + blocked.reason + ')';
-                });
-                message += blockedList.join(', ');
+            expandAllButton.innerHTML =
+                '<i class="fa fa-expand"></i> Expandir todo';
+        }
+    }
+
+    tonerOptions.forEach(function (option) {
+        const checkbox = option.querySelector('input[type="checkbox"]');
+
+        checkbox.addEventListener("change", function () {
+            option.classList.toggle("selected", checkbox.checked);
+            validationCompleted = false;
+            hideValidation();
+        });
+    });
+
+    if (validateButton) {
+        validateButton.addEventListener("click", function () {
+            validateRequest();
+        });
+    }
+
+    if (form) {
+        form.addEventListener("submit", function (event) {
+            const hasSelection = Array.from(tonerCheckboxes).some(function (item) {
+                return item.checked;
+            });
+
+            if (!hasSelection) {
+                event.preventDefault();
+                showValidation(
+                    "danger",
+                    "Debe seleccionar al menos un tóner."
+                );
+                return;
             }
-            showValidationAlert(message, 'warning');
-        }
+
+            submitButton.disabled = true;
+            submitButton.innerHTML =
+                '<i class="fa fa-spinner fa-spin"></i> Registrando...';
+        });
     }
 
-    function showValidationAlert(message, type) {
-        validationAlert.className = 'alert alert-' + type;
-        validationAlert.innerHTML = message;
-        validationAlert.classList.remove('d-none');
-        validationAlert.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    function validateRequest() {
+        const hasSelection = Array.from(tonerCheckboxes).some(function (item) {
+            return item.checked;
+        });
+
+        if (!hasSelection) {
+            showValidation(
+                "danger",
+                "Debe seleccionar al menos un tóner."
+            );
+            return;
+        }
+
+        validateButton.disabled = true;
+        validateButton.innerHTML =
+            '<i class="fa fa-spinner fa-spin"></i> Revisando...';
+
+        const formData = new FormData();
+        const equipmentInput = form.querySelector(
+            'input[name="id_registro"]'
+        );
+
+        formData.append("equipment_id", equipmentInput.value);
+        formData.append(
+            "toner_black",
+            document.getElementById("toner_black") &&
+            document.getElementById("toner_black").checked
+        );
+        formData.append(
+            "toner_cyan",
+            document.getElementById("toner_cyan") &&
+            document.getElementById("toner_cyan").checked
+        );
+        formData.append(
+            "toner_magenta",
+            document.getElementById("toner_magenta") &&
+            document.getElementById("toner_magenta").checked
+        );
+        formData.append(
+            "toner_yellow",
+            document.getElementById("toner_yellow") &&
+            document.getElementById("toner_yellow").checked
+        );
+
+        const counterBn = document.getElementById("contometro_black");
+        const counterColor = document.getElementById("contometro_color");
+
+        formData.append(
+            "counter_bn",
+            counterBn ? counterBn.value : 0
+        );
+        formData.append(
+            "counter_color",
+            counterColor ? counterColor.value : 0
+        );
+
+        fetch("/toner/validate_request_http", {
+            method: "POST",
+            body: formData
+        })
+        .then(function (response) {
+            return response.json();
+        })
+        .then(function (data) {
+            validationCompleted = true;
+
+            if (!data.can_create) {
+                showValidation(
+                    "danger",
+                    data.message || "La solicitud no puede registrarse."
+                );
+                return;
+            }
+
+            if (data.review_required || data.requires_evidence) {
+                showValidation(
+                    "warning",
+                    data.message ||
+                    "La solicitud puede registrarse, pero requiere revisión interna."
+                );
+            } else {
+                showValidation(
+                    "info",
+                    data.message ||
+                    "La solicitud puede registrarse para evaluación interna."
+                );
+            }
+        })
+        .catch(function (error) {
+            console.error("Error validando solicitud:", error);
+
+            showValidation(
+                "danger",
+                "No fue posible completar la revisión. Puede intentar nuevamente."
+            );
+        })
+        .finally(function () {
+            validateButton.disabled = false;
+            validateButton.innerHTML =
+                '<i class="fa fa-search"></i> Revisar solicitud';
+        });
     }
 
-    function hideValidationAlert() {
-        if (validationAlert) {
-            validationAlert.classList.add('d-none');
-        }
+    function showValidation(type, message) {
+        validationResult.className =
+            "toner-validation-result visible " + type;
+
+        validationResult.innerHTML =
+            '<i class="fa fa-info-circle"></i>' +
+            "<div>" + message + "</div>";
+
+        validationResult.scrollIntoView({
+            behavior: "smooth",
+            block: "center"
+        });
+    }
+
+    function hideValidation() {
+        validationResult.className = "toner-validation-result";
+        validationResult.innerHTML = "";
     }
 });
 //]]>
-</script>
+            </script>
+
         </t>
     </template>
-    <!-- SOLICITUD RECHAZADA -->
-    <template id="solicitud_toner_rechazada" name="Solicitud de Tóner Rechazada">
+
+
+    <!-- =========================================================
+         SOLICITUD RECIBIDA
+    ========================================================== -->
+
+    <template id="solicitud_toner_recibida" name="Solicitud de Tóner Recibida">
         <t t-call="website.layout">
-            
+
             <style>
-                @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&amp;display=swap');
-                
-                .response-container {
-                    font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
-                    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+                .toner-response-page {
                     min-height: 100vh;
-                    padding: 3rem 0;
+                    padding: 28px 14px;
+                    background:
+                        radial-gradient(
+                            circle at top right,
+                            rgba(8, 145, 178, 0.1),
+                            transparent 28rem
+                        ),
+                        #f1f5f9;
                 }
-                
-                .response-card {
-                    background: #fff;
-                    border-radius: 24px;
-                    box-shadow: 0 8px 32px rgba(0,0,0,0.1);
-                    overflow: hidden;
-                    max-width: 800px;
+
+                .toner-response-card {
+                    width: min(680px, 100%);
                     margin: 0 auto;
+                    overflow: hidden;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 22px;
+                    background: #ffffff;
+                    box-shadow: 0 24px 55px rgba(15, 23, 42, 0.14);
                 }
-                
-                .response-header {
-                    padding: 2.5rem 2rem;
+
+                .toner-response-header {
+                    padding: 26px 22px;
                     text-align: center;
-                    position: relative;
+                    color: #ffffff;
+                    background: linear-gradient(135deg, #0891b2, #0e7490);
                 }
-                
-                .response-header.warning {
-                    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-                    color: #fff;
+
+                .toner-response-icon {
+                    display: grid;
+                    place-items: center;
+                    width: 64px;
+                    height: 64px;
+                    margin: 0 auto 12px;
+                    border: 1px solid rgba(255, 255, 255, 0.3);
+                    border-radius: 20px;
+                    background: rgba(255, 255, 255, 0.14);
+                    font-size: 1.8rem;
                 }
-                
-                .response-header.success {
-                    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-                    color: #fff;
+
+                .toner-response-header h2 {
+                    margin: 0 0 5px;
+                    font-size: 1.45rem;
                 }
-                
-                .response-header.danger {
-                    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-                    color: #fff;
-                }
-                
-                .response-header h3 {
-                    font-size: 2rem;
-                    font-weight: 700;
+
+                .toner-response-header p {
                     margin: 0;
+                    color: rgba(255, 255, 255, 0.82);
+                    font-size: 0.88rem;
                 }
-                
-                .response-body {
-                    padding: 2.5rem 2rem;
+
+                .toner-response-body {
+                    padding: 22px;
                 }
-                
-                .status-alert {
-                    border-radius: 16px;
-                    padding: 1.5rem;
-                    margin-bottom: 2rem;
-                    border: none;
+
+                .toner-response-number {
+                    padding: 14px;
+                    margin-bottom: 14px;
+                    border-radius: 14px;
+                    text-align: center;
+                    background: #f8fafc;
                 }
-                
-                .status-alert h5 {
-                    font-weight: 700;
-                    font-size: 1.25rem;
-                    margin-bottom: 0.75rem;
-                }
-                
-                .info-section {
-                    background: #f9fafb;
-                    border-radius: 16px;
-                    padding: 1.5rem;
-                    margin-bottom: 1.5rem;
-                }
-                
-                .section-label {
-                    font-size: 0.75rem;
+
+                .toner-response-number span {
+                    display: block;
+                    margin-bottom: 4px;
+                    color: #64748b;
+                    font-size: 0.72rem;
+                    font-weight: 800;
                     text-transform: uppercase;
-                    letter-spacing: 0.5px;
-                    color: #6b7280;
-                    font-weight: 600;
-                    margin-bottom: 1rem;
                 }
-                
-                .info-row {
-                    margin-bottom: 1rem;
+
+                .toner-response-number strong {
+                    font-family: "SFMono-Regular", Consolas, monospace;
+                    font-size: 1.2rem;
                 }
-                
-                .info-row:last-child {
-                    margin-bottom: 0;
-                }
-                
-                .info-row-label {
-                    font-size: 0.875rem;
-                    color: #6b7280;
-                    margin-bottom: 0.25rem;
-                }
-                
-                .info-row-value {
-                    font-size: 1.1rem;
-                    font-weight: 600;
-                    color: #1a1f3a;
-                }
-                
-                .contact-buttons {
+
+                .toner-response-message {
                     display: flex;
-                    gap: 1rem;
+                    align-items: flex-start;
+                    gap: 11px;
+                    padding: 14px;
+                    border: 1px solid #bae6fd;
+                    border-radius: 14px;
+                    color: #0c4a6e;
+                    background: #f0f9ff;
+                }
+
+                .toner-response-message p {
+                    margin: 0;
+                    font-size: 0.84rem;
+                    line-height: 1.5;
+                }
+
+                .toner-response-steps {
+                    display: grid;
+                    gap: 9px;
+                    margin-top: 15px;
+                }
+
+                .toner-response-step {
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    padding: 11px 12px;
+                    border-radius: 12px;
+                    background: #f8fafc;
+                }
+
+                .toner-step-number {
+                    display: grid;
+                    place-items: center;
+                    flex: 0 0 auto;
+                    width: 27px;
+                    height: 27px;
+                    border-radius: 50%;
+                    color: #0e7490;
+                    background: #ecfeff;
+                    font-size: 0.72rem;
+                    font-weight: 900;
+                }
+
+                .toner-response-step strong {
+                    display: block;
+                    font-size: 0.82rem;
+                }
+
+                .toner-response-step small {
+                    color: #64748b;
+                    font-size: 0.7rem;
+                }
+
+                .toner-response-warning {
+                    margin-top: 14px;
+                    padding: 12px;
+                    border: 1px solid #fed7aa;
+                    border-radius: 12px;
+                    color: #9a3412;
+                    background: #fffbeb;
+                    font-size: 0.78rem;
+                    line-height: 1.45;
+                }
+
+                .toner-response-analysis {
+                    margin-top: 14px;
+                    padding: 12px;
+                    border: 1px solid #fde68a;
+                    border-radius: 12px;
+                    color: #92400e;
+                    background: #fffbeb;
+                    font-size: 0.78rem;
+                    line-height: 1.45;
+                }
+            </style>
+
+            <div class="toner-response-page">
+                <div class="toner-response-card">
+
+                    <div class="toner-response-header">
+                        <div class="toner-response-icon">
+                            <i class="fa fa-inbox"></i>
+                        </div>
+
+                        <h2>Solicitud recibida</h2>
+
+                        <p>
+                            El registro fue creado correctamente.
+                        </p>
+                    </div>
+
+                    <div class="toner-response-body">
+
+                        <div class="toner-response-number">
+                            <span>Número de solicitud</span>
+
+                            <strong>
+                                <t t-esc="creation_result.get('secuencia')"/>
+                            </strong>
+                        </div>
+
+                        <div class="toner-response-message">
+                            <i class="fa fa-info-circle"></i>
+
+                            <p>
+                                Su solicitud será evaluada por el área responsable.
+                                Este registro todavía
+                                <strong>no significa que el despacho esté autorizado</strong>.
+                                Recibirá una nueva confirmación cuando termine
+                                el proceso interno.
+                            </p>
+                        </div>
+
+                        <t t-if="creation_result.get('requires_evidence')">
+                            <div class="toner-response-analysis">
+                                <i class="fa fa-exclamation-triangle"></i>
+
+                                El consumo detectado requiere revisión adicional.
+                                El área responsable podría solicitar una explicación
+                                o evidencia antes de enviar la solicitud a gerencia.
+                            </div>
+                        </t>
+
+                        <div class="toner-response-steps">
+
+                            <div class="toner-response-step">
+                                <span class="toner-step-number">1</span>
+
+                                <div>
+                                    <strong>Solicitud registrada</strong>
+                                    <small>
+                                        La información y los contadores fueron recibidos.
+                                    </small>
+                                </div>
+                            </div>
+
+                            <div class="toner-response-step">
+                                <span class="toner-step-number">2</span>
+
+                                <div>
+                                    <strong>Evaluación interna</strong>
+                                    <small>
+                                        Se revisará consumo, historial y stock.
+                                    </small>
+                                </div>
+                            </div>
+
+                            <div class="toner-response-step">
+                                <span class="toner-step-number">3</span>
+
+                                <div>
+                                    <strong>Decisión y coordinación</strong>
+                                    <small>
+                                        Se notificará si el pedido es aprobado.
+                                    </small>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <div class="toner-response-warning">
+                            <i class="fa fa-exclamation-triangle"></i>
+
+                            No genere otra solicitud para el mismo equipo y tóner
+                            mientras esta permanezca activa.
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+        </t>
+    </template>
+
+
+    <!-- =========================================================
+         SOLICITUD BLOQUEADA / RECHAZADA
+    ========================================================== -->
+
+    <template id="solicitud_toner_rechazada" name="Solicitud de Tóner Bloqueada">
+        <t t-call="website.layout">
+
+            <style>
+                .toner-block-page {
+                    min-height: 100vh;
+                    padding: 28px 14px;
+                    background: #f1f5f9;
+                }
+
+                .toner-block-card {
+                    width: min(720px, 100%);
+                    margin: 0 auto;
+                    overflow: hidden;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 22px;
+                    background: #ffffff;
+                    box-shadow: 0 24px 55px rgba(15, 23, 42, 0.14);
+                }
+
+                .toner-block-header {
+                    padding: 26px 22px;
+                    text-align: center;
+                    color: #ffffff;
+                    background: linear-gradient(135deg, #f59e0b, #d97706);
+                }
+
+                .toner-block-header h2 {
+                    margin: 0 0 5px;
+                    font-size: 1.45rem;
+                }
+
+                .toner-block-header p {
+                    margin: 0;
+                    color: rgba(255, 255, 255, 0.84);
+                }
+
+                .toner-block-body {
+                    padding: 22px;
+                }
+
+                .toner-block-alert {
+                    display: flex;
+                    align-items: flex-start;
+                    gap: 11px;
+                    padding: 14px;
+                    border: 1px solid #fed7aa;
+                    border-radius: 14px;
+                    color: #9a3412;
+                    background: #fffbeb;
+                }
+
+                .toner-block-alert p {
+                    margin: 0;
+                    line-height: 1.5;
+                }
+
+                .toner-block-grid {
+                    display: grid;
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                    gap: 10px;
+                    margin-top: 14px;
+                }
+
+                .toner-block-item {
+                    padding: 12px;
+                    border-radius: 12px;
+                    background: #f8fafc;
+                }
+
+                .toner-block-item span {
+                    display: block;
+                    margin-bottom: 3px;
+                    color: #64748b;
+                    font-size: 0.72rem;
+                    font-weight: 800;
+                    text-transform: uppercase;
+                }
+
+                .toner-block-item strong {
+                    font-size: 0.88rem;
+                }
+
+                .toner-block-details {
+                    margin-top: 14px;
+                    padding: 12px;
+                    border-radius: 12px;
+                    background: #f8fafc;
+                }
+
+                .toner-block-details h3 {
+                    margin: 0 0 8px;
+                    font-size: 0.9rem;
+                }
+
+                .toner-block-details ul {
+                    margin: 0;
+                    padding-left: 18px;
+                }
+
+                .toner-block-actions {
+                    display: flex;
+                    gap: 10px;
                     justify-content: center;
                     flex-wrap: wrap;
-                    margin-top: 2rem;
+                    margin-top: 18px;
                 }
-                
-                .btn-contact {
+
+                .toner-block-button {
                     display: inline-flex;
                     align-items: center;
-                    gap: 0.5rem;
-                    padding: 1rem 1.5rem;
-                    border-radius: 12px;
-                    font-weight: 600;
+                    justify-content: center;
+                    gap: 8px;
+                    min-height: 42px;
+                    padding: 8px 14px;
+                    border-radius: 11px;
+                    font-weight: 800;
                     text-decoration: none;
-                    transition: all 0.2s;
                 }
-                
-                .btn-contact-primary {
-                    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-                    color: #fff;
-                    border: none;
+
+                .toner-block-button.primary {
+                    border: 0;
+                    color: #ffffff;
+                    background: linear-gradient(135deg, #0891b2, #0e7490);
                 }
-                
-                .btn-contact-primary:hover {
-                    transform: translateY(-2px);
-                    box-shadow: 0 12px 24px rgba(99, 102, 241, 0.3);
-                    color: #fff;
+
+                .toner-block-button.secondary {
+                    border: 1px solid #e2e8f0;
+                    color: #334155;
+                    background: #ffffff;
                 }
-                
-                .btn-contact-outline {
-                    background: #fff;
-                    color: #6366f1;
-                    border: 2px solid #6366f1;
-                }
-                
-                .btn-contact-outline:hover {
-                    background: #f5f3ff;
-                    transform: translateY(-2px);
-                    color: #6366f1;
-                }
-                
-                @media (max-width: 768px) {
-                    .response-body {
-                        padding: 1.5rem;
-                    }
-                    
-                    .response-header h3 {
-                        font-size: 1.5rem;
+
+                @media (max-width: 560px) {
+                    .toner-block-grid {
+                        grid-template-columns: 1fr;
                     }
                 }
             </style>
 
-            <div class="response-container">
-                <div class="container">
-                    <div class="response-card">
-                        <div class="response-header warning">
-                            <h3>
-                                <i class="fa fa-exclamation-triangle me-2"></i>
-                                Solicitud No Aprobada
-                            </h3>
+            <div class="toner-block-page">
+                <div class="toner-block-card">
+
+                    <div class="toner-block-header">
+                        <h2>
+                            <i class="fa fa-exclamation-triangle"></i>
+                            Solicitud no registrada
+                        </h2>
+
+                        <p>
+                            La validación detectó una condición que impide continuar.
+                        </p>
+                    </div>
+
+                    <div class="toner-block-body">
+
+                        <div class="toner-block-alert">
+                            <i class="fa fa-ban"></i>
+
+                            <p>
+                                <strong>Motivo:</strong>
+                                <t t-esc="validation_result.get('message') or 'La solicitud no puede registrarse.'"/>
+                            </p>
                         </div>
-                        
-                        <div class="response-body">
-                            <div class="status-alert alert-warning">
-                                <h5>❌ Su solicitud de tóner no ha sido aprobada</h5>
-                                <p class="mb-0" style="font-size: 1.05rem;">
-                                    <strong>Motivo:</strong>
-                                    <span t-esc="validation_result.get('message', 'Stock suficiente')"/>
-                                </p>
+
+                        <div class="toner-block-grid">
+
+                            <div class="toner-block-item">
+                                <span>Cliente</span>
+                                <strong>
+                                    <t t-esc="datos_formulario.get('cliente') or 'Sin cliente'"/>
+                                </strong>
                             </div>
-                            
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <div class="info-section">
-                                        <div class="section-label">
-                                            <i class="fa fa-desktop me-1"></i>
-                                            Información del Equipo
-                                        </div>
-                                        <div class="info-row">
-                                            <div class="info-row-label">Cliente</div>
-                                            <div class="info-row-value">
-                                                <t t-esc="datos_formulario.get('cliente')"/>
-                                            </div>
-                                        </div>
-                                        <div class="info-row">
-                                            <div class="info-row-label">Modelo</div>
-                                            <div class="info-row-value">
-                                                <t t-esc="datos_formulario.get('modelo_maquina')"/>
-                                            </div>
-                                        </div>
-                                        <div class="info-row">
-                                            <div class="info-row-label">Serie</div>
-                                            <div class="info-row-value">
-                                                <span class="badge badge-dark" style="font-size: 0.95rem; padding: 0.5rem 1rem;">
-                                                    <t t-esc="datos_formulario.get('serie')"/>
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div class="col-md-6 mb-3">
-                                    <div class="info-section">
-                                        <div class="section-label">
-                                            <i class="fa fa-user me-1"></i>
-                                            Solicitante
-                                        </div>
-                                        <div class="info-row">
-                                            <div class="info-row-label">Nombre</div>
-                                            <div class="info-row-value">
-                                                <t t-esc="datos_formulario.get('nombre')"/>
-                                            </div>
-                                        </div>
-                                        <div class="info-row">
-                                            <div class="info-row-label">Teléfono</div>
-                                            <div class="info-row-value">
-                                                <span class="badge badge-primary" style="font-size: 0.95rem; padding: 0.5rem 1rem;">
-                                                    <t t-esc="datos_formulario.get('celular')"/>
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
+
+                            <div class="toner-block-item">
+                                <span>Solicitante</span>
+                                <strong>
+                                    <t t-esc="datos_formulario.get('nombre') or 'Sin nombre'"/>
+                                </strong>
                             </div>
-                            
-                            <t t-if="validation_result.get('blocked_toners')">
-                                <div class="status-alert alert-info">
-                                    <h6 style="font-weight: 700; margin-bottom: 1rem;">
-                                        🚫 Tóners no necesarios
-                                    </h6>
-                                    <ul class="mb-0" style="padding-left: 1.5rem;">
-                                        <t t-foreach="validation_result.get('blocked_toners', [])" t-as="blocked">
-                                            <li style="margin-bottom: 0.5rem;">
-                                                <strong><span t-esc="blocked['color'].title()"/>:</strong>
-                                                <span t-esc="blocked['reason']"/>
-                                            </li>
-                                        </t>
-                                    </ul>
-                                </div>
-                            </t>
-                            
-                            <div class="status-alert alert-success">
-                                <h6 style="font-weight: 700; margin-bottom: 0.5rem;">
-                                    ✅ Su equipo actualmente tiene stock suficiente
-                                </h6>
-                                <p class="mb-0">
-                                    Nuestro sistema ha determinado que no es necesario enviar tóner en este momento.
-                                </p>
+
+                            <div class="toner-block-item">
+                                <span>Equipo</span>
+                                <strong>
+                                    <t t-esc="datos_formulario.get('modelo_maquina') or 'Sin modelo'"/>
+                                </strong>
                             </div>
-                            
-                            <div class="text-center mt-4">
-                                <h6 style="font-weight: 700; margin-bottom: 1rem;">
-                                    ¿Considera que hay un error?
-                                </h6>
-                                <p style="color: #6b7280; margin-bottom: 1.5rem;">
-                                    Puede contactarnos directamente:
-                                </p>
-                                <div class="contact-buttons">
-                                    <a href="tel:+51924894829" class="btn-contact btn-contact-primary">
-                                        <i class="fa fa-phone"></i>
-                                        +51 924 894 829
-                                    </a>
-                                    <a href="mailto:soporte@andescopiers.com.pe" class="btn-contact btn-contact-outline">
-                                        <i class="fa fa-envelope"></i>
-                                        Email Soporte
-                                    </a>
-                                </div>
+
+                            <div class="toner-block-item">
+                                <span>Serie</span>
+                                <strong>
+                                    <t t-esc="datos_formulario.get('serie') or 'Sin serie'"/>
+                                </strong>
                             </div>
+
                         </div>
+
+                        <t t-if="validation_result.get('colors')">
+                            <div class="toner-block-details">
+                                <h3>Detalle de la validación</h3>
+
+                                <ul>
+                                    <t
+                                        t-foreach="validation_result.get('colors', [])"
+                                        t-as="color_result"
+                                    >
+                                        <li>
+                                            <strong>
+                                                <t t-esc="color_result.get('label') or color_result.get('color')"/>
+                                            </strong>
+                                            :
+                                            <t t-esc="color_result.get('message')"/>
+                                        </li>
+                                    </t>
+                                </ul>
+                            </div>
+                        </t>
+
+                        <div class="toner-block-actions">
+                            <button
+                                type="button"
+                                class="toner-block-button primary"
+                                onclick="tonerGoBackBlocked()"
+                            >
+                                <i class="fa fa-arrow-left"></i>
+                                Volver al formulario
+                            </button>
+
+                            <a
+                                href="tel:+51924894829"
+                                class="toner-block-button secondary"
+                            >
+                                <i class="fa fa-phone"></i>
+                                Contactar soporte
+                            </a>
+                        </div>
+
                     </div>
                 </div>
             </div>
+
+            <script>
+//<![CDATA[
+function tonerGoBackBlocked() {
+    if (document.referrer) {
+        window.location.href = document.referrer;
+    } else {
+        window.history.back();
+    }
+}
+//]]>
+            </script>
+
         </t>
     </template>
 
-    <!-- SOLICITUD APROBADA -->
-    <template id="solicitud_toner_aprobada" name="Solicitud de Tóner Aprobada">
-        <t t-call="website.layout">
-            
-            <style>
-                @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&amp;display=swap');
-                
-                .response-container {
-                    font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
-                    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-                    min-height: 100vh;
-                    padding: 3rem 0;
-                }
-                
-                .response-card {
-                    background: #fff;
-                    border-radius: 24px;
-                    box-shadow: 0 8px 32px rgba(0,0,0,0.1);
-                    overflow: hidden;
-                    max-width: 800px;
-                    margin: 0 auto;
-                }
-                
-                .response-header {
-                    padding: 2.5rem 2rem;
-                    text-align: center;
-                    position: relative;
-                }
-                
-                .response-header.success {
-                    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-                    color: #fff;
-                }
-                
-                .response-header h3 {
-                    font-size: 2rem;
-                    font-weight: 700;
-                    margin: 0;
-                }
-                
-                .response-body {
-                    padding: 2.5rem 2rem;
-                }
-                
-                .status-alert {
-                    border-radius: 16px;
-                    padding: 1.5rem;
-                    margin-bottom: 2rem;
-                    border: none;
-                }
-                
-                .status-alert h5 {
-                    font-weight: 700;
-                    font-size: 1.25rem;
-                    margin-bottom: 0.75rem;
-                }
-                
-                .info-section {
-                    background: #f9fafb;
-                    border-radius: 16px;
-                    padding: 1.5rem;
-                    margin-bottom: 1.5rem;
-                }
-                
-                .section-label {
-                    font-size: 0.75rem;
-                    text-transform: uppercase;
-                    letter-spacing: 0.5px;
-                    color: #6b7280;
-                    font-weight: 600;
-                    margin-bottom: 1rem;
-                }
-                
-                .info-row {
-                    margin-bottom: 1rem;
-                }
-                
-                .info-row:last-child {
-                    margin-bottom: 0;
-                }
-                
-                .info-row-label {
-                    font-size: 0.875rem;
-                    color: #6b7280;
-                    margin-bottom: 0.25rem;
-                }
-                
-                .info-row-value {
-                    font-size: 1.1rem;
-                    font-weight: 600;
-                    color: #1a1f3a;
-                }
-                
-                .contact-buttons {
-                    display: flex;
-                    gap: 1rem;
-                    justify-content: center;
-                    flex-wrap: wrap;
-                    margin-top: 2rem;
-                }
-                
-                .btn-contact {
-                    display: inline-flex;
-                    align-items: center;
-                    gap: 0.5rem;
-                    padding: 1rem 1.5rem;
-                    border-radius: 12px;
-                    font-weight: 600;
-                    text-decoration: none;
-                    transition: all 0.2s;
-                }
-                
-                .btn-contact-success {
-                    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-                    color: #fff;
-                    border: none;
-                }
-                
-                .btn-contact-success:hover {
-                    transform: translateY(-2px);
-                    box-shadow: 0 12px 24px rgba(16, 185, 129, 0.3);
-                    color: #fff;
-                }
-                
-                .btn-contact-outline-success {
-                    background: #fff;
-                    color: #10b981;
-                    border: 2px solid #10b981;
-                }
-                
-                .btn-contact-outline-success:hover {
-                    background: #f0fdf4;
-                    transform: translateY(-2px);
-                    color: #10b981;
-                }
-                
-                @media (max-width: 768px) {
-                    .response-body {
-                        padding: 1.5rem;
-                    }
-                    
-                    .response-header h3 {
-                        font-size: 1.5rem;
-                    }
-                }
-            </style>
 
-            <div class="response-container">
-                <div class="container">
-                    <div class="response-card">
-                        <div class="response-header success">
-                            <h3>
-                                <i class="fa fa-check-circle me-2"></i>
-                                Solicitud Aprobada
-                            </h3>
-                        </div>
-                        
-                        <div class="response-body">
-                            <div class="status-alert alert-success">
-                                <h5>✅ Su solicitud de tóner ha sido aprobada</h5>
-                                <p class="mb-0" style="font-size: 1.05rem;">
-                                    <strong>Número de reporte:</strong>
-                                    <span class="badge badge-light border ms-2" style="font-size: 1rem; padding: 0.5rem 1rem;">
-                                        <t t-esc="creation_result.get('secuencia')"/>
-                                    </span>
-                                </p>
-                            </div>
-                            
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <div class="info-section">
-                                        <div class="section-label">
-                                            <i class="fa fa-desktop me-1"></i>
-                                            Información del Equipo
-                                        </div>
-                                        <div class="info-row">
-                                            <div class="info-row-label">Cliente</div>
-                                            <div class="info-row-value">
-                                                <t t-esc="datos_formulario.get('cliente')"/>
-                                            </div>
-                                        </div>
-                                        <div class="info-row">
-                                            <div class="info-row-label">Modelo</div>
-                                            <div class="info-row-value">
-                                                <t t-esc="datos_formulario.get('modelo_maquina')"/>
-                                            </div>
-                                        </div>
-                                        <div class="info-row">
-                                            <div class="info-row-label">Serie</div>
-                                            <div class="info-row-value">
-                                                <span class="badge badge-dark" style="font-size: 0.95rem; padding: 0.5rem 1rem;">
-                                                    <t t-esc="datos_formulario.get('serie')"/>
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div class="col-md-6 mb-3">
-                                    <div class="info-section">
-                                        <div class="section-label">
-                                            <i class="fa fa-user me-1"></i>
-                                            Solicitante
-                                        </div>
-                                        <div class="info-row">
-                                            <div class="info-row-label">Nombre</div>
-                                            <div class="info-row-value">
-                                                <t t-esc="datos_formulario.get('nombre')"/>
-                                            </div>
-                                        </div>
-                                        <div class="info-row">
-                                            <div class="info-row-label">Teléfono</div>
-                                            <div class="info-row-value">
-                                                <span class="badge badge-success" style="font-size: 0.95rem; padding: 0.5rem 1rem;">
-                                                    <t t-esc="datos_formulario.get('celular')"/>
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <t t-set="validation_details" t-value="creation_result.get('validation_details', {})"/>
-                            <t t-if="validation_details.get('requested_toners')">
-                                <div class="status-alert alert-info">
-                                    <h6 style="font-weight: 700; margin-bottom: 1rem;">
-                                        📦 Tóners aprobados
-                                    </h6>
-                                    <div>
-                                        <t t-foreach="validation_details.get('requested_toners', [])" t-as="toner">
-                                            <span class="badge badge-primary me-2 mb-2" style="font-size: 0.95rem; padding: 0.5rem 1rem;">
-                                                <t t-esc="toner"/>
-                                            </span>
-                                        </t>
-                                    </div>
-                                </div>
-                            </t>
-                            
-                            <div class="status-alert" style="background: #dbeafe; color: #1e40af;">
-                                <t t-if="creation_result.get('requires_automatic_delivery')">
-                                    <h6 style="font-weight: 700; margin-bottom: 0.5rem;">
-                                        🚚 Entrega programada automáticamente
-                                    </h6>
-                                    <p class="mb-0">
-                                        Su solicitud ha activado una programación automática de entrega.
-                                        Recibirá confirmación de la fecha de entrega.
-                                    </p>
-                                </t>
-                                <t t-else="">
-                                    <h6 style="font-weight: 700; margin-bottom: 0.5rem;">
-                                        📋 Será revisado por nuestro equipo
-                                    </h6>
-                                    <p class="mb-0">
-                                        Su solicitud será revisada por nuestro equipo administrativo
-                                        y recibirá confirmación en breve.
-                                    </p>
-                                </t>
-                            </div>
-                            
-                            <div class="text-center mt-4">
-                                <h6 style="font-weight: 700; margin-bottom: 1rem;">
-                                    ¡Gracias por confiar en Andes Copier!
-                                </h6>
-                                <p style="color: #6b7280; margin-bottom: 1.5rem;">
-                                    Ha recibido una confirmación por WhatsApp.
-                                </p>
-                                <div class="contact-buttons">
-                                    <a href="tel:+51924894829" class="btn-contact btn-contact-success">
-                                        <i class="fa fa-phone"></i>
-                                        +51 924 894 829
-                                    </a>
-                                    <a href="mailto:soporte@andescopiers.com.pe" class="btn-contact btn-contact-outline-success">
-                                        <i class="fa fa-envelope"></i>
-                                        Email Soporte
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </t>
-    </template>
+    <!-- =========================================================
+         SIN SELECCIÓN DE TÓNER
+    ========================================================== -->
 
-    <!-- SOLICITUD SIN SELECCIÓN -->
     <template id="solicitud_toner_sin_seleccion" name="Solicitud Sin Selección de Tóner">
         <t t-call="website.layout">
-            
+
             <style>
-                @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&amp;display=swap');
-                
-                .response-container {
-                    font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
-                    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+                .toner-error-page {
                     min-height: 100vh;
-                    padding: 3rem 0;
+                    padding: 28px 14px;
+                    background: #f1f5f9;
                 }
-                
-                .response-card {
-                    background: #fff;
-                    border-radius: 24px;
-                    box-shadow: 0 8px 32px rgba(0,0,0,0.1);
-                    overflow: hidden;
-                    max-width: 800px;
+
+                .toner-error-card {
+                    width: min(650px, 100%);
                     margin: 0 auto;
+                    overflow: hidden;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 22px;
+                    background: #ffffff;
+                    box-shadow: 0 24px 55px rgba(15, 23, 42, 0.14);
                 }
-                
-                .response-header {
-                    padding: 2.5rem 2rem;
+
+                .toner-error-header {
+                    padding: 26px 22px;
                     text-align: center;
+                    color: #ffffff;
+                    background: linear-gradient(135deg, #ef4444, #dc2626);
                 }
-                
-                .response-header.danger {
-                    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-                    color: #fff;
+
+                .toner-error-header h2 {
+                    margin: 0 0 5px;
                 }
-                
-                .response-header h3 {
-                    font-size: 2rem;
-                    font-weight: 700;
-                    margin: 0;
+
+                .toner-error-body {
+                    padding: 22px;
                 }
-                
-                .response-body {
-                    padding: 2.5rem 2rem;
-                }
-                
-                .status-alert {
-                    border-radius: 16px;
-                    padding: 1.5rem;
-                    margin-bottom: 2rem;
-                    border: none;
-                }
-                
-                .status-alert h5 {
-                    font-weight: 700;
-                    font-size: 1.25rem;
-                    margin-bottom: 0.75rem;
-                }
-                
-                .info-section {
-                    background: #f9fafb;
-                    border-radius: 16px;
-                    padding: 1.5rem;
-                    margin-bottom: 1.5rem;
-                }
-                
-                .section-label {
-                    font-size: 0.75rem;
-                    text-transform: uppercase;
-                    letter-spacing: 0.5px;
-                    color: #6b7280;
-                    font-weight: 600;
-                    margin-bottom: 1rem;
-                }
-                
-                .info-row {
-                    margin-bottom: 1rem;
-                }
-                
-                .info-row:last-child {
-                    margin-bottom: 0;
-                }
-                
-                .info-row-label {
-                    font-size: 0.875rem;
-                    color: #6b7280;
-                    margin-bottom: 0.25rem;
-                }
-                
-                .info-row-value {
-                    font-size: 1.1rem;
-                    font-weight: 600;
-                    color: #1a1f3a;
-                }
-                
-                .contact-buttons {
+
+                .toner-error-alert {
                     display: flex;
-                    gap: 1rem;
-                    justify-content: center;
-                    flex-wrap: wrap;
-                    margin-top: 2rem;
+                    align-items: flex-start;
+                    gap: 11px;
+                    padding: 14px;
+                    border: 1px solid #fecaca;
+                    border-radius: 14px;
+                    color: #991b1b;
+                    background: #fef2f2;
                 }
-                
-                .btn-contact {
+
+                .toner-error-alert p {
+                    margin: 0;
+                    line-height: 1.5;
+                }
+
+                .toner-error-help {
+                    margin-top: 14px;
+                    padding: 14px;
+                    border-radius: 14px;
+                    background: #f8fafc;
+                }
+
+                .toner-error-help h3 {
+                    margin: 0 0 8px;
+                    font-size: 0.95rem;
+                }
+
+                .toner-error-help ol {
+                    margin: 0;
+                    padding-left: 19px;
+                }
+
+                .toner-error-actions {
+                    display: flex;
+                    justify-content: center;
+                    margin-top: 18px;
+                }
+
+                .toner-error-button {
                     display: inline-flex;
                     align-items: center;
-                    gap: 0.5rem;
-                    padding: 1rem 1.5rem;
-                    border-radius: 12px;
-                    font-weight: 600;
-                    text-decoration: none;
-                    transition: all 0.2s;
-                }
-                
-                .btn-contact-primary {
-                    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-                    color: #fff;
-                    border: none;
-                }
-                
-                .btn-contact-primary:hover {
-                    transform: translateY(-2px);
-                    box-shadow: 0 12px 24px rgba(99, 102, 241, 0.3);
-                    color: #fff;
-                }
-                
-                .btn-contact-outline {
-                    background: #fff;
-                    color: #6366f1;
-                    border: 2px solid #6366f1;
-                }
-                
-                .btn-contact-outline:hover {
-                    background: #f5f3ff;
-                    transform: translateY(-2px);
-                    color: #6366f1;
-                }
-                
-                @media (max-width: 768px) {
-                    .response-body {
-                        padding: 1.5rem;
-                    }
-                    
-                    .response-header h3 {
-                        font-size: 1.5rem;
-                    }
+                    justify-content: center;
+                    gap: 8px;
+                    min-height: 42px;
+                    padding: 8px 14px;
+                    border: 0;
+                    border-radius: 11px;
+                    color: #ffffff;
+                    background: linear-gradient(135deg, #0891b2, #0e7490);
+                    font-weight: 800;
                 }
             </style>
 
-            <div class="response-container">
-                <div class="container">
-                    <div class="response-card">
-                        <div class="response-header danger">
-                            <h3>
-                                <i class="fa fa-times-circle me-2"></i>
-                                Error en Solicitud
-                            </h3>
+            <div class="toner-error-page">
+                <div class="toner-error-card">
+
+                    <div class="toner-error-header">
+                        <h2>
+                            <i class="fa fa-times-circle"></i>
+                            Solicitud incompleta
+                        </h2>
+
+                        <p>
+                            No se seleccionó ningún tóner.
+                        </p>
+                    </div>
+
+                    <div class="toner-error-body">
+
+                        <div class="toner-error-alert">
+                            <i class="fa fa-exclamation-circle"></i>
+
+                            <p>
+                                Para registrar la solicitud debe seleccionar
+                                al menos un color de tóner.
+                            </p>
                         </div>
-                        
-                        <div class="response-body">
-                            <div class="status-alert alert-danger">
-                                <h5>❌ No se seleccionó ningún tóner</h5>
-                                <p class="mb-0" style="font-size: 1.05rem;">
-                                    Para procesar su solicitud, debe seleccionar al menos un tipo de tóner.
-                                </p>
-                            </div>
-                            
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <div class="info-section">
-                                        <div class="section-label">
-                                            <i class="fa fa-desktop me-1"></i>
-                                            Información del Equipo
-                                        </div>
-                                        <div class="info-row">
-                                            <div class="info-row-label">Cliente</div>
-                                            <div class="info-row-value">
-                                                <t t-esc="datos_formulario.get('cliente')"/>
-                                            </div>
-                                        </div>
-                                        <div class="info-row">
-                                            <div class="info-row-label">Modelo</div>
-                                            <div class="info-row-value">
-                                                <t t-esc="datos_formulario.get('modelo_maquina')"/>
-                                            </div>
-                                        </div>
-                                        <div class="info-row">
-                                            <div class="info-row-label">Serie</div>
-                                            <div class="info-row-value">
-                                                <span class="badge badge-dark" style="font-size: 0.95rem; padding: 0.5rem 1rem;">
-                                                    <t t-esc="datos_formulario.get('serie')"/>
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div class="col-md-6 mb-3">
-                                    <div class="info-section">
-                                        <div class="section-label">
-                                            <i class="fa fa-user me-1"></i>
-                                            Solicitante
-                                        </div>
-                                        <div class="info-row">
-                                            <div class="info-row-label">Nombre</div>
-                                            <div class="info-row-value">
-                                                <t t-esc="datos_formulario.get('nombre')"/>
-                                            </div>
-                                        </div>
-                                        <div class="info-row">
-                                            <div class="info-row-label">Teléfono</div>
-                                            <div class="info-row-value">
-                                                <span class="badge badge-primary" style="font-size: 0.95rem; padding: 0.5rem 1rem;">
-                                                    <t t-esc="datos_formulario.get('celular')"/>
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="status-alert alert-info">
-                                <h6 style="font-weight: 700; margin-bottom: 1rem;">
-                                    📝 Para continuar
-                                </h6>
-                                <ol style="padding-left: 1.5rem; margin-bottom: 0;">
-                                    <li style="margin-bottom: 0.5rem;">Vuelva al formulario anterior</li>
-                                    <li style="margin-bottom: 0.5rem;">Seleccione al menos un tipo de tóner</li>
-                                    <li style="margin-bottom: 0.5rem;">Complete los contadores correctamente</li>
-                                    <li>Envíe nuevamente la solicitud</li>
-                                </ol>
-                            </div>
-                            
-                            <div class="text-center">
-                                <div class="contact-buttons">
-                                    <button type="button"
-                                            class="btn-contact btn-contact-primary"
-                                            onclick="goBack()">
-                                        <i class="fa fa-arrow-left"></i>
-                                        Volver al formulario
-                                    </button>
-                                    <a href="tel:+51924894829" class="btn-contact btn-contact-outline">
-                                        <i class="fa fa-phone"></i>
-                                        Contactar soporte
-                                    </a>
-                                </div>
-                            </div>
+
+                        <div class="toner-error-help">
+                            <h3>Para continuar</h3>
+
+                            <ol>
+                                <li>Regrese al formulario.</li>
+                                <li>Seleccione uno o varios colores.</li>
+                                <li>Revise los contadores.</li>
+                                <li>Registre nuevamente la solicitud.</li>
+                            </ol>
                         </div>
+
+                        <div class="toner-error-actions">
+                            <button
+                                type="button"
+                                class="toner-error-button"
+                                onclick="tonerGoBackNoSelection()"
+                            >
+                                <i class="fa fa-arrow-left"></i>
+                                Volver al formulario
+                            </button>
+                        </div>
+
                     </div>
                 </div>
             </div>
-            
+
             <script>
-                function goBack() {
-                    if (document.referrer) {
-                        window.location.href = document.referrer;
-                    } else {
-                        window.history.back();
-                    }
-                }
+//<![CDATA[
+function tonerGoBackNoSelection() {
+    if (document.referrer) {
+        window.location.href = document.referrer;
+    } else {
+        window.history.back();
+    }
+}
+//]]>
             </script>
+
         </t>
     </template>
+
 </odoo>

@@ -1,1343 +1,1516 @@
-# Agregar este nuevo modelo al archivo models.py
+# -*- coding: utf-8 -*-
 
-import logging
-from datetime import timedelta, datetime
-from odoo import models, fields, api
-import requests
 import json
-import pytz
-from odoo.exceptions import ValidationError, UserError
+import logging
+from datetime import timedelta
+
+import requests
+
+from odoo import api, fields, models, _
+from odoo.exceptions import UserError, ValidationError
 
 _logger = logging.getLogger(__name__)
 
+
 class TonerCounterSubmission(models.Model):
-    """Modelo para reportes de contadores y estado de tóner por clientes"""
-    _name = 'toner.counter.submission'
-    _description = 'Reportes de Contadores y Tóner por Clientes'
-    _inherit = ['mail.thread', 'mail.activity.mixin']
-    _order = 'submission_date desc'
-    _rec_name = 'display_name'
+    """
+    Solicitud de tóner y evaluación interna.
 
-    # ==========================================
-    # CAMPO DISPLAY NAME
-    # ==========================================
-    
+    Flujo:
+    recibida -> evaluacion -> pendiente_gerencia -> aprobada_gerencia
+    -> confirmacion_ventas -> lista_despacho -> en_despacho -> entregada
+
+    El cliente nunca aprueba ni autoriza el despacho desde el portal.
+    """
+    _name = "toner.counter.submission"
+    _description = "Solicitud y evaluación de tóner"
+    _inherit = ["mail.thread", "mail.activity.mixin"]
+    _order = "submission_date desc, id desc"
+    _rec_name = "display_name"
+
+    COLOR_LABELS = {
+        "black": "Negro",
+        "cyan": "Cian",
+        "magenta": "Magenta",
+        "yellow": "Amarillo",
+    }
+
+    OPEN_STATES = [
+        "recibida",
+        "evaluacion",
+        "pendiente_gerencia",
+        "aprobada_gerencia",
+        "confirmacion_ventas",
+        "lista_despacho",
+        "en_despacho",
+    ]
+
+    # -------------------------------------------------------------------------
+    # Identificación
+    # -------------------------------------------------------------------------
+
     display_name = fields.Char(
-        string='Nombre',
-        compute='_compute_display_name',
-        store=True
-    )
-
-    @api.depends('equipment_id', 'submission_date', 'client_name')
-    def _compute_display_name(self):
-        """Calcula el nombre a mostrar del registro"""
-        for record in self:
-            try:
-                equipment_name = record.equipment_id.name.name if record.equipment_id and record.equipment_id.name.name else 'Sin equipo'
-                date_str = record.submission_date.strftime('%d/%m/%Y') if record.submission_date else 'Sin fecha'
-                client_name = record.client_name or 'Sin cliente'
-                
-                record.display_name = f"{equipment_name} - {client_name} ({date_str})"
-            except Exception:
-                record.display_name = f"Reporte Tóner {record.id or 'Nuevo'}"
-
-    # ==========================================
-    # CAMPOS BÁSICOS
-    # ==========================================
-    
-    equipment_id = fields.Many2one(
-            'alquiler',
-            string='Equipo',
-            required=True,
-            tracking=True,
-            domain=[('estado_alquiler_id', '=', 'alquilada')],
-            help='Equipo para el cual se reportan los contadores y estado de tóner'
-        )
-    
-    partner_id = fields.Many2one(
-        'res.partner',
-        string='Cliente',
-        related='equipment_id.cliente_id',
+        string="Nombre",
+        compute="_compute_display_name",
         store=True,
-        readonly=True
     )
-    
+
+    equipment_id = fields.Many2one(
+        "alquiler",
+        string="Equipo",
+        required=True,
+        tracking=True,
+        index=True,
+        domain=[("estado_alquiler_id", "=", "alquilada")],
+    )
+
+    partner_id = fields.Many2one(
+        "res.partner",
+        string="Cliente",
+        related="equipment_id.cliente_id",
+        store=True,
+        readonly=True,
+        index=True,
+    )
+
     submission_date = fields.Datetime(
-        string='Fecha de Reporte',
+        string="Fecha de solicitud",
         default=fields.Datetime.now,
         required=True,
-        tracking=True
-    )
-    
-    secuencia = fields.Char(
-        string='Número de Reporte',
-        default='New',
-        copy=False,
-        required=True,
-        readonly=True
+        tracking=True,
+        index=True,
     )
 
-    # ==========================================
-    # INFORMACIÓN DEL CONTACTO
-    # ==========================================
-    
+    secuencia = fields.Char(
+        string="Número de solicitud",
+        default="New",
+        copy=False,
+        readonly=True,
+        required=True,
+        index=True,
+    )
+
+    # -------------------------------------------------------------------------
+    # Solicitante
+    # -------------------------------------------------------------------------
+
     client_name = fields.Char(
-        string='Nombre del Reportante',
+        string="Nombre del solicitante",
         required=True,
         tracking=True,
-        help='Nombre completo de la persona que reporta'
     )
-    
+
     client_email = fields.Char(
-        string='Email del Reportante',
+        string="Correo del solicitante",
         required=True,
         tracking=True,
-        help='Email de la persona que reporta'
     )
-    
+
     client_phone = fields.Char(
-        string='Teléfono del Reportante',
+        string="Teléfono del solicitante",
         tracking=True,
-        help='Teléfono de contacto'
     )
 
     client_phone_clean = fields.Char(
-        string='Teléfono Limpio',
-        compute='_compute_client_phone_clean',
+        string="Teléfono limpio",
+        compute="_compute_client_phone_clean",
         store=True,
-        help='Número de teléfono formateado para WhatsApp'
     )
 
-    # ==========================================
-    # CONTADORES REPORTADOS
-    # ==========================================
-    
+    # -------------------------------------------------------------------------
+    # Contadores
+    # -------------------------------------------------------------------------
+
     counter_bn = fields.Integer(
-        string='Contador Blanco y Negro',
+        string="Contador B/N actual",
         required=True,
         tracking=True,
-        help='Lectura actual del contador de copias en blanco y negro'
     )
-    
+
     counter_color = fields.Integer(
-        string='Contador Color',
+        string="Contador color actual",
         default=0,
         tracking=True,
-        help='Lectura actual del contador de copias a color'
     )
-    
-    # Contadores anteriores (calculados)
+
     previous_counter_bn = fields.Integer(
-        string='Contador B/N Anterior',
-        compute='_compute_previous_counters',
-        store=True,
-        help='Último contador B/N registrado'
+        string="Contador B/N anterior",
+        readonly=True,
+        tracking=True,
+        help="Contador base de la última entrega relevante.",
     )
-    
+
     previous_counter_color = fields.Integer(
-        string='Contador Color Anterior',
-        compute='_compute_previous_counters',
-        store=True,
-        help='Último contador Color registrado'
+        string="Contador color anterior",
+        readonly=True,
+        tracking=True,
+        help="Contador base de la última entrega relevante.",
     )
-    
-    # Copias del período
+
     copies_bn_period = fields.Integer(
-        string='Copias B/N del Período',
-        compute='_compute_period_copies',
+        string="Copias B/N desde la base",
+        compute="_compute_period_copies",
         store=True,
-        help='Copias B/N realizadas en este período'
     )
-    
+
     copies_color_period = fields.Integer(
-        string='Copias Color del Período',
-        compute='_compute_period_copies',
+        string="Copias color desde la base",
+        compute="_compute_period_copies",
         store=True,
-        help='Copias Color realizadas en este período'
     )
 
     total_copies_period = fields.Integer(
-        string='Total Copias del Período',
-        compute='_compute_total_copies_period',
+        string="Copias totales desde la base",
+        compute="_compute_period_copies",
         store=True,
-        help='Total de copias del período (B/N + Color)'
     )
 
-    # ==========================================
-    # STOCK DE TÓNER REPORTADO POR CLIENTE
-    # ==========================================
-    
-    stock_reportado_black = fields.Integer(
-        string='Stock Tóner Negro',
-        default=0,
-        help='Cantidad de tóner negro que tiene el cliente en stock (sin instalar)'
-    )
-    
-    stock_reportado_cyan = fields.Integer(
-        string='Stock Tóner Cian',
-        default=0,
-        help='Cantidad de tóner cian que tiene el cliente en stock (sin instalar)'
-    )
-    
-    stock_reportado_magenta = fields.Integer(
-        string='Stock Tóner Magenta',
-        default=0,
-        help='Cantidad de tóner magenta que tiene el cliente en stock (sin instalar)'
-    )
-    
-    stock_reportado_yellow = fields.Integer(
-        string='Stock Tóner Amarillo',
-        default=0,
-        help='Cantidad de tóner amarillo que tiene el cliente en stock (sin instalar)'
-    )
+    # -------------------------------------------------------------------------
+    # Tóner solicitado
+    # -------------------------------------------------------------------------
 
-    # ==========================================
-    # NIVEL DE TÓNER INSTALADO
-    # ==========================================
-    
-    nivel_toner_black = fields.Selection([
-        ('lleno', '🟢 Lleno (75-100%)'),
-        ('medio', '🟡 Medio (50-74%)'),
-        ('bajo', '🟠 Bajo (25-49%)'),
-        ('critico', '🔴 Crítico (0-24%)'),
-        ('agotado', '⚫ Agotado (0%)')
-    ], string='Nivel Tóner Negro', help='Nivel del tóner negro instalado')
-    
-    nivel_toner_cyan = fields.Selection([
-        ('lleno', '🟢 Lleno (75-100%)'),
-        ('medio', '🟡 Medio (50-74%)'),
-        ('bajo', '🟠 Bajo (25-49%)'),
-        ('critico', '🔴 Crítico (0-24%)'),
-        ('agotado', '⚫ Agotado (0%)')
-    ], string='Nivel Tóner Cian', help='Nivel del tóner cian instalado')
-    
-    nivel_toner_magenta = fields.Selection([
-        ('lleno', '🟢 Lleno (75-100%)'),
-        ('medio', '🟡 Medio (50-74%)'),
-        ('bajo', '🟠 Bajo (25-49%)'),
-        ('critico', '🔴 Crítico (0-24%)'),
-        ('agotado', '⚫ Agotado (0%)')
-    ], string='Nivel Tóner Magenta', help='Nivel del tóner magenta instalado')
-    
-    nivel_toner_yellow = fields.Selection([
-        ('lleno', '🟢 Lleno (75-100%)'),
-        ('medio', '🟡 Medio (50-74%)'),
-        ('bajo', '🟠 Bajo (25-49%)'),
-        ('critico', '🔴 Crítico (0-24%)'),
-        ('agotado', '⚫ Agotado (0%)')
-    ], string='Nivel Tóner Amarillo', help='Nivel del tóner amarillo instalado')
-
-    # ==========================================
-    # SOLICITUDES URGENTES
-    # ==========================================
-    
     requiere_toner_black = fields.Boolean(
-        string='Necesita Tóner Negro',
-        help='Cliente solicita tóner negro urgente'
-    )
-    
-    requiere_toner_cyan = fields.Boolean(
-        string='Necesita Tóner Cian',
-        help='Cliente solicita tóner cian urgente'
-    )
-    
-    requiere_toner_magenta = fields.Boolean(
-        string='Necesita Tóner Magenta',
-        help='Cliente solicita tóner magenta urgente'
-    )
-    
-    requiere_toner_yellow = fields.Boolean(
-        string='Necesita Tóner Amarillo',
-        help='Cliente solicita tóner amarillo urgente'
-    )
-
-    urgente = fields.Boolean(
-        string='Solicitud Urgente',
-        help='¿Es una solicitud urgente de tóner?'
-    )
-
-    # ==========================================
-    # CAMPOS CALCULADOS DE ANÁLISIS
-    # ==========================================
-    
-    # Stock total disponible (reportado + instalado)
-    stock_total_black = fields.Integer(
-        string='Stock Total Negro',
-        compute='_compute_stock_total',
-        help='Stock reportado + tóner instalado (si existe)'
-    )
-    
-    stock_total_cyan = fields.Integer(
-        string='Stock Total Cian',
-        compute='_compute_stock_total',
-        help='Stock reportado + tóner instalado (si existe)'
-    )
-    
-    stock_total_magenta = fields.Integer(
-        string='Stock Total Magenta',
-        compute='_compute_stock_total',
-        help='Stock reportado + tóner instalado (si existe)'
-    )
-    
-    stock_total_yellow = fields.Integer(
-        string='Stock Total Amarillo',
-        compute='_compute_stock_total',
-        help='Stock reportado + tóner instalado (si existe)'
-    )
-
-    # Análisis de necesidad de tóner
-    requiere_entrega_automatica = fields.Boolean(
-        string='Requiere Entrega Automática',
-        compute='_compute_requiere_entrega',
-        store=True,
-        help='Sistema determina si requiere entrega basado en stock y configuración'
-    )
-
-    fecha_estimada_agotamiento_black = fields.Date(
-        string='Fecha Estimada Agotamiento Negro',
-        compute='_compute_fecha_agotamiento',
-        help='Fecha estimada en que se agotará el tóner negro'
-    )
-
-    fecha_sugerida_entrega = fields.Date(
-        string='Fecha Sugerida de Entrega',
-        compute='_compute_fecha_sugerida_entrega',
-        help='Fecha sugerida para entregar tóner'
-    )
-
-    # ==========================================
-    # INFORMACIÓN ADICIONAL
-    # ==========================================
-    
-    notes = fields.Text(
-        string='Observaciones del Cliente',
-        help='Observaciones adicionales sobre los contadores o tóner'
-    )
-    
-    photo_counter = fields.Binary(
-        string='Foto del Contador',
-        help='Foto de la pantalla del contador como evidencia'
-    )
-    
-    photo_counter_filename = fields.Char(
-        string='Nombre Archivo Contador'
-    )
-    
-    photo_toner = fields.Binary(
-        string='Foto del Tóner',
-        help='Foto del estado del tóner como evidencia'
-    )
-    
-    photo_toner_filename = fields.Char(
-        string='Nombre Archivo Tóner'
-    )
-
-    # ==========================================
-    # ESTADO Y GESTIÓN
-    # ==========================================
-    
-    state = fields.Selection([
-        ('pending', 'Pendiente'),
-        ('reviewed', 'Revisado'),
-        ('approved', 'Aprobado'),
-        ('processed', 'Procesado'),
-        ('rejected', 'Rechazado')
-    ], string='Estado', default='pending', tracking=True)
-    
-    reviewer_id = fields.Many2one(
-        'res.users',
-        string='Revisado por',
+        string="Solicita tóner negro",
         tracking=True,
-        help='Usuario que revisó el reporte'
     )
-    
-    review_date = fields.Datetime(
-        string='Fecha de Revisión',
-        tracking=True
+    requiere_toner_cyan = fields.Boolean(
+        string="Solicita tóner cian",
+        tracking=True,
     )
-    
-    review_notes = fields.Text(
-        string='Notas de Revisión',
-        help='Notas del técnico que revisó'
+    requiere_toner_magenta = fields.Boolean(
+        string="Solicita tóner magenta",
+        tracking=True,
+    )
+    requiere_toner_yellow = fields.Boolean(
+        string="Solicita tóner amarillo",
+        tracking=True,
     )
 
-    # Relaciones con otros modelos
-    delivery_scheduled_id = fields.Many2one(
-        'toner.delivery.schedule',
-        string='Entrega Programada',
+    cantidad_solicitada_black = fields.Integer(
+        string="Cantidad solicitada negro",
+        default=0,
+        tracking=True,
+    )
+    cantidad_solicitada_cyan = fields.Integer(
+        string="Cantidad solicitada cian",
+        default=0,
+        tracking=True,
+    )
+    cantidad_solicitada_magenta = fields.Integer(
+        string="Cantidad solicitada magenta",
+        default=0,
+        tracking=True,
+    )
+    cantidad_solicitada_yellow = fields.Integer(
+        string="Cantidad solicitada amarillo",
+        default=0,
+        tracking=True,
+    )
+
+    cantidad_sugerida_black = fields.Integer(
+        string="Cantidad sugerida negro",
+        default=0,
+        tracking=True,
+    )
+    cantidad_sugerida_cyan = fields.Integer(
+        string="Cantidad sugerida cian",
+        default=0,
+        tracking=True,
+    )
+    cantidad_sugerida_magenta = fields.Integer(
+        string="Cantidad sugerida magenta",
+        default=0,
+        tracking=True,
+    )
+    cantidad_sugerida_yellow = fields.Integer(
+        string="Cantidad sugerida amarillo",
+        default=0,
+        tracking=True,
+    )
+
+    cantidad_aprobada_black = fields.Integer(
+        string="Cantidad aprobada negro",
+        default=0,
+        tracking=True,
+    )
+    cantidad_aprobada_cyan = fields.Integer(
+        string="Cantidad aprobada cian",
+        default=0,
+        tracking=True,
+    )
+    cantidad_aprobada_magenta = fields.Integer(
+        string="Cantidad aprobada magenta",
+        default=0,
+        tracking=True,
+    )
+    cantidad_aprobada_yellow = fields.Integer(
+        string="Cantidad aprobada amarillo",
+        default=0,
+        tracking=True,
+    )
+
+    # -------------------------------------------------------------------------
+    # Stock reportado y nivel instalado
+    # -------------------------------------------------------------------------
+
+    stock_reportado_black = fields.Integer(string="Stock cliente negro", default=0)
+    stock_reportado_cyan = fields.Integer(string="Stock cliente cian", default=0)
+    stock_reportado_magenta = fields.Integer(string="Stock cliente magenta", default=0)
+    stock_reportado_yellow = fields.Integer(string="Stock cliente amarillo", default=0)
+
+    nivel_toner_black = fields.Selection(
+        [
+            ("lleno", "Lleno"),
+            ("medio", "Medio"),
+            ("bajo", "Bajo"),
+            ("critico", "Crítico"),
+            ("agotado", "Agotado"),
+        ],
+        string="Nivel negro",
+    )
+    nivel_toner_cyan = fields.Selection(
+        [
+            ("lleno", "Lleno"),
+            ("medio", "Medio"),
+            ("bajo", "Bajo"),
+            ("critico", "Crítico"),
+            ("agotado", "Agotado"),
+        ],
+        string="Nivel cian",
+    )
+    nivel_toner_magenta = fields.Selection(
+        [
+            ("lleno", "Lleno"),
+            ("medio", "Medio"),
+            ("bajo", "Bajo"),
+            ("critico", "Crítico"),
+            ("agotado", "Agotado"),
+        ],
+        string="Nivel magenta",
+    )
+    nivel_toner_yellow = fields.Selection(
+        [
+            ("lleno", "Lleno"),
+            ("medio", "Medio"),
+            ("bajo", "Bajo"),
+            ("critico", "Crítico"),
+            ("agotado", "Agotado"),
+        ],
+        string="Nivel amarillo",
+    )
+
+    # -------------------------------------------------------------------------
+    # Resultado de evaluación automática
+    # -------------------------------------------------------------------------
+
+    analysis_result = fields.Selection(
+        [
+            ("normal", "Consumo razonable"),
+            ("early_consumption", "Consumo anticipado"),
+            ("duplicate", "Solicitud duplicada"),
+            ("no_history", "Sin historial suficiente"),
+            ("manual_review", "Revisión manual"),
+        ],
+        string="Resultado automático",
+        default="manual_review",
+        tracking=True,
+        index=True,
+    )
+
+    analysis_summary = fields.Text(
+        string="Resumen del análisis",
         readonly=True,
-        help='Entrega de tóner programada a partir de este reporte'
     )
 
-    # ==========================================
-    # MÉTODOS COMPUTE
-    # ==========================================
+    analysis_json = fields.Text(
+        string="Detalle técnico JSON",
+        readonly=True,
+    )
 
-    @api.depends('client_phone')
+    requires_evidence = fields.Boolean(
+        string="Requiere evidencia",
+        tracking=True,
+    )
+
+    early_request_reason = fields.Text(
+        string="Motivo de solicitud anticipada",
+        tracking=True,
+    )
+
+    duplicate_submission_id = fields.Many2one(
+        "toner.counter.submission",
+        string="Solicitud duplicada encontrada",
+        readonly=True,
+    )
+
+    last_delivery_date = fields.Datetime(
+        string="Última entrega de referencia",
+        readonly=True,
+    )
+
+    days_since_last_delivery = fields.Integer(
+        string="Días desde la última entrega",
+        readonly=True,
+    )
+
+    expected_yield = fields.Integer(
+        string="Rendimiento esperado",
+        readonly=True,
+    )
+
+    consumed_copies = fields.Integer(
+        string="Copias consumidas",
+        readonly=True,
+    )
+
+    consumption_percent = fields.Float(
+        string="% de rendimiento consumido",
+        digits=(16, 2),
+        readonly=True,
+    )
+
+    # -------------------------------------------------------------------------
+    # Gestión interna
+    # -------------------------------------------------------------------------
+
+    state = fields.Selection(
+        [
+            ("recibida", "Solicitud recibida"),
+            ("evaluacion", "En evaluación"),
+            ("pendiente_gerencia", "Pendiente de gerencia"),
+            ("aprobada_gerencia", "Aprobada por gerencia"),
+            ("rechazada_gerencia", "Rechazada por gerencia"),
+            ("devuelta", "Devuelta para corrección"),
+            ("confirmacion_ventas", "Pendiente de confirmación comercial"),
+            ("lista_despacho", "Lista para despacho"),
+            ("en_despacho", "En despacho"),
+            ("entregada", "Entregada"),
+            ("cancelada", "Cancelada"),
+        ],
+        string="Estado",
+        default="recibida",
+        tracking=True,
+        index=True,
+        required=True,
+    )
+
+    reviewer_id = fields.Many2one("res.users", string="Evaluado por", tracking=True)
+    review_date = fields.Datetime(string="Fecha de evaluación", tracking=True)
+    review_notes = fields.Text(string="Evaluación de asesora/alquiler", tracking=True)
+
+    management_user_id = fields.Many2one("res.users", string="Gerencia", tracking=True)
+    management_date = fields.Datetime(string="Fecha decisión gerencia", tracking=True)
+    management_notes = fields.Text(string="Decisión de gerencia", tracking=True)
+
+    sales_user_id = fields.Many2one("res.users", string="Confirmado por ventas", tracking=True)
+    sales_confirmation_date = fields.Datetime(
+        string="Fecha de confirmación comercial",
+        tracking=True,
+    )
+    sales_notes = fields.Text(string="Coordinación comercial", tracking=True)
+
+    delivery_scheduled_id = fields.Many2one(
+        "toner.delivery.schedule",
+        string="Entrega programada",
+        readonly=True,
+        tracking=True,
+    )
+
+    notes = fields.Text(string="Observaciones del cliente")
+    photo_counter = fields.Binary(string="Foto del contador")
+    photo_counter_filename = fields.Char(string="Archivo contador")
+    photo_toner = fields.Binary(string="Foto del tóner")
+    photo_toner_filename = fields.Char(string="Archivo tóner")
+
+    # -------------------------------------------------------------------------
+    # Cálculos
+    # -------------------------------------------------------------------------
+
+    @api.depends("equipment_id", "submission_date", "client_name", "secuencia")
+    def _compute_display_name(self):
+        for record in self:
+            equipment_name = (
+                record.equipment_id.name.name
+                if record.equipment_id and record.equipment_id.name
+                else "Sin equipo"
+            )
+            record.display_name = "%s - %s - %s" % (
+                record.secuencia or "Nueva",
+                equipment_name,
+                record.client_name or "Sin solicitante",
+            )
+
+    @api.depends("client_phone")
     def _compute_client_phone_clean(self):
-        """Formatea el número de teléfono para WhatsApp"""
         for record in self:
-            if record.client_phone:
-                phone = record.client_phone.replace('+', '').replace(' ', '').replace('-', '')
-                phone = ''.join(filter(str.isdigit, phone))
-                
-                if not phone.startswith('51') and len(phone) == 9:
-                    phone = '51' + phone
-                record.client_phone_clean = phone
-            else:
-                record.client_phone_clean = ''
+            record.client_phone_clean = record._clean_phone(record.client_phone)
 
-    @api.depends('equipment_id')
-    def _compute_previous_counters(self):
-        """Calcula los contadores anteriores basado en la última lectura del equipo"""
-        for record in self:
-            if record.equipment_id:
-                record.previous_counter_bn = record.equipment_id.contador_actual_black or 0
-                record.previous_counter_color = record.equipment_id.contador_actual_color or 0
-            else:
-                record.previous_counter_bn = 0
-                record.previous_counter_color = 0
-
-    @api.depends('counter_bn', 'counter_color', 'previous_counter_bn', 'previous_counter_color')
+    @api.depends(
+        "counter_bn",
+        "counter_color",
+        "previous_counter_bn",
+        "previous_counter_color",
+    )
     def _compute_period_copies(self):
-        """Calcula las copias del período"""
         for record in self:
-            record.copies_bn_period = max(0, record.counter_bn - record.previous_counter_bn)
-            record.copies_color_period = max(0, record.counter_color - record.previous_counter_color)
+            record.copies_bn_period = max(
+                0, (record.counter_bn or 0) - (record.previous_counter_bn or 0)
+            )
+            record.copies_color_period = max(
+                0, (record.counter_color or 0) - (record.previous_counter_color or 0)
+            )
+            record.total_copies_period = (
+                record.copies_bn_period + record.copies_color_period
+            )
 
-    @api.depends('copies_bn_period', 'copies_color_period')
-    def _compute_total_copies_period(self):
-        """Calcula el total de copias del período"""
-        for record in self:
-            record.total_copies_period = record.copies_bn_period + record.copies_color_period
-
-    @api.depends('stock_reportado_black', 'stock_reportado_cyan', 
-                 'stock_reportado_magenta', 'stock_reportado_yellow',
-                 'nivel_toner_black', 'nivel_toner_cyan',
-                 'nivel_toner_magenta', 'nivel_toner_yellow')
-    def _compute_stock_total(self):
-        """Calcula stock total disponible (reportado + instalado)"""
-        for record in self:
-            # Tóner negro
-            instalado_black = 1 if record.nivel_toner_black and record.nivel_toner_black != 'agotado' else 0
-            record.stock_total_black = record.stock_reportado_black + instalado_black
-            
-            # Tóner cian
-            instalado_cyan = 1 if record.nivel_toner_cyan and record.nivel_toner_cyan != 'agotado' else 0
-            record.stock_total_cyan = record.stock_reportado_cyan + instalado_cyan
-            
-            # Tóner magenta
-            instalado_magenta = 1 if record.nivel_toner_magenta and record.nivel_toner_magenta != 'agotado' else 0
-            record.stock_total_magenta = record.stock_reportado_magenta + instalado_magenta
-            
-            # Tóner amarillo
-            instalado_yellow = 1 if record.nivel_toner_yellow and record.nivel_toner_yellow != 'agotado' else 0
-            record.stock_total_yellow = record.stock_reportado_yellow + instalado_yellow
-
-    @api.depends('stock_total_black', 'stock_total_cyan', 'stock_total_magenta', 'stock_total_yellow',
-             'requiere_toner_black', 'requiere_toner_cyan', 'requiere_toner_magenta', 'requiere_toner_yellow',
-             'nivel_toner_black', 'nivel_toner_cyan', 'nivel_toner_magenta', 'nivel_toner_yellow')
-    def _compute_requiere_entrega(self):
-        """Determina si requiere entrega automática basado en stock y configuración"""
-        for record in self:
-            requiere = False
-            
-            if record.equipment_id and record.equipment_id.name:
-                # ✅ CORRECCIÓN: Usar el objeto modelo correctamente
-                modelo = record.equipment_id.name
-                
-                # Verificar solicitudes urgentes del cliente
-                if (record.requiere_toner_black or record.requiere_toner_cyan or 
-                    record.requiere_toner_magenta or record.requiere_toner_yellow):
-                    requiere = True
-                
-                # ✅ CORRECCIÓN: Acceder a campos que SÍ existen en modelo.maquina
-                # Verificar stock mínimo - Tóner Negro
-                # NOTA: Debes verificar qué campos realmente existen en modelo.maquina
-                # Por ahora uso stock_minimo_black, pero puede ser otro nombre
-                if hasattr(modelo, 'stock_minimo_black'):
-                    if record.stock_total_black <= (modelo.stock_minimo_black or 1):
-                        requiere = True
-                else:
-                    # Fallback: usar valores por defecto si no existen los campos
-                    if record.stock_total_black <= 1:
-                        requiere = True
-                
-                # Verificar niveles críticos
-                if record.nivel_toner_black in ['critico', 'agotado']:
-                    requiere = True
-                
-                # Para máquinas color, verificar tóners color
-                if record.equipment_id.tipo_maquina_id == 'color':
-                    # Usar hasattr para verificar si existen los campos
-                    stock_min_cyan = getattr(modelo, 'stock_minimo_cyan', 1)
-                    stock_min_magenta = getattr(modelo, 'stock_minimo_magenta', 1)
-                    stock_min_yellow = getattr(modelo, 'stock_minimo_yellow', 1)
-                    
-                    if (record.stock_total_cyan <= stock_min_cyan or
-                        record.stock_total_magenta <= stock_min_magenta or
-                        record.stock_total_yellow <= stock_min_yellow):
-                        requiere = True
-                    
-                    if (record.nivel_toner_cyan in ['critico', 'agotado'] or
-                        record.nivel_toner_magenta in ['critico', 'agotado'] or
-                        record.nivel_toner_yellow in ['critico', 'agotado']):
-                        requiere = True
-            
-            record.requiere_entrega_automatica = requiere
-
-    @api.depends('copies_bn_period', 'equipment_id.name.durabilidad_toner_black', 'nivel_toner_black')
-    def _compute_fecha_agotamiento(self):
-        """Calcula fecha estimada de agotamiento del tóner negro"""
-        for record in self:
-            # Por ahora retornamos None, se implementará con historial de consumo
-            record.fecha_estimada_agotamiento_black = False
-
-    @api.depends('fecha_estimada_agotamiento_black', 'equipment_id.name.tiempo_entrega_dias', 'equipment_id.name.margen_seguridad_dias')
-    def _compute_fecha_sugerida_entrega(self):
-        """Calcula fecha sugerida de entrega"""
-        for record in self:
-            if record.fecha_estimada_agotamiento_black and record.equipment_id and record.equipment_id.name.name:
-                modelo = record.equipment_id.name.name
-                dias_previos = (modelo.tiempo_entrega_dias or 2) + (modelo.margen_seguridad_dias or 3)
-                record.fecha_sugerida_entrega = record.fecha_estimada_agotamiento_black - timedelta(days=dias_previos)
-            else:
-                record.fecha_sugerida_entrega = False
-
-    # ==========================================
-    # MÉTODOS CREATE Y OVERRIDE
-    # ==========================================
+    # -------------------------------------------------------------------------
+    # Utilidades
+    # -------------------------------------------------------------------------
 
     @api.model
-    def create(self, vals):
-        """Sobrescribe create para asignar secuencia y enviar confirmación"""
-        if vals.get('secuencia', 'New') == 'New':
-            vals['secuencia'] = self.env['ir.sequence'].next_by_code('toner.counter.submission') or 'TCS/001'
-        
-        result = super(TonerCounterSubmission, self).create(vals)
-        
-        # Crear nota en el chatter
-        try:
-            result._create_chatter_note()
-        except Exception as e:
-            _logger.error("Error creando nota en chatter: %s", str(e))
-        
-        # Enviar confirmación WhatsApp al cliente
-        try:
-            result.send_whatsapp_confirmation()
-        except Exception as e:
-            _logger.error("Error enviando confirmación WhatsApp: %s", str(e))
-        
-        return result
+    def _clean_phone(self, phone):
+        phone = (phone or "").replace("@c.us", "")
+        phone = "".join(character for character in phone if character.isdigit())
+        if phone and not phone.startswith("51") and len(phone) == 9:
+            phone = "51" + phone
+        return phone
 
-    def _create_chatter_note(self):
-        """Crea nota informativa en el chatter"""
-        self.ensure_one()
-        
-        # Construir información de stock
-        stock_info = f"• Negro: {self.stock_reportado_black} en stock"
-        if self.equipment_id.tipo_maquina_id == 'color':
-            stock_info += f"<br/>• Cian: {self.stock_reportado_cyan} en stock"
-            stock_info += f"<br/>• Magenta: {self.stock_reportado_magenta} en stock"
-            stock_info += f"<br/>• Amarillo: {self.stock_reportado_yellow} en stock"
-        
-        # Construir información de niveles
-        nivel_info = f"• Negro: {dict(self._fields['nivel_toner_black'].selection).get(self.nivel_toner_black, 'No reportado')}"
-        if self.equipment_id.tipo_maquina_id == 'color':
-            nivel_info += f"<br/>• Cian: {dict(self._fields['nivel_toner_cyan'].selection).get(self.nivel_toner_cyan, 'No reportado')}"
-            nivel_info += f"<br/>• Magenta: {dict(self._fields['nivel_toner_magenta'].selection).get(self.nivel_toner_magenta, 'No reportado')}"
-            nivel_info += f"<br/>• Amarillo: {dict(self._fields['nivel_toner_yellow'].selection).get(self.nivel_toner_yellow, 'No reportado')}"
-        
-        # Solicitudes urgentes
-        urgentes = []
-        if self.requiere_toner_black: urgentes.append("Negro")
-        if self.requiere_toner_cyan: urgentes.append("Cian")
-        if self.requiere_toner_magenta: urgentes.append("Magenta")
-        if self.requiere_toner_yellow: urgentes.append("Amarillo")
-        
-        urgente_info = f"Tóners solicitados: {', '.join(urgentes)}" if urgentes else "Ninguno"
-        
-        body = f"""
-        📊 <b>Nuevo Reporte de Contadores y Tóner</b><br/><br/>
-        
-        <b>📋 Información del Equipo:</b><br/>
-        • <b>Equipo:</b> {self.equipment_id.name.name if self.equipment_id.name.name else 'Sin nombre'}<br/>
-        • <b>Serie:</b> {self.equipment_id.serie or 'Sin serie'}<br/>
-        • <b>Cliente:</b> {self.partner_id.name if self.partner_id else 'Sin cliente'}<br/><br/>
-        
-        <b>👤 Reportado por:</b><br/>
-        • <b>Nombre:</b> {self.client_name}<br/>
-        • <b>Email:</b> {self.client_email}<br/>
-        • <b>Teléfono:</b> {self.client_phone or 'No proporcionado'}<br/><br/>
-        
-        <b>📊 Contadores:</b><br/>
-        • <b>B/N:</b> {self.counter_bn:,} (Período: {self.copies_bn_period:,})<br/>
-        • <b>Color:</b> {self.counter_color:,} (Período: {self.copies_color_period:,})<br/><br/>
-        
-        <b>📦 Stock Reportado:</b><br/>
-        {stock_info}<br/><br/>
-        
-        <b>🎨 Nivel de Tóner Instalado:</b><br/>
-        {nivel_info}<br/><br/>
-        
-        <b>🚨 Solicitudes Urgentes:</b><br/>
-        {urgente_info}<br/><br/>
-        
-        <b>🔄 Requiere Entrega Automática:</b> {'✅ Sí' if self.requiere_entrega_automatica else '❌ No'}<br/>
-        
-        {f'<br/><b>📝 Observaciones:</b><br/>{self.notes}' if self.notes else ''}
+    @api.model
+    def _requested_colors_from_values(self, values):
+        colors = []
+        for color in self.COLOR_LABELS:
+            if values.get("requires_%s" % color):
+                colors.append(color)
+        return colors
+
+    @api.model
+    def _color_boolean_field(self, color):
+        return {
+            "black": "requiere_toner_black",
+            "cyan": "requiere_toner_cyan",
+            "magenta": "requiere_toner_magenta",
+            "yellow": "requiere_toner_yellow",
+        }[color]
+
+    @api.model
+    def _delivery_quantity_field(self, color):
+        return {
+            "black": "toner_black_qty",
+            "cyan": "toner_cyan_qty",
+            "magenta": "toner_magenta_qty",
+            "yellow": "toner_yellow_qty",
+        }[color]
+
+    @api.model
+    def _requested_quantity_field(self, color):
+        return "cantidad_solicitada_%s" % color
+
+    @api.model
+    def _suggested_quantity_field(self, color):
+        return "cantidad_sugerida_%s" % color
+
+    @api.model
+    def _approved_quantity_field(self, color):
+        return "cantidad_aprobada_%s" % color
+
+    @api.model
+    def _get_expected_yield(self, equipment, color):
         """
-        
-        self.message_post(
-            body=body,
-            message_type='notification'
-        )
+        Busca el rendimiento sin imponer un único nombre de campo.
+        Usa el primer campo existente y con valor.
+        """
+        model = equipment.name
+        candidates = {
+            "black": [
+                "durabilidad_toner_black",
+                "rendimiento_toner_black",
+                "rendimiento_black",
+            ],
+            "cyan": [
+                "durabilidad_toner_cyan",
+                "rendimiento_toner_cyan",
+                "rendimiento_cyan",
+            ],
+            "magenta": [
+                "durabilidad_toner_magenta",
+                "rendimiento_toner_magenta",
+                "rendimiento_magenta",
+            ],
+            "yellow": [
+                "durabilidad_toner_yellow",
+                "rendimiento_toner_yellow",
+                "rendimiento_yellow",
+            ],
+        }
 
-    # ==========================================
-    # MÉTODOS DE VALIDACIÓN
-    # ==========================================
+        for field_name in candidates[color]:
+            if field_name in model._fields:
+                value = int(getattr(model, field_name) or 0)
+                if value > 0:
+                    return value
 
-    @api.constrains('counter_bn', 'counter_color')
-    def _check_counters(self):
-        """Valida que los contadores sean válidos"""
-        for record in self:
-            if record.counter_bn < 0:
-                raise ValidationError("El contador de blanco y negro no puede ser negativo.")
-            
-            if record.counter_color < 0:
-                raise ValidationError("El contador de color no puede ser negativo.")
-            
-            # Validar que los contadores no sean menores a los anteriores
-            if record.counter_bn < record.previous_counter_bn:
-                raise ValidationError(
-                    f"El contador B/N ({record.counter_bn:,}) no puede ser menor "
-                    f"al contador anterior ({record.previous_counter_bn:,})."
-                )
-            
-            if record.counter_color < record.previous_counter_color:
-                raise ValidationError(
-                    f"El contador Color ({record.counter_color:,}) no puede ser menor "
-                    f"al contador anterior ({record.previous_counter_color:,})."
-                )
-
-    @api.constrains('client_email')
-    def _check_client_email(self):
-        """Valida el formato del email"""
-        for record in self:
-            if record.client_email:
-                import re
-                email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-                if not re.match(email_pattern, record.client_email):
-                    raise ValidationError(f"El email '{record.client_email}' no tiene un formato válido.")
-
-    @api.constrains('stock_reportado_black', 'stock_reportado_cyan', 
-                    'stock_reportado_magenta', 'stock_reportado_yellow')
-    def _check_stock_reportado(self):
-        """Valida que el stock reportado sea válido"""
-        for record in self:
-            if record.stock_reportado_black < 0:
-                raise ValidationError("El stock de tóner negro no puede ser negativo.")
-            if record.stock_reportado_cyan < 0:
-                raise ValidationError("El stock de tóner cian no puede ser negativo.")
-            if record.stock_reportado_magenta < 0:
-                raise ValidationError("El stock de tóner magenta no puede ser negativo.")
-            if record.stock_reportado_yellow < 0:
-                raise ValidationError("El stock de tóner amarillo no puede ser negativo.")
-
-    # ==========================================
-    # MÉTODOS DE ACCIÓN
-    # ==========================================
-
-    def action_review(self):
-        """Marca como revisado"""
-        self.ensure_one()
-        self.state = 'reviewed'
-        self.reviewer_id = self.env.user
-        self.review_date = fields.Datetime.now()
-        self.message_post(
-            body=f"👀 Reporte revisado por {self.env.user.name}",
-            message_type='notification'
-        )
-
-    def action_approve(self):
-        """Aprueba el reporte y actualiza el equipo"""
-        self.ensure_one()
-        self.state = 'approved'
-        if not self.reviewer_id:
-            self.reviewer_id = self.env.user
-            self.review_date = fields.Datetime.now()
-        
-        # Actualizar contadores en el equipo
-        self._update_equipment_counters()
-        
-        # Actualizar stock de tóner en el equipo
-        self._update_equipment_toner_stock()
-        
-        self.message_post(
-            body=f"✅ Reporte aprobado por {self.env.user.name}. Datos sincronizados con el equipo.",
-            message_type='notification'
-        )
-
-    def action_process_delivery(self):
-        """Procesa y crea programación de entrega si es necesario"""
-        self.ensure_one()
-        
-        if self.state != 'approved':
-            raise UserError("Solo se pueden procesar reportes aprobados.")
-        
-        if self.delivery_scheduled_id:
-            raise UserError("Ya existe una entrega programada para este reporte.")
-        
-        if not self.requiere_entrega_automatica:
-            raise UserError("Este reporte no requiere entrega automática según el análisis.")
-        
-        # Crear programación de entrega
-        delivery_vals = self._prepare_delivery_values()
-        
-        try:
-            delivery = self.env['toner.delivery.schedule'].create(delivery_vals)
-            self.delivery_scheduled_id = delivery.id
-            self.state = 'processed'
-            
-            # ✅ LÍNEA CORREGIDA - USAR display_name
-            self.message_post(
-                body=f"🚚 Entrega programada creada: {delivery.display_name}",
-                message_type='notification'
+        parameter = self.env["ir.config_parameter"].sudo()
+        default_value = int(
+            parameter.get_param(
+                "sat.toner_default_yield_%s" % color,
+                "10000" if color == "black" else "8000",
             )
-            
+        )
+        return max(default_value, 1)
+
+    @api.model
+    def _find_open_duplicate(self, equipment_id, color):
+        field_name = self._color_boolean_field(color)
+        return self.search(
+            [
+                ("equipment_id", "=", equipment_id),
+                (field_name, "=", True),
+                ("state", "in", self.OPEN_STATES),
+            ],
+            order="submission_date desc, id desc",
+            limit=1,
+        )
+
+    @api.model
+    def _find_last_delivered_schedule(self, equipment_id, color):
+        quantity_field = self._delivery_quantity_field(color)
+        return self.env["toner.delivery.schedule"].sudo().search(
+            [
+                ("equipment_id", "=", equipment_id),
+                ("state", "=", "entregado"),
+                (quantity_field, ">", 0),
+            ],
+            order="delivery_date_actual desc, id desc",
+            limit=1,
+        )
+
+    @api.model
+    def _analyze_color(self, equipment, color, current_counters):
+        duplicate = self._find_open_duplicate(equipment.id, color)
+        if duplicate:
             return {
-                'name': 'Entrega Programada',
-                'view_mode': 'form',
-                'res_model': 'toner.delivery.schedule',
-                'res_id': delivery.id,
-                'type': 'ir.actions.act_window',
-                'target': 'current',
+                "color": color,
+                "label": self.COLOR_LABELS[color],
+                "status": "duplicate",
+                "can_create": False,
+                "duplicate_id": duplicate.id,
+                "duplicate_sequence": duplicate.secuencia,
+                "message": _(
+                    "Ya existe una solicitud activa para el tóner %s."
+                ) % self.COLOR_LABELS[color],
             }
-        except Exception as e:
-            _logger.exception("Error creando programación de entrega: %s", str(e))
-            raise UserError(f"Error al crear la programación de entrega: {str(e)}")
-    def action_reject(self):
-        """Rechaza el reporte"""
-        self.ensure_one()
-        self.state = 'rejected'
-        if not self.reviewer_id:
-            self.reviewer_id = self.env.user
-            self.review_date = fields.Datetime.now()
-        self.message_post(
-            body=f"❌ Reporte rechazado por {self.env.user.name}",
-            message_type='notification'
-        )
 
-    def action_reset_to_pending(self):
-        """Regresa a estado pendiente"""
-        self.ensure_one()
-        self.state = 'pending'
-        self.reviewer_id = False
-        self.review_date = False
-        self.review_notes = False
-        self.message_post(
-            body="🔄 Reporte regresado a estado pendiente",
-            message_type='notification'
-        )
+        last_delivery = self._find_last_delivered_schedule(equipment.id, color)
+        expected_yield = self._get_expected_yield(equipment, color)
 
-    # ==========================================
-    # MÉTODOS DE ACTUALIZACIÓN DE EQUIPO
-    # ==========================================
-
-    def _update_equipment_counters(self):
-        """Actualiza los contadores en el equipo"""
-        self.ensure_one()
-        if self.equipment_id:
-            self.equipment_id.write({
-                'contador_actual_black': self.counter_bn,
-                'contador_actual_color': self.counter_color,
-                'fecha_ultima_lectura': self.submission_date
-            })
-
-    def _update_equipment_toner_stock(self):
-        """Actualiza el stock de tóner en el equipo"""
-        self.ensure_one()
-        if self.equipment_id:
-            update_vals = {
-                'stock_cliente_toner_black': self.stock_reportado_black,
-                'stock_cliente_toner_cyan': self.stock_reportado_cyan,
-                'stock_cliente_toner_magenta': self.stock_reportado_magenta,
-                'stock_cliente_toner_yellow': self.stock_reportado_yellow,
+        if not last_delivery:
+            return {
+                "color": color,
+                "label": self.COLOR_LABELS[color],
+                "status": "no_history",
+                "can_create": True,
+                "requires_evidence": False,
+                "expected_yield": expected_yield,
+                "consumed_copies": 0,
+                "consumption_percent": 0.0,
+                "message": _("No existe una entrega anterior confirmada para comparar."),
             }
-            
-            # Actualizar estado de tóner instalado basado en niveles reportados
-            if self.nivel_toner_black == 'agotado':
-                update_vals['toner_black_instalado'] = False
-            elif self.nivel_toner_black and self.nivel_toner_black != 'agotado':
-                update_vals['toner_black_instalado'] = True
-            
-            if self.equipment_id.tipo_maquina_id == 'color':
-                if self.nivel_toner_cyan == 'agotado':
-                    update_vals['toner_cyan_instalado'] = False
-                elif self.nivel_toner_cyan and self.nivel_toner_cyan != 'agotado':
-                    update_vals['toner_cyan_instalado'] = True
-                
-                if self.nivel_toner_magenta == 'agotado':
-                    update_vals['toner_magenta_instalado'] = False
-                elif self.nivel_toner_magenta and self.nivel_toner_magenta != 'agotado':
-                    update_vals['toner_magenta_instalado'] = True
-                
-                if self.nivel_toner_yellow == 'agotado':
-                    update_vals['toner_yellow_instalado'] = False
-                elif self.nivel_toner_yellow and self.nivel_toner_yellow != 'agotado':
-                    update_vals['toner_yellow_instalado'] = True
-            
-            self.equipment_id.write(update_vals)
 
-    def _prepare_delivery_values(self):
-        """Prepara valores para crear programación de entrega"""
-        self.ensure_one()
-        
-        # Calcular fecha de entrega sugerida
-        if self.fecha_sugerida_entrega:
-            delivery_date = self.fecha_sugerida_entrega
+        base_submission = last_delivery.submission_id
+        if color == "black":
+            current_counter = int(current_counters.get("bn", 0) or 0)
+            base_counter = int(
+                base_submission.counter_bn
+                if base_submission
+                else equipment.contador_bn or 0
+            )
         else:
-            # Fallback: entrega en 2 días
-            delivery_date = fields.Date.today() + timedelta(days=2)
-        
-        # Determinar cantidades a entregar
-        modelo = self.equipment_id.name
-        qty_black = 0
-        qty_cyan = 0
-        qty_magenta = 0
-        qty_yellow = 0
-        
-        # Tóner Negro
-        if (self.requiere_toner_black or 
-            self.stock_total_black <= (modelo.stock_minimo_black or 1) or
-            self.nivel_toner_black in ['critico', 'agotado']):
-            qty_black = max(1, (modelo.stock_minimo_black or 1) - self.stock_total_black + 1)
-        
-        # Tóners Color (solo para máquinas color)
-        if self.equipment_id.tipo_maquina_id == 'color':
-            if (self.requiere_toner_cyan or 
-                self.stock_total_cyan <= (modelo.stock_minimo_cyan or 1) or
-                self.nivel_toner_cyan in ['critico', 'agotado']):
-                qty_cyan = max(1, (modelo.stock_minimo_cyan or 1) - self.stock_total_cyan + 1)
-            
-            if (self.requiere_toner_magenta or 
-                self.stock_total_magenta <= (modelo.stock_minimo_magenta or 1) or
-                self.nivel_toner_magenta in ['critico', 'agotado']):
-                qty_magenta = max(1, (modelo.stock_minimo_magenta or 1) - self.stock_total_magenta + 1)
-            
-            if (self.requiere_toner_yellow or 
-                self.stock_total_yellow <= (modelo.stock_minimo_yellow or 1) or
-                self.nivel_toner_yellow in ['critico', 'agotado']):
-                qty_yellow = max(1, (modelo.stock_minimo_yellow or 1) - self.stock_total_yellow + 1)
-        
+            current_counter = int(current_counters.get("color", 0) or 0)
+            base_counter = int(
+                base_submission.counter_color
+                if base_submission
+                else equipment.contador_color or 0
+            )
+
+        if current_counter < base_counter:
+            return {
+                "color": color,
+                "label": self.COLOR_LABELS[color],
+                "status": "invalid_counter",
+                "can_create": False,
+                "expected_yield": expected_yield,
+                "base_counter": base_counter,
+                "current_counter": current_counter,
+                "message": _(
+                    "El contador actual no puede ser menor al contador de la última entrega."
+                ),
+            }
+
+        consumed = current_counter - base_counter
+        percentage = (consumed / expected_yield) * 100 if expected_yield else 0.0
+
+        delivery_datetime = (
+            fields.Datetime.to_datetime(last_delivery.delivery_date_actual)
+            if last_delivery.delivery_date_actual
+            else fields.Datetime.to_datetime(last_delivery.creation_date)
+        )
+        days = 0
+        if delivery_datetime:
+            days = max(
+                0,
+                (fields.Datetime.now() - delivery_datetime).days,
+            )
+
+        threshold = float(
+            self.env["ir.config_parameter"]
+            .sudo()
+            .get_param("sat.toner_early_consumption_percent", "50")
+        )
+        requires_evidence = percentage < threshold
+
         return {
-            'equipment_id': self.equipment_id.id,
-            'submission_id': self.id,
-            'delivery_date_planned': delivery_date,
-            'toner_black_qty': qty_black,
-            'toner_cyan_qty': qty_cyan,
-            'toner_magenta_qty': qty_magenta,
-            'toner_yellow_qty': qty_yellow,
-            'urgente': self.urgente,
-            'calculation_basis': 'reporte_cliente',
-            'notes': f"Generado automáticamente desde reporte {self.secuencia}\n\nObservaciones del cliente:\n{self.notes or 'Sin observaciones'}"
+            "color": color,
+            "label": self.COLOR_LABELS[color],
+            "status": "early_consumption" if requires_evidence else "normal",
+            "can_create": True,
+            "requires_evidence": requires_evidence,
+            "last_delivery_id": last_delivery.id,
+            "last_delivery_date": fields.Datetime.to_string(delivery_datetime)
+            if delivery_datetime
+            else False,
+            "days_since_last_delivery": days,
+            "base_counter": base_counter,
+            "current_counter": current_counter,
+            "expected_yield": expected_yield,
+            "consumed_copies": consumed,
+            "consumption_percent": round(percentage, 2),
+            "message": (
+                _(
+                    "Consumo anticipado: %(consumed)s de %(yield)s copias "
+                    "(%(percent).2f%%). Requiere revisión y evidencia."
+                )
+                % {
+                    "consumed": consumed,
+                    "yield": expected_yield,
+                    "percent": percentage,
+                }
+                if requires_evidence
+                else _(
+                    "Consumo razonable: %(consumed)s de %(yield)s copias "
+                    "(%(percent).2f%%)."
+                )
+                % {
+                    "consumed": consumed,
+                    "yield": expected_yield,
+                    "percent": percentage,
+                }
+            ),
         }
 
-    # ==========================================
-    # MÉTODOS DE WHATSAPP
-    # ==========================================
-
-    def send_whatsapp_message(self, phone, message):
-        """Envía mensaje de WhatsApp usando la API corporativa configurada en parámetros del sistema."""
-        try:
-            ICP = self.env["ir.config_parameter"].sudo()
-
-            base_url = ICP.get_param("sat.whatsapp_gateway_base_url")
-            api_key = ICP.get_param("sat.whatsapp_gateway_api_key")
-
-            if not base_url:
-                error_msg = "Falta configurar el parámetro sat.whatsapp_gateway_base_url"
-                _logger.error("❌ %s", error_msg)
-                return {
-                    "error": error_msg,
-                    "success": False,
-                }
-
-            if not api_key:
-                error_msg = "Falta configurar el parámetro sat.whatsapp_gateway_api_key"
-                _logger.error("❌ %s", error_msg)
-                return {
-                    "error": error_msg,
-                    "success": False,
-                }
-
-            base_url = base_url.rstrip("/")
-            url = f"{base_url}/api/send-message"
-
-            data = {
-                "to": phone,
-                "message": message,
-            }
-
-            headers = {
-                "Content-Type": "application/json",
-                "x-api-key": api_key,
-            }
-
-            response = requests.post(
-                url,
-                headers=headers,
-                json=data,
-                timeout=30,
-            )
-
-            _logger.info("WhatsApp API - Código de estado: %s", response.status_code)
-            _logger.info("WhatsApp API - Respuesta: %s", response.text)
-
-            try:
-                response_json = response.json()
-                _logger.info("WhatsApp API - Respuesta JSON: %s", response_json)
-
-                if response.status_code == 200 and response_json.get("success"):
-                    _logger.info(
-                        "✅ Mensaje WhatsApp enviado exitosamente a %s",
-                        phone,
-                    )
-                    return response_json
-
-                error_msg = response_json.get("error", "Error desconocido")
-                _logger.error("❌ Error en API WhatsApp: %s", error_msg)
-
-                return {
-                    "error": error_msg,
-                    "success": False,
-                    "status_code": response.status_code,
-                }
-
-            except json.JSONDecodeError as e:
-                error_msg = f"La respuesta no contiene un JSON válido: {str(e)}"
-                _logger.error(error_msg)
-                _logger.error("WhatsApp API - Respuesta raw: %s", response.text)
-
-                return {
-                    "error": error_msg,
-                    "success": False,
-                    "status_code": response.status_code,
-                }
-
-        except requests.exceptions.Timeout:
-            error_msg = f"Timeout al enviar mensaje WhatsApp a {phone}"
-            _logger.error("❌ %s", error_msg)
-
-            return {
-                "error": error_msg,
-                "success": False,
-            }
-
-        except requests.exceptions.RequestException as e:
-            error_msg = f"Error de red en WhatsApp API: {str(e)}"
-            _logger.exception("❌ %s", error_msg)
-
-            return {
-                "error": error_msg,
-                "success": False,
-            }
-
-        except Exception as e:
-            _logger.exception(
-                "❌ Error inesperado enviando mensaje WhatsApp: %s",
-                str(e),
-            )
-
-            return {
-                "error": str(e),
-                "success": False,
-            }
-
-    def send_whatsapp_confirmation(self):
-        """Envía confirmación por WhatsApp al cliente"""
-        self.ensure_one()
-        
-        if not self.client_phone_clean:
-            _logger.warning("No hay número de teléfono válido para enviar WhatsApp - Reporte: %s", self.secuencia)
-            return False
-        
-        try:
-            # Determinar saludo según la hora
-            lima_tz = pytz.timezone('America/Lima')
-            current_time = datetime.now(lima_tz)
-            current_hour = current_time.hour
-
-            if 5 <= current_hour < 12:
-                saludo = "👋 Buenos días"
-            elif 12 <= current_hour < 18:
-                saludo = "👋 Buenas tardes"
-            else:
-                saludo = "👋 Buenas noches"
-
-            # Construir mensaje de confirmación
-            equipment_name = self.equipment_id.name.name if self.equipment_id and self.equipment_id.name.name else 'Sin especificar'
-            serie = self.equipment_id.serie or 'Sin serie'
-
-            # Resumen de stock reportado
-            stock_summary = f"Negro: {self.stock_reportado_black}"
-            if self.equipment_id.tipo_maquina_id == 'color':
-                stock_summary += f", Cian: {self.stock_reportado_cyan}, Magenta: {self.stock_reportado_magenta}, Amarillo: {self.stock_reportado_yellow}"
-
-            # Información de entrega
-            entrega_info = ""
-            if self.requiere_entrega_automatica:
-                entrega_info = "\n\n🚚 *Entrega Programada:*\nSe ha programado una entrega de tóner basada en su reporte. Recibirá confirmación de la fecha de entrega."
-            else:
-                entrega_info = "\n\n✅ *Stock Suficiente:*\nSu stock actual es suficiente según nuestros parámetros."
-
-            message = (
-                f"*🏢 Soporte*\n\n"
-                f"{saludo}, {self.client_name}.\n\n"
-                f"Hemos recibido exitosamente su reporte de contadores y tóner:\n\n"
-                f"📋 *Número de Reporte:* {self.secuencia}\n"
-                f"🖨️ *Equipo:* {equipment_name}\n"
-                f"🔢 *Serie:* {serie}\n"
-                f"📊 *Contador B/N:* {self.counter_bn:,}\n"
-                f"📊 *Contador Color:* {self.counter_color:,}\n"
-                f"📈 *Copias del Período:* {self.total_copies_period:,}\n"
-                f"📦 *Stock Reportado:* {stock_summary}\n"
-                f"{entrega_info}\n\n"
-                f"Su reporte será revisado por nuestro equipo administrativo.\n\n"
-                f"Recibirá confirmación de la validación en: {self.client_email}\n\n"
-                
-                
-            )
-
-            # Enviar mensaje
-            response = self.send_whatsapp_message(self.client_phone_clean, message)
-            
-            if response and not response.get('error'):
-                self.message_post(
-                    body=f"✅ Confirmación WhatsApp enviada a {self.client_phone_clean}",
-                    message_type='notification'
-                )
-                _logger.info("WhatsApp de confirmación enviado exitosamente - Reporte: %s, Teléfono: %s", 
-                           self.secuencia, self.client_phone_clean)
-                return True
-            else:
-                error_msg = response.get('error', 'Error desconocido') if response else 'Sin respuesta'
-                self.message_post(
-                    body=f"❌ Error enviando WhatsApp a {self.client_phone_clean}: {error_msg}",
-                    message_type='notification'
-                )
-                _logger.error("Error enviando WhatsApp - Reporte: %s, Error: %s", self.secuencia, error_msg)
-                return False
-                
-        except Exception as e:
-            _logger.exception("Error en send_whatsapp_confirmation - Reporte: %s", self.secuencia)
-            self.message_post(
-                body=f"❌ Excepción enviando WhatsApp: {str(e)}",
-                message_type='notification'
-            )
-            return False
-
-    # ==========================================
-    # MÉTODOS ESTÁTICOS Y DE UTILIDAD
-    # ==========================================
+    # -------------------------------------------------------------------------
+    # Validación pública
+    # -------------------------------------------------------------------------
 
     @api.model
-    def create_from_public_form(self, vals):
-        """Método específico para crear desde formulario público"""
-        _logger.info("=== INICIANDO create_from_public_form para tóner ===")
-        _logger.info("Valores del formulario: %s", vals)
-        
-        try:
-            # Validaciones
-            required_fields = ['equipment_id', 'client_name', 'client_email', 'counter_bn']
-            missing_fields = [field for field in required_fields if not vals.get(field)]
-            
-            if missing_fields:
-                error_msg = f"Campos requeridos faltantes: {', '.join(missing_fields)}"
-                raise ValidationError(error_msg)
-            
-            # Crear el reporte
-            submission = self.create(vals)
-            
-            # Crear actividad para el equipo administrativo
-            try:
-                self._create_admin_activity(submission)
-            except Exception as e:
-                _logger.error("Error creando actividad administrativa: %s", str(e))
-            
-            return submission
-            
-        except Exception as e:
-            _logger.exception("Error en create_from_public_form: %s", str(e))
-            raise
+    def validate_web_toner_request(
+        self,
+        equipment_id,
+        requested_toners,
+        current_counters=None,
+    ):
+        current_counters = current_counters or {}
+        equipment = self.env["alquiler"].sudo().browse(int(equipment_id)).exists()
 
-    def _create_admin_activity(self, submission):
-        """Crea una actividad para el equipo administrativo"""
-        try:
-            # Buscar usuarios del grupo administrativo
-            admin_group = self.env.ref('account.group_account_user', False)
-            if admin_group and admin_group.users:
-                assignee = admin_group.users[0]
-            else:
-                assignee = self.env.user
-            
-            activity_vals = {
-                'activity_type_id': self.env.ref('mail.mail_activity_data_todo').id,
-                'summary': f'Revisar Reporte Tóner - {submission.secuencia}',
-                'note': f'''
-                    📊 <b>Nuevo Reporte de Contadores y Tóner</b><br/><br/>
-                    
-                    <b>Equipo:</b> {submission.equipment_id.name if submission.equipment_id.name else 'Sin nombre'}<br/>
-                    <b>Serie:</b> {submission.equipment_id.serie or 'Sin serie'}<br/>
-                    <b>Cliente:</b> {submission.partner_id.name if submission.partner_id else 'Sin cliente'}<br/><br/>
-                    
-                    <b>Reportado por:</b> {submission.client_name}<br/>
-                    <b>Email:</b> {submission.client_email}<br/>
-                    <b>Teléfono:</b> {submission.client_phone or 'No proporcionado'}<br/><br/>
-                    
-                    <b>Contadores:</b><br/>
-                    • B/N: {submission.counter_bn:,} (Período: {submission.copies_bn_period:,})<br/>
-                    • Color: {submission.counter_color:,} (Período: {submission.copies_color_period:,})<br/><br/>
-                    
-                    <b>Stock Reportado:</b><br/>
-                    • Negro: {submission.stock_reportado_black}<br/>
-                    • Cian: {submission.stock_reportado_cyan}<br/>
-                    • Magenta: {submission.stock_reportado_magenta}<br/>
-                    • Amarillo: {submission.stock_reportado_yellow}<br/><br/>
-                    
-                    <b>Requiere Entrega:</b> {'✅ Sí' if submission.requiere_entrega_automatica else '❌ No'}<br/><br/>
-                    
-                    {'<b>Observaciones:</b><br/>' + submission.notes + '<br/><br/>' if submission.notes else ''}
-                    
-                    Por favor, revisar y aprobar el reporte para actualizar el equipo.
-                ''',
-                'user_id': assignee.id,
-                'res_id': submission.id,
-                'res_model_id': self.env['ir.model']._get('toner.counter.submission').id,
-                'date_deadline': fields.Date.today() + timedelta(days=1)
+        if not equipment:
+            return {
+                "valid": False,
+                "can_create": False,
+                "reason": "equipment_not_found",
+                "message": _("El equipo no existe."),
+                "colors": [],
             }
-            
-            self.env['mail.activity'].create(activity_vals)
-            
-        except Exception as e:
-            _logger.exception("Error en _create_admin_activity: %s", str(e))
-            raise
 
-    def get_summary_data(self):
-        """Obtiene datos de resumen para dashboard"""
-        self.ensure_one()
+        selected_colors = [
+            color
+            for color in self.COLOR_LABELS
+            if requested_toners.get(color)
+        ]
+        if not selected_colors:
+            return {
+                "valid": False,
+                "can_create": False,
+                "reason": "no_toner_selected",
+                "message": _("Debe seleccionar al menos un tóner."),
+                "colors": [],
+            }
+
+        if equipment.tipo_maquina_id != "color":
+            selected_colors = [color for color in selected_colors if color == "black"]
+
+        counter_bn = int(current_counters.get("bn", equipment.contador_bn or 0) or 0)
+        counter_color = int(
+            current_counters.get("color", equipment.contador_color or 0) or 0
+        )
+
+        if counter_bn <= 0:
+            return {
+                "valid": False,
+                "can_create": False,
+                "reason": "invalid_counter",
+                "message": _("El contador B/N debe ser mayor que cero."),
+                "colors": [],
+            }
+
+        results = [
+            self._analyze_color(
+                equipment,
+                color,
+                {"bn": counter_bn, "color": counter_color},
+            )
+            for color in selected_colors
+        ]
+
+        blocking = [item for item in results if not item.get("can_create")]
+        review_required = any(item.get("requires_evidence") for item in results)
+
+        if blocking:
+            duplicate = next(
+                (item for item in blocking if item.get("status") == "duplicate"),
+                None,
+            )
+            return {
+                "valid": False,
+                "can_create": False,
+                "reason": duplicate.get("status") if duplicate else "blocked",
+                "message": " ".join(item["message"] for item in blocking),
+                "colors": results,
+                "duplicate_submission_id": duplicate.get("duplicate_id")
+                if duplicate
+                else False,
+                "duplicate_sequence": duplicate.get("duplicate_sequence")
+                if duplicate
+                else False,
+            }
+
         return {
-            'equipment_name': self.equipment_id.name.name if self.equipment_id.name.name else 'Sin nombre',
-            'client_name': self.client_name,
-            'submission_date': self.submission_date.strftime('%d/%m/%Y %H:%M'),
-            'copies_total': self.total_copies_period,
-            'requires_delivery': self.requiere_entrega_automatica,
-            'state_display': dict(self._fields['state'].selection).get(self.state, 'Desconocido'),
-            'urgente': self.urgente,
+            "valid": True,
+            "can_create": True,
+            "reason": "review_required" if review_required else "received",
+            "review_required": review_required,
+            "requires_evidence": review_required,
+            "message": (
+                _(
+                    "La solicitud puede registrarse, pero requiere revisión por consumo anticipado."
+                )
+                if review_required
+                else _("La solicitud puede registrarse para evaluación interna.")
+            ),
+            "colors": results,
         }
 
-
-    @api.model
-    def validate_web_toner_request(self, equipment_id, requested_toners, current_counters=None):
-        """
-        Valida si una solicitud web de tóner es válida basada en configuración y stock actual
-        
-        Args:
-            equipment_id: ID del equipo
-            requested_toners: dict con tóners solicitados {'black': True, 'cyan': False, ...}
-            current_counters: dict con contadores actuales {'bn': 1500, 'color': 800}
-        
-        Returns:
-            dict con resultado de validación
-        """
-        try:
-            equipment = self.env['alquiler'].browse(equipment_id)
-            if not equipment.exists():
-                return {
-                    'valid': False,
-                    'reason': 'Equipo no encontrado',
-                    'message': 'El equipo especificado no existe en el sistema.'
-                }
-            
-            if not equipment.name:
-                return {
-                    'valid': False,
-                    'reason': 'Sin configuración',
-                    'message': 'El equipo no tiene configuración de tóner.'
-                }
-            
-            modelo = equipment.name
-            
-            # Verificar si está habilitada la gestión automática
-            if not modelo.gestionar_toner_automatico:
-                return {
-                    'valid': True,
-                    'reason': 'Gestión manual',
-                    'message': 'Gestión manual habilitada - Solicitud aprobada automáticamente.'
-                }
-            
-            validation_result = {
-                'valid': True,
-                'reason': 'approved',
-                'message': 'Solicitud aprobada',
-                'details': {},
-                'warnings': [],
-                'blocked_toners': []
-            }
-            
-            # Evaluar cada tóner solicitado
-            toners_to_check = [
-                ('black', requested_toners.get('black', False), equipment.stock_total_toner_black, modelo.stock_minimo_black),
-                ('cyan', requested_toners.get('cyan', False), equipment.stock_total_toner_cyan, modelo.stock_minimo_cyan),
-                ('magenta', requested_toners.get('magenta', False), equipment.stock_total_toner_magenta, modelo.stock_minimo_magenta),
-                ('yellow', requested_toners.get('yellow', False), equipment.stock_total_toner_yellow, modelo.stock_minimo_yellow),
-            ]
-            
-            # Para máquinas monocromáticas, no evaluar tóners color
-            if equipment.tipo_maquina_id == 'monocromatica':
-                toners_to_check = [toners_to_check[0]]  # Solo negro
-            
-            for color, requested, stock_actual, stock_minimo in toners_to_check:
-                if not requested:
-                    continue
-                    
-                stock_min = stock_minimo or 1
-                
-                validation_result['details'][color] = {
-                    'stock_actual': stock_actual,
-                    'stock_minimo': stock_min,
-                    'requested': requested
-                }
-                
-                # VALIDACIÓN PRINCIPAL: ¿Realmente necesita este tóner?
-                if stock_actual >= stock_min + 1:  # Tiene stock suficiente + 1 de margen
-                    validation_result['blocked_toners'].append({
-                        'color': color,
-                        'reason': f'Stock suficiente: {stock_actual} unidades (mínimo: {stock_min})',
-                        'stock_actual': stock_actual,
-                        'stock_minimo': stock_min
-                    })
-                
-                # ADVERTENCIA: Stock bajo pero no crítico
-                elif stock_actual == stock_min:
-                    validation_result['warnings'].append({
-                        'color': color,
-                        'message': f'Stock en límite mínimo ({stock_actual} unidades). Solicitud aprobada.',
-                        'stock_actual': stock_actual
-                    })
-            
-            # Si hay tóners bloqueados, la solicitud no es completamente válida
-            if validation_result['blocked_toners']:
-                validation_result['valid'] = False
-                validation_result['reason'] = 'stock_sufficient'
-                
-                blocked_colors = [t['color'] for t in validation_result['blocked_toners']]
-                validation_result['message'] = f"Tóner(s) {', '.join(blocked_colors)} no necesario(s) - Stock suficiente"
-            
-            return validation_result
-            
-        except Exception as e:
-            _logger.exception("Error validando solicitud web de tóner: %s", str(e))
-            return {
-                'valid': False,
-                'reason': 'error',
-                'message': f'Error del sistema: {str(e)}'
-            }
+    # -------------------------------------------------------------------------
+    # Creación desde portal
+    # -------------------------------------------------------------------------
 
     @api.model
     def create_from_web_request(self, web_data):
-        """
-        Crea un reporte desde una solicitud web del controlador
-        
-        Args:
-            web_data: dict con datos del formulario web
-        
-        Returns:
-            dict con resultado de la creación
-        """
         try:
-            # Preparar datos para el reporte
-            equipment_id = web_data.get('equipment_id')
-            equipment = self.env['alquiler'].browse(equipment_id)
-            
-            if not equipment.exists():
-                raise ValidationError("Equipo no encontrado")
-            
-            submission_vals = {
-                'equipment_id': equipment_id,
-                'client_name': web_data.get('client_name'),
-                'client_email': web_data.get('client_email', 'soporte@andescopiers.com.pe'),  # Email por defecto si no viene
-                'client_phone': web_data.get('client_phone'),
-                'counter_bn': int(web_data.get('counter_bn', 0)),
-                'counter_color': int(web_data.get('counter_color', 0)),
-                
-                # Stock reportado (usar el stock actual del equipo como base)
-                'stock_reportado_black': equipment.stock_cliente_toner_black,
-                'stock_reportado_cyan': equipment.stock_cliente_toner_cyan,
-                'stock_reportado_magenta': equipment.stock_cliente_toner_magenta,
-                'stock_reportado_yellow': equipment.stock_cliente_toner_yellow,
-                
-                # Tóners solicitados
-                'requiere_toner_black': web_data.get('requires_black', False),
-                'requiere_toner_cyan': web_data.get('requires_cyan', False),
-                'requiere_toner_magenta': web_data.get('requires_magenta', False),
-                'requiere_toner_yellow': web_data.get('requires_yellow', False),
-                
-                # Urgente si cualquier tóner fue solicitado
-                'urgente': any([
-                    web_data.get('requires_black', False),
-                    web_data.get('requires_cyan', False),
-                    web_data.get('requires_magenta', False),
-                    web_data.get('requires_yellow', False)
-                ]),
-                
-                'notes': web_data.get('notes', 'Solicitud desde formulario web'),
-                'state': 'pending'
-            }
-            
-            # Crear el reporte
-            submission = self.create(submission_vals)
-            
-            return {
-                'success': True,
-                'submission_id': submission.id,
-                'secuencia': submission.secuencia,
-                'requires_automatic_delivery': submission.requiere_entrega_automatica,
-                'validation_details': submission._get_validation_summary()
-            }
-            
-        except Exception as e:
-            _logger.exception("Error creando reporte desde web: %s", str(e))
-            return {
-                'success': False,
-                'error': str(e)
+            equipment = self.env["alquiler"].sudo().browse(
+                int(web_data["equipment_id"])
+            ).exists()
+            if not equipment:
+                return {"success": False, "error": _("Equipo no encontrado.")}
+
+            requested_toners = {
+                color: bool(web_data.get("requires_%s" % color))
+                for color in self.COLOR_LABELS
             }
 
-    def _get_validation_summary(self):
-        """Obtiene resumen de validación para mostrar al cliente"""
+            validation = self.validate_web_toner_request(
+                equipment_id=equipment.id,
+                requested_toners=requested_toners,
+                current_counters={
+                    "bn": int(web_data.get("counter_bn", 0) or 0),
+                    "color": int(web_data.get("counter_color", 0) or 0),
+                },
+            )
+
+            if not validation.get("can_create"):
+                return {
+                    "success": False,
+                    "blocked": True,
+                    "validation": validation,
+                    "error": validation.get("message"),
+                }
+
+            color_results = validation.get("colors", [])
+            first_with_history = next(
+                (
+                    item
+                    for item in color_results
+                    if item.get("base_counter") is not None
+                ),
+                {},
+            )
+            most_restrictive = next(
+                (
+                    item
+                    for item in color_results
+                    if item.get("status") == "early_consumption"
+                ),
+                color_results[0] if color_results else {},
+            )
+
+            vals = {
+                "equipment_id": equipment.id,
+                "client_name": web_data.get("client_name") or _("Sin nombre"),
+                "client_email": web_data.get("client_email")
+                or "soporte@andescopiers.com.pe",
+                "client_phone": self._clean_phone(web_data.get("client_phone")),
+                "counter_bn": int(web_data.get("counter_bn", 0) or 0),
+                "counter_color": int(web_data.get("counter_color", 0) or 0),
+                "previous_counter_bn": int(
+                    first_with_history.get("base_counter", equipment.contador_bn or 0)
+                    if most_restrictive.get("color") == "black"
+                    else equipment.contador_bn or 0
+                ),
+                "previous_counter_color": int(
+                    first_with_history.get("base_counter", equipment.contador_color or 0)
+                    if most_restrictive.get("color") != "black"
+                    else equipment.contador_color or 0
+                ),
+                "requiere_toner_black": requested_toners["black"],
+                "requiere_toner_cyan": requested_toners["cyan"],
+                "requiere_toner_magenta": requested_toners["magenta"],
+                "requiere_toner_yellow": requested_toners["yellow"],
+                "cantidad_solicitada_black": 1 if requested_toners["black"] else 0,
+                "cantidad_solicitada_cyan": 1 if requested_toners["cyan"] else 0,
+                "cantidad_solicitada_magenta": 1 if requested_toners["magenta"] else 0,
+                "cantidad_solicitada_yellow": 1 if requested_toners["yellow"] else 0,
+                "cantidad_sugerida_black": 1
+                if requested_toners["black"]
+                and not next(
+                    (
+                        item.get("requires_evidence")
+                        for item in color_results
+                        if item["color"] == "black"
+                    ),
+                    False,
+                )
+                else 0,
+                "cantidad_sugerida_cyan": 1
+                if requested_toners["cyan"]
+                and not next(
+                    (
+                        item.get("requires_evidence")
+                        for item in color_results
+                        if item["color"] == "cyan"
+                    ),
+                    False,
+                )
+                else 0,
+                "cantidad_sugerida_magenta": 1
+                if requested_toners["magenta"]
+                and not next(
+                    (
+                        item.get("requires_evidence")
+                        for item in color_results
+                        if item["color"] == "magenta"
+                    ),
+                    False,
+                )
+                else 0,
+                "cantidad_sugerida_yellow": 1
+                if requested_toners["yellow"]
+                and not next(
+                    (
+                        item.get("requires_evidence")
+                        for item in color_results
+                        if item["color"] == "yellow"
+                    ),
+                    False,
+                )
+                else 0,
+                "analysis_result": (
+                    "early_consumption"
+                    if validation.get("review_required")
+                    else (
+                        "no_history"
+                        if any(
+                            item.get("status") == "no_history"
+                            for item in color_results
+                        )
+                        else "normal"
+                    )
+                ),
+                "analysis_summary": "\n".join(
+                    item.get("message", "") for item in color_results
+                ),
+                "analysis_json": json.dumps(
+                    validation,
+                    ensure_ascii=False,
+                    default=str,
+                    indent=2,
+                ),
+                "requires_evidence": bool(validation.get("requires_evidence")),
+                "last_delivery_date": most_restrictive.get("last_delivery_date"),
+                "days_since_last_delivery": int(
+                    most_restrictive.get("days_since_last_delivery", 0) or 0
+                ),
+                "expected_yield": int(
+                    most_restrictive.get("expected_yield", 0) or 0
+                ),
+                "consumed_copies": int(
+                    most_restrictive.get("consumed_copies", 0) or 0
+                ),
+                "consumption_percent": float(
+                    most_restrictive.get("consumption_percent", 0.0) or 0.0
+                ),
+                "notes": web_data.get("notes"),
+                "state": "recibida",
+            }
+
+            submission = self.sudo().create(vals)
+            submission._create_internal_activity()
+
+            _logger.info(
+                "[TONER] Solicitud creada secuencia=%s equipo=%s colores=%s "
+                "resultado=%s evidencia=%s",
+                submission.secuencia,
+                equipment.id,
+                self._requested_colors_from_values(web_data),
+                submission.analysis_result,
+                submission.requires_evidence,
+            )
+
+            return {
+                "success": True,
+                "submission_id": submission.id,
+                "secuencia": submission.secuencia,
+                "state": submission.state,
+                "message": _(
+                    "Solicitud registrada correctamente. Será evaluada por el área responsable."
+                ),
+                "requires_evidence": submission.requires_evidence,
+                "analysis_result": submission.analysis_result,
+                "validation": validation,
+            }
+        except Exception as error:
+            _logger.exception(
+                "[TONER] Error creando solicitud web data=%s error=%s",
+                web_data,
+                str(error),
+            )
+            return {"success": False, "error": str(error)}
+
+    # -------------------------------------------------------------------------
+    # Create, restricciones y chatter
+    # -------------------------------------------------------------------------
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            if vals.get("secuencia", "New") == "New":
+                vals["secuencia"] = (
+                    self.env["ir.sequence"].next_by_code(
+                        "toner.counter.submission"
+                    )
+                    or "TCS/001"
+                )
+        records = super().create(vals_list)
+        for record in records:
+            try:
+                record._create_chatter_note()
+                record.send_whatsapp_received()
+            except Exception:
+                _logger.exception(
+                    "[TONER] Error en notificación inicial solicitud=%s",
+                    record.id,
+                )
+        return records
+
+    @api.constrains("counter_bn", "counter_color")
+    def _check_counters(self):
+        for record in self:
+            if record.counter_bn < 0 or record.counter_color < 0:
+                raise ValidationError(_("Los contadores no pueden ser negativos."))
+
+    @api.constrains(
+        "cantidad_solicitada_black",
+        "cantidad_solicitada_cyan",
+        "cantidad_solicitada_magenta",
+        "cantidad_solicitada_yellow",
+        "cantidad_sugerida_black",
+        "cantidad_sugerida_cyan",
+        "cantidad_sugerida_magenta",
+        "cantidad_sugerida_yellow",
+        "cantidad_aprobada_black",
+        "cantidad_aprobada_cyan",
+        "cantidad_aprobada_magenta",
+        "cantidad_aprobada_yellow",
+    )
+    def _check_quantities(self):
+        for record in self:
+            for field_name in [
+                "cantidad_solicitada_black",
+                "cantidad_solicitada_cyan",
+                "cantidad_solicitada_magenta",
+                "cantidad_solicitada_yellow",
+                "cantidad_sugerida_black",
+                "cantidad_sugerida_cyan",
+                "cantidad_sugerida_magenta",
+                "cantidad_sugerida_yellow",
+                "cantidad_aprobada_black",
+                "cantidad_aprobada_cyan",
+                "cantidad_aprobada_magenta",
+                "cantidad_aprobada_yellow",
+            ]:
+                if getattr(record, field_name) < 0:
+                    raise ValidationError(_("Las cantidades no pueden ser negativas."))
+
+    def _create_chatter_note(self):
+        for record in self:
+            colors = [
+                self.COLOR_LABELS[color]
+                for color in self.COLOR_LABELS
+                if getattr(record, record._color_boolean_field(color))
+            ]
+            record.message_post(
+                body=_(
+                    """
+                    <b>Nueva solicitud de tóner recibida</b><br/>
+                    <b>Equipo:</b> %(equipment)s<br/>
+                    <b>Serie:</b> %(serie)s<br/>
+                    <b>Cliente:</b> %(client)s<br/>
+                    <b>Solicitante:</b> %(reporter)s<br/>
+                    <b>Tóner:</b> %(colors)s<br/>
+                    <b>Contador B/N:</b> %(bn)s<br/>
+                    <b>Contador color:</b> %(color)s<br/>
+                    <b>Resultado automático:</b> %(analysis)s<br/>
+                    <b>Requiere evidencia:</b> %(evidence)s<br/><br/>
+                    <b>Análisis:</b><br/>%(summary)s
+                    """
+                )
+                % {
+                    "equipment": record.equipment_id.name.name
+                    if record.equipment_id.name
+                    else "Sin modelo",
+                    "serie": record.equipment_id.serie or "Sin serie",
+                    "client": record.partner_id.name
+                    if record.partner_id
+                    else "Sin cliente",
+                    "reporter": record.client_name,
+                    "colors": ", ".join(colors),
+                    "bn": record.counter_bn,
+                    "color": record.counter_color,
+                    "analysis": dict(
+                        record._fields["analysis_result"].selection
+                    ).get(record.analysis_result),
+                    "evidence": "Sí" if record.requires_evidence else "No",
+                    "summary": (record.analysis_summary or "").replace("\n", "<br/>"),
+                },
+                message_type="notification",
+            )
+
+    def _create_internal_activity(self):
         self.ensure_one()
-        
-        summary = {
-            'equipment_name': self.equipment_id.name.name if self.equipment_id.name else 'Sin nombre',
-            'client_name': self.client_name,
-            'total_copies_period': self.total_copies_period,
-            'requires_delivery': self.requiere_entrega_automatica,
-            'requested_toners': [],
-            'stock_status': {}
+        try:
+            group = self.env.ref("sales_team.group_sale_salesman", False)
+            assignee = group.users[:1] if group and group.users else self.env.user
+            user = assignee[0] if hasattr(assignee, "__len__") else assignee
+            self.activity_schedule(
+                "mail.mail_activity_data_todo",
+                user_id=user.id,
+                date_deadline=fields.Date.today() + timedelta(days=1),
+                summary=_("Evaluar solicitud de tóner %s") % self.secuencia,
+                note=_(
+                    "Revisar contadores, consumo, historial y evidencia antes de enviar a gerencia."
+                ),
+            )
+        except Exception:
+            _logger.exception(
+                "[TONER] No se pudo crear actividad solicitud=%s",
+                self.id,
+            )
+
+    # -------------------------------------------------------------------------
+    # Flujo interno
+    # -------------------------------------------------------------------------
+
+    def action_start_review(self):
+        for record in self:
+            if record.state not in ("recibida", "devuelta"):
+                raise UserError(_("Solo se pueden evaluar solicitudes recibidas o devueltas."))
+            record.write(
+                {
+                    "state": "evaluacion",
+                    "reviewer_id": self.env.user.id,
+                    "review_date": fields.Datetime.now(),
+                }
+            )
+            record.message_post(
+                body=_("Evaluación iniciada por %s.") % self.env.user.name
+            )
+
+    def action_send_to_management(self):
+        for record in self:
+            if record.state != "evaluacion":
+                raise UserError(_("La solicitud debe estar en evaluación."))
+            if record.requires_evidence and not (
+                record.photo_counter or record.photo_toner or record.early_request_reason
+            ):
+                raise UserError(
+                    _(
+                        "El consumo es anticipado. Registre el motivo o adjunte evidencia antes de enviarlo a gerencia."
+                    )
+                )
+            record.write({"state": "pendiente_gerencia"})
+            record.message_post(
+                body=_("Solicitud enviada a gerencia por %s.") % self.env.user.name
+            )
+            record._notify_management()
+
+    def action_management_approve(self):
+        for record in self:
+            if record.state != "pendiente_gerencia":
+                raise UserError(_("Solo gerencia puede decidir solicitudes pendientes."))
+            if not any(
+                getattr(record, record._approved_quantity_field(color)) > 0
+                for color in self.COLOR_LABELS
+            ):
+                values = {
+                    record._approved_quantity_field(color): getattr(
+                        record, record._suggested_quantity_field(color)
+                    )
+                    for color in self.COLOR_LABELS
+                }
+                record.write(values)
+
+            if not any(
+                getattr(record, record._approved_quantity_field(color)) > 0
+                for color in self.COLOR_LABELS
+            ):
+                raise UserError(
+                    _("Gerencia debe indicar al menos una cantidad aprobada.")
+                )
+
+            record.write(
+                {
+                    "state": "aprobada_gerencia",
+                    "management_user_id": self.env.user.id,
+                    "management_date": fields.Datetime.now(),
+                }
+            )
+            record.message_post(
+                body=_("Solicitud aprobada por gerencia: %s.") % self.env.user.name
+            )
+            record.send_whatsapp_management_approved()
+
+    def action_management_reject(self):
+        for record in self:
+            if record.state != "pendiente_gerencia":
+                raise UserError(_("La solicitud no está pendiente de gerencia."))
+            if not record.management_notes:
+                raise UserError(_("Ingrese el motivo del rechazo."))
+            record.write(
+                {
+                    "state": "rechazada_gerencia",
+                    "management_user_id": self.env.user.id,
+                    "management_date": fields.Datetime.now(),
+                }
+            )
+            record.message_post(
+                body=_("Solicitud rechazada por gerencia: %s.") % self.env.user.name
+            )
+            record.send_whatsapp_management_rejected()
+
+    def action_return_for_correction(self):
+        for record in self:
+            if record.state != "pendiente_gerencia":
+                raise UserError(_("La solicitud no está pendiente de gerencia."))
+            record.write(
+                {
+                    "state": "devuelta",
+                    "management_user_id": self.env.user.id,
+                    "management_date": fields.Datetime.now(),
+                }
+            )
+            record.message_post(body=_("Solicitud devuelta para corrección."))
+
+    def action_send_to_sales_confirmation(self):
+        for record in self:
+            if record.state != "aprobada_gerencia":
+                raise UserError(_("La solicitud debe estar aprobada por gerencia."))
+            record.write({"state": "confirmacion_ventas"})
+            record.message_post(body=_("Solicitud devuelta a ventas para coordinación."))
+
+    def action_sales_confirm(self):
+        for record in self:
+            if record.state != "confirmacion_ventas":
+                raise UserError(_("La solicitud no está pendiente de confirmación comercial."))
+            record.write(
+                {
+                    "state": "lista_despacho",
+                    "sales_user_id": self.env.user.id,
+                    "sales_confirmation_date": fields.Datetime.now(),
+                }
+            )
+            record.message_post(
+                body=_("Coordinación comercial confirmada por %s.") % self.env.user.name
+            )
+            record.send_whatsapp_ready_for_dispatch()
+
+    def action_create_dispatch(self):
+        self.ensure_one()
+        if self.state != "lista_despacho":
+            raise UserError(_("La solicitud debe estar lista para despacho."))
+        if self.delivery_scheduled_id:
+            return self.action_view_delivery()
+
+        delivery_values = {
+            "equipment_id": self.equipment_id.id,
+            "submission_id": self.id,
+            "delivery_date_planned": fields.Date.today() + timedelta(days=1),
+            "toner_black_qty": self.cantidad_aprobada_black,
+            "toner_cyan_qty": self.cantidad_aprobada_cyan,
+            "toner_magenta_qty": self.cantidad_aprobada_magenta,
+            "toner_yellow_qty": self.cantidad_aprobada_yellow,
+            "calculation_basis": "reporte_cliente",
+            "priority": "alta" if self.requires_evidence else "normal",
+            "notes": _(
+                "Generado desde la solicitud %(sequence)s.\n%(notes)s"
+            )
+            % {
+                "sequence": self.secuencia,
+                "notes": self.sales_notes or "",
+            },
         }
-        
-        # Tóners solicitados
-        if self.requiere_toner_black: summary['requested_toners'].append('Negro')
-        if self.requiere_toner_cyan: summary['requested_toners'].append('Cian')
-        if self.requiere_toner_magenta: summary['requested_toners'].append('Magenta')
-        if self.requiere_toner_yellow: summary['requested_toners'].append('Amarillo')
-        
-        # Estado del stock
-        summary['stock_status'] = {
-            'black': f"{self.stock_total_black} unidades",
-            'cyan': f"{self.stock_total_cyan} unidades",
-            'magenta': f"{self.stock_total_magenta} unidades",
-            'yellow': f"{self.stock_total_yellow} unidades",
+        delivery = self.env["toner.delivery.schedule"].sudo().create(
+            delivery_values
+        )
+        self.write(
+            {
+                "delivery_scheduled_id": delivery.id,
+                "state": "en_despacho",
+            }
+        )
+        self.message_post(
+            body=_("Proceso de despacho creado: %s.") % delivery.display_name
+        )
+        return self.action_view_delivery()
+
+    def action_mark_delivered(self):
+        for record in self:
+            if (
+                not record.delivery_scheduled_id
+                or record.delivery_scheduled_id.state != "entregado"
+            ):
+                raise UserError(
+                    _("Primero debe confirmarse la entrega en el proceso de despacho.")
+                )
+            record.write({"state": "entregada"})
+            record._update_equipment_counters()
+            record.message_post(body=_("Solicitud cerrada como entregada."))
+
+    def action_cancel(self):
+        for record in self:
+            if record.state == "entregada":
+                raise UserError(_("No se puede cancelar una solicitud entregada."))
+            record.write({"state": "cancelada"})
+            record.message_post(
+                body=_("Solicitud cancelada por %s.") % self.env.user.name
+            )
+
+    def action_view_delivery(self):
+        self.ensure_one()
+        if not self.delivery_scheduled_id:
+            raise UserError(_("No existe un despacho relacionado."))
+        return {
+            "name": _("Entrega de tóner"),
+            "type": "ir.actions.act_window",
+            "res_model": "toner.delivery.schedule",
+            "view_mode": "form",
+            "res_id": self.delivery_scheduled_id.id,
+            "target": "current",
         }
-        
-        return summary
+
+    def _update_equipment_counters(self):
+        for record in self:
+            record.equipment_id.write(
+                {
+                    "contador_bn": record.counter_bn,
+                    "contador_color": record.counter_color,
+                    "fecha_ultima_actualizacion": fields.Datetime.now(),
+                }
+            )
+
+    # -------------------------------------------------------------------------
+    # Notificaciones
+    # -------------------------------------------------------------------------
+
+    def _notify_management(self):
+        for record in self:
+            record._send_internal_email(
+                subject=_("Solicitud de tóner pendiente de gerencia - %s")
+                % record.secuencia,
+                title=_("Solicitud pendiente de aprobación gerencial"),
+            )
+
+    def _send_internal_email(self, subject, title):
+        self.ensure_one()
+        server = self.env["ir.mail_server"].sudo().search(
+            [("name", "=", "office")], limit=1
+        )
+        if not server:
+            server = self.env["ir.mail_server"].sudo().search([], limit=1)
+
+        colors = [
+            self.COLOR_LABELS[color]
+            for color in self.COLOR_LABELS
+            if getattr(self, self._color_boolean_field(color))
+        ]
+
+        body = """
+            <h3>%s</h3>
+            <p><strong>Solicitud:</strong> %s</p>
+            <p><strong>Cliente:</strong> %s</p>
+            <p><strong>Equipo:</strong> %s</p>
+            <p><strong>Serie:</strong> %s</p>
+            <p><strong>Tóner:</strong> %s</p>
+            <p><strong>Contador B/N:</strong> %s</p>
+            <p><strong>Contador color:</strong> %s</p>
+            <p><strong>Análisis:</strong><br/>%s</p>
+        """ % (
+            title,
+            self.secuencia,
+            self.partner_id.name if self.partner_id else "Sin cliente",
+            self.equipment_id.name.name if self.equipment_id.name else "Sin modelo",
+            self.equipment_id.serie or "Sin serie",
+            ", ".join(colors),
+            self.counter_bn,
+            self.counter_color,
+            (self.analysis_summary or "").replace("\n", "<br/>"),
+        )
+
+        try:
+            self.env["mail.mail"].sudo().create(
+                {
+                    "subject": subject,
+                    "body_html": body,
+                    "email_from": "soporte@andescopiers.com.pe",
+                    "email_to": "comercial01@andescopiers.com.pe",
+                    "email_cc": "comercial@andescopiers.com.pe",
+                    "mail_server_id": server.id if server else False,
+                }
+            ).send()
+        except Exception:
+            _logger.exception(
+                "[TONER] Error enviando correo interno solicitud=%s",
+                self.id,
+            )
+
+    def send_whatsapp_received(self):
+        for record in self:
+            message = (
+                "*🏢 Soporte*\n\n"
+                "✅ *Solicitud de tóner recibida*\n\n"
+                "Estimado/a %s,\n\n"
+                "Registramos su solicitud con el número *%s*.\n"
+                "Será evaluada por el área responsable. "
+                "Este mensaje no autoriza todavía el despacho.\n\n"
+                "🖨️ *Equipo:* %s\n"
+                "🔢 *Serie:* %s\n"
+            ) % (
+                record.client_name,
+                record.secuencia,
+                record.equipment_id.name.name
+                if record.equipment_id.name
+                else "Sin modelo",
+                record.equipment_id.serie or "Sin serie",
+            )
+            record.send_whatsapp_message(record.client_phone_clean, message)
+
+    def send_whatsapp_management_approved(self):
+        for record in self:
+            message = (
+                "*🏢 Soporte*\n\n"
+                "✅ *Solicitud aprobada por gerencia*\n\n"
+                "Su solicitud *%s* fue aprobada y regresó al área comercial "
+                "para coordinar el despacho.\n"
+            ) % record.secuencia
+            record.send_whatsapp_message(record.client_phone_clean, message)
+
+    def send_whatsapp_management_rejected(self):
+        for record in self:
+            message = (
+                "*🏢 Soporte*\n\n"
+                "❌ *Solicitud no aprobada*\n\n"
+                "La solicitud *%s* no fue aprobada.\n"
+                "Motivo: %s\n"
+            ) % (
+                record.secuencia,
+                record.management_notes or "No especificado",
+            )
+            record.send_whatsapp_message(record.client_phone_clean, message)
+
+    def send_whatsapp_ready_for_dispatch(self):
+        for record in self:
+            message = (
+                "*🏢 Soporte*\n\n"
+                "📦 *Pedido confirmado para preparación*\n\n"
+                "La solicitud *%s* fue coordinada y pasará al proceso de despacho.\n"
+            ) % record.secuencia
+            record.send_whatsapp_message(record.client_phone_clean, message)
+
+    def send_whatsapp_message(self, phone, message):
+        self.ensure_one()
+        if not phone:
+            _logger.warning(
+                "[TONER] Sin teléfono para WhatsApp solicitud=%s",
+                self.id,
+            )
+            return False
+
+        parameters = self.env["ir.config_parameter"].sudo()
+        base_url = parameters.get_param("sat.whatsapp_gateway_base_url")
+        api_key = parameters.get_param("sat.whatsapp_gateway_api_key")
+
+        if not base_url or not api_key:
+            _logger.error(
+                "[TONER] Configuración WhatsApp incompleta solicitud=%s",
+                self.id,
+            )
+            return False
+
+        try:
+            response = requests.post(
+                "%s/api/send-message" % base_url.rstrip("/"),
+                headers={
+                    "Content-Type": "application/json",
+                    "x-api-key": api_key,
+                },
+                json={"to": phone, "message": message},
+                timeout=30,
+            )
+            data = response.json()
+            if response.status_code == 200 and data.get("success"):
+                _logger.info(
+                    "[TONER] WhatsApp enviado solicitud=%s teléfono=%s",
+                    self.id,
+                    phone,
+                )
+                return True
+
+            _logger.error(
+                "[TONER] Error WhatsApp solicitud=%s status=%s response=%s",
+                self.id,
+                response.status_code,
+                response.text[:500],
+            )
+            return False
+        except Exception:
+            _logger.exception(
+                "[TONER] Excepción WhatsApp solicitud=%s",
+                self.id,
+            )
+            return False
