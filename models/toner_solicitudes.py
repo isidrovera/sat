@@ -90,6 +90,30 @@ class TonerCounterSubmission(models.Model):
         index=True,
     )
 
+    source = fields.Selection(
+        [
+            ("portal", "Portal del cliente"),
+            ("manual", "Registro manual"),
+            ("api", "Integración/API"),
+        ],
+        string="Origen",
+        default="manual",
+        required=True,
+        readonly=True,
+        tracking=True,
+        index=True,
+    )
+
+    created_by_user_id = fields.Many2one(
+        "res.users",
+        string="Registrado por",
+        default=lambda self: self.env.user,
+        readonly=True,
+        required=True,
+        tracking=True,
+        index=True,
+    )
+
     # -------------------------------------------------------------------------
     # Solicitante
     # -------------------------------------------------------------------------
@@ -98,17 +122,28 @@ class TonerCounterSubmission(models.Model):
         string="Nombre del solicitante",
         required=True,
         tracking=True,
+        default=lambda self: self.env.user.name or "",
     )
 
     client_email = fields.Char(
         string="Correo del solicitante",
         required=True,
         tracking=True,
+        default=lambda self: (
+            self.env.user.email
+            or self.env.user.partner_id.email
+            or "soporte@andescopiers.com.pe"
+        ),
     )
 
     client_phone = fields.Char(
         string="Teléfono del solicitante",
         tracking=True,
+        default=lambda self: (
+            self.env.user.partner_id.mobile
+            or self.env.user.partner_id.phone
+            or ""
+        ),
     )
 
     client_phone_clean = fields.Char(
@@ -559,14 +594,18 @@ class TonerCounterSubmission(models.Model):
         return max(default_value, 1)
 
     @api.model
-    def _find_open_duplicate(self, equipment_id, color):
+    def _find_open_duplicate(self, equipment_id, color, exclude_submission_id=False):
         field_name = self._color_boolean_field(color)
+        domain = [
+            ("equipment_id", "=", equipment_id),
+            (field_name, "=", True),
+            ("state", "in", self.OPEN_STATES),
+        ]
+        if exclude_submission_id:
+            domain.append(("id", "!=", int(exclude_submission_id)))
+
         return self.search(
-            [
-                ("equipment_id", "=", equipment_id),
-                (field_name, "=", True),
-                ("state", "in", self.OPEN_STATES),
-            ],
+            domain,
             order="submission_date desc, id desc",
             limit=1,
         )
@@ -585,8 +624,18 @@ class TonerCounterSubmission(models.Model):
         )
 
     @api.model
-    def _analyze_color(self, equipment, color, current_counters):
-        duplicate = self._find_open_duplicate(equipment.id, color)
+    def _analyze_color(
+        self,
+        equipment,
+        color,
+        current_counters,
+        exclude_submission_id=False,
+    ):
+        duplicate = self._find_open_duplicate(
+            equipment.id,
+            color,
+            exclude_submission_id=exclude_submission_id,
+        )
         if duplicate:
             return {
                 "color": color,
@@ -717,6 +766,7 @@ class TonerCounterSubmission(models.Model):
         equipment_id,
         requested_toners,
         current_counters=None,
+        exclude_submission_id=False,
     ):
         current_counters = current_counters or {}
         equipment = self.env["alquiler"].sudo().browse(int(equipment_id)).exists()
@@ -766,6 +816,7 @@ class TonerCounterSubmission(models.Model):
                 equipment,
                 color,
                 {"bn": counter_bn, "color": counter_color},
+                exclude_submission_id=exclude_submission_id,
             )
             for color in selected_colors
         ]
@@ -863,6 +914,8 @@ class TonerCounterSubmission(models.Model):
 
             vals = {
                 "equipment_id": equipment.id,
+                "source": "portal",
+                "created_by_user_id": self.env.user.id,
                 "client_name": web_data.get("client_name") or _("Sin nombre"),
                 "client_email": web_data.get("client_email")
                 or "soporte@andescopiers.com.pe",
@@ -1003,13 +1056,257 @@ class TonerCounterSubmission(models.Model):
             )
             return {"success": False, "error": str(error)}
 
+
+    # -------------------------------------------------------------------------
+    # Creación manual segura
+    # -------------------------------------------------------------------------
+
+    def _get_requested_toners_from_record(self):
+        self.ensure_one()
+        return {
+            "black": bool(self.requiere_toner_black),
+            "cyan": bool(self.requiere_toner_cyan),
+            "magenta": bool(self.requiere_toner_magenta),
+            "yellow": bool(self.requiere_toner_yellow),
+        }
+
+    def _get_current_counters_from_record(self):
+        self.ensure_one()
+        return {
+            "bn": int(self.counter_bn or 0),
+            "color": int(self.counter_color or 0),
+        }
+
+    def _apply_validation_result(self, validation):
+        """Aplica el análisis sin cambiar el estado ni aprobar la solicitud."""
+        self.ensure_one()
+
+        color_results = validation.get("colors", [])
+        primary = next(
+            (
+                item
+                for item in color_results
+                if item.get("status") == "early_consumption"
+            ),
+            color_results[0] if color_results else {},
+        )
+
+        self.analysis_result = (
+            "duplicate"
+            if validation.get("reason") == "duplicate"
+            else "early_consumption"
+            if validation.get("review_required")
+            else "no_history"
+            if any(item.get("status") == "no_history" for item in color_results)
+            else "normal"
+            if validation.get("can_create")
+            else "manual_review"
+        )
+        self.analysis_summary = "\n".join(
+            item.get("message", "") for item in color_results
+        ) or validation.get("message", "")
+        self.analysis_json = json.dumps(
+            validation,
+            ensure_ascii=False,
+            default=str,
+            indent=2,
+        )
+        self.requires_evidence = bool(validation.get("requires_evidence"))
+        self.duplicate_submission_id = validation.get(
+            "duplicate_submission_id"
+        ) or False
+        self.last_delivery_date = primary.get("last_delivery_date") or False
+        self.days_since_last_delivery = int(
+            primary.get("days_since_last_delivery", 0) or 0
+        )
+        self.expected_yield = int(primary.get("expected_yield", 0) or 0)
+        self.consumed_copies = int(primary.get("consumed_copies", 0) or 0)
+        self.consumption_percent = float(
+            primary.get("consumption_percent", 0.0) or 0.0
+        )
+
+        if primary.get("color") == "black":
+            self.previous_counter_bn = int(
+                primary.get("base_counter", self.counter_bn or 0) or 0
+            )
+        elif primary.get("color"):
+            self.previous_counter_color = int(
+                primary.get("base_counter", self.counter_color or 0) or 0
+            )
+
+        for color in self.COLOR_LABELS:
+            requested_field = self._requested_quantity_field(color)
+            suggested_field = self._suggested_quantity_field(color)
+            requested = bool(
+                getattr(self, self._color_boolean_field(color))
+            )
+            setattr(self, requested_field, 1 if requested else 0)
+
+            result = next(
+                (
+                    item
+                    for item in color_results
+                    if item.get("color") == color
+                ),
+                {},
+            )
+            suggested = (
+                1
+                if requested
+                and result.get("can_create", True)
+                and not result.get("requires_evidence")
+                else 0
+            )
+            setattr(self, suggested_field, suggested)
+
+    def _validate_record_for_workflow(self):
+        """Validación definitiva para portal, formulario manual, API e importación."""
+        self.ensure_one()
+
+        if not self.equipment_id:
+            raise UserError(_("Debe seleccionar un equipo."))
+
+        requested_toners = self._get_requested_toners_from_record()
+        if not any(requested_toners.values()):
+            raise UserError(_("Debe seleccionar al menos un tóner."))
+
+        validation = self.validate_web_toner_request(
+            equipment_id=self.equipment_id.id,
+            requested_toners=requested_toners,
+            current_counters=self._get_current_counters_from_record(),
+            exclude_submission_id=self.id,
+        )
+
+        if not validation.get("can_create"):
+            raise UserError(
+                validation.get("message")
+                or _("La solicitud no supera la validación.")
+            )
+
+        return validation
+
+    @api.onchange("equipment_id")
+    def _onchange_equipment_id_manual(self):
+        """Carga equipo, contadores y usuario sin alterar el flujo."""
+        for record in self:
+            if not record.equipment_id:
+                record.counter_bn = 0
+                record.counter_color = 0
+                continue
+
+            record.counter_bn = int(record.equipment_id.contador_bn or 0)
+            record.counter_color = int(
+                record.equipment_id.contador_color or 0
+            )
+
+            if not record.client_name:
+                record.client_name = record.env.user.name or ""
+            if not record.client_email:
+                record.client_email = (
+                    record.env.user.email
+                    or record.env.user.partner_id.email
+                    or "soporte@andescopiers.com.pe"
+                )
+            if not record.client_phone:
+                record.client_phone = (
+                    record.env.user.partner_id.mobile
+                    or record.env.user.partner_id.phone
+                    or ""
+                )
+
+            if record.equipment_id.tipo_maquina_id != "color":
+                record.requiere_toner_cyan = False
+                record.requiere_toner_magenta = False
+                record.requiere_toner_yellow = False
+                record.counter_color = 0
+
+    @api.onchange(
+        "equipment_id",
+        "counter_bn",
+        "counter_color",
+        "requiere_toner_black",
+        "requiere_toner_cyan",
+        "requiere_toner_magenta",
+        "requiere_toner_yellow",
+    )
+    def _onchange_manual_analysis(self):
+        for record in self:
+            if not record.equipment_id:
+                continue
+
+            requested = record._get_requested_toners_from_record()
+            if not any(requested.values()):
+                record.analysis_result = "manual_review"
+                record.analysis_summary = False
+                record.analysis_json = False
+                record.requires_evidence = False
+                record.duplicate_submission_id = False
+                continue
+
+            validation = record.validate_web_toner_request(
+                equipment_id=record.equipment_id.id,
+                requested_toners=requested,
+                current_counters=record._get_current_counters_from_record(),
+                exclude_submission_id=record.id or False,
+            )
+            record._apply_validation_result(validation)
+
+            if not validation.get("can_create"):
+                return {
+                    "warning": {
+                        "title": _("Solicitud bloqueada"),
+                        "message": validation.get("message"),
+                    }
+                }
+
+            if validation.get("requires_evidence"):
+                return {
+                    "warning": {
+                        "title": _("Consumo anticipado"),
+                        "message": validation.get("message"),
+                    }
+                }
+
     # -------------------------------------------------------------------------
     # Create, restricciones y chatter
     # -------------------------------------------------------------------------
 
     @api.model_create_multi
     def create(self, vals_list):
+        current_user = self.env.user
+        current_partner = current_user.partner_id
+
         for vals in vals_list:
+            vals.setdefault("created_by_user_id", current_user.id)
+            vals.setdefault("source", "manual")
+            vals.setdefault("client_name", current_user.name or "")
+            vals.setdefault(
+                "client_email",
+                current_user.email
+                or current_partner.email
+                or "soporte@andescopiers.com.pe",
+            )
+            vals.setdefault(
+                "client_phone",
+                current_partner.mobile
+                or current_partner.phone
+                or "",
+            )
+
+            equipment_id = vals.get("equipment_id")
+            if equipment_id:
+                equipment = self.env["alquiler"].sudo().browse(
+                    int(equipment_id)
+                ).exists()
+                if equipment:
+                    vals.setdefault("counter_bn", int(equipment.contador_bn or 0))
+                    vals.setdefault(
+                        "counter_color",
+                        int(equipment.contador_color or 0)
+                        if equipment.tipo_maquina_id == "color"
+                        else 0,
+                    )
+
             if vals.get("secuencia", "New") == "New":
                 vals["secuencia"] = (
                     self.env["ir.sequence"].next_by_code(
@@ -1141,8 +1438,34 @@ class TonerCounterSubmission(models.Model):
         for record in self:
             if record.state not in ("recibida", "devuelta"):
                 raise UserError(_("Solo se pueden evaluar solicitudes recibidas o devueltas."))
+
+            validation = record._validate_record_for_workflow()
+            record._apply_validation_result(validation)
+
             record.write(
                 {
+                    "analysis_result": record.analysis_result,
+                    "analysis_summary": record.analysis_summary,
+                    "analysis_json": record.analysis_json,
+                    "requires_evidence": record.requires_evidence,
+                    "duplicate_submission_id": record.duplicate_submission_id.id
+                    if record.duplicate_submission_id
+                    else False,
+                    "last_delivery_date": record.last_delivery_date,
+                    "days_since_last_delivery": record.days_since_last_delivery,
+                    "expected_yield": record.expected_yield,
+                    "consumed_copies": record.consumed_copies,
+                    "consumption_percent": record.consumption_percent,
+                    "previous_counter_bn": record.previous_counter_bn,
+                    "previous_counter_color": record.previous_counter_color,
+                    "cantidad_solicitada_black": record.cantidad_solicitada_black,
+                    "cantidad_solicitada_cyan": record.cantidad_solicitada_cyan,
+                    "cantidad_solicitada_magenta": record.cantidad_solicitada_magenta,
+                    "cantidad_solicitada_yellow": record.cantidad_solicitada_yellow,
+                    "cantidad_sugerida_black": record.cantidad_sugerida_black,
+                    "cantidad_sugerida_cyan": record.cantidad_sugerida_cyan,
+                    "cantidad_sugerida_magenta": record.cantidad_sugerida_magenta,
+                    "cantidad_sugerida_yellow": record.cantidad_sugerida_yellow,
                     "state": "evaluacion",
                     "reviewer_id": self.env.user.id,
                     "review_date": fields.Datetime.now(),

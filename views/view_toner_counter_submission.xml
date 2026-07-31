@@ -25,6 +25,8 @@
                     <field name="partner_id" string="Cliente"/>
                     <field name="equipment_id" string="Equipo"/>
                     <field name="client_name" string="Solicitante"/>
+                    <field name="source" string="Origen" optional="show"/>
+                    <field name="created_by_user_id" string="Registrado por" optional="show"/>
 
                     <field name="counter_bn" string="Contador B/N"/>
                     <field name="counter_color" string="Contador Color" optional="show"/>
@@ -199,8 +201,14 @@
                         <!-- Cabecera tipo pedido -->
                         <group>
                             <group string="Cliente y Equipo">
+                                <field name="source" readonly="1"/>
+                                <field name="created_by_user_id" readonly="1"/>
                                 <field name="partner_id" readonly="1"/>
-                                <field name="equipment_id" readonly="state != 'recibida'"/>
+                                <field
+                                    name="equipment_id"
+                                    readonly="state != 'recibida'"
+                                    options="{'no_create': True, 'no_create_edit': True}"
+                                />
                                 <field name="submission_date" readonly="1"/>
                                 <field name="delivery_scheduled_id" readonly="1" invisible="not delivery_scheduled_id"/>
                             </group>
@@ -210,6 +218,11 @@
                                 <field name="client_phone" readonly="state != 'recibida'"/>
                                 <field name="client_email" readonly="state != 'recibida'"/>
                                 <field name="client_phone_clean" readonly="1"/>
+                                <div class="alert alert-light border" role="alert">
+                                    En un registro manual estos datos se cargan desde el usuario conectado.
+                                    Puede reemplazarlos por los datos del cliente que llamó o escribió,
+                                    pero el campo <strong>Registrado por</strong> conserva la auditoría interna.
+                                </div>
                             </group>
                         </group>
 
