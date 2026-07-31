@@ -476,6 +476,8 @@
 </html>
             ]]></field>
         </record>
+
+
         
 <!-- =========================================================================
      ESTILOS BASE (reutilizados en todos los templates)
@@ -1326,6 +1328,21 @@
     ]]></field>
 </record>
 
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
  <!-- =====================================================
              1. NUEVA SOLICITUD PARA COMERCIAL
         ====================================================== -->
@@ -1379,24 +1396,71 @@
           </tr>
         </thead>
         <tbody>
-          <t t-if="object.requiere_toner_black"><tr><td style="padding:9px;border:1px solid #e2e8f0;">Negro</td><td style="padding:9px;text-align:center;border:1px solid #e2e8f0;"><t t-out="object.cantidad_solicitada_black"/></td><td style="padding:9px;text-align:center;border:1px solid #e2e8f0;"><t t-out="object.cantidad_sugerida_black"/></td></tr></t>
-          <t t-if="object.requiere_toner_cyan"><tr><td style="padding:9px;border:1px solid #e2e8f0;">Cian</td><td style="padding:9px;text-align:center;border:1px solid #e2e8f0;"><t t-out="object.cantidad_solicitada_cyan"/></td><td style="padding:9px;text-align:center;border:1px solid #e2e8f0;"><t t-out="object.cantidad_sugerida_cyan"/></td></tr></t>
-          <t t-if="object.requiere_toner_magenta"><tr><td style="padding:9px;border:1px solid #e2e8f0;">Magenta</td><td style="padding:9px;text-align:center;border:1px solid #e2e8f0;"><t t-out="object.cantidad_solicitada_magenta"/></td><td style="padding:9px;text-align:center;border:1px solid #e2e8f0;"><t t-out="object.cantidad_sugerida_magenta"/></td></tr></t>
-          <t t-if="object.requiere_toner_yellow"><tr><td style="padding:9px;border:1px solid #e2e8f0;">Amarillo</td><td style="padding:9px;text-align:center;border:1px solid #e2e8f0;"><t t-out="object.cantidad_solicitada_yellow"/></td><td style="padding:9px;text-align:center;border:1px solid #e2e8f0;"><t t-out="object.cantidad_sugerida_yellow"/></td></tr></t>
+          <t t-foreach="object.get_requested_toner_email_lines()" t-as="line">
+            <tr>
+              <td style="padding:9px;border:1px solid #e2e8f0;">
+                <strong><t t-out="line['label']"/></strong>
+              </td>
+              <td style="padding:9px;text-align:center;border:1px solid #e2e8f0;">
+                <t t-out="line['requested_qty']"/>
+              </td>
+              <td style="padding:9px;text-align:center;border:1px solid #e2e8f0;">
+                <t t-out="line['suggested_qty']"/>
+              </td>
+            </tr>
+          </t>
         </tbody>
       </table>
 
-      <div style="font-size:18px;font-weight:700;margin:18px 0 10px;">📊 Contadores y consumo</div>
-      <table style="width:100%;border-collapse:collapse;font-size:14px;">
-        <tr><td style="padding:8px;background:#f8fafc;width:35%;">Contador B/N actual</td><td style="padding:8px;"><strong><t t-out="object.counter_bn"/></strong></td></tr>
-        <tr><td style="padding:8px;background:#f8fafc;">Contador color actual</td><td style="padding:8px;"><strong><t t-out="object.counter_color"/></strong></td></tr>
-        <tr><td style="padding:8px;background:#f8fafc;">Contador base B/N</td><td style="padding:8px;"><t t-out="object.previous_counter_bn"/></td></tr>
-        <tr><td style="padding:8px;background:#f8fafc;">Contador base color</td><td style="padding:8px;"><t t-out="object.previous_counter_color"/></td></tr>
-        <tr><td style="padding:8px;background:#f8fafc;">Última entrega</td><td style="padding:8px;"><t t-out="object.last_delivery_date or 'Sin historial'"/></td></tr>
-        <tr><td style="padding:8px;background:#f8fafc;">Días transcurridos</td><td style="padding:8px;"><t t-out="object.days_since_last_delivery"/></td></tr>
-        <tr><td style="padding:8px;background:#f8fafc;">Copias consumidas</td><td style="padding:8px;"><strong><t t-out="object.consumed_copies"/></strong></td></tr>
-        <tr><td style="padding:8px;background:#f8fafc;">Rendimiento esperado</td><td style="padding:8px;"><t t-out="object.expected_yield"/></td></tr>
-        <tr><td style="padding:8px;background:#f8fafc;">Porcentaje consumido</td><td style="padding:8px;"><strong><t t-out="object.consumption_percent"/> %</strong></td></tr>
+      <div style="font-size:18px;font-weight:700;margin:18px 0 10px;">📊 Duración y rendimiento por tóner</div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead>
+          <tr style="background:#0f172a;color:#fff;">
+            <th style="padding:9px;text-align:left;">Tóner</th>
+            <th style="padding:9px;text-align:center;">Contador</th>
+            <th style="padding:9px;text-align:center;">Base</th>
+            <th style="padding:9px;text-align:center;">Actual</th>
+            <th style="padding:9px;text-align:center;">Copias</th>
+            <th style="padding:9px;text-align:center;">Rendimiento</th>
+            <th style="padding:9px;text-align:center;">Consumo</th>
+            <th style="padding:9px;text-align:center;">Días</th>
+          </tr>
+        </thead>
+        <tbody>
+          <t t-foreach="object.get_toner_consumption_email_lines()" t-as="consumption">
+            <tr>
+              <td style="padding:8px;border:1px solid #e2e8f0;">
+                <strong><t t-out="consumption['label']"/></strong>
+              </td>
+              <td style="padding:8px;text-align:center;border:1px solid #e2e8f0;">
+                <t t-out="consumption['counter_type']"/>
+              </td>
+              <td style="padding:8px;text-align:center;border:1px solid #e2e8f0;">
+                <t t-out="consumption['base_counter']"/>
+              </td>
+              <td style="padding:8px;text-align:center;border:1px solid #e2e8f0;">
+                <t t-out="consumption['current_counter']"/>
+              </td>
+              <td style="padding:8px;text-align:center;border:1px solid #e2e8f0;">
+                <strong><t t-out="consumption['consumed_copies']"/></strong>
+              </td>
+              <td style="padding:8px;text-align:center;border:1px solid #e2e8f0;">
+                <strong><t t-out="consumption['expected_yield']"/></strong>
+              </td>
+              <td style="padding:8px;text-align:center;border:1px solid #e2e8f0;">
+                <strong><t t-out="'%.2f %%' % consumption['consumption_percent']"/></strong>
+              </td>
+              <td style="padding:8px;text-align:center;border:1px solid #e2e8f0;">
+                <t t-out="consumption['days']"/>
+              </td>
+            </tr>
+            <tr>
+              <td colspan="8" style="padding:8px;border:1px solid #e2e8f0;background:#f8fafc;">
+                <t t-out="consumption['message']"/>
+              </td>
+            </tr>
+          </t>
+        </tbody>
       </table>
 
       <div style="background:#fffbeb;border-left:4px solid #f59e0b;padding:16px;margin:18px 0;">
@@ -1456,24 +1520,76 @@
       <table style="width:100%;border-collapse:collapse;font-size:13px;">
         <thead><tr style="background:#0f172a;color:#fff;"><th style="padding:10px;text-align:left;">Tóner</th><th style="padding:10px;">Solicitado</th><th style="padding:10px;">Sugerido por comercial</th></tr></thead>
         <tbody>
-          <t t-if="object.requiere_toner_black"><tr><td style="padding:9px;border:1px solid #e2e8f0;">Negro</td><td style="padding:9px;text-align:center;border:1px solid #e2e8f0;"><t t-out="object.cantidad_solicitada_black"/></td><td style="padding:9px;text-align:center;border:1px solid #e2e8f0;"><strong><t t-out="object.cantidad_sugerida_black"/></strong></td></tr></t>
-          <t t-if="object.requiere_toner_cyan"><tr><td style="padding:9px;border:1px solid #e2e8f0;">Cian</td><td style="padding:9px;text-align:center;border:1px solid #e2e8f0;"><t t-out="object.cantidad_solicitada_cyan"/></td><td style="padding:9px;text-align:center;border:1px solid #e2e8f0;"><strong><t t-out="object.cantidad_sugerida_cyan"/></strong></td></tr></t>
-          <t t-if="object.requiere_toner_magenta"><tr><td style="padding:9px;border:1px solid #e2e8f0;">Magenta</td><td style="padding:9px;text-align:center;border:1px solid #e2e8f0;"><t t-out="object.cantidad_solicitada_magenta"/></td><td style="padding:9px;text-align:center;border:1px solid #e2e8f0;"><strong><t t-out="object.cantidad_sugerida_magenta"/></strong></td></tr></t>
-          <t t-if="object.requiere_toner_yellow"><tr><td style="padding:9px;border:1px solid #e2e8f0;">Amarillo</td><td style="padding:9px;text-align:center;border:1px solid #e2e8f0;"><t t-out="object.cantidad_solicitada_yellow"/></td><td style="padding:9px;text-align:center;border:1px solid #e2e8f0;"><strong><t t-out="object.cantidad_sugerida_yellow"/></strong></td></tr></t>
+          <t t-foreach="object.get_requested_toner_email_lines()" t-as="line">
+            <tr>
+              <td style="padding:9px;border:1px solid #e2e8f0;">
+                <strong><t t-out="line['label']"/></strong>
+              </td>
+              <td style="padding:9px;text-align:center;border:1px solid #e2e8f0;">
+                <t t-out="line['requested_qty']"/>
+              </td>
+              <td style="padding:9px;text-align:center;border:1px solid #e2e8f0;">
+                <strong><t t-out="line['suggested_qty']"/></strong>
+              </td>
+            </tr>
+          </t>
         </tbody>
       </table>
 
-      <div style="font-size:18px;font-weight:700;margin:18px 0 10px;">📊 Evaluación</div>
-      <table style="width:100%;border-collapse:collapse;font-size:14px;">
-        <tr><td style="padding:8px;background:#f8fafc;width:35%;">Contador actual B/N</td><td style="padding:8px;"><strong><t t-out="object.counter_bn"/></strong></td></tr>
-        <tr><td style="padding:8px;background:#f8fafc;">Contador actual color</td><td style="padding:8px;"><strong><t t-out="object.counter_color"/></strong></td></tr>
-        <tr><td style="padding:8px;background:#f8fafc;">Última entrega</td><td style="padding:8px;"><t t-out="object.last_delivery_date or 'Sin historial'"/></td></tr>
-        <tr><td style="padding:8px;background:#f8fafc;">Copias consumidas</td><td style="padding:8px;"><t t-out="object.consumed_copies"/></td></tr>
-        <tr><td style="padding:8px;background:#f8fafc;">Días transcurridos</td><td style="padding:8px;"><t t-out="object.days_since_last_delivery"/></td></tr>
-        <tr><td style="padding:8px;background:#f8fafc;">Rendimiento esperado</td><td style="padding:8px;"><t t-out="object.expected_yield"/></td></tr>
-        <tr><td style="padding:8px;background:#f8fafc;">Porcentaje consumido</td><td style="padding:8px;"><strong><t t-out="object.consumption_percent"/> %</strong></td></tr>
-        <tr><td style="padding:8px;background:#f8fafc;">Evaluado por</td><td style="padding:8px;"><t t-out="object.reviewer_id.name"/></td></tr>
+      <div style="font-size:18px;font-weight:700;margin:18px 0 10px;">📊 Evaluación y duración por tóner</div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead>
+          <tr style="background:#0f172a;color:#fff;">
+            <th style="padding:9px;text-align:left;">Tóner</th>
+            <th style="padding:9px;text-align:center;">Contador</th>
+            <th style="padding:9px;text-align:center;">Base</th>
+            <th style="padding:9px;text-align:center;">Actual</th>
+            <th style="padding:9px;text-align:center;">Copias</th>
+            <th style="padding:9px;text-align:center;">Rendimiento</th>
+            <th style="padding:9px;text-align:center;">Consumo</th>
+            <th style="padding:9px;text-align:center;">Días</th>
+          </tr>
+        </thead>
+        <tbody>
+          <t t-foreach="object.get_toner_consumption_email_lines()" t-as="consumption">
+            <tr>
+              <td style="padding:8px;border:1px solid #e2e8f0;">
+                <strong><t t-out="consumption['label']"/></strong>
+              </td>
+              <td style="padding:8px;text-align:center;border:1px solid #e2e8f0;">
+                <t t-out="consumption['counter_type']"/>
+              </td>
+              <td style="padding:8px;text-align:center;border:1px solid #e2e8f0;">
+                <t t-out="consumption['base_counter']"/>
+              </td>
+              <td style="padding:8px;text-align:center;border:1px solid #e2e8f0;">
+                <t t-out="consumption['current_counter']"/>
+              </td>
+              <td style="padding:8px;text-align:center;border:1px solid #e2e8f0;">
+                <strong><t t-out="consumption['consumed_copies']"/></strong>
+              </td>
+              <td style="padding:8px;text-align:center;border:1px solid #e2e8f0;">
+                <strong><t t-out="consumption['expected_yield']"/></strong>
+              </td>
+              <td style="padding:8px;text-align:center;border:1px solid #e2e8f0;">
+                <strong><t t-out="'%.2f %%' % consumption['consumption_percent']"/></strong>
+              </td>
+              <td style="padding:8px;text-align:center;border:1px solid #e2e8f0;">
+                <t t-out="consumption['days']"/>
+              </td>
+            </tr>
+            <tr>
+              <td colspan="8" style="padding:8px;border:1px solid #e2e8f0;background:#f8fafc;">
+                <t t-out="consumption['message']"/>
+              </td>
+            </tr>
+          </t>
+        </tbody>
       </table>
+      <div style="background:#f8fafc;padding:12px;margin-top:12px;">
+        <strong>Evaluado por:</strong>
+        <t t-out="object.reviewer_id.name or 'Sin responsable'"/>
+      </div>
 
       <div style="background:#fffbeb;border-left:4px solid #f59e0b;padding:16px;margin:18px 0;">
         <strong>Análisis automático:</strong><br/>
@@ -1537,10 +1653,22 @@
       <table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:18px;">
         <thead><tr style="background:#0f172a;color:#fff;"><th style="padding:9px;">Tóner</th><th style="padding:9px;">Solicitado</th><th style="padding:9px;">Sugerido</th><th style="padding:9px;">Aprobado</th></tr></thead>
         <tbody>
-          <t t-if="object.requiere_toner_black"><tr><td style="padding:9px;border:1px solid #e2e8f0;">Negro</td><td style="text-align:center;border:1px solid #e2e8f0;"><t t-out="object.cantidad_solicitada_black"/></td><td style="text-align:center;border:1px solid #e2e8f0;"><t t-out="object.cantidad_sugerida_black"/></td><td style="text-align:center;border:1px solid #e2e8f0;"><strong><t t-out="object.cantidad_aprobada_black"/></strong></td></tr></t>
-          <t t-if="object.requiere_toner_cyan"><tr><td style="padding:9px;border:1px solid #e2e8f0;">Cian</td><td style="text-align:center;border:1px solid #e2e8f0;"><t t-out="object.cantidad_solicitada_cyan"/></td><td style="text-align:center;border:1px solid #e2e8f0;"><t t-out="object.cantidad_sugerida_cyan"/></td><td style="text-align:center;border:1px solid #e2e8f0;"><strong><t t-out="object.cantidad_aprobada_cyan"/></strong></td></tr></t>
-          <t t-if="object.requiere_toner_magenta"><tr><td style="padding:9px;border:1px solid #e2e8f0;">Magenta</td><td style="text-align:center;border:1px solid #e2e8f0;"><t t-out="object.cantidad_solicitada_magenta"/></td><td style="text-align:center;border:1px solid #e2e8f0;"><t t-out="object.cantidad_sugerida_magenta"/></td><td style="text-align:center;border:1px solid #e2e8f0;"><strong><t t-out="object.cantidad_aprobada_magenta"/></strong></td></tr></t>
-          <t t-if="object.requiere_toner_yellow"><tr><td style="padding:9px;border:1px solid #e2e8f0;">Amarillo</td><td style="text-align:center;border:1px solid #e2e8f0;"><t t-out="object.cantidad_solicitada_yellow"/></td><td style="text-align:center;border:1px solid #e2e8f0;"><t t-out="object.cantidad_sugerida_yellow"/></td><td style="text-align:center;border:1px solid #e2e8f0;"><strong><t t-out="object.cantidad_aprobada_yellow"/></strong></td></tr></t>
+          <t t-foreach="object.get_requested_toner_email_lines()" t-as="line">
+            <tr>
+              <td style="padding:9px;border:1px solid #e2e8f0;">
+                <strong><t t-out="line['label']"/></strong>
+              </td>
+              <td style="text-align:center;border:1px solid #e2e8f0;">
+                <t t-out="line['requested_qty']"/>
+              </td>
+              <td style="text-align:center;border:1px solid #e2e8f0;">
+                <t t-out="line['suggested_qty']"/>
+              </td>
+              <td style="text-align:center;border:1px solid #e2e8f0;">
+                <strong><t t-out="line['approved_qty']"/></strong>
+              </td>
+            </tr>
+          </t>
         </tbody>
       </table>
       <div style="text-align:center;margin-top:26px;"><a t-att-href="object.get_backend_record_url()" style="background:#0891b2;color:#fff;padding:12px 22px;text-decoration:none;font-weight:bold;border-radius:6px;">Abrir y confirmar stock</a></div>
@@ -1599,9 +1727,6 @@
             <field name="body_html"><![CDATA[
 <div style="background:#f1f5f9;padding:24px;font-family:Arial;color:#1e293b;"><div style="max-width:800px;margin:auto;background:#fff;border:1px solid #e2e8f0;"><div style="background:#0891b2;color:#fff;padding:22px;text-align:center;font-size:22px;font-weight:bold;">📦 Pedido listo para despacho</div><div style="padding:24px;"><div style="background:#ecfeff;border-left:4px solid #0891b2;padding:16px;">Gerencia aprobó la solicitud y comercial confirmó el stock. Ya puede crearse el proceso de despacho.</div><p><strong>Solicitud:</strong> <t t-out="object.secuencia"/></p><p><strong>Cliente:</strong> <t t-out="object.partner_id.name"/></p><p><strong>Equipo:</strong> <t t-out="object.equipment_id.name.name"/> - <t t-out="object.equipment_id.serie"/></p><p><strong>Ubicación:</strong> <t t-out="object.equipment_id.ubicacion_instalacion or 'No indicada'"/></p><p><strong>Stock confirmado por:</strong> <t t-out="object.stock_confirmed_by_id.name"/></p><p><strong>Observaciones de stock:</strong> <t t-out="object.stock_confirmation_notes or 'Sin observaciones'"/></p><div style="text-align:center;margin-top:24px;"><a t-att-href="object.get_backend_record_url()" style="background:#0891b2;color:#fff;padding:12px 22px;text-decoration:none;font-weight:bold;border-radius:6px;">Abrir y crear despacho</a></div></div></div></div>
             ]]></field>
-        </record>
-
-   
 
 
     </data>

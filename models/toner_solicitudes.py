@@ -1922,6 +1922,145 @@ class TonerCounterSubmission(models.Model):
             )
         )
 
+    def get_requested_toner_email_lines(self):
+        """
+        Devuelve una línea por cada tóner solicitado.
+        Usa el booleano o la cantidad para no omitir colores.
+        """
+        self.ensure_one()
+
+        lines = []
+        for color, label in self.COLOR_LABELS.items():
+            boolean_field = self._color_boolean_field(color)
+            requested_field = self._requested_quantity_field(color)
+            suggested_field = self._suggested_quantity_field(color)
+            approved_field = self._approved_quantity_field(color)
+
+            requested_qty = int(
+                getattr(self, requested_field, 0) or 0
+            )
+            selected = bool(
+                getattr(self, boolean_field, False)
+                or requested_qty > 0
+            )
+
+            if not selected:
+                continue
+
+            lines.append(
+                {
+                    "color": color,
+                    "label": label,
+                    "requested_qty": requested_qty,
+                    "suggested_qty": int(
+                        getattr(self, suggested_field, 0) or 0
+                    ),
+                    "approved_qty": int(
+                        getattr(self, approved_field, 0) or 0
+                    ),
+                }
+            )
+
+        return lines
+
+    def get_toner_consumption_email_lines(self):
+        """
+        Devuelve el análisis separado por cada color solicitado.
+
+        Para negro usa contador B/N.
+        Para cian, magenta y amarillo usa contador color.
+        """
+        self.ensure_one()
+
+        requested = self._get_requested_toners_from_record()
+        current_counters = {
+            "bn": int(self.counter_bn or 0),
+            "color": int(self.counter_color or 0),
+        }
+
+        base_counters = None
+        if self.source == "manual":
+            base_counters = {
+                "bn": int(self.previous_counter_bn or 0),
+                "color": int(self.previous_counter_color or 0),
+            }
+
+        lines = []
+        for color, label in self.COLOR_LABELS.items():
+            if not requested.get(color):
+                continue
+
+            result = self._analyze_color(
+                self.equipment_id,
+                color,
+                current_counters,
+                exclude_submission_id=self.id,
+                base_counters=base_counters,
+            )
+
+            counter_key = "bn" if color == "black" else "color"
+            lines.append(
+                {
+                    "color": color,
+                    "label": label,
+                    "counter_type": (
+                        "B/N" if color == "black" else "Color"
+                    ),
+                    "base_counter": int(
+                        result.get(
+                            "base_counter",
+                            self.previous_counter_bn
+                            if color == "black"
+                            else self.previous_counter_color,
+                        )
+                        or 0
+                    ),
+                    "current_counter": int(
+                        result.get(
+                            "current_counter",
+                            current_counters[counter_key],
+                        )
+                        or 0
+                    ),
+                    "consumed_copies": int(
+                        result.get("consumed_copies", 0) or 0
+                    ),
+                    "expected_yield": int(
+                        result.get(
+                            "expected_yield",
+                            self._get_expected_yield(
+                                self.equipment_id,
+                                color,
+                            ),
+                        )
+                        or 0
+                    ),
+                    "consumption_percent": float(
+                        result.get("consumption_percent", 0.0)
+                        or 0.0
+                    ),
+                    "days": int(
+                        result.get(
+                            "days_since_last_delivery",
+                            0,
+                        )
+                        or 0
+                    ),
+                    "last_delivery_date": result.get(
+                        "last_delivery_date"
+                    )
+                    or False,
+                    "status": result.get("status")
+                    or "manual_review",
+                    "message": result.get("message") or "",
+                    "requires_evidence": bool(
+                        result.get("requires_evidence")
+                    ),
+                }
+            )
+
+        return lines
+
     def get_backend_record_url(self):
         self.ensure_one()
         base_url = (
