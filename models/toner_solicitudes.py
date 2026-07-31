@@ -64,6 +64,12 @@ class TonerCounterSubmission(models.Model):
         index=True,
         domain=[("estado_alquiler_id", "=", "alquilada")],
     )
+    tipo_maquina_id = fields.Selection(
+        related="equipment_id.tipo_maquina_id",
+        string="Tipo de Equipo",
+        readonly=True,
+        store=True,
+    )
 
     partner_id = fields.Many2one(
         "res.partner",
