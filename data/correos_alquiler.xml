@@ -1328,21 +1328,6 @@
     ]]></field>
 </record>
 
- 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
  <!-- =====================================================
              1. NUEVA SOLICITUD PARA COMERCIAL
         ====================================================== -->
@@ -1727,7 +1712,7 @@
             <field name="body_html"><![CDATA[
 <div style="background:#f1f5f9;padding:24px;font-family:Arial;color:#1e293b;"><div style="max-width:800px;margin:auto;background:#fff;border:1px solid #e2e8f0;"><div style="background:#0891b2;color:#fff;padding:22px;text-align:center;font-size:22px;font-weight:bold;">📦 Pedido listo para despacho</div><div style="padding:24px;"><div style="background:#ecfeff;border-left:4px solid #0891b2;padding:16px;">Gerencia aprobó la solicitud y comercial confirmó el stock. Ya puede crearse el proceso de despacho.</div><p><strong>Solicitud:</strong> <t t-out="object.secuencia"/></p><p><strong>Cliente:</strong> <t t-out="object.partner_id.name"/></p><p><strong>Equipo:</strong> <t t-out="object.equipment_id.name.name"/> - <t t-out="object.equipment_id.serie"/></p><p><strong>Ubicación:</strong> <t t-out="object.equipment_id.ubicacion_instalacion or 'No indicada'"/></p><p><strong>Stock confirmado por:</strong> <t t-out="object.stock_confirmed_by_id.name"/></p><p><strong>Observaciones de stock:</strong> <t t-out="object.stock_confirmation_notes or 'Sin observaciones'"/></p><div style="text-align:center;margin-top:24px;"><a t-att-href="object.get_backend_record_url()" style="background:#0891b2;color:#fff;padding:12px 22px;text-decoration:none;font-weight:bold;border-radius:6px;">Abrir y crear despacho</a></div></div></div></div>
             ]]></field>
-
+             </record>
 
     </data>
 </odoo>
