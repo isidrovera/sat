@@ -127,7 +127,7 @@
                         <button
                             name="action_send_to_sales_confirmation"
                             type="object"
-                            string="Enviar a Comercial"
+                            string="Enviar a Confirmación de Stock"
                             class="btn-primary"
                             invisible="state != 'aprobada_gerencia'"
                         />
@@ -135,7 +135,7 @@
                         <button
                             name="action_sales_confirm"
                             type="object"
-                            string="Confirmar Coordinación"
+                            string="Confirmar Stock"
                             class="btn-success"
                             invisible="state != 'confirmacion_ventas'"
                         />
@@ -174,8 +174,9 @@
 
                     <sheet>
 
-                        <!-- Campo técnico usado por las condiciones de visibilidad -->
+                        <!-- Campos técnicos usados por visibilidad y edición -->
                         <field name="tipo_maquina_id" invisible="1"/>
+                        <field name="source" invisible="1"/>
 
                         <div class="oe_button_box" name="button_box">
                             <button
@@ -253,14 +254,26 @@
 
                                 <group string="Resumen de Contadores">
                                     <group>
-                                        <field name="counter_bn" readonly="state != 'recibida'"/>
-                                        <field name="previous_counter_bn" readonly="1"/>
+                                        <field
+                                            name="counter_bn"
+                                            readonly="source != 'manual' or state not in ['recibida', 'devuelta']"
+                                        />
+                                        <field
+                                            name="previous_counter_bn"
+                                            readonly="source != 'manual' or state not in ['recibida', 'devuelta']"
+                                        />
                                         <field name="copies_bn_period" readonly="1"/>
                                     </group>
 
                                     <group invisible="tipo_maquina_id != 'color'">
-                                        <field name="counter_color" readonly="state != 'recibida'"/>
-                                        <field name="previous_counter_color" readonly="1"/>
+                                        <field
+                                            name="counter_color"
+                                            readonly="source != 'manual' or state not in ['recibida', 'devuelta']"
+                                        />
+                                        <field
+                                            name="previous_counter_color"
+                                            readonly="source != 'manual' or state not in ['recibida', 'devuelta']"
+                                        />
                                         <field name="copies_color_period" readonly="1"/>
                                     </group>
                                 </group>
@@ -270,8 +283,15 @@
                                 <group col="4">
 
                                     <group string="Negro">
-                                        <field name="requiere_toner_black" readonly="1"/>
-                                        <field name="cantidad_solicitada_black" readonly="1"/>
+                                        <field
+                                            name="requiere_toner_black"
+                                            readonly="source != 'manual' or state not in ['recibida', 'devuelta']"
+                                        />
+                                        <field
+                                            name="cantidad_solicitada_black"
+                                            readonly="source != 'manual' or state not in ['recibida', 'devuelta']"
+                                            invisible="not requiere_toner_black and cantidad_solicitada_black == 0"
+                                        />
                                         <field
                                             name="cantidad_sugerida_black"
                                             readonly="state not in ['evaluacion', 'devuelta']"
@@ -286,8 +306,15 @@
                                         string="Cian"
                                         invisible="tipo_maquina_id != 'color'"
                                     >
-                                        <field name="requiere_toner_cyan" readonly="1"/>
-                                        <field name="cantidad_solicitada_cyan" readonly="1"/>
+                                        <field
+                                            name="requiere_toner_cyan"
+                                            readonly="source != 'manual' or state not in ['recibida', 'devuelta']"
+                                        />
+                                        <field
+                                            name="cantidad_solicitada_cyan"
+                                            readonly="source != 'manual' or state not in ['recibida', 'devuelta']"
+                                            invisible="not requiere_toner_cyan and cantidad_solicitada_cyan == 0"
+                                        />
                                         <field
                                             name="cantidad_sugerida_cyan"
                                             readonly="state not in ['evaluacion', 'devuelta']"
@@ -302,8 +329,15 @@
                                         string="Magenta"
                                         invisible="tipo_maquina_id != 'color'"
                                     >
-                                        <field name="requiere_toner_magenta" readonly="1"/>
-                                        <field name="cantidad_solicitada_magenta" readonly="1"/>
+                                        <field
+                                            name="requiere_toner_magenta"
+                                            readonly="source != 'manual' or state not in ['recibida', 'devuelta']"
+                                        />
+                                        <field
+                                            name="cantidad_solicitada_magenta"
+                                            readonly="source != 'manual' or state not in ['recibida', 'devuelta']"
+                                            invisible="not requiere_toner_magenta and cantidad_solicitada_magenta == 0"
+                                        />
                                         <field
                                             name="cantidad_sugerida_magenta"
                                             readonly="state not in ['evaluacion', 'devuelta']"
@@ -318,8 +352,15 @@
                                         string="Amarillo"
                                         invisible="tipo_maquina_id != 'color'"
                                     >
-                                        <field name="requiere_toner_yellow" readonly="1"/>
-                                        <field name="cantidad_solicitada_yellow" readonly="1"/>
+                                        <field
+                                            name="requiere_toner_yellow"
+                                            readonly="source != 'manual' or state not in ['recibida', 'devuelta']"
+                                        />
+                                        <field
+                                            name="cantidad_solicitada_yellow"
+                                            readonly="source != 'manual' or state not in ['recibida', 'devuelta']"
+                                            invisible="not requiere_toner_yellow and cantidad_solicitada_yellow == 0"
+                                        />
                                         <field
                                             name="cantidad_sugerida_yellow"
                                             readonly="state not in ['evaluacion', 'devuelta']"
@@ -470,10 +511,10 @@
                             </page>
 
 
-                            <page string="Coordinación y Despacho" name="dispatch">
+                            <page string="Stock y Despacho" name="dispatch">
 
                                 <group>
-                                    <group string="Confirmación Comercial">
+                                    <group string="Confirmación de Stock">
                                         <field name="sales_user_id" readonly="1"/>
                                         <field name="sales_confirmation_date" readonly="1"/>
                                         <field name="sales_notes" readonly="state != 'confirmacion_ventas'"/>
@@ -717,7 +758,7 @@
                     />
 
                     <filter
-                        string="Pendientes de comercial"
+                        string="Pendientes de stock"
                         name="sales"
                         domain="[('state', '=', 'confirmacion_ventas')]"
                     />
