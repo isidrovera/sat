@@ -1336,7 +1336,7 @@
             <field name="model_id" ref="model_toner_counter_submission"/>
             <field name="subject">🆕 Nueva solicitud de tóner {{ object.secuencia }} - {{ object.partner_id.name or 'Sin cliente' }}</field>
             <field name="email_from">soporte@andescopiers.com.pe</field>
-            <field name="email_to">{{ object.get_commercial_emails() }}</field>
+            <field name="email_to">comercial1@andescopiers.com.pe, comercial@andescopiers.com.pe</field>
             <field name="auto_delete" eval="True"/>
             <field name="body_html"><![CDATA[
 <div style="margin:0;padding:0;background:#f1f5f9;font-family:Arial,Helvetica,sans-serif;color:#1e293b;">
@@ -1477,8 +1477,8 @@
             <field name="model_id" ref="model_toner_counter_submission"/>
             <field name="subject">⏳ Aprobación requerida - {{ object.secuencia }} - {{ object.partner_id.name or 'Sin cliente' }}</field>
             <field name="email_from">soporte@andescopiers.com.pe</field>
-            <field name="email_to">{{ object.get_management_emails() }}</field>
-            <field name="email_cc">{{ object.get_commercial_emails() }}</field>
+            <field name="email_to">lincoln@andescopiersc.com.pe</field>
+            <field name="email_cc">salvarez@andescopiers.com.pe</field>
             <field name="auto_delete" eval="True"/>
             <field name="body_html"><![CDATA[
 <div style="margin:0;padding:0;background:#f1f5f9;font-family:Arial,Helvetica,sans-serif;color:#1e293b;">
@@ -1618,7 +1618,7 @@
             <field name="model_id" ref="model_toner_counter_submission"/>
             <field name="subject">✅ {{ object.secuencia }} aprobada - Pendiente confirmar stock</field>
             <field name="email_from">soporte@andescopiers.com.pe</field>
-            <field name="email_to">{{ object.get_commercial_emails() }}</field>
+            <field name="email_to">comercial1@andescopiers.com.pe, comercial@andescopiers.com.pe</field>
             <field name="auto_delete" eval="True"/>
             <field name="body_html"><![CDATA[
 <div style="background:#f1f5f9;padding:24px;font-family:Arial;color:#1e293b;">
@@ -1668,7 +1668,7 @@
             <field name="model_id" ref="model_toner_counter_submission"/>
             <field name="subject">🔄 {{ object.secuencia }} devuelta para completar información</field>
             <field name="email_from">soporte@andescopiers.com.pe</field>
-            <field name="email_to">{{ object.get_commercial_emails() }}</field>
+            <field name="email_to">comercial1@andescopiers.com.pe, comercial@andescopiers.com.pe</field>
             <field name="auto_delete" eval="True"/>
             <field name="body_html"><![CDATA[
 <div style="background:#f1f5f9;padding:24px;font-family:Arial;color:#1e293b;"><div style="max-width:780px;margin:auto;background:#fff;border:1px solid #e2e8f0;"><div style="background:#d97706;color:#fff;padding:22px;text-align:center;font-size:22px;font-weight:bold;">🔄 Información adicional requerida</div><div style="padding:24px;"><p>Gerencia devolvió la solicitud <strong><t t-out="object.secuencia"/></strong>.</p><div style="background:#fffbeb;border-left:4px solid #d97706;padding:16px;"><strong>Información solicitada:</strong><br/><t t-out="object.management_notes"/></div><p><strong>Cliente:</strong> <t t-out="object.partner_id.name"/></p><p><strong>Equipo:</strong> <t t-out="object.equipment_id.name.name"/> - <t t-out="object.equipment_id.serie"/></p><p><strong>Decidido por:</strong> <t t-out="object.management_decision_name or object.management_user_id.name"/></p><div style="text-align:center;margin-top:24px;"><a t-att-href="object.get_backend_record_url()" style="background:#0891b2;color:#fff;padding:12px 22px;text-decoration:none;font-weight:bold;border-radius:6px;">Completar evaluación</a></div></div></div></div>
@@ -1680,7 +1680,7 @@
             <field name="model_id" ref="model_toner_counter_submission"/>
             <field name="subject">❌ {{ object.secuencia }} rechazada por gerencia</field>
             <field name="email_from">soporte@andescopiers.com.pe</field>
-            <field name="email_to">{{ object.get_commercial_emails() }}</field>
+            <field name="email_to">comercial1@andescopiers.com.pe, comercial@andescopiers.com.pe</field>
             <field name="auto_delete" eval="True"/>
             <field name="body_html"><![CDATA[
 <div style="background:#f1f5f9;padding:24px;font-family:Arial;color:#1e293b;"><div style="max-width:780px;margin:auto;background:#fff;border:1px solid #e2e8f0;"><div style="background:#dc2626;color:#fff;padding:22px;text-align:center;font-size:22px;font-weight:bold;">❌ Solicitud rechazada</div><div style="padding:24px;"><p>La solicitud <strong><t t-out="object.secuencia"/></strong> no debe continuar a despacho.</p><div style="background:#fef2f2;border-left:4px solid #dc2626;padding:16px;"><strong>Motivo:</strong><br/><t t-out="object.management_notes"/></div><p><strong>Cliente:</strong> <t t-out="object.partner_id.name"/></p><p><strong>Equipo:</strong> <t t-out="object.equipment_id.name.name"/> - <t t-out="object.equipment_id.serie"/></p><p><strong>Decidido por:</strong> <t t-out="object.management_decision_name or object.management_user_id.name"/></p><div style="text-align:center;margin-top:24px;"><a t-att-href="object.get_backend_record_url()" style="background:#475569;color:#fff;padding:12px 22px;text-decoration:none;font-weight:bold;border-radius:6px;">Ver solicitud</a></div></div></div></div>
@@ -1692,7 +1692,7 @@
             <field name="model_id" ref="model_toner_counter_submission"/>
             <field name="subject">🚫 {{ object.secuencia }} cancelada</field>
             <field name="email_from">soporte@andescopiers.com.pe</field>
-            <field name="email_to">{{ object.get_commercial_emails() }}</field>
+            <field name="email_to">comercial1@andescopiers.com.pe, comercial@andescopiers.com.pe</field>
             <field name="auto_delete" eval="True"/>
             <field name="body_html"><![CDATA[
 <div style="background:#f1f5f9;padding:24px;font-family:Arial;color:#1e293b;"><div style="max-width:780px;margin:auto;background:#fff;border:1px solid #e2e8f0;"><div style="background:#475569;color:#fff;padding:22px;text-align:center;font-size:22px;font-weight:bold;">🚫 Solicitud cancelada</div><div style="padding:24px;"><p>La solicitud <strong><t t-out="object.secuencia"/></strong> fue cancelada y no continuará en el flujo.</p><div style="background:#f8fafc;border-left:4px solid #64748b;padding:16px;"><strong>Motivo:</strong><br/><t t-out="object.management_notes"/></div><p><strong>Cliente:</strong> <t t-out="object.partner_id.name"/></p><p><strong>Equipo:</strong> <t t-out="object.equipment_id.name.name"/> - <t t-out="object.equipment_id.serie"/></p><div style="text-align:center;margin-top:24px;"><a t-att-href="object.get_backend_record_url()" style="background:#475569;color:#fff;padding:12px 22px;text-decoration:none;font-weight:bold;border-radius:6px;">Ver solicitud</a></div></div></div></div>
@@ -1707,7 +1707,7 @@
             <field name="model_id" ref="model_toner_counter_submission"/>
             <field name="subject">📦 {{ object.secuencia }} lista para despacho</field>
             <field name="email_from">soporte@andescopiers.com.pe</field>
-            <field name="email_to">{{ object.get_dispatch_emails() }}</field>
+            <field name="email_to">comercial1@andescopiers.com.pe, comercial@andescopiers.com.pe</field>
             <field name="auto_delete" eval="True"/>
             <field name="body_html"><![CDATA[
 <div style="background:#f1f5f9;padding:24px;font-family:Arial;color:#1e293b;"><div style="max-width:800px;margin:auto;background:#fff;border:1px solid #e2e8f0;"><div style="background:#0891b2;color:#fff;padding:22px;text-align:center;font-size:22px;font-weight:bold;">📦 Pedido listo para despacho</div><div style="padding:24px;"><div style="background:#ecfeff;border-left:4px solid #0891b2;padding:16px;">Gerencia aprobó la solicitud y comercial confirmó el stock. Ya puede crearse el proceso de despacho.</div><p><strong>Solicitud:</strong> <t t-out="object.secuencia"/></p><p><strong>Cliente:</strong> <t t-out="object.partner_id.name"/></p><p><strong>Equipo:</strong> <t t-out="object.equipment_id.name.name"/> - <t t-out="object.equipment_id.serie"/></p><p><strong>Ubicación:</strong> <t t-out="object.equipment_id.ubicacion_instalacion or 'No indicada'"/></p><p><strong>Stock confirmado por:</strong> <t t-out="object.stock_confirmed_by_id.name"/></p><p><strong>Observaciones de stock:</strong> <t t-out="object.stock_confirmation_notes or 'Sin observaciones'"/></p><div style="text-align:center;margin-top:24px;"><a t-att-href="object.get_backend_record_url()" style="background:#0891b2;color:#fff;padding:12px 22px;text-decoration:none;font-weight:bold;border-radius:6px;">Abrir y crear despacho</a></div></div></div></div>
