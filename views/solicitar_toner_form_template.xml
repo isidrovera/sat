@@ -2517,5 +2517,73 @@ function tonerGoBackNoSelection() {
 
         </t>
     </template>
+    
+    <!-- =====================================================
+         PÁGINAS WEB SEGURAS PARA DECISIÓN
+    ====================================================== -->
+    <template id="toner_management_decision_page" name="Decisión de gerencia - Tóner">
+        <t t-call="website.layout">
+            <div style="min-height:100vh;background:#f1f5f9;padding:30px 15px;">
+                <div style="max-width:720px;margin:auto;background:#fff;border:1px solid #e2e8f0;border-radius:18px;overflow:hidden;box-shadow:0 20px 45px rgba(15,23,42,.12);">
+                    <div style="background:#1d4ed8;color:#fff;padding:24px;text-align:center;">
+                        <h2 style="margin:0;">Decisión de gerencia</h2>
+                        <p style="margin:8px 0 0;" t-if="submission">Solicitud <strong><t t-out="submission.secuencia"/></strong></p>
+                    </div>
+                    <div style="padding:24px;">
+                        <t t-if="error">
+                            <div style="background:#fef2f2;border-left:4px solid #dc2626;padding:16px;color:#991b1b;"><t t-out="error"/></div>
+                        </t>
+                        <t t-else="">
+                            <div style="background:#f8fafc;padding:16px;margin-bottom:18px;">
+                                <p><strong>Cliente:</strong> <t t-out="submission.partner_id.name"/></p>
+                                <p><strong>Equipo:</strong> <t t-out="submission.equipment_id.name.name"/> - <t t-out="submission.equipment_id.serie"/></p>
+                                <p><strong>Copias consumidas:</strong> <t t-out="submission.consumed_copies"/></p>
+                                <p><strong>Rendimiento esperado:</strong> <t t-out="submission.expected_yield"/></p>
+                                <p style="margin-bottom:0;"><strong>Porcentaje:</strong> <t t-out="submission.consumption_percent"/> %</p>
+                            </div>
+                            <form action="/toner/management/confirm" method="post">
+                                <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                <input type="hidden" name="token" t-att-value="token"/>
+                                <input type="hidden" name="decision" t-att-value="decision"/>
+
+                                <label style="display:block;font-weight:bold;margin-bottom:6px;">Nombre de quien decide</label>
+                                <input type="text" name="decision_name" required="required" style="width:100%;padding:11px;border:1px solid #cbd5e1;border-radius:8px;margin-bottom:16px;"/>
+
+                                <label style="display:block;font-weight:bold;margin-bottom:6px;">
+                                    <t t-if="decision == 'approve'">Observación de aprobación</t>
+                                    <t t-else="">Motivo obligatorio</t>
+                                </label>
+                                <textarea name="notes" t-att-required="decision != 'approve' and 'required' or None" style="width:100%;min-height:110px;padding:11px;border:1px solid #cbd5e1;border-radius:8px;margin-bottom:18px;"></textarea>
+
+                                <button type="submit" style="width:100%;border:0;background:#1d4ed8;color:#fff;padding:13px;font-weight:bold;border-radius:8px;">
+                                    Confirmar decisión
+                                </button>
+                            </form>
+                        </t>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <template id="toner_management_decision_result" name="Resultado decisión de gerencia - Tóner">
+        <t t-call="website.layout">
+            <div style="min-height:100vh;background:#f1f5f9;padding:30px 15px;">
+                <div style="max-width:650px;margin:auto;background:#fff;border:1px solid #e2e8f0;border-radius:18px;overflow:hidden;box-shadow:0 20px 45px rgba(15,23,42,.12);">
+                    <t t-if="success">
+                        <div style="background:#16a34a;color:#fff;padding:24px;text-align:center;"><h2 style="margin:0;">Decisión registrada</h2></div>
+                        <div style="padding:24px;text-align:center;">
+                            <p>La decisión para la solicitud <strong><t t-out="submission.secuencia"/></strong> fue registrada correctamente.</p>
+                            <p>El área comercial recibió la notificación correspondiente.</p>
+                        </div>
+                    </t>
+                    <t t-else="">
+                        <div style="background:#dc2626;color:#fff;padding:24px;text-align:center;"><h2 style="margin:0;">No se pudo registrar</h2></div>
+                        <div style="padding:24px;"><div style="background:#fef2f2;border-left:4px solid #dc2626;padding:16px;color:#991b1b;"><t t-out="error"/></div></div>
+                    </t>
+                </div>
+            </div>
+        </t>
+    </template>
 
 </odoo>
