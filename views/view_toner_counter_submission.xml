@@ -127,17 +127,9 @@
                         />
 
                         <button
-                            name="action_send_to_sales_confirmation"
-                            type="object"
-                            string="Enviar a Comercial"
-                            class="btn-primary"
-                            invisible="state != 'aprobada_gerencia'"
-                        />
-
-                        <button
                             name="action_sales_confirm"
                             type="object"
-                            string="Confirmar Coordinación"
+                            string="Confirmar Stock"
                             class="btn-success"
                             invisible="state != 'confirmacion_ventas'"
                         />
@@ -509,8 +501,11 @@
 
                                 <group>
                                     <group string="Decisión">
+                                        <field name="management_decision" readonly="1"/>
                                         <field name="management_user_id" readonly="1"/>
+                                        <field name="management_decision_name" readonly="1"/>
                                         <field name="management_date" readonly="1"/>
+                                        <field name="management_decision_ip" readonly="1"/>
                                     </group>
 
                                     <group string="Estado">
@@ -536,13 +531,17 @@
                             </page>
 
 
-                            <page string="Coordinación y Despacho" name="dispatch">
+                            <page string="Stock y Despacho" name="dispatch">
 
                                 <group>
-                                    <group string="Confirmación Comercial">
-                                        <field name="sales_user_id" readonly="1"/>
-                                        <field name="sales_confirmation_date" readonly="1"/>
-                                        <field name="sales_notes" readonly="state != 'confirmacion_ventas'"/>
+                                    <group string="Confirmación de Stock">
+                                        <field name="stock_confirmed_by_id" readonly="1"/>
+                                        <field name="stock_confirmation_date" readonly="1"/>
+                                        <field
+                                            name="stock_confirmation_notes"
+                                            readonly="state != 'confirmacion_ventas'"
+                                            placeholder="Confirme existencia, ubicación y observaciones del stock..."
+                                        />
                                     </group>
 
                                     <group string="Despacho">
@@ -552,9 +551,11 @@
                                 </group>
 
                                 <div class="alert alert-info" role="alert">
-                                    Comercial debe confirmar contacto, dirección,
-                                    disponibilidad del cliente y fecha tentativa
-                                    antes de liberar el pedido para despacho.
+                                    Después de la aprobación de gerencia,
+                                    comercial debe verificar físicamente el stock
+                                    y confirmar las cantidades disponibles.
+                                    Al confirmar, la solicitud pasa a
+                                    <strong>Lista para despacho</strong>.
                                 </div>
 
                             </page>
@@ -783,7 +784,7 @@
                     />
 
                     <filter
-                        string="Pendientes de comercial"
+                        string="Pendientes de stock"
                         name="sales"
                         domain="[('state', '=', 'confirmacion_ventas')]"
                     />

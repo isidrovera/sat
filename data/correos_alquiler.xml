@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <odoo>
-    <data>
+   
         <record id="mail_template_maintenance_notification" model="mail.template">
             <field name="name">Notificación de Mantenimiento Preventivo</field>
             <field name="model_id" ref="model_alquiler" />
@@ -1325,5 +1325,350 @@
 </html>
     ]]></field>
 </record>
+
+ <!-- =====================================================
+             1. NUEVA SOLICITUD PARA COMERCIAL
+        ====================================================== -->
+        <record id="mail_template_toner_new_request_commercial" model="mail.template">
+            <field name="name">Tóner - Nueva solicitud para comercial</field>
+            <field name="model_id" ref="model_toner_counter_submission"/>
+            <field name="subject">🆕 Nueva solicitud de tóner {{ object.secuencia }} - {{ object.partner_id.name or 'Sin cliente' }}</field>
+            <field name="email_from">soporte@andescopiers.com.pe</field>
+            <field name="email_to">{{ object.get_commercial_emails() }}</field>
+            <field name="auto_delete" eval="True"/>
+            <field name="body_html"><![CDATA[
+<div style="margin:0;padding:0;background:#f1f5f9;font-family:Arial,Helvetica,sans-serif;color:#1e293b;">
+  <div style="max-width:820px;margin:0 auto;padding:24px;">
+    <div style="background:#0891b2;padding:24px;text-align:center;color:#fff;">
+      <div style="font-size:24px;font-weight:700;">🆕 Nueva solicitud de tóner</div>
+      <div style="margin-top:8px;">Solicitud <strong><t t-out="object.secuencia"/></strong></div>
+    </div>
+    <div style="background:#fff;border:1px solid #e2e8f0;padding:24px;">
+      <div style="background:#ecfeff;border-left:4px solid #0891b2;padding:16px;margin-bottom:18px;">
+        Se registró una nueva solicitud. El área comercial debe revisar contadores,
+        historial, duración, stock reportado y cantidades antes de enviarla a gerencia.
+        Este correo <strong>no autoriza el despacho</strong>.
+      </div>
+
+      <div style="font-size:18px;font-weight:700;margin:18px 0 10px;">📄 Solicitud</div>
+      <table style="width:100%;border-collapse:collapse;font-size:14px;">
+        <tr><td style="padding:8px;background:#f8fafc;width:35%;">Número</td><td style="padding:8px;"><strong><t t-out="object.secuencia"/></strong></td></tr>
+        <tr><td style="padding:8px;background:#f8fafc;">Fecha</td><td style="padding:8px;"><t t-out="object.submission_date"/></td></tr>
+        <tr><td style="padding:8px;background:#f8fafc;">Origen</td><td style="padding:8px;"><t t-out="object.source"/></td></tr>
+        <tr><td style="padding:8px;background:#f8fafc;">Registrado por</td><td style="padding:8px;"><t t-out="object.created_by_user_id.name"/></td></tr>
+      </table>
+
+      <div style="font-size:18px;font-weight:700;margin:18px 0 10px;">🏢 Cliente y equipo</div>
+      <table style="width:100%;border-collapse:collapse;font-size:14px;">
+        <tr><td style="padding:8px;background:#f8fafc;width:35%;">Cliente</td><td style="padding:8px;"><strong><t t-out="object.partner_id.name"/></strong></td></tr>
+        <tr><td style="padding:8px;background:#f8fafc;">Solicitante</td><td style="padding:8px;"><t t-out="object.client_name"/></td></tr>
+        <tr><td style="padding:8px;background:#f8fafc;">Celular</td><td style="padding:8px;"><t t-out="object.client_phone"/></td></tr>
+        <tr><td style="padding:8px;background:#f8fafc;">Correo</td><td style="padding:8px;"><t t-out="object.client_email"/></td></tr>
+        <tr><td style="padding:8px;background:#f8fafc;">Modelo</td><td style="padding:8px;"><t t-out="object.equipment_id.name.name"/></td></tr>
+        <tr><td style="padding:8px;background:#f8fafc;">Serie</td><td style="padding:8px;"><strong><t t-out="object.equipment_id.serie"/></strong></td></tr>
+        <tr><td style="padding:8px;background:#f8fafc;">Ubicación</td><td style="padding:8px;"><t t-out="object.equipment_id.ubicacion_instalacion or 'No indicada'"/></td></tr>
+      </table>
+
+      <div style="font-size:18px;font-weight:700;margin:18px 0 10px;">📦 Pedido por color</div>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead>
+          <tr style="background:#0f172a;color:#fff;">
+            <th style="padding:10px;text-align:left;">Tóner</th>
+            <th style="padding:10px;text-align:center;">Solicitado</th>
+            <th style="padding:10px;text-align:center;">Sugerido</th>
+          </tr>
+        </thead>
+        <tbody>
+          <t t-if="object.requiere_toner_black"><tr><td style="padding:9px;border:1px solid #e2e8f0;">Negro</td><td style="padding:9px;text-align:center;border:1px solid #e2e8f0;"><t t-out="object.cantidad_solicitada_black"/></td><td style="padding:9px;text-align:center;border:1px solid #e2e8f0;"><t t-out="object.cantidad_sugerida_black"/></td></tr></t>
+          <t t-if="object.requiere_toner_cyan"><tr><td style="padding:9px;border:1px solid #e2e8f0;">Cian</td><td style="padding:9px;text-align:center;border:1px solid #e2e8f0;"><t t-out="object.cantidad_solicitada_cyan"/></td><td style="padding:9px;text-align:center;border:1px solid #e2e8f0;"><t t-out="object.cantidad_sugerida_cyan"/></td></tr></t>
+          <t t-if="object.requiere_toner_magenta"><tr><td style="padding:9px;border:1px solid #e2e8f0;">Magenta</td><td style="padding:9px;text-align:center;border:1px solid #e2e8f0;"><t t-out="object.cantidad_solicitada_magenta"/></td><td style="padding:9px;text-align:center;border:1px solid #e2e8f0;"><t t-out="object.cantidad_sugerida_magenta"/></td></tr></t>
+          <t t-if="object.requiere_toner_yellow"><tr><td style="padding:9px;border:1px solid #e2e8f0;">Amarillo</td><td style="padding:9px;text-align:center;border:1px solid #e2e8f0;"><t t-out="object.cantidad_solicitada_yellow"/></td><td style="padding:9px;text-align:center;border:1px solid #e2e8f0;"><t t-out="object.cantidad_sugerida_yellow"/></td></tr></t>
+        </tbody>
+      </table>
+
+      <div style="font-size:18px;font-weight:700;margin:18px 0 10px;">📊 Contadores y consumo</div>
+      <table style="width:100%;border-collapse:collapse;font-size:14px;">
+        <tr><td style="padding:8px;background:#f8fafc;width:35%;">Contador B/N actual</td><td style="padding:8px;"><strong><t t-out="object.counter_bn"/></strong></td></tr>
+        <tr><td style="padding:8px;background:#f8fafc;">Contador color actual</td><td style="padding:8px;"><strong><t t-out="object.counter_color"/></strong></td></tr>
+        <tr><td style="padding:8px;background:#f8fafc;">Contador base B/N</td><td style="padding:8px;"><t t-out="object.previous_counter_bn"/></td></tr>
+        <tr><td style="padding:8px;background:#f8fafc;">Contador base color</td><td style="padding:8px;"><t t-out="object.previous_counter_color"/></td></tr>
+        <tr><td style="padding:8px;background:#f8fafc;">Última entrega</td><td style="padding:8px;"><t t-out="object.last_delivery_date or 'Sin historial'"/></td></tr>
+        <tr><td style="padding:8px;background:#f8fafc;">Días transcurridos</td><td style="padding:8px;"><t t-out="object.days_since_last_delivery"/></td></tr>
+        <tr><td style="padding:8px;background:#f8fafc;">Copias consumidas</td><td style="padding:8px;"><strong><t t-out="object.consumed_copies"/></strong></td></tr>
+        <tr><td style="padding:8px;background:#f8fafc;">Rendimiento esperado</td><td style="padding:8px;"><t t-out="object.expected_yield"/></td></tr>
+        <tr><td style="padding:8px;background:#f8fafc;">Porcentaje consumido</td><td style="padding:8px;"><strong><t t-out="object.consumption_percent"/> %</strong></td></tr>
+      </table>
+
+      <div style="background:#fffbeb;border-left:4px solid #f59e0b;padding:16px;margin:18px 0;">
+        <strong>Resultado automático:</strong> <t t-out="object.analysis_result"/><br/>
+        <t t-out="object.analysis_summary or 'Sin observaciones del sistema'"/>
+      </div>
+
+      <div style="background:#f8fafc;padding:16px;margin:18px 0;">
+        <strong>Observaciones del cliente:</strong><br/>
+        <t t-out="object.notes or 'Sin observaciones'"/>
+      </div>
+
+      <div style="text-align:center;margin:28px 0;">
+        <a t-att-href="object.get_backend_record_url()" style="background:#0891b2;color:#fff;text-decoration:none;padding:13px 24px;display:inline-block;font-weight:700;border-radius:6px;">
+          Evaluar solicitud en Odoo
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+            ]]></field>
+        </record>
+
+        <!-- =====================================================
+             2. DECISIÓN PARA GERENCIA
+        ====================================================== -->
+        <record id="mail_template_toner_management_decision" model="mail.template">
+            <field name="name">Tóner - Decisión de gerencia</field>
+            <field name="model_id" ref="model_toner_counter_submission"/>
+            <field name="subject">⏳ Aprobación requerida - {{ object.secuencia }} - {{ object.partner_id.name or 'Sin cliente' }}</field>
+            <field name="email_from">soporte@andescopiers.com.pe</field>
+            <field name="email_to">{{ object.get_management_emails() }}</field>
+            <field name="email_cc">{{ object.get_commercial_emails() }}</field>
+            <field name="auto_delete" eval="True"/>
+            <field name="body_html"><![CDATA[
+<div style="margin:0;padding:0;background:#f1f5f9;font-family:Arial,Helvetica,sans-serif;color:#1e293b;">
+  <div style="max-width:840px;margin:0 auto;padding:24px;">
+    <div style="background:#1d4ed8;padding:24px;text-align:center;color:#fff;">
+      <div style="font-size:24px;font-weight:700;">⏳ Decisión de gerencia requerida</div>
+      <div style="margin-top:8px;">Solicitud <strong><t t-out="object.secuencia"/></strong></div>
+    </div>
+    <div style="background:#fff;border:1px solid #e2e8f0;padding:24px;">
+      <div style="background:#eff6ff;border-left:4px solid #2563eb;padding:16px;margin-bottom:18px;">
+        Comercial completó la evaluación. Revise la solicitud y seleccione una decisión.
+        Los botones abren una página segura de confirmación.
+      </div>
+
+      <div style="font-size:18px;font-weight:700;margin:18px 0 10px;">🏢 Cliente y equipo</div>
+      <table style="width:100%;border-collapse:collapse;font-size:14px;">
+        <tr><td style="padding:8px;background:#f8fafc;width:35%;">Cliente</td><td style="padding:8px;"><strong><t t-out="object.partner_id.name"/></strong></td></tr>
+        <tr><td style="padding:8px;background:#f8fafc;">Modelo</td><td style="padding:8px;"><t t-out="object.equipment_id.name.name"/></td></tr>
+        <tr><td style="padding:8px;background:#f8fafc;">Serie</td><td style="padding:8px;"><strong><t t-out="object.equipment_id.serie"/></strong></td></tr>
+        <tr><td style="padding:8px;background:#f8fafc;">Solicitante</td><td style="padding:8px;"><t t-out="object.client_name"/> - <t t-out="object.client_phone"/></td></tr>
+      </table>
+
+      <div style="font-size:18px;font-weight:700;margin:18px 0 10px;">📦 Cantidades</div>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead><tr style="background:#0f172a;color:#fff;"><th style="padding:10px;text-align:left;">Tóner</th><th style="padding:10px;">Solicitado</th><th style="padding:10px;">Sugerido por comercial</th></tr></thead>
+        <tbody>
+          <t t-if="object.requiere_toner_black"><tr><td style="padding:9px;border:1px solid #e2e8f0;">Negro</td><td style="padding:9px;text-align:center;border:1px solid #e2e8f0;"><t t-out="object.cantidad_solicitada_black"/></td><td style="padding:9px;text-align:center;border:1px solid #e2e8f0;"><strong><t t-out="object.cantidad_sugerida_black"/></strong></td></tr></t>
+          <t t-if="object.requiere_toner_cyan"><tr><td style="padding:9px;border:1px solid #e2e8f0;">Cian</td><td style="padding:9px;text-align:center;border:1px solid #e2e8f0;"><t t-out="object.cantidad_solicitada_cyan"/></td><td style="padding:9px;text-align:center;border:1px solid #e2e8f0;"><strong><t t-out="object.cantidad_sugerida_cyan"/></strong></td></tr></t>
+          <t t-if="object.requiere_toner_magenta"><tr><td style="padding:9px;border:1px solid #e2e8f0;">Magenta</td><td style="padding:9px;text-align:center;border:1px solid #e2e8f0;"><t t-out="object.cantidad_solicitada_magenta"/></td><td style="padding:9px;text-align:center;border:1px solid #e2e8f0;"><strong><t t-out="object.cantidad_sugerida_magenta"/></strong></td></tr></t>
+          <t t-if="object.requiere_toner_yellow"><tr><td style="padding:9px;border:1px solid #e2e8f0;">Amarillo</td><td style="padding:9px;text-align:center;border:1px solid #e2e8f0;"><t t-out="object.cantidad_solicitada_yellow"/></td><td style="padding:9px;text-align:center;border:1px solid #e2e8f0;"><strong><t t-out="object.cantidad_sugerida_yellow"/></strong></td></tr></t>
+        </tbody>
+      </table>
+
+      <div style="font-size:18px;font-weight:700;margin:18px 0 10px;">📊 Evaluación</div>
+      <table style="width:100%;border-collapse:collapse;font-size:14px;">
+        <tr><td style="padding:8px;background:#f8fafc;width:35%;">Contador actual B/N</td><td style="padding:8px;"><strong><t t-out="object.counter_bn"/></strong></td></tr>
+        <tr><td style="padding:8px;background:#f8fafc;">Contador actual color</td><td style="padding:8px;"><strong><t t-out="object.counter_color"/></strong></td></tr>
+        <tr><td style="padding:8px;background:#f8fafc;">Última entrega</td><td style="padding:8px;"><t t-out="object.last_delivery_date or 'Sin historial'"/></td></tr>
+        <tr><td style="padding:8px;background:#f8fafc;">Copias consumidas</td><td style="padding:8px;"><t t-out="object.consumed_copies"/></td></tr>
+        <tr><td style="padding:8px;background:#f8fafc;">Días transcurridos</td><td style="padding:8px;"><t t-out="object.days_since_last_delivery"/></td></tr>
+        <tr><td style="padding:8px;background:#f8fafc;">Rendimiento esperado</td><td style="padding:8px;"><t t-out="object.expected_yield"/></td></tr>
+        <tr><td style="padding:8px;background:#f8fafc;">Porcentaje consumido</td><td style="padding:8px;"><strong><t t-out="object.consumption_percent"/> %</strong></td></tr>
+        <tr><td style="padding:8px;background:#f8fafc;">Evaluado por</td><td style="padding:8px;"><t t-out="object.reviewer_id.name"/></td></tr>
+      </table>
+
+      <div style="background:#fffbeb;border-left:4px solid #f59e0b;padding:16px;margin:18px 0;">
+        <strong>Análisis automático:</strong><br/>
+        <t t-out="object.analysis_summary or 'Sin observaciones del sistema'"/>
+      </div>
+      <div style="background:#f8fafc;padding:16px;margin:18px 0;">
+        <strong>Evaluación comercial:</strong><br/>
+        <t t-out="object.review_notes or 'Sin evaluación escrita'"/>
+      </div>
+      <t t-if="object.requires_evidence">
+        <div style="background:#fef2f2;border-left:4px solid #dc2626;padding:16px;margin:18px 0;">
+          <strong>⚠️ Requiere evidencia.</strong><br/>
+          <t t-out="object.early_request_reason or 'Revisar evidencia adjunta en Odoo.'"/>
+        </div>
+      </t>
+
+      <div style="text-align:center;margin:30px 0 14px;">
+        <a t-att-href="object.get_management_decision_url('approve')" style="background:#16a34a;color:#fff;text-decoration:none;padding:12px 18px;display:inline-block;margin:4px;font-weight:700;border-radius:6px;">✅ Aprobar</a>
+        <a t-att-href="object.get_management_decision_url('request_information')" style="background:#d97706;color:#fff;text-decoration:none;padding:12px 18px;display:inline-block;margin:4px;font-weight:700;border-radius:6px;">🔄 Solicitar información</a>
+        <a t-att-href="object.get_management_decision_url('reject')" style="background:#dc2626;color:#fff;text-decoration:none;padding:12px 18px;display:inline-block;margin:4px;font-weight:700;border-radius:6px;">❌ Rechazar</a>
+        <a t-att-href="object.get_management_decision_url('cancel')" style="background:#475569;color:#fff;text-decoration:none;padding:12px 18px;display:inline-block;margin:4px;font-weight:700;border-radius:6px;">🚫 Cancelar</a>
+      </div>
+
+      <div style="text-align:center;margin:10px 0 24px;">
+        <a t-att-href="object.get_backend_record_url()" style="color:#1d4ed8;text-decoration:underline;">Abrir registro completo en Odoo</a>
+      </div>
+      <div style="font-size:12px;color:#64748b;text-align:center;">
+        El enlace vence el <t t-out="object.management_token_expires_at"/>.
+      </div>
+    </div>
+  </div>
+</div>
+            ]]></field>
+        </record>
+
+        <!-- =====================================================
+             3-6. RESPUESTAS DE GERENCIA A COMERCIAL
+        ====================================================== -->
+        <record id="mail_template_toner_management_approved_commercial" model="mail.template">
+            <field name="name">Tóner - Aprobada por gerencia</field>
+            <field name="model_id" ref="model_toner_counter_submission"/>
+            <field name="subject">✅ {{ object.secuencia }} aprobada - Pendiente confirmar stock</field>
+            <field name="email_from">soporte@andescopiers.com.pe</field>
+            <field name="email_to">{{ object.get_commercial_emails() }}</field>
+            <field name="auto_delete" eval="True"/>
+            <field name="body_html"><![CDATA[
+<div style="background:#f1f5f9;padding:24px;font-family:Arial;color:#1e293b;">
+  <div style="max-width:800px;margin:auto;background:#fff;border:1px solid #e2e8f0;">
+    <div style="background:#16a34a;color:#fff;padding:22px;text-align:center;font-size:23px;font-weight:bold;">✅ Solicitud aprobada por gerencia</div>
+    <div style="padding:24px;">
+      <div style="background:#ecfdf5;border-left:4px solid #16a34a;padding:16px;">
+        La solicitud <strong><t t-out="object.secuencia"/></strong> fue aprobada.
+        El siguiente paso es <strong>confirmar el stock disponible</strong>.
+        Después de confirmar el stock, pasará a <strong>Lista para despacho</strong>.
+      </div>
+      <p><strong>Cliente:</strong> <t t-out="object.partner_id.name"/></p>
+      <p><strong>Equipo:</strong> <t t-out="object.equipment_id.name.name"/> - <t t-out="object.equipment_id.serie"/></p>
+      <p><strong>Decidido por:</strong> <t t-out="object.management_decision_name or object.management_user_id.name"/></p>
+      <p><strong>Fecha:</strong> <t t-out="object.management_date"/></p>
+      <p><strong>Observación:</strong> <t t-out="object.management_notes or 'Sin observaciones'"/></p>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:18px;">
+        <thead><tr style="background:#0f172a;color:#fff;"><th style="padding:9px;">Tóner</th><th style="padding:9px;">Solicitado</th><th style="padding:9px;">Sugerido</th><th style="padding:9px;">Aprobado</th></tr></thead>
+        <tbody>
+          <t t-if="object.requiere_toner_black"><tr><td style="padding:9px;border:1px solid #e2e8f0;">Negro</td><td style="text-align:center;border:1px solid #e2e8f0;"><t t-out="object.cantidad_solicitada_black"/></td><td style="text-align:center;border:1px solid #e2e8f0;"><t t-out="object.cantidad_sugerida_black"/></td><td style="text-align:center;border:1px solid #e2e8f0;"><strong><t t-out="object.cantidad_aprobada_black"/></strong></td></tr></t>
+          <t t-if="object.requiere_toner_cyan"><tr><td style="padding:9px;border:1px solid #e2e8f0;">Cian</td><td style="text-align:center;border:1px solid #e2e8f0;"><t t-out="object.cantidad_solicitada_cyan"/></td><td style="text-align:center;border:1px solid #e2e8f0;"><t t-out="object.cantidad_sugerida_cyan"/></td><td style="text-align:center;border:1px solid #e2e8f0;"><strong><t t-out="object.cantidad_aprobada_cyan"/></strong></td></tr></t>
+          <t t-if="object.requiere_toner_magenta"><tr><td style="padding:9px;border:1px solid #e2e8f0;">Magenta</td><td style="text-align:center;border:1px solid #e2e8f0;"><t t-out="object.cantidad_solicitada_magenta"/></td><td style="text-align:center;border:1px solid #e2e8f0;"><t t-out="object.cantidad_sugerida_magenta"/></td><td style="text-align:center;border:1px solid #e2e8f0;"><strong><t t-out="object.cantidad_aprobada_magenta"/></strong></td></tr></t>
+          <t t-if="object.requiere_toner_yellow"><tr><td style="padding:9px;border:1px solid #e2e8f0;">Amarillo</td><td style="text-align:center;border:1px solid #e2e8f0;"><t t-out="object.cantidad_solicitada_yellow"/></td><td style="text-align:center;border:1px solid #e2e8f0;"><t t-out="object.cantidad_sugerida_yellow"/></td><td style="text-align:center;border:1px solid #e2e8f0;"><strong><t t-out="object.cantidad_aprobada_yellow"/></strong></td></tr></t>
+        </tbody>
+      </table>
+      <div style="text-align:center;margin-top:26px;"><a t-att-href="object.get_backend_record_url()" style="background:#0891b2;color:#fff;padding:12px 22px;text-decoration:none;font-weight:bold;border-radius:6px;">Abrir y confirmar stock</a></div>
+    </div>
+  </div>
+</div>
+            ]]></field>
+        </record>
+
+        <record id="mail_template_toner_management_information_requested" model="mail.template">
+            <field name="name">Tóner - Gerencia solicita información</field>
+            <field name="model_id" ref="model_toner_counter_submission"/>
+            <field name="subject">🔄 {{ object.secuencia }} devuelta para completar información</field>
+            <field name="email_from">soporte@andescopiers.com.pe</field>
+            <field name="email_to">{{ object.get_commercial_emails() }}</field>
+            <field name="auto_delete" eval="True"/>
+            <field name="body_html"><![CDATA[
+<div style="background:#f1f5f9;padding:24px;font-family:Arial;color:#1e293b;"><div style="max-width:780px;margin:auto;background:#fff;border:1px solid #e2e8f0;"><div style="background:#d97706;color:#fff;padding:22px;text-align:center;font-size:22px;font-weight:bold;">🔄 Información adicional requerida</div><div style="padding:24px;"><p>Gerencia devolvió la solicitud <strong><t t-out="object.secuencia"/></strong>.</p><div style="background:#fffbeb;border-left:4px solid #d97706;padding:16px;"><strong>Información solicitada:</strong><br/><t t-out="object.management_notes"/></div><p><strong>Cliente:</strong> <t t-out="object.partner_id.name"/></p><p><strong>Equipo:</strong> <t t-out="object.equipment_id.name.name"/> - <t t-out="object.equipment_id.serie"/></p><p><strong>Decidido por:</strong> <t t-out="object.management_decision_name or object.management_user_id.name"/></p><div style="text-align:center;margin-top:24px;"><a t-att-href="object.get_backend_record_url()" style="background:#0891b2;color:#fff;padding:12px 22px;text-decoration:none;font-weight:bold;border-radius:6px;">Completar evaluación</a></div></div></div></div>
+            ]]></field>
+        </record>
+
+        <record id="mail_template_toner_management_rejected_commercial" model="mail.template">
+            <field name="name">Tóner - Rechazada por gerencia</field>
+            <field name="model_id" ref="model_toner_counter_submission"/>
+            <field name="subject">❌ {{ object.secuencia }} rechazada por gerencia</field>
+            <field name="email_from">soporte@andescopiers.com.pe</field>
+            <field name="email_to">{{ object.get_commercial_emails() }}</field>
+            <field name="auto_delete" eval="True"/>
+            <field name="body_html"><![CDATA[
+<div style="background:#f1f5f9;padding:24px;font-family:Arial;color:#1e293b;"><div style="max-width:780px;margin:auto;background:#fff;border:1px solid #e2e8f0;"><div style="background:#dc2626;color:#fff;padding:22px;text-align:center;font-size:22px;font-weight:bold;">❌ Solicitud rechazada</div><div style="padding:24px;"><p>La solicitud <strong><t t-out="object.secuencia"/></strong> no debe continuar a despacho.</p><div style="background:#fef2f2;border-left:4px solid #dc2626;padding:16px;"><strong>Motivo:</strong><br/><t t-out="object.management_notes"/></div><p><strong>Cliente:</strong> <t t-out="object.partner_id.name"/></p><p><strong>Equipo:</strong> <t t-out="object.equipment_id.name.name"/> - <t t-out="object.equipment_id.serie"/></p><p><strong>Decidido por:</strong> <t t-out="object.management_decision_name or object.management_user_id.name"/></p><div style="text-align:center;margin-top:24px;"><a t-att-href="object.get_backend_record_url()" style="background:#475569;color:#fff;padding:12px 22px;text-decoration:none;font-weight:bold;border-radius:6px;">Ver solicitud</a></div></div></div></div>
+            ]]></field>
+        </record>
+
+        <record id="mail_template_toner_management_cancelled_commercial" model="mail.template">
+            <field name="name">Tóner - Cancelada por gerencia</field>
+            <field name="model_id" ref="model_toner_counter_submission"/>
+            <field name="subject">🚫 {{ object.secuencia }} cancelada</field>
+            <field name="email_from">soporte@andescopiers.com.pe</field>
+            <field name="email_to">{{ object.get_commercial_emails() }}</field>
+            <field name="auto_delete" eval="True"/>
+            <field name="body_html"><![CDATA[
+<div style="background:#f1f5f9;padding:24px;font-family:Arial;color:#1e293b;"><div style="max-width:780px;margin:auto;background:#fff;border:1px solid #e2e8f0;"><div style="background:#475569;color:#fff;padding:22px;text-align:center;font-size:22px;font-weight:bold;">🚫 Solicitud cancelada</div><div style="padding:24px;"><p>La solicitud <strong><t t-out="object.secuencia"/></strong> fue cancelada y no continuará en el flujo.</p><div style="background:#f8fafc;border-left:4px solid #64748b;padding:16px;"><strong>Motivo:</strong><br/><t t-out="object.management_notes"/></div><p><strong>Cliente:</strong> <t t-out="object.partner_id.name"/></p><p><strong>Equipo:</strong> <t t-out="object.equipment_id.name.name"/> - <t t-out="object.equipment_id.serie"/></p><div style="text-align:center;margin-top:24px;"><a t-att-href="object.get_backend_record_url()" style="background:#475569;color:#fff;padding:12px 22px;text-decoration:none;font-weight:bold;border-radius:6px;">Ver solicitud</a></div></div></div></div>
+            ]]></field>
+        </record>
+
+        <!-- =====================================================
+             7. STOCK CONFIRMADO / LISTO PARA DESPACHO
+        ====================================================== -->
+        <record id="mail_template_toner_ready_for_dispatch" model="mail.template">
+            <field name="name">Tóner - Listo para despacho</field>
+            <field name="model_id" ref="model_toner_counter_submission"/>
+            <field name="subject">📦 {{ object.secuencia }} lista para despacho</field>
+            <field name="email_from">soporte@andescopiers.com.pe</field>
+            <field name="email_to">{{ object.get_dispatch_emails() }}</field>
+            <field name="auto_delete" eval="True"/>
+            <field name="body_html"><![CDATA[
+<div style="background:#f1f5f9;padding:24px;font-family:Arial;color:#1e293b;"><div style="max-width:800px;margin:auto;background:#fff;border:1px solid #e2e8f0;"><div style="background:#0891b2;color:#fff;padding:22px;text-align:center;font-size:22px;font-weight:bold;">📦 Pedido listo para despacho</div><div style="padding:24px;"><div style="background:#ecfeff;border-left:4px solid #0891b2;padding:16px;">Gerencia aprobó la solicitud y comercial confirmó el stock. Ya puede crearse el proceso de despacho.</div><p><strong>Solicitud:</strong> <t t-out="object.secuencia"/></p><p><strong>Cliente:</strong> <t t-out="object.partner_id.name"/></p><p><strong>Equipo:</strong> <t t-out="object.equipment_id.name.name"/> - <t t-out="object.equipment_id.serie"/></p><p><strong>Ubicación:</strong> <t t-out="object.equipment_id.ubicacion_instalacion or 'No indicada'"/></p><p><strong>Stock confirmado por:</strong> <t t-out="object.stock_confirmed_by_id.name"/></p><p><strong>Observaciones de stock:</strong> <t t-out="object.stock_confirmation_notes or 'Sin observaciones'"/></p><div style="text-align:center;margin-top:24px;"><a t-att-href="object.get_backend_record_url()" style="background:#0891b2;color:#fff;padding:12px 22px;text-decoration:none;font-weight:bold;border-radius:6px;">Abrir y crear despacho</a></div></div></div></div>
+            ]]></field>
+        </record>
+
     </data>
+
+    <!-- =====================================================
+         PÁGINAS WEB SEGURAS PARA DECISIÓN
+    ====================================================== -->
+    <template id="toner_management_decision_page" name="Decisión de gerencia - Tóner">
+        <t t-call="website.layout">
+            <div style="min-height:100vh;background:#f1f5f9;padding:30px 15px;">
+                <div style="max-width:720px;margin:auto;background:#fff;border:1px solid #e2e8f0;border-radius:18px;overflow:hidden;box-shadow:0 20px 45px rgba(15,23,42,.12);">
+                    <div style="background:#1d4ed8;color:#fff;padding:24px;text-align:center;">
+                        <h2 style="margin:0;">Decisión de gerencia</h2>
+                        <p style="margin:8px 0 0;" t-if="submission">Solicitud <strong><t t-out="submission.secuencia"/></strong></p>
+                    </div>
+                    <div style="padding:24px;">
+                        <t t-if="error">
+                            <div style="background:#fef2f2;border-left:4px solid #dc2626;padding:16px;color:#991b1b;"><t t-out="error"/></div>
+                        </t>
+                        <t t-else="">
+                            <div style="background:#f8fafc;padding:16px;margin-bottom:18px;">
+                                <p><strong>Cliente:</strong> <t t-out="submission.partner_id.name"/></p>
+                                <p><strong>Equipo:</strong> <t t-out="submission.equipment_id.name.name"/> - <t t-out="submission.equipment_id.serie"/></p>
+                                <p><strong>Copias consumidas:</strong> <t t-out="submission.consumed_copies"/></p>
+                                <p><strong>Rendimiento esperado:</strong> <t t-out="submission.expected_yield"/></p>
+                                <p style="margin-bottom:0;"><strong>Porcentaje:</strong> <t t-out="submission.consumption_percent"/> %</p>
+                            </div>
+                            <form action="/toner/management/confirm" method="post">
+                                <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                <input type="hidden" name="token" t-att-value="token"/>
+                                <input type="hidden" name="decision" t-att-value="decision"/>
+
+                                <label style="display:block;font-weight:bold;margin-bottom:6px;">Nombre de quien decide</label>
+                                <input type="text" name="decision_name" required="required" style="width:100%;padding:11px;border:1px solid #cbd5e1;border-radius:8px;margin-bottom:16px;"/>
+
+                                <label style="display:block;font-weight:bold;margin-bottom:6px;">
+                                    <t t-if="decision == 'approve'">Observación de aprobación</t>
+                                    <t t-else="">Motivo obligatorio</t>
+                                </label>
+                                <textarea name="notes" t-att-required="decision != 'approve' and 'required' or None" style="width:100%;min-height:110px;padding:11px;border:1px solid #cbd5e1;border-radius:8px;margin-bottom:18px;"></textarea>
+
+                                <button type="submit" style="width:100%;border:0;background:#1d4ed8;color:#fff;padding:13px;font-weight:bold;border-radius:8px;">
+                                    Confirmar decisión
+                                </button>
+                            </form>
+                        </t>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <template id="toner_management_decision_result" name="Resultado decisión de gerencia - Tóner">
+        <t t-call="website.layout">
+            <div style="min-height:100vh;background:#f1f5f9;padding:30px 15px;">
+                <div style="max-width:650px;margin:auto;background:#fff;border:1px solid #e2e8f0;border-radius:18px;overflow:hidden;box-shadow:0 20px 45px rgba(15,23,42,.12);">
+                    <t t-if="success">
+                        <div style="background:#16a34a;color:#fff;padding:24px;text-align:center;"><h2 style="margin:0;">Decisión registrada</h2></div>
+                        <div style="padding:24px;text-align:center;">
+                            <p>La decisión para la solicitud <strong><t t-out="submission.secuencia"/></strong> fue registrada correctamente.</p>
+                            <p>El área comercial recibió la notificación correspondiente.</p>
+                        </div>
+                    </t>
+                    <t t-else="">
+                        <div style="background:#dc2626;color:#fff;padding:24px;text-align:center;"><h2 style="margin:0;">No se pudo registrar</h2></div>
+                        <div style="padding:24px;"><div style="background:#fef2f2;border-left:4px solid #dc2626;padding:16px;color:#991b1b;"><t t-out="error"/></div></div>
+                    </t>
+                </div>
+            </div>
+        </t>
+    </template>
+
 </odoo>

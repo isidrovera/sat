@@ -2,6 +2,7 @@
 
 import json
 import logging
+import secrets
 from datetime import timedelta
 
 import requests
@@ -416,7 +417,7 @@ class TonerCounterSubmission(models.Model):
             ("aprobada_gerencia", "Aprobada por gerencia"),
             ("rechazada_gerencia", "Rechazada por gerencia"),
             ("devuelta", "Devuelta para corrección"),
-            ("confirmacion_ventas", "Pendiente de confirmación comercial"),
+            ("confirmacion_ventas", "Pendiente de confirmación de stock"),
             ("lista_despacho", "Lista para despacho"),
             ("en_despacho", "En despacho"),
             ("entregada", "Entregada"),
@@ -436,6 +437,67 @@ class TonerCounterSubmission(models.Model):
     management_user_id = fields.Many2one("res.users", string="Gerencia", tracking=True)
     management_date = fields.Datetime(string="Fecha decisión gerencia", tracking=True)
     management_notes = fields.Text(string="Decisión de gerencia", tracking=True)
+
+    management_decision = fields.Selection(
+        [
+            ("approved", "Aprobada"),
+            ("information_requested", "Solicitó información"),
+            ("rejected", "Rechazada"),
+            ("cancelled", "Cancelada"),
+        ],
+        string="Decisión de gerencia",
+        readonly=True,
+        tracking=True,
+        index=True,
+    )
+
+    management_decision_name = fields.Char(
+        string="Nombre de quien decidió",
+        readonly=True,
+        tracking=True,
+    )
+
+    management_decision_ip = fields.Char(
+        string="IP de decisión",
+        readonly=True,
+    )
+
+    management_access_token = fields.Char(
+        string="Token de decisión",
+        copy=False,
+        readonly=True,
+        index=True,
+    )
+
+    management_token_expires_at = fields.Datetime(
+        string="Vencimiento del enlace",
+        copy=False,
+        readonly=True,
+    )
+
+    management_token_used_at = fields.Datetime(
+        string="Enlace utilizado",
+        copy=False,
+        readonly=True,
+    )
+
+    stock_confirmed_by_id = fields.Many2one(
+        "res.users",
+        string="Stock confirmado por",
+        readonly=True,
+        tracking=True,
+    )
+
+    stock_confirmation_date = fields.Datetime(
+        string="Fecha de confirmación de stock",
+        readonly=True,
+        tracking=True,
+    )
+
+    stock_confirmation_notes = fields.Text(
+        string="Observaciones de stock",
+        tracking=True,
+    )
 
     sales_user_id = fields.Many2one("res.users", string="Confirmado por ventas", tracking=True)
     sales_confirmation_date = fields.Datetime(
@@ -1421,6 +1483,7 @@ class TonerCounterSubmission(models.Model):
             try:
                 record._create_chatter_note()
                 record.send_whatsapp_received()
+                record._notify_new_request_to_commercial()
             except Exception:
                 _logger.exception(
                     "[TONER] Error en notificación inicial solicitud=%s",
@@ -1532,6 +1595,348 @@ class TonerCounterSubmission(models.Model):
                 self.id,
             )
 
+
+    # -------------------------------------------------------------------------
+    # Correos XML, enlaces y decisión segura de gerencia
+    # -------------------------------------------------------------------------
+
+    def get_commercial_emails(self):
+        self.ensure_one()
+        return (
+            self.env["ir.config_parameter"]
+            .sudo()
+            .get_param(
+                "sat.toner_commercial_emails",
+                "comercial01@andescopiers.com.pe,comercial@andescopiers.com.pe",
+            )
+        )
+
+    def get_management_emails(self):
+        self.ensure_one()
+        return (
+            self.env["ir.config_parameter"]
+            .sudo()
+            .get_param(
+                "sat.toner_management_emails",
+                "gerencia@corapsac.com",
+            )
+        )
+
+    def get_dispatch_emails(self):
+        self.ensure_one()
+        return (
+            self.env["ir.config_parameter"]
+            .sudo()
+            .get_param(
+                "sat.toner_dispatch_emails",
+                "comercial01@andescopiers.com.pe,comercial@andescopiers.com.pe",
+            )
+        )
+
+    def get_backend_record_url(self):
+        self.ensure_one()
+        base_url = (
+            self.env["ir.config_parameter"]
+            .sudo()
+            .get_param("web.base.url", "")
+            .rstrip("/")
+        )
+        if not base_url:
+            return ""
+
+        action = self.env.ref(
+            "sat.action_toner_counter_submission",
+            raise_if_not_found=False,
+        )
+        if action:
+            return "%s/odoo/action-%s/%s" % (
+                base_url,
+                action.id,
+                self.id,
+            )
+
+        return "%s/odoo/%s/%s" % (
+            base_url,
+            self._name,
+            self.id,
+        )
+
+    def _generate_management_access_token(self):
+        self.ensure_one()
+        token_hours = int(
+            self.env["ir.config_parameter"]
+            .sudo()
+            .get_param("sat.toner_management_token_hours", "72")
+        )
+        token = secrets.token_urlsafe(40)
+        self.write(
+            {
+                "management_access_token": token,
+                "management_token_expires_at": (
+                    fields.Datetime.now()
+                    + timedelta(hours=max(token_hours, 1))
+                ),
+                "management_token_used_at": False,
+            }
+        )
+        return token
+
+    def get_management_decision_url(self, decision):
+        self.ensure_one()
+        valid_decisions = {
+            "approve",
+            "request_information",
+            "reject",
+            "cancel",
+        }
+        if decision not in valid_decisions:
+            return "#"
+
+        base_url = (
+            self.env["ir.config_parameter"]
+            .sudo()
+            .get_param("web.base.url", "")
+            .rstrip("/")
+        )
+        if not base_url or not self.management_access_token:
+            return "#"
+
+        return "%s/toner/management/%s/%s" % (
+            base_url,
+            self.management_access_token,
+            decision,
+        )
+
+    def _send_mail_template(self, xmlid, force_send=True):
+        self.ensure_one()
+        template = self.env.ref(xmlid, raise_if_not_found=False)
+        if not template:
+            _logger.error(
+                "[TONER] Plantilla no encontrada xmlid=%s solicitud=%s",
+                xmlid,
+                self.id,
+            )
+            return False
+
+        try:
+            mail_id = template.sudo().send_mail(
+                self.id,
+                force_send=force_send,
+                raise_exception=True,
+            )
+            _logger.info(
+                "[TONER] Plantilla enviada xmlid=%s solicitud=%s mail_id=%s",
+                xmlid,
+                self.id,
+                mail_id,
+            )
+            self.message_post(
+                body=_("Correo enviado: %s") % template.name
+            )
+            return mail_id
+        except Exception:
+            _logger.exception(
+                "[TONER] Error enviando plantilla xmlid=%s solicitud=%s",
+                xmlid,
+                self.id,
+            )
+            return False
+
+    def _notify_new_request_to_commercial(self):
+        for record in self:
+            record._send_mail_template(
+                "sat.mail_template_toner_new_request_commercial"
+            )
+
+    def _notify_management(self):
+        for record in self:
+            record._generate_management_access_token()
+            record._send_mail_template(
+                "sat.mail_template_toner_management_decision"
+            )
+
+    def _notify_commercial_management_result(self):
+        self.ensure_one()
+        template_by_decision = {
+            "approved": "sat.mail_template_toner_management_approved_commercial",
+            "information_requested": "sat.mail_template_toner_management_information_requested",
+            "rejected": "sat.mail_template_toner_management_rejected_commercial",
+            "cancelled": "sat.mail_template_toner_management_cancelled_commercial",
+        }
+        xmlid = template_by_decision.get(self.management_decision)
+        if xmlid:
+            self._send_mail_template(xmlid)
+
+    def _notify_ready_for_dispatch(self):
+        for record in self:
+            record._send_mail_template(
+                "sat.mail_template_toner_ready_for_dispatch"
+            )
+
+    def _ensure_management_token_valid(self, token):
+        self.ensure_one()
+
+        if not token or token != self.management_access_token:
+            raise UserError(_("El enlace de decisión no es válido."))
+
+        if self.management_token_used_at:
+            raise UserError(_("Este enlace ya fue utilizado."))
+
+        if (
+            not self.management_token_expires_at
+            or fields.Datetime.now() > self.management_token_expires_at
+        ):
+            raise UserError(_("El enlace de decisión venció."))
+
+        if self.state != "pendiente_gerencia":
+            raise UserError(
+                _("La solicitud ya no está pendiente de gerencia.")
+            )
+
+    def register_management_decision(
+        self,
+        token,
+        decision,
+        decision_name,
+        notes=False,
+        remote_ip=False,
+    ):
+        self.ensure_one()
+        self._ensure_management_token_valid(token)
+
+        valid_decisions = {
+            "approve",
+            "request_information",
+            "reject",
+            "cancel",
+        }
+        if decision not in valid_decisions:
+            raise UserError(_("La decisión no es válida."))
+
+        decision_name = (decision_name or "").strip()
+        notes = (notes or "").strip()
+
+        if not decision_name:
+            raise UserError(
+                _("Ingrese el nombre de quien toma la decisión.")
+            )
+
+        if decision in {
+            "request_information",
+            "reject",
+            "cancel",
+        } and not notes:
+            raise UserError(
+                _("Debe indicar el motivo de la decisión.")
+            )
+
+        now = fields.Datetime.now()
+        values = {
+            "management_date": now,
+            "management_notes": notes,
+            "management_decision_name": decision_name,
+            "management_decision_ip": remote_ip or False,
+            "management_token_used_at": now,
+        }
+
+        if decision == "approve":
+            approved_values = {}
+            for color in self.COLOR_LABELS:
+                approved_field = self._approved_quantity_field(color)
+                suggested_field = self._suggested_quantity_field(color)
+                approved_qty = int(
+                    getattr(self, approved_field) or 0
+                )
+                suggested_qty = int(
+                    getattr(self, suggested_field) or 0
+                )
+                approved_values[approved_field] = (
+                    approved_qty
+                    if approved_qty > 0
+                    else suggested_qty
+                )
+
+            if not any(
+                quantity > 0
+                for quantity in approved_values.values()
+            ):
+                raise UserError(
+                    _("No existe una cantidad sugerida para aprobar.")
+                )
+
+            values.update(approved_values)
+            values.update(
+                {
+                    "management_decision": "approved",
+                    "state": "confirmacion_ventas",
+                }
+            )
+            message = _(
+                "Gerencia aprobó la solicitud. "
+                "Queda pendiente la confirmación de stock."
+            )
+
+        elif decision == "request_information":
+            values.update(
+                {
+                    "management_decision": "information_requested",
+                    "state": "devuelta",
+                }
+            )
+            message = _(
+                "Gerencia solicitó información adicional."
+            )
+
+        elif decision == "reject":
+            values.update(
+                {
+                    "management_decision": "rejected",
+                    "state": "rechazada_gerencia",
+                }
+            )
+            message = _("Gerencia rechazó la solicitud.")
+
+        else:
+            values.update(
+                {
+                    "management_decision": "cancelled",
+                    "state": "cancelada",
+                }
+            )
+            message = _("Gerencia canceló la solicitud.")
+
+        self.sudo().write(values)
+        self.message_post(
+            body=_(
+                "%(message)s<br/>"
+                "<b>Decidido por:</b> %(name)s<br/>"
+                "<b>Observación:</b> %(notes)s"
+            )
+            % {
+                "message": message,
+                "name": decision_name,
+                "notes": notes or _("Sin observaciones"),
+            }
+        )
+
+        _logger.info(
+            "[TONER] Decisión gerencia solicitud=%s decision=%s "
+            "name=%s ip=%s",
+            self.id,
+            decision,
+            decision_name,
+            remote_ip,
+        )
+
+        self._notify_commercial_management_result()
+
+        if decision == "approve":
+            self.send_whatsapp_management_approved()
+        elif decision == "reject":
+            self.send_whatsapp_management_rejected()
+
+        return True
+
     # -------------------------------------------------------------------------
     # Flujo interno
     # -------------------------------------------------------------------------
@@ -1598,91 +2003,157 @@ class TonerCounterSubmission(models.Model):
     def action_management_approve(self):
         for record in self:
             if record.state != "pendiente_gerencia":
-                raise UserError(_("Solo gerencia puede decidir solicitudes pendientes."))
-            if not any(
-                getattr(record, record._approved_quantity_field(color)) > 0
-                for color in self.COLOR_LABELS
-            ):
-                values = {
-                    record._approved_quantity_field(color): getattr(
-                        record, record._suggested_quantity_field(color)
-                    )
-                    for color in self.COLOR_LABELS
-                }
-                record.write(values)
-
-            if not any(
-                getattr(record, record._approved_quantity_field(color)) > 0
-                for color in self.COLOR_LABELS
-            ):
                 raise UserError(
-                    _("Gerencia debe indicar al menos una cantidad aprobada.")
+                    _("La solicitud no está pendiente de gerencia.")
                 )
 
-            record.write(
+            approved_values = {}
+            for color in self.COLOR_LABELS:
+                approved_field = record._approved_quantity_field(color)
+                suggested_field = record._suggested_quantity_field(color)
+                approved_qty = int(
+                    getattr(record, approved_field) or 0
+                )
+                suggested_qty = int(
+                    getattr(record, suggested_field) or 0
+                )
+                approved_values[approved_field] = (
+                    approved_qty
+                    if approved_qty > 0
+                    else suggested_qty
+                )
+
+            if not any(
+                quantity > 0
+                for quantity in approved_values.values()
+            ):
+                raise UserError(
+                    _("Gerencia debe aprobar al menos una cantidad.")
+                )
+
+            approved_values.update(
                 {
-                    "state": "aprobada_gerencia",
+                    "state": "confirmacion_ventas",
+                    "management_decision": "approved",
                     "management_user_id": self.env.user.id,
+                    "management_decision_name": self.env.user.name,
                     "management_date": fields.Datetime.now(),
+                    "management_token_used_at": fields.Datetime.now(),
                 }
             )
+            record.write(approved_values)
             record.message_post(
-                body=_("Solicitud aprobada por gerencia: %s.") % self.env.user.name
+                body=_(
+                    "Solicitud aprobada por gerencia. "
+                    "Queda pendiente la confirmación de stock."
+                )
             )
+            record._notify_commercial_management_result()
             record.send_whatsapp_management_approved()
 
     def action_management_reject(self):
         for record in self:
             if record.state != "pendiente_gerencia":
-                raise UserError(_("La solicitud no está pendiente de gerencia."))
+                raise UserError(
+                    _("La solicitud no está pendiente de gerencia.")
+                )
             if not record.management_notes:
-                raise UserError(_("Ingrese el motivo del rechazo."))
+                raise UserError(
+                    _("Ingrese el motivo del rechazo.")
+                )
+
             record.write(
                 {
                     "state": "rechazada_gerencia",
+                    "management_decision": "rejected",
                     "management_user_id": self.env.user.id,
+                    "management_decision_name": self.env.user.name,
                     "management_date": fields.Datetime.now(),
+                    "management_token_used_at": fields.Datetime.now(),
                 }
             )
             record.message_post(
-                body=_("Solicitud rechazada por gerencia: %s.") % self.env.user.name
+                body=_(
+                    "Solicitud rechazada por gerencia: %s."
+                )
+                % self.env.user.name
             )
+            record._notify_commercial_management_result()
             record.send_whatsapp_management_rejected()
 
     def action_return_for_correction(self):
         for record in self:
             if record.state != "pendiente_gerencia":
-                raise UserError(_("La solicitud no está pendiente de gerencia."))
+                raise UserError(
+                    _("La solicitud no está pendiente de gerencia.")
+                )
+            if not record.management_notes:
+                raise UserError(
+                    _("Indique la información adicional requerida.")
+                )
+
             record.write(
                 {
                     "state": "devuelta",
+                    "management_decision": "information_requested",
                     "management_user_id": self.env.user.id,
+                    "management_decision_name": self.env.user.name,
                     "management_date": fields.Datetime.now(),
+                    "management_token_used_at": fields.Datetime.now(),
                 }
             )
-            record.message_post(body=_("Solicitud devuelta para corrección."))
+            record.message_post(
+                body=_("Gerencia solicitó información adicional.")
+            )
+            record._notify_commercial_management_result()
 
     def action_send_to_sales_confirmation(self):
+        """Compatibilidad con solicitudes antiguas aprobadas."""
         for record in self:
             if record.state != "aprobada_gerencia":
-                raise UserError(_("La solicitud debe estar aprobada por gerencia."))
+                raise UserError(
+                    _("La solicitud debe estar aprobada por gerencia.")
+                )
             record.write({"state": "confirmacion_ventas"})
-            record.message_post(body=_("Solicitud devuelta a ventas para coordinación."))
+            record.message_post(
+                body=_("Solicitud pendiente de confirmación de stock.")
+            )
 
     def action_sales_confirm(self):
         for record in self:
             if record.state != "confirmacion_ventas":
-                raise UserError(_("La solicitud no está pendiente de confirmación comercial."))
+                raise UserError(
+                    _("La solicitud no está pendiente de confirmación de stock.")
+                )
+
+            if not any(
+                getattr(
+                    record,
+                    record._approved_quantity_field(color),
+                ) > 0
+                for color in self.COLOR_LABELS
+            ):
+                raise UserError(
+                    _("No existen cantidades aprobadas para confirmar.")
+                )
+
             record.write(
                 {
                     "state": "lista_despacho",
+                    "stock_confirmed_by_id": self.env.user.id,
+                    "stock_confirmation_date": fields.Datetime.now(),
                     "sales_user_id": self.env.user.id,
                     "sales_confirmation_date": fields.Datetime.now(),
                 }
             )
             record.message_post(
-                body=_("Coordinación comercial confirmada por %s.") % self.env.user.name
+                body=_(
+                    "Stock confirmado por %s. "
+                    "La solicitud está lista para despacho."
+                )
+                % self.env.user.name
             )
+            record._notify_ready_for_dispatch()
             record.send_whatsapp_ready_for_dispatch()
 
     def action_create_dispatch(self):
@@ -1773,66 +2244,20 @@ class TonerCounterSubmission(models.Model):
     # Notificaciones
     # -------------------------------------------------------------------------
 
-    def _notify_management(self):
+    def _notify_management_legacy(self):
         for record in self:
-            record._send_internal_email(
-                subject=_("Solicitud de tóner pendiente de gerencia - %s")
-                % record.secuencia,
-                title=_("Solicitud pendiente de aprobación gerencial"),
-            )
+            record._notify_management()
 
     def _send_internal_email(self, subject, title):
+        """Método conservado por compatibilidad; los correos usan mail.template XML."""
         self.ensure_one()
-        server = self.env["ir.mail_server"].sudo().search(
-            [("name", "=", "office")], limit=1
-        )
-        if not server:
-            server = self.env["ir.mail_server"].sudo().search([], limit=1)
-
-        colors = [
-            self.COLOR_LABELS[color]
-            for color in self.COLOR_LABELS
-            if getattr(self, self._color_boolean_field(color))
-        ]
-
-        body = """
-            <h3>%s</h3>
-            <p><strong>Solicitud:</strong> %s</p>
-            <p><strong>Cliente:</strong> %s</p>
-            <p><strong>Equipo:</strong> %s</p>
-            <p><strong>Serie:</strong> %s</p>
-            <p><strong>Tóner:</strong> %s</p>
-            <p><strong>Contador B/N:</strong> %s</p>
-            <p><strong>Contador color:</strong> %s</p>
-            <p><strong>Análisis:</strong><br/>%s</p>
-        """ % (
+        _logger.warning(
+            "[TONER] _send_internal_email obsoleto solicitud=%s subject=%s title=%s",
+            self.id,
+            subject,
             title,
-            self.secuencia,
-            self.partner_id.name if self.partner_id else "Sin cliente",
-            self.equipment_id.name.name if self.equipment_id.name else "Sin modelo",
-            self.equipment_id.serie or "Sin serie",
-            ", ".join(colors),
-            self.counter_bn,
-            self.counter_color,
-            (self.analysis_summary or "").replace("\n", "<br/>"),
         )
-
-        try:
-            self.env["mail.mail"].sudo().create(
-                {
-                    "subject": subject,
-                    "body_html": body,
-                    "email_from": "soporte@andescopiers.com.pe",
-                    "email_to": "comercial01@andescopiers.com.pe",
-                    "email_cc": "comercial@andescopiers.com.pe",
-                    "mail_server_id": server.id if server else False,
-                }
-            ).send()
-        except Exception:
-            _logger.exception(
-                "[TONER] Error enviando correo interno solicitud=%s",
-                self.id,
-            )
+        return False
 
     def send_whatsapp_received(self):
         for record in self:
@@ -1883,7 +2308,7 @@ class TonerCounterSubmission(models.Model):
             message = (
                 "*🏢 Soporte*\n\n"
                 "📦 *Pedido confirmado para preparación*\n\n"
-                "La solicitud *%s* fue coordinada y pasará al proceso de despacho.\n"
+                "La solicitud *%s* tiene stock confirmado y pasará al proceso de despacho.\n"
             ) % record.secuencia
             record.send_whatsapp_message(record.client_phone_clean, message)
 
