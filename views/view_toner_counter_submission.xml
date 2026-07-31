@@ -263,84 +263,141 @@
 
                                 <group string="Resumen de Contadores">
                                     <group>
-                                        <field name="counter_bn" readonly="state != 'recibida'"/>
+                                        <field
+                                            name="counter_bn"
+                                            readonly="state != 'recibida'"
+                                        />
                                         <field name="previous_counter_bn" readonly="1"/>
                                         <field name="copies_bn_period" readonly="1"/>
                                     </group>
 
-                                    <group>
-                                        <field name="counter_color" readonly="state != 'recibida'"/>
+                                    <group invisible="not equipment_id or equipment_id.tipo_maquina_id != 'color'">
+                                        <field
+                                            name="counter_color"
+                                            readonly="state != 'recibida'"
+                                        />
                                         <field name="previous_counter_color" readonly="1"/>
                                         <field name="copies_color_period" readonly="1"/>
                                     </group>
                                 </group>
 
-                                <separator string="Detalle por Tóner"/>
+                                <separator string="Detalle del Pedido"/>
 
                                 <group col="4">
 
-                                    <group string="Negro">
-                                        <field name="requiere_toner_black" readonly="1"/>
-                                        <field name="cantidad_solicitada_black" readonly="1"/>
+                                    <group string="Tóner Negro">
+                                        <field
+                                            name="requiere_toner_black"
+                                            string="Seleccionar"
+                                            readonly="state != 'recibida'"
+                                        />
+                                        <field
+                                            name="cantidad_solicitada_black"
+                                            string="Cantidad solicitada"
+                                            readonly="state != 'recibida'"
+                                            required="requiere_toner_black"
+                                        />
                                         <field
                                             name="cantidad_sugerida_black"
+                                            string="Cantidad sugerida"
                                             readonly="state not in ['evaluacion', 'devuelta']"
                                         />
                                         <field
                                             name="cantidad_aprobada_black"
+                                            string="Cantidad aprobada"
                                             readonly="state != 'pendiente_gerencia'"
                                         />
                                     </group>
 
                                     <group
-                                        string="Cian"
-                                        invisible="equipment_id.tipo_maquina_id == 'monocromatica'"
+                                        string="Tóner Cian"
+                                        invisible="not equipment_id or equipment_id.tipo_maquina_id != 'color'"
                                     >
-                                        <field name="requiere_toner_cyan" readonly="1"/>
-                                        <field name="cantidad_solicitada_cyan" readonly="1"/>
+                                        <field
+                                            name="requiere_toner_cyan"
+                                            string="Seleccionar"
+                                            readonly="state != 'recibida'"
+                                        />
+                                        <field
+                                            name="cantidad_solicitada_cyan"
+                                            string="Cantidad solicitada"
+                                            readonly="state != 'recibida'"
+                                            required="requiere_toner_cyan"
+                                        />
                                         <field
                                             name="cantidad_sugerida_cyan"
+                                            string="Cantidad sugerida"
                                             readonly="state not in ['evaluacion', 'devuelta']"
                                         />
                                         <field
                                             name="cantidad_aprobada_cyan"
+                                            string="Cantidad aprobada"
                                             readonly="state != 'pendiente_gerencia'"
                                         />
                                     </group>
 
                                     <group
-                                        string="Magenta"
-                                        invisible="equipment_id.tipo_maquina_id == 'monocromatica'"
+                                        string="Tóner Magenta"
+                                        invisible="not equipment_id or equipment_id.tipo_maquina_id != 'color'"
                                     >
-                                        <field name="requiere_toner_magenta" readonly="1"/>
-                                        <field name="cantidad_solicitada_magenta" readonly="1"/>
+                                        <field
+                                            name="requiere_toner_magenta"
+                                            string="Seleccionar"
+                                            readonly="state != 'recibida'"
+                                        />
+                                        <field
+                                            name="cantidad_solicitada_magenta"
+                                            string="Cantidad solicitada"
+                                            readonly="state != 'recibida'"
+                                            required="requiere_toner_magenta"
+                                        />
                                         <field
                                             name="cantidad_sugerida_magenta"
+                                            string="Cantidad sugerida"
                                             readonly="state not in ['evaluacion', 'devuelta']"
                                         />
                                         <field
                                             name="cantidad_aprobada_magenta"
+                                            string="Cantidad aprobada"
                                             readonly="state != 'pendiente_gerencia'"
                                         />
                                     </group>
 
                                     <group
-                                        string="Amarillo"
-                                        invisible="equipment_id.tipo_maquina_id == 'monocromatica'"
+                                        string="Tóner Amarillo"
+                                        invisible="not equipment_id or equipment_id.tipo_maquina_id != 'color'"
                                     >
-                                        <field name="requiere_toner_yellow" readonly="1"/>
-                                        <field name="cantidad_solicitada_yellow" readonly="1"/>
+                                        <field
+                                            name="requiere_toner_yellow"
+                                            string="Seleccionar"
+                                            readonly="state != 'recibida'"
+                                        />
+                                        <field
+                                            name="cantidad_solicitada_yellow"
+                                            string="Cantidad solicitada"
+                                            readonly="state != 'recibida'"
+                                            required="requiere_toner_yellow"
+                                        />
                                         <field
                                             name="cantidad_sugerida_yellow"
+                                            string="Cantidad sugerida"
                                             readonly="state not in ['evaluacion', 'devuelta']"
                                         />
                                         <field
                                             name="cantidad_aprobada_yellow"
+                                            string="Cantidad aprobada"
                                             readonly="state != 'pendiente_gerencia'"
                                         />
                                     </group>
 
                                 </group>
+
+                                <div class="alert alert-info" role="alert">
+                                    <strong>Registro manual:</strong>
+                                    seleccione el tóner o escriba directamente una cantidad.
+                                    Al ingresar una cantidad mayor que cero, el color se seleccionará automáticamente.
+                                    Para equipos monocromáticos solo se mostrará el tóner negro.
+                                </div>
 
                                 <separator string="Instrucciones para el Área Comercial"/>
 
@@ -369,7 +426,6 @@
                                 </div>
 
                             </page>
-
 
                             <page string="Análisis de Consumo" name="consumption_analysis">
 
@@ -511,15 +567,15 @@
                                         <field name="stock_reportado_black"/>
                                         <field
                                             name="stock_reportado_cyan"
-                                            invisible="equipment_id.tipo_maquina_id == 'monocromatica'"
+                                            invisible="not equipment_id or equipment_id.tipo_maquina_id != 'color'"
                                         />
                                         <field
                                             name="stock_reportado_magenta"
-                                            invisible="equipment_id.tipo_maquina_id == 'monocromatica'"
+                                            invisible="not equipment_id or equipment_id.tipo_maquina_id != 'color'"
                                         />
                                         <field
                                             name="stock_reportado_yellow"
-                                            invisible="equipment_id.tipo_maquina_id == 'monocromatica'"
+                                            invisible="not equipment_id or equipment_id.tipo_maquina_id != 'color'"
                                         />
                                     </group>
 
@@ -527,15 +583,15 @@
                                         <field name="nivel_toner_black"/>
                                         <field
                                             name="nivel_toner_cyan"
-                                            invisible="equipment_id.tipo_maquina_id == 'monocromatica'"
+                                            invisible="not equipment_id or equipment_id.tipo_maquina_id != 'color'"
                                         />
                                         <field
                                             name="nivel_toner_magenta"
-                                            invisible="equipment_id.tipo_maquina_id == 'monocromatica'"
+                                            invisible="not equipment_id or equipment_id.tipo_maquina_id != 'color'"
                                         />
                                         <field
                                             name="nivel_toner_yellow"
-                                            invisible="equipment_id.tipo_maquina_id == 'monocromatica'"
+                                            invisible="not equipment_id or equipment_id.tipo_maquina_id != 'color'"
                                         />
                                     </group>
                                 </group>

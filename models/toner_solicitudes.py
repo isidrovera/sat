@@ -1064,10 +1064,22 @@ class TonerCounterSubmission(models.Model):
     def _get_requested_toners_from_record(self):
         self.ensure_one()
         return {
-            "black": bool(self.requiere_toner_black),
-            "cyan": bool(self.requiere_toner_cyan),
-            "magenta": bool(self.requiere_toner_magenta),
-            "yellow": bool(self.requiere_toner_yellow),
+            "black": bool(
+                self.requiere_toner_black
+                or self.cantidad_solicitada_black > 0
+            ),
+            "cyan": bool(
+                self.requiere_toner_cyan
+                or self.cantidad_solicitada_cyan > 0
+            ),
+            "magenta": bool(
+                self.requiere_toner_magenta
+                or self.cantidad_solicitada_magenta > 0
+            ),
+            "yellow": bool(
+                self.requiere_toner_yellow
+                or self.cantidad_solicitada_yellow > 0
+            ),
         }
 
     def _get_current_counters_from_record(self):
@@ -1137,10 +1149,24 @@ class TonerCounterSubmission(models.Model):
         for color in self.COLOR_LABELS:
             requested_field = self._requested_quantity_field(color)
             suggested_field = self._suggested_quantity_field(color)
-            requested = bool(
-                getattr(self, self._color_boolean_field(color))
+            boolean_field = self._color_boolean_field(color)
+
+            current_requested_qty = int(
+                getattr(self, requested_field, 0) or 0
             )
-            setattr(self, requested_field, 1 if requested else 0)
+            requested = bool(
+                getattr(self, boolean_field)
+                or current_requested_qty > 0
+            )
+
+            setattr(self, boolean_field, requested)
+
+            if requested and current_requested_qty <= 0:
+                current_requested_qty = 1
+            elif not requested:
+                current_requested_qty = 0
+
+            setattr(self, requested_field, current_requested_qty)
 
             result = next(
                 (
@@ -1150,13 +1176,24 @@ class TonerCounterSubmission(models.Model):
                 ),
                 {},
             )
-            suggested = (
-                1
-                if requested
+
+            current_suggested_qty = int(
+                getattr(self, suggested_field, 0) or 0
+            )
+
+            if (
+                requested
                 and result.get("can_create", True)
                 and not result.get("requires_evidence")
-                else 0
-            )
+            ):
+                suggested = (
+                    current_suggested_qty
+                    if current_suggested_qty > 0
+                    else current_requested_qty
+                )
+            else:
+                suggested = 0
+
             setattr(self, suggested_field, suggested)
 
     def _validate_record_for_workflow(self):
@@ -1220,6 +1257,67 @@ class TonerCounterSubmission(models.Model):
                 record.requiere_toner_yellow = False
                 record.counter_color = 0
 
+
+    @api.onchange(
+        "cantidad_solicitada_black",
+        "cantidad_solicitada_cyan",
+        "cantidad_solicitada_magenta",
+        "cantidad_solicitada_yellow",
+    )
+    def _onchange_requested_quantities(self):
+        for record in self:
+            for color in self.COLOR_LABELS:
+                quantity_field = record._requested_quantity_field(color)
+                boolean_field = record._color_boolean_field(color)
+                quantity = int(getattr(record, quantity_field, 0) or 0)
+
+                if quantity < 0:
+                    setattr(record, quantity_field, 0)
+                    quantity = 0
+
+                setattr(record, boolean_field, quantity > 0)
+
+            if (
+                record.equipment_id
+                and record.equipment_id.tipo_maquina_id != "color"
+            ):
+                record.requiere_toner_cyan = False
+                record.requiere_toner_magenta = False
+                record.requiere_toner_yellow = False
+                record.cantidad_solicitada_cyan = 0
+                record.cantidad_solicitada_magenta = 0
+                record.cantidad_solicitada_yellow = 0
+
+    @api.onchange(
+        "requiere_toner_black",
+        "requiere_toner_cyan",
+        "requiere_toner_magenta",
+        "requiere_toner_yellow",
+    )
+    def _onchange_requested_toner_flags(self):
+        for record in self:
+            for color in self.COLOR_LABELS:
+                boolean_field = record._color_boolean_field(color)
+                quantity_field = record._requested_quantity_field(color)
+                selected = bool(getattr(record, boolean_field))
+                quantity = int(getattr(record, quantity_field, 0) or 0)
+
+                if selected and quantity <= 0:
+                    setattr(record, quantity_field, 1)
+                elif not selected:
+                    setattr(record, quantity_field, 0)
+
+            if (
+                record.equipment_id
+                and record.equipment_id.tipo_maquina_id != "color"
+            ):
+                record.requiere_toner_cyan = False
+                record.requiere_toner_magenta = False
+                record.requiere_toner_yellow = False
+                record.cantidad_solicitada_cyan = 0
+                record.cantidad_solicitada_magenta = 0
+                record.cantidad_solicitada_yellow = 0
+
     @api.onchange(
         "equipment_id",
         "counter_bn",
@@ -1228,6 +1326,10 @@ class TonerCounterSubmission(models.Model):
         "requiere_toner_cyan",
         "requiere_toner_magenta",
         "requiere_toner_yellow",
+        "cantidad_solicitada_black",
+        "cantidad_solicitada_cyan",
+        "cantidad_solicitada_magenta",
+        "cantidad_solicitada_yellow",
     )
     def _onchange_manual_analysis(self):
         for record in self:
