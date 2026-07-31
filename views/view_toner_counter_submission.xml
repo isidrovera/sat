@@ -25,8 +25,6 @@
                     <field name="partner_id" string="Cliente"/>
                     <field name="equipment_id" string="Equipo"/>
                     <field name="client_name" string="Solicitante"/>
-                    <field name="source" string="Origen" optional="show"/>
-                    <field name="created_by_user_id" string="Registrado por" optional="show"/>
 
                     <field name="counter_bn" string="Contador B/N"/>
                     <field name="counter_color" string="Contador Color" optional="show"/>
@@ -127,9 +125,17 @@
                         />
 
                         <button
+                            name="action_send_to_sales_confirmation"
+                            type="object"
+                            string="Enviar a Comercial"
+                            class="btn-primary"
+                            invisible="state != 'aprobada_gerencia'"
+                        />
+
+                        <button
                             name="action_sales_confirm"
                             type="object"
-                            string="Confirmar Stock"
+                            string="Confirmar Coordinación"
                             class="btn-success"
                             invisible="state != 'confirmacion_ventas'"
                         />
@@ -168,6 +174,9 @@
 
                     <sheet>
 
+                        <!-- Campo técnico usado por las condiciones de visibilidad -->
+                        <field name="tipo_maquina_id" invisible="1"/>
+
                         <div class="oe_button_box" name="button_box">
                             <button
                                 name="action_view_delivery"
@@ -193,14 +202,8 @@
                         <!-- Cabecera tipo pedido -->
                         <group>
                             <group string="Cliente y Equipo">
-                                <field name="source" readonly="1"/>
-                                <field name="created_by_user_id" readonly="1"/>
                                 <field name="partner_id" readonly="1"/>
-                                <field
-                                    name="equipment_id"
-                                    readonly="state != 'recibida'"
-                                    options="{'no_create': True, 'no_create_edit': True}"
-                                />
+                                <field name="equipment_id" readonly="state != 'recibida'"/>
                                 <field name="submission_date" readonly="1"/>
                                 <field name="delivery_scheduled_id" readonly="1" invisible="not delivery_scheduled_id"/>
                             </group>
@@ -210,11 +213,6 @@
                                 <field name="client_phone" readonly="state != 'recibida'"/>
                                 <field name="client_email" readonly="state != 'recibida'"/>
                                 <field name="client_phone_clean" readonly="1"/>
-                                <div class="alert alert-light border" role="alert">
-                                    En un registro manual estos datos se cargan desde el usuario conectado.
-                                    Puede reemplazarlos por los datos del cliente que llamó o escribió,
-                                    pero el campo <strong>Registrado por</strong> conserva la auditoría interna.
-                                </div>
                             </group>
                         </group>
 
@@ -255,141 +253,84 @@
 
                                 <group string="Resumen de Contadores">
                                     <group>
-                                        <field
-                                            name="counter_bn"
-                                            readonly="state != 'recibida'"
-                                        />
+                                        <field name="counter_bn" readonly="state != 'recibida'"/>
                                         <field name="previous_counter_bn" readonly="1"/>
                                         <field name="copies_bn_period" readonly="1"/>
                                     </group>
 
-                                    <group invisible="not equipment_id or equipment_id.tipo_maquina_id != 'color'">
-                                        <field
-                                            name="counter_color"
-                                            readonly="state != 'recibida'"
-                                        />
+                                    <group invisible="tipo_maquina_id != 'color'">
+                                        <field name="counter_color" readonly="state != 'recibida'"/>
                                         <field name="previous_counter_color" readonly="1"/>
                                         <field name="copies_color_period" readonly="1"/>
                                     </group>
                                 </group>
 
-                                <separator string="Detalle del Pedido"/>
+                                <separator string="Detalle por Tóner"/>
 
                                 <group col="4">
 
-                                    <group string="Tóner Negro">
-                                        <field
-                                            name="requiere_toner_black"
-                                            string="Seleccionar"
-                                            readonly="state != 'recibida'"
-                                        />
-                                        <field
-                                            name="cantidad_solicitada_black"
-                                            string="Cantidad solicitada"
-                                            readonly="state != 'recibida'"
-                                            required="requiere_toner_black"
-                                        />
+                                    <group string="Negro">
+                                        <field name="requiere_toner_black" readonly="1"/>
+                                        <field name="cantidad_solicitada_black" readonly="1"/>
                                         <field
                                             name="cantidad_sugerida_black"
-                                            string="Cantidad sugerida"
                                             readonly="state not in ['evaluacion', 'devuelta']"
                                         />
                                         <field
                                             name="cantidad_aprobada_black"
-                                            string="Cantidad aprobada"
                                             readonly="state != 'pendiente_gerencia'"
                                         />
                                     </group>
 
                                     <group
-                                        string="Tóner Cian"
-                                        invisible="not equipment_id or equipment_id.tipo_maquina_id != 'color'"
+                                        string="Cian"
+                                        invisible="tipo_maquina_id != 'color'"
                                     >
-                                        <field
-                                            name="requiere_toner_cyan"
-                                            string="Seleccionar"
-                                            readonly="state != 'recibida'"
-                                        />
-                                        <field
-                                            name="cantidad_solicitada_cyan"
-                                            string="Cantidad solicitada"
-                                            readonly="state != 'recibida'"
-                                            required="requiere_toner_cyan"
-                                        />
+                                        <field name="requiere_toner_cyan" readonly="1"/>
+                                        <field name="cantidad_solicitada_cyan" readonly="1"/>
                                         <field
                                             name="cantidad_sugerida_cyan"
-                                            string="Cantidad sugerida"
                                             readonly="state not in ['evaluacion', 'devuelta']"
                                         />
                                         <field
                                             name="cantidad_aprobada_cyan"
-                                            string="Cantidad aprobada"
                                             readonly="state != 'pendiente_gerencia'"
                                         />
                                     </group>
 
                                     <group
-                                        string="Tóner Magenta"
-                                        invisible="not equipment_id or equipment_id.tipo_maquina_id != 'color'"
+                                        string="Magenta"
+                                        invisible="tipo_maquina_id != 'color'"
                                     >
-                                        <field
-                                            name="requiere_toner_magenta"
-                                            string="Seleccionar"
-                                            readonly="state != 'recibida'"
-                                        />
-                                        <field
-                                            name="cantidad_solicitada_magenta"
-                                            string="Cantidad solicitada"
-                                            readonly="state != 'recibida'"
-                                            required="requiere_toner_magenta"
-                                        />
+                                        <field name="requiere_toner_magenta" readonly="1"/>
+                                        <field name="cantidad_solicitada_magenta" readonly="1"/>
                                         <field
                                             name="cantidad_sugerida_magenta"
-                                            string="Cantidad sugerida"
                                             readonly="state not in ['evaluacion', 'devuelta']"
                                         />
                                         <field
                                             name="cantidad_aprobada_magenta"
-                                            string="Cantidad aprobada"
                                             readonly="state != 'pendiente_gerencia'"
                                         />
                                     </group>
 
                                     <group
-                                        string="Tóner Amarillo"
-                                        invisible="not equipment_id or equipment_id.tipo_maquina_id != 'color'"
+                                        string="Amarillo"
+                                        invisible="tipo_maquina_id != 'color'"
                                     >
-                                        <field
-                                            name="requiere_toner_yellow"
-                                            string="Seleccionar"
-                                            readonly="state != 'recibida'"
-                                        />
-                                        <field
-                                            name="cantidad_solicitada_yellow"
-                                            string="Cantidad solicitada"
-                                            readonly="state != 'recibida'"
-                                            required="requiere_toner_yellow"
-                                        />
+                                        <field name="requiere_toner_yellow" readonly="1"/>
+                                        <field name="cantidad_solicitada_yellow" readonly="1"/>
                                         <field
                                             name="cantidad_sugerida_yellow"
-                                            string="Cantidad sugerida"
                                             readonly="state not in ['evaluacion', 'devuelta']"
                                         />
                                         <field
                                             name="cantidad_aprobada_yellow"
-                                            string="Cantidad aprobada"
                                             readonly="state != 'pendiente_gerencia'"
                                         />
                                     </group>
 
                                 </group>
-
-                                <div class="alert alert-info" role="alert">
-                                    <strong>Registro manual:</strong>
-                                    seleccione el tóner o escriba directamente una cantidad.
-                                    Al ingresar una cantidad mayor que cero, el color se seleccionará automáticamente.
-                                    Para equipos monocromáticos solo se mostrará el tóner negro.
-                                </div>
 
                                 <separator string="Instrucciones para el Área Comercial"/>
 
@@ -418,6 +359,7 @@
                                 </div>
 
                             </page>
+
 
                             <page string="Análisis de Consumo" name="consumption_analysis">
 
@@ -501,11 +443,8 @@
 
                                 <group>
                                     <group string="Decisión">
-                                        <field name="management_decision" readonly="1"/>
                                         <field name="management_user_id" readonly="1"/>
-                                        <field name="management_decision_name" readonly="1"/>
                                         <field name="management_date" readonly="1"/>
-                                        <field name="management_decision_ip" readonly="1"/>
                                     </group>
 
                                     <group string="Estado">
@@ -531,17 +470,13 @@
                             </page>
 
 
-                            <page string="Stock y Despacho" name="dispatch">
+                            <page string="Coordinación y Despacho" name="dispatch">
 
                                 <group>
-                                    <group string="Confirmación de Stock">
-                                        <field name="stock_confirmed_by_id" readonly="1"/>
-                                        <field name="stock_confirmation_date" readonly="1"/>
-                                        <field
-                                            name="stock_confirmation_notes"
-                                            readonly="state != 'confirmacion_ventas'"
-                                            placeholder="Confirme existencia, ubicación y observaciones del stock..."
-                                        />
+                                    <group string="Confirmación Comercial">
+                                        <field name="sales_user_id" readonly="1"/>
+                                        <field name="sales_confirmation_date" readonly="1"/>
+                                        <field name="sales_notes" readonly="state != 'confirmacion_ventas'"/>
                                     </group>
 
                                     <group string="Despacho">
@@ -551,11 +486,9 @@
                                 </group>
 
                                 <div class="alert alert-info" role="alert">
-                                    Después de la aprobación de gerencia,
-                                    comercial debe verificar físicamente el stock
-                                    y confirmar las cantidades disponibles.
-                                    Al confirmar, la solicitud pasa a
-                                    <strong>Lista para despacho</strong>.
+                                    Comercial debe confirmar contacto, dirección,
+                                    disponibilidad del cliente y fecha tentativa
+                                    antes de liberar el pedido para despacho.
                                 </div>
 
                             </page>
@@ -568,15 +501,15 @@
                                         <field name="stock_reportado_black"/>
                                         <field
                                             name="stock_reportado_cyan"
-                                            invisible="not equipment_id or equipment_id.tipo_maquina_id != 'color'"
+                                            invisible="tipo_maquina_id != 'color'"
                                         />
                                         <field
                                             name="stock_reportado_magenta"
-                                            invisible="not equipment_id or equipment_id.tipo_maquina_id != 'color'"
+                                            invisible="tipo_maquina_id != 'color'"
                                         />
                                         <field
                                             name="stock_reportado_yellow"
-                                            invisible="not equipment_id or equipment_id.tipo_maquina_id != 'color'"
+                                            invisible="tipo_maquina_id != 'color'"
                                         />
                                     </group>
 
@@ -584,15 +517,15 @@
                                         <field name="nivel_toner_black"/>
                                         <field
                                             name="nivel_toner_cyan"
-                                            invisible="not equipment_id or equipment_id.tipo_maquina_id != 'color'"
+                                            invisible="tipo_maquina_id != 'color'"
                                         />
                                         <field
                                             name="nivel_toner_magenta"
-                                            invisible="not equipment_id or equipment_id.tipo_maquina_id != 'color'"
+                                            invisible="tipo_maquina_id != 'color'"
                                         />
                                         <field
                                             name="nivel_toner_yellow"
-                                            invisible="not equipment_id or equipment_id.tipo_maquina_id != 'color'"
+                                            invisible="tipo_maquina_id != 'color'"
                                         />
                                     </group>
                                 </group>
@@ -784,7 +717,7 @@
                     />
 
                     <filter
-                        string="Pendientes de stock"
+                        string="Pendientes de comercial"
                         name="sales"
                         domain="[('state', '=', 'confirmacion_ventas')]"
                     />
