@@ -677,6 +677,131 @@ class TonerRequestController(http.Controller):
             )
             return False
 
+
+    # -------------------------------------------------------------------------
+    # Decisión segura de gerencia
+    # -------------------------------------------------------------------------
+
+    @http.route(
+        "/toner/management/<string:token>/<string:decision>",
+        type="http",
+        auth="public",
+        methods=["GET"],
+        website=True,
+        csrf=False,
+        sitemap=False,
+    )
+    def toner_management_decision_page(
+        self,
+        token,
+        decision,
+        **kwargs,
+    ):
+        submission = request.env[
+            "toner.counter.submission"
+        ].sudo().search(
+            [("management_access_token", "=", token)],
+            limit=1,
+        )
+
+        values = {
+            "submission": submission,
+            "token": token,
+            "decision": decision,
+            "error": False,
+        }
+
+        if not submission:
+            values["error"] = _(
+                "El enlace no corresponde a una solicitud válida."
+            )
+        else:
+            try:
+                submission._ensure_management_token_valid(token)
+                if decision not in {
+                    "approve",
+                    "request_information",
+                    "reject",
+                    "cancel",
+                }:
+                    values["error"] = _(
+                        "La acción indicada no es válida."
+                    )
+            except Exception as error:
+                values["error"] = str(error)
+
+        return request.render(
+            "sat.toner_management_decision_page",
+            values,
+        )
+
+    @http.route(
+        "/toner/management/confirm",
+        type="http",
+        auth="public",
+        methods=["POST"],
+        website=True,
+        csrf=True,
+        sitemap=False,
+    )
+    def toner_management_decision_confirm(self, **post):
+        token = post.get("token")
+        decision = post.get("decision")
+        decision_name = post.get("decision_name")
+        notes = post.get("notes")
+
+        submission = request.env[
+            "toner.counter.submission"
+        ].sudo().search(
+            [("management_access_token", "=", token)],
+            limit=1,
+        )
+
+        values = {
+            "submission": submission,
+            "decision": decision,
+            "success": False,
+            "error": False,
+        }
+
+        if not submission:
+            values["error"] = _(
+                "El enlace no corresponde a una solicitud válida."
+            )
+        else:
+            try:
+                forwarded_for = request.httprequest.headers.get(
+                    "X-Forwarded-For",
+                    "",
+                )
+                remote_ip = (
+                    forwarded_for.split(",")[0].strip()
+                    if forwarded_for
+                    else request.httprequest.remote_addr
+                )
+
+                submission.register_management_decision(
+                    token=token,
+                    decision=decision,
+                    decision_name=decision_name,
+                    notes=notes,
+                    remote_ip=remote_ip,
+                )
+                values["success"] = True
+            except Exception as error:
+                _logger.exception(
+                    "[TONER-MANAGEMENT] Error decisión "
+                    "solicitud=%s decision=%s",
+                    submission.id,
+                    decision,
+                )
+                values["error"] = str(error)
+
+        return request.render(
+            "sat.toner_management_decision_result",
+            values,
+        )
+
     # -------------------------------------------------------------------------
     # Confirmación antigua
     # -------------------------------------------------------------------------
