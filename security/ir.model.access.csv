@@ -306,3 +306,4 @@ access_sat_prueba_maquina_snmp_alerta_manager,sat.prueba.maquina.snmp.alerta man
 access_evaluacion_cierre_mensual_user,evaluacion.cierre.mensual usuario,model_evaluacion_cierre_mensual,base.group_user,1,1,1,1
 access_evaluacion_cierre_mensual_maquina_user,evaluacion.cierre.mensual.maquina usuario,model_evaluacion_cierre_mensual_maquina,base.group_user,1,1,1,1
 access_evaluacion_cierre_mensual_tecnico_user,evaluacion.cierre.mensual.tecnico usuario,model_evaluacion_cierre_mensual_tecnico,base.group_user,1,1,1,1
+access_evaluacion_cierre_mensual_descarga_user,Descargas de contenedores del cierre mensual,model_evaluacion_cierre_mensual_descarga,base.group_user,1,1,1,1
