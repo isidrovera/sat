@@ -10,22 +10,37 @@
             <field name="model">evaluacion.cierre.mensual</field>
             <field name="arch" type="xml">
                 <list
-                    string="Cierres Mensuales de Producción"
+                    string="Cierres mensuales de producción"
                     default_order="fecha_inicio desc"
                     decoration-info="state == 'calculado'"
                     decoration-success="state == 'confirmado'"
                     decoration-muted="state == 'cancelado'">
-                    <field name="name"/>
-                    <field name="fecha_inicio"/>
-                    <field name="fecha_fin"/>
-                    <field name="pool_total_exigible"/>
-                    <field name="maquinas_finalizadas_mes"/>
-                    <field name="maquinas_pendientes_cierre"/>
-                    <field name="capacidad_total_taller_horas"/>
-                    <field name="state" widget="badge"
-                           decoration-info="state == 'calculado'"
-                           decoration-success="state == 'confirmado'"
-                           decoration-muted="state == 'cancelado'"/>
+
+                    <field name="name" string="Cierre"/>
+                    <field name="fecha_inicio" string="Periodo"/>
+                    <field name="meta_base_taller" string="Meta base"/>
+                    <field name="meta_total_taller_ajustada" string="Meta ajustada"/>
+                    <field name="pool_total_exigible" string="Pool exigible"/>
+                    <field name="maquinas_finalizadas_mes" string="Finalizadas"/>
+                    <field name="maquinas_pendientes_cierre" string="Pendientes"/>
+                    <field name="contenedores_recibidos" string="Contenedores"/>
+                    <field name="capacidad_total_taller_horas" string="Horas disponibles"/>
+
+                    <field
+                        name="state"
+                        string="Estado"
+                        widget="badge"
+                        decoration-info="state == 'calculado'"
+                        decoration-success="state == 'confirmado'"
+                        decoration-muted="state == 'cancelado'"/>
+
+                    <field name="fecha_fin" optional="hide"/>
+                    <field name="factor_disponibilidad_taller" optional="hide"/>
+                    <field name="maquinas_descargadas_mes" optional="hide"/>
+                    <field name="maquinas_backlog_inicial" optional="hide"/>
+                    <field name="maquinas_excluidas" optional="hide"/>
+                    <field name="horas_descarga_contenedores" optional="hide"/>
+                    <field name="horas_hombre_descarga_contenedores" optional="hide"/>
                     <field name="calculado_por_id" optional="hide"/>
                     <field name="fecha_calculo" optional="hide"/>
                     <field name="confirmado_por_id" optional="hide"/>
@@ -47,90 +62,139 @@
                     <field name="calculado_por_id"/>
                     <field name="confirmado_por_id"/>
 
-                    <filter name="filter_borrador"
-                            string="Borradores"
-                            domain="[('state', '=', 'borrador')]"/>
-
-                    <filter name="filter_calculado"
-                            string="Calculados"
-                            domain="[('state', '=', 'calculado')]"/>
-
-                    <filter name="filter_confirmado"
-                            string="Confirmados"
-                            domain="[('state', '=', 'confirmado')]"/>
-
-                    <filter name="filter_cancelado"
-                            string="Cancelados"
-                            domain="[('state', '=', 'cancelado')]"/>
+                    <filter
+                        name="filter_borrador"
+                        string="Borradores"
+                        domain="[('state', '=', 'borrador')]"/>
+                    <filter
+                        name="filter_calculado"
+                        string="Calculados"
+                        domain="[('state', '=', 'calculado')]"/>
+                    <filter
+                        name="filter_confirmado"
+                        string="Confirmados"
+                        domain="[('state', '=', 'confirmado')]"/>
+                    <filter
+                        name="filter_cancelado"
+                        string="Cancelados"
+                        domain="[('state', '=', 'cancelado')]"/>
 
                     <separator/>
 
-                    <filter name="group_by_state"
+                    <filter
+                        name="filter_con_contenedores"
+                        string="Con contenedores"
+                        domain="[('contenedores_recibidos', '&gt;', 0)]"/>
+                    <filter
+                        name="filter_con_pendientes"
+                        string="Con pendientes"
+                        domain="[('maquinas_pendientes_cierre', '&gt;', 0)]"/>
+
+                    <group expand="0" string="Agrupar por">
+                        <filter
+                            name="group_by_state"
                             string="Estado"
                             context="{'group_by': 'state'}"/>
-
-                    <filter name="group_by_fecha_inicio"
+                        <filter
+                            name="group_by_fecha_inicio"
                             string="Mes"
                             context="{'group_by': 'fecha_inicio:month'}"/>
+                        <filter
+                            name="group_by_calculado_por"
+                            string="Calculado por"
+                            context="{'group_by': 'calculado_por_id'}"/>
+                    </group>
                 </search>
             </field>
         </record>
 
         <!-- ============================================================ -->
-        <!-- VISTA FORMULARIO                                              -->
+        <!-- VISTA FORMULARIO                                             -->
         <!-- ============================================================ -->
         <record id="view_evaluacion_cierre_mensual_form" model="ir.ui.view">
             <field name="name">evaluacion.cierre.mensual.form</field>
             <field name="model">evaluacion.cierre.mensual</field>
             <field name="arch" type="xml">
-                <form string="Cierre Mensual de Producción">
+                <form string="Cierre mensual de producción">
                     <header>
-                        <button name="action_calcular"
-                                string="Calcular / Recalcular"
-                                type="object"
-                                class="btn-primary"
-                                invisible="state == 'confirmado' or state == 'cancelado'"/>
+                        <button
+                            name="action_calcular"
+                            string="Calcular cierre"
+                            type="object"
+                            class="btn-primary"
+                            invisible="state in ('confirmado', 'cancelado')"/>
 
-                        <button name="action_confirmar"
-                                string="Confirmar cierre"
-                                type="object"
-                                class="btn-success"
-                                invisible="state != 'calculado'"/>
+                        <button
+                            name="action_confirmar"
+                            string="Confirmar cierre"
+                            type="object"
+                            class="btn-success"
+                            invisible="state != 'calculado'"
+                            confirm="Al confirmar, las metas y resultados quedarán congelados. ¿Desea continuar?"/>
 
-                        <button name="action_volver_borrador"
-                                string="Volver a borrador"
-                                type="object"
-                                invisible="state not in ('calculado', 'cancelado')"/>
+                        <button
+                            name="action_volver_borrador"
+                            string="Volver a borrador"
+                            type="object"
+                            invisible="state not in ('calculado', 'cancelado')"/>
 
-                        <button name="action_cancelar"
-                                string="Cancelar"
-                                type="object"
-                                class="btn-secondary"
-                                invisible="state == 'confirmado' or state == 'cancelado'"/>
+                        <button
+                            name="action_cancelar"
+                            string="Cancelar"
+                            type="object"
+                            class="btn-secondary"
+                            invisible="state in ('confirmado', 'cancelado')"
+                            confirm="¿Desea cancelar este cierre mensual?"/>
 
-                        <field name="state"
-                               widget="statusbar"
-                               statusbar_visible="borrador,calculado,confirmado,cancelado" options="{'clickable': 1}"/>
+                        <field
+                            name="state"
+                            widget="statusbar"
+                            statusbar_visible="borrador,calculado,confirmado,cancelado"/>
                     </header>
 
                     <sheet>
-                        <div class="oe_button_box" name="button_box"/>
+                        <widget
+                            name="web_ribbon"
+                            title="CONFIRMADO"
+                            bg_color="text-bg-success"
+                            invisible="state != 'confirmado'"/>
 
-                        <div class="oe_title">
-                            <label for="name"/>
+                        <widget
+                            name="web_ribbon"
+                            title="CANCELADO"
+                            bg_color="text-bg-secondary"
+                            invisible="state != 'cancelado'"/>
+
+                        <div class="oe_title mb-3">
+                            <label for="name" string="Cierre mensual"/>
                             <h1>
                                 <field name="name" readonly="1"/>
                             </h1>
+                            <div class="text-muted">
+                                La meta se distribuye según las horas reales disponibles de cada técnico.
+                            </div>
                         </div>
 
+                        <!-- DATOS PRINCIPALES -->
                         <group>
-                            <group string="Periodo">
-                                <field name="fecha_inicio"
-                                       readonly="state != 'borrador'"/>
+                            <group string="Periodo y meta">
+                                <field
+                                    name="fecha_inicio"
+                                    readonly="state != 'borrador'"
+                                    options="{'datepicker': {'warn_future': true}}"/>
                                 <field name="fecha_fin" readonly="1"/>
+                                <field
+                                    name="meta_base_taller"
+                                    readonly="state != 'borrador'"
+                                    help="Meta mensual definida por gerencia. Actualmente: 60 máquinas."/>
+                                <field name="meta_total_taller_ajustada" readonly="1"/>
+                                <field
+                                    name="factor_disponibilidad_taller"
+                                    readonly="1"
+                                    widget="percentage"/>
                             </group>
 
-                            <group string="Control del cierre">
+                            <group string="Control y aprobación">
                                 <field name="fecha_calculo" readonly="1"/>
                                 <field name="calculado_por_id" readonly="1"/>
                                 <field name="fecha_confirmacion" readonly="1"/>
@@ -138,93 +202,187 @@
                             </group>
                         </group>
 
-                        <group string="Resumen del pool" col="4">
-                            <field name="maquinas_descargadas_mes" readonly="1"/>
-                            <field name="maquinas_backlog_inicial" readonly="1"/>
-                            <field name="maquinas_reactivadas" readonly="1"/>
-                            <field name="maquinas_excluidas" readonly="1"/>
+                        <!-- EXPLICACIÓN SIMPLE -->
+                        <div class="alert alert-info mt-3 mb-3" role="alert">
+                            <strong>¿Cómo se obtiene la meta?</strong>
+                            <br/>
+                            Se parte de la meta base de gerencia, se ajusta por las horas reales
+                            disponibles del taller y nunca se exige más que el pool real de máquinas.
+                            Los tickets, las ausencias que reducen meta y las descargas de contenedores
+                            disminuyen únicamente las horas del técnico afectado.
+                        </div>
 
-                            <field name="maquinas_entregadas_sin_revision" readonly="1"/>
-                            <field name="maquinas_finalizadas_mes" readonly="1"/>
-                            <field name="maquinas_pendientes_cierre" readonly="1"/>
-                            <field name="pool_total_exigible" readonly="1"/>
+                        <!-- INDICADORES PRINCIPALES -->
+                        <div class="row g-3 mb-4">
+                            <div class="col-12 col-md-6 col-xl-3">
+                                <div class="card h-100 shadow-sm border-0">
+                                    <div class="card-body">
+                                        <div class="text-muted small">Pool exigible</div>
+                                        <div class="fs-2 fw-bold">
+                                            <field name="pool_total_exigible" readonly="1" class="oe_inline"/>
+                                        </div>
+                                        <div class="small text-muted">Máquinas válidas del periodo</div>
+                                    </div>
+                                </div>
+                            </div>
 
-                            <field name="capacidad_total_taller_horas"
-                                   readonly="1"
-                                   colspan="2"/>
-                        </group>
+                            <div class="col-12 col-md-6 col-xl-3">
+                                <div class="card h-100 shadow-sm border-0">
+                                    <div class="card-body">
+                                        <div class="text-muted small">Meta ajustada</div>
+                                        <div class="fs-2 fw-bold">
+                                            <field name="meta_total_taller_ajustada" readonly="1" class="oe_inline"/>
+                                        </div>
+                                        <div class="small text-muted">Meta total que se reparte</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-12 col-md-6 col-xl-3">
+                                <div class="card h-100 shadow-sm border-0">
+                                    <div class="card-body">
+                                        <div class="text-muted small">Finalizadas</div>
+                                        <div class="fs-2 fw-bold">
+                                            <field name="maquinas_finalizadas_mes" readonly="1" class="oe_inline"/>
+                                        </div>
+                                        <div class="small text-muted">Producción terminada del mes</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-12 col-md-6 col-xl-3">
+                                <div class="card h-100 shadow-sm border-0">
+                                    <div class="card-body">
+                                        <div class="text-muted small">Pendientes</div>
+                                        <div class="fs-2 fw-bold">
+                                            <field name="maquinas_pendientes_cierre" readonly="1" class="oe_inline"/>
+                                        </div>
+                                        <div class="small text-muted">Pasan al siguiente periodo</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
                         <notebook>
-                            <page string="Resumen para gerencia" name="resumen_gerencia">
-                                <field name="resumen_gerencia"
-                                       readonly="1"
-                                       nolabel="1"
-                                       widget="html"/>
+                            <!-- ================================================= -->
+                            <!-- RESUMEN EJECUTIVO                                  -->
+                            <!-- ================================================= -->
+                            <page string="Resumen ejecutivo" name="resumen_ejecutivo">
+                                <div class="alert alert-light border mb-3" role="alert">
+                                    Esta sección presenta el cierre en lenguaje directo para gerencia:
+                                    qué ingresó, qué se excluyó, cuánto se produjo, qué quedó pendiente
+                                    y por qué se asignó cada meta.
+                                </div>
+
+                                <field
+                                    name="resumen_gerencia"
+                                    readonly="1"
+                                    nolabel="1"
+                                    widget="html"/>
                             </page>
 
-                            <page string="Máquinas del cierre" name="maquinas">
-                                <field name="maquina_line_ids"
-                                       readonly="state == 'confirmado'">
+                            <!-- ================================================= -->
+                            <!-- DESCARGAS DE CONTENEDORES                          -->
+                            <!-- ================================================= -->
+                            <page string="Contenedores" name="contenedores">
+                                <div class="alert alert-warning mb-3" role="alert">
+                                    <strong>Importante:</strong>
+                                    cada contenedor representa aproximadamente medio día de trabajo.
+                                    Registre la fecha, la cantidad, las horas y solamente los técnicos
+                                    que realmente participaron. Esas horas reducirán su disponibilidad
+                                    para producción.
+                                </div>
+
+                                <group>
+                                    <group string="Resumen de descargas">
+                                        <field name="contenedores_recibidos" readonly="1"/>
+                                        <field name="horas_descarga_contenedores" readonly="1"/>
+                                        <field name="horas_hombre_descarga_contenedores" readonly="1"/>
+                                    </group>
+
+                                    <group string="Cómo interpretar">
+                                        <div class="text-muted">
+                                            <p class="mb-2">
+                                                <strong>Horas de descarga:</strong>
+                                                tiempo real transcurrido en las descargas.
+                                            </p>
+                                            <p class="mb-0">
+                                                <strong>Horas-hombre:</strong>
+                                                duración multiplicada por los técnicos participantes.
+                                            </p>
+                                        </div>
+                                    </group>
+                                </group>
+
+                                <field
+                                    name="descarga_contenedor_ids"
+                                    nolabel="1"
+                                    readonly="state == 'confirmado'">
                                     <list
-                                        string="Máquinas del cierre"
-                                        create="0"
-                                        delete="0"
-                                        edit="0"
-                                        decoration-success="finalizada_mes"
-                                        decoration-warning="pendiente_cierre"
-                                        decoration-danger="excluida">
-                                        <field name="serie"/>
-                                        <field name="modelo"/>
-                                        <field name="ingreso_fecha"/>
-                                        <field name="estado_cierre" widget="badge"/>
-                                        <field name="origen_pool" widget="badge"/>
-                                        <field name="incluida_pool"/>
-                                        <field name="excluida"/>
-                                        <field name="motivo_exclusion"
-                                               widget="badge"
-                                               optional="show"/>
-                                        <field name="finalizada_mes"/>
-                                        <field name="pendiente_cierre"/>
-                                        <field name="tecnico_id"/>
-                                        <field name="fecha_finalizacion"/>
-                                        <field name="explicacion" optional="show"/>
+                                        string="Descargas de contenedores"
+                                        editable="bottom"
+                                        decoration-info="cantidad_contenedores &gt; 0">
+                                        <field name="fecha"/>
+                                        <field name="cantidad_contenedores"/>
+                                        <field name="horas_por_contenedor"/>
+                                        <field name="horas_totales" readonly="1"/>
+                                        <field
+                                            name="tecnico_ids"
+                                            widget="many2many_tags"
+                                            options="{'no_create': true}"/>
+                                        <field name="observaciones" optional="show"/>
                                     </list>
 
-                                    <form string="Detalle de máquina">
+                                    <form string="Detalle de descarga de contenedor">
                                         <sheet>
+                                            <div class="oe_title">
+                                                <h2>Registro de descarga</h2>
+                                                <div class="text-muted">
+                                                    Indique quiénes participaron para descontar correctamente sus horas.
+                                                </div>
+                                            </div>
+
                                             <group>
-                                                <group string="Máquina">
-                                                    <field name="maquina_id" readonly="1"/>
-                                                    <field name="serie" readonly="1"/>
-                                                    <field name="modelo" readonly="1"/>
-                                                    <field name="ingreso_fecha" readonly="1"/>
-                                                    <field name="estado_cierre" readonly="1"/>
-                                                    <field name="origen_pool" readonly="1"/>
+                                                <group string="Datos de la descarga">
+                                                    <field name="fecha"/>
+                                                    <field name="cantidad_contenedores"/>
+                                                    <field name="horas_por_contenedor"/>
+                                                    <field name="horas_totales" readonly="1"/>
                                                 </group>
 
-                                                <group string="Resultado">
-                                                    <field name="incluida_pool" readonly="1"/>
-                                                    <field name="excluida" readonly="1"/>
-                                                    <field name="motivo_exclusion" readonly="1"/>
-                                                    <field name="finalizada_mes" readonly="1"/>
-                                                    <field name="pendiente_cierre" readonly="1"/>
+                                                <group string="Personal participante">
+                                                    <field
+                                                        name="tecnico_ids"
+                                                        widget="many2many_tags"
+                                                        options="{'no_create': true}"/>
                                                 </group>
                                             </group>
 
-                                            <group string="Reparación y responsable">
-                                                <field name="reparacion_id" readonly="1"/>
-                                                <field name="tecnico_id" readonly="1"/>
-                                                <field name="fecha_finalizacion" readonly="1"/>
-                                                <field name="explicacion" readonly="1"/>
+                                            <group string="Observaciones">
+                                                <field
+                                                    name="observaciones"
+                                                    nolabel="1"
+                                                    placeholder="Ejemplo: descarga, organización y ubicación inicial de las máquinas..."/>
                                             </group>
                                         </sheet>
                                     </form>
                                 </field>
                             </page>
 
+                            <!-- ================================================= -->
+                            <!-- METAS POR TÉCNICO                                  -->
+                            <!-- ================================================= -->
                             <page string="Metas por técnico" name="tecnicos">
-                                <field name="tecnico_line_ids"
-                                       readonly="state == 'confirmado'">
+                                <div class="alert alert-info mb-3" role="alert">
+                                    La meta individual depende de la participación del técnico en las
+                                    horas disponibles del taller. Por eso dos técnicos pueden tener metas
+                                    diferentes dentro del mismo mes.
+                                </div>
+
+                                <field
+                                    name="tecnico_line_ids"
+                                    nolabel="1"
+                                    readonly="1">
                                     <list
                                         string="Metas por técnico"
                                         create="0"
@@ -233,69 +391,217 @@
                                         decoration-success="porcentaje_cumplimiento &gt;= 100"
                                         decoration-warning="porcentaje_cumplimiento &gt;= 80 and porcentaje_cumplimiento &lt; 100"
                                         decoration-danger="porcentaje_cumplimiento &lt; 80 and participa_pool">
+
                                         <field name="tecnico_id"/>
                                         <field name="tipo_operativo" widget="badge"/>
                                         <field name="participa_pool"/>
                                         <field name="horas_programadas"/>
-                                        <field name="horas_ausencia_reduce_meta"/>
+                                        <field name="horas_ausencia_reduce_meta" string="Horas ausencia"/>
                                         <field name="horas_tickets"/>
-                                        <field name="tickets_finalizados"/>
-                                        <field name="tickets_sin_retorno"/>
-                                        <field name="horas_taller_disponibles"/>
-                                        <field name="porcentaje_participacion"
-                                               widget="percentage"/>
+                                        <field name="horas_descarga_contenedores" string="Horas descarga"/>
+                                        <field name="horas_taller_disponibles" string="Horas taller"/>
+                                        <field name="porcentaje_participacion" widget="progressbar"/>
                                         <field name="meta_asignada"/>
-                                        <field name="produccion_finalizada"/>
-                                        <field name="porcentaje_cumplimiento"
-                                               widget="percentage"/>
+                                        <field name="produccion_finalizada" string="Finalizadas"/>
+                                        <field name="porcentaje_cumplimiento" widget="progressbar"/>
                                         <field name="motivo_calculo" optional="show"/>
+                                        <field name="tickets_finalizados" optional="hide"/>
+                                        <field name="tickets_sin_retorno" optional="hide"/>
                                     </list>
 
-                                    <form string="Detalle de meta técnica">
+                                    <form string="Detalle de la meta técnica">
                                         <sheet>
-                                            <group>
-                                                <group string="Técnico">
+                                            <div class="oe_title">
+                                                <h2>
                                                     <field name="tecnico_id" readonly="1"/>
+                                                </h2>
+                                                <div class="text-muted">
+                                                    Detalle de disponibilidad, descuentos y meta asignada.
+                                                </div>
+                                            </div>
+
+                                            <group>
+                                                <group string="Perfil operativo">
                                                     <field name="perfil_id" readonly="1"/>
-                                                    <field name="tipo_operativo" readonly="1"/>
+                                                    <field name="tipo_operativo" readonly="1" widget="badge"/>
                                                     <field name="participa_pool" readonly="1"/>
                                                 </group>
 
-                                                <group string="Disponibilidad">
-                                                    <field name="horas_programadas" readonly="1"/>
-                                                    <field name="horas_ausencia_reduce_meta" readonly="1"/>
-                                                    <field name="horas_tickets" readonly="1"/>
-                                                    <field name="tickets_finalizados" readonly="1"/>
-                                                    <field name="tickets_sin_retorno" readonly="1"/>
-                                                    <field name="horas_taller_disponibles" readonly="1"/>
+                                                <group string="Resultado">
+                                                    <field name="meta_asignada" readonly="1"/>
+                                                    <field name="produccion_finalizada" readonly="1"/>
+                                                    <field
+                                                        name="porcentaje_cumplimiento"
+                                                        readonly="1"
+                                                        widget="progressbar"/>
+                                                    <field
+                                                        name="porcentaje_participacion"
+                                                        readonly="1"
+                                                        widget="progressbar"/>
                                                 </group>
                                             </group>
 
-                                            <group string="Meta y resultado">
-                                                <field name="porcentaje_participacion"
-                                                       readonly="1"
-                                                       widget="percentage"/>
-                                                <field name="meta_asignada" readonly="1"/>
-                                                <field name="produccion_finalizada" readonly="1"/>
-                                                <field name="porcentaje_cumplimiento"
-                                                       readonly="1"
-                                                       widget="percentage"/>
+                                            <group string="Disponibilidad del mes" col="4">
+                                                <field name="horas_programadas" readonly="1"/>
+                                                <field name="horas_ausencia_reduce_meta" readonly="1"/>
+                                                <field name="horas_tickets" readonly="1"/>
+                                                <field name="horas_descarga_contenedores" readonly="1"/>
+                                                <field name="horas_taller_disponibles" readonly="1"/>
+                                                <field name="tickets_finalizados" readonly="1"/>
+                                                <field name="tickets_sin_retorno" readonly="1"/>
                                             </group>
 
-                                            <group string="Explicación para gerencia">
-                                                <field name="motivo_calculo"
-                                                       readonly="1"
-                                                       nolabel="1"/>
+                                            <div class="alert alert-light border mt-3" role="alert">
+                                                <strong>Explicación para gerencia</strong>
+                                                <br/>
+                                                Aquí se detalla por qué el técnico recibió esa meta y qué
+                                                actividades redujeron su disponibilidad productiva.
+                                            </div>
+
+                                            <field
+                                                name="motivo_calculo"
+                                                readonly="1"
+                                                nolabel="1"/>
+                                        </sheet>
+                                    </form>
+                                </field>
+                            </page>
+
+                            <!-- ================================================= -->
+                            <!-- MÁQUINAS DEL CIERRE                                -->
+                            <!-- ================================================= -->
+                            <page string="Máquinas" name="maquinas">
+                                <div class="alert alert-light border mb-3" role="alert">
+                                    <strong>Colores:</strong>
+                                    verde = finalizada, amarillo = pendiente y rojo = excluida.
+                                </div>
+
+                                <field
+                                    name="maquina_line_ids"
+                                    nolabel="1"
+                                    readonly="1">
+                                    <list
+                                        string="Máquinas del cierre"
+                                        create="0"
+                                        delete="0"
+                                        edit="0"
+                                        decoration-success="finalizada_mes"
+                                        decoration-warning="pendiente_cierre"
+                                        decoration-danger="excluida">
+
+                                        <field name="serie"/>
+                                        <field name="modelo"/>
+                                        <field name="ingreso_fecha"/>
+                                        <field name="estado_cierre" widget="badge"/>
+                                        <field name="origen_pool" widget="badge"/>
+                                        <field name="finalizada_mes"/>
+                                        <field name="pendiente_cierre"/>
+                                        <field name="excluida"/>
+                                        <field name="motivo_exclusion" widget="badge" optional="show"/>
+                                        <field name="tecnico_id"/>
+                                        <field name="fecha_finalizacion"/>
+                                        <field name="incluida_pool" optional="hide"/>
+                                        <field name="explicacion" optional="show"/>
+                                    </list>
+
+                                    <form string="Detalle de la máquina">
+                                        <sheet>
+                                            <div class="oe_title">
+                                                <h2>
+                                                    <field name="modelo" readonly="1"/>
+                                                </h2>
+                                                <div class="text-muted">
+                                                    Serie: <field name="serie" readonly="1" class="oe_inline"/>
+                                                </div>
+                                            </div>
+
+                                            <group>
+                                                <group string="Identificación">
+                                                    <field name="maquina_id" readonly="1"/>
+                                                    <field name="ingreso_fecha" readonly="1"/>
+                                                    <field name="estado_cierre" readonly="1" widget="badge"/>
+                                                    <field name="origen_pool" readonly="1" widget="badge"/>
+                                                </group>
+
+                                                <group string="Resultado del cierre">
+                                                    <field name="incluida_pool" readonly="1"/>
+                                                    <field name="finalizada_mes" readonly="1"/>
+                                                    <field name="pendiente_cierre" readonly="1"/>
+                                                    <field name="excluida" readonly="1"/>
+                                                    <field name="motivo_exclusion" readonly="1" widget="badge"/>
+                                                </group>
+                                            </group>
+
+                                            <group string="Reparación y responsable">
+                                                <field name="reparacion_id" readonly="1"/>
+                                                <field name="tecnico_id" readonly="1"/>
+                                                <field name="fecha_finalizacion" readonly="1"/>
+                                            </group>
+
+                                            <group string="Explicación">
+                                                <field name="explicacion" readonly="1" nolabel="1"/>
                                             </group>
                                         </sheet>
                                     </form>
                                 </field>
                             </page>
 
+                            <!-- ================================================= -->
+                            <!-- DESGLOSE DEL POOL                                  -->
+                            <!-- ================================================= -->
+                            <page string="Desglose del pool" name="desglose_pool">
+                                <div class="row g-3">
+                                    <div class="col-12 col-md-6">
+                                        <div class="card h-100 shadow-sm border-0">
+                                            <div class="card-body">
+                                                <h5 class="card-title">Origen de las máquinas</h5>
+                                                <group col="2">
+                                                    <field name="maquinas_descargadas_mes" readonly="1"/>
+                                                    <field name="maquinas_backlog_inicial" readonly="1"/>
+                                                    <field name="maquinas_reactivadas" readonly="1"/>
+                                                    <field name="pool_total_exigible" readonly="1"/>
+                                                </group>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-12 col-md-6">
+                                        <div class="card h-100 shadow-sm border-0">
+                                            <div class="card-body">
+                                                <h5 class="card-title">Resultado y exclusiones</h5>
+                                                <group col="2">
+                                                    <field name="maquinas_finalizadas_mes" readonly="1"/>
+                                                    <field name="maquinas_pendientes_cierre" readonly="1"/>
+                                                    <field name="maquinas_excluidas" readonly="1"/>
+                                                    <field name="maquinas_entregadas_sin_revision" readonly="1"/>
+                                                </group>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <group string="Capacidad del taller" class="mt-3">
+                                    <field name="capacidad_total_taller_horas" readonly="1"/>
+                                    <field name="factor_disponibilidad_taller" readonly="1" widget="percentage"/>
+                                    <field name="meta_base_taller" readonly="1"/>
+                                    <field name="meta_total_taller_ajustada" readonly="1"/>
+                                </group>
+                            </page>
+
+                            <!-- ================================================= -->
+                            <!-- OBSERVACIONES                                      -->
+                            <!-- ================================================= -->
                             <page string="Observaciones" name="observaciones">
-                                <field name="observaciones"
-                                       placeholder="Ingrese observaciones o decisiones de gerencia..."
-                                       readonly="state == 'confirmado'"/>
+                                <div class="alert alert-light border mb-3" role="alert">
+                                    Use este espacio para registrar decisiones, excepciones o comentarios
+                                    aprobados por gerencia antes de confirmar el cierre.
+                                </div>
+
+                                <field
+                                    name="observaciones"
+                                    nolabel="1"
+                                    placeholder="Ejemplo: se aprobó una reducción excepcional de la meta por capacitación general del taller..."
+                                    readonly="state == 'confirmado'"/>
                             </page>
                         </notebook>
                     </sheet>
@@ -306,33 +612,35 @@
         </record>
 
         <!-- ============================================================ -->
-        <!-- ACCIÓN                                                        -->
+        <!-- ACCIÓN                                                       -->
         <!-- ============================================================ -->
         <record id="action_evaluacion_cierre_mensual" model="ir.actions.act_window">
-            <field name="name">Cierres Mensuales</field>
+            <field name="name">Cierres mensuales</field>
             <field name="res_model">evaluacion.cierre.mensual</field>
             <field name="view_mode">list,form</field>
             <field name="search_view_id" ref="view_evaluacion_cierre_mensual_search"/>
-            <field name="context">{'search_default_filter_confirmado': 0}</field>
+            <field name="context">{}</field>
             <field name="help" type="html">
                 <p class="o_view_nocontent_smiling_face">
                     Cree el primer cierre mensual de producción
                 </p>
                 <p>
-                    El cierre calcula el pool de máquinas, distribuye la meta entre
-                    los técnicos disponibles y conserva el detalle aprobado por gerencia.
+                    El cierre identifica el pool real, registra las descargas de
+                    contenedores, calcula la disponibilidad del taller y distribuye
+                    una meta explicable entre los técnicos participantes.
                 </p>
             </field>
         </record>
 
         <!-- ============================================================ -->
-        <!-- MENÚ                                                          -->
+        <!-- MENÚ                                                         -->
         <!-- ============================================================ -->
-        <menuitem id="menu_evaluacion_cierre_mensual"
-                  name="Cierres Mensuales"
-                  parent="menu_evaluaciones_root"
-                  action="action_evaluacion_cierre_mensual"
-                  sequence="40"/>
+        <menuitem
+            id="menu_evaluacion_cierre_mensual"
+            name="Cierres mensuales"
+            parent="menu_evaluaciones_root"
+            action="action_evaluacion_cierre_mensual"
+            sequence="40"/>
 
     </data>
 </odoo>
