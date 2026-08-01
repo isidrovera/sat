@@ -478,7 +478,7 @@ class EvaluacionPersonal(models.Model):
     )
 
     cierre_tecnico_line_id = fields.Many2one(
-        'evaluacion.cierre.mensual.tecnico.name',
+        'evaluacion.cierre.mensual.tecnico',
         string='Línea del técnico en el cierre',
         compute='_compute_datos_cierre_mensual',
         readonly=True
