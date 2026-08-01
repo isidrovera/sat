@@ -8,26 +8,37 @@
                 <t t-set="datos"
                    t-value="env['evaluacion.personal']._preparar_datos_reporte(o)"/>
 
-                <t t-set="meta_taller"
-                   t-value="datos.get('meta_mensual_taller', 60)"/>
+                <t t-set="tipo_operativo_texto"
+                   t-value="'Técnico fijo de taller' if o.tipo_operativo == 'taller' else ('Técnico exclusivo de servicios / alquiler' if o.tipo_operativo == 'servicios' else 'Técnico mixto / servicios eventuales')"/>
 
-                <t t-set="reparaciones_reporte"
-                   t-value="datos.get('cantidad_reparaciones_reporte', o.cantidad_reparaciones or 0)"/>
+                <t t-set="requiere_cierre"
+                   t-value="o.tipo_operativo in ('taller', 'mixto')"/>
 
-                <t t-set="porcentaje_reparaciones_reporte"
-                   t-value="datos.get('porcentaje_cumplimiento_reporte', 0.0)"/>
+                <t t-set="requiere_evaluaciones"
+                   t-value="(o.tickets_validos_bono or 0) &gt; 0 and (o.evaluaciones_servicio_minimas or 0) &gt; 0"/>
+
+                <t t-set="bloqueado_evaluaciones"
+                   t-value="requiere_evaluaciones and not o.cumple_minimo_evaluaciones"/>
+
+                <t t-set="bloqueado_reclamos"
+                   t-value="(o.reclamos_procedentes_count or 0) &gt;= 5"/>
+
+                <t t-set="bloqueado_cierre"
+                   t-value="requiere_cierre and not o.cierre_confirmado_disponible"/>
+
+                <t t-set="bloqueado_produccion"
+                   t-value="(o.porcentaje_produccion_total or 0.0) &lt; 95.0"/>
+
+                <t t-set="bono_bloqueado"
+                   t-value="bloqueado_evaluaciones or bloqueado_reclamos or bloqueado_cierre or bloqueado_produccion"/>
 
                 <t t-call="web.external_layout">
                     <div class="page">
 
                         <style>
-                            /* ==================================================
-                               CONFIGURACIÓN GENERAL
-                            ================================================== */
-
                             .page {
                                 font-family: Arial, Helvetica, sans-serif;
-                                font-size: 9pt;
+                                font-size: 8.5pt;
                                 line-height: 1.25;
                                 color: #1f2937;
                             }
@@ -44,16 +55,16 @@
                                 page-break-after: always;
                             }
 
+                            .text-right {
+                                text-align: right;
+                            }
+
                             .text-center {
                                 text-align: center;
                             }
 
-                            .text-left {
-                                text-align: left;
-                            }
-
-                            .text-right {
-                                text-align: right;
+                            .fw-bold {
+                                font-weight: 700;
                             }
 
                             .text-muted {
@@ -72,17 +83,9 @@
                                 color: #b45309;
                             }
 
-                            .fw-bold {
-                                font-weight: 700;
-                            }
-
-                            /* ==================================================
-                               ENCABEZADO
-                            ================================================== */
-
                             .report-header {
                                 width: 100%;
-                                margin-bottom: 8px;
+                                margin-bottom: 7px;
                                 border-collapse: separate;
                                 border-spacing: 0;
                                 background: #1e3a8a;
@@ -97,55 +100,37 @@
                             }
 
                             .report-title {
-                                font-size: 16pt;
+                                font-size: 15pt;
                                 font-weight: 700;
                                 line-height: 1.15;
-                                margin-bottom: 3px;
                             }
 
-                            .report-period {
-                                font-size: 9pt;
+                            .report-subtitle {
+                                margin-top: 3px;
                                 color: #dbeafe;
+                                font-size: 8pt;
                             }
 
                             .report-person {
-                                font-size: 9pt;
+                                font-size: 8pt;
                                 line-height: 1.45;
                             }
 
-                            /* ==================================================
-                               TÍTULOS DE SECCIÓN
-                            ================================================== */
-
                             .section-title {
-                                margin: 9px 0 6px;
-                                padding: 6px 8px;
+                                margin: 8px 0 5px;
+                                padding: 5px 7px;
                                 background: #1e40af;
                                 color: #ffffff;
                                 border-radius: 4px;
-                                font-size: 10pt;
-                                font-weight: 700;
-                                line-height: 1.2;
-                            }
-
-                            .subsection-title {
-                                margin: 7px 0 5px;
-                                padding-bottom: 3px;
-                                border-bottom: 2px solid #dbeafe;
-                                color: #1e40af;
                                 font-size: 9.5pt;
                                 font-weight: 700;
                             }
 
-                            /* ==================================================
-                               TABLAS DE TARJETAS
-                            ================================================== */
-
                             .card-table {
                                 width: 100%;
+                                margin: -4px 0 3px;
                                 border-collapse: separate;
-                                border-spacing: 5px;
-                                margin: -5px 0 4px;
+                                border-spacing: 4px;
                                 table-layout: fixed;
                             }
 
@@ -153,100 +138,65 @@
                                 vertical-align: top;
                             }
 
-                            .summary-card,
                             .metric-card,
-                            .evaluation-card,
-                            .info-card {
+                            .info-card,
+                            .score-card,
+                            .feedback-card,
+                            .alert-card {
+                                background: #ffffff;
                                 border: 1px solid #d1d5db;
                                 border-radius: 5px;
-                                background: #ffffff;
                                 page-break-inside: avoid;
                             }
 
-                            .summary-card {
-                                padding: 6px;
-                                text-align: center;
-                                min-height: 58px;
-                            }
-
-                            .summary-icon {
-                                font-size: 12pt;
-                                margin-bottom: 1px;
-                            }
-
-                            .summary-label {
-                                font-size: 7pt;
-                                color: #4b5563;
-                                font-weight: 700;
-                                text-transform: uppercase;
-                            }
-
-                            .summary-value {
-                                margin-top: 2px;
-                                font-size: 15pt;
-                                line-height: 1;
-                                font-weight: 700;
-                                color: #111827;
-                            }
-
-                            .summary-detail {
-                                margin-top: 2px;
-                                font-size: 7pt;
-                                color: #6b7280;
-                            }
-
                             .metric-card {
-                                min-height: 82px;
+                                min-height: 78px;
                                 padding: 7px;
                                 border-top: 4px solid #2563eb;
                             }
 
-                            .metric-card.repairs {
+                            .metric-card.green {
                                 border-top-color: #16a34a;
                             }
 
-                            .metric-card.score {
-                                border-top-color: #7c3aed;
+                            .metric-card.red {
+                                border-top-color: #dc2626;
                             }
 
-                            .metric-card.goal {
+                            .metric-card.orange {
                                 border-top-color: #f59e0b;
                             }
 
-                            .metric-card.status {
-                                border-top-color: #0891b2;
+                            .metric-card.purple {
+                                border-top-color: #7c3aed;
                             }
 
-                            .metric-title {
-                                font-size: 7.5pt;
+                            .metric-label {
+                                font-size: 7pt;
                                 color: #4b5563;
                                 font-weight: 700;
                                 text-transform: uppercase;
-                                margin-bottom: 4px;
                             }
 
                             .metric-value {
-                                font-size: 18pt;
+                                margin-top: 4px;
+                                font-size: 17pt;
                                 line-height: 1;
-                                font-weight: 700;
                                 color: #111827;
+                                font-weight: 700;
                             }
 
-                            .metric-subtitle {
-                                min-height: 18px;
-                                margin-top: 4px;
-                                font-size: 7pt;
+                            .metric-detail {
+                                margin-top: 5px;
+                                min-height: 17px;
+                                font-size: 6.8pt;
                                 color: #6b7280;
                                 line-height: 1.25;
                             }
 
-                            /* ==================================================
-                               BARRAS DE PROGRESO
-                            ================================================== */
-
                             .progress {
                                 width: 100%;
-                                height: 7px;
+                                height: 6px;
                                 margin-top: 5px;
                                 overflow: hidden;
                                 border-radius: 4px;
@@ -254,62 +204,140 @@
                             }
 
                             .progress-fill {
-                                height: 7px;
+                                height: 6px;
                                 border-radius: 4px;
                             }
 
-                            .progress-excellent {
+                            .progress-green {
                                 background: #16a34a;
                             }
 
-                            .progress-good {
+                            .progress-blue {
                                 background: #2563eb;
                             }
 
-                            .progress-regular {
+                            .progress-orange {
                                 background: #f59e0b;
                             }
 
-                            .progress-poor {
+                            .progress-red {
                                 background: #dc2626;
                             }
 
-                            /* ==================================================
-                               EVALUACIONES
-                            ================================================== */
+                            .status-banner {
+                                margin: 5px 0 7px;
+                                padding: 8px 10px;
+                                border-radius: 5px;
+                                font-size: 8pt;
+                                line-height: 1.4;
+                                page-break-inside: avoid;
+                            }
 
-                            .evaluation-card {
-                                min-height: 61px;
-                                padding: 6px;
+                            .status-banner.success {
+                                background: #dcfce7;
+                                border-left: 4px solid #16a34a;
+                                color: #166534;
+                            }
+
+                            .status-banner.danger {
+                                background: #fee2e2;
+                                border-left: 4px solid #dc2626;
+                                color: #991b1b;
+                            }
+
+                            .status-banner.warning {
+                                background: #fef3c7;
+                                border-left: 4px solid #f59e0b;
+                                color: #92400e;
+                            }
+
+                            .info-card {
+                                padding: 7px;
+                            }
+
+                            .info-title {
+                                margin-bottom: 5px;
+                                padding-bottom: 3px;
+                                border-bottom: 1px solid #dbeafe;
+                                color: #1e40af;
+                                font-size: 8pt;
+                                font-weight: 700;
+                            }
+
+                            .data-table {
+                                width: 100%;
+                                border-collapse: collapse;
+                                font-size: 7.4pt;
+                            }
+
+                            .data-table td,
+                            .data-table th {
+                                padding: 3px 4px;
+                                border-bottom: 1px solid #e5e7eb;
+                                vertical-align: top;
+                            }
+
+                            .data-table th {
+                                background: #eff6ff;
+                                color: #1e3a8a;
+                                text-align: left;
+                            }
+
+                            .data-table tr:last-child td {
+                                border-bottom: 0;
+                            }
+
+                            .score-card {
+                                padding: 7px;
+                                min-height: 72px;
                                 border-left: 4px solid #2563eb;
                             }
 
-                            .evaluation-name {
-                                min-height: 18px;
-                                color: #374151;
-                                font-size: 7.2pt;
+                            .score-title {
+                                font-size: 7pt;
+                                color: #4b5563;
                                 font-weight: 700;
                                 text-transform: uppercase;
-                                line-height: 1.15;
                             }
 
-                            .evaluation-value {
-                                margin-top: 3px;
-                                font-size: 8.5pt;
+                            .score-value {
+                                margin-top: 4px;
+                                font-size: 14pt;
                                 font-weight: 700;
                                 color: #111827;
                             }
 
-                            /* ==================================================
-                               GRÁFICOS
-                            ================================================== */
+                            .score-detail {
+                                margin-top: 3px;
+                                font-size: 6.7pt;
+                                color: #6b7280;
+                            }
 
-                            .chart-row {
-                                width: 100%;
-                                border-collapse: separate;
-                                border-spacing: 5px;
-                                margin: -5px 0 4px;
-                                table-layout: fixed;
+                            .alert-card {
+                                padding: 7px;
+                                border-left: 4px solid #dc2626;
+                                background: #fff7f7;
+                            }
+
+                            .alert-card.warning {
+                                border-left-color: #f59e0b;
+                                background: #fffbeb;
+                            }
+
+                            .alert-card.success {
+                                border-left-color: #16a34a;
+                                background: #f0fdf4;
+                            }
+
+                            .alert-title {
+                                margin-bottom: 3px;
+                                font-size: 7.5pt;
+                                font-weight: 700;
+                            }
+
+                            .alert-text {
+                                font-size: 7pt;
+                                line-height: 1.35;
                             }
 
                             .chart-box {
@@ -336,20 +364,16 @@
                             .chart-image-small {
                                 display: block;
                                 width: 100%;
-                                max-height: 250px;
+                                max-height: 230px;
                                 object-fit: contain;
                             }
-
-                            /* ==================================================
-                               TABLA DIARIA
-                            ================================================== */
 
                             .daily-table {
                                 width: 100%;
                                 margin-top: 4px;
                                 border-collapse: collapse;
                                 table-layout: fixed;
-                                font-size: 7.2pt;
+                                font-size: 6.9pt;
                             }
 
                             .daily-table thead {
@@ -380,40 +404,12 @@
                                 background: #f8fafc;
                             }
 
-                            .daily-table .col-date {
-                                width: 9%;
-                            }
-
-                            .daily-table .col-day {
-                                width: 10%;
-                            }
-
-                            .daily-table .col-number {
-                                width: 11%;
-                            }
-
-                            .daily-table .col-objective {
-                                width: 10%;
-                            }
-
-                            .daily-table .col-percent {
-                                width: 13%;
-                            }
-
-                            .daily-table .col-status {
-                                width: 15%;
-                            }
-
-                            /* ==================================================
-                               BADGES
-                            ================================================== */
-
                             .badge {
                                 display: inline-block;
                                 padding: 2px 5px;
                                 border-radius: 9px;
                                 color: #ffffff;
-                                font-size: 6.7pt;
+                                font-size: 6.2pt;
                                 font-weight: 700;
                                 white-space: nowrap;
                             }
@@ -438,103 +434,40 @@
                                 background: #16a34a;
                             }
 
-                            /* ==================================================
-                               INFORMACIÓN DETALLADA
-                            ================================================== */
-
-                            .info-card {
+                            .feedback-card {
+                                min-height: 88px;
                                 padding: 7px;
-                            }
-
-                            .info-title {
-                                margin-bottom: 5px;
-                                padding-bottom: 3px;
-                                border-bottom: 1px solid #dbeafe;
-                                color: #1e40af;
-                                font-size: 8.5pt;
-                                font-weight: 700;
-                            }
-
-                            .compact-list {
-                                margin: 0;
-                                padding-left: 15px;
-                                font-size: 7.5pt;
-                                line-height: 1.35;
-                            }
-
-                            .compact-list li {
-                                margin-bottom: 2px;
-                            }
-
-                            .kpi-table {
-                                width: 100%;
-                                border-collapse: collapse;
-                                font-size: 7.8pt;
-                            }
-
-                            .kpi-table td {
-                                padding: 3px 2px;
-                                border-bottom: 1px solid #e5e7eb;
-                            }
-
-                            .kpi-table tr:last-child td {
-                                border-bottom: 0;
-                            }
-
-                            /* ==================================================
-                               RETROALIMENTACIÓN
-                            ================================================== */
-
-                            .feedback-table {
-                                width: 100%;
-                                border-collapse: separate;
-                                border-spacing: 5px;
-                                margin: -5px 0 4px;
-                                table-layout: fixed;
-                            }
-
-                            .feedback-box {
-                                min-height: 90px;
-                                padding: 7px;
-                                border: 1px solid #d1d5db;
                                 border-left: 4px solid #2563eb;
-                                border-radius: 5px;
-                                background: #ffffff;
-                                page-break-inside: avoid;
                             }
 
-                            .feedback-box.success {
+                            .feedback-card.green {
                                 border-left-color: #16a34a;
                             }
 
-                            .feedback-box.danger {
+                            .feedback-card.red {
                                 border-left-color: #dc2626;
                             }
 
-                            .feedback-box.warning {
+                            .feedback-card.orange {
                                 border-left-color: #f59e0b;
                             }
 
-                            .feedback-box.purple {
+                            .feedback-card.purple {
                                 border-left-color: #7c3aed;
                             }
 
                             .feedback-title {
                                 margin-bottom: 4px;
-                                font-size: 8pt;
+                                font-size: 7.8pt;
                                 font-weight: 700;
                                 color: #1e40af;
                             }
 
                             .feedback-content {
-                                font-size: 7.8pt;
+                                font-size: 7.2pt;
                                 line-height: 1.35;
                                 white-space: pre-line;
                             }
-
-                            /* ==================================================
-                               FIRMAS Y PIE
-                            ================================================== */
 
                             .signature-table {
                                 width: 100%;
@@ -545,50 +478,49 @@
                             }
 
                             .signature-space {
-                                height: 38px;
+                                height: 35px;
                             }
 
                             .signature-line {
                                 padding-top: 5px;
                                 border-top: 1px solid #374151;
                                 text-align: center;
-                                font-size: 8pt;
+                                font-size: 7.5pt;
                                 font-weight: 700;
                             }
 
                             .signature-role {
                                 margin-top: 2px;
                                 color: #6b7280;
-                                font-size: 7pt;
+                                font-size: 6.7pt;
                                 font-weight: 400;
                             }
 
                             .report-footer {
-                                margin-top: 15px;
-                                padding-top: 6px;
+                                margin-top: 12px;
+                                padding-top: 5px;
                                 border-top: 1px solid #d1d5db;
                                 text-align: center;
                                 color: #6b7280;
-                                font-size: 6.8pt;
+                                font-size: 6.4pt;
                             }
                         </style>
 
                         <!-- ==================================================
-                             PÁGINA 1: RESUMEN Y EVALUACIÓN
+                             PÁGINA 1: RESUMEN GERENCIAL DEL BONO
                         ================================================== -->
 
                         <table class="report-header">
                             <tr>
                                 <td style="width: 58%;">
                                     <div class="report-title">
-                                        <t t-esc="o.name"/>
+                                        Evaluación mensual y cálculo de bono
                                     </div>
-                                    <div class="report-period">
-                                        <i class="fa fa-calendar"/>
-                                        <span>
-                                            <t t-esc="o.mes"/>
-                                            <t t-esc="o.anio"/>
-                                        </span>
+                                    <div class="report-subtitle">
+                                        <t t-esc="o.name"/>
+                                        ·
+                                        <t t-esc="o.mes"/>
+                                        <t t-esc="o.anio"/>
                                     </div>
                                 </td>
 
@@ -598,6 +530,10 @@
                                         <t t-esc="o.nombre_usuario"/>
                                     </div>
                                     <div class="report-person">
+                                        <strong>Perfil:</strong>
+                                        <t t-esc="tipo_operativo_texto"/>
+                                    </div>
+                                    <div class="report-person">
                                         <strong>Evaluador:</strong>
                                         <t t-esc="o.evaluador_id.name"/>
                                     </div>
@@ -605,347 +541,360 @@
                             </tr>
                         </table>
 
-                        <!-- RESUMEN ESTADÍSTICO -->
-
-                        <table class="card-table avoid-break">
-                            <tr>
-                                <td style="width: 25%;">
-                                    <div class="summary-card">
-                                        <div class="summary-icon">🎯</div>
-                                        <div class="summary-label">Mejor día</div>
-                                        <div class="summary-value">
-                                            <t t-esc="o.mejor_dia_total"/>
-                                        </div>
-                                        <div class="summary-detail">
-                                            <t t-if="o.mejor_dia_fecha">
-                                                <t t-esc="o.mejor_dia_fecha"
-                                                   t-options='{"widget": "date", "format": "dd/MM/yyyy"}'/>
-                                            </t>
-                                            <t t-else="">Sin registro</t>
-                                        </div>
-                                    </div>
-                                </td>
-
-                                <td style="width: 25%;">
-                                    <div class="summary-card">
-                                        <div class="summary-icon">⚠️</div>
-                                        <div class="summary-label">Día más bajo</div>
-                                        <div class="summary-value">
-                                            <t t-esc="o.peor_dia_total"/>
-                                        </div>
-                                        <div class="summary-detail">
-                                            <t t-if="o.peor_dia_fecha">
-                                                <t t-esc="o.peor_dia_fecha"
-                                                   t-options='{"widget": "date", "format": "dd/MM/yyyy"}'/>
-                                            </t>
-                                            <t t-else="">Sin registro</t>
-                                        </div>
-                                    </div>
-                                </td>
-
-                                <td style="width: 25%;">
-                                    <div class="summary-card">
-                                        <div class="summary-icon">✅</div>
-                                        <div class="summary-label">Días con actividad</div>
-                                        <div class="summary-value">
-                                            <t t-esc="o.total_dias_trabajados"/>
-                                        </div>
-                                        <div class="summary-detail">días laborales</div>
-                                    </div>
-                                </td>
-
-                                <td style="width: 25%;">
-                                    <div class="summary-card">
-                                        <div class="summary-icon">❌</div>
-                                        <div class="summary-label">Días sin actividad</div>
-                                        <div class="summary-value">
-                                            <t t-esc="o.total_dias_sin_actividad"/>
-                                        </div>
-                                        <div class="summary-detail">días laborales</div>
-                                    </div>
-                                </td>
-                            </tr>
-                        </table>
-
-                        <!-- MÉTRICAS PRINCIPALES -->
-
-                        <table class="card-table avoid-break">
-                            <tr>
-                                <td style="width: 25%;">
-                                    <div class="metric-card score">
-                                        <div class="metric-title">
-                                            <i class="fa fa-star"/>
-                                            Puntaje total
-                                        </div>
-
-                                        <div class="metric-value">
-                                            <t t-esc="'%.1f' % (o.puntaje_total or 0)"/>%
-                                        </div>
-
-                                        <div class="metric-subtitle">
-                                            <t t-esc="dict(o._fields['nivel_desempeno'].selection).get(o.nivel_desempeno, 'Sin nivel')"/>
-                                        </div>
-
-                                        <div class="progress">
-                                            <div t-attf-class="progress-fill {{
-                                                    'progress-excellent' if (o.puntaje_total or 0) >= 90 else
-                                                    'progress-good' if (o.puntaje_total or 0) >= 80 else
-                                                    'progress-regular' if (o.puntaje_total or 0) >= 70 else
-                                                    'progress-poor'
-                                                }}"
-                                                 t-attf-style="width: #{min(o.puntaje_total or 0, 100)}%;"/>
-                                        </div>
-                                    </div>
-                                </td>
-
-                                <td style="width: 25%;">
-                                    <div class="metric-card repairs">
-                                        <div class="metric-title">
-                                            <i class="fa fa-tools"/>
-                                            Reparaciones
-                                        </div>
-
-                                        <div class="metric-value">
-                                            <t t-esc="reparaciones_reporte"/>
-                                        </div>
-
-                                        <div class="metric-subtitle">
-                                            Meta individual:
-                                            <strong><t t-esc="meta_taller"/></strong>
-                                            |
-                                            <strong>
-                                                <t t-esc="'%.1f' % porcentaje_reparaciones_reporte"/>%
-                                            </strong>
-                                        </div>
-
-                                        <div class="progress">
-                                            <div t-attf-class="progress-fill {{
-                                                    'progress-excellent' if porcentaje_reparaciones_reporte >= 100 else
-                                                    'progress-good' if porcentaje_reparaciones_reporte >= 90 else
-                                                    'progress-regular' if porcentaje_reparaciones_reporte >= 70 else
-                                                    'progress-poor'
-                                                }}"
-                                                 t-attf-style="width: #{min(porcentaje_reparaciones_reporte, 100)}%;"/>
-                                        </div>
-                                    </div>
-                                </td>
-
-                                <td style="width: 25%;">
-                                    <div class="metric-card goal">
-                                        <div class="metric-title">
-                                            <i class="fa fa-bullseye"/>
-                                            Pendiente para meta
-                                        </div>
-
-                                        <div class="metric-value">
-                                            <t t-esc="datos.get('reparaciones_pendientes', 0)"/>
-                                        </div>
-
-                                        <div class="metric-subtitle">
-                                            <t t-if="datos.get('reparaciones_pendientes', 0) &gt; 0">
-                                                reparaciones pendientes
-                                            </t>
-                                            <t t-else="">
-                                                Meta alcanzada
-                                            </t>
-                                        </div>
-                                    </div>
-                                </td>
-
-                                <td style="width: 25%;">
-                                    <div class="metric-card status">
-                                        <div class="metric-title">
-                                            <i class="fa fa-chart-line"/>
-                                            Promedio diario
-                                        </div>
-
-                                        <div class="metric-value">
-                                            <t t-esc="'%.1f' % (
-                                                reparaciones_reporte / o.dias_evaluados
-                                                if o.dias_evaluados
-                                                else 0
-                                            )"/>
-                                        </div>
-
-                                        <div class="metric-subtitle">
-                                            reparaciones por día evaluado
-                                        </div>
-                                    </div>
-                                </td>
-                            </tr>
-                        </table>
-
-                        <!-- TENDENCIA -->
-
-                        <t t-if="datos.get('grafico_tendencia')">
-                            <div class="chart-box avoid-break">
-                                <div class="chart-title">
-                                    <i class="fa fa-chart-line"/>
-                                    Tendencia diaria de reparaciones
-                                </div>
-                                <img class="chart-image"
-                                     t-att-src="'data:image/png;base64,' + datos['grafico_tendencia']"/>
+                        <t t-if="bono_bloqueado">
+                            <div class="status-banner danger">
+                                <strong>BONO NO OTORGADO.</strong>
+                                El resultado calculado no genera pago porque existe al menos una condición de bloqueo.
+                                El detalle de las causas se muestra en la sección “Validaciones para acceder al bono”.
                             </div>
                         </t>
 
-                        <!-- EVALUACIÓN TÉCNICA -->
-
-                        <div class="section-title">
-                            <i class="fa fa-cogs"/>
-                            EVALUACIÓN TÉCNICA
-                        </div>
+                        <t t-else="">
+                            <div class="status-banner success">
+                                <strong>BONO APROBADO.</strong>
+                                El técnico cumple las condiciones mínimas de producción, calidad, asistencia,
+                                cierre mensual y cobertura de evaluaciones.
+                            </div>
+                        </t>
 
                         <table class="card-table avoid-break">
                             <tr>
-                                <td style="width: 25%;">
-                                    <div class="evaluation-card">
-                                        <div class="evaluation-name">
-                                            <i class="fa fa-check-circle"/>
-                                            Calidad
+                                <td style="width: 20%;">
+                                    <div class="metric-card purple">
+                                        <div class="metric-label">Resultado total bono</div>
+                                        <div class="metric-value">
+                                            <t t-esc="'%.2f' % (o.puntaje_total_bono or 0.0)"/>%
                                         </div>
-                                        <div class="evaluation-value">
-                                            <t t-esc="dict(o._fields['calidad_trabajo'].selection).get(o.calidad_trabajo, 'Sin evaluar')"/>
-                                        </div>
-                                        <div class="progress">
-                                            <div class="progress-fill progress-good"
-                                                 t-attf-style="width: #{int(o.calidad_trabajo or '0') * 20}%;"/>
+                                        <div class="metric-detail">
+                                            Máximo reconocido: 120%
                                         </div>
                                     </div>
                                 </td>
 
-                                <td style="width: 25%;">
-                                    <div class="evaluation-card">
-                                        <div class="evaluation-name">
-                                            <i class="fa fa-brain"/>
-                                            Conocimiento
+                                <td style="width: 20%;">
+                                    <div class="metric-card green">
+                                        <div class="metric-label">Bono base</div>
+                                        <div class="metric-value">
+                                            S/ <t t-esc="'%.2f' % (o.bono_base or 0.0)"/>
                                         </div>
-                                        <div class="evaluation-value">
-                                            <t t-esc="dict(o._fields['conocimiento_tecnico'].selection).get(o.conocimiento_tecnico, 'Sin evaluar')"/>
-                                        </div>
-                                        <div class="progress">
-                                            <div class="progress-fill progress-good"
-                                                 t-attf-style="width: #{int(o.conocimiento_tecnico or '0') * 20}%;"/>
+                                        <div class="metric-detail">
+                                            Según escala del resultado
                                         </div>
                                     </div>
                                 </td>
 
-                                <td style="width: 25%;">
-                                    <div class="evaluation-card">
-                                        <div class="evaluation-name">
-                                            <i class="fa fa-puzzle-piece"/>
-                                            Resolución
+                                <td style="width: 20%;">
+                                    <div class="metric-card">
+                                        <div class="metric-label">Acelerador</div>
+                                        <div class="metric-value">
+                                            S/ <t t-esc="'%.2f' % (o.monto_acelerador or 0.0)"/>
                                         </div>
-                                        <div class="evaluation-value">
-                                            <t t-esc="dict(o._fields['resolucion_problemas'].selection).get(o.resolucion_problemas, 'Sin evaluar')"/>
-                                        </div>
-                                        <div class="progress">
-                                            <div class="progress-fill progress-good"
-                                                 t-attf-style="width: #{int(o.resolucion_problemas or '0') * 20}%;"/>
+                                        <div class="metric-detail">
+                                            <t t-if="o.aplica_acelerador">
+                                                Aplicado
+                                            </t>
+                                            <t t-else="">
+                                                No aplicado
+                                            </t>
                                         </div>
                                     </div>
                                 </td>
 
-                                <td style="width: 25%;">
-                                    <div class="evaluation-card">
-                                        <div class="evaluation-name">
-                                            <i class="fa fa-wrench"/>
-                                            Herramientas
+                                <td style="width: 20%;">
+                                    <div class="metric-card orange">
+                                        <div class="metric-label">Bono final</div>
+                                        <div class="metric-value">
+                                            S/ <t t-esc="'%.2f' % (o.bono_final or 0.0)"/>
                                         </div>
-                                        <div class="evaluation-value">
-                                            <t t-esc="dict(o._fields['uso_herramientas'].selection).get(o.uso_herramientas, 'Sin evaluar')"/>
+                                        <div class="metric-detail">
+                                            Monto final a pagar
                                         </div>
-                                        <div class="progress">
-                                            <div class="progress-fill progress-good"
-                                                 t-attf-style="width: #{int(o.uso_herramientas or '0') * 20}%;"/>
+                                    </div>
+                                </td>
+
+                                <td style="width: 20%;">
+                                    <div t-attf-class="metric-card {{'red' if bono_bloqueado else 'green'}}">
+                                        <div class="metric-label">Estado del bono</div>
+                                        <div class="metric-value" style="font-size: 12pt;">
+                                            <t t-if="bono_bloqueado">BLOQUEADO</t>
+                                            <t t-else="">APROBADO</t>
+                                        </div>
+                                        <div class="metric-detail">
+                                            Validación automática
                                         </div>
                                     </div>
                                 </td>
                             </tr>
                         </table>
 
-                        <!-- ACTITUD Y CLIENTE EN UNA SOLA FILA -->
-
                         <div class="section-title">
-                            <i class="fa fa-user-check"/>
-                            EVALUACIÓN ACTITUDINAL Y ATENCIÓN AL CLIENTE
+                            RESUMEN DE PRODUCCIÓN
                         </div>
 
                         <table class="card-table avoid-break">
                             <tr>
-                                <td style="width: 16.66%;">
-                                    <div class="evaluation-card">
-                                        <div class="evaluation-name">Puntualidad</div>
-                                        <div class="evaluation-value">
-                                            <t t-esc="dict(o._fields['puntualidad'].selection).get(o.puntualidad, 'Sin evaluar')"/>
+                                <td style="width: 25%;">
+                                    <div class="metric-card green">
+                                        <div class="metric-label">Producción total</div>
+                                        <div class="metric-value">
+                                            <t t-esc="'%.2f' % (o.porcentaje_produccion_total or 0.0)"/>%
+                                        </div>
+                                        <div class="metric-detail">
+                                            Taller y servicios ponderados
                                         </div>
                                         <div class="progress">
-                                            <div class="progress-fill progress-good"
-                                                 t-attf-style="width: #{int(o.puntualidad or '0') * 20}%;"/>
+                                            <div t-attf-class="progress-fill {{
+                                                    'progress-green' if (o.porcentaje_produccion_total or 0.0) >= 100 else
+                                                    'progress-blue' if (o.porcentaje_produccion_total or 0.0) >= 95 else
+                                                    'progress-orange' if (o.porcentaje_produccion_total or 0.0) >= 80 else
+                                                    'progress-red'
+                                                }}"
+                                                 t-attf-style="width: #{min(o.porcentaje_produccion_total or 0.0, 100.0)}%;"/>
                                         </div>
                                     </div>
                                 </td>
 
-                                <td style="width: 16.66%;">
-                                    <div class="evaluation-card">
-                                        <div class="evaluation-name">Compromiso</div>
-                                        <div class="evaluation-value">
-                                            <t t-esc="dict(o._fields['compromiso'].selection).get(o.compromiso, 'Sin evaluar')"/>
+                                <td style="width: 25%;">
+                                    <div class="metric-card">
+                                        <div class="metric-label">Producción de taller</div>
+                                        <div class="metric-value">
+                                            <t t-esc="o.reparaciones_validas_bono or 0"/>
                                         </div>
-                                        <div class="progress">
-                                            <div class="progress-fill progress-good"
-                                                 t-attf-style="width: #{int(o.compromiso or '0') * 20}%;"/>
-                                        </div>
-                                    </div>
-                                </td>
-
-                                <td style="width: 16.66%;">
-                                    <div class="evaluation-card">
-                                        <div class="evaluation-name">Trabajo en equipo</div>
-                                        <div class="evaluation-value">
-                                            <t t-esc="dict(o._fields['trabajo_equipo'].selection).get(o.trabajo_equipo, 'Sin evaluar')"/>
-                                        </div>
-                                        <div class="progress">
-                                            <div class="progress-fill progress-good"
-                                                 t-attf-style="width: #{int(o.trabajo_equipo or '0') * 20}%;"/>
+                                        <div class="metric-detail">
+                                            Meta:
+                                            <t t-esc="'%.2f' % (o.meta_taller_ajustada or 0.0)"/>
+                                            ·
+                                            <t t-esc="'%.2f' % (o.porcentaje_produccion_taller or 0.0)"/>%
                                         </div>
                                     </div>
                                 </td>
 
-                                <td style="width: 16.66%;">
-                                    <div class="evaluation-card">
-                                        <div class="evaluation-name">Trato</div>
-                                        <div class="evaluation-value">
-                                            <t t-esc="dict(o._fields['trato_cliente'].selection).get(o.trato_cliente, 'Sin evaluar')"/>
+                                <td style="width: 25%;">
+                                    <div class="metric-card">
+                                        <div class="metric-label">Producción de servicios</div>
+                                        <div class="metric-value">
+                                            <t t-esc="o.tickets_validos_bono or 0"/>
                                         </div>
-                                        <div class="progress">
-                                            <div class="progress-fill progress-good"
-                                                 t-attf-style="width: #{int(o.trato_cliente or '0') * 20}%;"/>
-                                        </div>
-                                    </div>
-                                </td>
-
-                                <td style="width: 16.66%;">
-                                    <div class="evaluation-card">
-                                        <div class="evaluation-name">Comunicación</div>
-                                        <div class="evaluation-value">
-                                            <t t-esc="dict(o._fields['comunicacion_cliente'].selection).get(o.comunicacion_cliente, 'Sin evaluar')"/>
-                                        </div>
-                                        <div class="progress">
-                                            <div class="progress-fill progress-good"
-                                                 t-attf-style="width: #{int(o.comunicacion_cliente or '0') * 20}%;"/>
+                                        <div class="metric-detail">
+                                            Meta:
+                                            <t t-esc="'%.2f' % (o.meta_servicios_ajustada or 0.0)"/>
+                                            ·
+                                            <t t-esc="'%.2f' % (o.porcentaje_produccion_servicios or 0.0)"/>%
                                         </div>
                                     </div>
                                 </td>
 
-                                <td style="width: 16.70%;">
-                                    <div class="evaluation-card">
-                                        <div class="evaluation-name">Conflictos</div>
-                                        <div class="evaluation-value">
-                                            <t t-esc="dict(o._fields['manejo_conflictos'].selection).get(o.manejo_conflictos, 'Sin evaluar')"/>
+                                <td style="width: 25%;">
+                                    <div class="metric-card purple">
+                                        <div class="metric-label">Aporte de producción</div>
+                                        <div class="metric-value">
+                                            <t t-esc="'%.2f' % (o.puntaje_produccion_bono or 0.0)"/>
                                         </div>
-                                        <div class="progress">
-                                            <div class="progress-fill progress-good"
-                                                 t-attf-style="width: #{int(o.manejo_conflictos or '0') * 20}%;"/>
+                                        <div class="metric-detail">
+                                            Puntos aportados de 50
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <div class="section-title">
+                            ORIGEN Y VALIDACIÓN DE LA META
+                        </div>
+
+                        <t t-if="o.cierre_confirmado_disponible">
+                            <div class="status-banner success">
+                                <strong>Meta validada.</strong>
+                                <t t-esc="o.mensaje_cierre_mensual or 'La meta proviene de un cierre mensual confirmado.'"/>
+                            </div>
+                        </t>
+
+                        <t t-elif="requiere_cierre">
+                            <div class="status-banner danger">
+                                <strong>Meta no validada.</strong>
+                                <t t-esc="o.mensaje_cierre_mensual or 'No existe cierre mensual confirmado.'"/>
+                            </div>
+                        </t>
+
+                        <t t-else="">
+                            <div class="status-banner warning">
+                                <strong>El cierre de taller no aplica.</strong>
+                                El técnico está clasificado como exclusivo de servicios.
+                            </div>
+                        </t>
+
+                        <table class="card-table avoid-break">
+                            <tr>
+                                <td style="width: 50%;">
+                                    <div class="info-card">
+                                        <div class="info-title">Datos del cierre mensual</div>
+                                        <table class="data-table">
+                                            <tr>
+                                                <td>Cierre aplicado</td>
+                                                <td class="text-right fw-bold">
+                                                    <t t-if="o.cierre_mensual_id">
+                                                        <t t-esc="o.cierre_mensual_id.name"/>
+                                                    </t>
+                                                    <t t-else="">No disponible</t>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>Pool mensual exigible</td>
+                                                <td class="text-right fw-bold">
+                                                    <t t-esc="o.pool_total_exigible_cierre or 0"/>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>Horas disponibles de taller</td>
+                                                <td class="text-right fw-bold">
+                                                    <t t-esc="'%.2f' % (o.horas_taller_disponibles_cierre or 0.0)"/>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>Participación en el pool</td>
+                                                <td class="text-right fw-bold">
+                                                    <t t-esc="'%.2f' % (o.porcentaje_participacion_pool or 0.0)"/>%
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                </td>
+
+                                <td style="width: 50%;">
+                                    <div class="info-card">
+                                        <div class="info-title">Metas individuales aplicadas</div>
+                                        <table class="data-table">
+                                            <tr>
+                                                <td>Meta taller ajustada</td>
+                                                <td class="text-right fw-bold">
+                                                    <t t-esc="'%.2f' % (o.meta_taller_ajustada or 0.0)"/>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>Meta servicios ajustada</td>
+                                                <td class="text-right fw-bold">
+                                                    <t t-esc="'%.2f' % (o.meta_servicios_ajustada or 0.0)"/>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>Días laborables equivalentes</td>
+                                                <td class="text-right fw-bold">
+                                                    <t t-esc="'%.2f' % (o.dias_laborables_equivalentes or 0.0)"/>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>Días en servicios</td>
+                                                <td class="text-right fw-bold">
+                                                    <t t-esc="'%.2f' % (o.dias_servicio_equivalentes or 0.0)"/>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <t t-if="o.explicacion_meta_gerencia">
+                            <div class="info-card avoid-break" style="margin-top: 4px;">
+                                <div class="info-title">Explicación de la meta para gerencia</div>
+                                <div style="font-size: 7.2pt; line-height: 1.4; white-space: pre-line;">
+                                    <t t-esc="o.explicacion_meta_gerencia"/>
+                                </div>
+                            </div>
+                        </t>
+
+                        <div class="section-title">
+                            VALIDACIONES PARA ACCEDER AL BONO
+                        </div>
+
+                        <table class="card-table">
+                            <tr>
+                                <td style="width: 25%;">
+                                    <div t-attf-class="alert-card {{'success' if not bloqueado_produccion else ''}}">
+                                        <div class="alert-title">
+                                            Producción mínima
+                                        </div>
+                                        <div class="alert-text">
+                                            Resultado:
+                                            <strong><t t-esc="'%.2f' % (o.porcentaje_produccion_total or 0.0)"/>%</strong>
+                                            <br/>
+                                            Requisito: mínimo 95%.
+                                            <br/>
+                                            <t t-if="bloqueado_produccion">
+                                                <span class="text-danger fw-bold">No cumple</span>
+                                            </t>
+                                            <t t-else="">
+                                                <span class="text-success fw-bold">Cumple</span>
+                                            </t>
+                                        </div>
+                                    </div>
+                                </td>
+
+                                <td style="width: 25%;">
+                                    <div t-attf-class="alert-card {{'success' if not bloqueado_evaluaciones else ''}}">
+                                        <div class="alert-title">
+                                            Encuestas requeridas
+                                        </div>
+                                        <div class="alert-text">
+                                            Requeridas:
+                                            <strong><t t-esc="o.evaluaciones_servicio_minimas or 0"/></strong>
+                                            <br/>
+                                            Faltantes:
+                                            <strong><t t-esc="o.evaluaciones_servicio_faltantes or 0"/></strong>
+                                            <br/>
+                                            <t t-if="bloqueado_evaluaciones">
+                                                <span class="text-danger fw-bold">No cumple</span>
+                                            </t>
+                                            <t t-else="">
+                                                <span class="text-success fw-bold">Cumple</span>
+                                            </t>
+                                        </div>
+                                    </div>
+                                </td>
+
+                                <td style="width: 25%;">
+                                    <div t-attf-class="alert-card {{'success' if not bloqueado_reclamos else ''}}">
+                                        <div class="alert-title">
+                                            Reclamos procedentes
+                                        </div>
+                                        <div class="alert-text">
+                                            Registrados:
+                                            <strong><t t-esc="o.reclamos_procedentes_count or 0"/></strong>
+                                            <br/>
+                                            Bloqueo desde 5 reclamos.
+                                            <br/>
+                                            <t t-if="bloqueado_reclamos">
+                                                <span class="text-danger fw-bold">Bono bloqueado</span>
+                                            </t>
+                                            <t t-else="">
+                                                <span class="text-success fw-bold">Sin bloqueo</span>
+                                            </t>
+                                        </div>
+                                    </div>
+                                </td>
+
+                                <td style="width: 25%;">
+                                    <div t-attf-class="alert-card {{'success' if not bloqueado_cierre else ''}}">
+                                        <div class="alert-title">
+                                            Cierre mensual
+                                        </div>
+                                        <div class="alert-text">
+                                            <t t-if="not requiere_cierre">
+                                                No aplica para este perfil.
+                                            </t>
+                                            <t t-elif="o.cierre_confirmado_disponible">
+                                                Cierre confirmado y meta asignada.
+                                            </t>
+                                            <t t-else="">
+                                                No existe cierre confirmado.
+                                            </t>
+                                            <br/>
+                                            <t t-if="bloqueado_cierre">
+                                                <span class="text-danger fw-bold">No cumple</span>
+                                            </t>
+                                            <t t-else="">
+                                                <span class="text-success fw-bold">Cumple</span>
+                                            </t>
                                         </div>
                                     </div>
                                 </td>
@@ -955,83 +904,318 @@
                         <div class="page-break"/>
 
                         <!-- ==================================================
-                             PÁGINA 2: ANÁLISIS DIARIO Y GRÁFICOS
+                             PÁGINA 2: COMPONENTES DEL RESULTADO
                         ================================================== -->
 
                         <div class="section-title">
-                            <i class="fa fa-calendar-alt"/>
-                            ANÁLISIS DIARIO DE REPARACIONES
+                            COMPONENTES DEL RESULTADO DEL BONO
+                        </div>
+
+                        <table class="card-table avoid-break">
+                            <tr>
+                                <td style="width: 25%;">
+                                    <div class="score-card">
+                                        <div class="score-title">Producción 50%</div>
+                                        <div class="score-value">
+                                            <t t-esc="'%.2f' % (o.puntaje_produccion_bono or 0.0)"/>
+                                        </div>
+                                        <div class="score-detail">
+                                            Resultado base:
+                                            <t t-esc="'%.2f' % (o.porcentaje_produccion_total or 0.0)"/>%
+                                        </div>
+                                    </div>
+                                </td>
+
+                                <td style="width: 25%;">
+                                    <div class="score-card">
+                                        <div class="score-title">Calidad 25%</div>
+                                        <div class="score-value">
+                                            <t t-esc="'%.2f' % (o.puntaje_calidad_bono or 0.0)"/>
+                                        </div>
+                                        <div class="score-detail">
+                                            Puntaje base:
+                                            <t t-esc="'%.2f' % (o.puntaje_calidad_real or 0.0)"/>%
+                                        </div>
+                                    </div>
+                                </td>
+
+                                <td style="width: 25%;">
+                                    <div class="score-card">
+                                        <div class="score-title">Asistencia 15%</div>
+                                        <div class="score-value">
+                                            <t t-esc="'%.2f' % (o.puntaje_asistencia_bono or 0.0)"/>
+                                        </div>
+                                        <div class="score-detail">
+                                            Puntaje base:
+                                            <t t-esc="'%.2f' % (o.puntaje_asistencia_real or 0.0)"/>%
+                                        </div>
+                                    </div>
+                                </td>
+
+                                <td style="width: 25%;">
+                                    <div class="score-card">
+                                        <div class="score-title">Apoyo 10%</div>
+                                        <div class="score-value">
+                                            <t t-esc="'%.2f' % (o.puntaje_apoyo_bono or 0.0)"/>
+                                        </div>
+                                        <div class="score-detail">
+                                            Puntaje base:
+                                            <t t-esc="'%.2f' % (o.puntaje_apoyo_real or 0.0)"/>%
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <t t-if="o.bono_extra_sobreproduccion">
+                            <div class="status-banner success">
+                                <strong>Sobreproducción reconocida:</strong>
+                                se agregaron
+                                <t t-esc="'%.2f' % (o.bono_extra_sobreproduccion or 0.0)"/>
+                                puntos adicionales al resultado.
+                            </div>
+                        </t>
+
+                        <div class="section-title">
+                            CALIDAD, RECLAMOS Y EVALUACIONES DEL CLIENTE
+                        </div>
+
+                        <table class="card-table avoid-break">
+                            <tr>
+                                <td style="width: 50%;">
+                                    <div class="info-card">
+                                        <div class="info-title">Indicadores de calidad</div>
+                                        <table class="data-table">
+                                            <tr>
+                                                <td>Reclamos procedentes</td>
+                                                <td class="text-right fw-bold">
+                                                    <t t-esc="o.reclamos_procedentes_count or 0"/>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>Evaluaciones respondidas</td>
+                                                <td class="text-right fw-bold">
+                                                    <t t-esc="o.evaluaciones_servicio_count or 0"/>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>Evaluaciones mínimas requeridas</td>
+                                                <td class="text-right fw-bold">
+                                                    <t t-esc="o.evaluaciones_servicio_minimas or 0"/>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>Evaluaciones faltantes</td>
+                                                <td class="text-right fw-bold">
+                                                    <t t-esc="o.evaluaciones_servicio_faltantes or 0"/>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>Evaluaciones críticas</td>
+                                                <td class="text-right fw-bold">
+                                                    <t t-esc="o.evaluaciones_criticas_count or 0"/>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                </td>
+
+                                <td style="width: 50%;">
+                                    <div class="info-card">
+                                        <div class="info-title">Resultado de calidad</div>
+                                        <table class="data-table">
+                                            <tr>
+                                                <td>Promedio evaluación de servicio</td>
+                                                <td class="text-right fw-bold">
+                                                    <t t-esc="'%.2f' % (o.promedio_evaluacion_servicio or 0.0)"/>%
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>Penalidad por evaluaciones</td>
+                                                <td class="text-right fw-bold">
+                                                    -<t t-esc="'%.2f' % (o.penalidad_evaluaciones_servicio or 0.0)"/>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>Puntaje real de calidad</td>
+                                                <td class="text-right fw-bold">
+                                                    <t t-esc="'%.2f' % (o.puntaje_calidad_real or 0.0)"/>%
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>Cobertura mínima cumplida</td>
+                                                <td class="text-right fw-bold">
+                                                    <t t-if="o.cumple_minimo_evaluaciones">
+                                                        <span class="text-success">Sí</span>
+                                                    </t>
+                                                    <t t-else="">
+                                                        <span class="text-danger">No</span>
+                                                    </t>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <div class="section-title">
+                            ASISTENCIA, DISPONIBILIDAD Y APOYO
+                        </div>
+
+                        <table class="card-table avoid-break">
+                            <tr>
+                                <td style="width: 50%;">
+                                    <div class="info-card">
+                                        <div class="info-title">Disponibilidad operativa</div>
+                                        <table class="data-table">
+                                            <tr>
+                                                <td>Días laborables equivalentes</td>
+                                                <td class="text-right fw-bold">
+                                                    <t t-esc="'%.2f' % (o.dias_laborables_equivalentes or 0.0)"/>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>Días descontados por ausencias</td>
+                                                <td class="text-right fw-bold">
+                                                    <t t-esc="'%.2f' % (o.dias_ausencia_equivalentes or 0.0)"/>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>Días ocupados en servicios</td>
+                                                <td class="text-right fw-bold">
+                                                    <t t-esc="'%.2f' % (o.dias_servicio_equivalentes or 0.0)"/>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>Días disponibles para taller</td>
+                                                <td class="text-right fw-bold">
+                                                    <t t-esc="'%.2f' % (o.dias_taller_disponibles or 0.0)"/>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>Horas estimadas en servicios</td>
+                                                <td class="text-right fw-bold">
+                                                    <t t-esc="'%.2f' % (o.horas_servicio_mes or 0.0)"/>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                </td>
+
+                                <td style="width: 50%;">
+                                    <div class="info-card">
+                                        <div class="info-title">Asistencia y trabajo en equipo</div>
+                                        <table class="data-table">
+                                            <tr>
+                                                <td>Faltas injustificadas equivalentes</td>
+                                                <td class="text-right fw-bold">
+                                                    <t t-esc="'%.2f' % (o.faltas_injustificadas_equivalentes or 0.0)"/>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>Puntaje de asistencia</td>
+                                                <td class="text-right fw-bold">
+                                                    <t t-esc="'%.2f' % (o.puntaje_asistencia_real or 0.0)"/>%
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>Calificación de apoyo</td>
+                                                <td class="text-right fw-bold">
+                                                    <t t-esc="dict(o._fields['apoyo_calificacion'].selection).get(o.apoyo_calificacion, 'Sin evaluar')"/>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>Puntaje de apoyo</td>
+                                                <td class="text-right fw-bold">
+                                                    <t t-esc="'%.2f' % (o.puntaje_apoyo_real or 0.0)"/>%
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <div class="section-title">
+                            EXPLICACIÓN AUTOMÁTICA DEL CÁLCULO
+                        </div>
+
+                        <div class="info-card avoid-break">
+                            <div style="font-size: 7pt; line-height: 1.4; white-space: pre-line;">
+                                <t t-esc="o.motivo_bono or 'No existe explicación disponible.'"/>
+                            </div>
+                        </div>
+
+                        <t t-if="datos.get('grafico_distribucion')">
+                            <div class="chart-box avoid-break" style="margin-top: 6px;">
+                                <div class="chart-title">
+                                    Cumplimiento de la meta individual
+                                </div>
+                                <img class="chart-image-small"
+                                     style="max-width: 520px; margin: 0 auto;"
+                                     t-att-src="'data:image/png;base64,' + datos['grafico_distribucion']"/>
+                            </div>
+                        </t>
+
+                        <div class="page-break"/>
+
+                        <!-- ==================================================
+                             PÁGINA 3: DETALLE OPERATIVO Y EVALUACIÓN
+                        ================================================== -->
+
+                        <div class="section-title">
+                            ANÁLISIS DIARIO DE PRODUCCIÓN
                         </div>
 
                         <t t-if="o.detalle_diario_ids">
                             <table class="daily-table">
                                 <thead>
                                     <tr>
-                                        <th class="col-date">Fecha</th>
-                                        <th class="col-day">Día</th>
-                                        <th class="col-number">Reparaciones</th>
-                                        <th class="col-number">Tickets</th>
-                                        <th class="col-number">Total</th>
-                                        <th class="col-objective">Objetivo</th>
-                                        <th class="col-percent">% cumplimiento</th>
-                                        <th class="col-status">Estado</th>
+                                        <th style="width: 9%;">Fecha</th>
+                                        <th style="width: 10%;">Día</th>
+                                        <th style="width: 12%;">Reparaciones</th>
+                                        <th style="width: 10%;">Tickets</th>
+                                        <th style="width: 9%;">Total</th>
+                                        <th style="width: 10%;">Objetivo</th>
+                                        <th style="width: 14%;">Cumplimiento</th>
+                                        <th style="width: 14%;">Estado</th>
                                     </tr>
                                 </thead>
 
                                 <tbody>
-                                    <t t-foreach="o.detalle_diario_ids.sorted('fecha')"
-                                       t-as="detalle">
-
+                                    <t t-foreach="o.detalle_diario_ids.sorted('fecha')" t-as="detalle">
                                         <tr>
                                             <td>
                                                 <t t-esc="detalle.fecha"
                                                    t-options='{"widget": "date", "format": "dd/MM"}'/>
                                             </td>
-
                                             <td>
                                                 <t t-esc="detalle.dia_semana"/>
                                             </td>
-
                                             <td class="fw-bold">
                                                 <t t-esc="detalle.cantidad_reparaciones"/>
                                             </td>
-
                                             <td>
                                                 <t t-esc="detalle.cantidad_tickets"/>
                                             </td>
-
                                             <td>
                                                 <t t-esc="detalle.total_trabajos"/>
                                             </td>
-
                                             <td>
                                                 <t t-esc="detalle.objetivo_dia"/>
                                             </td>
-
                                             <td class="fw-bold">
-                                                <t t-esc="'%.1f' % (detalle.porcentaje_cumplimiento or 0)"/>%
+                                                <t t-esc="'%.1f' % (detalle.porcentaje_cumplimiento or 0.0)"/>%
                                             </td>
-
                                             <td>
                                                 <span t-attf-class="badge badge-{{(detalle.estado_dia or 'sin_actividad').replace('_', '-')}}">
-                                                    <t t-if="detalle.estado_dia == 'sin_actividad'">
-                                                        Sin actividad
-                                                    </t>
-                                                    <t t-elif="detalle.estado_dia == 'bajo'">
-                                                        Bajo
-                                                    </t>
-                                                    <t t-elif="detalle.estado_dia == 'aceptable'">
-                                                        Aceptable
-                                                    </t>
-                                                    <t t-elif="detalle.estado_dia == 'bueno'">
-                                                        Bueno
-                                                    </t>
-                                                    <t t-elif="detalle.estado_dia == 'excelente'">
-                                                        Excelente
-                                                    </t>
-                                                    <t t-else="">
-                                                        Sin estado
-                                                    </t>
+                                                    <t t-if="detalle.estado_dia == 'sin_actividad'">Sin actividad</t>
+                                                    <t t-elif="detalle.estado_dia == 'bajo'">Bajo</t>
+                                                    <t t-elif="detalle.estado_dia == 'aceptable'">Aceptable</t>
+                                                    <t t-elif="detalle.estado_dia == 'bueno'">Bueno</t>
+                                                    <t t-elif="detalle.estado_dia == 'excelente'">Excelente</t>
+                                                    <t t-else="">Sin estado</t>
                                                 </span>
                                             </td>
                                         </tr>
@@ -1040,21 +1224,22 @@
                             </table>
                         </t>
 
-                        <t t-if="not o.detalle_diario_ids">
-                            <div class="info-card text-center text-muted">
-                                No existen detalles diarios para este período.
+                        <t t-if="datos.get('grafico_tendencia')">
+                            <div class="chart-box avoid-break" style="margin-top: 6px;">
+                                <div class="chart-title">
+                                    Tendencia diaria de reparaciones
+                                </div>
+                                <img class="chart-image"
+                                     t-att-src="'data:image/png;base64,' + datos['grafico_tendencia']"/>
                             </div>
                         </t>
 
-                        <!-- GRÁFICOS EN DOS COLUMNAS -->
-
-                        <table class="chart-row">
+                        <table class="card-table">
                             <tr>
                                 <td style="width: 50%;">
                                     <t t-if="datos.get('grafico_semanal')">
                                         <div class="chart-box">
                                             <div class="chart-title">
-                                                <i class="fa fa-chart-bar"/>
                                                 Reparaciones semanales
                                             </div>
                                             <img class="chart-image-small"
@@ -1067,7 +1252,6 @@
                                     <t t-if="datos.get('heatmap_actividad')">
                                         <div class="chart-box">
                                             <div class="chart-title">
-                                                <i class="fa fa-th"/>
                                                 Mapa de actividad mensual
                                             </div>
                                             <img class="chart-image-small"
@@ -1078,182 +1262,117 @@
                             </tr>
                         </table>
 
-                        <!-- INFORMACIÓN Y CUMPLIMIENTO EN DOS COLUMNAS -->
-
                         <div class="section-title">
-                            <i class="fa fa-clipboard-list"/>
-                            INFORMACIÓN COMPLEMENTARIA
+                            EVALUACIÓN TÉCNICA Y ACTITUDINAL
                         </div>
 
-                        <t t-set="clientes" t-value="set()"/>
-                        <t t-set="modelos" t-value="set()"/>
-
-                        <t t-foreach="o.detalle_diario_ids" t-as="detalle">
-                            <t t-foreach="detalle.clientes_atendidos.split(', ') if detalle.clientes_atendidos else []"
-                               t-as="cliente">
-                                <t t-set="clientes"
-                                   t-value="clientes.union({cliente.strip()})"/>
-                            </t>
-
-                            <t t-foreach="detalle.modelos_trabajados.split(', ') if detalle.modelos_trabajados else []"
-                               t-as="modelo">
-                                <t t-set="modelos"
-                                   t-value="modelos.union({modelo.strip()})"/>
-                            </t>
-                        </t>
-
-                        <table class="card-table">
+                        <table class="card-table avoid-break">
                             <tr>
-                                <td style="width: 33.33%;">
-                                    <div class="info-card">
-                                        <div class="info-title">
-                                            <i class="fa fa-users"/>
-                                            Clientes atendidos
+                                <td style="width: 25%;">
+                                    <div class="score-card">
+                                        <div class="score-title">Calidad del trabajo</div>
+                                        <div class="score-detail">
+                                            <t t-esc="dict(o._fields['calidad_trabajo'].selection).get(o.calidad_trabajo, 'Sin evaluar')"/>
                                         </div>
-
-                                        <ul class="compact-list">
-                                            <t t-foreach="sorted(list(clientes))[:8]"
-                                               t-as="cliente">
-                                                <li t-if="cliente and cliente != 'Sin clientes'">
-                                                    <t t-esc="cliente"/>
-                                                </li>
-                                            </t>
-
-                                            <t t-if="len(clientes) &gt; 8">
-                                                <li class="text-muted">
-                                                    ... y
-                                                    <t t-esc="len(clientes) - 8"/>
-                                                    clientes más
-                                                </li>
-                                            </t>
-
-                                            <t t-if="not clientes or ('Sin clientes' in clientes and len(clientes) == 1)">
-                                                <li class="text-muted">
-                                                    No se registraron clientes.
-                                                </li>
-                                            </t>
-                                        </ul>
                                     </div>
                                 </td>
 
-                                <td style="width: 33.33%;">
-                                    <div class="info-card">
-                                        <div class="info-title">
-                                            <i class="fa fa-print"/>
-                                            Equipos trabajados
+                                <td style="width: 25%;">
+                                    <div class="score-card">
+                                        <div class="score-title">Conocimiento técnico</div>
+                                        <div class="score-detail">
+                                            <t t-esc="dict(o._fields['conocimiento_tecnico'].selection).get(o.conocimiento_tecnico, 'Sin evaluar')"/>
                                         </div>
-
-                                        <ul class="compact-list">
-                                            <t t-foreach="sorted(list(modelos))[:8]"
-                                               t-as="modelo">
-                                                <li t-if="modelo and modelo != 'Sin equipos'">
-                                                    <t t-esc="modelo"/>
-                                                </li>
-                                            </t>
-
-                                            <t t-if="len(modelos) &gt; 8">
-                                                <li class="text-muted">
-                                                    ... y
-                                                    <t t-esc="len(modelos) - 8"/>
-                                                    modelos más
-                                                </li>
-                                            </t>
-
-                                            <t t-if="not modelos or ('Sin equipos' in modelos and len(modelos) == 1)">
-                                                <li class="text-muted">
-                                                    No se registraron equipos.
-                                                </li>
-                                            </t>
-                                        </ul>
                                     </div>
                                 </td>
 
-                                <td style="width: 33.34%;">
-                                    <div class="info-card">
-                                        <div class="info-title">
-                                            <i class="fa fa-chart-line"/>
-                                            Indicadores
+                                <td style="width: 25%;">
+                                    <div class="score-card">
+                                        <div class="score-title">Resolución de problemas</div>
+                                        <div class="score-detail">
+                                            <t t-esc="dict(o._fields['resolucion_problemas'].selection).get(o.resolucion_problemas, 'Sin evaluar')"/>
                                         </div>
+                                    </div>
+                                </td>
 
-                                        <table class="kpi-table">
-                                            <tr>
-                                                <td>Promedio reparaciones</td>
-                                                <td class="text-right fw-bold">
-                                                    <t t-esc="'%.2f' % (o.promedio_diario_reparaciones or 0)"/>
-                                                </td>
-                                            </tr>
-
-                                            <tr>
-                                                <td>Promedio tickets</td>
-                                                <td class="text-right fw-bold">
-                                                    <t t-esc="'%.2f' % (o.promedio_diario_tickets or 0)"/>
-                                                </td>
-                                            </tr>
-
-                                            <tr>
-                                                <td>Días evaluados</td>
-                                                <td class="text-right fw-bold">
-                                                    <t t-esc="o.dias_evaluados"/>
-                                                </td>
-                                            </tr>
-
-                                            <tr>
-                                                <td>Total clientes</td>
-                                                <td class="text-right fw-bold">
-                                                    <t t-esc="len([
-                                                        cliente for cliente in clientes
-                                                        if cliente and cliente != 'Sin clientes'
-                                                    ])"/>
-                                                </td>
-                                            </tr>
-
-                                            <tr>
-                                                <td>Total modelos</td>
-                                                <td class="text-right fw-bold">
-                                                    <t t-esc="len([
-                                                        modelo for modelo in modelos
-                                                        if modelo and modelo != 'Sin equipos'
-                                                    ])"/>
-                                                </td>
-                                            </tr>
-                                        </table>
+                                <td style="width: 25%;">
+                                    <div class="score-card">
+                                        <div class="score-title">Uso de herramientas</div>
+                                        <div class="score-detail">
+                                            <t t-esc="dict(o._fields['uso_herramientas'].selection).get(o.uso_herramientas, 'Sin evaluar')"/>
+                                        </div>
                                     </div>
                                 </td>
                             </tr>
                         </table>
 
-                        <t t-if="datos.get('grafico_distribucion')">
-                            <div class="chart-box avoid-break">
-                                <div class="chart-title">
-                                    <i class="fa fa-chart-pie"/>
-                                    Cumplimiento de la meta individual de taller
-                                </div>
+                        <table class="card-table avoid-break">
+                            <tr>
+                                <td style="width: 16.66%;">
+                                    <div class="score-card">
+                                        <div class="score-title">Puntualidad</div>
+                                        <div class="score-detail">
+                                            <t t-esc="dict(o._fields['puntualidad'].selection).get(o.puntualidad, 'Sin evaluar')"/>
+                                        </div>
+                                    </div>
+                                </td>
 
-                                <img class="chart-image-small"
-                                     style="max-width: 540px; margin: 0 auto;"
-                                     t-att-src="'data:image/png;base64,' + datos['grafico_distribucion']"/>
-                            </div>
-                        </t>
+                                <td style="width: 16.66%;">
+                                    <div class="score-card">
+                                        <div class="score-title">Compromiso</div>
+                                        <div class="score-detail">
+                                            <t t-esc="dict(o._fields['compromiso'].selection).get(o.compromiso, 'Sin evaluar')"/>
+                                        </div>
+                                    </div>
+                                </td>
 
-                        <div class="page-break"/>
+                                <td style="width: 16.66%;">
+                                    <div class="score-card">
+                                        <div class="score-title">Trabajo en equipo</div>
+                                        <div class="score-detail">
+                                            <t t-esc="dict(o._fields['trabajo_equipo'].selection).get(o.trabajo_equipo, 'Sin evaluar')"/>
+                                        </div>
+                                    </div>
+                                </td>
 
-                        <!-- ==================================================
-                             PÁGINA 3: RETROALIMENTACIÓN Y FIRMAS
-                        ================================================== -->
+                                <td style="width: 16.66%;">
+                                    <div class="score-card">
+                                        <div class="score-title">Trato al cliente</div>
+                                        <div class="score-detail">
+                                            <t t-esc="dict(o._fields['trato_cliente'].selection).get(o.trato_cliente, 'Sin evaluar')"/>
+                                        </div>
+                                    </div>
+                                </td>
+
+                                <td style="width: 16.66%;">
+                                    <div class="score-card">
+                                        <div class="score-title">Comunicación</div>
+                                        <div class="score-detail">
+                                            <t t-esc="dict(o._fields['comunicacion_cliente'].selection).get(o.comunicacion_cliente, 'Sin evaluar')"/>
+                                        </div>
+                                    </div>
+                                </td>
+
+                                <td style="width: 16.70%;">
+                                    <div class="score-card">
+                                        <div class="score-title">Manejo de conflictos</div>
+                                        <div class="score-detail">
+                                            <t t-esc="dict(o._fields['manejo_conflictos'].selection).get(o.manejo_conflictos, 'Sin evaluar')"/>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        </table>
 
                         <div class="section-title">
-                            <i class="fa fa-comments"/>
                             RETROALIMENTACIÓN Y PLAN DE ACCIÓN
                         </div>
 
-                        <table class="feedback-table">
+                        <table class="card-table">
                             <tr>
                                 <td style="width: 50%;">
-                                    <div class="feedback-box success">
-                                        <div class="feedback-title text-success">
-                                            <i class="fa fa-star"/>
-                                            Fortalezas identificadas
-                                        </div>
+                                    <div class="feedback-card green">
+                                        <div class="feedback-title">Fortalezas identificadas</div>
                                         <div class="feedback-content">
                                             <t t-esc="o.fortalezas or 'No se identificaron fortalezas específicas.'"/>
                                         </div>
@@ -1261,11 +1380,8 @@
                                 </td>
 
                                 <td style="width: 50%;">
-                                    <div class="feedback-box danger">
-                                        <div class="feedback-title text-danger">
-                                            <i class="fa fa-arrow-up"/>
-                                            Áreas de mejora
-                                        </div>
+                                    <div class="feedback-card red">
+                                        <div class="feedback-title">Áreas de mejora</div>
                                         <div class="feedback-content">
                                             <t t-esc="o.areas_mejora or 'No se identificaron áreas de mejora críticas.'"/>
                                         </div>
@@ -1275,11 +1391,8 @@
 
                             <tr>
                                 <td style="width: 50%;">
-                                    <div class="feedback-box">
-                                        <div class="feedback-title">
-                                            <i class="fa fa-tasks"/>
-                                            Plan de acción
-                                        </div>
+                                    <div class="feedback-card">
+                                        <div class="feedback-title">Plan de acción</div>
                                         <div class="feedback-content">
                                             <t t-esc="o.plan_accion or 'No se estableció un plan de acción específico.'"/>
                                         </div>
@@ -1287,11 +1400,8 @@
                                 </td>
 
                                 <td style="width: 50%;">
-                                    <div class="feedback-box purple">
-                                        <div class="feedback-title" style="color: #7c3aed;">
-                                            <i class="fa fa-bullseye"/>
-                                            Objetivos del próximo período
-                                        </div>
+                                    <div class="feedback-card purple">
+                                        <div class="feedback-title">Objetivos del próximo período</div>
                                         <div class="feedback-content">
                                             <t t-esc="o.objetivos_proximos or 'No se establecieron objetivos específicos.'"/>
                                         </div>
@@ -1300,48 +1410,32 @@
                             </tr>
                         </table>
 
-                        <table class="feedback-table">
-                            <tr>
-                                <td t-if="o.necesita_capacitacion"
-                                    style="width: 50%;">
-                                    <div class="feedback-box warning">
-                                        <div class="feedback-title text-warning">
-                                            <i class="fa fa-graduation-cap"/>
-                                            Necesidades de capacitación
-                                        </div>
-                                        <div class="feedback-content">
-                                            <t t-esc="o.temas_capacitacion or 'No se especificaron temas de capacitación.'"/>
-                                        </div>
-                                    </div>
-                                </td>
+                        <t t-if="o.necesita_capacitacion or o.comentarios">
+                            <table class="card-table">
+                                <tr>
+                                    <td style="width: 50%;">
+                                        <t t-if="o.necesita_capacitacion">
+                                            <div class="feedback-card orange">
+                                                <div class="feedback-title">Necesidades de capacitación</div>
+                                                <div class="feedback-content">
+                                                    <t t-esc="o.temas_capacitacion or 'No se especificaron temas.'"/>
+                                                </div>
+                                            </div>
+                                        </t>
+                                    </td>
 
-                                <td t-if="o.comentarios"
-                                    style="width: 50%;">
-                                    <div class="feedback-box">
-                                        <div class="feedback-title">
-                                            <i class="fa fa-comment"/>
-                                            Comentarios del evaluador
-                                        </div>
-                                        <div class="feedback-content">
-                                            <t t-esc="o.comentarios"/>
-                                        </div>
-                                    </div>
-                                </td>
-                            </tr>
-                        </table>
-
-                        <t t-if="o.proxima_evaluacion">
-                            <div class="info-card avoid-break"
-                                 style="margin-top: 8px; background: #f0fdf4; border-left: 4px solid #16a34a;">
-                                <div class="info-title text-success">
-                                    <i class="fa fa-calendar-plus"/>
-                                    Próxima evaluación programada
-                                </div>
-
-                                <strong>Fecha:</strong>
-                                <t t-esc="o.proxima_evaluacion"
-                                   t-options='{"widget": "date", "format": "dd/MM/yyyy"}'/>
-                            </div>
+                                    <td style="width: 50%;">
+                                        <t t-if="o.comentarios">
+                                            <div class="feedback-card">
+                                                <div class="feedback-title">Comentarios del evaluador</div>
+                                                <div class="feedback-content">
+                                                    <t t-esc="o.comentarios"/>
+                                                </div>
+                                            </div>
+                                        </t>
+                                    </td>
+                                </tr>
+                            </table>
                         </t>
 
                         <table class="signature-table avoid-break">
@@ -1350,9 +1444,7 @@
                                     <div class="signature-space"/>
                                     <div class="signature-line">
                                         <t t-esc="o.evaluador_id.name"/>
-                                        <div class="signature-role">
-                                            Evaluador
-                                        </div>
+                                        <div class="signature-role">Evaluador</div>
                                     </div>
                                 </td>
 
@@ -1360,9 +1452,7 @@
                                     <div class="signature-space"/>
                                     <div class="signature-line">
                                         <t t-esc="o.nombre_usuario"/>
-                                        <div class="signature-role">
-                                            Técnico evaluado
-                                        </div>
+                                        <div class="signature-role">Técnico evaluado</div>
                                     </div>
                                 </td>
                             </tr>
