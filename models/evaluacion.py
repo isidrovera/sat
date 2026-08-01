@@ -1968,63 +1968,56 @@ class EvaluacionPersonal(models.Model):
 
     def _get_reparaciones_bono(self, inicio_mes, fin_mes):
         """
-        Devuelve la producción real de taller correspondiente al período.
+        Obtiene las reparaciones válidas para la producción mensual.
 
         Reglas:
-        1. Si existe fecha_finalizacion, la reparación pertenece al mes de esa
-           fecha, sin importar cuándo fue creada.
-        2. Si fecha_finalizacion está vacía, pero el estado es ``finalizado``,
-           se usa create_date como respaldo. Esto cubre los registros que se
-           finalizaron cambiando directamente el estado y no mediante el botón.
-        3. Una reparación con fecha_finalizacion fuera del período nunca usa
-           create_date como respaldo, evitando contar en julio una reparación
-           que realmente se finalizó en agosto.
+        1. Si tiene fecha_finalizacion, cuenta en el mes de esa fecha.
+        2. Si no tiene fecha_finalizacion, pero estado_id = finalizado,
+        usa create_date como respaldo.
+        3. Siempre debe corresponder al técnico evaluado.
         """
         self.ensure_one()
 
-        if not self.usuario_id or not self._model_exists('reparaciones.reparaciones'):
-            return self.env['reparaciones.reparaciones'].browse()
+        if not self._model_exists('reparaciones.reparaciones'):
+            return self.env['reparaciones.reparaciones']
 
         Reparacion = self.env['reparaciones.reparaciones']
-        inicio_dt, fin_dt = self._rango_utc(inicio_mes, fin_mes)
 
-        if 'fecha_finalizacion' not in Reparacion._fields:
-            _logger.warning(
-                '[BONO] El modelo reparaciones.reparaciones no tiene el campo '
-                'fecha_finalizacion. Se usarán únicamente los registros en estado '
-                'finalizado creados dentro del período.'
-            )
-            return Reparacion.search([
-                ('responsable_id', '=', self.usuario_id.id),
-                ('state', '=', 'finalizado'),
-                ('create_date', '>=', inicio_dt),
-                ('create_date', '<', fin_dt),
-            ])
-
-        domain = [
-            ('responsable_id', '=', self.usuario_id.id),
-            '|',
-                '&',
-                    ('fecha_finalizacion', '!=', False),
-                    '&',
-                        ('fecha_finalizacion', '>=', inicio_dt),
-                        ('fecha_finalizacion', '<', fin_dt),
-                '&',
-                    ('fecha_finalizacion', '=', False),
-                    '&',
-                        ('state', '=', 'finalizado'),
-                        '&',
-                            ('create_date', '>=', inicio_dt),
-                            ('create_date', '<', fin_dt),
-        ]
-
-        reparaciones = Reparacion.search(domain)
-
-        _logger.info(
-            '[PRODUCCIÓN TALLER] Técnico: %s | Período: %s a %s | Cantidad: %s',
-            self.usuario_id.display_name,
+        inicio_utc, fin_utc = self._rango_utc(
             inicio_mes,
             fin_mes,
+        )
+
+        reparaciones_con_fecha = Reparacion.search([
+            ('responsable_id', '=', self.usuario_id.id),
+            ('fecha_finalizacion', '!=', False),
+            ('fecha_finalizacion', '>=', inicio_utc),
+            ('fecha_finalizacion', '<', fin_utc),
+        ])
+
+        reparaciones_sin_fecha = Reparacion.search([
+            ('responsable_id', '=', self.usuario_id.id),
+            ('fecha_finalizacion', '=', False),
+            ('estado_id', '=', 'finalizado'),
+            ('create_date', '>=', inicio_utc),
+            ('create_date', '<', fin_utc),
+        ])
+
+        reparaciones = (
+            reparaciones_con_fecha
+            | reparaciones_sin_fecha
+        )
+
+        _logger.info(
+            '[BONO] Técnico: %s | Periodo: %s - %s | '
+            'Con fecha de finalización: %s | '
+            'Finalizadas sin fecha: %s | '
+            'Total válido: %s',
+            self.usuario_id.name,
+            inicio_mes,
+            fin_mes,
+            len(reparaciones_con_fecha),
+            len(reparaciones_sin_fecha),
             len(reparaciones),
         )
 
