@@ -3106,7 +3106,7 @@ class EvaluacionPersonalDetalleDiario(models.Model):
                         '&',
                             ('fecha_finalizacion', '=', False),
                             '&',
-                                ('state', '=', 'finalizado'),
+                                ('estado_id', '=', 'finalizado'),
                                 '&',
                                     ('create_date', '>=', inicio_utc),
                                     ('create_date', '<', fin_utc),
@@ -3114,7 +3114,7 @@ class EvaluacionPersonalDetalleDiario(models.Model):
             else:
                 domain_reparaciones = [
                     ('responsable_id', '=', record.usuario_id.id),
-                    ('state', '=', 'finalizado'),
+                    ('estado_id', '=', 'finalizado'),
                     ('create_date', '>=', inicio_utc),
                     ('create_date', '<', fin_utc),
                 ]
