@@ -1968,30 +1968,67 @@ class EvaluacionPersonal(models.Model):
 
     def _get_reparaciones_bono(self, inicio_mes, fin_mes):
         """
-        Cuenta la producción de taller por la fecha real de finalización.
-        Una máquina ingresada en un mes anterior cuenta cuando su revisión
-        se finaliza, evitando atribuir producción por la creación del registro.
+        Devuelve la producción real de taller correspondiente al período.
+
+        Reglas:
+        1. Si existe fecha_finalizacion, la reparación pertenece al mes de esa
+           fecha, sin importar cuándo fue creada.
+        2. Si fecha_finalizacion está vacía, pero el estado es ``finalizado``,
+           se usa create_date como respaldo. Esto cubre los registros que se
+           finalizaron cambiando directamente el estado y no mediante el botón.
+        3. Una reparación con fecha_finalizacion fuera del período nunca usa
+           create_date como respaldo, evitando contar en julio una reparación
+           que realmente se finalizó en agosto.
         """
         self.ensure_one()
-        if not self._model_exists('reparaciones.reparaciones'):
-            return self.env['reparaciones.reparaciones']
 
-        inicio_dt, fin_dt = self._rango_utc(inicio_mes, fin_mes)
+        if not self.usuario_id or not self._model_exists('reparaciones.reparaciones'):
+            return self.env['reparaciones.reparaciones'].browse()
+
         Reparacion = self.env['reparaciones.reparaciones']
+        inicio_dt, fin_dt = self._rango_utc(inicio_mes, fin_mes)
 
         if 'fecha_finalizacion' not in Reparacion._fields:
             _logger.warning(
-                '[BONO] reparaciones.reparaciones no tiene fecha_finalizacion; '
-                'no se contabilizará producción para evitar usar create_date.'
+                '[BONO] El modelo reparaciones.reparaciones no tiene el campo '
+                'fecha_finalizacion. Se usarán únicamente los registros en estado '
+                'finalizado creados dentro del período.'
             )
-            return Reparacion.browse()
+            return Reparacion.search([
+                ('responsable_id', '=', self.usuario_id.id),
+                ('state', '=', 'finalizado'),
+                ('create_date', '>=', inicio_dt),
+                ('create_date', '<', fin_dt),
+            ])
 
-        return Reparacion.search([
+        domain = [
             ('responsable_id', '=', self.usuario_id.id),
-            ('fecha_finalizacion', '!=', False),
-            ('fecha_finalizacion', '>=', inicio_dt),
-            ('fecha_finalizacion', '<', fin_dt),
-        ])
+            '|',
+                '&',
+                    ('fecha_finalizacion', '!=', False),
+                    '&',
+                        ('fecha_finalizacion', '>=', inicio_dt),
+                        ('fecha_finalizacion', '<', fin_dt),
+                '&',
+                    ('fecha_finalizacion', '=', False),
+                    '&',
+                        ('state', '=', 'finalizado'),
+                        '&',
+                            ('create_date', '>=', inicio_dt),
+                            ('create_date', '<', fin_dt),
+        ]
+
+        reparaciones = Reparacion.search(domain)
+
+        _logger.info(
+            '[PRODUCCIÓN TALLER] Técnico: %s | Período: %s a %s | Cantidad: %s',
+            self.usuario_id.display_name,
+            inicio_mes,
+            fin_mes,
+            len(reparaciones),
+        )
+
+        return reparaciones
 
     def _get_tickets_bono(self, inicio_mes, fin_mes):
         self.ensure_one()
@@ -3040,8 +3077,16 @@ class EvaluacionPersonalDetalleDiario(models.Model):
     
     @api.depends('usuario_id', 'fecha')
     def _compute_trabajos(self):
-        """Busca reparaciones finalizadas y tickets finalizados en cada día."""
+        """
+        Busca las reparaciones y tickets que corresponden a cada día.
+
+        Para reparaciones se aplica exactamente la misma regla del cálculo
+        mensual: fecha_finalizacion cuando existe y create_date como respaldo
+        únicamente si el registro está en estado ``finalizado`` y no tiene
+        fecha_finalizacion.
+        """
         Evaluacion = self.env['evaluacion.personal']
+
         for record in self:
             if not record.usuario_id or not record.fecha:
                 record.reparacion_ids = [(5, 0, 0)]
@@ -3049,18 +3094,39 @@ class EvaluacionPersonalDetalleDiario(models.Model):
                 continue
 
             dia_siguiente = record.fecha + timedelta(days=1)
-            inicio_utc, fin_utc = Evaluacion._rango_utc(record.fecha, dia_siguiente)
+            inicio_utc, fin_utc = Evaluacion._rango_utc(
+                record.fecha,
+                dia_siguiente,
+            )
 
             Reparacion = self.env['reparaciones.reparaciones']
+
             if 'fecha_finalizacion' in Reparacion._fields:
-                reparaciones = Reparacion.search([
+                domain_reparaciones = [
                     ('responsable_id', '=', record.usuario_id.id),
-                    ('fecha_finalizacion', '!=', False),
-                    ('fecha_finalizacion', '>=', inicio_utc),
-                    ('fecha_finalizacion', '<', fin_utc),
-                ])
+                    '|',
+                        '&',
+                            ('fecha_finalizacion', '!=', False),
+                            '&',
+                                ('fecha_finalizacion', '>=', inicio_utc),
+                                ('fecha_finalizacion', '<', fin_utc),
+                        '&',
+                            ('fecha_finalizacion', '=', False),
+                            '&',
+                                ('state', '=', 'finalizado'),
+                                '&',
+                                    ('create_date', '>=', inicio_utc),
+                                    ('create_date', '<', fin_utc),
+                ]
             else:
-                reparaciones = Reparacion.browse()
+                domain_reparaciones = [
+                    ('responsable_id', '=', record.usuario_id.id),
+                    ('state', '=', 'finalizado'),
+                    ('create_date', '>=', inicio_utc),
+                    ('create_date', '<', fin_utc),
+                ]
+
+            reparaciones = Reparacion.search(domain_reparaciones)
             record.reparacion_ids = [(6, 0, reparaciones.ids)]
 
             Ticket = self.env['ticket.alquiler']
