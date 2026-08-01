@@ -104,9 +104,80 @@ class EvaluacionCierreMensual(models.Model):
         copy=False,
     )
 
+    descarga_contenedor_ids = fields.One2many(
+        'evaluacion.cierre.mensual.descarga',
+        'cierre_id',
+        string='Descargas de contenedores',
+        copy=False,
+        help=(
+            'Registra cada llegada de contenedor, su duración y los técnicos '
+            'que participaron en la descarga.'
+        ),
+    )
+
     # ============================================================
     # RESUMEN DEL POOL
     # ============================================================
+
+    meta_base_taller = fields.Float(
+        string='Meta base mensual del taller',
+        default=60.0,
+        required=True,
+        tracking=True,
+        digits=(16, 2),
+        help=(
+            'Meta mensual definida por gerencia. Se ajusta según la '
+            'disponibilidad real del equipo y nunca supera el pool exigible.'
+        ),
+    )
+
+    meta_total_taller_ajustada = fields.Float(
+        string='Meta total ajustada del taller',
+        readonly=True,
+        copy=False,
+        tracking=True,
+        digits=(16, 2),
+        help=(
+            'Meta base de 60 máquinas ajustada por la disponibilidad real '
+            'del taller y limitada al pool exigible del periodo.'
+        ),
+    )
+
+    factor_disponibilidad_taller = fields.Float(
+        string='Factor de disponibilidad del taller',
+        readonly=True,
+        copy=False,
+        digits=(16, 4),
+        help=(
+            'Relación entre las horas reales disponibles de taller y las '
+            'horas programadas de los técnicos que participan en producción.'
+        ),
+    )
+
+    contenedores_recibidos = fields.Integer(
+        string='Contenedores recibidos',
+        compute='_compute_resumen',
+        store=True,
+    )
+
+    horas_descarga_contenedores = fields.Float(
+        string='Horas de descarga de contenedores',
+        compute='_compute_resumen',
+        store=True,
+        digits=(16, 2),
+        help='Suma de la duración total registrada para las descargas del mes.',
+    )
+
+    horas_hombre_descarga_contenedores = fields.Float(
+        string='Horas-hombre en descargas',
+        compute='_compute_resumen',
+        store=True,
+        digits=(16, 2),
+        help=(
+            'Duración de cada descarga multiplicada por la cantidad de '
+            'técnicos participantes.'
+        ),
+    )
 
     maquinas_descargadas_mes = fields.Integer(
         string='Descargadas en el mes',
@@ -222,6 +293,8 @@ class EvaluacionCierreMensual(models.Model):
             'fecha_inicio',
             'maquina_line_ids',
             'tecnico_line_ids',
+            'descarga_contenedor_ids',
+            'meta_base_taller',
         }
 
         if campos_bloqueados.intersection(vals):
@@ -759,6 +832,20 @@ class EvaluacionCierreMensual(models.Model):
             )
         )
 
+    def _get_horas_descarga_tecnico(self, usuario):
+        """Devuelve las horas de descarga asignadas al técnico en el cierre."""
+        self.ensure_one()
+
+        if not usuario:
+            return 0.0
+
+        total = 0.0
+        for descarga in self.descarga_contenedor_ids:
+            if usuario in descarga.tecnico_ids:
+                total += descarga.horas_totales or 0.0
+
+        return total
+
     def _preparar_tecnicos(self):
         self.ensure_one()
 
@@ -768,6 +855,7 @@ class EvaluacionCierreMensual(models.Model):
 
         datos = []
         capacidad_total = 0.0
+        capacidad_programada_taller = 0.0
 
         for perfil in perfiles:
             horas_programadas = self._get_horas_programadas_mes(perfil)
@@ -776,18 +864,23 @@ class EvaluacionCierreMensual(models.Model):
                 self._get_horas_ausencia_reduce_meta(perfil),
             )
             tickets = self._get_horas_tickets(perfil)
+            horas_descarga = self._get_horas_descarga_tecnico(
+                perfil.tecnico_id
+            )
 
             horas_base = max(0.0, horas_programadas - horas_ausencia)
 
             if perfil.tipo_operativo == 'servicios':
                 horas_taller = 0.0
             else:
-                horas_taller = max(
-                    0.0,
-                    horas_base - min(horas_base, tickets['horas']),
+                horas_no_productivas = min(
+                    horas_base,
+                    (tickets['horas'] or 0.0) + (horas_descarga or 0.0),
                 )
+                horas_taller = max(0.0, horas_base - horas_no_productivas)
 
             if perfil.tipo_operativo in ('taller', 'mixto'):
+                capacidad_programada_taller += horas_programadas
                 capacidad_total += horas_taller
 
             datos.append({
@@ -795,18 +888,40 @@ class EvaluacionCierreMensual(models.Model):
                 'horas_programadas': horas_programadas,
                 'horas_ausencia': horas_ausencia,
                 'horas_tickets': tickets['horas'],
+                'horas_descarga': horas_descarga,
                 'tickets_count': tickets['cantidad'],
                 'tickets_sin_retorno': tickets['sin_retorno'],
                 'horas_taller': horas_taller,
             })
 
-        return datos, capacidad_total
+        return datos, capacidad_total, capacidad_programada_taller
 
     def _calcular_lineas_tecnicos(self):
         self.ensure_one()
 
-        datos, capacidad_total = self._preparar_tecnicos()
-        pool = self.pool_total_exigible
+        (
+            datos,
+            capacidad_total,
+            capacidad_programada_taller,
+        ) = self._preparar_tecnicos()
+
+        pool = self.pool_total_exigible or 0.0
+        factor_disponibilidad = (
+            capacidad_total / capacidad_programada_taller
+            if capacidad_programada_taller > 0
+            else 0.0
+        )
+        factor_disponibilidad = max(0.0, min(1.0, factor_disponibilidad))
+
+        meta_base_ajustada = (
+            (self.meta_base_taller or 60.0) * factor_disponibilidad
+        )
+        meta_total = min(pool, meta_base_ajustada)
+
+        self.write({
+            'factor_disponibilidad_taller': factor_disponibilidad,
+            'meta_total_taller_ajustada': meta_total,
+        })
 
         comandos = [(5, 0, 0)]
 
@@ -824,7 +939,7 @@ class EvaluacionCierreMensual(models.Model):
             )
 
             meta = (
-                pool * item['horas_taller'] / capacidad_total
+                meta_total * item['horas_taller'] / capacidad_total
                 if participa and capacidad_total > 0
                 else 0.0
             )
@@ -864,6 +979,21 @@ class EvaluacionCierreMensual(models.Model):
                     % (item['horas_tickets'], item['tickets_count'])
                 )
 
+            if item['horas_descarga']:
+                motivo.append(
+                    'Se descontaron %.2f horas por participación en la '
+                    'descarga de contenedores.'
+                    % item['horas_descarga']
+                )
+
+            if participa:
+                motivo.append(
+                    'La meta individual se calculó sobre una meta total '
+                    'ajustada de %.2f máquinas, proveniente de una meta base '
+                    'gerencial de %.2f y limitada por un pool exigible de %s.'
+                    % (meta_total, self.meta_base_taller, self.pool_total_exigible)
+                )
+
             if item['tickets_sin_retorno']:
                 motivo.append(
                     '%s ticket(s) fueron registrados sin retorno al taller.'
@@ -878,6 +1008,7 @@ class EvaluacionCierreMensual(models.Model):
                 'horas_programadas': item['horas_programadas'],
                 'horas_ausencia_reduce_meta': item['horas_ausencia'],
                 'horas_tickets': item['horas_tickets'],
+                'horas_descarga_contenedores': item['horas_descarga'],
                 'tickets_finalizados': item['tickets_count'],
                 'tickets_sin_retorno': item['tickets_sin_retorno'],
                 'horas_taller_disponibles': item['horas_taller'],
@@ -902,10 +1033,25 @@ class EvaluacionCierreMensual(models.Model):
         'maquina_line_ids.finalizada_mes',
         'maquina_line_ids.pendiente_cierre',
         'tecnico_line_ids.horas_taller_disponibles',
+        'descarga_contenedor_ids.cantidad_contenedores',
+        'descarga_contenedor_ids.horas_totales',
+        'descarga_contenedor_ids.tecnico_ids',
     )
     def _compute_resumen(self):
         for rec in self:
             lineas = rec.maquina_line_ids
+            descargas = rec.descarga_contenedor_ids
+
+            rec.contenedores_recibidos = sum(
+                descargas.mapped('cantidad_contenedores')
+            )
+            rec.horas_descarga_contenedores = sum(
+                descargas.mapped('horas_totales')
+            )
+            rec.horas_hombre_descarga_contenedores = sum(
+                (descarga.horas_totales or 0.0) * len(descarga.tecnico_ids)
+                for descarga in descargas
+            )
 
             rec.maquinas_descargadas_mes = len(
                 lineas.filtered(lambda line: line.origen_pool == 'ingreso_mes')
@@ -945,6 +1091,12 @@ class EvaluacionCierreMensual(models.Model):
         'fecha_inicio',
         'fecha_fin',
         'pool_total_exigible',
+        'meta_base_taller',
+        'meta_total_taller_ajustada',
+        'factor_disponibilidad_taller',
+        'contenedores_recibidos',
+        'horas_descarga_contenedores',
+        'horas_hombre_descarga_contenedores',
         'maquinas_descargadas_mes',
         'maquinas_backlog_inicial',
         'maquinas_reactivadas',
@@ -956,6 +1108,7 @@ class EvaluacionCierreMensual(models.Model):
         'tecnico_line_ids.tecnico_id',
         'tecnico_line_ids.tipo_operativo',
         'tecnico_line_ids.meta_asignada',
+        'tecnico_line_ids.horas_descarga_contenedores',
         'tecnico_line_ids.produccion_finalizada',
         'tecnico_line_ids.porcentaje_cumplimiento',
         'tecnico_line_ids.motivo_calculo',
@@ -977,6 +1130,7 @@ class EvaluacionCierreMensual(models.Model):
                     '<td>%s</td>'
                     '<td style="text-align:right;">%.2f</td>'
                     '<td style="text-align:right;">%.2f</td>'
+                    '<td style="text-align:right;">%.2f</td>'
                     '<td style="text-align:right;">%s</td>'
                     '<td style="text-align:right;">%.2f%%</td>'
                     '<td>%s</td>'
@@ -987,6 +1141,7 @@ class EvaluacionCierreMensual(models.Model):
                             linea._fields['tipo_operativo'].selection
                         ).get(linea.tipo_operativo, ''),
                         linea.horas_taller_disponibles,
+                        linea.horas_descarga_contenedores,
                         linea.meta_asignada,
                         linea.produccion_finalizada,
                         linea.porcentaje_cumplimiento,
@@ -1005,6 +1160,19 @@ class EvaluacionCierreMensual(models.Model):
                 '%s fueron entregadas sin una revisión finalizada registrada.'
                 '</p>'
                 '<p>'
+                '<strong>Contenedores recibidos:</strong> %s. '
+                'Las descargas ocuparon %.2f horas de operación y %.2f horas-hombre. '
+                'Este tiempo se descuenta únicamente a los técnicos registrados '
+                'como participantes, porque durante la descarga no pueden dedicarse '
+                'a la revisión y reparación de máquinas.'
+                '</p>'
+                '<p>'
+                '<strong>Meta gerencial:</strong> %.2f máquinas. '
+                'La meta total ajustada fue %.2f máquinas, con un factor de '
+                'disponibilidad de %.2f%%. La meta se limita al pool real para no '
+                'exigir producción sobre máquinas que no estuvieron disponibles.'
+                '</p>'
+                '<p>'
                 '<strong>Resultado:</strong> %s máquinas fueron finalizadas durante '
                 'el mes y %s quedaron pendientes para el siguiente periodo.'
                 '</p>'
@@ -1019,6 +1187,7 @@ class EvaluacionCierreMensual(models.Model):
                 '<th>Técnico</th>'
                 '<th>Perfil</th>'
                 '<th>Horas taller</th>'
+                '<th>Horas descarga</th>'
                 '<th>Meta asignada</th>'
                 '<th>Finalizadas</th>'
                 '<th>Cumplimiento</th>'
@@ -1036,6 +1205,12 @@ class EvaluacionCierreMensual(models.Model):
                     rec.maquinas_reactivadas,
                     rec.maquinas_excluidas,
                     rec.maquinas_entregadas_sin_revision,
+                    rec.contenedores_recibidos,
+                    rec.horas_descarga_contenedores,
+                    rec.horas_hombre_descarga_contenedores,
+                    rec.meta_base_taller,
+                    rec.meta_total_taller_ajustada,
+                    rec.factor_disponibilidad_taller * 100.0,
                     rec.maquinas_finalizadas_mes,
                     rec.maquinas_pendientes_cierre,
                     rec.capacidad_total_taller_horas,
@@ -1069,11 +1244,14 @@ class EvaluacionCierreMensual(models.Model):
             rec.message_post(
                 body=_(
                     'Cierre calculado. Pool exigible: %s máquinas. '
-                    'Finalizadas: %s. Pendientes: %s. Técnicos participantes: %s.'
+                    'Finalizadas: %s. Pendientes: %s. Meta ajustada: %.2f. '
+                    'Contenedores recibidos: %s. Técnicos participantes: %s.'
                 ) % (
                     rec.pool_total_exigible,
                     rec.maquinas_finalizadas_mes,
                     rec.maquinas_pendientes_cierre,
+                    rec.meta_total_taller_ajustada,
+                    rec.contenedores_recibidos,
                     len(rec.tecnico_line_ids.filtered('participa_pool')),
                 )
             )
@@ -1140,6 +1318,98 @@ class EvaluacionCierreMensual(models.Model):
             rec.write({'state': 'cancelado'})
 
         return True
+
+
+class EvaluacionCierreMensualDescarga(models.Model):
+    _name = 'evaluacion.cierre.mensual.descarga'
+    _description = 'Descarga de contenedor del cierre mensual'
+    _order = 'fecha asc, id asc'
+
+    cierre_id = fields.Many2one(
+        'evaluacion.cierre.mensual',
+        string='Cierre mensual',
+        required=True,
+        ondelete='cascade',
+        index=True,
+    )
+
+    fecha = fields.Date(
+        string='Fecha de descarga',
+        required=True,
+        default=fields.Date.context_today,
+    )
+
+    cantidad_contenedores = fields.Integer(
+        string='Cantidad de contenedores',
+        required=True,
+        default=1,
+        help='Cantidad de contenedores recibidos en esta descarga.',
+    )
+
+    horas_por_contenedor = fields.Float(
+        string='Horas por contenedor',
+        required=True,
+        default=4.0,
+        digits=(16, 2),
+        help='Medio día equivale normalmente a 4 horas por contenedor.',
+    )
+
+    horas_totales = fields.Float(
+        string='Duración total de descarga',
+        compute='_compute_horas_totales',
+        store=True,
+        digits=(16, 2),
+    )
+
+    tecnico_ids = fields.Many2many(
+        'res.users',
+        'evaluacion_cierre_descarga_tecnico_rel',
+        'descarga_id',
+        'tecnico_id',
+        string='Técnicos participantes',
+        required=True,
+        help=(
+            'Solo estos técnicos recibirán el descuento de horas por la '
+            'descarga del contenedor.'
+        ),
+    )
+
+    observaciones = fields.Text(
+        string='Observaciones',
+    )
+
+    @api.depends('cantidad_contenedores', 'horas_por_contenedor')
+    def _compute_horas_totales(self):
+        for rec in self:
+            rec.horas_totales = max(
+                0.0,
+                float(rec.cantidad_contenedores or 0)
+                * (rec.horas_por_contenedor or 0.0),
+            )
+
+    @api.constrains('fecha', 'cantidad_contenedores', 'horas_por_contenedor')
+    def _check_datos_descarga(self):
+        for rec in self:
+            if rec.cantidad_contenedores <= 0:
+                raise ValidationError(
+                    _('La cantidad de contenedores debe ser mayor que cero.')
+                )
+            if rec.horas_por_contenedor <= 0:
+                raise ValidationError(
+                    _('Las horas por contenedor deben ser mayores que cero.')
+                )
+            if (
+                rec.cierre_id
+                and rec.fecha
+                and not (
+                    rec.cierre_id.fecha_inicio
+                    <= rec.fecha
+                    <= rec.cierre_id.fecha_fin
+                )
+            ):
+                raise ValidationError(
+                    _('La fecha de descarga debe pertenecer al periodo del cierre.')
+                )
 
 
 class EvaluacionCierreMensualMaquina(models.Model):
@@ -1335,6 +1605,16 @@ class EvaluacionCierreMensualTecnico(models.Model):
         string='Horas en tickets',
         readonly=True,
         digits=(16, 2),
+    )
+
+    horas_descarga_contenedores = fields.Float(
+        string='Horas en descarga de contenedores',
+        readonly=True,
+        digits=(16, 2),
+        help=(
+            'Horas descontadas por participación del técnico en descargas '
+            'de contenedores durante el periodo.'
+        ),
     )
 
     tickets_finalizados = fields.Integer(

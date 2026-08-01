@@ -405,9 +405,13 @@ class EvaluacionPersonal(models.Model):
 
     meta_base_taller = fields.Float(
         string='Meta base taller',
-        default=50.0,
+        default=60.0,
         tracking=True,
-        help='Meta mensual base para taller. Gerencia define 50 máquinas como 100%.'
+        help=(
+            'Meta mensual base para taller. Gerencia define 60 máquinas como 100%. '
+            'La meta individual puede ajustarse mediante el cierre mensual según '
+            'las horas reales disponibles de cada técnico.'
+        )
     )
 
     meta_base_servicios = fields.Float(
@@ -665,13 +669,13 @@ class EvaluacionPersonal(models.Model):
     )
 
     puntaje_produccion_bono = fields.Float(
-        string='Producción 45%',
+        string='Producción 50%',
         compute='_compute_resultado_bono',
         store=True
     )
 
     puntaje_calidad_bono = fields.Float(
-        string='Calidad 30%',
+        string='Calidad 25%',
         compute='_compute_resultado_bono',
         store=True
     )
@@ -1138,8 +1142,8 @@ class EvaluacionPersonal(models.Model):
             asistencia = min(100.0, record.puntaje_asistencia_real or 0.0)
             apoyo = min(100.0, record.puntaje_apoyo_real or 0.0)
 
-            record.puntaje_produccion_bono = produccion * 0.45
-            record.puntaje_calidad_bono = calidad * 0.30
+            record.puntaje_produccion_bono = produccion * 0.50
+            record.puntaje_calidad_bono = calidad * 0.25
             record.puntaje_asistencia_bono = asistencia * 0.15
             record.puntaje_apoyo_bono = apoyo * 0.10
 
@@ -1240,6 +1244,22 @@ class EvaluacionPersonal(models.Model):
                 'Periodo: %s %s' % (record.mes or '', record.anio or ''),
                 'Perfil aplicado: %s.' % tipo_texto,
                 '',
+                'CRITERIO DE PONDERACIÓN APROBADO',
+                '- Producción 50%%: recibe el mayor peso porque mide el cumplimiento '
+                'directo de la meta operativa del taller, cuya referencia mensual es '
+                '60 máquinas, ajustada por la disponibilidad real del técnico.',
+                '- Calidad 25%%: conserva un peso relevante para evitar que el aumento '
+                'de producción se logre a costa de errores, reclamos procedentes o '
+                'evaluaciones negativas del cliente.',
+                '- Asistencia 15%%: reconoce que la presencia y continuidad del técnico '
+                'son necesarias para cumplir la planificación mensual.',
+                '- Apoyo y trabajo en equipo 10%%: mantiene la valoración de la '
+                'colaboración, sin desplazar los indicadores objetivos de producción, '
+                'calidad y asistencia.',
+                '- La ponderación total es 100%% y no modifica la forma en que se '
+                'calculan producción, reclamos, encuestas, faltas o apoyo; únicamente '
+                'cambia el peso de cada resultado dentro del bono.',
+                '',
                 '1. PRODUCCIÓN',
                 '- Taller: %s reparaciones finalizadas / meta ajustada %.2f = %.2f%%.' % (
                     record.reparaciones_validas_bono,
@@ -1251,7 +1271,7 @@ class EvaluacionPersonal(models.Model):
                     record.meta_servicios_ajustada,
                     record.porcentaje_produccion_servicios,
                 ),
-                '- Producción total aplicada: %.2f%%. Aporta %.2f puntos de 45.' % (
+                '- Producción total aplicada: %.2f%%. Aporta %.2f puntos de 50.' % (
                     record.porcentaje_produccion_total,
                     record.puntaje_produccion_bono,
                 ),
@@ -1291,19 +1311,25 @@ class EvaluacionPersonal(models.Model):
                 '- Tickets aún sin evaluación respondida: %s.' % record.evaluaciones_servicio_faltantes,
                 '- Evaluaciones críticas menores a 70%%: %s.' % record.evaluaciones_criticas_count,
                 '- Promedio de evaluaciones respondidas: %.2f%%.' % record.promedio_evaluacion_servicio,
-                '- Puntaje final de calidad: %.2f%%. Aporta %.2f puntos de 30.' % (
+                '- Puntaje final de calidad: %.2f%%. Aporta %.2f puntos de 25.' % (
                     record.puntaje_calidad_real,
                     record.puntaje_calidad_bono,
                 ),
                 '',
                 '5. ASISTENCIA Y APOYO',
-                '- Faltas injustificadas equivalentes: %.2f. Puntaje asistencia: %.2f%%.' % (
+                '- Faltas injustificadas equivalentes: %.2f. Puntaje asistencia: %.2f%%. '
+                'Aporta %.2f puntos de 15.' % (
                     record.faltas_injustificadas_equivalentes,
                     record.puntaje_asistencia_real,
+                    record.puntaje_asistencia_bono,
                 ),
-                '- Puntaje apoyo / trabajo en equipo: %.2f%%.' % record.puntaje_apoyo_real,
+                '- Puntaje apoyo / trabajo en equipo: %.2f%%. '
+                'Aporta %.2f puntos de 10.' % (
+                    record.puntaje_apoyo_real,
+                    record.puntaje_apoyo_bono,
+                ),
                 '',
-                '5. RESULTADO',
+                '6. RESULTADO',
                 '- Resultado total: %.2f%%.' % resultado,
                 '- Bono base calculado: S/ %.2f.' % bono,
             ]
