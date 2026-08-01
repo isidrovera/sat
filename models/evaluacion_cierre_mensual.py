@@ -1665,6 +1665,6 @@ class EvaluacionCierreMensualTecnico(models.Model):
         (
             'evaluacion_cierre_tecnico_unique',
             'unique(cierre_id, tecnico_id)',
-            'El técnico ya fue incluido en este cierre mensual.',
+            'El técnico ya fue incluido en este cierre mensual.....',
         ),
     ]
