@@ -623,101 +623,320 @@
         ========================================================== -->
 
         <record id="view_toner_counter_submission_kanban" model="ir.ui.view">
-            <field name="name">toner.counter.submission.kanban</field>
-            <field name="model">toner.counter.submission</field>
-            <field name="arch" type="xml">
-                <kanban
-                    default_group_by="state"
-                    class="o_kanban_small_column"
-                    quick_create="false"
-                >
-                    <field name="secuencia"/>
-                    <field name="submission_date"/>
-                    <field name="partner_id"/>
-                    <field name="equipment_id"/>
-                    <field name="client_name"/>
-                    <field name="state"/>
-                    <field name="analysis_result"/>
-                    <field name="requires_evidence"/>
-                    <field name="consumed_copies"/>
-                    <field name="expected_yield"/>
-                    <field name="consumption_percent"/>
-                    <field name="days_since_last_delivery"/>
-                    <field name="activity_ids"/>
+        <field name="name">toner.counter.submission.kanban</field>
+        <field name="model">toner.counter.submission</field>
 
-                    <templates>
-                        <t t-name="card">
+        <field name="arch" type="xml">
+            <kanban
+                default_group_by="state"
+                class="o_kanban_small_column o_toner_counter_kanban"
+                quick_create="false"
+                sample="1"
+            >
 
-                            <div class="d-flex justify-content-between align-items-start mb-2">
-                                <strong>
-                                    <field name="secuencia"/>
-                                </strong>
+                <!-- Campos disponibles para QWeb -->
+                <field name="secuencia"/>
+                <field name="submission_date"/>
+                <field name="partner_id"/>
+                <field name="equipment_id"/>
+                <field name="client_name"/>
+                <field name="state"/>
+                <field name="analysis_result"/>
+                <field name="requires_evidence"/>
+                <field name="consumed_copies"/>
+                <field name="expected_yield"/>
+                <field name="consumption_percent"/>
+                <field name="days_since_last_delivery"/>
+                <field name="activity_ids"/>
+
+                <templates>
+
+                    <!-- Tarjeta principal -->
+                    <t t-name="card">
+
+                        <div
+                            t-attf-class="
+                                o_toner_submission_card
+                                #{record.requires_evidence.raw_value ? 'o_toner_requires_evidence' : ''}
+                                #{record.consumption_percent.raw_value &gt;= 100
+                                    ? 'o_toner_consumption_danger'
+                                    : record.consumption_percent.raw_value &gt;= 80
+                                        ? 'o_toner_consumption_warning'
+                                        : 'o_toner_consumption_normal'}
+                            "
+                        >
+
+                            <!-- Cabecera -->
+                            <div class="o_toner_card_header">
+
+                                <div class="o_toner_card_reference">
+                                    <div class="o_toner_card_icon">
+                                        <i class="fa fa-tint" aria-label="Solicitud de tóner"/>
+                                    </div>
+
+                                    <div class="o_toner_card_title">
+                                        <strong>
+                                            <field name="secuencia"/>
+                                        </strong>
+
+                                        <div class="o_toner_card_date">
+                                            <i class="fa fa-calendar-o me-1"/>
+                                            <field name="submission_date"/>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="o_toner_card_result">
+                                    <field
+                                        name="analysis_result"
+                                        widget="label_selection"
+                                    />
+                                </div>
+
+                            </div>
+
+                            <!-- Estado -->
+                            <div class="o_toner_state_row">
+                                <span class="o_toner_state_label">
+                                    <i class="fa fa-circle-o-notch me-1"/>
+                                    Estado
+                                </span>
 
                                 <field
-                                    name="analysis_result"
-                                    widget="label_selection"
+                                    name="state"
+                                    widget="badge"
                                 />
                             </div>
 
-                            <div class="mb-2">
-                                <div>
-                                    <strong>Cliente:</strong>
-                                    <field name="partner_id"/>
+                            <!-- Cliente y equipo -->
+                            <div class="o_toner_information">
+
+                                <div class="o_toner_information_row">
+                                    <div class="o_toner_information_icon o_toner_icon_client">
+                                        <i class="fa fa-building-o"/>
+                                    </div>
+
+                                    <div class="o_toner_information_content">
+                                        <span class="o_toner_information_label">
+                                            Cliente
+                                        </span>
+
+                                        <strong class="o_toner_information_value">
+                                            <field name="partner_id"/>
+                                        </strong>
+                                    </div>
                                 </div>
 
-                                <div>
-                                    <strong>Equipo:</strong>
-                                    <field name="equipment_id"/>
+                                <div class="o_toner_information_row">
+                                    <div class="o_toner_information_icon o_toner_icon_equipment">
+                                        <i class="fa fa-print"/>
+                                    </div>
+
+                                    <div class="o_toner_information_content">
+                                        <span class="o_toner_information_label">
+                                            Equipo
+                                        </span>
+
+                                        <strong class="o_toner_information_value">
+                                            <field name="equipment_id"/>
+                                        </strong>
+                                    </div>
                                 </div>
+
                             </div>
 
-                            <div class="row g-1 small">
-                                <div class="col-6">
-                                    <span class="text-muted">Copias</span><br/>
-                                    <strong>
-                                        <field name="consumed_copies"/>
-                                    </strong>
+                            <!-- Métricas -->
+                            <div class="o_toner_metrics">
+
+                                <div class="o_toner_metric">
+                                    <div class="o_toner_metric_icon">
+                                        <i class="fa fa-files-o"/>
+                                    </div>
+
+                                    <div class="o_toner_metric_content">
+                                        <span>Copias consumidas</span>
+
+                                        <strong>
+                                            <field name="consumed_copies"/>
+                                        </strong>
+                                    </div>
                                 </div>
 
-                                <div class="col-6">
-                                    <span class="text-muted">Rendimiento</span><br/>
-                                    <strong>
-                                        <field name="expected_yield"/>
-                                    </strong>
+                                <div class="o_toner_metric">
+                                    <div class="o_toner_metric_icon">
+                                        <i class="fa fa-line-chart"/>
+                                    </div>
+
+                                    <div class="o_toner_metric_content">
+                                        <span>Rendimiento esperado</span>
+
+                                        <strong>
+                                            <field name="expected_yield"/>
+                                        </strong>
+                                    </div>
                                 </div>
 
-                                <div class="col-6 mt-2">
-                                    <span class="text-muted">% consumido</span><br/>
+                                <div class="o_toner_metric">
+                                    <div class="o_toner_metric_icon">
+                                        <i class="fa fa-percent"/>
+                                    </div>
+
+                                    <div class="o_toner_metric_content">
+                                        <span>Consumo</span>
+
+                                        <strong>
+                                            <field name="consumption_percent"/>
+                                        </strong>
+                                    </div>
+                                </div>
+
+                                <div class="o_toner_metric">
+                                    <div class="o_toner_metric_icon">
+                                        <i class="fa fa-clock-o"/>
+                                    </div>
+
+                                    <div class="o_toner_metric_content">
+                                        <span>Desde entrega</span>
+
+                                        <strong>
+                                            <field name="days_since_last_delivery"/>
+                                            <span class="o_toner_metric_suffix">
+                                                días
+                                            </span>
+                                        </strong>
+                                    </div>
+                                </div>
+
+                            </div>
+
+                            <!-- Barra de consumo -->
+                            <div class="o_toner_progress_section">
+
+                                <div class="o_toner_progress_header">
+                                    <span>
+                                        Nivel de consumo
+                                    </span>
+
                                     <strong>
                                         <field name="consumption_percent"/>
                                     </strong>
                                 </div>
 
-                                <div class="col-6 mt-2">
-                                    <span class="text-muted">Días</span><br/>
-                                    <strong>
-                                        <field name="days_since_last_delivery"/>
-                                    </strong>
+                                <div class="o_toner_progress">
+                                    <div
+                                        class="o_toner_progress_value"
+                                        t-att-style="
+                                            'width: ' +
+                                            (
+                                                record.consumption_percent.raw_value &gt; 100
+                                                ? 100
+                                                : record.consumption_percent.raw_value
+                                            ) +
+                                            '%;'
+                                        "
+                                    />
                                 </div>
+
                             </div>
 
-                            <div class="d-flex justify-content-between align-items-center mt-3">
-                                <div>
-                                    <t t-if="record.requires_evidence.raw_value">
-                                        <span class="badge text-bg-warning">
-                                            Requiere evidencia
+                            <!-- Advertencia -->
+                            <t t-if="record.requires_evidence.raw_value">
+                                <div class="o_toner_evidence_alert">
+                                    <div class="o_toner_evidence_alert_icon">
+                                        <i class="fa fa-camera"/>
+                                    </div>
+
+                                    <div>
+                                        <strong>Evidencia requerida</strong>
+
+                                        <span>
+                                            Se deben adjuntar fotografías o
+                                            documentos de validación.
+                                        </span>
+                                    </div>
+                                </div>
+                            </t>
+
+                            <!-- Pie -->
+                            <footer class="o_toner_card_footer">
+
+                                <div class="o_toner_footer_status">
+                                    <t t-if="record.consumption_percent.raw_value &gt;= 100">
+                                        <span class="o_toner_status_indicator o_toner_status_danger">
+                                            <i class="fa fa-exclamation-circle me-1"/>
+                                            Rendimiento superado
+                                        </span>
+                                    </t>
+
+                                    <t t-elif="record.consumption_percent.raw_value &gt;= 80">
+                                        <span class="o_toner_status_indicator o_toner_status_warning">
+                                            <i class="fa fa-exclamation-triangle me-1"/>
+                                            Consumo elevado
+                                        </span>
+                                    </t>
+
+                                    <t t-else="">
+                                        <span class="o_toner_status_indicator o_toner_status_normal">
+                                            <i class="fa fa-check-circle me-1"/>
+                                            Consumo normal
                                         </span>
                                     </t>
                                 </div>
 
-                                <field name="activity_ids" widget="kanban_activity"/>
-                            </div>
+                                <div class="o_toner_footer_activity">
+                                    <field
+                                        name="activity_ids"
+                                        widget="kanban_activity"
+                                    />
+                                </div>
 
-                        </t>
-                    </templates>
-                </kanban>
-            </field>
-        </record>
+                            </footer>
+
+                        </div>
+
+                    </t>
+
+                    <!-- Menú de tres puntos -->
+                    <t t-name="menu">
+
+                        <a
+                            type="open"
+                            role="menuitem"
+                            class="dropdown-item"
+                        >
+                            <i class="fa fa-external-link me-2"/>
+                            Abrir solicitud
+                        </a>
+
+                        <a
+                            t-if="widget.editable"
+                            type="edit"
+                            role="menuitem"
+                            class="dropdown-item"
+                        >
+                            <i class="fa fa-pencil me-2"/>
+                            Editar
+                        </a>
+
+                        <div class="dropdown-divider"/>
+
+                        <a
+                            t-if="widget.deletable"
+                            type="delete"
+                            role="menuitem"
+                            class="dropdown-item text-danger"
+                        >
+                            <i class="fa fa-trash me-2"/>
+                            Eliminar
+                        </a>
+
+                    </t>
+
+                </templates>
+
+            </kanban>
+        </field>
+    </record>
 
 
         <!-- =========================================================
