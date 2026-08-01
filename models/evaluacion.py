@@ -936,7 +936,7 @@ class EvaluacionPersonal(models.Model):
                 and dias_mes > 0
             ):
                 record.meta_servicios_ajustada = (
-                    (record.meta_base_servicios or 40.0)
+                    (record.meta_base_servicios or 45.0)
                     * (record.dias_servicios_disponibles / dias_mes)
                 )
 
@@ -1162,6 +1162,7 @@ class EvaluacionPersonal(models.Model):
 
     @api.depends(
         'puntaje_total_bono',
+        'porcentaje_produccion_total',
         'reclamos_procedentes_count',
         'evaluaciones_criticas_count',
         'faltas_injustificadas_equivalentes',
@@ -1192,10 +1193,14 @@ class EvaluacionPersonal(models.Model):
             requiere_cierre = record.tipo_operativo in ('taller', 'mixto')
             cierre, linea_cierre = record._buscar_linea_cierre_confirmado()
             bloqueado_por_cierre = requiere_cierre and not (cierre and linea_cierre)
+            bloqueado_por_produccion = (
+                (record.porcentaje_produccion_total or 0.0) < 95.0
+            )
             bono_bloqueado = (
                 bloqueado_por_evaluaciones
                 or bloqueado_por_reclamos
                 or bloqueado_por_cierre
+                or bloqueado_por_produccion
             )
 
             if bono_bloqueado:
@@ -1247,7 +1252,7 @@ class EvaluacionPersonal(models.Model):
                 'CRITERIO DE PONDERACIÓN APROBADO',
                 '- Producción 50%%: recibe el mayor peso porque mide el cumplimiento '
                 'directo de la meta operativa del taller, cuya referencia mensual es '
-                '60 máquinas, ajustada por la disponibilidad real del técnico.',
+                '60 máquinas por técnico, ajustada por su disponibilidad real. Para servicios, la referencia es 45 tickets por técnico.',
                 '- Calidad 25%%: conserva un peso relevante para evitar que el aumento '
                 'de producción se logre a costa de errores, reclamos procedentes o '
                 'evaluaciones negativas del cliente.',
@@ -1353,6 +1358,12 @@ class EvaluacionPersonal(models.Model):
                     '- BONO BLOQUEADO: no existe un cierre mensual confirmado con una meta asignada para este técnico.'
                 )
 
+            if bloqueado_por_produccion:
+                resumen.append(
+                    '- BONO BLOQUEADO: la producción fue %.2f%% y se requiere como mínimo 95%% para acceder al bono.'
+                    % record.porcentaje_produccion_total
+                )
+
             if aplica_acelerador:
                 resumen.append('- Acelerador aplicado: S/ 100.00.')
             else:
@@ -1361,6 +1372,8 @@ class EvaluacionPersonal(models.Model):
                     razones.append('el bono se encuentra bloqueado')
                 if resultado < 110.0:
                     razones.append('el resultado es menor a 110%')
+                if bloqueado_por_produccion:
+                    razones.append('la producción es menor al 95% mínimo')
                 if reclamos > 0:
                     razones.append('tiene reclamos procedentes')
                 if record.evaluaciones_criticas_count > 0:
@@ -2987,7 +3000,7 @@ class EvaluacionPersonalDetalleDiario(models.Model):
             meta_servicio_dia = 0.0
             if dias_mes > 0:
                 if evaluacion.tipo_operativo in ('taller', 'mixto'):
-                    meta_taller_dia = ((evaluacion.meta_base_taller or 50.0) / dias_mes) * taller_disponible
+                    meta_taller_dia = ((evaluacion.meta_base_taller or 60.0) / dias_mes) * taller_disponible
                 if evaluacion.tipo_operativo in ('servicios', 'mixto'):
                     meta_servicio_dia = ((evaluacion.meta_base_servicios or 45.0) / dias_mes) * servicio_equiv
             record.dia_equivalente_bono = dia_equiv

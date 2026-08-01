@@ -126,20 +126,18 @@ class EvaluacionCierreMensual(models.Model):
         tracking=True,
         digits=(16, 2),
         help=(
-            'Meta mensual definida por gerencia. Se ajusta según la '
-            'disponibilidad real del equipo y nunca supera el pool exigible.'
+            'Meta mensual individual definida por gerencia para cada técnico de taller con disponibilidad completa. No se divide entre técnicos ni se limita por el pool mensual.'
         ),
     )
 
     meta_total_taller_ajustada = fields.Float(
-        string='Meta total ajustada del taller',
+        string='Suma de metas individuales ajustadas',
         readonly=True,
         copy=False,
         tracking=True,
         digits=(16, 2),
         help=(
-            'Meta base de 60 máquinas ajustada por la disponibilidad real '
-            'del taller y limitada al pool exigible del periodo.'
+            'Suma de las metas individuales asignadas a los técnicos de taller y mixtos. Cada técnico parte de una meta individual de 60 máquinas.'
         ),
     )
 
@@ -897,103 +895,99 @@ class EvaluacionCierreMensual(models.Model):
         return datos, capacidad_total, capacidad_programada_taller
 
     def _calcular_lineas_tecnicos(self):
+        """Calcula una meta individual por técnico de taller o mixto."""
         self.ensure_one()
 
-        (
-            datos,
-            capacidad_total,
-            capacidad_programada_taller,
-        ) = self._preparar_tecnicos()
+        datos, capacidad_total, capacidad_programada_taller = self._preparar_tecnicos()
 
-        pool = self.pool_total_exigible or 0.0
-        factor_disponibilidad = (
+        factor_general = (
             capacidad_total / capacidad_programada_taller
             if capacidad_programada_taller > 0
             else 0.0
         )
-        factor_disponibilidad = max(0.0, min(1.0, factor_disponibilidad))
-
-        meta_base_ajustada = (
-            (self.meta_base_taller or 60.0) * factor_disponibilidad
-        )
-        meta_total = min(pool, meta_base_ajustada)
-
-        self.write({
-            'factor_disponibilidad_taller': factor_disponibilidad,
-            'meta_total_taller_ajustada': meta_total,
-        })
+        factor_general = max(0.0, min(1.0, factor_general))
 
         comandos = [(5, 0, 0)]
+        suma_metas_individuales = 0.0
 
         for item in datos:
             perfil = item['perfil']
+            horas_programadas = item['horas_programadas'] or 0.0
+            horas_taller = item['horas_taller'] or 0.0
+
             participa = bool(
                 perfil.tipo_operativo in ('taller', 'mixto')
-                and item['horas_taller'] > 0
+                and horas_programadas > 0.0
+                and horas_taller > 0.0
             )
 
             porcentaje = (
-                item['horas_taller'] / capacidad_total * 100.0
-                if participa and capacidad_total > 0
+                horas_taller / capacidad_total * 100.0
+                if participa and capacidad_total > 0.0
                 else 0.0
             )
+
+            factor_individual = (
+                horas_taller / horas_programadas
+                if participa and horas_programadas > 0.0
+                else 0.0
+            )
+            factor_individual = max(0.0, min(1.0, factor_individual))
 
             meta = (
-                meta_total * item['horas_taller'] / capacidad_total
-                if participa and capacidad_total > 0
+                (self.meta_base_taller or 60.0) * factor_individual
+                if participa
                 else 0.0
             )
+            suma_metas_individuales += meta
 
             produccion = self._get_produccion_tecnico(perfil.tecnico_id)
-            cumplimiento = (
-                produccion / meta * 100.0
-                if meta > 0
-                else 0.0
-            )
+            cumplimiento = produccion / meta * 100.0 if meta > 0.0 else 0.0
 
             motivo = []
-
             if perfil.tipo_operativo == 'servicios':
                 motivo.append(
-                    'No participa en el pool de taller porque es técnico exclusivo de servicios.'
+                    'No recibe meta de taller porque es técnico exclusivo de servicios. '
+                    'Su meta individual de servicios se calcula en la evaluación mensual.'
                 )
             elif not participa:
                 motivo.append(
-                    'No tiene horas disponibles de taller en el periodo.'
+                    'No tiene horas disponibles de taller en el periodo, por lo que '
+                    'su meta individual de taller es cero.'
                 )
             else:
                 motivo.append(
-                    'Participa según sus horas reales disponibles de taller.'
+                    'La meta base es individual: %.2f máquinas por técnico de taller '
+                    'con disponibilidad completa.' % (self.meta_base_taller or 60.0)
+                )
+                motivo.append(
+                    'Disponibilidad individual aplicada: %.2f%% (%.2f de %.2f horas programadas).'
+                    % (factor_individual * 100.0, horas_taller, horas_programadas)
+                )
+                motivo.append(
+                    'Meta individual ajustada: %.2f máquinas. Producción finalizada: %s. '
+                    'Cumplimiento real: %.2f%%.' % (meta, produccion, cumplimiento)
+                )
+                motivo.append(
+                    'El pool exigible de %s máquinas es informativo y no divide ni '
+                    'reduce la meta individual.' % self.pool_total_exigible
                 )
 
             if item['horas_ausencia']:
                 motivo.append(
-                    'Se descontaron %.2f horas por vacaciones, enfermedad, '
-                    'descanso médico o capacitación.'
+                    'Se descontaron %.2f horas por vacaciones, enfermedad, descanso médico o capacitación.'
                     % item['horas_ausencia']
                 )
-
             if item['horas_tickets']:
                 motivo.append(
                     'Se descontaron %.2f horas por %s ticket(s) finalizado(s).'
                     % (item['horas_tickets'], item['tickets_count'])
                 )
-
             if item['horas_descarga']:
                 motivo.append(
-                    'Se descontaron %.2f horas por participación en la '
-                    'descarga de contenedores.'
+                    'Se descontaron %.2f horas por participación en la descarga de contenedores.'
                     % item['horas_descarga']
                 )
-
-            if participa:
-                motivo.append(
-                    'La meta individual se calculó sobre una meta total '
-                    'ajustada de %.2f máquinas, proveniente de una meta base '
-                    'gerencial de %.2f y limitada por un pool exigible de %s.'
-                    % (meta_total, self.meta_base_taller, self.pool_total_exigible)
-                )
-
             if item['tickets_sin_retorno']:
                 motivo.append(
                     '%s ticket(s) fueron registrados sin retorno al taller.'
@@ -1005,13 +999,13 @@ class EvaluacionCierreMensual(models.Model):
                 'tecnico_id': perfil.tecnico_id.id,
                 'tipo_operativo': perfil.tipo_operativo,
                 'participa_pool': participa,
-                'horas_programadas': item['horas_programadas'],
+                'horas_programadas': horas_programadas,
                 'horas_ausencia_reduce_meta': item['horas_ausencia'],
                 'horas_tickets': item['horas_tickets'],
                 'horas_descarga_contenedores': item['horas_descarga'],
                 'tickets_finalizados': item['tickets_count'],
                 'tickets_sin_retorno': item['tickets_sin_retorno'],
-                'horas_taller_disponibles': item['horas_taller'],
+                'horas_taller_disponibles': horas_taller,
                 'porcentaje_participacion': porcentaje,
                 'meta_asignada': meta,
                 'produccion_finalizada': produccion,
@@ -1019,7 +1013,11 @@ class EvaluacionCierreMensual(models.Model):
                 'motivo_calculo': ' '.join(motivo),
             }))
 
-        self.write({'tecnico_line_ids': comandos})
+        self.write({
+            'factor_disponibilidad_taller': factor_general,
+            'meta_total_taller_ajustada': suma_metas_individuales,
+            'tecnico_line_ids': comandos,
+        })
 
     # ============================================================
     # RESÚMENES
@@ -1178,9 +1176,9 @@ class EvaluacionCierreMensual(models.Model):
                 '</p>'
                 '<p>'
                 '<strong>Capacidad total de taller:</strong> %.2f horas. '
-                'La meta se reparte proporcionalmente entre técnicos de taller y '
-                'mixtos según sus horas disponibles, después de descontar únicamente '
-                'ausencias que reducen meta y tiempo dedicado a tickets.'
+                'Cada técnico de taller parte de una meta individual de 60 máquinas. '
+                'La meta se ajusta según sus propias horas disponibles, después de '
+                'descontar ausencias que reducen meta, tickets y descargas.'
                 '</p>'
                 '<table class="table table-sm table-bordered">'
                 '<thead><tr>'
