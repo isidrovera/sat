@@ -231,6 +231,7 @@
             'sat/static/src/scss/gallery_widget.scss',
             'sat/static/src/scss/pedido_dashboard.scss',
             'sat/static/src/scss/toner_counter_submission_kanban.scss',
+            'sat/static/src/scss/sat_equipment_views.scss',
       
             
             

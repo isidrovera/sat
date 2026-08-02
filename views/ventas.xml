@@ -1,879 +1,2006 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-  <data>
-    <record id="maquinas_form_view" model="ir.ui.view">
-      <field name="name">Sat.form</field>
-      <field name="model">sat.sat</field>
-      <field name="arch" type="xml">
-        <form string="Gestión de Equipos de Fotocopiado">
-          <!-- HEADER: Con botones mejorados e iconos modernos -->
-          <header>
-            <button string="Enviar Reportes" name="send_records_by_email" type="object"
-              class="oe_highlight" icon="fa-paper-plane-o"
-              help="Envía por correo electrónico un listado completo de las máquinas con problemas o fallas y el estatus de partes en proceso"
-              groups="base.group_system" />
-            <button string="Nueva Reparación" name="create_reparacion" type="object"
-              class="btn btn-success" icon="fa-wrench"
-              help="Crea una nueva orden de reparación para esta máquina. Asegúrese de haber registrado correctamente las observaciones del equipo."
-              groups="base.group_system" />
-            <button name="action_print_reparacion_pdf"
-              type="object"
-              string="Imprimir reparación"
-              icon="fa-print"
-              class="btn-primary"
-              invisible="reparaciones_count == 0" />
-            <button name="action_open_reparacion_gallery"
-              type="object"
-              string="Ver fotos reparación"
-              icon="fa-images"
-              class="btn-secondary"
-              invisible="reparaciones_count == 0" />
-          <!--  <button name="action_entregar"
-        string="Entregar"
-        type="object"
-        class="btn-primary"
-        invisible="estado_ventas_id == 'entregada'"/>
-            <button name="action_regresar_a_finalizado"
-              string="Regresar a Finalizado"
-              type="object"
-              class="btn-secondary"
-              invisible="estado_ventas_id != 'entregada'"/>-->
-            <!--<button
-            name="action_crear_reparaciones" string="Crear Reparaciones Masivas" 
-                type="object" class="btn-primary" icon="fa-cogs"
-                help="Permite generar múltiples órdenes de reparación para varios equipos desde una sola operación"
-            />-->
-            <field name="disponibilidad_id" widget="statusbar" statusbar_visible="true" />
-            <field name="estado_ventas_id" widget="statusbar" options="{'clickable': '1'}"
-              class="custom_statusbar"
-              groups="base.group_system, sat_jefes_group_user" />
-          </header>
-          <!-- ALERTAS MEJORADAS: Con iconos y mejor formato -->
-          <div class="alert alert-danger" role="alert"
-            style="margin-bottom: 0px; display: flex; align-items: center; gap: 10px;"
-            invisible="activador == 'no'">
-            <i class="fa fa-exclamation-circle fa-2x" style="color: #dc3545;"></i>
-            <div>
-              <strong style="font-size: 15px;">¡ATENCIÓN: MÁQUINA CON PROBLEMAS!</strong>
-              <br /> Esta
-              máquina tiene observaciones críticas:
-              <field name='descripcion'
-                style="color: red; font-weight: bold;" />
-              <br />
-              <b>Importante:</b> Si está
-              gestionando una separación o venta, revise las observaciones con detenimiento y
-              consulte con el área técnica antes de proceder. Se requiere aprobación del responsable
-              técnico.
-            </div>
-          </div>
-          <div class="alert alert-warning" role="alert"
-            style="margin-bottom: 0px; display: flex; align-items: center; gap: 10px; background-color: #fff3cd;"
-            invisible="ubicacion_id == 'primer_piso' or ubicacion_id == 'tercer_piso'">
-            <i class="fa fa-warehouse fa-2x" style="color: #ff9800;"></i>
-            <div>
-              <strong style="font-size: 15px;">¡ALERTA DE UBICACIÓN!</strong>
-              <br /> Esta máquina se
-              encuentra en:
-              <field name="ubicacion_id"
-                style="background-color: #ffee99; padding: 2px 5px; border-radius: 3px; font-weight: bold;" />
-              <br />
-              <b>Proceso
-              a seguir:</b> Para separación o venta, notifique con mínimo 24 horas de anticipación
-              al área de almacén para coordinar su traslado. Sin este aviso, no se garantiza
-              disponibilidad inmediata del equipo.
-            </div>
-          </div>
-          <sheet>
-            <!-- BOTONES ESTADÍSTICOS: Con tooltip mejorado -->
-            <div class="oe_button_box" name="button_box">
-              <button name="view_reparaciones_ids" type="object" class="oe_stat_button"
-                icon="fa-wrench"
-                help="Ver todas las reparaciones históricas y en curso asociadas a este equipo. Revise esta información antes de realizar cualquier operación de venta.">
-                <field name="reparaciones_count" string="Reparaciones" widget="statinfo" />
-              </button>
-            </div>
-            <!-- TÍTULO Y CLIENTE -->
-            <div class="oe_title">
-              <label for="cliente_id" style="font-size: 16px; color: #212529;">Cliente /
-                Distribuidor</label>
-              <h1>
-                <field name="cliente_id" domain="[('tipo_cliente', '=', 'distribuidor')]"
-                  placeholder="Seleccione el cliente o distribuidor asociado"
-                  widget="many2one_avatar"
-                  style="width:100%; font-size: 20px;" options="{'no_create': True}" />
-              </h1>
-            </div>
-            <!-- GRUPOS DE DATOS: Mejorando presentación visual e instrucciones -->
-            <group>
-              <group string="Datos del Equipo"
-                style="background-color: #f8f9fa; border-radius: 8px; padding: 15px; border-left: 4px solid #007bff;">
-                <field name="tipo_maquina"
-                  help="Seleccione el tipo de equipo (fotocopiadora, impresora, multifuncional, etc.)" />
-                <field name="marca" help="Marca del fabricante del equipo" />
-                <field name="name" search="True" options="{'no_create': True}"
-                  help="Seleccione el modelo exacto del equipo. No crear nuevos registros sin autorización." />
-                <field name="serie_id"
-                  help="IMPORTANTE: Verifique que el número de serie coincida exactamente con el físico del equipo. En caso de discrepancia, notifique al supervisor." />
-                <field name="contometro"
-                  help="Lectura actual del contador de impresiones/copias del equipo. Verifique físicamente este valor." />
-                <field name="ubicacion_id"
-                  help="Ubicación física actual del equipo dentro de las instalaciones." />
-                <field name="fecha_separacion" invisible="disponibilidad_id == 'disponible'"
-                  readonly="1"
-                  help="Fecha en que se realizó la separación del equipo. Campo automático." />
-              </group>
-              <group string="Datos de Importación"
-                style="background-color: #e8f4f8; border-radius: 8px; padding: 15px; border-left: 4px solid #17a2b8;">
-                <field name="proveedor_id" domain="[('tipo_cliente', '=', 'proveedor')]"
-                  options="{'no_create': True}"
-                  help="Proveedor internacional que suministró el equipo. Si no aparece en la lista, contacte al departamento de compras." />
-                <field name="importacion"
-                  help="Número o referencia del lote de importación. Este dato es fundamental para trazabilidad aduanera." />
-                <field name="invoice"
-                  help="Número de factura internacional de compra. Documento requerido para garantía del fabricante." />
-              </group>
-              <group string="Datos para revisión"
-                style="background-color: #fff8f8; border-radius: 8px; padding: 15px; border-left: 4px solid #dc3545;">
-                <button
-                  name="action_colocar_en_revision"
-                  type="object"
-                  string="Colocar en revisión"
-                  class="btn-primary"
-                  invisible="estado_ventas_id != 'sin_revisar' or not id"
-                />
-                <!-- Quitar de revisión: SOLO cuando está en para_revision -->
-                <button
-                  name="action_quitar_de_revision"
-                  type="object"
-                  string="Quitar de revisión"
-                  invisible="estado_ventas_id != 'para_revision' or not id"
-                />
-                <field name="posicion_cola" readonly="1" />
-                <!--<field
-                name="tipo_revision" widget="kanban_label_selection" options="{'classes': {'draft':
-                'default', 'done': 'success'}}" 
-                    help="Seleccione el tipo de revisión técnica necesaria. 'Draft' para pendiente, 'Done' para
-                completada."/>
-                <field name="prioridad" widget="selection" 
-                    help="Establezca la prioridad de atención técnica. Alta prioridad implica atención inmediata para
-                equipos críticos o con cliente en espera."/>-->
-              </group>
-              <group string="Notificar"
-                style="background-color: #f0f9e8; border-radius: 8px; padding: 15px; border-left: 4px solid #28a745;">
-                <field name="trabajadores_id" widget="many2one_avatar"
-                  help="Técnico o trabajador asignado como responsable principal de este equipo. Recibirá todas las notificaciones relevantes." />
-                <field name="asesora_id"
-                  help="Asesor(a) comercial asignado(a) cuando el equipo está en proceso de venta o atención a distribuidor." />
-                <field name="fecha_para_revision"
-                  help="Fecha programada para la próxima revisión técnica. Establecer con al menos 48 horas de anticipación." />
-                <field name="autorizacion_cambio_digitos"
-                  help="Marque esta casilla si se ha autorizado modificación de dígitos o configuración especial del equipo." />
-                <field name="contometro_proveedor"/>
-              </group>
-            </group>
-            <!-- PESTAÑAS: Con instrucciones mejoradas -->
-            <notebook>
-              <page string="Observaciones del equipo">
-                <group>
-                  <group>
-                    <field name="descripcion"
-                      placeholder="Detalle aquí todos los problemas, condiciones especiales o requisitos del equipo..."
-                      style="min-height: 120px; font-family: 'Courier New', monospace; padding: 10px; background-color: #f8f9fa;" />
-                  </group>
-                  <group>
-                    <field name="activador" class="oe_form_field_bottom_separator" invisible="1" />
-                    <label for="foto_problema"
-                      style="font-weight: bold; display: block; margin-bottom: 5px;">Evidencia
-                      Fotográfica:</label>
-                    <field name="foto_problema" widget="image" />
-                  </group>
-                </group>
-              </page>
-              <page string="Precios">
-                <group>
-                  <group style="background-color: #f8fffa; border-radius: 6px; padding: 10px;">
-                    <field name="precio_venta" widget="monetary"
-                      options="{'currency_field': 'currency_id'}"
-                      groups="base.group_system, sat.Sat_ventas_group_user"
-                      style="font-size: 18px; font-weight: bold; color: #28a745;" />
-                    <field name="currency_id" string="Tipo de moneda" />
-                  </group>
-                  <group style="background-color: #fff8f8; border-radius: 6px; padding: 10px;"
-                    groups="base.group_system, sat_jefes_group_user">
-                    <field name="precio_compra" widget="monetary"
-                      options="{'currency_field': 'currency_id'}"
-                      groups="base.group_system, sat_jefes_group_user"
-                      style="font-size: 16px; color: #dc3545;" />
-                  </group>
-                </group>
-              </page>
-              <page string="Logística">
-                <group>
-                  <group style="background-color: #fff9f0; border-radius: 6px; padding: 10px;">
-                    <field name="factura_venta" placeholder="Ej: F001-00012345" />
-                  </group>
-                  <group style="background-color: #fff9f0; border-radius: 6px; padding: 10px;">
-                    <field name="fecha_entrega" />
-                  </group>
-                </group>
-              </page>
-              <page string="Ingreso scanner">
-                <group>
-                  <group>
-                    <field name="check_ingreso" readonly="1" />
-                    <field name="ingreso_estado" readonly="1" />
-                  </group>
-                  <group>
-                    <field name="ingreso_fecha" readonly="1" />
-                    <field name="ingreso_fuente" readonly="1" />
-                  </group>
-                </group>
-                <group string="Observaciones (scanner)">
-                  <!-- reutilizamos tu campo existente -->
-                  <field name="descripcion" />
-                </group>
-              </page>
-              <page string="🔩 Partes Retiradas" name="partes_retiradas_sat">
-                <field name="partes_retiradas_ids" readonly="1">
-                  <list>
-                    <field name="solicitud_id" string="Solicitud"/>
-                    <field name="parte"/>
+    <data>
+
+        <!-- =========================================================
+             FORMULARIO DE EQUIPO
+        ========================================================== -->
+        <record id="maquinas_form_view" model="ir.ui.view">
+            <field name="name">sat.sat.form</field>
+            <field name="model">sat.sat</field>
+            <field name="arch" type="xml">
+
+                <form string="Gestión de Equipos" class="sat_equipment_form">
+
+                    <!-- =================================================
+                         CABECERA Y ACCIONES
+                    ================================================== -->
+                    <header class="sat_equipment_header">
+
+                        <button
+                            name="send_records_by_email"
+                            string="Enviar reporte"
+                            type="object"
+                            icon="fa-paper-plane"
+                            class="btn-secondary"
+                            help="Envía por correo un listado de las máquinas con problemas, fallas o partes en proceso."
+                            groups="base.group_system"
+                        />
+
+                        <button
+                            name="create_reparacion"
+                            string="Nueva reparación"
+                            type="object"
+                            icon="fa-wrench"
+                            class="btn-primary"
+                            help="Crea una nueva orden de reparación para este equipo."
+                            groups="base.group_system"
+                        />
+
+                        <button
+                            name="action_print_reparacion_pdf"
+                            string="Imprimir reparación"
+                            type="object"
+                            icon="fa-print"
+                            class="btn-secondary"
+                            invisible="reparaciones_count == 0"
+                        />
+
+                        <button
+                            name="action_open_reparacion_gallery"
+                            string="Ver fotografías"
+                            type="object"
+                            icon="fa-camera"
+                            class="btn-secondary"
+                            invisible="reparaciones_count == 0"
+                        />
+
+                        <field
+                            name="disponibilidad_id"
+                            widget="statusbar"
+                            statusbar_visible="disponible,separada,no_disponible"
+                        />
+
+                        <field
+                            name="estado_ventas_id"
+                            widget="statusbar"
+                            options="{'clickable': '1'}"
+                            class="sat_custom_statusbar"
+                            groups="base.group_system,sat_jefes_group_user"
+                        />
+
+                    </header>
+
+                    <!-- =================================================
+                         ALERTA DE PROBLEMAS
+                    ================================================== -->
+                    <div
+                        class="alert alert-danger sat_equipment_alert sat_equipment_alert_danger"
+                        role="alert"
+                        invisible="activador == 'no'"
+                    >
+                        <div class="sat_equipment_alert_icon">
+                            <i class="fa fa-exclamation-triangle"/>
+                        </div>
+
+                        <div class="sat_equipment_alert_content">
+                            <div class="sat_equipment_alert_title">
+                                Equipo con observaciones técnicas
+                            </div>
+
+                            <div class="sat_equipment_alert_text">
+                                Este equipo presenta problemas que deben revisarse antes de
+                                separarlo, venderlo o entregarlo.
+                            </div>
+
+                            <div class="sat_equipment_alert_value">
+                                <field name="descripcion" readonly="1" nolabel="1"/>
+                            </div>
+
+                            <div class="sat_equipment_alert_help">
+                                Consulte con el responsable técnico antes de continuar con
+                                cualquier operación comercial.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- =================================================
+                         ALERTA DE UBICACIÓN
+                    ================================================== -->
+                    <div
+                        class="alert alert-warning sat_equipment_alert sat_equipment_alert_warning"
+                        role="alert"
+                        invisible="ubicacion_id == 'primer_piso' or ubicacion_id == 'tercer_piso'"
+                    >
+                        <div class="sat_equipment_alert_icon">
+                            <i class="fa fa-building"/>
+                        </div>
+
+                        <div class="sat_equipment_alert_content">
+                            <div class="sat_equipment_alert_title">
+                                Equipo ubicado fuera del almacén principal
+                            </div>
+
+                            <div class="sat_equipment_alert_text">
+                                Ubicación actual:
+                                <span class="sat_equipment_location_value">
+                                    <field name="ubicacion_id" readonly="1"/>
+                                </span>
+                            </div>
+
+                            <div class="sat_equipment_alert_help">
+                                Para una separación o venta, coordine el traslado con almacén
+                                con un mínimo de 24 horas de anticipación.
+                            </div>
+                        </div>
+                    </div>
+
+                    <sheet>
+
+                        <!-- =================================================
+                             BOTONES ESTADÍSTICOS
+                        ================================================== -->
+                        <div class="oe_button_box sat_equipment_button_box" name="button_box">
+
+                            <button
+                                name="view_reparaciones_ids"
+                                type="object"
+                                class="oe_stat_button"
+                                icon="fa-wrench"
+                                help="Muestra todas las reparaciones relacionadas con este equipo."
+                            >
+                                <field
+                                    name="reparaciones_count"
+                                    string="Reparaciones"
+                                    widget="statinfo"
+                                />
+                            </button>
+
+                        </div>
+
+                        <!-- =================================================
+                             IDENTIDAD PRINCIPAL DEL EQUIPO
+                        ================================================== -->
+                        <div class="sat_equipment_identity">
+
+                            <div class="sat_equipment_identity_icon">
+                                <i class="fa fa-print"/>
+                            </div>
+
+                            <div class="sat_equipment_identity_content">
+
+                                <div class="sat_equipment_identity_label">
+                                    Cliente o distribuidor
+                                </div>
+
+                                <h1 class="sat_equipment_identity_title">
+                                    <field
+                                        name="cliente_id"
+                                        domain="[('tipo_cliente', '=', 'distribuidor')]"
+                                        widget="many2one_avatar"
+                                        placeholder="Seleccione el cliente o distribuidor"
+                                        options="{'no_create': True}"
+                                    />
+                                </h1>
+
+                                <div class="sat_equipment_identity_meta">
+
+                                    <span class="sat_equipment_identity_meta_item">
+                                        <i class="fa fa-tag"/>
+                                        <field name="marca" readonly="1"/>
+                                    </span>
+
+                                    <span class="sat_equipment_identity_meta_item">
+                                        <i class="fa fa-cube"/>
+                                        <field name="name" readonly="1"/>
+                                    </span>
+
+                                    <span class="sat_equipment_identity_meta_item">
+                                        <i class="fa fa-barcode"/>
+                                        <field name="serie_id" readonly="1"/>
+                                    </span>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <!-- =================================================
+                             RESUMEN OPERATIVO
+                        ================================================== -->
+                        <div class="sat_equipment_summary">
+
+                            <div class="sat_equipment_summary_item">
+                                <div class="sat_equipment_summary_icon">
+                                    <i class="fa fa-map-marker"/>
+                                </div>
+                                <div class="sat_equipment_summary_content">
+                                    <span class="sat_equipment_summary_label">
+                                        Ubicación
+                                    </span>
+                                    <field name="ubicacion_id" readonly="1"/>
+                                </div>
+                            </div>
+
+                            <div class="sat_equipment_summary_item">
+                                <div class="sat_equipment_summary_icon">
+                                    <i class="fa fa-calculator"/>
+                                </div>
+                                <div class="sat_equipment_summary_content">
+                                    <span class="sat_equipment_summary_label">
+                                        Contómetro
+                                    </span>
+                                    <field name="contometro" readonly="1"/>
+                                </div>
+                            </div>
+
+                            <div class="sat_equipment_summary_item">
+                                <div class="sat_equipment_summary_icon">
+                                    <i class="fa fa-check-circle"/>
+                                </div>
+                                <div class="sat_equipment_summary_content">
+                                    <span class="sat_equipment_summary_label">
+                                        Disponibilidad
+                                    </span>
+                                    <field name="disponibilidad_id" readonly="1"/>
+                                </div>
+                            </div>
+
+                            <div class="sat_equipment_summary_item">
+                                <div class="sat_equipment_summary_icon">
+                                    <i class="fa fa-cogs"/>
+                                </div>
+                                <div class="sat_equipment_summary_content">
+                                    <span class="sat_equipment_summary_label">
+                                        Estado técnico
+                                    </span>
+                                    <field name="estado_ventas_id" readonly="1"/>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <!-- =================================================
+                             INFORMACIÓN PRINCIPAL
+                        ================================================== -->
+                        <group class="sat_equipment_main_groups">
+
+                            <!-- DATOS DEL EQUIPO -->
+                            <group
+                                string="Identificación del equipo"
+                                class="sat_equipment_group sat_equipment_group_primary"
+                            >
+
+                                <field
+                                    name="tipo_maquina"
+                                    help="Seleccione el tipo de equipo."
+                                />
+
+                                <field
+                                    name="marca"
+                                    help="Marca del fabricante."
+                                />
+
+                                <field
+                                    name="name"
+                                    search="True"
+                                    options="{'no_create': True}"
+                                    help="Seleccione el modelo exacto del equipo."
+                                />
+
+                                <field
+                                    name="serie_id"
+                                    help="Verifique que la serie coincida con la placa física del equipo."
+                                />
+
+                                <field
+                                    name="contometro"
+                                    help="Lectura actual del contador principal."
+                                />
+
+                                <field
+                                    name="ubicacion_id"
+                                    help="Ubicación física actual del equipo."
+                                />
+
+                                <field
+                                    name="fecha_separacion"
+                                    readonly="1"
+                                    invisible="disponibilidad_id == 'disponible'"
+                                    help="Fecha en que se realizó la separación."
+                                />
+
+                            </group>
+
+                            <!-- IMPORTACIÓN -->
+                            <group
+                                string="Importación y procedencia"
+                                class="sat_equipment_group sat_equipment_group_info"
+                            >
+
+                                <field
+                                    name="proveedor_id"
+                                    domain="[('tipo_cliente', '=', 'proveedor')]"
+                                    options="{'no_create': True}"
+                                    help="Proveedor que suministró el equipo."
+                                />
+
+                                <field
+                                    name="importacion"
+                                    help="Número o referencia del lote de importación."
+                                />
+
+                                <field
+                                    name="invoice"
+                                    help="Factura internacional relacionada con la compra."
+                                />
+
+                                <field
+                                    name="contometro_proveedor"
+                                    help="Contómetro registrado por el proveedor."
+                                />
+
+                            </group>
+
+                            <!-- REVISIÓN -->
+                            <group
+                                string="Control de revisión"
+                                class="sat_equipment_group sat_equipment_group_danger"
+                            >
+
+                                <div class="sat_equipment_review_actions">
+
+                                    <button
+                                        name="action_colocar_en_revision"
+                                        type="object"
+                                        string="Colocar en revisión"
+                                        icon="fa-search"
+                                        class="btn-primary"
+                                        invisible="estado_ventas_id != 'sin_revisar' or not id"
+                                    />
+
+                                    <button
+                                        name="action_quitar_de_revision"
+                                        type="object"
+                                        string="Quitar de revisión"
+                                        icon="fa-undo"
+                                        class="btn-secondary"
+                                        invisible="estado_ventas_id != 'para_revision' or not id"
+                                    />
+
+                                </div>
+
+                                <field
+                                    name="posicion_cola"
+                                    readonly="1"
+                                    help="Posición actual del equipo en la cola de revisión."
+                                />
+
+                                <field
+                                    name="fecha_para_revision"
+                                    help="Fecha programada para la revisión técnica."
+                                />
+
+                            </group>
+
+                            <!-- RESPONSABLES -->
+                            <group
+                                string="Responsables y notificaciones"
+                                class="sat_equipment_group sat_equipment_group_success"
+                            >
+
+                                <field
+                                    name="trabajadores_id"
+                                    widget="many2one_avatar"
+                                    help="Responsable técnico principal del equipo."
+                                />
+
+                                <field
+                                    name="asesora_id"
+                                    help="Asesora comercial vinculada al equipo."
+                                />
+
+                                <field
+                                    name="autorizacion_cambio_digitos"
+                                    help="Indica si existe autorización para modificar dígitos o configuración."
+                                />
+
+                            </group>
+
+                        </group>
+
+                        <!-- =================================================
+                             PESTAÑAS
+                        ================================================== -->
+                        <notebook class="sat_equipment_notebook">
+
+                            <!-- OBSERVACIONES -->
+                            <page
+                                string="Observaciones"
+                                name="observaciones_equipo"
+                            >
+
+                                <div class="sat_equipment_page_header">
+                                    <div class="sat_equipment_page_icon">
+                                        <i class="fa fa-commenting"/>
+                                    </div>
+                                    <div>
+                                        <h3>Observaciones del equipo</h3>
+                                        <p>
+                                            Registre problemas, condiciones especiales, faltantes
+                                            o indicaciones importantes.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <group>
+
+                                    <group
+                                        string="Detalle técnico"
+                                        class="sat_equipment_group sat_equipment_group_neutral"
+                                    >
+                                        <field
+                                            name="descripcion"
+                                            nolabel="1"
+                                            placeholder="Describa los problemas, condiciones especiales o requisitos del equipo..."
+                                            class="sat_equipment_description"
+                                        />
+                                    </group>
+
+                                    <group
+                                        string="Evidencia fotográfica"
+                                        class="sat_equipment_group sat_equipment_group_neutral"
+                                    >
+                                        <field
+                                            name="foto_problema"
+                                            widget="image"
+                                            nolabel="1"
+                                            class="sat_equipment_problem_image"
+                                        />
+
+                                        <field
+                                            name="activador"
+                                            invisible="1"
+                                        />
+                                    </group>
+
+                                </group>
+
+                            </page>
+
+                            <!-- PRECIOS -->
+                            <page
+                                string="Información comercial"
+                                name="informacion_comercial"
+                            >
+
+                                <div class="sat_equipment_page_header">
+                                    <div class="sat_equipment_page_icon">
+                                        <i class="fa fa-money"/>
+                                    </div>
+                                    <div>
+                                        <h3>Precios y moneda</h3>
+                                        <p>
+                                            Información comercial visible según los permisos del usuario.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <group>
+
+                                    <group
+                                        string="Precio de venta"
+                                        class="sat_equipment_group sat_equipment_group_success"
+                                    >
+                                        <field
+                                            name="precio_venta"
+                                            widget="monetary"
+                                            options="{'currency_field': 'currency_id'}"
+                                            groups="base.group_system,sat.Sat_ventas_group_user"
+                                            class="sat_equipment_sale_price"
+                                        />
+
+                                        <field
+                                            name="currency_id"
+                                            string="Moneda"
+                                        />
+                                    </group>
+
+                                    <group
+                                        string="Costo de compra"
+                                        class="sat_equipment_group sat_equipment_group_danger"
+                                        groups="base.group_system,sat_jefes_group_user"
+                                    >
+                                        <field
+                                            name="precio_compra"
+                                            widget="monetary"
+                                            options="{'currency_field': 'currency_id'}"
+                                            groups="base.group_system,sat_jefes_group_user"
+                                            class="sat_equipment_purchase_price"
+                                        />
+                                    </group>
+
+                                </group>
+
+                            </page>
+
+                            <!-- LOGÍSTICA -->
+                            <page
+                                string="Logística y entrega"
+                                name="logistica_entrega"
+                            >
+
+                                <div class="sat_equipment_page_header">
+                                    <div class="sat_equipment_page_icon">
+                                        <i class="fa fa-truck"/>
+                                    </div>
+                                    <div>
+                                        <h3>Información logística</h3>
+                                        <p>
+                                            Registre la factura de venta y la fecha de entrega.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <group>
+
+                                    <group
+                                        string="Facturación"
+                                        class="sat_equipment_group sat_equipment_group_warning"
+                                    >
+                                        <field
+                                            name="factura_venta"
+                                            placeholder="Ejemplo: F001-00012345"
+                                        />
+                                    </group>
+
+                                    <group
+                                        string="Entrega"
+                                        class="sat_equipment_group sat_equipment_group_warning"
+                                    >
+                                        <field name="fecha_entrega"/>
+                                    </group>
+
+                                </group>
+
+                            </page>
+
+                            <!-- SCANNER -->
+                            <page
+                                string="Ingreso por scanner"
+                                name="ingreso_scanner"
+                            >
+
+                                <div class="sat_equipment_page_header">
+                                    <div class="sat_equipment_page_icon">
+                                        <i class="fa fa-qrcode"/>
+                                    </div>
+                                    <div>
+                                        <h3>Control de ingreso</h3>
+                                        <p>
+                                            Información automática obtenida durante el registro de ingreso.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <group>
+
+                                    <group
+                                        string="Estado del ingreso"
+                                        class="sat_equipment_group sat_equipment_group_info"
+                                    >
+                                        <field
+                                            name="check_ingreso"
+                                            readonly="1"
+                                        />
+
+                                        <field
+                                            name="ingreso_estado"
+                                            readonly="1"
+                                        />
+                                    </group>
+
+                                    <group
+                                        string="Trazabilidad"
+                                        class="sat_equipment_group sat_equipment_group_info"
+                                    >
+                                        <field
+                                            name="ingreso_fecha"
+                                            readonly="1"
+                                        />
+
+                                        <field
+                                            name="ingreso_fuente"
+                                            readonly="1"
+                                        />
+                                    </group>
+
+                                </group>
+
+                                <group
+                                    string="Observaciones registradas"
+                                    class="sat_equipment_group sat_equipment_group_neutral"
+                                >
+                                    <field
+                                        name="descripcion"
+                                        readonly="1"
+                                    />
+                                </group>
+
+                            </page>
+
+                            <!-- PARTES RETIRADAS -->
+                            <page
+                                string="Partes retiradas"
+                                name="partes_retiradas_sat"
+                            >
+
+                                <div class="sat_equipment_page_header">
+                                    <div class="sat_equipment_page_icon">
+                                        <i class="fa fa-cogs"/>
+                                    </div>
+                                    <div>
+                                        <h3>Historial de partes retiradas</h3>
+                                        <p>
+                                            Partes extraídas del equipo durante solicitudes o reparaciones.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <field
+                                    name="partes_retiradas_ids"
+                                    readonly="1"
+                                    nolabel="1"
+                                >
+                                    <list
+                                        create="0"
+                                        edit="0"
+                                        delete="0"
+                                        class="sat_equipment_embedded_list"
+                                    >
+                                        <field
+                                            name="solicitud_id"
+                                            string="Solicitud"
+                                        />
+
+                                        <field
+                                            name="parte"
+                                            string="Parte"
+                                        />
+
+                                        <field
+                                            name="descripcion"
+                                            string="Descripción"
+                                            optional="show"
+                                        />
+
+                                        <field
+                                            name="state"
+                                            string="Estado"
+                                            widget="badge"
+                                            decoration-success="state == 'entregada'"
+                                            decoration-warning="state == 'encontrada'"
+                                            decoration-info="state == 'buscando'"
+                                        />
+
+                                        <field
+                                            name="fecha_gestion"
+                                            string="Fecha de retiro"
+                                        />
+
+                                        <field
+                                            name="gestionado_por"
+                                            string="Gestionado por"
+                                        />
+                                    </list>
+                                </field>
+
+                            </page>
+
+                            <!-- PRUEBAS TÉCNICAS -->
+                            <page
+                                string="Pruebas técnicas"
+                                name="pruebas_tecnicas"
+                            >
+
+                                <div class="sat_equipment_page_header">
+                                    <div class="sat_equipment_page_icon">
+                                        <i class="fa fa-line-chart"/>
+                                    </div>
+                                    <div>
+                                        <h3>Resultados de pruebas técnicas</h3>
+                                        <p>
+                                            Contadores, consumo de tóner, alertas y estado de las pruebas.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div class="sat_pruebas_fullwidth_container">
+                                    <field
+                                        name="prueba_tecnica_dashboard_json"
+                                        widget="sat_pruebas_dashboard"
+                                        nolabel="1"
+                                        readonly="1"
+                                    />
+                                </div>
+
+                                <separator string="Detalle técnico"/>
+
+                                <field
+                                    name="prueba_ids"
+                                    nolabel="1"
+                                >
+                                    <list
+                                        create="0"
+                                        edit="0"
+                                        delete="0"
+                                        decoration-success="estado_toner == 'ok'"
+                                        decoration-warning="estado_toner == 'bajo'"
+                                        decoration-danger="estado_toner == 'critico'"
+                                        class="sat_equipment_embedded_list"
+                                    >
+
+                                        <field
+                                            name="reparacion_id"
+                                            string="Reparación"
+                                        />
+
+                                        <field
+                                            name="contador_inicial_total"
+                                            string="Contador inicial"
+                                            optional="show"
+                                        />
+
+                                        <field
+                                            name="contador_actual_total"
+                                            string="Contador actual"
+                                            optional="show"
+                                        />
+
+                                        <field
+                                            name="contador_impresiones"
+                                            string="Impresiones"
+                                            optional="hide"
+                                        />
+
+                                        <field
+                                            name="contador_copias"
+                                            string="Copias"
+                                            optional="hide"
+                                        />
+
+                                        <field
+                                            name="contador_scanner"
+                                            string="Escaneos"
+                                            optional="hide"
+                                        />
+
+                                        <field
+                                            name="contador_duplex"
+                                            string="Dúplex"
+                                            optional="hide"
+                                        />
+
+                                        <field
+                                            name="delta_total"
+                                            string="Prueba total"
+                                            optional="show"
+                                        />
+
+                                        <field
+                                            name="delta_impresiones"
+                                            string="Pruebas impresión"
+                                            optional="hide"
+                                        />
+
+                                        <field
+                                            name="delta_copias"
+                                            string="Pruebas copia"
+                                            optional="hide"
+                                        />
+
+                                        <field
+                                            name="delta_scanner"
+                                            string="Pruebas scanner"
+                                            optional="hide"
+                                        />
+
+                                        <field
+                                            name="delta_duplex"
+                                            string="Pruebas dúplex"
+                                            optional="hide"
+                                        />
+
+                                        <field
+                                            name="toner_negro"
+                                            string="Tóner negro"
+                                            widget="progressbar"
+                                        />
+
+                                        <field
+                                            name="toner_cyan"
+                                            string="Tóner cyan"
+                                            widget="progressbar"
+                                            optional="hide"
+                                        />
+
+                                        <field
+                                            name="toner_magenta"
+                                            string="Tóner magenta"
+                                            widget="progressbar"
+                                            optional="hide"
+                                        />
+
+                                        <field
+                                            name="toner_amarillo"
+                                            string="Tóner amarillo"
+                                            widget="progressbar"
+                                            optional="hide"
+                                        />
+
+                                        <field
+                                            name="estado_toner"
+                                            string="Estado del tóner"
+                                            widget="badge"
+                                        />
+
+                                        <field
+                                            name="estado_prueba"
+                                            string="Estado de prueba"
+                                            widget="badge"
+                                        />
+
+                                        <field
+                                            name="nivel_prueba"
+                                            string="Nivel"
+                                        />
+
+                                        <field
+                                            name="cantidad_alertas_snmp"
+                                            string="Alertas SNMP"
+                                        />
+
+                                        <field
+                                            name="fecha_ultima_actualizacion"
+                                            string="Última actualización"
+                                        />
+
+                                    </list>
+                                </field>
+
+                            </page>
+
+                            <!-- WHATSAPP -->
+                            <page
+                                string="Notificaciones WhatsApp"
+                                name="notificaciones_whatsapp"
+                            >
+
+                                <div class="sat_equipment_page_header">
+                                    <div class="sat_equipment_page_icon">
+                                        <i class="fa fa-whatsapp"/>
+                                    </div>
+                                    <div>
+                                        <h3>Historial de notificaciones</h3>
+                                        <p>
+                                            Estado de los mensajes enviados a técnicos, asesoras y responsables.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <field
+                                    name="notificacion_log_ids"
+                                    readonly="1"
+                                    nolabel="1"
+                                >
+                                    <list
+                                        create="0"
+                                        edit="0"
+                                        delete="0"
+                                        decoration-success="state == 'sent'"
+                                        decoration-warning="state in ('pending', 'pending_out_of_hours', 'sending')"
+                                        decoration-danger="state == 'error'"
+                                        decoration-muted="state in ('cancelled', 'skipped_duplicate')"
+                                        class="sat_equipment_embedded_list"
+                                    >
+
+                                        <field
+                                            name="create_date"
+                                            string="Creado"
+                                        />
+
+                                        <field
+                                            name="event_type"
+                                            string="Evento"
+                                        />
+
+                                        <field
+                                            name="recipient_type"
+                                            string="Tipo"
+                                            optional="hide"
+                                        />
+
+                                        <field
+                                            name="recipient_name"
+                                            string="Destinatario"
+                                        />
+
+                                        <field
+                                            name="phone_clean"
+                                            string="Teléfono"
+                                        />
+
+                                        <field
+                                            name="state"
+                                            string="Estado"
+                                            widget="badge"
+                                            decoration-success="state == 'sent'"
+                                            decoration-warning="state in ('pending', 'pending_out_of_hours', 'sending')"
+                                            decoration-danger="state == 'error'"
+                                            decoration-muted="state in ('cancelled', 'skipped_duplicate')"
+                                        />
+
+                                        <field
+                                            name="lima_scheduled_text"
+                                            string="Programado"
+                                            optional="show"
+                                        />
+
+                                        <field
+                                            name="lima_sent_text"
+                                            string="Enviado"
+                                            optional="show"
+                                        />
+
+                                        <field
+                                            name="retry_count"
+                                            string="Reintentos"
+                                            optional="hide"
+                                        />
+
+                                        <field
+                                            name="error_message"
+                                            string="Error"
+                                            optional="hide"
+                                        />
+
+                                    </list>
+                                </field>
+
+                            </page>
+
+                        </notebook>
+
+                    </sheet>
+
+                    <chatter/>
+
+                </form>
+
+            </field>
+        </record>
+
+
+        <!-- =========================================================
+             VISTA LISTA
+        ========================================================== -->
+        <record id="maquinas_tree_sat" model="ir.ui.view">
+            <field name="name">sat.sat.list</field>
+            <field name="model">sat.sat</field>
+            <field name="type">list</field>
+            <field name="arch" type="xml">
+
+                <list
+                    string="Equipos"
+                    default_order="id desc"
+                    js_class="sat_tree_dashboard"
+                    class="sat_equipment_list"
+                    decoration-danger="activador == 'si'"
+                    decoration-muted="estado_ventas_id == 'entregada'"
+                >
+
+                    <!-- CAMPOS TÉCNICOS -->
+                    <field
+                        name="activador"
+                        column_invisible="True"
+                    />
+
+                    <!-- IDENTIFICACIÓN -->
+                    <field
+                        name="cliente_nombre"
+                        string="Cliente"
+                        optional="show"
+                    />
+
+                    <field
+                        name="marca"
+                        string="Marca"
+                        optional="show"
+                    />
+
+                    <field
+                        name="name"
+                        string="Modelo"
+                        optional="show"
+                        class="sat_equipment_model_cell"
+                    />
+
+                    <field
+                        name="serie_id"
+                        string="Serie"
+                        optional="show"
+                    />
+
+                    <field
+                        name="tipo_maquina"
+                        string="Tipo"
+                        optional="hide"
+                    />
+
+                    <!-- OPERACIÓN -->
+                    <field
+                        name="contometro"
+                        string="Contómetro"
+                        optional="show"
+                        class="text-end sat_equipment_counter_cell"
+                    />
+
+                    <field
+                        name="ubicacion_id"
+                        string="Ubicación"
+                        optional="show"
+                    />
+
+                    <field
+                        name="disponibilidad_id"
+                        string="Disponibilidad"
+                        widget="badge"
+                        optional="show"
+                        decoration-success="disponibilidad_id == 'disponible'"
+                        decoration-warning="disponibilidad_id == 'separada'"
+                        decoration-danger="disponibilidad_id == 'no_disponible'"
+                    />
+
+                    <field
+                        name="estado_ventas_id"
+                        string="Estado"
+                        widget="badge"
+                        optional="show"
+                        decoration-muted="estado_ventas_id == 'sin_revisar'"
+                        decoration-info="estado_ventas_id in ('para_revision', 'en_revision')"
+                        decoration-primary="estado_ventas_id == 'asignado'"
+                        decoration-success="estado_ventas_id == 'finalizado'"
+                        decoration-warning="estado_ventas_id == 'entregada'"
+                        decoration-danger="estado_ventas_id in ('con_problemas', 'de_partes')"
+                    />
+
+                    <field
+                        name="check_ingreso"
+                        string="Ingreso"
+                        widget="boolean_toggle"
+                        readonly="1"
+                        optional="show"
+                    />
+
+                    <!-- CAMPOS OPCIONALES -->
+                    <field
+                        name="asesora_id"
+                        string="Asesora"
+                        optional="hide"
+                    />
+
+                    <field
+                        name="trabajadores_id"
+                        string="Responsable"
+                        optional="hide"
+                    />
+
+                    <field
+                        name="importacion"
+                        string="Importación"
+                        optional="hide"
+                    />
+
+                    <field
+                        name="proveedor_id"
+                        string="Proveedor"
+                        optional="hide"
+                    />
+
+                    <field
+                        name="descripcion"
+                        string="Observaciones"
+                        optional="hide"
+                    />
+
+                    <field
+                        name="create_date"
+                        string="Ingreso"
+                        optional="hide"
+                    />
+
+                    <field
+                        name="fecha_separacion"
+                        string="Separada"
+                        optional="hide"
+                        invisible="disponibilidad_id != 'separada'"
+                    />
+
+                    <field
+                        name="fecha_para_revision"
+                        string="Programada"
+                        optional="hide"
+                    />
+
+                    <field
+                        name="currency_id"
+                        string="Moneda"
+                        optional="hide"
+                    />
+
+                    <field
+                        name="precio_compra"
+                        string="Costo"
+                        widget="monetary"
+                        options="{'currency_field': 'currency_id'}"
+                        optional="hide"
+                        groups="base.group_system,sat_jefes_group_user"
+                    />
+
+                    <!-- ACCIONES DE UBICACIÓN -->
+                    <button
+                        name="action_primer"
+                        type="object"
+                        string=""
+                        icon="fa-building-o"
+                        class="sat_equipment_list_action sat_equipment_list_action_location"
+                        groups="base.group_system"
+                        title="Mover al primer piso"
+                    />
+
+                    <button
+                        name="action_tercero"
+                        type="object"
+                        string=""
+                        icon="fa-building"
+                        class="sat_equipment_list_action sat_equipment_list_action_location"
+                        groups="base.group_system"
+                        title="Mover al tercer piso"
+                    />
+
+                    <button
+                        name="action_segundo"
+                        type="object"
+                        string=""
+                        icon="fa-truck"
+                        class="sat_equipment_list_action sat_equipment_list_action_location"
+                        groups="base.group_system"
+                        title="Mover al segundo local"
+                    />
+
+                    <!-- ACCIONES DE REVISIÓN -->
+                    <button
+                        name="action_colocar_en_revision"
+                        type="object"
+                        string=""
+                        icon="fa-search"
+                        class="sat_equipment_list_action sat_equipment_list_action_primary"
+                        help="Coloca el equipo en la cola de revisión."
+                        invisible="estado_ventas_id != 'sin_revisar' or not id"
+                    />
+
+                    <button
+                        name="action_quitar_de_revision"
+                        type="object"
+                        string=""
+                        icon="fa-undo"
+                        class="sat_equipment_list_action"
+                        help="Retira el equipo de la cola de revisión."
+                        invisible="estado_ventas_id != 'para_revision' or not id"
+                    />
+
+                    <!-- ACCIONES DE REPARACIÓN -->
+                    <button
+                        name="view_reparaciones_ids"
+                        type="object"
+                        string=""
+                        icon="fa-wrench"
+                        class="sat_equipment_list_action sat_equipment_list_action_primary"
+                        invisible="estado_ventas_id != 'finalizado'"
+                        title="Ver reparaciones"
+                    />
+
+                    <button
+                        name="action_print_reparacion_pdf"
+                        type="object"
+                        string=""
+                        icon="fa-file-pdf-o"
+                        class="sat_equipment_list_action"
+                        invisible="estado_ventas_id != 'finalizado'"
+                        title="Imprimir reparación"
+                    />
+
+                    <button
+                        name="action_open_reparacion_gallery"
+                        type="object"
+                        string=""
+                        icon="fa-camera"
+                        class="sat_equipment_list_action"
+                        invisible="estado_ventas_id != 'finalizado'"
+                        title="Ver fotografías"
+                    />
+
+                </list>
+
+            </field>
+        </record>
+
+
+        <!-- =========================================================
+             VISTA DE BÚSQUEDA
+        ========================================================== -->
+        <record id="Sat_search_view" model="ir.ui.view">
+            <field name="name">sat.sat.search</field>
+            <field name="model">sat.sat</field>
+            <field name="arch" type="xml">
+
+                <search string="Buscar equipos">
+
+                    <!-- BÚSQUEDA DIRECTA -->
+                    <field
+                        name="serie_id"
+                        string="Serie"
+                    />
+
+                    <field
+                        name="name"
+                        string="Modelo"
+                    />
+
+                    <field
+                        name="marca"
+                        string="Marca"
+                    />
+
+                    <field
+                        name="cliente_id"
+                        string="Cliente"
+                    />
+
+                    <field
+                        name="tipo_maquina"
+                        string="Tipo de equipo"
+                    />
+
+                    <field
+                        name="ubicacion_id"
+                        string="Ubicación"
+                    />
+
+                    <field
+                        name="asesora_id"
+                        string="Asesora"
+                    />
+
+                    <field
+                        name="trabajadores_id"
+                        string="Responsable"
+                    />
+
+                    <field
+                        name="importacion"
+                        string="Importación"
+                    />
+
+                    <field
+                        name="proveedor_id"
+                        string="Proveedor"
+                    />
+
+                    <field
+                        name="invoice"
+                        string="Invoice"
+                    />
+
+                    <!-- DISPONIBILIDAD -->
+                    <separator/>
+
+                    <filter
+                        name="filter_disponible"
+                        string="Disponibles"
+                        domain="[('disponibilidad_id', '=', 'disponible')]"
+                    />
+
+                    <filter
+                        name="filter_separada"
+                        string="Separadas"
+                        domain="[('disponibilidad_id', '=', 'separada')]"
+                    />
+
+                    <filter
+                        name="filter_no_disponible"
+                        string="No disponibles"
+                        domain="[('disponibilidad_id', '=', 'no_disponible')]"
+                    />
+
+                    <!-- ESTADO -->
+                    <separator/>
+
+                    <filter
+                        name="filter_sin_revisar"
+                        string="Sin revisar"
+                        domain="[('estado_ventas_id', '=', 'sin_revisar')]"
+                    />
+
+                    <filter
+                        name="filter_para_revision"
+                        string="Para revisión"
+                        domain="[('estado_ventas_id', '=', 'para_revision')]"
+                    />
+
+                    <filter
+                        name="filter_revision"
+                        string="En revisión"
+                        domain="[('estado_ventas_id', '=', 'en_revision')]"
+                    />
+
+                    <filter
+                        name="filter_finalizado"
+                        string="Finalizados"
+                        domain="[('estado_ventas_id', '=', 'finalizado')]"
+                    />
+
+                    <filter
+                        name="filter_problemas"
+                        string="Con problemas"
+                        domain="[('estado_ventas_id', '=', 'con_problemas')]"
+                    />
+
+                    <filter
+                        name="filter_partes"
+                        string="De partes"
+                        domain="[('estado_ventas_id', '=', 'de_partes')]"
+                    />
+
+                    <filter
+                        name="filter_entregada"
+                        string="Entregadas"
+                        domain="[('estado_ventas_id', '=', 'entregada')]"
+                    />
+
+                    <filter
+                        name="filter_stock"
+                        string="En stock"
+                        domain="[('estado_ventas_id', '!=', 'entregada')]"
+                    />
+
+                    <!-- UBICACIÓN -->
+                    <separator/>
+
+                    <filter
+                        name="filter_primer_piso"
+                        string="Primer piso"
+                        domain="[('ubicacion_id', '=', 'primer_piso')]"
+                    />
+
+                    <filter
+                        name="filter_tercer_piso"
+                        string="Tercer piso"
+                        domain="[('ubicacion_id', '=', 'tercer_piso')]"
+                    />
+
+                    <filter
+                        name="filter_segundo_local"
+                        string="Segundo local"
+                        domain="[('ubicacion_id', '=', 'segundo_local')]"
+                    />
+
+                    <filter
+                        name="filter_covida"
+                        string="Covida"
+                        domain="[('ubicacion_id', '=', 'covida')]"
+                    />
+
+                    <!-- TIPO -->
+                    <separator/>
+
+                    <filter
+                        name="filter_color"
+                        string="Color"
+                        domain="[('tipo_id', '=', 'color')]"
+                    />
+
+                    <filter
+                        name="filter_monocromatica"
+                        string="Monocromáticas"
+                        domain="[('tipo_id', '=', 'monocromatica')]"
+                    />
+
+                    <!-- REVISIÓN -->
+                    <separator/>
+
+                    <filter
+                        name="filter_paso_papel"
+                        string="Paso de papel"
+                        domain="[('tipo_revision', '=', 'paso_papel')]"
+                    />
+
+                    <filter
+                        name="filter_regular"
+                        string="Revisión regular"
+                        domain="[('tipo_revision', '=', 'regular')]"
+                    />
+
+                    <filter
+                        name="filter_cliente_final"
+                        string="Cliente final"
+                        domain="[('tipo_revision', '=', 'cliente_final')]"
+                    />
+
+                    <!-- PRIORIDAD -->
+                    <separator/>
+
+                    <filter
+                        name="filter_prioridad_alta"
+                        string="Prioridad alta"
+                        domain="[('prioridad', '=', 'alta')]"
+                    />
+
+                    <filter
+                        name="filter_prioridad_baja"
+                        string="Prioridad baja"
+                        domain="[('prioridad', '=', 'bajaubicacion')]"
+                    />
+
+                    <!-- ESPECIALES -->
+                    <separator/>
+
+                    <filter
+                        name="filter_con_cliente"
+                        string="Con cliente"
+                        domain="[('cliente_id', '!=', False)]"
+                    />
+
+                    <filter
+                        name="filter_sin_cliente"
+                        string="Sin cliente"
+                        domain="[('cliente_id', '=', False)]"
+                    />
+
+                    <filter
+                        name="filter_con_descripcion"
+                        string="Con observaciones"
+                        domain="[('descripcion', '!=', False)]"
+                    />
+
+                    <filter
+                        name="filter_check_ingreso"
+                        string="Ingreso registrado"
+                        domain="[('check_ingreso', '=', True)]"
+                    />
+
+                    <filter
+                        name="filter_sin_check_ingreso"
+                        string="Sin ingreso"
+                        domain="[('check_ingreso', '=', False)]"
+                    />
+
+                    <filter
+                        name="filter_con_token_ubicacion"
+                        string="Con token de ubicación"
+                        domain="[('location_change_token', '!=', False)]"
+                    />
+
+                    <filter
+                        name="filter_actualizadas_snmp"
+                        string="Actualizadas por SNMP"
+                        domain="[('ultima_fuente_actualizacion', '=', 'snmp')]"
+                    />
+
+                    <!-- FECHAS -->
+                    <separator/>
+
+                    <filter
+                        name="filter_creadas_hoy"
+                        string="Ingresadas hoy"
+                        domain="[
+                            ('create_date', '&gt;=', datetime.datetime.combine(context_today(), datetime.time(0, 0, 0))),
+                            ('create_date', '&lt;=', datetime.datetime.combine(context_today(), datetime.time(23, 59, 59)))
+                        ]"
+                    />
+
+                    <filter
+                        name="filter_creadas_semana"
+                        string="Ingresadas esta semana"
+                        domain="[
+                            ('create_date', '&gt;=', (context_today() - datetime.timedelta(days=context_today().weekday())).strftime('%Y-%m-%d')),
+                            ('create_date', '&lt;=', (context_today() + datetime.timedelta(days=6-context_today().weekday())).strftime('%Y-%m-%d'))
+                        ]"
+                    />
+
+                    <filter
+                        name="filter_creadas_mes"
+                        string="Ingresadas este mes"
+                        domain="[
+                            ('create_date', '&gt;=', datetime.datetime.now().strftime('%Y-%m-01'))
+                        ]"
+                    />
+
+                    <filter
+                        name="filter_separadas_hoy"
+                        string="Separadas hoy"
+                        domain="[('fecha_separacion', '=', context_today())]"
+                    />
+
+                    <filter
+                        name="filter_actualizadas_snmp_hoy"
+                        string="SNMP actualizado hoy"
+                        domain="[
+                            ('ultima_actualizacion_snmp', '&gt;=', datetime.datetime.combine(context_today(), datetime.time(0, 0, 0)))
+                        ]"
+                    />
+
+                    <!-- INGRESO -->
+                    <separator/>
+
+                    <filter
+                        name="filter_ingreso_ok_no_obs"
+                        string="Ingreso sin observaciones"
+                        domain="[('ingreso_estado', '=', 'ok_no_obs')]"
+                    />
+
+                    <filter
+                        name="filter_ingreso_ok_obs"
+                        string="Ingreso con observaciones"
+                        domain="[('ingreso_estado', '=', 'ok_obs')]"
+                    />
+
+                    <filter
+                        name="filter_ingreso_rechazado"
+                        string="Ingreso rechazado"
+                        domain="[('ingreso_estado', '=', 'rechazado')]"
+                    />
+
+                    <!-- AGRUPACIONES -->
+                    <group expand="0" string="Agrupar por">
+
+                        <filter
+                            name="group_disponibilidad"
+                            string="Disponibilidad"
+                            context="{'group_by': 'disponibilidad_id'}"
+                        />
+
+                        <filter
+                            name="group_estado"
+                            string="Estado técnico"
+                            context="{'group_by': 'estado_ventas_id'}"
+                        />
+
+                        <filter
+                            name="group_marca"
+                            string="Marca"
+                            context="{'group_by': 'marca'}"
+                        />
+
+                        <filter
+                            name="group_modelo"
+                            string="Modelo"
+                            context="{'group_by': 'name'}"
+                        />
+
+                        <filter
+                            name="group_tipo_maquina"
+                            string="Tipo de equipo"
+                            context="{'group_by': 'tipo_maquina'}"
+                        />
+
+                        <filter
+                            name="group_tipo"
+                            string="Color o monocromática"
+                            context="{'group_by': 'tipo_id'}"
+                        />
+
+                        <filter
+                            name="group_ubicacion"
+                            string="Ubicación"
+                            context="{'group_by': 'ubicacion_id'}"
+                        />
+
+                        <filter
+                            name="group_cliente"
+                            string="Cliente"
+                            context="{'group_by': 'cliente_id'}"
+                        />
+
+                        <filter
+                            name="group_asesora"
+                            string="Asesora"
+                            context="{'group_by': 'asesora_id'}"
+                        />
+
+                        <filter
+                            name="group_proveedor"
+                            string="Proveedor"
+                            context="{'group_by': 'proveedor_id'}"
+                        />
+
+                        <filter
+                            name="group_importacion"
+                            string="Importación"
+                            context="{'group_by': 'importacion'}"
+                        />
+
+                        <filter
+                            name="group_trabajador"
+                            string="Responsable"
+                            context="{'group_by': 'trabajadores_id'}"
+                        />
+
+                        <filter
+                            name="group_tipo_revision"
+                            string="Tipo de revisión"
+                            context="{'group_by': 'tipo_revision'}"
+                        />
+
+                        <filter
+                            name="group_prioridad"
+                            string="Prioridad"
+                            context="{'group_by': 'prioridad'}"
+                        />
+
+                        <filter
+                            name="group_fuente_actualizacion"
+                            string="Fuente de actualización"
+                            context="{'group_by': 'ultima_fuente_actualizacion'}"
+                        />
+
+                        <filter
+                            name="group_ingreso_estado"
+                            string="Estado de ingreso"
+                            context="{'group_by': 'ingreso_estado'}"
+                        />
+
+                        <separator/>
+
+                        <filter
+                            name="group_fecha_creacion"
+                            string="Mes de ingreso"
+                            context="{'group_by': 'create_date:month'}"
+                        />
+
+                        <filter
+                            name="group_fecha_creacion_semana"
+                            string="Semana de ingreso"
+                            context="{'group_by': 'create_date:week'}"
+                        />
+
+                        <filter
+                            name="group_fecha_separacion"
+                            string="Fecha de separación"
+                            context="{'group_by': 'fecha_separacion'}"
+                        />
+
+                        <filter
+                            name="group_fecha_entrega"
+                            string="Fecha de entrega"
+                            context="{'group_by': 'fecha_entrega'}"
+                        />
+
+                    </group>
+
+                </search>
+
+            </field>
+        </record>
+
+
+        <!-- =========================================================
+             VISTA KANBAN
+        ========================================================== -->
+        <record id="maquinas_kanban_view" model="ir.ui.view">
+            <field name="name">sat.sat.kanban</field>
+            <field name="model">sat.sat</field>
+            <field name="arch" type="xml">
+
+                <kanban
+                    string="Equipos"
+                    default_group_by="estado_ventas_id"
+                    class="o_kanban_small_column sat_equipment_kanban"
+                    quick_create="false"
+                    sample="1"
+                >
+
+                    <field name="id"/>
+                    <field name="name"/>
+                    <field name="cliente_id"/>
+                    <field name="tipo_maquina"/>
+                    <field name="marca"/>
+                    <field name="serie_id"/>
+                    <field name="contometro"/>
+                    <field name="disponibilidad_id"/>
+                    <field name="estado_ventas_id"/>
+                    <field name="tipo_id"/>
+                    <field name="precio_venta"/>
+                    <field
+                        name="precio_compra"
+                        groups="base.group_system,sat_jefes_group_user"
+                    />
+                    <field name="currency_id"/>
+                    <field name="asesora_id"/>
+                    <field name="ubicacion_id"/>
+                    <field name="importacion"/>
                     <field name="descripcion"/>
-                    <field name="state" widget="badge"
-                              decoration-success="state == 'entregada'"
-                              decoration-warning="state == 'encontrada'"
-                              decoration-info="state == 'buscando'"/>
-                    <field name="fecha_gestion" string="Fecha Retiro"/>
-                    <field name="gestionado_por"/>
-                  </list>
-                </field>
-              </page>
-             <page string="Pruebas Técnicas" name="pruebas_tecnicas">
+                    <field name="factura_venta"/>
+                    <field name="fecha_entrega"/>
+                    <field name="activador"/>
+                    <field name="check_ingreso"/>
+                    <field name="reparaciones_count"/>
 
-    <div class="sat_pruebas_fullwidth_container">
-        <field name="prueba_tecnica_dashboard_json"
-               widget="sat_pruebas_dashboard"
-               nolabel="1"
-               readonly="1"/>
-    </div>
+                    <progressbar
+                        field="estado_ventas_id"
+                        colors="{
+                            'finalizado': 'success',
+                            'con_problemas': 'warning',
+                            'de_partes': 'danger',
+                            'en_revision': 'info',
+                            'para_revision': 'info',
+                            'sin_revisar': 'secondary',
+                            'entregada': 'primary'
+                        }"
+                    />
 
-    <separator string="Vista clásica Odoo"/>
+                    <templates>
 
-    <field name="prueba_ids" nolabel="1">
-        <list create="0"
-              edit="0"
-              delete="0"
-              decoration-success="estado_toner == 'ok'"
-              decoration-warning="estado_toner == 'bajo'"
-              decoration-danger="estado_toner == 'critico'">
+                        <t t-name="card">
 
-            <field name="reparacion_id"/>
+                            <div
+                                t-attf-class="
+                                    sat_equipment_card
+                                    oe_kanban_global_click
+                                    sat_equipment_card_state_#{record.estado_ventas_id.raw_value or 'default'}
+                                "
+                            >
 
-            <field name="contador_inicial_total"/>
-            <field name="contador_actual_total"/>
-            <field name="contador_impresiones"/>
-            <field name="contador_copias"/>
-            <field name="contador_scanner"/>
-            <field name="contador_duplex"/>
+                                <!-- INDICADOR LATERAL -->
+                                <div class="sat_equipment_card_state_line"/>
 
-            <field name="delta_total"/>
-            <field name="delta_impresiones"/>
-            <field name="delta_copias"/>
-            <field name="delta_scanner"/>
-            <field name="delta_duplex"/>
+                                <!-- CABECERA -->
+                                <div class="sat_equipment_card_header">
 
-            <field name="toner_negro" widget="progressbar"/>
-            <field name="toner_cyan" widget="progressbar"/>
-            <field name="toner_magenta" widget="progressbar"/>
-            <field name="toner_amarillo" widget="progressbar"/>
+                                    <div class="sat_equipment_card_title_area">
 
-            <field name="estado_toner"/>
-            <field name="estado_prueba"/>
-            <field name="nivel_prueba"/>
-            <field name="cantidad_alertas_snmp"/>
-            <field name="fecha_ultima_actualizacion"/>
-        </list>
-    </field>
+                                        <div class="sat_equipment_card_machine_icon">
+                                            <i class="fa fa-print"/>
+                                        </div>
 
-</page>
-              <page string="📲 Notificaciones WhatsApp" name="notificaciones_whatsapp">
-    <field name="notificacion_log_ids" readonly="1" nolabel="1">
-        <list create="0" edit="0" delete="0"
-              decoration-success="state == 'sent'"
-              decoration-warning="state in ('pending', 'pending_out_of_hours', 'sending')"
-              decoration-danger="state == 'error'"
-              decoration-muted="state in ('cancelled', 'skipped_duplicate')">
+                                        <div class="sat_equipment_card_title_content">
 
-            <field name="create_date" string="Creado"/>
-            <field name="event_type" string="Evento"/>
-            <field name="recipient_type" string="Tipo"/>
-            <field name="recipient_name" string="Destinatario"/>
-            <field name="phone_clean" string="Teléfono"/>
-            <field name="state" string="Estado" widget="badge"
-                   decoration-success="state == 'sent'"
-                   decoration-warning="state in ('pending', 'pending_out_of_hours', 'sending')"
-                   decoration-danger="state == 'error'"
-                   decoration-muted="state in ('cancelled', 'skipped_duplicate')"/>
-            <field name="lima_scheduled_text" string="Programado Lima"/>
-            <field name="lima_sent_text" string="Enviado Lima"/>
-            <field name="retry_count" string="Reintentos"/>
-            <field name="error_message" string="Error"/>
-        </list>
-    </field>
-</page>
-            </notebook>
-          </sheet>
-          <!-- COMENTARIOS -->
-          <chatter />
-        </form>
-      </field>
-    </record>
-    <record id="maquinas_tree_sat" model="ir.ui.view">
-      <field name="name">sat.tree</field>
-      <field name="model">sat.sat</field>
-      <field name="type">list</field>
-      <field name="arch" type="xml">
-        <list default_order="id desc" js_class="sat_tree_dashboard">
-          <field name="importacion" optional="hide" />
-          <field name="proveedor_id" optional="hide" />
-          <field name="descripcion" optional="hide" />
-          <!-- Información del Cliente -->
-          <field name="cliente_nombre" string="Cliente" />
-          <field name="tipo_maquina" />
-          <field name="marca" />
-          <!-- Información Principal -->
-          <field name="name" class="h6 fw-bold text-primary" />
-          <field name="serie_id" />
-          <!-- Datos Operativos -->
-          <field name="contometro" class="text-end" />
-          <field name="ubicacion_id" class="fst-italic" />
-          <!-- Estados y Alertas -->
-          <field name="disponibilidad_id"
-            widget="badge"
-            class="rounded-pill px-3"
-            decoration-success="disponibilidad_id == 'disponible'"
-            decoration-warning="disponibilidad_id == 'separada'"
-            decoration-danger="disponibilidad_id == 'no_disponible'" />
-          <field name="estado_ventas_id"
-            widget="badge"
-            class="rounded-pill px-3"
-            decoration-muted="estado_ventas_id == 'sin_revisar'"
-            decoration-info="estado_ventas_id == 'en_revision'"
-            decoration-success="estado_ventas_id == 'finalizado'"
-            decoration-danger="estado_ventas_id not in ('sin_revisar', 'en_revision', 'finalizado', 'entregada')"
-            decoration-warning="estado_ventas_id == 'entregada'" />
-          <field name="icono_rojo"
-            widget="html"
-            string=" "
-            invisible="activador == 'no'"
-            class="text-danger fs-5" />
-          <field name="check_ingreso" readonly="1" string="Descarga"  widget='boolean_button'/>
-          <!-- Campos Opcionales -->
-          <field name="create_date" string="Ingreso" widget="remaining_days" optional="hide" />
-          <field name="fecha_separacion" string="Separada" widget="remaining_days"
-            invisible="disponibilidad_id != 'separada'" optional="hide" />
-          <field name="fecha_para_revision" string="Fecha para revisión" optional="hide" />
-          <field name="activador" optional="hide" />
-          <field name="currency_id" string="Tipo de moneda" optional="hide" />
-          <field name="precio_compra" widget="monetary" options="{'currency_field': 'currency_id'}"
-            optional="hide" groups="base.group_system, sat_jefes_group_user" />
-          <field name="asesora_id" optional="hide" />
-          <!-- Botones de Acción -->
-          <button name="action_primer"
-            type="object"
-            class="btn btn-light rounded me-1"
-            icon="fa-building-o"
-            groups="base.group_system"
-            title="Primer piso" />
-          <button name="action_tercero"
-            type="object"
-            class="btn btn-light rounded me-1"
-            icon="fa-building"
-            groups="base.group_system"
-            title="Tercer piso" />
-          <button name="action_segundo"
-            type="object"
-            class="btn btn-light rounded me-1"
-            icon="fa-truck"
-            groups="base.group_system"
-            title="Segundo local" />
-          <button name="view_reparaciones_ids"
-            type="object"
-            class="btn btn-primary rounded"
-            icon="fa-wrench"
-            invisible="estado_ventas_id != 'finalizado'"
-            title="Ver Reparaciones" />
-          <button
-              name="action_colocar_en_revision"
-              type="object"
-              string=""
-              class="btn-primary"
-              icon="fa-search"
-              help="Marca esta maquina para revisión"
-              invisible="estado_ventas_id != 'sin_revisar' or not id"
-          />
-          <button
-              name="action_quitar_de_revision"
-              type="object"
-              string=""
-              icon="fa-check-circle"
-              help="Retira esta maquina del estado para revisión"
-              invisible="estado_ventas_id != 'para_revision' or not id"
-          />
-          <!-- Botón para imprimir PDF -->
-          <button
-              name="action_print_reparacion_pdf"
-              type="object"
-              string=""
-              icon="fa-file-pdf-o" invisible="estado_ventas_id != 'finalizado'"
-              help="Imprime la información de la reparación en formato PDF"
-          />
-          <!-- Botón para ver galería de fotos -->
-          <button
-              name="action_open_reparacion_gallery"
-              type="object"
-              string=""
-              icon="fa-camera" invisible="estado_ventas_id != 'finalizado'"
-              help="Abre el visor de fotos de la reparación"
-          />
-         <!-- <button name="action_entregar"
-        string="Entregar"
-        type="object"
-        class="btn-primary"
-        invisible="estado_ventas_id == 'entregada'"/>
-          <button name="action_regresar_a_finalizado"
-              string="Regresar a Finalizado"
-              type="object"
-              class="btn-secondary"
-              invisible="estado_ventas_id != 'entregada'"/>-->
-        </list>
-      </field>
-    </record>
-    <!-- Búsqueda -->
-    <record id="Sat_search_view" model="ir.ui.view">
-      <field name="name">sat.sat.search</field>
-      <field name="model">sat.sat</field>
-      <field name="arch" type="xml">
-        <search string="Buscar Máquinas">
-          <!-- ========================================
-           CAMPOS DE BÚSQUEDA
-      ======================================== -->
-          <field name="serie_id" string="Serie"/>
-          <field name="tipo_maquina" string="Tipo de Máquina"/>
-          <field name="marca" string="Marca"/>
-          <field name="name" string="Modelo"/>
-          <field name="cliente_id" string="Cliente"/>
-          <field name="ubicacion_id" string="Ubicación"/>
-          <field name="asesora_id" string="Asesora"/>
-          <field name="importacion" string="Importación"/>
-          <field name="proveedor_id" string="Proveedor"/>
-          <field name="invoice" string="Invoice"/>
-          <field name="contometro" string="Contómetro"/>
-          <field name="trabajadores_id" string="Trabajador"/>
-          <!-- ========================================
-           FILTROS POR DISPONIBILIDAD
-      ======================================== -->
-          <separator/>
-          <filter name="filter_disponible"
-              string="Disponibles"
-              domain="[('disponibilidad_id', '=', 'disponible')]"/>
-          <filter name="filter_separada"
-              string="Separadas"
-              domain="[('disponibilidad_id', '=', 'separada')]"/>
-          <filter name="filter_no_disponible"
-              string="No Disponibles"
-              domain="[('disponibilidad_id', '=', 'no_disponible')]"/>
-          <!-- ========================================
-           FILTROS POR ESTADO DE VENTAS
-      ======================================== -->
-          <separator/>
-          <filter name="filter_sin_revisar"
-              string="Sin Revisar"
-              domain="[('estado_ventas_id', '=', 'sin_revisar')]"/>
-          <filter name="filter_para_revision"
-              string="Para Revisión"
-              domain="[('estado_ventas_id', '=', 'para_revision')]"/>
-          <filter name="filter_revision"
-              string="En Revisión"
-              domain="[('estado_ventas_id', '=', 'en_revision')]"/>
-          <filter name="filter_finalizado"
-              string="Finalizado"
-              domain="[('estado_ventas_id', '=', 'finalizado')]"/>
-          <filter name="filter_problemas"
-              string="Con Problemas"
-              domain="[('estado_ventas_id', '=', 'con_problemas')]"/>
-          <filter name="filter_partes"
-              string="De Partes"
-              domain="[('estado_ventas_id', '=', 'de_partes')]"/>
-          <filter name="filter_entregada"
-              string="Entregada"
-              domain="[('estado_ventas_id', '=', 'entregada')]"/>
-          <filter name="filter_stock"
-              string="En Stock"
-              domain="[('estado_ventas_id', '!=', 'entregada')]"/>
-          <!-- ========================================
-           FILTROS POR UBICACIÓN
-      ======================================== -->
-          <separator/>
-          <filter name="filter_primer_piso"
-              string="Primer Piso"
-              domain="[('ubicacion_id', '=', 'primer_piso')]"/>
-          <filter name="filter_tercer_piso"
-              string="Tercer Piso"
-              domain="[('ubicacion_id', '=', 'tercer_piso')]"/>
-          <filter name="filter_segundo_local"
-              string="Segundo Local"
-              domain="[('ubicacion_id', '=', 'segundo_local')]"/>
-          <filter name="filter_covida"
-              string="Covida"
-              domain="[('ubicacion_id', '=', 'covida')]"/>
-          <!-- ========================================
-           FILTROS POR TIPO DE MÁQUINA
-      ======================================== -->
-          <separator/>
-          <filter name="filter_color"
-              string="Color"
-              domain="[('tipo_id', '=', 'color')]"/>
-          <filter name="filter_monocromatica"
-              string="Monocromática"
-              domain="[('tipo_id', '=', 'monocromatica')]"/>
-          <!-- ========================================
-           FILTROS POR TIPO DE REVISIÓN
-      ======================================== -->
-          <separator/>
-          <filter name="filter_paso_papel"
-              string="Paso Papel"
-              domain="[('tipo_revision', '=', 'paso_papel')]"/>
-          <filter name="filter_regular"
-              string="Regular"
-              domain="[('tipo_revision', '=', 'regular')]"/>
-          <filter name="filter_cliente_final"
-              string="Cliente Final"
-              domain="[('tipo_revision', '=', 'cliente_final')]"/>
-          <!-- ========================================
-           FILTROS POR PRIORIDAD
-      ======================================== -->
-          <separator/>
-          <filter name="filter_prioridad_alta"
-              string="Prioridad Alta"
-              domain="[('prioridad', '=', 'alta')]"/>
-          <filter name="filter_prioridad_baja"
-              string="Prioridad Baja"
-              domain="[('prioridad', '=', 'bajaubicacion')]"/>
-          <!-- ========================================
-           FILTROS ESPECIALES
-      ======================================== -->
-          <separator/>
-          <filter name="filter_con_cliente"
-              string="Con Cliente Asignado"
-              domain="[('cliente_id', '!=', False)]"/>
-          <filter name="filter_sin_cliente"
-              string="Sin Cliente Asignado"
-              domain="[('cliente_id', '=', False)]"/>
-          <filter name="filter_con_descripcion"
-              string="Con Descripción/Problema"
-              domain="[('descripcion', '!=', False)]"/>
-          <filter name="filter_check_ingreso"
-              string="Con Ingreso Registrado"
-              domain="[('check_ingreso', '=', True)]"/>
-          <filter name="filter_sin_check_ingreso"
-              string="Sin Ingreso Registrado"
-              domain="[('check_ingreso', '=', False)]"/>
-          <filter name="filter_separadas_recientemente"
-              string="Separadas Recientemente"
-              domain="[('fecha_separacion', '!=', False)]"/>
-          <filter name="filter_con_token_ubicacion"
-              string="Con Token de Ubicación"
-              domain="[('location_change_token', '!=', False)]"/>
-          <filter name="filter_actualizadas_snmp"
-              string="Actualizadas por SNMP"
-              domain="[('ultima_fuente_actualizacion', '=', 'snmp')]"/>
-          <!-- ========================================
-           FILTROS TEMPORALES
-      ======================================== -->
-          <separator/>
-          <filter name="filter_creadas_hoy"
-              string="Creadas Hoy"
-              domain="[('create_date', '&gt;=', datetime.datetime.combine(context_today(), datetime.time(0,0,0))),
-                       ('create_date', '&lt;=', datetime.datetime.combine(context_today(), datetime.time(23,59,59)))]"/>
-          <filter name="filter_creadas_semana"
-              string="Creadas Esta Semana"
-              domain="[('create_date', '&gt;=', (context_today() - datetime.timedelta(days=context_today().weekday())).strftime('%Y-%m-%d')),
-                       ('create_date', '&lt;=', (context_today() + datetime.timedelta(days=6-context_today().weekday())).strftime('%Y-%m-%d'))]"/>
-          <filter name="filter_creadas_mes"
-              string="Creadas Este Mes"
-              domain="[('create_date', '&gt;=', datetime.datetime.now().strftime('%Y-%m-01'))]"/>
-          <filter name="filter_separadas_hoy"
-              string="Separadas Hoy"
-              domain="[('fecha_separacion', '=', context_today())]"/>
-          <filter name="filter_actualizadas_snmp_hoy"
-              string="Actualizadas SNMP Hoy"
-              domain="[('ultima_actualizacion_snmp', '&gt;=', datetime.datetime.combine(context_today(), datetime.time(0,0,0)))]"/>
-          <!-- ========================================
-           FILTROS POR ESTADO DE INGRESO
-      ======================================== -->
-          <separator/>
-          <filter name="filter_ingreso_ok_no_obs"
-              string="Ingreso OK (sin obs)"
-              domain="[('ingreso_estado', '=', 'ok_no_obs')]"/>
-          <filter name="filter_ingreso_ok_obs"
-              string="Ingreso OK (con obs)"
-              domain="[('ingreso_estado', '=', 'ok_obs')]"/>
-          <filter name="filter_ingreso_rechazado"
-              string="Ingreso Rechazado"
-              domain="[('ingreso_estado', '=', 'rechazado')]"/>
-          <!-- ========================================
-           AGRUPAR POR
-      ======================================== -->
-          <separator/>
-          <group expand="0" string="Agrupar Por">
-            <filter name="group_disponibilidad"
-                string="Disponibilidad"
-                context="{'group_by': 'disponibilidad_id'}"/>
-            <filter name="group_estado"
-                string="Estado de Ventas"
-                context="{'group_by': 'estado_ventas_id'}"/>
-            <filter name="group_marca"
-                string="Marca"
-                context="{'group_by': 'marca'}"/>
-            <filter name="group_modelo"
-                string="Modelo"
-                context="{'group_by': 'name'}"/>
-            <filter name="group_tipo_maquina"
-                string="Tipo de Máquina"
-                context="{'group_by': 'tipo_maquina'}"/>
-            <filter name="group_tipo"
-                string="Tipo (Color/Mono)"
-                context="{'group_by': 'tipo_id'}"/>
-            <filter name="group_ubicacion"
-                string="Ubicación"
-                context="{'group_by': 'ubicacion_id'}"/>
-            <filter name="group_cliente"
-                string="Cliente"
-                context="{'group_by': 'cliente_id'}"/>
-            <filter name="group_asesora"
-                string="Asesora"
-                context="{'group_by': 'asesora_id'}"/>
-            <filter name="group_proveedor"
-                string="Proveedor"
-                context="{'group_by': 'proveedor_id'}"/>
-            <filter name="group_importacion"
-                string="Importación"
-                context="{'group_by': 'importacion'}"/>
-            <filter name="group_trabajador"
-                string="Trabajador Asignado"
-                context="{'group_by': 'trabajadores_id'}"/>
-            <filter name="group_tipo_revision"
-                string="Tipo de Revisión"
-                context="{'group_by': 'tipo_revision'}"/>
-            <filter name="group_prioridad"
-                string="Prioridad"
-                context="{'group_by': 'prioridad'}"/>
-            <filter name="group_fuente_actualizacion"
-                string="Fuente Actualización"
-                context="{'group_by': 'ultima_fuente_actualizacion'}"/>
-            <filter name="group_ingreso_estado"
-                string="Estado de Ingreso"
-                context="{'group_by': 'ingreso_estado'}"/>
-            <separator/>
-            <filter name="group_fecha_creacion"
-                string="Fecha de Creación (Mes)"
-                context="{'group_by': 'create_date:month'}"/>
-            <filter name="group_fecha_creacion_semana"
-                string="Fecha de Creación (Semana)"
-                context="{'group_by': 'create_date:week'}"/>
-            <filter name="group_fecha_separacion"
-                string="Fecha de Separación"
-                context="{'group_by': 'fecha_separacion'}"/>
-            <filter name="group_fecha_entrega"
-                string="Fecha de Entrega"
-                context="{'group_by': 'fecha_entrega'}"/>
-          </group>
-        </search>
-      </field>
-    </record>
-    <!-- Kanban -->
-    <record id="maquinas_kanban_view" model="ir.ui.view">
-      <field name="name">maquinas.kanban</field>
-      <field name="model">sat.sat</field>
-      <field name="arch" type="xml">
-        <kanban default_group_by="estado_ventas_id" class="o_kanban_dashboard" sample="1">
-          <field name="id" />
-          <field name="name" />
-          <field name="cliente_id" />
-          <field name="tipo_maquina" />
-          <field name="marca" />
-          <field name="serie_id" />
-          <field name="contometro" />
-          <field name="disponibilidad_id" />
-          <field name="estado_ventas_id" />
-          <field name="tipo_id" />
-          <field name="precio_venta" />
-          <field name="precio_compra" groups="base.group_system, sat_jefes_group_user" />
-          <field name="asesora_id" />
-          <field name="ubicacion_id" />
-          <field name="importacion" />
-          <field name="descripcion" />
-          <field name="factura_venta" />
-          <field name="fecha_entrega" />
-          <field name="activador" />
-          <progressbar field="estado_ventas_id"
-            colors='{"finalizado": "success", 
-                        "con_problemas": "warning", 
-                        "de_partes": "danger",
-                        "en_revision": "info",
-                        "sin_revisar": "secondary",
-                        "entregada": "primary"}' />
-          <templates>
-            <t t-name="card">
-              <div class="oe_kanban_global_click position-relative shadow-sm rounded">
-                <!-- Header con estado y disponibilidad -->
-                <div
-                  class="d-flex justify-content-between align-items-center p-2 bg-light border-bottom">
-                  <div class="d-flex align-items-center">
-                    <!-- Icono dinámico según estado -->
-                    <i
-                      t-attf-class="fa me-2 #{
-                                    record.estado_ventas_id.raw_value == 'sin_revisar' ? 'fa-clock text-secondary' :
-                                    record.estado_ventas_id.raw_value == 'para_revision' ? 'fa-search text-info' :
-                                    record.estado_ventas_id.raw_value == 'asignado' ? 'fa-user-check text-primary' :
-                                    record.estado_ventas_id.raw_value == 'en_revision' ? 'fa-tools text-info' :
-                                    record.estado_ventas_id.raw_value == 'finalizado' ? 'fa-check-circle text-success' :
-                                    record.estado_ventas_id.raw_value == 'con_problemas' ? 'fa-exclamation-triangle text-warning' :
-                                    record.estado_ventas_id.raw_value == 'de_partes' ? 'fa-cog text-danger' :
-                                    record.estado_ventas_id.raw_value == 'entregada' ? 'fa-truck text-success' :
-                                    'fa-question text-secondary'}"
-                      title="Estado" />
-                    <field name="estado_ventas_id" widget="badge"
-                      decoration-success="estado_ventas_id == 'finalizado' or estado_ventas_id == 'entregada'"
-                      decoration-warning="estado_ventas_id == 'con_problemas'"
-                      decoration-danger="estado_ventas_id == 'de_partes'"
-                      decoration-info="estado_ventas_id == 'en_revision' or estado_ventas_id == 'para_revision'"
-                      decoration-primary="estado_ventas_id == 'asignado'"
-                      decoration-secondary="estado_ventas_id == 'sin_revisar'" />
-                  </div>
-                  <div class="d-flex align-items-center">
-                    <!-- Icono dinámico según disponibilidad -->
-                    <i
-                      t-attf-class="fa me-2 #{
-                                    record.disponibilidad_id.raw_value == 'disponible' ? 'fa-check-circle text-success' :
-                                    record.disponibilidad_id.raw_value == 'separada' ? 'fa-bookmark text-warning' :
-                                    record.disponibilidad_id.raw_value == 'no_disponible' ? 'fa-times-circle text-danger' :
-                                    'fa-question text-secondary'}"
-                      title="Disponibilidad" />
-                    <field name="disponibilidad_id" widget="badge"
-                      decoration-success="disponibilidad_id == 'disponible'"
-                      decoration-warning="disponibilidad_id == 'separada'"
-                      decoration-danger="disponibilidad_id == 'no_disponible'" />
-                  </div>
-                </div>
-                <div class="p-3">
-                  <!-- Información del Cliente y Asesora -->
-                  <div class="mb-3">
-                    <div class="d-flex align-items-center mb-2">
-                      <i class="fa fa-building text-primary me-2" title="Cliente" />
-                      <span class="text-muted me-1">Cliente:</span>
-                      <field name="cliente_id" class="fw-bold" />
-                    </div>
-                    <div class="d-flex align-items-center mb-2">
-                      <i class="fa fa-female text-pink me-2" title="Asesora" />
-                      <span class="text-muted me-1">Asesora:</span>
-                      <field name="asesora_id" />
-                    </div>
-                  </div>
-                  <!-- Información de la Máquina -->
-                  <div class="mb-3">
-                    <div class="d-flex align-items-center mb-2">
-                      <i class="fa fa-print text-success me-2" title="Tipo" />
-                      <span class="text-muted me-1">Tipo:</span>
-                      <field name="tipo_maquina" />
-                    </div>
-                    <div class="d-flex align-items-center mb-2">
-                      <i class="fa fa-trademark text-info me-2" title="Marca" />
-                      <span
-                        class="text-muted me-1">Marca:</span>
-                      <field name="marca" /> -
-                    </div>
-                    <div class="d-flex align-items-center mb-2">
-                      <i class="fa fa-trademark text-info me-2" title="Modelo" />
-                      <span
-                        class="text-muted me-1">Modelo:</span>
-                      <field name="name" /> -
-                    </div>
-                    <div class="d-flex align-items-center mb-2">
-                      <i class="fa fa-barcode text-secondary me-2" title="Serie" />
-                      <span class="text-muted me-1">Serie:</span>
-                    </div>
-                    <div class="d-flex align-items-center mb-2">
-                      <i class="fa fa-calculator text-dark me-2" title="Contómetro" />
-                      <span class="text-muted me-1">Contómetro:</span>
-                      <field name="contometro" />
-                    </div>
-                  </div>
-                  <!-- Precios -->
-                  <div class="mb-3">
-                    <div class="d-flex justify-content-between">
-                      <div class="d-flex align-items-center">
-                        <i class="fa fa-tag text-success me-2" title="Precio Venta" />
-                        <span class="text-muted me-1">Venta:</span>
-                        <field name="precio_venta" />
-                      </div>
-                      <div class="d-flex align-items-center"
-                        groups="base.group_system, sat_jefes_group_user">
-                        <i class="fa fa-shopping-cart text-danger me-2" title="Precio Compra" />
-                        <span class="text-muted me-1">Compra:</span>
-                        <field name="precio_compra" />
-                      </div>
-                    </div>
-                  </div>
-                  <!-- Ubicación e Importación -->
-                  <div class="mb-3">
-                    <div class="d-flex align-items-center mb-2">
-                      <i class="fa fa-map-marker-alt text-danger me-2" title="Ubicación" />
-                      <span class="text-muted me-1">Ubicación:</span>
-                      <field name="ubicacion_id" />
-                    </div>
-                    <div class="d-flex align-items-center mb-2">
-                      <i class="fa fa-plane text-info me-2" title="Importación" />
-                      <span class="text-muted me-1">Import.:</span>
-                      <field name="importacion" />
-                    </div>
-                  </div>
-                  <!-- Facturación -->
-                  <div class="pt-2 border-top" t-if="record.factura_venta.raw_value">
-                    <div class="d-flex justify-content-between align-items-center">
-                      <div class="d-flex align-items-center">
-                        <i class="fa fa-file-invoice text-primary me-2" title="Factura" />
-                        <span class="text-muted me-1">Factura:</span>
-                        <field name="factura_venta" />
-                      </div>
-                      <div class="d-flex align-items-center">
-                        <i class="fa fa-calendar text-success me-2" title="Fecha Entrega" />
-                        <field name="fecha_entrega" />
-                      </div>
-                    </div>
-                  </div>
-                  <!-- Alerta -->
-                  <div t-if="record.activador.raw_value == 'si'"
-                    class="position-absolute top-0 end-0 p-2">
-                    <i class="fa fa-exclamation-circle fa-lg text-danger" />
-                  </div>
-                </div>
-                <!-- Indicador lateral de estado -->
-                <div
-                  t-attf-class="position-absolute top-0 start-0 h-100 w-1 
-                            #{record.estado_ventas_id.raw_value == 'finalizado' ? 'bg-success' : 
-                            record.estado_ventas_id.raw_value == 'con_problemas' ? 'bg-warning' :
-                            record.estado_ventas_id.raw_value == 'de_partes' ? 'bg-danger' :
-                            record.estado_ventas_id.raw_value == 'en_revision' ? 'bg-info' : 
-                            record.estado_ventas_id.raw_value == 'entregada' ? 'bg-success' :
-                            record.estado_ventas_id.raw_value == 'asignado' ? 'bg-primary' :
-                            record.estado_ventas_id.raw_value == 'para_revision' ? 'bg-info' : 'bg-secondary'}" />
-              </div>
-            </t>
-          </templates>
-        </kanban>
-      </field>
-    </record>
-  </data>
+                                            <div class="sat_equipment_card_title">
+                                                <field name="marca"/>
+                                                <span t-if="record.marca.raw_value and record.name.raw_value">
+                                                    ·
+                                                </span>
+                                                <field name="name"/>
+                                            </div>
+
+                                            <div class="sat_equipment_card_serial">
+                                                <i class="fa fa-barcode"/>
+                                                <span>Serie:</span>
+                                                <strong>
+                                                    <field name="serie_id"/>
+                                                </strong>
+                                            </div>
+
+                                        </div>
+
+                                    </div>
+
+                                    <div
+                                        class="sat_equipment_card_problem"
+                                        t-if="record.activador.raw_value == 'si'"
+                                        title="Equipo con observaciones"
+                                    >
+                                        <i class="fa fa-exclamation-triangle"/>
+                                    </div>
+
+                                </div>
+
+                                <!-- ESTADOS -->
+                                <div class="sat_equipment_card_badges">
+
+                                    <field
+                                        name="estado_ventas_id"
+                                        widget="badge"
+                                        decoration-muted="estado_ventas_id == 'sin_revisar'"
+                                        decoration-info="estado_ventas_id in ('para_revision', 'en_revision')"
+                                        decoration-primary="estado_ventas_id == 'asignado'"
+                                        decoration-success="estado_ventas_id == 'finalizado'"
+                                        decoration-warning="estado_ventas_id == 'entregada'"
+                                        decoration-danger="estado_ventas_id in ('con_problemas', 'de_partes')"
+                                    />
+
+                                    <field
+                                        name="disponibilidad_id"
+                                        widget="badge"
+                                        decoration-success="disponibilidad_id == 'disponible'"
+                                        decoration-warning="disponibilidad_id == 'separada'"
+                                        decoration-danger="disponibilidad_id == 'no_disponible'"
+                                    />
+
+                                </div>
+
+                                <!-- INFORMACIÓN PRINCIPAL -->
+                                <div class="sat_equipment_card_body">
+
+                                    <div class="sat_equipment_card_row">
+
+                                        <div class="sat_equipment_card_row_icon">
+                                            <i class="fa fa-building-o"/>
+                                        </div>
+
+                                        <div class="sat_equipment_card_row_content">
+                                            <span class="sat_equipment_card_row_label">
+                                                Cliente
+                                            </span>
+
+                                            <strong class="sat_equipment_card_row_value">
+                                                <field name="cliente_id"/>
+                                            </strong>
+                                        </div>
+
+                                    </div>
+
+                                    <div class="sat_equipment_card_row">
+
+                                        <div class="sat_equipment_card_row_icon">
+                                            <i class="fa fa-map-marker"/>
+                                        </div>
+
+                                        <div class="sat_equipment_card_row_content">
+                                            <span class="sat_equipment_card_row_label">
+                                                Ubicación
+                                            </span>
+
+                                            <strong class="sat_equipment_card_row_value">
+                                                <field name="ubicacion_id"/>
+                                            </strong>
+                                        </div>
+
+                                    </div>
+
+                                    <div class="sat_equipment_card_metrics">
+
+                                        <div class="sat_equipment_card_metric">
+                                            <span class="sat_equipment_card_metric_label">
+                                                Contómetro
+                                            </span>
+
+                                            <strong class="sat_equipment_card_metric_value">
+                                                <field name="contometro"/>
+                                            </strong>
+                                        </div>
+
+                                        <div class="sat_equipment_card_metric">
+                                            <span class="sat_equipment_card_metric_label">
+                                                Reparaciones
+                                            </span>
+
+                                            <strong class="sat_equipment_card_metric_value">
+                                                <field name="reparaciones_count"/>
+                                            </strong>
+                                        </div>
+
+                                    </div>
+
+                                    <div
+                                        class="sat_equipment_card_row"
+                                        t-if="record.asesora_id.raw_value"
+                                    >
+
+                                        <div class="sat_equipment_card_row_icon">
+                                            <i class="fa fa-user"/>
+                                        </div>
+
+                                        <div class="sat_equipment_card_row_content">
+                                            <span class="sat_equipment_card_row_label">
+                                                Asesora
+                                            </span>
+
+                                            <span class="sat_equipment_card_row_value">
+                                                <field name="asesora_id"/>
+                                            </span>
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                                <!-- INFORMACIÓN COMPLEMENTARIA -->
+                                <div
+                                    class="sat_equipment_card_extra"
+                                    t-if="
+                                        record.factura_venta.raw_value
+                                        or record.fecha_entrega.raw_value
+                                        or record.importacion.raw_value
+                                    "
+                                >
+
+                                    <div
+                                        class="sat_equipment_card_extra_item"
+                                        t-if="record.importacion.raw_value"
+                                    >
+                                        <i class="fa fa-ship"/>
+                                        <span>Importación:</span>
+                                        <strong>
+                                            <field name="importacion"/>
+                                        </strong>
+                                    </div>
+
+                                    <div
+                                        class="sat_equipment_card_extra_item"
+                                        t-if="record.factura_venta.raw_value"
+                                    >
+                                        <i class="fa fa-file-text-o"/>
+                                        <span>Factura:</span>
+                                        <strong>
+                                            <field name="factura_venta"/>
+                                        </strong>
+                                    </div>
+
+                                    <div
+                                        class="sat_equipment_card_extra_item"
+                                        t-if="record.fecha_entrega.raw_value"
+                                    >
+                                        <i class="fa fa-calendar"/>
+                                        <span>Entrega:</span>
+                                        <strong>
+                                            <field name="fecha_entrega"/>
+                                        </strong>
+                                    </div>
+
+                                </div>
+
+                                <!-- PIE DE TARJETA -->
+                                <div class="sat_equipment_card_footer">
+
+                                    <div class="sat_equipment_card_type">
+                                        <i class="fa fa-cube"/>
+                                        <field name="tipo_maquina"/>
+                                    </div>
+
+                                    <div
+                                        class="sat_equipment_card_ingress"
+                                        t-att-title="
+                                            record.check_ingreso.raw_value
+                                            ? 'Ingreso registrado'
+                                            : 'Ingreso pendiente'
+                                        "
+                                    >
+                                        <i
+                                            t-attf-class="
+                                                fa
+                                                #{
+                                                    record.check_ingreso.raw_value
+                                                    ? 'fa-check-circle text-success'
+                                                    : 'fa-clock-o text-muted'
+                                                }
+                                            "
+                                        />
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        </t>
+
+                    </templates>
+
+                </kanban>
+
+            </field>
+        </record>
+
+    </data>
 </odoo>
