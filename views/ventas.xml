@@ -1739,15 +1739,15 @@
 
                     <progressbar
                         field="estado_ventas_id"
-                        colors="{
-                            'finalizado': 'success',
-                            'con_problemas': 'warning',
-                            'de_partes': 'danger',
-                            'en_revision': 'info',
-                            'para_revision': 'info',
-                            'sin_revisar': 'secondary',
-                            'entregada': 'primary'
-                        }"
+                        colors='{
+                            "finalizado": "success",
+                            "con_problemas": "warning",
+                            "de_partes": "danger",
+                            "en_revision": "info",
+                            "para_revision": "info",
+                            "sin_revisar": "secondary",
+                            "entregada": "primary"
+                        }'
                     />
 
                     <templates>
