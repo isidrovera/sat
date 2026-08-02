@@ -260,6 +260,26 @@ class MantenimientoTecnicoAusencia(models.Model):
     )
 
     # ============================================================
+    # CALENDARIO LABORAL
+    # ============================================================
+
+    def _get_factor_laboral_fecha(self, work_date):
+        """Obtiene el factor laboral considerando feriados peruanos."""
+        Calendar = self.env.registry.get('whatsapp.calendar.event')
+        if Calendar:
+            return self.env['whatsapp.calendar.event'].get_workday_factor(work_date)
+
+        if work_date.weekday() < 5:
+            return 1.0
+        if work_date.weekday() == 5:
+            return 0.5
+        return 0.0
+
+    def _get_horas_laborales_fecha(self, work_date):
+        factor = self._get_factor_laboral_fecha(work_date)
+        return factor * 8.0
+
+    # ============================================================
     # COMPUTES
     # ============================================================
 
@@ -302,35 +322,56 @@ class MantenimientoTecnicoAusencia(models.Model):
                 rec.horas_permiso = hora_fin - hora_inicio
             else:
                 rec.horas_permiso = 0.0
-    @api.depends('impacto_evaluacion', 'fecha_inicio', 'fecha_fin', 'dia_completo', 'hora_inicio', 'hora_fin')
+    @api.depends(
+        'impacto_evaluacion',
+        'fecha_inicio',
+        'fecha_fin',
+        'dia_completo',
+        'hora_inicio',
+        'hora_fin'
+    )
     def _compute_ajuste_meta(self):
+        """
+        Calcula el ajuste usando únicamente tiempo laboral real.
+        Los feriados y domingos valen cero; el sábado vale medio día.
+        """
         for rec in self:
             rec.dias_ajuste_meta = 0.0
             rec.horas_ajuste_meta = 0.0
 
-            if rec.impacto_evaluacion != 'reduce_meta':
-                continue
-
-            if not rec.fecha_inicio:
+            if rec.impacto_evaluacion != 'reduce_meta' or not rec.fecha_inicio:
                 continue
 
             fecha_fin = rec.fecha_fin or rec.fecha_inicio
-
             if fecha_fin < rec.fecha_inicio:
                 continue
 
-            total_dias = (fecha_fin - rec.fecha_inicio).days + 1
+            total_dias = 0.0
+            total_horas = 0.0
+            current = rec.fecha_inicio
 
-            if rec.dia_completo:
-                rec.dias_ajuste_meta = total_dias
-                rec.horas_ajuste_meta = total_dias * 8.0
-            else:
-                horas = 0.0
-                if rec.hora_fin > rec.hora_inicio:
-                    horas = rec.hora_fin - rec.hora_inicio
+            while current <= fecha_fin:
+                factor = rec._get_factor_laboral_fecha(current)
+                horas_laborales = rec._get_horas_laborales_fecha(current)
 
-                rec.horas_ajuste_meta = horas
-                rec.dias_ajuste_meta = horas / 8.0 if horas else 0.0
+                if factor > 0 and horas_laborales > 0:
+                    if rec.dia_completo:
+                        total_dias += factor
+                        total_horas += horas_laborales
+                    else:
+                        horas_ausencia = max(
+                            0.0,
+                            (rec.hora_fin or 0.0) - (rec.hora_inicio or 0.0)
+                        )
+                        horas_aplicadas = min(horas_laborales, horas_ausencia)
+                        total_horas += horas_aplicadas
+                        total_dias += min(factor, horas_aplicadas / 8.0)
+
+                current += timedelta(days=1)
+
+            rec.dias_ajuste_meta = total_dias
+            rec.horas_ajuste_meta = total_horas
+
     def _compute_correo_contabilidad(self):
         """
         Campo de compatibilidad.

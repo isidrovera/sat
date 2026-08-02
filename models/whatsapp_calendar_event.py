@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import logging
-from datetime import date
+from datetime import date, timedelta
 
 from odoo import api, fields, models, _
 from odoo.exceptions import ValidationError
@@ -262,20 +262,87 @@ class WhatsappCalendarEvent(models.Model):
         }
 
     # ==========================================================
+    # Calendario laboral compartido
+    # ==========================================================
+    @api.model
+    def is_closed_date(self, work_date):
+        """Indica si la fecha está cerrada por feriado o cierre manual."""
+        if not work_date:
+            return False
+
+        event = self.search([
+            ("event_date", "=", work_date),
+            ("active", "=", True),
+            ("is_closed", "=", True),
+            ("event_type", "in", ["holiday", "manual_closed"]),
+        ], limit=1)
+        return bool(event)
+
+    @api.model
+    def get_workday_factor(self, work_date):
+        """
+        Factor laboral general usado por evaluación y ausencias:
+        - feriado/cierre: 0.0
+        - lunes a viernes: 1.0
+        - sábado: 0.5
+        - domingo: 0.0
+        """
+        if not work_date or self.is_closed_date(work_date):
+            return 0.0
+        if work_date.weekday() < 5:
+            return 1.0
+        if work_date.weekday() == 5:
+            return 0.5
+        return 0.0
+
+    @api.model
+    def get_working_days_equivalent(self, start_date, end_date):
+        """Suma factores laborales en el rango [start_date, end_date)."""
+        if not start_date or not end_date or end_date <= start_date:
+            return 0.0
+
+        total = 0.0
+        current = start_date
+        while current < end_date:
+            total += self.get_workday_factor(current)
+            current += timedelta(days=1)
+        return total
+
+    @api.model
+    def _easter_sunday(self, year):
+        """Calcula el Domingo de Pascua para el calendario gregoriano."""
+        year = int(year)
+        a = year % 19
+        b = year // 100
+        c = year % 100
+        d = b // 4
+        e = b % 4
+        f = (b + 8) // 25
+        g = (b - f + 1) // 3
+        h = (19 * a + b - d - g + 15) % 30
+        i = c // 4
+        k = c % 4
+        l = (32 + 2 * e + 2 * i - h - k) % 7
+        m = (a + 11 * h + 22 * l) // 451
+        month = (h + l - 7 * m + 114) // 31
+        day = ((h + l - 7 * m + 114) % 31) + 1
+        return date(year, month, day)
+
+    # ==========================================================
     # Feriados Perú
     # ==========================================================
     @api.model
     def get_peru_holidays(self, year):
-        """
-        Feriados nacionales Perú.
-        Se carga localmente para no depender de una API externa.
-        """
+        """Feriados nacionales del Perú, incluyendo Semana Santa móvil."""
         year = int(year)
+        easter = self._easter_sunday(year)
+        holy_thursday = easter - timedelta(days=3)
+        good_friday = easter - timedelta(days=2)
 
         return [
             (date(year, 1, 1), "Año Nuevo"),
-            (date(year, 4, 17), "Jueves Santo"),
-            (date(year, 4, 18), "Viernes Santo"),
+            (holy_thursday, "Jueves Santo"),
+            (good_friday, "Viernes Santo"),
             (date(year, 5, 1), "Día del Trabajo"),
             (date(year, 6, 7), "Batalla de Arica y Día de la Bandera"),
             (date(year, 6, 29), "San Pedro y San Pablo"),

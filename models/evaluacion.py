@@ -1507,25 +1507,18 @@ class EvaluacionPersonal(models.Model):
 
     @api.depends('fecha')
     def _compute_dias_evaluados(self):
-        """Calcula los días laborables del mes (L-V completos, Sábados 0.5)"""
+        """Calcula días laborables equivalentes excluyendo feriados."""
         for record in self:
-            if record.fecha:
-                inicio_mes = record.fecha.replace(day=1)
-                fin_mes = inicio_mes + relativedelta(months=1)
-                dias = 0.0
-                current = inicio_mes
-                
-                while current < fin_mes:
-                    if current.weekday() < 5:  # Lunes a Viernes
-                        dias += 1.0
-                    elif current.weekday() == 5:  # Sábado
-                        dias += 0.5
-                    # Domingo no cuenta (weekday() == 6)
-                    current += relativedelta(days=1)
-                    
-                record.dias_evaluados = dias
-            else:
+            if not record.fecha:
                 record.dias_evaluados = 0.0
+                continue
+
+            inicio_mes = record.fecha.replace(day=1)
+            fin_mes = inicio_mes + relativedelta(months=1)
+            record.dias_evaluados = record._get_dias_laborables_equivalentes(
+                inicio_mes,
+                fin_mes,
+            )
 
     @api.depends('fecha', 'dias_evaluados')
     def _compute_objetivos(self):
@@ -1864,17 +1857,25 @@ class EvaluacionPersonal(models.Model):
                 record.tipo_operativo = tipo
 
     def _get_dias_laborables_equivalentes(self, inicio_mes, fin_mes):
+        """Suma días laborables equivalentes excluyendo feriados y cierres."""
+        if self._model_exists('whatsapp.calendar.event'):
+            return self.env['whatsapp.calendar.event'].get_working_days_equivalent(
+                inicio_mes,
+                fin_mes,
+            )
+
         dias = 0.0
         current = inicio_mes
         while current < fin_mes:
-            if current.weekday() < 5:
-                dias += 1.0
-            elif current.weekday() == 5:
-                dias += 0.5
+            dias += self._get_factor_dia_bono(current)
             current += timedelta(days=1)
         return dias
 
     def _get_factor_dia_bono(self, fecha):
+        """Factor laboral de una fecha considerando feriados peruanos."""
+        if self._model_exists('whatsapp.calendar.event'):
+            return self.env['whatsapp.calendar.event'].get_workday_factor(fecha)
+
         if fecha.weekday() < 5:
             return 1.0
         if fecha.weekday() == 5:
@@ -1884,6 +1885,10 @@ class EvaluacionPersonal(models.Model):
     def _get_horas_laborales_fecha(self, fecha):
         """Devuelve las horas laborales reales del técnico para una fecha."""
         self.ensure_one()
+
+        factor_laboral = self._get_factor_dia_bono(fecha)
+        if factor_laboral <= 0:
+            return 0.0
 
         perfil_tecnico = False
         if self._model_exists('mantenimiento.tecnico.perfil') and self.usuario_id:
@@ -1968,59 +1973,47 @@ class EvaluacionPersonal(models.Model):
 
     def _get_reparaciones_bono(self, inicio_mes, fin_mes):
         """
-        Obtiene las reparaciones válidas para la producción mensual.
-
-        Reglas:
-        1. Si tiene fecha_finalizacion, cuenta en el mes de esa fecha.
-        2. Si no tiene fecha_finalizacion, pero estado_id = finalizado,
-        usa create_date como respaldo.
-        3. Siempre debe corresponder al técnico evaluado.
+        Producción válida del mes:
+        - con fecha_finalizacion: cuenta por esa fecha;
+        - sin fecha_finalizacion y estado_id=finalizado: usa create_date.
         """
         self.ensure_one()
 
-        if not self._model_exists('reparaciones.reparaciones'):
-            return self.env['reparaciones.reparaciones']
+        if not self.usuario_id or not self._model_exists('reparaciones.reparaciones'):
+            return self.env['reparaciones.reparaciones'].browse()
 
         Reparacion = self.env['reparaciones.reparaciones']
+        inicio_dt, fin_dt = self._rango_utc(inicio_mes, fin_mes)
 
-        inicio_utc, fin_utc = self._rango_utc(
-            inicio_mes,
-            fin_mes,
-        )
+        con_fecha = Reparacion.browse()
+        if 'fecha_finalizacion' in Reparacion._fields:
+            con_fecha = Reparacion.search([
+                ('responsable_id', '=', self.usuario_id.id),
+                ('fecha_finalizacion', '!=', False),
+                ('fecha_finalizacion', '>=', inicio_dt),
+                ('fecha_finalizacion', '<', fin_dt),
+            ])
 
-        reparaciones_con_fecha = Reparacion.search([
-            ('responsable_id', '=', self.usuario_id.id),
-            ('fecha_finalizacion', '!=', False),
-            ('fecha_finalizacion', '>=', inicio_utc),
-            ('fecha_finalizacion', '<', fin_utc),
-        ])
+        sin_fecha = Reparacion.browse()
+        if 'estado_id' in Reparacion._fields:
+            domain = [
+                ('responsable_id', '=', self.usuario_id.id),
+                ('estado_id', '=', 'finalizado'),
+                ('create_date', '>=', inicio_dt),
+                ('create_date', '<', fin_dt),
+            ]
+            if 'fecha_finalizacion' in Reparacion._fields:
+                domain.append(('fecha_finalizacion', '=', False))
+            sin_fecha = Reparacion.search(domain)
 
-        reparaciones_sin_fecha = Reparacion.search([
-            ('responsable_id', '=', self.usuario_id.id),
-            ('fecha_finalizacion', '=', False),
-            ('estado_id', '=', 'finalizado'),
-            ('create_date', '>=', inicio_utc),
-            ('create_date', '<', fin_utc),
-        ])
-
-        reparaciones = (
-            reparaciones_con_fecha
-            | reparaciones_sin_fecha
-        )
-
+        reparaciones = con_fecha | sin_fecha
         _logger.info(
-            '[BONO] Técnico: %s | Periodo: %s - %s | '
-            'Con fecha de finalización: %s | '
-            'Finalizadas sin fecha: %s | '
-            'Total válido: %s',
-            self.usuario_id.name,
-            inicio_mes,
-            fin_mes,
-            len(reparaciones_con_fecha),
-            len(reparaciones_sin_fecha),
+            '[PRODUCCIÓN TALLER] Técnico=%s con_fecha=%s sin_fecha=%s total=%s',
+            self.usuario_id.display_name,
+            len(con_fecha),
+            len(sin_fecha),
             len(reparaciones),
         )
-
         return reparaciones
 
     def _get_tickets_bono(self, inicio_mes, fin_mes):
@@ -3046,38 +3039,31 @@ class EvaluacionPersonalDetalleDiario(models.Model):
     
     @api.depends('fecha')
     def _compute_info_dia(self):
-        """Calcula información del día (nombre, si es laboral, etc.)"""
+        """Calcula día laboral excluyendo feriados y cierres manuales."""
+        Evaluacion = self.env['evaluacion.personal']
+        dias_semana = [
+            'Lunes', 'Martes', 'Miércoles', 'Jueves',
+            'Viernes', 'Sábado', 'Domingo'
+        ]
+
         for record in self:
-            if record.fecha:
-                # Día de la semana (0=Lunes, 6=Domingo)
-                weekday = record.fecha.weekday()
-                
-                # Nombres de días en español
-                dias_semana = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
-                record.dia_semana = dias_semana[weekday]
-                record.numero_dia = record.fecha.day
-                
-                # Sábado (medio día laboral)
-                record.es_sabado = (weekday == 5)
-                
-                # Días laborales: Lunes a Sábado (0-5)
-                record.es_dia_laboral = (weekday < 6)
-            else:
+            if not record.fecha:
                 record.dia_semana = ''
                 record.numero_dia = 0
                 record.es_sabado = False
                 record.es_dia_laboral = False
-    
+                continue
+
+            weekday = record.fecha.weekday()
+            factor = Evaluacion._get_factor_dia_bono(record.fecha)
+            record.dia_semana = dias_semana[weekday]
+            record.numero_dia = record.fecha.day
+            record.es_sabado = weekday == 5 and factor > 0
+            record.es_dia_laboral = factor > 0
+
     @api.depends('usuario_id', 'fecha')
     def _compute_trabajos(self):
-        """
-        Busca las reparaciones y tickets que corresponden a cada día.
-
-        Para reparaciones se aplica exactamente la misma regla del cálculo
-        mensual: fecha_finalizacion cuando existe y create_date como respaldo
-        únicamente si el registro está en estado ``finalizado`` y no tiene
-        fecha_finalizacion.
-        """
+        """Busca trabajos del día usando la misma regla mensual."""
         Evaluacion = self.env['evaluacion.personal']
 
         for record in self:
@@ -3087,39 +3073,31 @@ class EvaluacionPersonalDetalleDiario(models.Model):
                 continue
 
             dia_siguiente = record.fecha + timedelta(days=1)
-            inicio_utc, fin_utc = Evaluacion._rango_utc(
-                record.fecha,
-                dia_siguiente,
-            )
+            inicio_utc, fin_utc = Evaluacion._rango_utc(record.fecha, dia_siguiente)
 
             Reparacion = self.env['reparaciones.reparaciones']
-
+            con_fecha = Reparacion.browse()
             if 'fecha_finalizacion' in Reparacion._fields:
-                domain_reparaciones = [
+                con_fecha = Reparacion.search([
                     ('responsable_id', '=', record.usuario_id.id),
-                    '|',
-                        '&',
-                            ('fecha_finalizacion', '!=', False),
-                            '&',
-                                ('fecha_finalizacion', '>=', inicio_utc),
-                                ('fecha_finalizacion', '<', fin_utc),
-                        '&',
-                            ('fecha_finalizacion', '=', False),
-                            '&',
-                                ('estado_id', '=', 'finalizado'),
-                                '&',
-                                    ('create_date', '>=', inicio_utc),
-                                    ('create_date', '<', fin_utc),
-                ]
-            else:
-                domain_reparaciones = [
+                    ('fecha_finalizacion', '!=', False),
+                    ('fecha_finalizacion', '>=', inicio_utc),
+                    ('fecha_finalizacion', '<', fin_utc),
+                ])
+
+            sin_fecha = Reparacion.browse()
+            if 'estado_id' in Reparacion._fields:
+                domain = [
                     ('responsable_id', '=', record.usuario_id.id),
                     ('estado_id', '=', 'finalizado'),
                     ('create_date', '>=', inicio_utc),
                     ('create_date', '<', fin_utc),
                 ]
+                if 'fecha_finalizacion' in Reparacion._fields:
+                    domain.append(('fecha_finalizacion', '=', False))
+                sin_fecha = Reparacion.search(domain)
 
-            reparaciones = Reparacion.search(domain_reparaciones)
+            reparaciones = con_fecha | sin_fecha
             record.reparacion_ids = [(6, 0, reparaciones.ids)]
 
             Ticket = self.env['ticket.alquiler']
@@ -3135,9 +3113,7 @@ class EvaluacionPersonalDetalleDiario(models.Model):
                     ('agenda', '<', fin_utc),
                 ]
 
-            domain = [
-                ('responsable', '=', record.usuario_id.id),
-            ] + domain_fecha
+            domain = [('responsable', '=', record.usuario_id.id)] + domain_fecha
             if 'estado' in Ticket._fields:
                 domain.append(('estado', '=', 'finalizado'))
 
@@ -3157,7 +3133,7 @@ class EvaluacionPersonalDetalleDiario(models.Model):
         for record in self:
             record.total_trabajos = record.cantidad_reparaciones + record.cantidad_tickets
     
-    @api.depends('es_dia_laboral', 'es_sabado')
+    @api.depends('es_dia_laboral', 'es_sabado', 'fecha')
     def _compute_objetivo(self):
         """Calcula el objetivo del día según tipo de día"""
         for record in self:
