@@ -7,25 +7,79 @@ from odoo import api, fields, models, _
 from odoo.exceptions import UserError, ValidationError
 
 
-class MarcaMaquina(models.Model):
-    _name = 'marca.marca'
-    _description = 'Marca de máquina'
-    _order = 'name'
+class ModeloMaquinaFamilia(models.Model):
+    _name = 'modelo.maquina.familia'
+    _description = 'Familia técnica de modelos de máquina'
+    _order = 'marca_id, name'
+    _rec_name = 'display_name'
 
     name = fields.Char(
-        string='Marca de máquina',
+        string='Familia',
         required=True,
         index=True,
+        help=(
+            'Nombre técnico o comercial de la familia. '
+            'Ejemplo: MP C3004 / C6004.'
+        ),
     )
 
     codigo_tecnico = fields.Char(
         string='Código técnico',
+        required=True,
         copy=False,
         index=True,
         help=(
-            'Código estable utilizado para generar IDs externos. '
-            'Ejemplo: ricoh, konica_minolta, canon.'
+            'Código estable de la familia. '
+            'Ejemplo: mp_cxx04.'
         ),
+    )
+
+    marca_id = fields.Many2one(
+        'marca.marca',
+        string='Marca',
+        required=True,
+        ondelete='restrict',
+        index=True,
+    )
+
+    tipo_id = fields.Selection(
+        [
+            ('color', 'Color'),
+            ('monocromatica', 'Monocromática'),
+            ('mixta', 'Mixta'),
+        ],
+        string='Tecnología',
+        default='color',
+        required=True,
+    )
+
+    descripcion = fields.Text(
+        string='Descripción',
+    )
+
+    notas_tecnicas = fields.Text(
+        string='Notas técnicas',
+    )
+
+    active = fields.Boolean(
+        string='Activo',
+        default=True,
+    )
+
+    modelo_ids = fields.One2many(
+        'modelo.maquina',
+        'familia_id',
+        string='Modelos',
+    )
+
+    modelo_count = fields.Integer(
+        string='Cantidad de modelos',
+        compute='_compute_modelo_count',
+    )
+
+    display_name = fields.Char(
+        string='Nombre mostrado',
+        compute='_compute_display_name',
     )
 
     external_id_display = fields.Char(
@@ -58,23 +112,32 @@ class MarcaMaquina(models.Model):
         copy=False,
     )
 
-    active = fields.Boolean(
-        string='Activo',
-        default=True,
-    )
-
     _sql_constraints = [
         (
-            'unique_name',
-            'unique(name)',
-            'La marca que intenta agregar ya existe.',
-        ),
-        (
-            'unique_codigo_tecnico',
-            'unique(codigo_tecnico)',
-            'El código técnico de la marca ya está siendo utilizado.',
+            'unique_marca_codigo_familia',
+            'unique(marca_id, codigo_tecnico)',
+            'Ya existe una familia con este código para la marca.',
         ),
     ]
+
+    # =========================================================
+    # CAMPOS CALCULADOS
+    # =========================================================
+
+    @api.depends('marca_id', 'name')
+    def _compute_display_name(self):
+        for record in self:
+            if record.marca_id and record.name:
+                record.display_name = (
+                    f'{record.marca_id.name} / {record.name}'
+                )
+            else:
+                record.display_name = record.name or _('Nueva familia')
+
+    @api.depends('modelo_ids')
+    def _compute_modelo_count(self):
+        for record in self:
+            record.modelo_count = len(record.modelo_ids)
 
     # =========================================================
     # NORMALIZACIÓN
@@ -82,14 +145,6 @@ class MarcaMaquina(models.Model):
 
     @api.model
     def _normalizar_codigo(self, value):
-        """
-        Convierte un texto en un código técnico estable.
-
-        Ejemplos:
-            Konica Minolta -> konica_minolta
-            RICOH          -> ricoh
-            Kyocera-Mita   -> kyocera_mita
-        """
         value = value or ''
 
         value = unicodedata.normalize('NFKD', value)
@@ -108,20 +163,14 @@ class MarcaMaquina(models.Model):
 
     @api.onchange('name')
     def _onchange_name_codigo_tecnico(self):
-        """
-        Propone el código técnico mientras el usuario edita la marca.
-
-        No reemplaza un código que ya haya sido ingresado manualmente.
-        """
         for record in self:
             if record.name and not record.codigo_tecnico:
-                record.codigo_tecnico = record._normalizar_codigo(record.name)
+                record.codigo_tecnico = record._normalizar_codigo(
+                    record.name
+                )
 
     @api.model_create_multi
     def create(self, vals_list):
-        """
-        Genera el código técnico al crear la marca si no fue informado.
-        """
         for vals in vals_list:
             if vals.get('name') and not vals.get('codigo_tecnico'):
                 vals['codigo_tecnico'] = self._normalizar_codigo(
@@ -133,16 +182,13 @@ class MarcaMaquina(models.Model):
     @api.constrains('codigo_tecnico')
     def _check_codigo_tecnico(self):
         for record in self:
-            if not record.codigo_tecnico:
-                continue
-
             normalizado = record._normalizar_codigo(
                 record.codigo_tecnico
             )
 
             if not normalizado:
                 raise ValidationError(
-                    _('El código técnico de la marca no es válido.')
+                    _('El código técnico de la familia no es válido.')
                 )
 
             if record.codigo_tecnico != normalizado:
@@ -159,11 +205,6 @@ class MarcaMaquina(models.Model):
     # =========================================================
 
     def _get_external_id_record(self):
-        """
-        Obtiene el registro ir.model.data relacionado con la marca.
-
-        Primero busca uno perteneciente al módulo sat.
-        """
         self.ensure_one()
 
         if not self.id:
@@ -191,7 +232,7 @@ class MarcaMaquina(models.Model):
             limit=1,
         )
 
-    @api.depends('name', 'codigo_tecnico')
+    @api.depends('codigo_tecnico', 'marca_id.codigo_tecnico')
     def _compute_external_id_info(self):
         IrModelData = self.env['ir.model.data'].sudo()
 
@@ -211,8 +252,15 @@ class MarcaMaquina(models.Model):
                 record.external_id_state = 'generated'
                 continue
 
-            if record.codigo_tecnico:
-                proposed_name = f'marca_{record.codigo_tecnico}'
+            if (
+                record.marca_id.codigo_tecnico
+                and record.codigo_tecnico
+            ):
+                proposed_name = (
+                    f'familia_'
+                    f'{record.marca_id.codigo_tecnico}_'
+                    f'{record.codigo_tecnico}'
+                )
 
                 conflict = IrModelData.search(
                     [
@@ -229,12 +277,6 @@ class MarcaMaquina(models.Model):
                     record.external_id_state = 'conflict'
 
     def action_generate_external_id(self):
-        """
-        Genera el ID externo real de la marca en ir.model.data.
-
-        Ejemplo:
-            sat.marca_ricoh
-        """
         IrModelData = self.env['ir.model.data'].sudo()
 
         generated = 0
@@ -242,17 +284,25 @@ class MarcaMaquina(models.Model):
         conflicts = []
 
         for record in self:
+            if not record.marca_id:
+                conflicts.append(
+                    _('%s: no tiene una marca asignada.')
+                    % record.name
+                )
+                continue
+
+            if not record.marca_id.codigo_tecnico:
+                conflicts.append(
+                    _(
+                        '%s: la marca %s no tiene código técnico.'
+                    ) % (record.name, record.marca_id.name)
+                )
+                continue
+
             if not record.codigo_tecnico:
                 record.codigo_tecnico = record._normalizar_codigo(
                     record.name
                 )
-
-            if not record.codigo_tecnico:
-                conflicts.append(
-                    _('%s: no se pudo generar el código técnico.')
-                    % (record.name or record.id)
-                )
-                continue
 
             current_external = record._get_external_id_record()
 
@@ -260,7 +310,11 @@ class MarcaMaquina(models.Model):
                 existing += 1
                 continue
 
-            external_name = f'marca_{record.codigo_tecnico}'
+            external_name = (
+                f'familia_'
+                f'{record.marca_id.codigo_tecnico}_'
+                f'{record.codigo_tecnico}'
+            )
 
             conflict = IrModelData.search(
                 [
@@ -274,7 +328,7 @@ class MarcaMaquina(models.Model):
                 conflicts.append(
                     _(
                         '%s: el ID sat.%s ya pertenece a otro registro.'
-                    ) % (record.name, external_name)
+                    ) % (record.display_name, external_name)
                 )
                 continue
 
@@ -299,16 +353,15 @@ class MarcaMaquina(models.Model):
 
         if conflicts:
             raise UserError(
-                _(
-                    'Se encontraron conflictos:\n\n%s'
-                ) % '\n'.join(conflicts)
+                _('Se encontraron conflictos:\n\n%s')
+                % '\n'.join(conflicts)
             )
 
         return {
             'type': 'ir.actions.client',
             'tag': 'display_notification',
             'params': {
-                'title': _('IDs externos de marcas'),
+                'title': _('IDs externos de familias'),
                 'message': _(
                     'Generados: %(generated)s\n'
                     'Ya existentes: %(existing)s'
@@ -318,5 +371,24 @@ class MarcaMaquina(models.Model):
                 },
                 'type': 'success',
                 'sticky': False,
+            },
+        }
+
+    # =========================================================
+    # ACCIONES
+    # =========================================================
+
+    def action_view_modelos(self):
+        self.ensure_one()
+
+        return {
+            'name': _('Modelos - %s') % self.display_name,
+            'type': 'ir.actions.act_window',
+            'res_model': 'modelo.maquina',
+            'view_mode': 'list,form',
+            'domain': [('familia_id', '=', self.id)],
+            'context': {
+                'default_familia_id': self.id,
+                'default_marca_id': self.marca_id.id,
             },
         }

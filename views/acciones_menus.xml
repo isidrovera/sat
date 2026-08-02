@@ -453,6 +453,21 @@
       <field name="res_model">modelo.maquina</field>
       <field name="view_mode">list,form,kanban</field>
     </record>
+    <record id="action_modelo_maquina_familia" model="ir.actions.act_window">
+    <field name="name">Familias de modelos</field>
+    <field name="res_model">modelo.maquina.familia</field>
+    <field name="view_mode">list,form</field>
+    <field name="search_view_id" ref="modelo_maquina_familia_search_view"/>
+    <field name="help" type="html">
+        <p class="o_view_nocontent_smiling_face">
+            Cree una familia técnica de modelos
+        </p>
+        <p>
+            Las familias permiten agrupar modelos que comparten accesorios
+            o características técnicas.
+        </p>
+    </field>
+</record>
 
     <record id="sat.action_tipo_window" model="ir.actions.act_window">
       <field name="name">Tipo de maquina</field>
@@ -1092,6 +1107,13 @@ action = env["sat.import.line"].browse(env.context.get("active_ids", [])).action
               parent="sat.ajustes"
               action="sat.action_marca_window"
               sequence="10"/>
+
+
+    <menuitem id="menu_modelo_maquina_familia"
+          name="Familias de modelos"
+          parent="sat.ajustes"
+          action="action_modelo_maquina_familia"
+          sequence="15"/>
 
     <menuitem id="sat.menu_modelo"
               name="Modelo"

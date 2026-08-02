@@ -3,16 +3,21 @@
     <data>
 
         <!-- ===================================================== -->
-        <!-- FORMULARIO DE MARCAS                                  -->
+        <!-- FORMULARIO DE FAMILIA                                 -->
         <!-- ===================================================== -->
 
-        <record id="Marcas_form_view" model="ir.ui.view">
-            <field name="name">marca.marca.form</field>
-            <field name="model">marca.marca</field>
+        <record
+            id="modelo_maquina_familia_form_view"
+            model="ir.ui.view"
+        >
+            <field name="name">modelo.maquina.familia.form</field>
+            <field name="model">modelo.maquina.familia</field>
             <field name="arch" type="xml">
-                <form string="Marca de máquina">
+
+                <form string="Familia técnica">
 
                     <header>
+
                         <button
                             name="action_generate_external_id"
                             type="object"
@@ -21,31 +26,62 @@
                             class="btn-primary"
                             invisible="not id or external_id_state == 'generated'"
                         />
+
                     </header>
 
                     <sheet>
+
+                        <div class="oe_button_box" name="button_box">
+
+                            <button
+                                class="oe_stat_button"
+                                type="object"
+                                name="action_view_modelos"
+                                icon="fa-print"
+                            >
+                                <field
+                                    name="modelo_count"
+                                    string="Modelos"
+                                    widget="statinfo"
+                                />
+                            </button>
+
+                        </div>
 
                         <div class="oe_title">
                             <label for="name"/>
                             <h1>
                                 <field
                                     name="name"
-                                    placeholder="Ejemplo: Ricoh"
+                                    placeholder="Nombre de la familia"
                                 />
                             </h1>
                         </div>
 
                         <group>
-                            <group string="Identificación">
-                                <field name="name"/>
+
+                            <group string="Información principal">
+
+                                <field name="marca_id"/>
+
+                                <field
+                                    name="name"
+                                    string="Familia"
+                                />
+
                                 <field
                                     name="codigo_tecnico"
-                                    placeholder="Ejemplo: ricoh"
+                                    placeholder="Ejemplo: mp_cxx04"
                                 />
+
+                                <field name="tipo_id"/>
+
                                 <field name="active"/>
+
                             </group>
 
                             <group string="Referencia XML">
+
                                 <field
                                     name="external_id_state"
                                     widget="badge"
@@ -58,7 +94,6 @@
                                 <field
                                     name="external_id_display"
                                     readonly="1"
-                                    placeholder="Pendiente de generar"
                                 />
 
                                 <field
@@ -72,57 +107,93 @@
                                     readonly="1"
                                     invisible="not external_id_generated_by"
                                 />
+
                             </group>
+
                         </group>
 
-                        <div
-                            class="alert alert-info"
-                            invisible="external_id_state == 'generated'"
-                        >
-                            <strong>ID externo pendiente.</strong>
-                            Guarde la marca y utilice el botón
-                            <strong>Generar ID externo</strong>.
-                        </div>
+                        <notebook>
 
-                        <div
-                            class="alert alert-success"
-                            invisible="external_id_state != 'generated'"
-                        >
-                            Esta marca ya cuenta con un ID externo y puede
-                            utilizarse como referencia desde archivos XML.
-                        </div>
+                            <page
+                                name="modelos"
+                                string="Modelos"
+                            >
 
-                        <div
-                            class="alert alert-danger"
-                            invisible="external_id_state != 'conflict'"
-                        >
-                            Existe un conflicto con el ID externo propuesto.
-                            Revise el código técnico antes de continuar.
-                        </div>
+                                <field
+                                    name="modelo_ids"
+                                    context="{
+                                        'default_marca_id': marca_id,
+                                        'default_familia_id': id
+                                    }"
+                                >
+
+                                    <list editable="bottom">
+
+                                        <field name="marca_id"/>
+
+                                        <field name="name"/>
+
+                                        <field name="codigo_tecnico"/>
+
+                                        <field name="tipo_id"/>
+
+                                        <field name="tipo_maquina_id"/>
+
+                                    </list>
+
+                                </field>
+
+                            </page>
+
+                            <page
+                                name="informacion_tecnica"
+                                string="Información técnica"
+                            >
+
+                                <group>
+
+                                    <field name="descripcion"/>
+
+                                    <field name="notas_tecnicas"/>
+
+                                </group>
+
+                            </page>
+
+                        </notebook>
 
                     </sheet>
 
-                    <chatter/>
-
                 </form>
+
             </field>
         </record>
 
         <!-- ===================================================== -->
-        <!-- LISTA DE MARCAS                                       -->
+        <!-- LISTA DE FAMILIAS                                     -->
         <!-- ===================================================== -->
 
-        <record id="Marcas_tree_view" model="ir.ui.view">
-            <field name="name">marca.marca.list</field>
-            <field name="model">marca.marca</field>
+        <record
+            id="modelo_maquina_familia_list_view"
+            model="ir.ui.view"
+        >
+            <field name="name">modelo.maquina.familia.list</field>
+            <field name="model">modelo.maquina.familia</field>
             <field name="arch" type="xml">
-                <list string="Marcas de máquinas">
+
+                <list string="Familias técnicas">
+
+                    <field name="marca_id"/>
 
                     <field name="name"/>
 
+                    <field name="codigo_tecnico"/>
+
+                    <field name="tipo_id"/>
+
                     <field
-                        name="codigo_tecnico"
-                        optional="show"
+                        name="modelo_count"
+                        string="Modelos"
                     />
 
                     <field
@@ -149,67 +220,89 @@
                     <button
                         name="action_generate_external_id"
                         type="object"
-                        title="Generar ID externo"
                         icon="fa-link"
+                        title="Generar ID externo"
                         invisible="external_id_state == 'generated'"
                     />
 
                 </list>
+
             </field>
         </record>
 
         <!-- ===================================================== -->
-        <!-- BÚSQUEDA DE MARCAS                                    -->
+        <!-- BÚSQUEDA DE FAMILIAS                                  -->
         <!-- ===================================================== -->
 
-        <record id="Marcas_search_view" model="ir.ui.view">
-            <field name="name">marca.marca.search</field>
-            <field name="model">marca.marca</field>
+        <record
+            id="modelo_maquina_familia_search_view"
+            model="ir.ui.view"
+        >
+            <field name="name">modelo.maquina.familia.search</field>
+            <field name="model">modelo.maquina.familia</field>
             <field name="arch" type="xml">
-                <search string="Buscar marcas">
+
+                <search string="Buscar familias">
 
                     <field name="name"/>
                     <field name="codigo_tecnico"/>
+                    <field name="marca_id"/>
+                    <field name="tipo_id"/>
 
                     <separator/>
 
                     <filter
-                        name="marcas_activas"
+                        name="familias_activas"
                         string="Activas"
                         domain="[('active', '=', True)]"
                     />
 
                     <filter
-                        name="marcas_archivadas"
+                        name="familias_archivadas"
                         string="Archivadas"
                         domain="[('active', '=', False)]"
                     />
 
-                    <filter
-                        name="sin_codigo_tecnico"
-                        string="Sin código técnico"
-                        domain="[
-                            '|',
-                            ('codigo_tecnico', '=', False),
-                            ('codigo_tecnico', '=', '')
-                        ]"
-                    />
+                    <group expand="1" string="Agrupar por">
+
+                        <filter
+                            name="group_brand"
+                            string="Marca"
+                            context="{'group_by': 'marca_id'}"
+                        />
+
+                        <filter
+                            name="group_type"
+                            string="Tecnología"
+                            context="{'group_by': 'tipo_id'}"
+                        />
+
+                    </group>
 
                 </search>
+
             </field>
         </record>
+
+       
 
         <!-- ===================================================== -->
         <!-- ACCIÓN MASIVA                                         -->
         <!-- ===================================================== -->
 
         <record
-            id="server_action_generate_brand_external_ids"
+            id="server_action_generate_family_external_ids"
             model="ir.actions.server"
         >
             <field name="name">Generar IDs externos</field>
-            <field name="model_id" ref="model_marca_marca"/>
-            <field name="binding_model_id" ref="model_marca_marca"/>
+            <field
+                name="model_id"
+                ref="model_modelo_maquina_familia"
+            />
+            <field
+                name="binding_model_id"
+                ref="model_modelo_maquina_familia"
+            />
             <field name="binding_view_types">list</field>
             <field name="state">code</field>
             <field name="code">

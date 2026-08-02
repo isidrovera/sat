@@ -128,3 +128,4 @@ from . import evaluacion_personal_dashboard
 from . import sat_pruebas_dashboard
 from . import sat_name_search
 from . import evaluacion_cierre_mensual
+from . import modelo_maquina_familia
