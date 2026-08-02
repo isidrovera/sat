@@ -14,7 +14,7 @@ class ModelosMaquina(models.Model):
     _inherit = 'modelo.maquina'
 
     # =========================================================
-    # IDENTIFICACIÓN TÉCNICA
+    # IDENTIFICACIÓN TÉCNICA DEL MODELO
     # =========================================================
 
     codigo_tecnico = fields.Char(
@@ -22,8 +22,8 @@ class ModelosMaquina(models.Model):
         copy=False,
         index=True,
         help=(
-            'Código estable del modelo utilizado para generar el ID externo. '
-            'Ejemplo: mp_c4504.'
+            'Código estable utilizado para generar el ID externo. '
+            'Ejemplo: mp_c4504, mp_305_plus o imagerunner_c3525_iii.'
         ),
     )
 
@@ -34,9 +34,8 @@ class ModelosMaquina(models.Model):
         index=True,
         domain="[('marca_id', '=', marca_id)]",
         help=(
-            'Familia técnica opcional. Se utilizará principalmente para '
-            'compatibilidad de accesorios. La configuración específica '
-            'del modelo tendrá prioridad.'
+            'Familia técnica opcional para organizar modelos que comparten '
+            'accesorios o determinadas características.'
         ),
     )
 
@@ -71,15 +70,15 @@ class ModelosMaquina(models.Model):
     )
 
     # =========================================================
-    # CONFIGURACIÓN COPIADA DESDE OTRO MODELO
+    # MODELO DE REFERENCIA
     # =========================================================
 
     modelo_referencia_id = fields.Many2one(
         'modelo.maquina',
         string='Modelo de referencia',
         help=(
-            'Selecciona un modelo existente para copiar automáticamente '
-            'sus componentes y accesorios.'
+            'Modelo existente desde el cual se copiarán sus componentes '
+            'y accesorios.'
         ),
         domain="[('id', '!=', id)]",
     )
@@ -108,8 +107,23 @@ class ModelosMaquina(models.Model):
 
     @api.model
     def _normalizar_codigo(self, value):
+        """
+        Convierte el nombre comercial en un código técnico estable.
+
+        Ejemplos:
+            MP 305       -> mp_305
+            MP 305+      -> mp_305_plus
+            C3525 II     -> c3525_ii
+            C3525 III    -> c3525_iii
+            TM-305       -> tm_305
+        """
         value = value or ''
 
+        # Conservar el significado de símbolos comerciales importantes.
+        value = value.replace('+', ' plus ')
+        value = value.replace('&', ' and ')
+
+        # Eliminar tildes y otros signos diacríticos.
         value = unicodedata.normalize('NFKD', value)
         value = ''.join(
             character
@@ -118,7 +132,14 @@ class ModelosMaquina(models.Model):
         )
 
         value = value.lower().strip()
-        value = re.sub(r'[^a-z0-9]+', '_', value)
+
+        # Espacios, guiones, barras y puntos pasan a separadores.
+        value = re.sub(r'[\s\-\/\.]+', '_', value)
+
+        # Eliminar otros caracteres no permitidos.
+        value = re.sub(r'[^a-z0-9_]+', '_', value)
+
+        # Limpiar separadores repetidos.
         value = re.sub(r'_+', '_', value)
         value = value.strip('_')
 
@@ -137,6 +158,7 @@ class ModelosMaquina(models.Model):
         for record in self:
             if (
                 record.familia_id
+                and record.marca_id
                 and record.familia_id.marca_id != record.marca_id
             ):
                 record.familia_id = False
@@ -151,9 +173,10 @@ class ModelosMaquina(models.Model):
             ):
                 raise ValidationError(
                     _(
-                        'La familia seleccionada pertenece a la marca %s, '
-                        'pero el modelo pertenece a la marca %s.'
-                    ) % (
+                        'La familia seleccionada pertenece a la marca "%s", '
+                        'pero el modelo pertenece a la marca "%s".'
+                    )
+                    % (
                         record.familia_id.marca_id.name,
                         record.marca_id.name,
                     )
@@ -177,10 +200,11 @@ class ModelosMaquina(models.Model):
             if record.codigo_tecnico != normalizado:
                 raise ValidationError(
                     _(
-                        'El código técnico debe utilizar únicamente '
-                        'letras minúsculas, números y guion bajo.\n\n'
+                        'El código técnico debe usar únicamente letras '
+                        'minúsculas, números y guion bajo.\n\n'
                         'Código sugerido: %s'
-                    ) % normalizado
+                    )
+                    % normalizado
                 )
 
     # =========================================================
@@ -188,6 +212,11 @@ class ModelosMaquina(models.Model):
     # =========================================================
 
     def _get_external_id_record(self):
+        """
+        Obtiene el identificador externo relacionado con el modelo.
+
+        Prioriza los IDs externos pertenecientes al módulo sat.
+        """
         self.ensure_one()
 
         if not self.id:
@@ -223,7 +252,10 @@ class ModelosMaquina(models.Model):
         if not external_record:
             return False
 
-        return f'{external_record.module}.{external_record.name}'
+        return '%s.%s' % (
+            external_record.module,
+            external_record.name,
+        )
 
     @api.depends(
         'codigo_tecnico',
@@ -243,20 +275,21 @@ class ModelosMaquina(models.Model):
             external_record = record._get_external_id_record()
 
             if external_record:
-                record.external_id_display = (
-                    f'{external_record.module}.{external_record.name}'
+                record.external_id_display = '%s.%s' % (
+                    external_record.module,
+                    external_record.name,
                 )
                 record.external_id_state = 'generated'
                 continue
 
             if (
-                record.marca_id.codigo_tecnico
+                record.marca_id
+                and record.marca_id.codigo_tecnico
                 and record.codigo_tecnico
             ):
-                proposed_name = (
-                    f'modelo_'
-                    f'{record.marca_id.codigo_tecnico}_'
-                    f'{record.codigo_tecnico}'
+                proposed_name = 'modelo_%s_%s' % (
+                    record.marca_id.codigo_tecnico,
+                    record.codigo_tecnico,
                 )
 
                 conflict = IrModelData.search(
@@ -277,8 +310,10 @@ class ModelosMaquina(models.Model):
         """
         Genera IDs externos para uno o varios modelos.
 
-        Ejemplo:
-            sat.modelo_ricoh_mp_c4504
+        Ejemplos:
+            sat.modelo_ricoh_mp_305
+            sat.modelo_ricoh_mp_305_plus
+            sat.modelo_canon_c3525_iii
         """
         IrModelData = self.env['ir.model.data'].sudo()
 
@@ -297,8 +332,9 @@ class ModelosMaquina(models.Model):
             if not record.marca_id.codigo_tecnico:
                 conflicts.append(
                     _(
-                        '%s: la marca %s no tiene código técnico.'
-                    ) % (
+                        '%s: la marca "%s" no tiene código técnico.'
+                    )
+                    % (
                         record.name,
                         record.marca_id.name,
                     )
@@ -323,10 +359,9 @@ class ModelosMaquina(models.Model):
                 existing += 1
                 continue
 
-            external_name = (
-                f'modelo_'
-                f'{record.marca_id.codigo_tecnico}_'
-                f'{record.codigo_tecnico}'
+            external_name = 'modelo_%s_%s' % (
+                record.marca_id.codigo_tecnico,
+                record.codigo_tecnico,
             )
 
             conflict = IrModelData.search(
@@ -338,13 +373,26 @@ class ModelosMaquina(models.Model):
             )
 
             if conflict:
+                conflict_record = self.env[
+                    conflict.model
+                ].browse(conflict.res_id)
+
+                conflict_description = (
+                    conflict_record.display_name
+                    if conflict_record.exists()
+                    else _('registro inexistente')
+                )
+
                 conflicts.append(
                     _(
-                        '%s: el ID sat.%s ya pertenece a otro registro.'
-                    ) % (
-                        record.name,
-                        external_name,
+                        '%(model)s: el ID sat.%(external)s ya pertenece '
+                        'a "%(conflict)s".'
                     )
+                    % {
+                        'model': record.name,
+                        'external': external_name,
+                        'conflict': conflict_description,
+                    }
                 )
                 continue
 
@@ -371,7 +419,8 @@ class ModelosMaquina(models.Model):
             raise UserError(
                 _(
                     'No se pudieron generar todos los IDs externos:\n\n%s'
-                ) % '\n'.join(conflicts)
+                )
+                % '\n'.join(conflicts)
             )
 
         return {
@@ -382,7 +431,8 @@ class ModelosMaquina(models.Model):
                 'message': _(
                     'Generados: %(generated)s\n'
                     'Ya existentes: %(existing)s'
-                ) % {
+                )
+                % {
                     'generated': generated,
                     'existing': existing,
                 },
@@ -397,7 +447,7 @@ class ModelosMaquina(models.Model):
 
     def _get_related_external_id(self, record):
         """
-        Obtiene el ID externo completo de cualquier registro relacionado.
+        Obtiene el ID externo completo de un registro relacionado.
         """
         if not record:
             return False
@@ -412,6 +462,9 @@ class ModelosMaquina(models.Model):
         value=None,
         reference=None,
     ):
+        """
+        Agrega un campo a un nodo XML de Odoo.
+        """
         field_node = etree.SubElement(
             parent,
             'field',
@@ -438,11 +491,10 @@ class ModelosMaquina(models.Model):
 
     def action_export_models_xml(self):
         """
-        Exporta los modelos seleccionados como XML actualizable.
+        Exporta los modelos seleccionados a un XML actualizable.
 
-        El XML utiliza los IDs externos existentes, por lo que al cargarlo
-        en el módulo actualizará los registros actuales y no creará
-        modelos duplicados.
+        Los registros deben tener ID externo para que el XML actualice
+        los modelos existentes y no cree duplicados.
         """
         records = self
 
@@ -477,7 +529,8 @@ class ModelosMaquina(models.Model):
                     'Los siguientes modelos todavía no tienen '
                     'ID externo:\n\n%s\n\n'
                     'Genere primero sus IDs externos.'
-                ) % '\n'.join(missing_external_ids)
+                )
+                % '\n'.join(missing_external_ids)
             )
 
         root = etree.Element(
@@ -493,15 +546,23 @@ class ModelosMaquina(models.Model):
         for record in records:
             external_record = record._get_external_id_record()
 
+            # ---------------------------------------------
+            # COMENTARIO DE MARCA
+            # ---------------------------------------------
+
             if record.marca_id.name != current_brand:
                 current_brand = record.marca_id.name
                 current_family = False
 
                 data_node.append(
                     etree.Comment(
-                        f' Marca: {current_brand} '
+                        ' Marca: %s ' % current_brand
                     )
                 )
+
+            # ---------------------------------------------
+            # COMENTARIO DE FAMILIA
+            # ---------------------------------------------
 
             family_name = (
                 record.familia_id.name
@@ -514,9 +575,13 @@ class ModelosMaquina(models.Model):
 
                 data_node.append(
                     etree.Comment(
-                        f' Familia: {current_family} '
+                        ' Familia: %s ' % current_family
                     )
                 )
+
+            # ---------------------------------------------
+            # REGISTRO DEL MODELO
+            # ---------------------------------------------
 
             record_node = etree.SubElement(
                 data_node,
@@ -531,6 +596,16 @@ class ModelosMaquina(models.Model):
                 record.name,
             )
 
+            self._append_xml_field(
+                record_node,
+                'codigo_tecnico',
+                record.codigo_tecnico,
+            )
+
+            # ---------------------------------------------
+            # MARCA
+            # ---------------------------------------------
+
             brand_external_id = self._get_related_external_id(
                 record.marca_id
             )
@@ -542,6 +617,10 @@ class ModelosMaquina(models.Model):
                     reference=brand_external_id,
                 )
 
+            # ---------------------------------------------
+            # FAMILIA
+            # ---------------------------------------------
+
             family_external_id = self._get_related_external_id(
                 record.familia_id
             )
@@ -552,9 +631,21 @@ class ModelosMaquina(models.Model):
                     'familia_id',
                     reference=family_external_id,
                 )
+            elif record.familia_id:
+                self._append_xml_field(
+                    record_node,
+                    'familia_id',
+                    False,
+                )
 
-            type_machine_external_id = self._get_related_external_id(
-                record.tipo_maquina_id
+            # ---------------------------------------------
+            # TIPO DE MÁQUINA
+            # ---------------------------------------------
+
+            type_machine_external_id = (
+                self._get_related_external_id(
+                    record.tipo_maquina_id
+                )
             )
 
             if type_machine_external_id:
@@ -563,12 +654,6 @@ class ModelosMaquina(models.Model):
                     'tipo_maquina_id',
                     reference=type_machine_external_id,
                 )
-
-            self._append_xml_field(
-                record_node,
-                'codigo_tecnico',
-                record.codigo_tecnico,
-            )
 
             self._append_xml_field(
                 record_node,
@@ -582,11 +667,48 @@ class ModelosMaquina(models.Model):
                 record.precio_venta or 0.0,
             )
 
-            # Configuración actual de tóners
+            # =============================================
+            # TÓNER NEGRO
+            # =============================================
+
+            self._append_xml_field(
+                record_node,
+                'toner_modelo_black',
+                record.toner_modelo_black,
+            )
+
+            self._append_xml_field(
+                record_node,
+                'toner_codigo_parte_black',
+                record.toner_codigo_parte_black,
+            )
+
             self._append_xml_field(
                 record_node,
                 'durabilidad_toner_black',
                 record.durabilidad_toner_black or 0,
+            )
+
+            self._append_xml_field(
+                record_node,
+                'stock_minimo_black',
+                record.stock_minimo_black or 0,
+            )
+
+            # =============================================
+            # TÓNER CIAN
+            # =============================================
+
+            self._append_xml_field(
+                record_node,
+                'toner_modelo_cyan',
+                record.toner_modelo_cyan,
+            )
+
+            self._append_xml_field(
+                record_node,
+                'toner_codigo_parte_cyan',
+                record.toner_codigo_parte_cyan,
             )
 
             self._append_xml_field(
@@ -597,8 +719,52 @@ class ModelosMaquina(models.Model):
 
             self._append_xml_field(
                 record_node,
+                'stock_minimo_cyan',
+                record.stock_minimo_cyan or 0,
+            )
+
+            # =============================================
+            # TÓNER MAGENTA
+            # =============================================
+
+            self._append_xml_field(
+                record_node,
+                'toner_modelo_magenta',
+                record.toner_modelo_magenta,
+            )
+
+            self._append_xml_field(
+                record_node,
+                'toner_codigo_parte_magenta',
+                record.toner_codigo_parte_magenta,
+            )
+
+            self._append_xml_field(
+                record_node,
                 'durabilidad_toner_magenta',
                 record.durabilidad_toner_magenta or 0,
+            )
+
+            self._append_xml_field(
+                record_node,
+                'stock_minimo_magenta',
+                record.stock_minimo_magenta or 0,
+            )
+
+            # =============================================
+            # TÓNER AMARILLO
+            # =============================================
+
+            self._append_xml_field(
+                record_node,
+                'toner_modelo_yellow',
+                record.toner_modelo_yellow,
+            )
+
+            self._append_xml_field(
+                record_node,
+                'toner_codigo_parte_yellow',
+                record.toner_codigo_parte_yellow,
             )
 
             self._append_xml_field(
@@ -609,27 +775,35 @@ class ModelosMaquina(models.Model):
 
             self._append_xml_field(
                 record_node,
-                'stock_minimo_black',
-                record.stock_minimo_black or 0,
-            )
-
-            self._append_xml_field(
-                record_node,
-                'stock_minimo_cyan',
-                record.stock_minimo_cyan or 0,
-            )
-
-            self._append_xml_field(
-                record_node,
-                'stock_minimo_magenta',
-                record.stock_minimo_magenta or 0,
-            )
-
-            self._append_xml_field(
-                record_node,
                 'stock_minimo_yellow',
                 record.stock_minimo_yellow or 0,
             )
+
+            # =============================================
+            # INFORMACIÓN DE VERIFICACIÓN DEL TÓNER
+            # =============================================
+
+            self._append_xml_field(
+                record_node,
+                'toner_fuente_informacion',
+                record.toner_fuente_informacion,
+            )
+
+            self._append_xml_field(
+                record_node,
+                'toner_fecha_verificacion',
+                record.toner_fecha_verificacion,
+            )
+
+            self._append_xml_field(
+                record_node,
+                'toner_observaciones',
+                record.toner_observaciones,
+            )
+
+            # =============================================
+            # CONFIGURACIÓN LOGÍSTICA
+            # =============================================
 
             self._append_xml_field(
                 record_node,
@@ -680,16 +854,18 @@ class ModelosMaquina(models.Model):
                 'datas': base64.b64encode(xml_content),
                 'mimetype': 'application/xml',
                 'res_model': self._name,
-                'res_id': records[0].id if len(records) == 1 else False,
+                'res_id': (
+                    records[0].id
+                    if len(records) == 1
+                    else False
+                ),
             }
         )
 
         return {
             'type': 'ir.actions.act_url',
-            'url': (
-                '/web/content/%s?download=true'
-                % attachment.id
-            ),
+            'url': '/web/content/%s?download=true'
+            % attachment.id,
             'target': 'self',
         }
 
@@ -699,20 +875,16 @@ class ModelosMaquina(models.Model):
 
     def _compute_totales_config(self):
         for record in self:
-            record.total_componentes = (
-                self.env[
-                    'modelo.maquina.componente'
-                ].search_count(
-                    [('modelo_id', '=', record.id)]
-                )
+            record.total_componentes = self.env[
+                'modelo.maquina.componente'
+            ].search_count(
+                [('modelo_id', '=', record.id)]
             )
 
-            record.total_accesorios = (
-                self.env[
-                    'modelo.maquina.accesorio'
-                ].search_count(
-                    [('modelo_id', '=', record.id)]
-                )
+            record.total_accesorios = self.env[
+                'modelo.maquina.accesorio'
+            ].search_count(
+                [('modelo_id', '=', record.id)]
             )
 
     # =========================================================
@@ -752,13 +924,14 @@ class ModelosMaquina(models.Model):
             return {
                 'warning': {
                     'title': _(
-                        'Configuración se copiará al guardar'
+                        'La configuración se copiará al guardar'
                     ),
                     'message': _(
                         'Al guardar este modelo se copiarán '
                         '%(components)s componentes y '
                         '%(accessories)s accesorios desde "%(model)s".'
-                    ) % {
+                    )
+                    % {
                         'components': comp_count,
                         'accessories': acc_count,
                         'model': self.modelo_referencia_id.name,
@@ -780,6 +953,12 @@ class ModelosMaquina(models.Model):
         self,
         modelo_origen,
     ):
+        """
+        Copia componentes y accesorios desde otro modelo.
+
+        No copia la configuración de tóner porque las referencias y
+        duraciones deben corresponder exactamente al modelo destino.
+        """
         self.ensure_one()
 
         if not modelo_origen:
@@ -809,6 +988,10 @@ class ModelosMaquina(models.Model):
         es_destino_monocromo = (
             self.tipo_id == 'monocromatica'
         )
+
+        # =====================================================
+        # COPIAR COMPONENTES
+        # =====================================================
 
         componentes_origen = ComponenteModel.search(
             [('modelo_id', '=', modelo_origen.id)]
@@ -885,6 +1068,10 @@ class ModelosMaquina(models.Model):
                         'nota': subparte_origen.nota,
                     }
                 )
+
+        # =====================================================
+        # COPIAR ACCESORIOS
+        # =====================================================
 
         accesorios_origen = AccesorioModel.search(
             [('modelo_id', '=', modelo_origen.id)]
@@ -975,7 +1162,7 @@ class ModelosMaquina(models.Model):
         return records
 
     # =========================================================
-    # ACCIONES EXISTENTES
+    # ACCIÓN COPIAR CONFIGURACIÓN
     # =========================================================
 
     def action_copiar_desde_modelo(self):
@@ -983,9 +1170,7 @@ class ModelosMaquina(models.Model):
 
         if not self.modelo_referencia_id:
             raise UserError(
-                _(
-                    'Debe seleccionar un modelo de referencia.'
-                )
+                _('Debe seleccionar un modelo de referencia.')
             )
 
         comp_count = self.env[
@@ -1030,8 +1215,8 @@ class ModelosMaquina(models.Model):
 
         if comp_copiados == 0 and acc_copiados == 0:
             message = _(
-                'No se copió ningún elemento. '
-                'Los registros pueden existir previamente.'
+                'No se copió ningún elemento. Los componentes y '
+                'accesorios pueden existir previamente.'
             )
             notification_type = 'info'
         else:
@@ -1039,7 +1224,8 @@ class ModelosMaquina(models.Model):
                 'Se copiaron %(components)s de %(total_components)s '
                 'componentes y %(accessories)s de %(total_accessories)s '
                 'accesorios desde "%(model)s".'
-            ) % {
+            )
+            message %= {
                 'components': comp_copiados,
                 'total_components': comp_count,
                 'accessories': acc_copiados,
@@ -1058,6 +1244,10 @@ class ModelosMaquina(models.Model):
                 'sticky': False,
             },
         }
+
+    # =========================================================
+    # ACCIONES DE COMPONENTES Y ACCESORIOS
+    # =========================================================
 
     def action_ver_componentes(self):
         self.ensure_one()
