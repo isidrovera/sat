@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <data noupdate="0">
+        <!-- Marcas de máquinas -->
+        <record id="marca_canon" model="marca.marca">
+            <field name="name">Canon</field>
+            <field name="codigo_tecnico">canon</field>
+            <field name="active" eval="True"/>
+        </record>
+        <record id="marca_epson" model="marca.marca">
+            <field name="name">Epson</field>
+            <field name="codigo_tecnico">epson</field>
+            <field name="active" eval="True"/>
+        </record>
+        <record id="marca_hp" model="marca.marca">
+            <field name="name">HP</field>
+            <field name="codigo_tecnico">hp</field>
+            <field name="active" eval="True"/>
+        </record>
+        <record id="marca_konica_minolta" model="marca.marca">
+            <field name="name">Konica Minolta</field>
+            <field name="codigo_tecnico">konica_minolta</field>
+            <field name="active" eval="True"/>
+        </record>
+        <record id="marca_kyocera" model="marca.marca">
+            <field name="name">Kyocera</field>
+            <field name="codigo_tecnico">kyocera</field>
+            <field name="active" eval="True"/>
+        </record>
+        <record id="marca_lanier" model="marca.marca">
+            <field name="name">Lanier</field>
+            <field name="codigo_tecnico">lanier</field>
+            <field name="active" eval="True"/>
+        </record>
+        <record id="marca_ricoh" model="marca.marca">
+            <field name="name">Ricoh</field>
+            <field name="codigo_tecnico">ricoh</field>
+            <field name="active" eval="True"/>
+        </record>
+        <record id="marca_riso" model="marca.marca">
+            <field name="name">Riso</field>
+            <field name="codigo_tecnico">riso</field>
+            <field name="active" eval="True"/>
+        </record>
+        <record id="marca_savin" model="marca.marca">
+            <field name="name">Savin</field>
+            <field name="codigo_tecnico">savin</field>
+            <field name="active" eval="True"/>
+        </record>
+    </data>
+</odoo>

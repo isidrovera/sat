@@ -80,6 +80,7 @@
         'data/whatsapp_session_cron_data.xml',
         'data/reparaciones_avance_data.xml',
         'data/sat_notificacion_log_data.xml',
+        'data/modelos_maquina_data.xml',
         'data/modelos_maquina_data.xml',    
         'views/ventas.xml',   
         'views/modelos.xml',
