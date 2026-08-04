@@ -132,33 +132,231 @@
 
 
 /* ==========================================================
-   BARRA DE ESTADOS
+   BARRAS DE ESTADO
+   Disponibilidad y estado técnico
 ========================================================== */
 
-.sat_equipment_form .o_statusbar_status {
-    margin-left: auto;
+.sat_equipment_form .sat_equipment_header .o_statusbar_status {
+    display: flex;
+    align-items: center;
+    margin-left: 12px;
+    overflow: visible;
 }
 
-.sat_equipment_form .o_statusbar_status .o_arrow_button {
-    min-height: 33px;
-    padding-right: 15px;
-    padding-left: 15px;
-    border-color: var(--sat-neutral-200);
-    background: #ffffff;
-    color: var(--sat-neutral-500);
+/* Estados normales: visibles, sin fondo blanco */
+.sat_equipment_form
+.sat_equipment_header
+.o_statusbar_status
+.o_arrow_button {
+    min-height: 34px;
+    padding: 7px 18px 7px 22px !important;
+    border-color: #aebfce !important;
+    background-color: #e8eef4 !important;
+    color: #334a60 !important;
     font-size: 12px;
-    font-weight: 600;
+    font-weight: 700;
+    opacity: 1 !important;
+    box-shadow: none !important;
+    transition:
+        background-color 0.18s ease,
+        border-color 0.18s ease,
+        color 0.18s ease;
 }
 
-.sat_equipment_form .o_statusbar_status .o_arrow_button:hover {
-    background: var(--sat-primary-soft);
-    color: var(--sat-primary-dark);
+/* Flechas de los estados normales */
+.sat_equipment_form
+.sat_equipment_header
+.o_statusbar_status
+.o_arrow_button::before {
+    border-left-color: #aebfce !important;
 }
 
-.sat_equipment_form .o_statusbar_status .o_arrow_button.o_arrow_button_current {
-    border-color: var(--sat-primary);
-    background: var(--sat-primary);
-    color: #ffffff;
+.sat_equipment_form
+.sat_equipment_header
+.o_statusbar_status
+.o_arrow_button::after {
+    border-left-color: #e8eef4 !important;
+}
+
+/* Hover */
+.sat_equipment_form
+.sat_equipment_header
+.o_statusbar_status
+.o_arrow_button:hover {
+    border-color: #5c86a9 !important;
+    background-color: #d3e4f2 !important;
+    color: #173f61 !important;
+}
+
+.sat_equipment_form
+.sat_equipment_header
+.o_statusbar_status
+.o_arrow_button:hover::before {
+    border-left-color: #5c86a9 !important;
+}
+
+.sat_equipment_form
+.sat_equipment_header
+.o_statusbar_status
+.o_arrow_button:hover::after {
+    border-left-color: #d3e4f2 !important;
+}
+
+/* Estado actual: contraste alto */
+.sat_equipment_form
+.sat_equipment_header
+.o_statusbar_status
+.o_arrow_button.o_arrow_button_current,
+.sat_equipment_form
+.sat_equipment_header
+.o_statusbar_status
+.o_arrow_button[aria-current="step"],
+.sat_equipment_form
+.sat_equipment_header
+.o_statusbar_status
+.o_arrow_button.active {
+    border-color: #0d7180 !important;
+    background-color: #0d7180 !important;
+    color: #ffffff !important;
+    font-weight: 800;
+    opacity: 1 !important;
+    box-shadow:
+        0 2px 6px rgba(13, 113, 128, 0.28),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.14) !important;
+}
+
+.sat_equipment_form
+.sat_equipment_header
+.o_statusbar_status
+.o_arrow_button.o_arrow_button_current::before,
+.sat_equipment_form
+.sat_equipment_header
+.o_statusbar_status
+.o_arrow_button[aria-current="step"]::before,
+.sat_equipment_form
+.sat_equipment_header
+.o_statusbar_status
+.o_arrow_button.active::before {
+    border-left-color: #0d7180 !important;
+}
+
+.sat_equipment_form
+.sat_equipment_header
+.o_statusbar_status
+.o_arrow_button.o_arrow_button_current::after,
+.sat_equipment_form
+.sat_equipment_header
+.o_statusbar_status
+.o_arrow_button[aria-current="step"]::after,
+.sat_equipment_form
+.sat_equipment_header
+.o_statusbar_status
+.o_arrow_button.active::after {
+    border-left-color: #0d7180 !important;
+}
+
+/* Odoo puede renderizar los estados no seleccionados como disabled.
+   Deben seguir viéndose claramente. */
+.sat_equipment_form
+.sat_equipment_header
+.o_statusbar_status
+.o_arrow_button:disabled,
+.sat_equipment_form
+.sat_equipment_header
+.o_statusbar_status
+.o_arrow_button.disabled {
+    border-color: #bdc9d5 !important;
+    background-color: #edf2f6 !important;
+    color: #536779 !important;
+    opacity: 1 !important;
+}
+
+.sat_equipment_form
+.sat_equipment_header
+.o_statusbar_status
+.o_arrow_button:disabled::before,
+.sat_equipment_form
+.sat_equipment_header
+.o_statusbar_status
+.o_arrow_button.disabled::before {
+    border-left-color: #bdc9d5 !important;
+}
+
+.sat_equipment_form
+.sat_equipment_header
+.o_statusbar_status
+.o_arrow_button:disabled::after,
+.sat_equipment_form
+.sat_equipment_header
+.o_statusbar_status
+.o_arrow_button.disabled::after {
+    border-left-color: #edf2f6 !important;
+}
+
+/* Conserva el color fuerte incluso si el estado actual también llega disabled */
+.sat_equipment_form
+.sat_equipment_header
+.o_statusbar_status
+.o_arrow_button.o_arrow_button_current:disabled,
+.sat_equipment_form
+.sat_equipment_header
+.o_statusbar_status
+.o_arrow_button[aria-current="step"]:disabled {
+    border-color: #0d7180 !important;
+    background-color: #0d7180 !important;
+    color: #ffffff !important;
+}
+
+.sat_equipment_form
+.sat_equipment_header
+.o_statusbar_status
+.o_arrow_button.o_arrow_button_current:disabled::before,
+.sat_equipment_form
+.sat_equipment_header
+.o_statusbar_status
+.o_arrow_button[aria-current="step"]:disabled::before {
+    border-left-color: #0d7180 !important;
+}
+
+.sat_equipment_form
+.sat_equipment_header
+.o_statusbar_status
+.o_arrow_button.o_arrow_button_current:disabled::after,
+.sat_equipment_form
+.sat_equipment_header
+.o_statusbar_status
+.o_arrow_button[aria-current="step"]:disabled::after {
+    border-left-color: #0d7180 !important;
+}
+
+/* Botón de estados ocultos: los tres puntos */
+.sat_equipment_form
+.sat_equipment_header
+.o_statusbar_status
+.o_statusbar_status_dropdown,
+.sat_equipment_form
+.sat_equipment_header
+.o_statusbar_status
+.dropdown-toggle {
+    min-height: 34px;
+    border: 1px solid #aebfce !important;
+    border-radius: 6px;
+    background: #e8eef4 !important;
+    color: #334a60 !important;
+    opacity: 1 !important;
+}
+
+.sat_equipment_form
+.sat_equipment_header
+.o_statusbar_status
+.o_statusbar_status_dropdown:hover,
+.sat_equipment_form
+.sat_equipment_header
+.o_statusbar_status
+.dropdown-toggle:hover {
+    border-color: #5c86a9 !important;
+    background: #d3e4f2 !important;
+    color: #173f61 !important;
 }
 
 
