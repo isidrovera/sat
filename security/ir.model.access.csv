@@ -291,7 +291,7 @@ access_reparacion_avance_user,reparacion.avance user,model_reparacion_avance,bas
 access_reparacion_avance_linea_user,reparacion.avance.linea user,model_reparacion_avance_linea,base.group_user,1,1,1,1
 access_sat_dashboard_user_base,sat_dashboard.user.base,model_sat_dashboard,base.group_user,1,0,0,0
 access_evaluacion_personal_user_base,evaluacion_personal.user.base,model_evaluacion_personal,base.group_user,1,0,0,0
-access_taller_incidencia_user_base,taller_incidencia.user.base,model_taller_incidencia,base.group_user,1,0,0,0
+access_taller_incidencia_user_base,taller_incidencia.user.base,model_taller_incidencia,base.group_user,1,1,1,0
 access_excel_import_model_user_base,excel_import_model.user.base,model_excel_import_model,base.group_user,1,0,0,0
 access_sale_order_user_base,sale_order.user.base,model_sale_order,base.group_user,1,0,0,0
 access_sale_order_line_user_base,sale_order_line.user.base,model_sale_order_line,base.group_user,1,0,0,0
