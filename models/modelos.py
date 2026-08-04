@@ -665,7 +665,6 @@ class ModelosMaquin(models.Model):
                         'pero no registró su modelo ni su código de parte.'
                     )
                 )
-
     # =========================================================
     # ACCIONES
     # =========================================================
