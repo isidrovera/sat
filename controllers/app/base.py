@@ -22,524 +22,608 @@ _ALLOWED_ORIGINS = {
     "https://andessolutioncopiers.com",
 }
 
-class AppHomeController(
-    AppBaseController
-):
+
+class AppBaseController(http.Controller):
 
     # ============================================================
-    # OPTIONS
+    # CORS
     # ============================================================
 
-    @http.route(
-        "/api/app/home",
-        type="http",
-        auth="none",
-        methods=["OPTIONS"],
-        csrf=False,
-        save_session=False,
-    )
-    def home_options(
+    def _is_allowed_origin(
         self,
-        **kwargs,
+        origin,
     ):
-        return self._options_response()
+        if not origin:
+            return False
 
-    # ============================================================
-    # USER
-    # ============================================================
+        if origin in _ALLOWED_ORIGINS:
+            return True
 
-    def _serialize_user(
+        if re.match(
+            r"^https?://localhost(?::\d+)?$",
+            origin,
+        ):
+            return True
+
+        if re.match(
+            r"^https?://127\.0\.0\.1(?::\d+)?$",
+            origin,
+        ):
+            return True
+
+        return False
+
+    def _cors_headers(
         self,
-        user,
     ):
-        employee = False
+        origin = (
+            request.httprequest
+            .headers
+            .get("Origin")
+        )
+
+        headers = [
+            (
+                "Access-Control-Allow-Methods",
+                "GET, POST, PATCH, PUT, DELETE, OPTIONS",
+            ),
+            (
+                "Access-Control-Allow-Headers",
+                "Content-Type, Accept, Authorization",
+            ),
+            (
+                "Access-Control-Allow-Credentials",
+                "true",
+            ),
+            (
+                "Access-Control-Max-Age",
+                "86400",
+            ),
+        ]
 
         if (
-            "employee_id"
-            in user._fields
-            and user.employee_id
+            origin
+            and self._is_allowed_origin(
+                origin
+            )
         ):
-            employee = {
-                "id": user.employee_id.id,
-                "name": user.employee_id.name,
-                "job_title": (
-                    user.employee_id.job_title
-                    if "job_title"
-                    in user.employee_id._fields
-                    else False
+            headers.extend(
+                [
+                    (
+                        "Access-Control-Allow-Origin",
+                        origin,
+                    ),
+                    (
+                        "Vary",
+                        "Origin",
+                    ),
+                ]
+            )
+
+        return headers
+
+    def _options_response(
+        self,
+    ):
+        origin = (
+            request.httprequest
+            .headers
+            .get("Origin")
+        )
+
+        if (
+            origin
+            and not self._is_allowed_origin(
+                origin
+            )
+        ):
+            return self._json_response(
+                {
+                    "success": False,
+                    "code": "ORIGIN_NOT_ALLOWED",
+                    "message": (
+                        "El origen de la solicitud "
+                        "no está autorizado."
+                    ),
+                },
+                status=403,
+            )
+
+        return request.make_response(
+            "",
+            headers=self._cors_headers(),
+            status=204,
+        )
+
+    # ============================================================
+    # JSON
+    # ============================================================
+
+    def _json_response(
+        self,
+        data,
+        status=200,
+    ):
+        headers = [
+            (
+                "Content-Type",
+                "application/json; charset=utf-8",
+            ),
+            (
+                "Cache-Control",
+                "no-store",
+            ),
+        ]
+
+        headers.extend(
+            self._cors_headers()
+        )
+
+        return request.make_response(
+            json.dumps(
+                data,
+                ensure_ascii=False,
+                default=self._json_default,
+            ),
+            headers=headers,
+            status=status,
+        )
+
+    def _json_default(
+        self,
+        value,
+    ):
+        if isinstance(
+            value,
+            (datetime, date),
+        ):
+            return value.isoformat()
+
+        return str(value)
+
+    def _get_json_body(
+        self,
+    ):
+        try:
+            data = (
+                request.httprequest
+                .get_json(
+                    silent=True,
+                )
+            )
+
+            if isinstance(
+                data,
+                dict,
+            ):
+                return data
+
+        except Exception:
+            _logger.exception(
+                "No se pudo interpretar "
+                "el JSON recibido."
+            )
+
+        return {}
+
+    # ============================================================
+    # SESSION / AUTH
+    # ============================================================
+
+    def _require_user(
+        self,
+    ):
+        """
+        Valida manualmente la sesión Odoo.
+
+        Devuelve:
+
+            (user, None)
+
+        cuando la sesión es válida.
+
+        Devuelve:
+
+            (None, response)
+
+        cuando la sesión no existe o expiró.
+        """
+
+        uid = request.session.uid
+
+        if not uid:
+            return (
+                None,
+                self._json_response(
+                    {
+                        "success": False,
+                        "authenticated": False,
+                        "code": "SESSION_EXPIRED",
+                        "message": (
+                            "La sesión ha expirado "
+                            "o no existe una sesión activa."
+                        ),
+                    },
+                    status=401,
                 ),
-            }
+            )
+
+        user = (
+            request.env[
+                "res.users"
+            ]
+            .sudo()
+            .browse(
+                uid
+            )
+            .exists()
+        )
+
+        if (
+            not user
+            or not user.active
+        ):
+            request.session.logout(
+                keep_db=True,
+            )
+
+            return (
+                None,
+                self._json_response(
+                    {
+                        "success": False,
+                        "authenticated": False,
+                        "code": "INVALID_SESSION",
+                        "message": (
+                            "La sesión ya no es válida."
+                        ),
+                    },
+                    status=401,
+                ),
+            )
+
+        request.update_env(
+            user=uid,
+        )
+
+        request.session.touch()
+
+        return (
+            request.env.user,
+            None,
+        )
+
+    # ============================================================
+    # MODEL ACCESS
+    # ============================================================
+
+    def _can_read_model(
+        self,
+        model_name,
+    ):
+        try:
+            model = request.env[
+                model_name
+            ]
+
+            return bool(
+                model.check_access_rights(
+                    "read",
+                    raise_exception=False,
+                )
+            )
+
+        except Exception:
+            return False
+
+    def _can_create_model(
+        self,
+        model_name,
+    ):
+        try:
+            model = request.env[
+                model_name
+            ]
+
+            return bool(
+                model.check_access_rights(
+                    "create",
+                    raise_exception=False,
+                )
+            )
+
+        except Exception:
+            return False
+
+    def _can_write_model(
+        self,
+        model_name,
+    ):
+        try:
+            model = request.env[
+                model_name
+            ]
+
+            return bool(
+                model.check_access_rights(
+                    "write",
+                    raise_exception=False,
+                )
+            )
+
+        except Exception:
+            return False
+
+    def _can_unlink_model(
+        self,
+        model_name,
+    ):
+        try:
+            model = request.env[
+                model_name
+            ]
+
+            return bool(
+                model.check_access_rights(
+                    "unlink",
+                    raise_exception=False,
+                )
+            )
+
+        except Exception:
+            return False
+
+    # ============================================================
+    # RECORD HELPERS
+    # ============================================================
+
+    def _many2one(
+        self,
+        record,
+    ):
+        if not record:
+            return False
 
         return {
-            "id": user.id,
-            "name": user.name,
-            "login": user.login,
-            "company": self._many2one(
-                user.company_id
+            "id": record.id,
+            "name": (
+                record.display_name
+                or record.name
+                or ""
             ),
-            "employee": employee,
         }
 
-    # ============================================================
-    # TODAY RANGE
-    # ============================================================
-
-    def _today_utc_range(
+    def _selection_label(
         self,
-        user,
+        record,
+        field_name,
     ):
-        tz_name = (
-            user.tz
-            or "America/Lima"
-        )
+        if not record:
+            return False
+
+        if (
+            field_name
+            not in record._fields
+        ):
+            return False
+
+        value = record[
+            field_name
+        ]
+
+        if value in (
+            False,
+            None,
+            "",
+        ):
+            return False
+
+        field = record._fields[
+            field_name
+        ]
+
+        selection = field.selection
+
+        if callable(
+            selection
+        ):
+            try:
+                selection = selection(
+                    record.env
+                )
+            except TypeError:
+                selection = selection(
+                    record
+                )
 
         try:
-            timezone = pytz.timezone(
-                tz_name
+            return dict(
+                selection
+                or []
+            ).get(
+                value,
+                value,
+            )
+
+        except Exception:
+            return value
+
+    def _safe_value(
+        self,
+        record,
+        field_name,
+        default=False,
+    ):
+        if not record:
+            return default
+
+        if (
+            field_name
+            not in record._fields
+        ):
+            return default
+
+        value = record[
+            field_name
+        ]
+
+        if hasattr(
+            value,
+            "ids",
+        ):
+            if not value:
+                return False
+
+            if len(value) == 1:
+                return self._many2one(
+                    value
+                )
+
+            return [
+                self._many2one(
+                    item
+                )
+                for item
+                in value
+            ]
+
+        return value
+
+    # ============================================================
+    # PAGINATION
+    # ============================================================
+
+    def _get_pagination(
+        self,
+        default_limit=50,
+        max_limit=100,
+    ):
+        try:
+            limit = int(
+                request.httprequest
+                .args
+                .get(
+                    "limit",
+                    default_limit,
+                )
             )
         except Exception:
-            timezone = pytz.timezone(
-                "America/Lima"
+            limit = default_limit
+
+        try:
+            offset = int(
+                request.httprequest
+                .args
+                .get(
+                    "offset",
+                    0,
+                )
             )
+        except Exception:
+            offset = 0
 
-        now_local = datetime.now(
-            timezone
+        limit = max(
+            1,
+            min(
+                limit,
+                max_limit,
+            ),
         )
 
-        start_local = timezone.localize(
-            datetime.combine(
-                now_local.date(),
-                time.min,
-            )
-        )
-
-        end_local = timezone.localize(
-            datetime.combine(
-                now_local.date(),
-                time.max,
-            )
-        )
-
-        start_utc = (
-            start_local
-            .astimezone(pytz.UTC)
-            .replace(tzinfo=None)
-        )
-
-        end_utc = (
-            end_local
-            .astimezone(pytz.UTC)
-            .replace(tzinfo=None)
+        offset = max(
+            0,
+            offset,
         )
 
         return (
-            fields.Datetime.to_string(
-                start_utc
-            ),
-            fields.Datetime.to_string(
-                end_utc
-            ),
+            limit,
+            offset,
         )
 
     # ============================================================
-    # RECENT ACTIVITY
+    # STANDARD ERRORS
     # ============================================================
 
-    def _recent_activity(
+    def _error_response(
         self,
-        user,
+        exception,
     ):
-        result = []
-
-        # --------------------------------------------------------
-        # Servicios
-        # --------------------------------------------------------
-
-        if self._can_read_model(
-            "ticket.alquiler"
+        if isinstance(
+            exception,
+            AccessDenied,
         ):
-            tickets = request.env[
-                "ticket.alquiler"
-            ].search(
-                [
-                    (
-                        "responsable",
-                        "=",
-                        user.id,
-                    ),
-                ],
-                order="write_date desc",
-                limit=3,
-            )
-
-            for ticket in tickets:
-                result.append(
-                    {
-                        "type": "service",
-                        "id": ticket.id,
-                        "reference": (
-                            ticket.name
-                            or ""
-                        ),
-                        "title": (
-                            ticket.nombre_cliente
-                            if "nombre_cliente"
-                            in ticket._fields
-                            else ticket.display_name
-                        ),
-                        "status": (
-                            ticket.estado
-                        ),
-                        "status_label": (
-                            self._selection_label(
-                                ticket,
-                                "estado",
-                            )
-                        ),
-                        "date": (
-                            ticket.write_date
-                        ),
-                    }
-                )
-
-        # --------------------------------------------------------
-        # Reparaciones
-        # --------------------------------------------------------
-
-        if self._can_read_model(
-            "reparaciones.reparaciones"
-        ):
-            repairs = request.env[
-                "reparaciones.reparaciones"
-            ].search(
-                [
-                    (
-                        "responsable_id",
-                        "=",
-                        user.id,
-                    ),
-                ],
-                order="write_date desc",
-                limit=3,
-            )
-
-            for repair in repairs:
-                result.append(
-                    {
-                        "type": "repair",
-                        "id": repair.id,
-                        "reference": (
-                            repair.name
-                            or ""
-                        ),
-                        "title": (
-                            repair.serie_id
-                            or repair.display_name
-                        ),
-                        "status": (
-                            repair.estado_id
-                        ),
-                        "status_label": (
-                            self._selection_label(
-                                repair,
-                                "estado_id",
-                            )
-                        ),
-                        "date": (
-                            repair.write_date
-                        ),
-                    }
-                )
-
-        # --------------------------------------------------------
-        # Permisos
-        # --------------------------------------------------------
-
-        if self._can_read_model(
-            "mantenimiento.tecnico.ausencia"
-        ):
-            permissions = request.env[
-                "mantenimiento.tecnico.ausencia"
-            ].search(
-                [
-                    (
-                        "tecnico_id",
-                        "=",
-                        user.id,
-                    ),
-                ],
-                order="write_date desc",
-                limit=3,
-            )
-
-            for permission in permissions:
-                result.append(
-                    {
-                        "type": "permission",
-                        "id": permission.id,
-                        "reference": (
-                            permission.name
-                            or ""
-                        ),
-                        "title": (
-                            self._selection_label(
-                                permission,
-                                "tipo",
-                            )
-                        ),
-                        "status": (
-                            permission.estado
-                        ),
-                        "status_label": (
-                            self._selection_label(
-                                permission,
-                                "estado",
-                            )
-                        ),
-                        "date": (
-                            permission.write_date
-                        ),
-                    }
-                )
-
-        result.sort(
-            key=lambda item: (
-                item.get("date")
-                or datetime.min
-            ),
-            reverse=True,
-        )
-
-        return result[:5]
-
-    # ============================================================
-    # HOME
-    # ============================================================
-
-    @http.route(
-        "/api/app/home",
-        type="http",
-        auth="public",
-        methods=["GET"],
-        csrf=False,
-        save_session=True,
-    )
-    def home(
-        self,
-        **kwargs,
-    ):
-        user, error = (
-            self._require_user()
-        )
-
-        if error:
-            return error
-
-        try:
-            start_today, end_today = (
-                self._today_utc_range(
-                    user
-                )
-            )
-
-            # ====================================================
-            # SERVICES
-            # ====================================================
-
-            service_visible = (
-                self._can_read_model(
-                    "ticket.alquiler"
-                )
-            )
-
-            services_active = 0
-            services_today = 0
-
-            if service_visible:
-                Ticket = request.env[
-                    "ticket.alquiler"
-                ]
-
-                services_active = (
-                    Ticket.search_count(
-                        [
-                            (
-                                "responsable",
-                                "=",
-                                user.id,
-                            ),
-                            (
-                                "estado",
-                                "!=",
-                                "finalizado",
-                            ),
-                        ]
-                    )
-                )
-
-                services_today = (
-                    Ticket.search_count(
-                        [
-                            (
-                                "responsable",
-                                "=",
-                                user.id,
-                            ),
-                            (
-                                "agenda",
-                                ">=",
-                                start_today,
-                            ),
-                            (
-                                "agenda",
-                                "<=",
-                                end_today,
-                            ),
-                        ]
-                    )
-                )
-
-            # ====================================================
-            # REPAIRS
-            # ====================================================
-
-            repair_visible = (
-                self._can_read_model(
-                    "reparaciones.reparaciones"
-                )
-            )
-
-            repairs_active = 0
-
-            if repair_visible:
-                Repair = request.env[
-                    "reparaciones.reparaciones"
-                ]
-
-                repairs_active = (
-                    Repair.search_count(
-                        [
-                            (
-                                "responsable_id",
-                                "=",
-                                user.id,
-                            ),
-                            (
-                                "estado_id",
-                                "not in",
-                                [
-                                    "finalizado",
-                                    "entregada",
-                                ],
-                            ),
-                        ]
-                    )
-                )
-
-            # ====================================================
-            # PERMISSIONS
-            # ====================================================
-
-            permission_visible = (
-                self._can_read_model(
-                    "mantenimiento.tecnico.ausencia"
-                )
-            )
-
-            permission_count = 0
-            permission_pending = 0
-
-            if permission_visible:
-                Permission = request.env[
-                    "mantenimiento.tecnico.ausencia"
-                ]
-
-                permission_count = (
-                    Permission.search_count(
-                        [
-                            (
-                                "tecnico_id",
-                                "=",
-                                user.id,
-                            ),
-                        ]
-                    )
-                )
-
-                permission_pending = (
-                    Permission.search_count(
-                        [
-                            (
-                                "tecnico_id",
-                                "=",
-                                user.id,
-                            ),
-                            (
-                                "estado",
-                                "=",
-                                "pendiente",
-                            ),
-                        ]
-                    )
-                )
-
             return self._json_response(
                 {
-                    "success": True,
-                    "user": (
-                        self._serialize_user(
-                            user
-                        )
+                    "success": False,
+                    "code": "ACCESS_DENIED",
+                    "message": (
+                        "No tienes autorización "
+                        "para realizar esta operación."
                     ),
-                    "modules": {
-                        "services": {
-                            "visible": (
-                                service_visible
-                            ),
-                            "count": (
-                                services_active
-                            ),
-                            "today": (
-                                services_today
-                            ),
-                        },
-                        "repairs": {
-                            "visible": (
-                                repair_visible
-                            ),
-                            "count": (
-                                repairs_active
-                            ),
-                        },
-                        "permissions": {
-                            "visible": (
-                                permission_visible
-                            ),
-                            "can_create": (
-                                self._can_create_model(
-                                    "mantenimiento.tecnico.ausencia"
-                                )
-                            ),
-                            "count": (
-                                permission_count
-                            ),
-                            "pending": (
-                                permission_pending
-                            ),
-                        },
-                        "profile": {
-                            "visible": True,
-                        },
-                    },
-                    "recent_activity": (
-                        self._recent_activity(
-                            user
-                        )
-                    ),
-                }
+                },
+                status=403,
             )
 
-        except Exception as exc:
-            return self._error_response(
-                exc
+        if isinstance(
+            exception,
+            AccessError,
+        ):
+            return self._json_response(
+                {
+                    "success": False,
+                    "code": "ACCESS_ERROR",
+                    "message": (
+                        "No tienes permisos para "
+                        "acceder a este registro."
+                    ),
+                },
+                status=403,
             )
+
+        if isinstance(
+            exception,
+            ValidationError,
+        ):
+            return self._json_response(
+                {
+                    "success": False,
+                    "code": "VALIDATION_ERROR",
+                    "message": str(
+                        exception
+                    ),
+                },
+                status=400,
+            )
+
+        if isinstance(
+            exception,
+            UserError,
+        ):
+            return self._json_response(
+                {
+                    "success": False,
+                    "code": "USER_ERROR",
+                    "message": str(
+                        exception
+                    ),
+                },
+                status=400,
+            )
+
+        _logger.exception(
+            "Error inesperado "
+            "en API móvil: %s",
+            exception,
+        )
+
+        return self._json_response(
+            {
+                "success": False,
+                "code": "SERVER_ERROR",
+                "message": (
+                    "Ocurrió un error inesperado "
+                    "procesando la solicitud."
+                ),
+            },
+            status=500,
+        )
