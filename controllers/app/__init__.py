@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
-from . import auth
 from . import base
+from . import auth
 from . import home
 from . import service
 from . import repair
