@@ -1,17 +1,26 @@
 # -*- coding: utf-8 -*-
 
+import json
 import logging
-from datetime import datetime, time
+import re
+from datetime import date, datetime
 
-import pytz
-
-from odoo import fields, http
+from odoo import http
+from odoo.exceptions import (
+    AccessError,
+    AccessDenied,
+    UserError,
+    ValidationError,
+)
 from odoo.http import request
-
-from .base import AppBaseController
 
 
 _logger = logging.getLogger(__name__)
+
+
+_ALLOWED_ORIGINS = {
+    "https://andessolutioncopiers.com",
+}
 
 
 class AppHomeController(
