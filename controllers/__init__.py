@@ -24,3 +24,4 @@ from . import evidencia
 from . import whatsapp_api_controller
 from . import controllers
 from . import reparaciones_avance
+from . import app
