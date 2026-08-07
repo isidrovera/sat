@@ -13,11 +13,109 @@ from odoo.http import request
 _logger = logging.getLogger(__name__)
 
 
+# ============================================================
+# CORS
+# ============================================================
+
+# Dominios permitidos para consumir la API desde navegador.
+#
+# Android/iOS no dependen de CORS, pero Flutter Web sí.
+#
+# No utilizamos:
+#
+# Access-Control-Allow-Origin: *
+#
+# porque la autenticación utiliza cookies/sesiones.
+_ALLOWED_ORIGINS = {
+    "https://andessolutioncopiers.com",
+}
+
+
+def _is_allowed_origin(origin):
+    """
+    Determina si un Origin está autorizado.
+
+    Permitimos:
+    - dominio de producción
+    - localhost para Flutter Web
+    - 127.0.0.1 para desarrollo
+    """
+
+    if not origin:
+        return False
+
+    if origin in _ALLOWED_ORIGINS:
+        return True
+
+    # Flutter Web desde localhost con cualquier puerto.
+    if re.match(
+        r"^https?://localhost(?::\d+)?$",
+        origin,
+    ):
+        return True
+
+    # Flutter Web usando 127.0.0.1.
+    if re.match(
+        r"^https?://127\.0\.0\.1(?::\d+)?$",
+        origin,
+    ):
+        return True
+
+    return False
+
+
 class AppAuthController(http.Controller):
 
     # ============================================================
-    # Helpers
+    # HELPERS
     # ============================================================
+
+    def _cors_headers(self):
+        """
+        Cabeceras CORS utilizadas por las APIs de la app.
+
+        Cuando se manejan cookies de sesión debemos devolver
+        explícitamente el Origin autorizado.
+        """
+
+        origin = request.httprequest.headers.get(
+            "Origin"
+        )
+
+        headers = [
+            (
+                "Access-Control-Allow-Methods",
+                "GET, POST, OPTIONS",
+            ),
+            (
+                "Access-Control-Allow-Headers",
+                "Content-Type, Accept, Authorization",
+            ),
+            (
+                "Access-Control-Allow-Credentials",
+                "true",
+            ),
+            (
+                "Access-Control-Max-Age",
+                "86400",
+            ),
+        ]
+
+        if origin and _is_allowed_origin(origin):
+            headers.extend(
+                [
+                    (
+                        "Access-Control-Allow-Origin",
+                        origin,
+                    ),
+                    (
+                        "Vary",
+                        "Origin",
+                    ),
+                ]
+            )
+
+        return headers
 
     def _json_response(
         self,
@@ -29,23 +127,31 @@ class AppAuthController(http.Controller):
 
         No utiliza JSON-RPC para que Flutter pueda consumir
         directamente la respuesta HTTP.
+
+        Además agrega las cabeceras CORS necesarias.
         """
+
+        headers = [
+            (
+                "Content-Type",
+                "application/json; charset=utf-8",
+            ),
+            (
+                "Cache-Control",
+                "no-store",
+            ),
+        ]
+
+        headers.extend(
+            self._cors_headers()
+        )
 
         return request.make_response(
             json.dumps(
                 data,
                 ensure_ascii=False,
             ),
-            headers=[
-                (
-                    "Content-Type",
-                    "application/json; charset=utf-8",
-                ),
-                (
-                    "Cache-Control",
-                    "no-store",
-                ),
-            ],
+            headers=headers,
             status=status,
         )
 
@@ -74,7 +180,10 @@ class AppAuthController(http.Controller):
 
         return {}
 
-    def _get_database(self, data=None):
+    def _get_database(
+        self,
+        data=None,
+    ):
         """
         Determina la base de datos de Odoo.
 
@@ -101,7 +210,10 @@ class AppAuthController(http.Controller):
 
         return db or False
 
-    def _image_to_string(self, image):
+    def _image_to_string(
+        self,
+        image,
+    ):
         """
         Convierte avatar binario/base64 de Odoo a texto
         para poder incluirlo en JSON.
@@ -112,19 +224,27 @@ class AppAuthController(http.Controller):
 
         if isinstance(image, bytes):
             try:
-                return image.decode("utf-8")
+                return image.decode(
+                    "utf-8"
+                )
             except UnicodeDecodeError:
                 return base64.b64encode(
                     image,
-                ).decode("utf-8")
+                ).decode(
+                    "utf-8"
+                )
 
         return str(image)
 
-    def _get_employee_data(self, user):
+    def _get_employee_data(
+        self,
+        user,
+    ):
         """
-        Devuelve los datos laborales disponibles.
+        Devuelve datos laborales disponibles.
 
-        No asumimos que todos los usuarios tengan empleado.
+        No todos los usuarios necesariamente tienen
+        un empleado relacionado.
         """
 
         result = {
@@ -152,7 +272,10 @@ class AppAuthController(http.Controller):
 
         return result
 
-    def _serialize_user(self, user):
+    def _serialize_user(
+        self,
+        user,
+    ):
         """
         Información básica necesaria para Flutter.
 
@@ -162,7 +285,14 @@ class AppAuthController(http.Controller):
         user.ensure_one()
 
         partner = user.partner_id
-        employee = self._get_employee_data(user)
+
+        employee = self._get_employee_data(
+            user
+        )
+
+        # --------------------------------------------------------
+        # 2FA
+        # --------------------------------------------------------
 
         totp_enabled = False
 
@@ -171,6 +301,10 @@ class AppAuthController(http.Controller):
                 user.totp_enabled
             )
 
+        # --------------------------------------------------------
+        # Avatar
+        # --------------------------------------------------------
+
         avatar = False
 
         if "avatar_128" in user._fields:
@@ -178,15 +312,25 @@ class AppAuthController(http.Controller):
                 user.avatar_128,
             )
 
+        # --------------------------------------------------------
+        # Datos del contacto
+        # --------------------------------------------------------
+
         phone = False
 
         if "phone" in partner._fields:
-            phone = partner.phone or False
+            phone = (
+                partner.phone
+                or False
+            )
 
         mobile = False
 
         if "mobile" in partner._fields:
-            mobile = partner.mobile or False
+            mobile = (
+                partner.mobile
+                or False
+            )
 
         email = (
             partner.email
@@ -204,7 +348,9 @@ class AppAuthController(http.Controller):
             "phone": phone,
             "mobile": mobile,
             "avatar": avatar,
-            "active": bool(user.active),
+            "active": bool(
+                user.active
+            ),
             "company": {
                 "id": company.id,
                 "name": company.name,
@@ -215,7 +361,9 @@ class AppAuthController(http.Controller):
             },
         }
 
-    def _current_user_response(self):
+    def _current_user_response(
+        self,
+    ):
         """
         Respuesta común después de una autenticación correcta.
         """
@@ -236,6 +384,63 @@ class AppAuthController(http.Controller):
         }
 
     # ============================================================
+    # CORS PREFLIGHT
+    # ============================================================
+
+    @http.route(
+        [
+            "/api/app/auth/login",
+            "/api/app/auth/2fa",
+            "/api/app/auth/me",
+            "/api/app/auth/logout",
+        ],
+        type="http",
+        auth="none",
+        methods=["OPTIONS"],
+        csrf=False,
+        save_session=False,
+    )
+    def auth_options(
+        self,
+        **kwargs,
+    ):
+        """
+        Responde el preflight CORS que realiza el navegador.
+
+        Flutter Web suele ejecutar primero:
+
+            OPTIONS /api/app/auth/login
+
+        antes del POST real.
+        """
+
+        origin = request.httprequest.headers.get(
+            "Origin"
+        )
+
+        if (
+            origin
+            and not _is_allowed_origin(origin)
+        ):
+            return self._json_response(
+                {
+                    "success": False,
+                    "code": "ORIGIN_NOT_ALLOWED",
+                    "message": (
+                        "El origen de la solicitud "
+                        "no está autorizado."
+                    ),
+                },
+                status=403,
+            )
+
+        return request.make_response(
+            "",
+            headers=self._cors_headers(),
+            status=204,
+        )
+
+    # ============================================================
     # LOGIN
     # ============================================================
 
@@ -247,7 +452,10 @@ class AppAuthController(http.Controller):
         csrf=False,
         save_session=True,
     )
-    def login(self, **kwargs):
+    def login(
+        self,
+        **kwargs,
+    ):
         """
         Primer paso de autenticación.
 
@@ -264,19 +472,25 @@ class AppAuthController(http.Controller):
         Si tiene TOTP:
             → Odoo crea una pre-sesión
             → devuelve requires_2fa = true
-            → Flutter debe conservar session_id
-            → luego llamar /api/app/auth/2fa
+            → Flutter conserva session_id
+            → luego llama /api/app/auth/2fa
         """
 
         data = self._get_json_body()
 
         login = str(
-            data.get("login") or ""
+            data.get("login")
+            or ""
         ).strip()
 
         password = str(
-            data.get("password") or ""
+            data.get("password")
+            or ""
         )
+
+        # --------------------------------------------------------
+        # Validación de entrada
+        # --------------------------------------------------------
 
         if not login:
             return self._json_response(
@@ -303,7 +517,13 @@ class AppAuthController(http.Controller):
                 status=400,
             )
 
-        db = self._get_database(data)
+        # --------------------------------------------------------
+        # Base de datos
+        # --------------------------------------------------------
+
+        db = self._get_database(
+            data
+        )
 
         if not db:
             _logger.error(
@@ -322,6 +542,10 @@ class AppAuthController(http.Controller):
                 },
                 status=500,
             )
+
+        # --------------------------------------------------------
+        # Credenciales Odoo
+        # --------------------------------------------------------
 
         credential = {
             "login": login,
@@ -344,7 +568,8 @@ class AppAuthController(http.Controller):
                 login,
             )
 
-            # No decimos si el usuario existe o no.
+            # No indicamos si fue usuario o contraseña
+            # para evitar revelar usuarios existentes.
             return self._json_response(
                 {
                     "success": False,
@@ -386,19 +611,23 @@ class AppAuthController(http.Controller):
         # - si no hay MFA llama finalize()
         # - si hay MFA deja request.session.uid = None
         #
-        # Por tanto no necesitamos inventar nuestra propia bandera.
-        #
 
         if (
             request.session.pre_uid
             and not request.session.uid
         ):
-            pre_uid = request.session.pre_uid
+            pre_uid = (
+                request.session.pre_uid
+            )
 
             user = (
-                request.env["res.users"]
+                request.env[
+                    "res.users"
+                ]
                 .sudo()
-                .browse(pre_uid)
+                .browse(
+                    pre_uid
+                )
                 .exists()
             )
 
@@ -420,6 +649,10 @@ class AppAuthController(http.Controller):
                     status=401,
                 )
 
+            # ----------------------------------------------------
+            # Tipo de MFA
+            # ----------------------------------------------------
+
             mfa_type = False
 
             try:
@@ -431,12 +664,17 @@ class AppAuthController(http.Controller):
                     )
                     else False
                 )
+
             except Exception:
                 _logger.exception(
                     "No se pudo determinar "
                     "el tipo de MFA del usuario %s.",
                     user.id,
                 )
+
+            # ----------------------------------------------------
+            # Solo TOTP por ahora
+            # ----------------------------------------------------
 
             if mfa_type != "totp":
                 _logger.warning(
@@ -465,6 +703,10 @@ class AppAuthController(http.Controller):
                     },
                     status=403,
                 )
+
+            # ----------------------------------------------------
+            # Flutter debe mostrar pantalla TOTP
+            # ----------------------------------------------------
 
             return self._json_response(
                 {
@@ -510,6 +752,7 @@ class AppAuthController(http.Controller):
             )
 
         request.session.db = db
+
         request.session.touch()
 
         return self._json_response(
@@ -528,12 +771,15 @@ class AppAuthController(http.Controller):
         csrf=False,
         save_session=True,
     )
-    def verify_2fa(self, **kwargs):
+    def verify_2fa(
+        self,
+        **kwargs,
+    ):
         """
         Segundo paso cuando el usuario tiene TOTP.
 
         IMPORTANTE:
-        Flutter debe enviar la MISMA cookie session_id
+        Flutter debe enviar/conservar la MISMA session_id
         obtenida durante /login.
 
         Body:
@@ -543,18 +789,28 @@ class AppAuthController(http.Controller):
         }
         """
 
+        # --------------------------------------------------------
+        # Ya autenticado
+        # --------------------------------------------------------
+
         if request.session.uid:
-            # Ya está autenticado.
             return self._json_response(
                 self._current_user_response(),
             )
 
-        pre_uid = request.session.pre_uid
+        # --------------------------------------------------------
+        # Pre-sesión
+        # --------------------------------------------------------
+
+        pre_uid = (
+            request.session.pre_uid
+        )
 
         if not pre_uid:
             return self._json_response(
                 {
                     "success": False,
+                    "authenticated": False,
                     "code": "MFA_SESSION_EXPIRED",
                     "message": (
                         "La sesión de verificación "
@@ -565,10 +821,15 @@ class AppAuthController(http.Controller):
                 status=401,
             )
 
+        # --------------------------------------------------------
+        # Código enviado por Flutter
+        # --------------------------------------------------------
+
         data = self._get_json_body()
 
         raw_code = str(
-            data.get("code") or ""
+            data.get("code")
+            or ""
         )
 
         code = re.sub(
@@ -606,10 +867,18 @@ class AppAuthController(http.Controller):
                 status=400,
             )
 
+        # --------------------------------------------------------
+        # Usuario pendiente de MFA
+        # --------------------------------------------------------
+
         user = (
-            request.env["res.users"]
+            request.env[
+                "res.users"
+            ]
             .sudo()
-            .browse(pre_uid)
+            .browse(
+                pre_uid
+            )
             .exists()
         )
 
@@ -630,6 +899,10 @@ class AppAuthController(http.Controller):
                 status=401,
             )
 
+        # --------------------------------------------------------
+        # Verificamos que realmente tenga TOTP
+        # --------------------------------------------------------
+
         if (
             "totp_enabled" not in user._fields
             or not user.totp_enabled
@@ -646,11 +919,11 @@ class AppAuthController(http.Controller):
                 status=400,
             )
 
+        # --------------------------------------------------------
+        # Validar código TOTP
+        # --------------------------------------------------------
+
         try:
-            #
-            # Misma lógica utilizada por
-            # auth_totp/controllers/home.py
-            #
             with user._assert_can_auth(
                 user=user.id,
             ):
@@ -668,6 +941,7 @@ class AppAuthController(http.Controller):
             return self._json_response(
                 {
                     "success": False,
+                    "authenticated": False,
                     "code": "INVALID_TOTP",
                     "message": (
                         "El código de verificación "
@@ -687,6 +961,7 @@ class AppAuthController(http.Controller):
             return self._json_response(
                 {
                     "success": False,
+                    "authenticated": False,
                     "code": "TOTP_ERROR",
                     "message": (
                         "No fue posible validar "
@@ -724,6 +999,7 @@ class AppAuthController(http.Controller):
             return self._json_response(
                 {
                     "success": False,
+                    "authenticated": False,
                     "code": "SESSION_FINALIZE_ERROR",
                     "message": (
                         "El código fue validado, "
@@ -751,17 +1027,24 @@ class AppAuthController(http.Controller):
         readonly=True,
         save_session=True,
     )
-    def me(self, **kwargs):
+    def me(
+        self,
+        **kwargs,
+    ):
         """
         Comprueba si la sesión móvil continúa autenticada.
 
-        Con auth='public' evitamos que Odoo redirija automáticamente
+        auth='public' evita que Odoo redirija automáticamente
         hacia /web/login cuando la sesión ya no existe.
 
-        La API siempre devuelve JSON.
+        Esta API siempre devuelve JSON.
         """
 
         uid = request.session.uid
+
+        # --------------------------------------------------------
+        # Sin sesión
+        # --------------------------------------------------------
 
         if not uid:
             return self._json_response(
@@ -778,14 +1061,25 @@ class AppAuthController(http.Controller):
                 status=401,
             )
 
+        # --------------------------------------------------------
+        # Usuario
+        # --------------------------------------------------------
+
         user = (
-            request.env["res.users"]
+            request.env[
+                "res.users"
+            ]
             .sudo()
-            .browse(uid)
+            .browse(
+                uid
+            )
             .exists()
         )
 
-        if not user or not user.active:
+        if (
+            not user
+            or not user.active
+        ):
             request.session.logout(
                 keep_db=True,
             )
@@ -802,6 +1096,10 @@ class AppAuthController(http.Controller):
                 },
                 status=401,
             )
+
+        # --------------------------------------------------------
+        # Actualizar environment
+        # --------------------------------------------------------
 
         request.update_env(
             user=uid,
@@ -820,20 +1118,55 @@ class AppAuthController(http.Controller):
     @http.route(
         "/api/app/auth/logout",
         type="http",
-        auth="user",
+        auth="public",
         methods=["POST"],
         csrf=False,
         save_session=True,
     )
-    def logout(self, **kwargs):
+    def logout(
+        self,
+        **kwargs,
+    ):
         """
         Cierra la sesión actual de Odoo.
 
-        Flutter deberá eliminar localmente
-        la cookie session_id después de recibir éxito.
+        Se utiliza auth='public' para que, si la sesión ya
+        venció, Odoo no redirija a /web/login.
+
+        Flutter deberá eliminar localmente session_id
+        después de recibir la respuesta.
         """
 
-        user_id = request.env.user.id
+        user_id = (
+            request.session.uid
+        )
+
+        # --------------------------------------------------------
+        # Ya estaba desconectado
+        # --------------------------------------------------------
+
+        if not user_id:
+            return self._json_response(
+                {
+                    "success": True,
+                    "authenticated": False,
+                    "message": (
+                        "No existe una sesión activa."
+                    ),
+                },
+            )
+
+        # --------------------------------------------------------
+        # Actualizamos usuario actual
+        # --------------------------------------------------------
+
+        request.update_env(
+            user=user_id,
+        )
+
+        # --------------------------------------------------------
+        # Logout Odoo
+        # --------------------------------------------------------
 
         request.session.logout(
             keep_db=True,
