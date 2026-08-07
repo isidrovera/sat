@@ -22,7 +22,6 @@ _ALLOWED_ORIGINS = {
     "https://andessolutioncopiers.com",
 }
 
-
 class AppHomeController(
     AppBaseController
 ):
