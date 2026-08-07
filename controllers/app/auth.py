@@ -745,7 +745,7 @@ class AppAuthController(http.Controller):
     @http.route(
         "/api/app/auth/me",
         type="http",
-        auth="user",
+        auth="public",
         methods=["GET"],
         csrf=False,
         readonly=True,
@@ -753,16 +753,59 @@ class AppAuthController(http.Controller):
     )
     def me(self, **kwargs):
         """
-        Flutter llama este endpoint al abrir la app.
+        Comprueba si la sesión móvil continúa autenticada.
 
-        Si session_id sigue siendo válida:
-            → HTTP 200
-            → devuelve usuario
-            → abrir Home
+        Con auth='public' evitamos que Odoo redirija automáticamente
+        hacia /web/login cuando la sesión ya no existe.
 
-        Si la sesión venció:
-            Odoo rechazará auth='user'.
+        La API siempre devuelve JSON.
         """
+
+        uid = request.session.uid
+
+        if not uid:
+            return self._json_response(
+                {
+                    "success": False,
+                    "authenticated": False,
+                    "requires_2fa": False,
+                    "code": "SESSION_EXPIRED",
+                    "message": (
+                        "La sesión ha expirado o "
+                        "no existe una sesión activa."
+                    ),
+                },
+                status=401,
+            )
+
+        user = (
+            request.env["res.users"]
+            .sudo()
+            .browse(uid)
+            .exists()
+        )
+
+        if not user or not user.active:
+            request.session.logout(
+                keep_db=True,
+            )
+
+            return self._json_response(
+                {
+                    "success": False,
+                    "authenticated": False,
+                    "requires_2fa": False,
+                    "code": "INVALID_SESSION",
+                    "message": (
+                        "La sesión ya no es válida."
+                    ),
+                },
+                status=401,
+            )
+
+        request.update_env(
+            user=uid,
+        )
 
         request.session.touch()
 
