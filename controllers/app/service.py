@@ -2,8 +2,9 @@
 
 import base64
 import logging
+import math
 import mimetypes
-import re
+from datetime import timedelta
 
 import requests
 
@@ -17,9 +18,18 @@ from .base import AppBaseController
 _logger = logging.getLogger(__name__)
 
 
-class AppServiceController(
-    AppBaseController
-):
+class AppServiceController(AppBaseController):
+
+    # ============================================================
+    # CONSTANTS
+    # ============================================================
+
+    COUNTER_WORK_STATES = (
+        "proceso",
+        "en_ruta",
+        "en_sitio",
+        "en_revision",
+    )
 
     # ============================================================
     # OPTIONS
@@ -32,12 +42,21 @@ class AppServiceController(
             "/api/app/services/<int:service_id>/state",
             "/api/app/services/<int:service_id>/finalize",
 
-            "/api/app/services/<int:service_id>/checklist/options",
+            (
+                "/api/app/services/<int:service_id>"
+                "/counters/auto-load"
+            ),
+
+            (
+                "/api/app/services/<int:service_id>"
+                "/checklist/options"
+            ),
 
             (
                 "/api/app/services/<int:service_id>"
                 "/components/<int:evaluation_id>"
             ),
+
             (
                 "/api/app/services/<int:service_id>"
                 "/accessories/<int:evaluation_id>"
@@ -52,18 +71,22 @@ class AppServiceController(
                 "/api/app/services/<int:service_id>"
                 "/evidences"
             ),
+
             (
                 "/api/app/services/<int:service_id>"
                 "/evidences/geocode"
             ),
+
             (
                 "/api/app/services/<int:service_id>"
                 "/evidences/logo"
             ),
+
             (
                 "/api/app/services/<int:service_id>"
                 "/evidences/<int:photo_id>"
             ),
+
             (
                 "/api/app/services/<int:service_id>"
                 "/evidences/<int:photo_id>/image"
@@ -85,7 +108,7 @@ class AppServiceController(
         return self._options_response()
 
     # ============================================================
-    # HELPERS
+    # BASIC HELPERS
     # ============================================================
 
     def _get_service(
@@ -94,7 +117,7 @@ class AppServiceController(
         user,
     ):
         """
-        Devuelve únicamente servicios asignados
+        Devuelve solamente servicios asignados
         al usuario autenticado.
         """
 
@@ -152,13 +175,36 @@ class AppServiceController(
         except Exception:
             return default
 
+    def _safe_int(
+        self,
+        value,
+        default=0,
+    ):
+        try:
+            if value in (
+                None,
+                "",
+                False,
+            ):
+                return default
+
+            return int(
+                value
+            )
+
+        except Exception:
+            return default
+
     def _safe_base64(
         self,
         value,
     ):
         """
-        Convierte DataURL/base64 a base64 limpio
-        y valida que sea correcto.
+        Devuelve:
+        (
+            base64_limpio,
+            bytes_decodificados
+        )
         """
 
         if not value:
@@ -185,6 +231,56 @@ class AppServiceController(
         except Exception:
             return False, False
 
+    def _selection_values(
+        self,
+        record,
+        field_name,
+    ):
+        if field_name not in record._fields:
+            return []
+
+        field = record._fields[
+            field_name
+        ]
+
+        selection = (
+            field.selection
+        )
+
+        if callable(
+            selection
+        ):
+            try:
+                selection = selection(
+                    record
+                )
+            except TypeError:
+                selection = selection(
+                    record.env
+                )
+
+        return selection or []
+
+    def _selection_options(
+        self,
+        record,
+        field_name,
+    ):
+        return [
+            {
+                "value": value,
+                "label": label,
+            }
+            for (
+                value,
+                label,
+            )
+            in self._selection_values(
+                record,
+                field_name,
+            )
+        ]
+
     def _many2one_with_code(
         self,
         record,
@@ -192,8 +288,10 @@ class AppServiceController(
         if not record:
             return False
 
-        result = self._many2one(
-            record
+        result = (
+            self._many2one(
+                record
+            )
         )
 
         if not isinstance(
@@ -202,13 +300,12 @@ class AppServiceController(
         ):
             result = {
                 "id": record.id,
-                "name": record.display_name,
+                "name": (
+                    record.display_name
+                ),
             }
 
-        if (
-            "code"
-            in record._fields
-        ):
+        if "code" in record._fields:
             result[
                 "code"
             ] = (
@@ -219,6 +316,232 @@ class AppServiceController(
         return result
 
     # ============================================================
+    # COUNTER HELPERS
+    # ============================================================
+
+    def _counter_preview(
+        self,
+        ticket,
+    ):
+        """
+        Consulta si la misma lógica utilizada por
+        action_cargar_contadores tiene información
+        válida para cargar.
+
+        No modifica el ticket.
+        """
+
+        result = {
+            "available": False,
+            "source": False,
+            "reading_date": False,
+            "black": False,
+            "color": False,
+            "scanner": False,
+        }
+
+        if (
+            ticket.estado
+            not in self.COUNTER_WORK_STATES
+        ):
+            return result
+
+        if not ticket.product_alquiler:
+            return result
+
+        if not ticket.agenda:
+            return result
+
+        equipment = (
+            ticket.product_alquiler
+        )
+
+        series = (
+            getattr(
+                equipment,
+                "serie",
+                False,
+            )
+        )
+
+        if not series:
+            return result
+
+        if not hasattr(
+            ticket,
+            "_buscar_contadores_con_limite_fecha",
+        ):
+            return result
+
+        try:
+            agenda_date = (
+                ticket.agenda.date()
+            )
+
+            minimum_date = (
+                agenda_date
+                - timedelta(
+                    days=3,
+                )
+            )
+
+            (
+                counters,
+                source,
+                counter_date,
+            ) = (
+                ticket
+                ._buscar_contadores_con_limite_fecha(
+                    series,
+                    agenda_date,
+                    minimum_date,
+                )
+            )
+
+            if not counters:
+                return result
+
+            black = (
+                counters.get(
+                    "contador_bn",
+                    0,
+                )
+                or 0
+            )
+
+            color = (
+                counters.get(
+                    "contador_color",
+                    0,
+                )
+                or 0
+            )
+
+            scanner = (
+                counters.get(
+                    "contador_scan",
+                    0,
+                )
+                or 0
+            )
+
+            if not any(
+                (
+                    black,
+                    color,
+                    scanner,
+                )
+            ):
+                return result
+
+            result.update(
+                {
+                    "available": True,
+                    "source": (
+                        source
+                        or False
+                    ),
+                    "reading_date": (
+                        counter_date.isoformat()
+                        if counter_date
+                        else False
+                    ),
+                    "black": (
+                        black
+                        if black > 0
+                        else False
+                    ),
+                    "color": (
+                        color
+                        if color > 0
+                        else False
+                    ),
+                    "scanner": (
+                        scanner
+                        if scanner > 0
+                        else False
+                    ),
+                }
+            )
+
+            return result
+
+        except Exception:
+            _logger.exception(
+                "[APP SERVICES] "
+                "Error consultando "
+                "disponibilidad de contadores."
+            )
+
+            return result
+
+    # ============================================================
+    # COMPONENT CODES
+    # ============================================================
+
+    def _component_code_from_evaluation(
+        self,
+        evaluation,
+    ):
+        component_type = (
+            evaluation
+            .componente_tipo_id
+        )
+
+        if not component_type:
+            return False
+
+        base_code = (
+            f"t{component_type.id}"
+        )
+
+        is_color_sensitive = bool(
+            getattr(
+                component_type,
+                "is_color_sensitive",
+                False,
+            )
+        )
+
+        if not is_color_sensitive:
+            return base_code
+
+        color = (
+            evaluation.color_id
+        )
+
+        if not color:
+            return base_code
+
+        color_code = (
+            color.code
+            if (
+                "code"
+                in color._fields
+            )
+            else False
+        )
+
+        if not color_code:
+            return base_code
+
+        return (
+            f"{base_code}_"
+            f"{str(color_code).lower()}"
+        )
+
+    def _accessory_code_from_evaluation(
+        self,
+        evaluation,
+    ):
+        if not evaluation.tipo_id:
+            return False
+
+        return (
+            f"a{evaluation.tipo_id.id}"
+        )
+
+    # ============================================================
     # SERIALIZERS
     # ============================================================
 
@@ -227,7 +550,9 @@ class AppServiceController(
         ticket,
     ):
         return {
-            "id": ticket.id,
+            "id": (
+                ticket.id
+            ),
 
             "reference": (
                 ticket.name
@@ -393,7 +718,8 @@ class AppServiceController(
                 if (
                     "pedido_origen_id"
                     in ticket._fields
-                    and ticket.pedido_origen_id
+                    and
+                    ticket.pedido_origen_id
                 )
                 else False
             ),
@@ -420,7 +746,9 @@ class AppServiceController(
                 self._many2one(
                     item.componente_tipo_id
                 )
-                if item.componente_tipo_id
+                if (
+                    item.componente_tipo_id
+                )
                 else False
             ),
 
@@ -448,7 +776,8 @@ class AppServiceController(
                 state.code
                 if (
                     state
-                    and "code"
+                    and
+                    "code"
                     in state._fields
                 )
                 else False
@@ -457,14 +786,12 @@ class AppServiceController(
             "requires_change": (
                 bool(
                     state
-                    and (
-                        "code"
-                        in state._fields
-                    )
-                    and (
-                        state.code
-                        == "requiere_cambio"
-                    )
+                    and
+                    "code"
+                    in state._fields
+                    and
+                    state.code
+                    == "requiere_cambio"
                 )
             ),
 
@@ -495,7 +822,9 @@ class AppServiceController(
         )
 
         return {
-            "id": item.id,
+            "id": (
+                item.id
+            ),
 
             "accessory": (
                 self._many2one(
@@ -517,7 +846,8 @@ class AppServiceController(
                 state.code
                 if (
                     state
-                    and "code"
+                    and
+                    "code"
                     in state._fields
                 )
                 else False
@@ -526,14 +856,12 @@ class AppServiceController(
             "requires_change": (
                 bool(
                     state
-                    and (
-                        "code"
-                        in state._fields
-                    )
-                    and (
-                        state.code
-                        == "requiere_cambio"
-                    )
+                    and
+                    "code"
+                    in state._fields
+                    and
+                    state.code
+                    == "requiere_cambio"
                 )
             ),
 
@@ -555,7 +883,9 @@ class AppServiceController(
         service_id,
     ):
         return {
-            "id": photo.id,
+            "id": (
+                photo.id
+            ),
 
             "moment": (
                 photo.momento
@@ -625,16 +955,18 @@ class AppServiceController(
 
             "original_image_url": (
                 "/api/app/services/"
-                f"{service_id}/evidences/"
-                f"{photo.id}/image"
-                "?variant=original"
+                f"{service_id}"
+                "/evidences/"
+                f"{photo.id}"
+                "/image?variant=original"
             ),
 
             "processed_image_url": (
                 "/api/app/services/"
-                f"{service_id}/evidences/"
-                f"{photo.id}/image"
-                "?variant=processed"
+                f"{service_id}"
+                "/evidences/"
+                f"{photo.id}"
+                "/image?variant=processed"
             ),
         }
 
@@ -648,43 +980,81 @@ class AppServiceController(
             )
         )
 
-        evidence_before = (
-            ticket.evidencia_foto_ids.filtered(
-                lambda photo: (
-                    photo.momento
-                    == "antes"
+        if (
+            "evidencia_foto_ids"
+            in ticket._fields
+        ):
+            evidence_before = (
+                ticket
+                .evidencia_foto_ids
+                .filtered(
+                    lambda photo: (
+                        photo.momento
+                        == "antes"
+                    )
                 )
             )
-            if (
-                "evidencia_foto_ids"
-                in ticket._fields
-            )
-            else request.env[
-                "ticket.evidencia.foto"
-            ]
-        )
 
-        evidence_after = (
-            ticket.evidencia_foto_ids.filtered(
-                lambda photo: (
-                    photo.momento
-                    == "despues"
+            evidence_after = (
+                ticket
+                .evidencia_foto_ids
+                .filtered(
+                    lambda photo: (
+                        photo.momento
+                        == "despues"
+                    )
                 )
             )
-            if (
-                "evidencia_foto_ids"
-                in ticket._fields
-            )
-            else request.env[
+
+        else:
+            Evidence = request.env[
                 "ticket.evidencia.foto"
             ]
+
+            evidence_before = (
+                Evidence.search(
+                    [
+                        (
+                            "ticket_id",
+                            "=",
+                            ticket.id,
+                        ),
+                        (
+                            "momento",
+                            "=",
+                            "antes",
+                        ),
+                    ]
+                )
+            )
+
+            evidence_after = (
+                Evidence.search(
+                    [
+                        (
+                            "ticket_id",
+                            "=",
+                            ticket.id,
+                        ),
+                        (
+                            "momento",
+                            "=",
+                            "despues",
+                        ),
+                    ]
+                )
+            )
+
+        counter_preview = (
+            self._counter_preview(
+                ticket
+            )
         )
 
         result.update(
             {
                 # ------------------------------------------------
                 # PROBLEMA REPORTADO
-                # SOLO LECTURA EN APP
                 # ------------------------------------------------
 
                 "description": (
@@ -692,11 +1062,12 @@ class AppServiceController(
                     or False
                 ),
 
-                "description_readonly": True,
+                "description_readonly": (
+                    True
+                ),
 
                 # ------------------------------------------------
-                # INFORME DEL TÉCNICO
-                # HTML EDITABLE
+                # INFORME TÉCNICO HTML
                 # ------------------------------------------------
 
                 "technical_report": (
@@ -704,7 +1075,9 @@ class AppServiceController(
                     or False
                 ),
 
-                "technical_report_html": True,
+                "technical_report_html": (
+                    True
+                ),
 
                 # ------------------------------------------------
                 # DATOS DE QUIEN REPORTÓ
@@ -790,6 +1163,44 @@ class AppServiceController(
                         ticket.total_copias_id
                         or False
                     ),
+
+                    "auto_load_available": (
+                        counter_preview[
+                            "available"
+                        ]
+                    ),
+
+                    "auto_load_source": (
+                        counter_preview[
+                            "source"
+                        ]
+                    ),
+
+                    "auto_load_reading_date": (
+                        counter_preview[
+                            "reading_date"
+                        ]
+                    ),
+
+                    "auto_load_preview": {
+                        "black": (
+                            counter_preview[
+                                "black"
+                            ]
+                        ),
+
+                        "color": (
+                            counter_preview[
+                                "color"
+                            ]
+                        ),
+
+                        "scanner": (
+                            counter_preview[
+                                "scanner"
+                            ]
+                        ),
+                    },
                 },
 
                 # ------------------------------------------------
@@ -808,22 +1219,28 @@ class AppServiceController(
                     )
                 ),
 
-                "quality_options": [
-                    {
-                        "value": value,
-                        "label": label,
-                    }
-                    for (
-                        value,
-                        label,
+                "quality_options": (
+                    self._selection_options(
+                        ticket,
+                        "calidad_id",
                     )
-                    in (
-                        ticket._fields[
-                            "calidad_id"
-                        ].selection
-                        or []
+                ),
+
+                # ------------------------------------------------
+                # RETORNO
+                # ------------------------------------------------
+
+                "return_options": (
+                    self._selection_options(
+                        ticket,
+                        "retorno_id",
                     )
-                ],
+                    if (
+                        "retorno_id"
+                        in ticket._fields
+                    )
+                    else []
+                ),
 
                 # ------------------------------------------------
                 # CHECKLIST
@@ -834,7 +1251,10 @@ class AppServiceController(
                         item
                     )
                     for item
-                    in ticket.ticket_componente_eval_ids
+                    in (
+                        ticket
+                        .ticket_componente_eval_ids
+                    )
                 ],
 
                 "accessories": [
@@ -842,7 +1262,10 @@ class AppServiceController(
                         item
                     )
                     for item
-                    in ticket.ticket_accesorio_eval_ids
+                    in (
+                        ticket
+                        .ticket_accesorio_eval_ids
+                    )
                 ],
 
                 # ------------------------------------------------
@@ -876,7 +1299,8 @@ class AppServiceController(
                     if (
                         "pedido_origen_id"
                         in ticket._fields
-                        and ticket.pedido_origen_id
+                        and
+                        ticket.pedido_origen_id
                     )
                     else False
                 ),
@@ -898,8 +1322,13 @@ class AppServiceController(
                         )
                     ),
 
-                    "minimum_before": 3,
-                    "minimum_after": 3,
+                    "minimum_before": (
+                        3
+                    ),
+
+                    "minimum_after": (
+                        3
+                    ),
 
                     "before_complete": (
                         len(
@@ -933,70 +1362,6 @@ class AppServiceController(
         return result
 
     # ============================================================
-    # COMPONENT / ACCESSORY CODE
-    # ============================================================
-
-    def _component_code_from_evaluation(
-        self,
-        evaluation,
-    ):
-        component_type = (
-            evaluation.componente_tipo_id
-        )
-
-        if not component_type:
-            return False
-
-        code = (
-            f"t{component_type.id}"
-        )
-
-        is_color_sensitive = (
-            bool(
-                component_type.is_color_sensitive
-            )
-            if (
-                "is_color_sensitive"
-                in component_type._fields
-            )
-            else False
-        )
-
-        if (
-            is_color_sensitive
-            and evaluation.color_id
-        ):
-            color_code = (
-                evaluation.color_id.code
-                if (
-                    "code"
-                    in evaluation.color_id._fields
-                )
-                else False
-            )
-
-            if color_code:
-                code += (
-                    "_"
-                    + str(
-                        color_code
-                    ).lower()
-                )
-
-        return code
-
-    def _accessory_code_from_evaluation(
-        self,
-        evaluation,
-    ):
-        if not evaluation.tipo_id:
-            return False
-
-        return (
-            f"a{evaluation.tipo_id.id}"
-        )
-
-    # ============================================================
     # LIST SERVICES
     # ============================================================
 
@@ -1021,13 +1386,19 @@ class AppServiceController(
 
         try:
             state = (
-                request.httprequest.args.get(
+                request
+                .httprequest
+                .args
+                .get(
                     "state"
                 )
             )
 
             search_term = (
-                request.httprequest.args.get(
+                request
+                .httprequest
+                .args
+                .get(
                     "search"
                 )
                 or ""
@@ -1037,7 +1408,10 @@ class AppServiceController(
                 limit = min(
                     max(
                         int(
-                            request.httprequest.args.get(
+                            request
+                            .httprequest
+                            .args
+                            .get(
                                 "limit",
                                 50,
                             )
@@ -1100,26 +1474,28 @@ class AppServiceController(
                     ]
                 )
 
-            Ticket = request.env[
-                "ticket.alquiler"
-            ]
-
-            tickets = Ticket.search(
-                domain,
-                order=(
-                    "agenda asc, "
-                    "priority desc, "
-                    "id desc"
-                ),
-                limit=limit,
+            tickets = (
+                request.env[
+                    "ticket.alquiler"
+                ].search(
+                    domain,
+                    order=(
+                        "agenda asc, "
+                        "priority desc, "
+                        "id desc"
+                    ),
+                    limit=limit,
+                )
             )
 
             return self._json_response(
                 {
                     "success": True,
 
-                    "count": len(
-                        tickets
+                    "count": (
+                        len(
+                            tickets
+                        )
                     ),
 
                     "items": [
@@ -1192,7 +1568,7 @@ class AppServiceController(
             )
 
     # ============================================================
-    # UPDATE TECHNICAL INFORMATION
+    # UPDATE SERVICE
     # ============================================================
 
     @http.route(
@@ -1237,8 +1613,9 @@ class AppServiceController(
                         "success": False,
                         "code": "SERVICE_FINALIZED",
                         "message": (
-                            "El servicio está finalizado "
-                            "y ya no puede modificarse."
+                            "El servicio está "
+                            "finalizado y ya no "
+                            "puede modificarse."
                         ),
                     },
                     status=400,
@@ -1249,7 +1626,7 @@ class AppServiceController(
             )
 
             # ----------------------------------------------------
-            # DESCRIPTION NO SE EDITA DESDE APP.
+            # description NO está permitido.
             # Es el problema reportado por el cliente.
             # ----------------------------------------------------
 
@@ -1259,6 +1636,8 @@ class AppServiceController(
                 "contometrok_id",
                 "contometroc_id",
                 "calidad_id",
+                "retorno_id",
+                "pedido_especial",
             }
 
             vals = {}
@@ -1267,14 +1646,17 @@ class AppServiceController(
                 if (
                     field_name
                     in data
-                    and field_name
+                    and
+                    field_name
                     in ticket._fields
                 ):
                     vals[
                         field_name
-                    ] = data[
-                        field_name
-                    ]
+                    ] = (
+                        data[
+                            field_name
+                        ]
+                    )
 
             if not vals:
                 return self._json_response(
@@ -1282,8 +1664,8 @@ class AppServiceController(
                         "success": False,
                         "code": "NO_DATA",
                         "message": (
-                            "No se recibieron campos "
-                            "técnicos válidos "
+                            "No se recibieron "
+                            "campos válidos "
                             "para actualizar."
                         ),
                     },
@@ -1297,7 +1679,8 @@ class AppServiceController(
             if (
                 "calidad_id"
                 in vals
-                and vals[
+                and
+                vals[
                     "calidad_id"
                 ]
             ):
@@ -1308,10 +1691,10 @@ class AppServiceController(
                         label,
                     )
                     in (
-                        ticket._fields[
-                            "calidad_id"
-                        ].selection
-                        or []
+                        self._selection_values(
+                            ticket,
+                            "calidad_id",
+                        )
                     )
                 }
 
@@ -1324,10 +1707,83 @@ class AppServiceController(
                     return self._json_response(
                         {
                             "success": False,
-                            "code": "INVALID_QUALITY",
+                            "code": (
+                                "INVALID_QUALITY"
+                            ),
                             "message": (
-                                "El valor de calidad "
-                                "no es válido."
+                                "El valor de "
+                                "calidad no es válido."
+                            ),
+                        },
+                        status=400,
+                    )
+
+            # ----------------------------------------------------
+            # VALIDAR RETORNO
+            # ----------------------------------------------------
+
+            if (
+                "retorno_id"
+                in vals
+            ):
+                valid_return_values = {
+                    value
+                    for (
+                        value,
+                        label,
+                    )
+                    in (
+                        self._selection_values(
+                            ticket,
+                            "retorno_id",
+                        )
+                    )
+                }
+
+                if (
+                    vals[
+                        "retorno_id"
+                    ]
+                    not in valid_return_values
+                ):
+                    return self._json_response(
+                        {
+                            "success": False,
+                            "code": (
+                                "INVALID_RETURN_VALUE"
+                            ),
+                            "message": (
+                                "El valor de "
+                                "retorno no es válido."
+                            ),
+                        },
+                        status=400,
+                    )
+
+            # ----------------------------------------------------
+            # VALIDAR PEDIDO ESPECIAL
+            # ----------------------------------------------------
+
+            if (
+                "pedido_especial"
+                in vals
+            ):
+                if not isinstance(
+                    vals[
+                        "pedido_especial"
+                    ],
+                    bool,
+                ):
+                    return self._json_response(
+                        {
+                            "success": False,
+                            "code": (
+                                "INVALID_SPECIAL_ORDER_VALUE"
+                            ),
+                            "message": (
+                                "Pedido especial "
+                                "debe ser verdadero "
+                                "o falso."
                             ),
                         },
                         status=400,
@@ -1345,6 +1801,189 @@ class AppServiceController(
                         "Servicio actualizado "
                         "correctamente."
                     ),
+
+                    "service": (
+                        self._serialize_service_detail(
+                            ticket
+                        )
+                    ),
+                }
+            )
+
+        except Exception as exc:
+            return self._error_response(
+                exc
+            )
+
+    # ============================================================
+    # AUTO LOAD COUNTERS
+    # ============================================================
+
+    @http.route(
+        (
+            "/api/app/services/<int:service_id>"
+            "/counters/auto-load"
+        ),
+        type="http",
+        auth="public",
+        methods=["POST"],
+        csrf=False,
+        save_session=True,
+    )
+    def service_auto_load_counters(
+        self,
+        service_id,
+        **kwargs,
+    ):
+        user, error = (
+            self._require_user()
+        )
+
+        if error:
+            return error
+
+        try:
+            ticket = (
+                self._get_service(
+                    service_id,
+                    user,
+                )
+            )
+
+            if not ticket:
+                return (
+                    self._service_not_found_response()
+                )
+
+            if (
+                ticket.estado
+                == "finalizado"
+            ):
+                return self._json_response(
+                    {
+                        "success": False,
+                        "code": "SERVICE_FINALIZED",
+                        "message": (
+                            "No se pueden cargar "
+                            "contadores en un "
+                            "servicio finalizado."
+                        ),
+                    },
+                    status=400,
+                )
+
+            if (
+                ticket.estado
+                not in self.COUNTER_WORK_STATES
+            ):
+                return self._json_response(
+                    {
+                        "success": False,
+                        "code": (
+                            "INVALID_COUNTER_STATE"
+                        ),
+                        "message": (
+                            "La carga automática "
+                            "de contadores no está "
+                            "disponible en el "
+                            "estado actual."
+                        ),
+                    },
+                    status=400,
+                )
+
+            if not hasattr(
+                ticket,
+                "action_cargar_contadores",
+            ):
+                return self._json_response(
+                    {
+                        "success": False,
+                        "code": (
+                            "COUNTER_METHOD_NOT_AVAILABLE"
+                        ),
+                        "message": (
+                            "La instalación de Odoo "
+                            "no dispone del método "
+                            "action_cargar_contadores."
+                        ),
+                    },
+                    status=500,
+                )
+
+            preview_before = (
+                self._counter_preview(
+                    ticket
+                )
+            )
+
+            if not preview_before[
+                "available"
+            ]:
+                return self._json_response(
+                    {
+                        "success": False,
+                        "code": (
+                            "COUNTERS_NOT_AVAILABLE"
+                        ),
+                        "message": (
+                            "No existen contadores "
+                            "válidos dentro del rango "
+                            "permitido de 3 días."
+                        ),
+                    },
+                    status=400,
+                )
+
+            ticket.action_cargar_contadores()
+
+            try:
+                ticket.invalidate_recordset()
+            except Exception:
+                pass
+
+            return self._json_response(
+                {
+                    "success": True,
+
+                    "message": (
+                        "Contadores cargados "
+                        "automáticamente."
+                    ),
+
+                    "source": (
+                        preview_before[
+                            "source"
+                        ]
+                    ),
+
+                    "reading_date": (
+                        preview_before[
+                            "reading_date"
+                        ]
+                    ),
+
+                    "meters": {
+                        "black": (
+                            ticket.contometrok_id
+                            or False
+                        ),
+
+                        "color": (
+                            ticket.contometroc_id
+                            or False
+                        ),
+
+                        "scanner": (
+                            ticket.contometros_id
+                            or False
+                        ),
+
+                        "total": (
+                            ticket.total_copias_id
+                            or False
+                        ),
+                    },
 
                     "service": (
                         self._serialize_service_detail(
@@ -1526,7 +2165,9 @@ class AppServiceController(
                 return self._json_response(
                     {
                         "success": False,
-                        "code": "COMPONENT_NOT_FOUND",
+                        "code": (
+                            "COMPONENT_NOT_FOUND"
+                        ),
                         "message": (
                             "La evaluación del "
                             "componente no existe."
@@ -1541,16 +2182,12 @@ class AppServiceController(
 
             vals = {}
 
-            if (
-                "state_id"
-                in data
-            ):
+            if "state_id" in data:
                 state_id = (
-                    int(
+                    self._safe_int(
                         data.get(
                             "state_id"
                         )
-                        or 0
                     )
                 )
 
@@ -1566,7 +2203,9 @@ class AppServiceController(
                     return self._json_response(
                         {
                             "success": False,
-                            "code": "INVALID_COMPONENT_STATE",
+                            "code": (
+                                "INVALID_COMPONENT_STATE"
+                            ),
                             "message": (
                                 "El estado del "
                                 "componente no existe."
@@ -1577,7 +2216,9 @@ class AppServiceController(
 
                 vals[
                     "estado_id"
-                ] = state.id
+                ] = (
+                    state.id
+                )
 
             if (
                 "observations"
@@ -1713,7 +2354,9 @@ class AppServiceController(
                 return self._json_response(
                     {
                         "success": False,
-                        "code": "ACCESSORY_NOT_FOUND",
+                        "code": (
+                            "ACCESSORY_NOT_FOUND"
+                        ),
                         "message": (
                             "La evaluación del "
                             "accesorio no existe."
@@ -1728,16 +2371,12 @@ class AppServiceController(
 
             vals = {}
 
-            if (
-                "state_id"
-                in data
-            ):
+            if "state_id" in data:
                 state_id = (
-                    int(
+                    self._safe_int(
                         data.get(
                             "state_id"
                         )
-                        or 0
                     )
                 )
 
@@ -1753,7 +2392,9 @@ class AppServiceController(
                     return self._json_response(
                         {
                             "success": False,
-                            "code": "INVALID_ACCESSORY_STATE",
+                            "code": (
+                                "INVALID_ACCESSORY_STATE"
+                            ),
                             "message": (
                                 "El estado del "
                                 "accesorio no existe."
@@ -1764,7 +2405,9 @@ class AppServiceController(
 
                 vals[
                     "estado_id"
-                ] = state.id
+                ] = (
+                    state.id
+                )
 
             if (
                 "observations"
@@ -1819,7 +2462,7 @@ class AppServiceController(
             )
 
     # ============================================================
-    # SUBPARTS HELPERS
+    # SUBPART HELPERS
     # ============================================================
 
     def _get_component_evaluation(
@@ -1873,23 +2516,42 @@ class AppServiceController(
         ticket,
         evaluation,
     ):
-        if (
-            not ticket.product_alquiler
-            or not ticket.product_alquiler.name
-        ):
+        """
+        Replica la búsqueda que hace el wizard:
+        modelo + tipo + color.
+        """
+
+        if not ticket.product_alquiler:
             return []
 
         model = (
-            ticket.product_alquiler.name
+            getattr(
+                ticket.product_alquiler,
+                "name",
+                False,
+            )
         )
+
+        if not model:
+            return []
 
         component_type = (
-            evaluation.componente_tipo_id
+            evaluation
+            .componente_tipo_id
         )
 
-        ComponentModel = request.env[
-            "modelo.maquina.componente"
-        ]
+        if not component_type:
+            return []
+
+        ComponentModel = (
+            request.env[
+                "modelo.maquina.componente"
+            ]
+        )
+
+        fields_map = (
+            ComponentModel._fields
+        )
 
         domain = [
             (
@@ -1904,13 +2566,10 @@ class AppServiceController(
             ),
         ]
 
-        fields_map = (
-            ComponentModel._fields
-        )
-
         if (
             evaluation.color_id
-            and "color_id"
+            and
+            "color_id"
             in fields_map
         ):
             domain.append(
@@ -1945,12 +2604,31 @@ class AppServiceController(
                 )
             )
 
+        if not records:
+            records = (
+                ComponentModel.search(
+                    [
+                        (
+                            "tipo_id",
+                            "=",
+                            component_type.id,
+                        ),
+                    ]
+                )
+            )
+
         subparts = {}
 
         for record in records:
-            for detail in (
-                record.detalle_ids
-            ):
+            details = (
+                getattr(
+                    record,
+                    "detalle_ids",
+                    []
+                )
+            )
+
+            for detail in details:
                 if not detail.subparte_id:
                     continue
 
@@ -1963,7 +2641,7 @@ class AppServiceController(
 
                     "default_quantity": (
                         detail.cantidad
-                        or 1
+                        or 1.0
                     ),
                 }
 
@@ -1978,9 +2656,11 @@ class AppServiceController(
         if not evaluation.tipo_id:
             return []
 
-        Subpart = request.env[
-            "componente.subparte"
-        ]
+        Subpart = (
+            request.env[
+                "componente.subparte"
+            ]
+        )
 
         if (
             "tipo_id"
@@ -2003,8 +2683,12 @@ class AppServiceController(
 
         return [
             {
-                "record": record,
-                "default_quantity": 1,
+                "record": (
+                    record
+                ),
+                "default_quantity": (
+                    1.0
+                ),
             }
             for record
             in records
@@ -2015,9 +2699,11 @@ class AppServiceController(
         ticket,
         component_code,
     ):
-        Intervention = request.env[
-            "ticket.componente.intervencion"
-        ]
+        Intervention = (
+            request.env[
+                "ticket.componente.intervencion"
+            ]
+        )
 
         intervention = (
             Intervention.search(
@@ -2044,7 +2730,6 @@ class AppServiceController(
                         "ticket_id": (
                             ticket.id
                         ),
-
                         "componente_code": (
                             component_code
                         ),
@@ -2055,7 +2740,7 @@ class AppServiceController(
         return intervention
 
     # ============================================================
-    # SUBPARTS GET
+    # GET SUBPARTS
     # ============================================================
 
     @http.route(
@@ -2095,22 +2780,25 @@ class AppServiceController(
                 )
 
             evaluation_type = (
-                request.httprequest.args.get(
+                request
+                .httprequest
+                .args
+                .get(
                     "type"
                 )
                 or ""
             ).strip()
 
-            try:
-                evaluation_id = int(
-                    request.httprequest.args.get(
+            evaluation_id = (
+                self._safe_int(
+                    request
+                    .httprequest
+                    .args
+                    .get(
                         "evaluation_id"
                     )
-                    or 0
                 )
-
-            except Exception:
-                evaluation_id = 0
+            )
 
             if evaluation_type not in (
                 "component",
@@ -2132,7 +2820,9 @@ class AppServiceController(
                 return self._json_response(
                     {
                         "success": False,
-                        "code": "EVALUATION_REQUIRED",
+                        "code": (
+                            "EVALUATION_REQUIRED"
+                        ),
                         "message": (
                             "Debe indicar "
                             "evaluation_id."
@@ -2156,7 +2846,9 @@ class AppServiceController(
                     return self._json_response(
                         {
                             "success": False,
-                            "code": "COMPONENT_NOT_FOUND",
+                            "code": (
+                                "COMPONENT_NOT_FOUND"
+                            ),
                             "message": (
                                 "Componente no encontrado."
                             ),
@@ -2189,7 +2881,9 @@ class AppServiceController(
                     return self._json_response(
                         {
                             "success": False,
-                            "code": "ACCESSORY_NOT_FOUND",
+                            "code": (
+                                "ACCESSORY_NOT_FOUND"
+                            ),
                             "message": (
                                 "Accesorio no encontrado."
                             ),
@@ -2209,10 +2903,14 @@ class AppServiceController(
                     )
                 )
 
-            intervention = (
+            Intervention = (
                 request.env[
                     "ticket.componente.intervencion"
-                ].search(
+                ]
+            )
+
+            intervention = (
+                Intervention.search(
                     [
                         (
                             "ticket_id",
@@ -2240,7 +2938,9 @@ class AppServiceController(
 
                     selected_map[
                         detail.subparte_id.id
-                    ] = detail
+                    ] = (
+                        detail
+                    )
 
             items = []
 
@@ -2305,7 +3005,9 @@ class AppServiceController(
                         component_code
                     ),
 
-                    "items": items,
+                    "items": (
+                        items
+                    ),
                 }
             )
 
@@ -2315,7 +3017,7 @@ class AppServiceController(
             )
 
     # ============================================================
-    # SUBPARTS SAVE
+    # SAVE SUBPARTS
     # ============================================================
 
     @http.route(
@@ -2375,18 +3077,21 @@ class AppServiceController(
                 self._get_json_body()
             )
 
-            evaluation_type = str(
-                data.get(
-                    "type"
-                )
-                or ""
-            ).strip()
+            evaluation_type = (
+                str(
+                    data.get(
+                        "type"
+                    )
+                    or ""
+                ).strip()
+            )
 
-            evaluation_id = int(
-                data.get(
-                    "evaluation_id"
+            evaluation_id = (
+                self._safe_int(
+                    data.get(
+                        "evaluation_id"
+                    )
                 )
-                or 0
             )
 
             raw_items = (
@@ -2427,7 +3132,9 @@ class AppServiceController(
                     return self._json_response(
                         {
                             "success": False,
-                            "code": "COMPONENT_NOT_FOUND",
+                            "code": (
+                                "COMPONENT_NOT_FOUND"
+                            ),
                             "message": (
                                 "Componente no encontrado."
                             ),
@@ -2460,7 +3167,9 @@ class AppServiceController(
                     return self._json_response(
                         {
                             "success": False,
-                            "code": "ACCESSORY_NOT_FOUND",
+                            "code": (
+                                "ACCESSORY_NOT_FOUND"
+                            ),
                             "message": (
                                 "Accesorio no encontrado."
                             ),
@@ -2495,9 +3204,11 @@ class AppServiceController(
                 )
             )
 
-            Detail = request.env[
-                "ticket.componente.intervencion.detalle"
-            ]
+            Detail = (
+                request.env[
+                    "ticket.componente.intervencion.detalle"
+                ]
+            )
 
             selected_ids = set()
 
@@ -2513,21 +3224,21 @@ class AppServiceController(
                 ):
                     continue
 
-                try:
-                    subpart_id = int(
+                subpart_id = (
+                    self._safe_int(
                         raw.get(
                             "subpart_id"
                         )
-                        or raw.get(
+                        or
+                        raw.get(
                             "id"
                         )
-                        or 0
                     )
-
-                except Exception:
-                    continue
+                )
 
                 if (
+                    not subpart_id
+                    or
                     subpart_id
                     not in available_ids
                 ):
@@ -2562,8 +3273,10 @@ class AppServiceController(
                         ),
                         default=1.0,
                     )
-                    or 1.0
                 )
+
+                if quantity <= 0:
+                    quantity = 1.0
 
                 observation = (
                     raw.get(
@@ -2604,11 +3317,9 @@ class AppServiceController(
                         vals
                     )
 
-            existing_details = (
+            for detail in (
                 intervention.detalle_ids
-            )
-
-            for detail in existing_details:
+            ):
                 if (
                     detail.subparte_id.id
                     not in selected_ids
@@ -2642,7 +3353,7 @@ class AppServiceController(
             )
 
     # ============================================================
-    # EVIDENCES LIST
+    # EVIDENCE LIST
     # ============================================================
 
     @http.route(
@@ -2734,8 +3445,13 @@ class AppServiceController(
                         )
                     ),
 
-                    "minimum_before": 3,
-                    "minimum_after": 3,
+                    "minimum_before": (
+                        3
+                    ),
+
+                    "minimum_after": (
+                        3
+                    ),
 
                     "complete": (
                         len(
@@ -2825,15 +3541,18 @@ class AppServiceController(
                 self._get_json_body()
             )
 
-            moment = str(
-                data.get(
-                    "moment"
-                )
-                or data.get(
-                    "momento"
-                )
-                or ""
-            ).strip()
+            moment = (
+                str(
+                    data.get(
+                        "moment"
+                    )
+                    or
+                    data.get(
+                        "momento"
+                    )
+                    or ""
+                ).strip()
+            )
 
             if moment not in (
                 "antes",
@@ -2855,7 +3574,8 @@ class AppServiceController(
                 data.get(
                     "original_image"
                 )
-                or data.get(
+                or
+                data.get(
                     "imagen_original"
                 )
             )
@@ -2864,12 +3584,16 @@ class AppServiceController(
                 data.get(
                     "processed_image"
                 )
-                or data.get(
+                or
+                data.get(
                     "imagen_procesada"
                 )
             )
 
-            original_base64, original_bytes = (
+            (
+                original_base64,
+                original_bytes,
+            ) = (
                 self._safe_base64(
                     original_value
                 )
@@ -2879,7 +3603,9 @@ class AppServiceController(
                 return self._json_response(
                     {
                         "success": False,
-                        "code": "INVALID_ORIGINAL_IMAGE",
+                        "code": (
+                            "INVALID_ORIGINAL_IMAGE"
+                        ),
                         "message": (
                             "No se recibió una "
                             "imagen original válida."
@@ -2895,15 +3621,19 @@ class AppServiceController(
                 (
                     processed_base64,
                     processed_bytes,
-                ) = self._safe_base64(
-                    processed_value
+                ) = (
+                    self._safe_base64(
+                        processed_value
+                    )
                 )
 
                 if not processed_base64:
                     return self._json_response(
                         {
                             "success": False,
-                            "code": "INVALID_PROCESSED_IMAGE",
+                            "code": (
+                                "INVALID_PROCESSED_IMAGE"
+                            ),
                             "message": (
                                 "La imagen procesada "
                                 "no es válida."
@@ -2927,7 +3657,9 @@ class AppServiceController(
                 return self._json_response(
                     {
                         "success": False,
-                        "code": "ORIGINAL_TOO_LARGE",
+                        "code": (
+                            "ORIGINAL_TOO_LARGE"
+                        ),
                         "message": (
                             "La imagen original "
                             "supera los 10 MB."
@@ -2938,7 +3670,8 @@ class AppServiceController(
 
             if (
                 processed_bytes
-                and len(
+                and
+                len(
                     processed_bytes
                 )
                 > max_size
@@ -2946,7 +3679,9 @@ class AppServiceController(
                 return self._json_response(
                     {
                         "success": False,
-                        "code": "PROCESSED_TOO_LARGE",
+                        "code": (
+                            "PROCESSED_TOO_LARGE"
+                        ),
                         "message": (
                             "La imagen procesada "
                             "supera los 10 MB."
@@ -2960,7 +3695,8 @@ class AppServiceController(
                     data.get(
                         "latitude"
                     )
-                    or data.get(
+                    or
+                    data.get(
                         "latitud"
                     )
                 )
@@ -2971,7 +3707,8 @@ class AppServiceController(
                     data.get(
                         "longitude"
                     )
-                    or data.get(
+                    or
+                    data.get(
                         "longitud"
                     )
                 )
@@ -2982,10 +3719,12 @@ class AppServiceController(
                     data.get(
                         "gps_accuracy"
                     )
-                    or data.get(
+                    or
+                    data.get(
                         "precision_gps"
                     )
-                    or data.get(
+                    or
+                    data.get(
                         "precision"
                     )
                 )
@@ -2995,27 +3734,32 @@ class AppServiceController(
                 data.get(
                     "address"
                 )
-                or data.get(
+                or
+                data.get(
                     "direccion_capturada"
                 )
-                or data.get(
+                or
+                data.get(
                     "direccion"
                 )
-                or False
+                or
+                False
             )
 
             original_filename = (
                 data.get(
                     "original_filename"
                 )
-                or "evidencia_original.jpg"
+                or
+                "evidencia_original.jpg"
             )
 
             processed_filename = (
                 data.get(
                     "processed_filename"
                 )
-                or "evidencia_procesada.jpg"
+                or
+                "evidencia_procesada.jpg"
             )
 
             vals = {
@@ -3056,14 +3800,19 @@ class AppServiceController(
                 ),
 
                 "user_agent": (
-                    request.httprequest.headers.get(
+                    request
+                    .httprequest
+                    .headers
+                    .get(
                         "User-Agent",
                         "",
                     )
                 ),
 
                 "ip_origen": (
-                    request.httprequest.remote_addr
+                    request
+                    .httprequest
+                    .remote_addr
                 ),
             }
 
@@ -3094,10 +3843,14 @@ class AppServiceController(
                     "desde Copier OS App.<br/>"
                     f"Momento: {moment}<br/>"
                     f"Foto ID: {photo.id}<br/>"
-                    f"GPS: {latitude}, {longitude}<br/>"
-                    f"Precisión: {gps_accuracy} m"
+                    f"GPS: {latitude}, "
+                    f"{longitude}<br/>"
+                    f"Precisión: "
+                    f"{gps_accuracy} m"
                 ),
-                message_type="notification",
+                message_type=(
+                    "notification"
+                ),
             )
 
             return self._json_response(
@@ -3206,7 +3959,9 @@ class AppServiceController(
                 return self._json_response(
                     {
                         "success": False,
-                        "code": "EVIDENCE_NOT_FOUND",
+                        "code": (
+                            "EVIDENCE_NOT_FOUND"
+                        ),
                         "message": (
                             "La evidencia no existe."
                         ),
@@ -3219,7 +3974,6 @@ class AppServiceController(
             return self._json_response(
                 {
                     "success": True,
-
                     "message": (
                         "Evidencia eliminada."
                     ),
@@ -3293,35 +4047,40 @@ class AppServiceController(
             return request.not_found()
 
         variant = (
-            request.httprequest.args.get(
+            request
+            .httprequest
+            .args
+            .get(
                 "variant"
             )
-            or "processed"
+            or
+            "processed"
         )
 
-        if (
-            variant
-            == "original"
-        ):
+        if variant == "original":
             image_value = (
                 photo.imagen_original
             )
 
             filename = (
                 photo.imagen_original_filename
-                or "evidencia.jpg"
+                or
+                "evidencia.jpg"
             )
 
         else:
             image_value = (
                 photo.imagen_procesada
-                or photo.imagen_original
+                or
+                photo.imagen_original
             )
 
             filename = (
                 photo.imagen_procesada_filename
-                or photo.imagen_original_filename
-                or "evidencia.jpg"
+                or
+                photo.imagen_original_filename
+                or
+                "evidencia.jpg"
             )
 
         if not image_value:
@@ -3341,7 +4100,8 @@ class AppServiceController(
             mimetypes.guess_type(
                 filename
             )[0]
-            or "image/jpeg"
+            or
+            "image/jpeg"
         )
 
         return request.make_response(
@@ -3361,7 +4121,10 @@ class AppServiceController(
                 ),
                 (
                     "Cache-Control",
-                    "private, max-age=300",
+                    (
+                        "private, "
+                        "max-age=300"
+                    ),
                 ),
             ],
         )
@@ -3408,9 +4171,11 @@ class AppServiceController(
             if (
                 "company_id"
                 in ticket._fields
-                and ticket.company_id
+                and
+                ticket.company_id
             )
-            else request.env.company
+            else
+            request.env.company
         )
 
         logo = False
@@ -3418,7 +4183,8 @@ class AppServiceController(
         if (
             "logo"
             in company._fields
-            and company.logo
+            and
+            company.logo
         ):
             logo = (
                 company.logo
@@ -3427,7 +4193,8 @@ class AppServiceController(
         elif (
             "logo_web"
             in company._fields
-            and company.logo_web
+            and
+            company.logo_web
         ):
             logo = (
                 company.logo_web
@@ -3462,13 +4229,16 @@ class AppServiceController(
                 ),
                 (
                     "Cache-Control",
-                    "private, max-age=3600",
+                    (
+                        "private, "
+                        "max-age=3600"
+                    ),
                 ),
             ],
         )
 
     # ============================================================
-    # GEOCODE
+    # GEOCODE HELPERS
     # ============================================================
 
     def _normalize_address(
@@ -3497,7 +4267,8 @@ class AppServiceController(
             )
             if (
                 item
-                and item.strip()
+                and
+                item.strip()
             )
         ]
 
@@ -3506,7 +4277,8 @@ class AppServiceController(
         for item in parts:
             if (
                 item.isdigit()
-                and len(
+                and
+                len(
                     item
                 )
                 >= 5
@@ -3518,13 +4290,16 @@ class AppServiceController(
                     item
                 )
 
-        return (
-            ", ".join(
-                clean[:6]
+        if clean:
+            return (
+                ", ".join(
+                    clean[:6]
+                )
             )
-            if clean
-            else address[:180]
-        )
+
+        return address[
+            :180
+        ]
 
     def _distance_meters(
         self,
@@ -3533,43 +4308,54 @@ class AppServiceController(
         lat2,
         lon2,
     ):
-        import math
+        radius = (
+            6371000
+        )
 
-        radius = 6371000
-
-        phi1 = math.radians(
-            float(
-                lat1
+        phi1 = (
+            math.radians(
+                float(
+                    lat1
+                )
             )
         )
 
-        phi2 = math.radians(
-            float(
-                lat2
+        phi2 = (
+            math.radians(
+                float(
+                    lat2
+                )
             )
         )
 
-        d_phi = math.radians(
-            float(
-                lat2
-            )
-            - float(
-                lat1
+        delta_phi = (
+            math.radians(
+                float(
+                    lat2
+                )
+                -
+                float(
+                    lat1
+                )
             )
         )
 
-        d_lambda = math.radians(
-            float(
-                lon2
-            )
-            - float(
-                lon1
+        delta_lambda = (
+            math.radians(
+                float(
+                    lon2
+                )
+                -
+                float(
+                    lon1
+                )
             )
         )
 
         value = (
             math.sin(
-                d_phi / 2
+                delta_phi
+                / 2
             ) ** 2
             +
             math.cos(
@@ -3581,7 +4367,8 @@ class AppServiceController(
             )
             *
             math.sin(
-                d_lambda / 2
+                delta_lambda
+                / 2
             ) ** 2
         )
 
@@ -3593,7 +4380,9 @@ class AppServiceController(
                     value
                 ),
                 math.sqrt(
-                    1 - value
+                    1
+                    -
+                    value
                 ),
             )
         )
@@ -3640,7 +4429,8 @@ class AppServiceController(
                     "traccar.timeout",
                     "10",
                 )
-                or 10
+                or
+                10
             )
 
         except Exception:
@@ -3648,8 +4438,10 @@ class AppServiceController(
 
         if (
             not url
-            or not email
-            or not password
+            or
+            not email
+            or
+            not password
         ):
             return False
 
@@ -3666,9 +4458,13 @@ class AppServiceController(
                     ),
                     data={
                         "email": email,
-                        "password": password,
+                        "password": (
+                            password
+                        ),
                     },
-                    timeout=timeout,
+                    timeout=(
+                        timeout
+                    ),
                 )
             )
 
@@ -3684,7 +4480,9 @@ class AppServiceController(
                         f"{url}"
                         "/api/positions"
                     ),
-                    timeout=timeout,
+                    timeout=(
+                        timeout
+                    ),
                 )
             )
 
@@ -3723,8 +4521,10 @@ class AppServiceController(
 
                 if (
                     not lat
-                    or not lng
-                    or not address
+                    or
+                    not lng
+                    or
+                    not address
                 ):
                     continue
 
@@ -3739,19 +4539,25 @@ class AppServiceController(
 
                 if (
                     best is False
-                    or distance
+                    or
+                    distance
                     < best_distance
                 ):
-                    best = position
+                    best = (
+                        position
+                    )
+
                     best_distance = (
                         distance
                     )
 
             if (
                 best
-                and best_distance
+                and
+                best_distance
                 is not False
-                and best_distance
+                and
+                best_distance
                 <= 250
             ):
                 return (
@@ -3791,7 +4597,9 @@ class AppServiceController(
                         "lon": longitude,
                         "zoom": 18,
                         "addressdetails": 1,
-                        "accept-language": "es",
+                        "accept-language": (
+                            "es"
+                        ),
                     },
                     headers={
                         "User-Agent": (
@@ -3829,6 +4637,10 @@ class AppServiceController(
             )
 
             return False
+
+    # ============================================================
+    # GEOCODE
+    # ============================================================
 
     @http.route(
         (
@@ -3875,7 +4687,8 @@ class AppServiceController(
                     data.get(
                         "latitude"
                     )
-                    or data.get(
+                    or
+                    data.get(
                         "lat"
                     )
                 )
@@ -3886,7 +4699,8 @@ class AppServiceController(
                     data.get(
                         "longitude"
                     )
-                    or data.get(
+                    or
+                    data.get(
                         "lng"
                     )
                 )
@@ -3894,12 +4708,15 @@ class AppServiceController(
 
             if (
                 not latitude
-                or not longitude
+                or
+                not longitude
             ):
                 return self._json_response(
                     {
                         "success": False,
-                        "code": "INVALID_COORDINATES",
+                        "code": (
+                            "INVALID_COORDINATES"
+                        ),
                         "message": (
                             "Las coordenadas "
                             "no son válidas."
@@ -3966,7 +4783,7 @@ class AppServiceController(
             )
 
     # ============================================================
-    # STATE
+    # CHANGE STATE
     # ============================================================
 
     @http.route(
@@ -4012,8 +4829,7 @@ class AppServiceController(
                         "state"
                     )
                     or ""
-                )
-                .strip()
+                ).strip()
             )
 
             transitions = {
@@ -4044,11 +4860,9 @@ class AppServiceController(
                 return self._json_response(
                     {
                         "success": False,
-
                         "code": (
                             "INVALID_STATE_TRANSITION"
                         ),
-
                         "message": (
                             "No se puede cambiar "
                             f"de {ticket.estado} "
@@ -4072,7 +4886,9 @@ class AppServiceController(
                     "Copier OS App: "
                     f"{self._selection_label(ticket, 'estado')}"
                 ),
-                message_type="notification",
+                message_type=(
+                    "notification"
+                ),
             )
 
             return self._json_response(
@@ -4087,6 +4903,12 @@ class AppServiceController(
                         self._selection_label(
                             ticket,
                             "estado",
+                        )
+                    ),
+
+                    "service": (
+                        self._serialize_service_detail(
+                            ticket
                         )
                     ),
                 }
@@ -4156,10 +4978,8 @@ class AppServiceController(
                 )
 
             # ----------------------------------------------------
-            # VALIDACIÓN PREVIA DE SUBPARTES.
-            #
-            # Evita que action_finalizar() intente abrir
-            # un wizard de Odoo que Flutter no puede mostrar.
+            # EVITAR QUE ODOO DEVUELVA UN WIZARD
+            # QUE FLUTTER NO PUEDE MOSTRAR
             # ----------------------------------------------------
 
             if hasattr(
@@ -4185,9 +5005,10 @@ class AppServiceController(
                             ),
 
                             "message": (
-                                "Hay componentes o "
-                                "accesorios que requieren "
-                                "cambio y todavía no tienen "
+                                "Hay componentes "
+                                "o accesorios que "
+                                "requieren cambio "
+                                "y todavía no tienen "
                                 "subpartes seleccionadas."
                             ),
 
@@ -4209,11 +5030,10 @@ class AppServiceController(
 
             ticket.action_finalizar()
 
-            # ----------------------------------------------------
-            # VOLVER A LEER.
-            # ----------------------------------------------------
-
-            ticket.invalidate_recordset()
+            try:
+                ticket.invalidate_recordset()
+            except Exception:
+                pass
 
             if (
                 ticket.estado
@@ -4228,9 +5048,10 @@ class AppServiceController(
                         ),
 
                         "message": (
-                            "Odoo ejecutó la validación "
-                            "pero el servicio todavía "
-                            "no quedó finalizado."
+                            "Odoo ejecutó la "
+                            "validación pero el "
+                            "servicio todavía no "
+                            "quedó finalizado."
                         ),
 
                         "service": (
