@@ -327,72 +327,298 @@ class AppRepairController(AppBaseController):
 
         return result
 
-    def _available_component_subparts(self, evaluation):
-        if (
-            "subpartes_ids" not in evaluation._fields
-            or not evaluation.componente_tipo_id
-        ):
-            return request.env[
+    def _available_component_subparts(
+        self,
+        evaluation,
+        ticket=None,
+    ):
+        """
+        Devuelve subpartes disponibles para componentes.
+
+        Reparaciones:
+        - La evaluación tiene subpartes_ids.
+        - Se usa el catálogo directo de componente.subparte.
+
+        Servicios:
+        - ticket.componente.evaluacion no tiene subpartes_ids.
+        - Se obtiene el catálogo desde modelo.maquina.componente
+          usando modelo de máquina + tipo + color.
+        """
+
+        # --------------------------------------------------------
+        # REPARACIONES
+        # --------------------------------------------------------
+        if "subpartes_ids" in evaluation._fields:
+            if not evaluation.componente_tipo_id:
+                model_name = (
+                    evaluation._fields[
+                        "subpartes_ids"
+                    ].comodel_name
+                )
+                return request.env[
+                    model_name
+                ].browse([])
+
+            model_name = (
                 evaluation._fields[
                     "subpartes_ids"
                 ].comodel_name
-            ].browse([]) if "subpartes_ids" in evaluation._fields else []
-
-        model_name = (
-            evaluation._fields[
-                "subpartes_ids"
-            ].comodel_name
-        )
-        Model = request.env[model_name]
-        domain = []
-
-        if "tipo_id" in Model._fields:
-            domain.append(
-                (
-                    "tipo_id",
-                    "=",
-                    evaluation.componente_tipo_id.id,
-                )
             )
 
+            Model = request.env[
+                model_name
+            ]
+
+            domain = []
+
+            if "tipo_id" in Model._fields:
+                domain.append(
+                    (
+                        "tipo_id",
+                        "=",
+                        evaluation.componente_tipo_id.id,
+                    )
+                )
+
+            if (
+                "color_id" in Model._fields
+                and "color_id" in evaluation._fields
+                and evaluation.color_id
+            ):
+                domain.append(
+                    (
+                        "color_id",
+                        "in",
+                        [
+                            False,
+                            evaluation.color_id.id,
+                        ],
+                    )
+                )
+
+            if "active" in Model._fields:
+                domain.append(
+                    ("active", "=", True)
+                )
+
+            return Model.search(
+                domain,
+                order="id asc",
+            )
+
+        # --------------------------------------------------------
+        # SERVICIOS
+        # --------------------------------------------------------
         if (
-            "color_id" in Model._fields
+            not ticket
+            or "componente_tipo_id"
+            not in evaluation._fields
+            or not evaluation.componente_tipo_id
+        ):
+            return request.env[
+                "componente.subparte"
+            ].browse([])
+
+        if (
+            "product_alquiler"
+            not in ticket._fields
+            or not ticket.product_alquiler
+        ):
+            return request.env[
+                "componente.subparte"
+            ].browse([])
+
+        product = ticket.product_alquiler
+
+        modelo = (
+            product.name
+            if (
+                "name" in product._fields
+                and product.name
+                and hasattr(product.name, "_fields")
+            )
+            else False
+        )
+
+        if not modelo:
+            return request.env[
+                "componente.subparte"
+            ].browse([])
+
+        MMC = request.env[
+            "modelo.maquina.componente"
+        ]
+
+        domain = [
+            (
+                "modelo_id",
+                "=",
+                modelo.id,
+            ),
+            (
+                "tipo_id",
+                "=",
+                evaluation.componente_tipo_id.id,
+            ),
+        ]
+
+        if (
+            "color_id" in MMC._fields
+            and "color_id" in evaluation._fields
             and evaluation.color_id
         ):
             domain.append(
                 (
                     "color_id",
-                    "in",
-                    [False, evaluation.color_id.id],
+                    "=",
+                    evaluation.color_id.id,
                 )
             )
 
-        if "active" in Model._fields:
-            domain.append(("active", "=", True))
-
-        return Model.search(domain, order="id asc")
-
-    def _available_accessory_subparts(self, evaluation):
-        if "subparte_ids" not in evaluation._fields:
-            return []
-
-        model_name = (
-            evaluation._fields[
-                "subparte_ids"
-            ].comodel_name
+        components = MMC.search(
+            domain
         )
-        Model = request.env[model_name]
-        domain = []
 
-        if "tipo_id" in Model._fields and evaluation.tipo_id:
-            domain.append(
-                ("tipo_id", "=", evaluation.tipo_id.id)
+        # Igual que el flujo web: fallback sin color.
+        if (
+            not components
+            and "color_id" in evaluation._fields
+            and evaluation.color_id
+        ):
+            components = MMC.search(
+                [
+                    (
+                        "modelo_id",
+                        "=",
+                        modelo.id,
+                    ),
+                    (
+                        "tipo_id",
+                        "=",
+                        evaluation.componente_tipo_id.id,
+                    ),
+                ]
             )
 
-        if "active" in Model._fields:
-            domain.append(("active", "=", True))
+        # Último fallback utilizado por el flujo web: solo tipo.
+        if not components:
+            components = MMC.search(
+                [
+                    (
+                        "tipo_id",
+                        "=",
+                        evaluation.componente_tipo_id.id,
+                    ),
+                ]
+            )
 
-        return Model.search(domain, order="id asc")
+        subpart_ids = []
+
+        for component in components:
+            if "detalle_ids" not in component._fields:
+                continue
+
+            for detail in component.detalle_ids:
+                if (
+                    "subparte_id" in detail._fields
+                    and detail.subparte_id
+                    and detail.subparte_id.id
+                    not in subpart_ids
+                ):
+                    subpart_ids.append(
+                        detail.subparte_id.id
+                    )
+
+        return request.env[
+            "componente.subparte"
+        ].browse(
+            subpart_ids
+        )
+
+
+    def _available_accessory_subparts(
+        self,
+        evaluation,
+        ticket=None,
+    ):
+        """
+        Devuelve subpartes disponibles para accesorios.
+
+        Reparaciones usa subparte_ids de la evaluación.
+        Servicios busca componente.subparte por tipo_id.
+        """
+
+        # --------------------------------------------------------
+        # REPARACIONES
+        # --------------------------------------------------------
+        if "subparte_ids" in evaluation._fields:
+            model_name = (
+                evaluation._fields[
+                    "subparte_ids"
+                ].comodel_name
+            )
+
+            Model = request.env[
+                model_name
+            ]
+
+            domain = []
+
+            if (
+                "tipo_id" in Model._fields
+                and "tipo_id" in evaluation._fields
+                and evaluation.tipo_id
+            ):
+                domain.append(
+                    (
+                        "tipo_id",
+                        "=",
+                        evaluation.tipo_id.id,
+                    )
+                )
+
+            if "active" in Model._fields:
+                domain.append(
+                    ("active", "=", True)
+                )
+
+            return Model.search(
+                domain,
+                order="id asc",
+            )
+
+        # --------------------------------------------------------
+        # SERVICIOS
+        # --------------------------------------------------------
+        if (
+            "tipo_id" not in evaluation._fields
+            or not evaluation.tipo_id
+        ):
+            return request.env[
+                "componente.subparte"
+            ].browse([])
+
+        Subpart = request.env[
+            "componente.subparte"
+        ]
+
+        domain = [
+            (
+                "tipo_id",
+                "=",
+                evaluation.tipo_id.id,
+            )
+        ]
+
+        if "active" in Subpart._fields:
+            domain.append(
+                ("active", "=", True)
+            )
+
+        return Subpart.search(
+            domain,
+            order="id asc",
+        )
 
     # ============================================================
     # CHECKLIST SERIALIZERS
