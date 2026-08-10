@@ -111,7 +111,7 @@ class AppServiceController(AppBaseController):
     # BASIC HELPERS
     # ============================================================
 
-    def _get_service(
+    def _service_get_service(
         self,
         service_id,
         user,
@@ -155,7 +155,7 @@ class AppServiceController(AppBaseController):
             status=404,
         )
 
-    def _safe_float(
+    def _service_safe_float(
         self,
         value,
         default=0.0,
@@ -175,7 +175,7 @@ class AppServiceController(AppBaseController):
         except Exception:
             return default
 
-    def _safe_int(
+    def _service_safe_int(
         self,
         value,
         default=0,
@@ -195,7 +195,7 @@ class AppServiceController(AppBaseController):
         except Exception:
             return default
 
-    def _safe_base64(
+    def _service_safe_base64(
         self,
         value,
     ):
@@ -231,7 +231,7 @@ class AppServiceController(AppBaseController):
         except Exception:
             return False, False
 
-    def _selection_values(
+    def _service_selection_values(
         self,
         record,
         field_name,
@@ -261,7 +261,7 @@ class AppServiceController(AppBaseController):
 
         return selection or []
 
-    def _selection_options(
+    def _service_selection_options(
         self,
         record,
         field_name,
@@ -275,13 +275,13 @@ class AppServiceController(AppBaseController):
                 value,
                 label,
             )
-            in self._selection_values(
+            in self._service_selection_values(
                 record,
                 field_name,
             )
         ]
 
-    def _many2one_with_code(
+    def _service_many2one_with_code(
         self,
         record,
     ):
@@ -319,7 +319,7 @@ class AppServiceController(AppBaseController):
     # COUNTER HELPERS
     # ============================================================
 
-    def _counter_preview(
+    def _service_counter_preview(
         self,
         ticket,
     ):
@@ -479,7 +479,7 @@ class AppServiceController(AppBaseController):
     # COMPONENT CODES
     # ============================================================
 
-    def _component_code_from_evaluation(
+    def _service_component_code_from_evaluation(
         self,
         evaluation,
     ):
@@ -530,7 +530,7 @@ class AppServiceController(AppBaseController):
             f"{str(color_code).lower()}"
         )
 
-    def _accessory_code_from_evaluation(
+    def _service_accessory_code_from_evaluation(
         self,
         evaluation,
     ):
@@ -545,7 +545,7 @@ class AppServiceController(AppBaseController):
     # SERIALIZERS
     # ============================================================
 
-    def _serialize_service_short(
+    def _service_serialize_service_short(
         self,
         ticket,
     ):
@@ -725,7 +725,7 @@ class AppServiceController(AppBaseController):
             ),
         }
 
-    def _serialize_component(
+    def _service_serialize_component(
         self,
         item,
     ):
@@ -753,7 +753,7 @@ class AppServiceController(AppBaseController):
             ),
 
             "color": (
-                self._many2one_with_code(
+                self._service_many2one_with_code(
                     item.color_id
                 )
                 if (
@@ -765,7 +765,7 @@ class AppServiceController(AppBaseController):
             ),
 
             "state": (
-                self._many2one_with_code(
+                self._service_many2one_with_code(
                     state
                 )
                 if state
@@ -801,13 +801,13 @@ class AppServiceController(AppBaseController):
             ),
 
             "component_code": (
-                self._component_code_from_evaluation(
+                self._service_component_code_from_evaluation(
                     item
                 )
             ),
         }
 
-    def _serialize_accessory(
+    def _service_serialize_accessory(
         self,
         item,
     ):
@@ -835,7 +835,7 @@ class AppServiceController(AppBaseController):
             ),
 
             "state": (
-                self._many2one_with_code(
+                self._service_many2one_with_code(
                     state
                 )
                 if state
@@ -871,13 +871,13 @@ class AppServiceController(AppBaseController):
             ),
 
             "component_code": (
-                self._accessory_code_from_evaluation(
+                self._service_accessory_code_from_evaluation(
                     item
                 )
             ),
         }
 
-    def _serialize_evidence(
+    def _service_serialize_evidence(
         self,
         photo,
         service_id,
@@ -970,12 +970,12 @@ class AppServiceController(AppBaseController):
             ),
         }
 
-    def _serialize_service_detail(
+    def _service_serialize_service_detail(
         self,
         ticket,
     ):
         result = (
-            self._serialize_service_short(
+            self._service_serialize_service_short(
                 ticket
             )
         )
@@ -1046,7 +1046,7 @@ class AppServiceController(AppBaseController):
             )
 
         counter_preview = (
-            self._counter_preview(
+            self._service_counter_preview(
                 ticket
             )
         )
@@ -1220,7 +1220,7 @@ class AppServiceController(AppBaseController):
                 ),
 
                 "quality_options": (
-                    self._selection_options(
+                    self._service_selection_options(
                         ticket,
                         "calidad_id",
                     )
@@ -1231,7 +1231,7 @@ class AppServiceController(AppBaseController):
                 # ------------------------------------------------
 
                 "return_options": (
-                    self._selection_options(
+                    self._service_selection_options(
                         ticket,
                         "retorno_id",
                     )
@@ -1247,7 +1247,7 @@ class AppServiceController(AppBaseController):
                 # ------------------------------------------------
 
                 "components": [
-                    self._serialize_component(
+                    self._service_serialize_component(
                         item
                     )
                     for item
@@ -1258,7 +1258,7 @@ class AppServiceController(AppBaseController):
                 ],
 
                 "accessories": [
-                    self._serialize_accessory(
+                    self._service_serialize_accessory(
                         item
                     )
                     for item
@@ -1499,7 +1499,7 @@ class AppServiceController(AppBaseController):
                     ),
 
                     "items": [
-                        self._serialize_service_short(
+                        self._service_serialize_service_short(
                             ticket
                         )
                         for ticket
@@ -1539,7 +1539,7 @@ class AppServiceController(AppBaseController):
 
         try:
             ticket = (
-                self._get_service(
+                self._service_get_service(
                     service_id,
                     user,
                 )
@@ -1555,7 +1555,7 @@ class AppServiceController(AppBaseController):
                     "success": True,
 
                     "service": (
-                        self._serialize_service_detail(
+                        self._service_serialize_service_detail(
                             ticket
                         )
                     ),
@@ -1593,7 +1593,7 @@ class AppServiceController(AppBaseController):
 
         try:
             ticket = (
-                self._get_service(
+                self._service_get_service(
                     service_id,
                     user,
                 )
@@ -1691,7 +1691,7 @@ class AppServiceController(AppBaseController):
                         label,
                     )
                     in (
-                        self._selection_values(
+                        self._service_selection_values(
                             ticket,
                             "calidad_id",
                         )
@@ -1733,7 +1733,7 @@ class AppServiceController(AppBaseController):
                         label,
                     )
                     in (
-                        self._selection_values(
+                        self._service_selection_values(
                             ticket,
                             "retorno_id",
                         )
@@ -1803,7 +1803,7 @@ class AppServiceController(AppBaseController):
                     ),
 
                     "service": (
-                        self._serialize_service_detail(
+                        self._service_serialize_service_detail(
                             ticket
                         )
                     ),
@@ -1844,7 +1844,7 @@ class AppServiceController(AppBaseController):
 
         try:
             ticket = (
-                self._get_service(
+                self._service_get_service(
                     service_id,
                     user,
                 )
@@ -1912,7 +1912,7 @@ class AppServiceController(AppBaseController):
                 )
 
             preview_before = (
-                self._counter_preview(
+                self._service_counter_preview(
                     ticket
                 )
             )
@@ -1986,7 +1986,7 @@ class AppServiceController(AppBaseController):
                     },
 
                     "service": (
-                        self._serialize_service_detail(
+                        self._service_serialize_service_detail(
                             ticket
                         )
                     ),
@@ -2027,7 +2027,7 @@ class AppServiceController(AppBaseController):
 
         try:
             ticket = (
-                self._get_service(
+                self._service_get_service(
                     service_id,
                     user,
                 )
@@ -2061,7 +2061,7 @@ class AppServiceController(AppBaseController):
                     "success": True,
 
                     "component_states": [
-                        self._many2one_with_code(
+                        self._service_many2one_with_code(
                             item
                         )
                         for item
@@ -2069,7 +2069,7 @@ class AppServiceController(AppBaseController):
                     ],
 
                     "accessory_states": [
-                        self._many2one_with_code(
+                        self._service_many2one_with_code(
                             item
                         )
                         for item
@@ -2113,7 +2113,7 @@ class AppServiceController(AppBaseController):
 
         try:
             ticket = (
-                self._get_service(
+                self._service_get_service(
                     service_id,
                     user,
                 )
@@ -2184,7 +2184,7 @@ class AppServiceController(AppBaseController):
 
             if "state_id" in data:
                 state_id = (
-                    self._safe_int(
+                    self._service_safe_int(
                         data.get(
                             "state_id"
                         )
@@ -2260,7 +2260,7 @@ class AppServiceController(AppBaseController):
                     ),
 
                     "component": (
-                        self._serialize_component(
+                        self._service_serialize_component(
                             evaluation
                         )
                     ),
@@ -2302,7 +2302,7 @@ class AppServiceController(AppBaseController):
 
         try:
             ticket = (
-                self._get_service(
+                self._service_get_service(
                     service_id,
                     user,
                 )
@@ -2373,7 +2373,7 @@ class AppServiceController(AppBaseController):
 
             if "state_id" in data:
                 state_id = (
-                    self._safe_int(
+                    self._service_safe_int(
                         data.get(
                             "state_id"
                         )
@@ -2449,7 +2449,7 @@ class AppServiceController(AppBaseController):
                     ),
 
                     "accessory": (
-                        self._serialize_accessory(
+                        self._service_serialize_accessory(
                             evaluation
                         )
                     ),
@@ -2465,7 +2465,7 @@ class AppServiceController(AppBaseController):
     # SUBPART HELPERS
     # ============================================================
 
-    def _get_component_evaluation(
+    def _service_get_component_evaluation(
         self,
         ticket,
         evaluation_id,
@@ -2488,7 +2488,7 @@ class AppServiceController(AppBaseController):
             limit=1,
         )
 
-    def _get_accessory_evaluation(
+    def _service_get_accessory_evaluation(
         self,
         ticket,
         evaluation_id,
@@ -2511,7 +2511,7 @@ class AppServiceController(AppBaseController):
             limit=1,
         )
 
-    def _available_component_subparts(
+    def _service_available_component_subparts(
         self,
         ticket,
         evaluation,
@@ -2649,7 +2649,7 @@ class AppServiceController(AppBaseController):
             subparts.values()
         )
 
-    def _available_accessory_subparts(
+    def _service_available_accessory_subparts(
         self,
         evaluation,
     ):
@@ -2694,7 +2694,7 @@ class AppServiceController(AppBaseController):
             in records
         ]
 
-    def _get_or_create_intervention(
+    def _service_get_or_create_intervention(
         self,
         ticket,
         component_code,
@@ -2768,7 +2768,7 @@ class AppServiceController(AppBaseController):
 
         try:
             ticket = (
-                self._get_service(
+                self._service_get_service(
                     service_id,
                     user,
                 )
@@ -2790,7 +2790,7 @@ class AppServiceController(AppBaseController):
             ).strip()
 
             evaluation_id = (
-                self._safe_int(
+                self._service_safe_int(
                     request
                     .httprequest
                     .args
@@ -2836,7 +2836,7 @@ class AppServiceController(AppBaseController):
                 == "component"
             ):
                 evaluation = (
-                    self._get_component_evaluation(
+                    self._service_get_component_evaluation(
                         ticket,
                         evaluation_id,
                     )
@@ -2857,13 +2857,13 @@ class AppServiceController(AppBaseController):
                     )
 
                 component_code = (
-                    self._component_code_from_evaluation(
+                    self._service_component_code_from_evaluation(
                         evaluation
                     )
                 )
 
                 available = (
-                    self._available_component_subparts(
+                    self._service_available_component_subparts(
                         ticket,
                         evaluation,
                     )
@@ -2871,7 +2871,7 @@ class AppServiceController(AppBaseController):
 
             else:
                 evaluation = (
-                    self._get_accessory_evaluation(
+                    self._service_get_accessory_evaluation(
                         ticket,
                         evaluation_id,
                     )
@@ -2892,13 +2892,13 @@ class AppServiceController(AppBaseController):
                     )
 
                 component_code = (
-                    self._accessory_code_from_evaluation(
+                    self._service_accessory_code_from_evaluation(
                         evaluation
                     )
                 )
 
                 available = (
-                    self._available_accessory_subparts(
+                    self._service_available_accessory_subparts(
                         evaluation
                     )
                 )
@@ -3045,7 +3045,7 @@ class AppServiceController(AppBaseController):
 
         try:
             ticket = (
-                self._get_service(
+                self._service_get_service(
                     service_id,
                     user,
                 )
@@ -3087,7 +3087,7 @@ class AppServiceController(AppBaseController):
             )
 
             evaluation_id = (
-                self._safe_int(
+                self._service_safe_int(
                     data.get(
                         "evaluation_id"
                     )
@@ -3122,7 +3122,7 @@ class AppServiceController(AppBaseController):
                 == "component"
             ):
                 evaluation = (
-                    self._get_component_evaluation(
+                    self._service_get_component_evaluation(
                         ticket,
                         evaluation_id,
                     )
@@ -3143,13 +3143,13 @@ class AppServiceController(AppBaseController):
                     )
 
                 component_code = (
-                    self._component_code_from_evaluation(
+                    self._service_component_code_from_evaluation(
                         evaluation
                     )
                 )
 
                 available = (
-                    self._available_component_subparts(
+                    self._service_available_component_subparts(
                         ticket,
                         evaluation,
                     )
@@ -3157,7 +3157,7 @@ class AppServiceController(AppBaseController):
 
             else:
                 evaluation = (
-                    self._get_accessory_evaluation(
+                    self._service_get_accessory_evaluation(
                         ticket,
                         evaluation_id,
                     )
@@ -3178,13 +3178,13 @@ class AppServiceController(AppBaseController):
                     )
 
                 component_code = (
-                    self._accessory_code_from_evaluation(
+                    self._service_accessory_code_from_evaluation(
                         evaluation
                     )
                 )
 
                 available = (
-                    self._available_accessory_subparts(
+                    self._service_available_accessory_subparts(
                         evaluation
                     )
                 )
@@ -3198,7 +3198,7 @@ class AppServiceController(AppBaseController):
             }
 
             intervention = (
-                self._get_or_create_intervention(
+                self._service_get_or_create_intervention(
                     ticket,
                     component_code,
                 )
@@ -3225,7 +3225,7 @@ class AppServiceController(AppBaseController):
                     continue
 
                 subpart_id = (
-                    self._safe_int(
+                    self._service_safe_int(
                         raw.get(
                             "subpart_id"
                         )
@@ -3267,7 +3267,7 @@ class AppServiceController(AppBaseController):
                 )
 
                 quantity = (
-                    self._safe_float(
+                    self._service_safe_float(
                         raw.get(
                             "quantity"
                         ),
@@ -3381,7 +3381,7 @@ class AppServiceController(AppBaseController):
 
         try:
             ticket = (
-                self._get_service(
+                self._service_get_service(
                     service_id,
                     user,
                 )
@@ -3466,7 +3466,7 @@ class AppServiceController(AppBaseController):
                     ),
 
                     "items": [
-                        self._serialize_evidence(
+                        self._service_serialize_evidence(
                             photo,
                             ticket.id,
                         )
@@ -3510,7 +3510,7 @@ class AppServiceController(AppBaseController):
 
         try:
             ticket = (
-                self._get_service(
+                self._service_get_service(
                     service_id,
                     user,
                 )
@@ -3594,7 +3594,7 @@ class AppServiceController(AppBaseController):
                 original_base64,
                 original_bytes,
             ) = (
-                self._safe_base64(
+                self._service_safe_base64(
                     original_value
                 )
             )
@@ -3622,7 +3622,7 @@ class AppServiceController(AppBaseController):
                     processed_base64,
                     processed_bytes,
                 ) = (
-                    self._safe_base64(
+                    self._service_safe_base64(
                         processed_value
                     )
                 )
@@ -3691,7 +3691,7 @@ class AppServiceController(AppBaseController):
                 )
 
             latitude = (
-                self._safe_float(
+                self._service_safe_float(
                     data.get(
                         "latitude"
                     )
@@ -3703,7 +3703,7 @@ class AppServiceController(AppBaseController):
             )
 
             longitude = (
-                self._safe_float(
+                self._service_safe_float(
                     data.get(
                         "longitude"
                     )
@@ -3715,7 +3715,7 @@ class AppServiceController(AppBaseController):
             )
 
             gps_accuracy = (
-                self._safe_float(
+                self._service_safe_float(
                     data.get(
                         "gps_accuracy"
                     )
@@ -3863,7 +3863,7 @@ class AppServiceController(AppBaseController):
                     ),
 
                     "photo": (
-                        self._serialize_evidence(
+                        self._service_serialize_evidence(
                             photo,
                             ticket.id,
                         )
@@ -3907,7 +3907,7 @@ class AppServiceController(AppBaseController):
 
         try:
             ticket = (
-                self._get_service(
+                self._service_get_service(
                     service_id,
                     user,
                 )
@@ -4014,7 +4014,7 @@ class AppServiceController(AppBaseController):
             return error
 
         ticket = (
-            self._get_service(
+            self._service_get_service(
                 service_id,
                 user,
             )
@@ -4157,7 +4157,7 @@ class AppServiceController(AppBaseController):
             return error
 
         ticket = (
-            self._get_service(
+            self._service_get_service(
                 service_id,
                 user,
             )
@@ -4241,7 +4241,7 @@ class AppServiceController(AppBaseController):
     # GEOCODE HELPERS
     # ============================================================
 
-    def _normalize_address(
+    def _service_normalize_address(
         self,
         address,
     ):
@@ -4301,7 +4301,7 @@ class AppServiceController(AppBaseController):
             :180
         ]
 
-    def _distance_meters(
+    def _service_distance_meters(
         self,
         lat1,
         lon1,
@@ -4387,7 +4387,7 @@ class AppServiceController(AppBaseController):
             )
         )
 
-    def _traccar_address(
+    def _service_traccar_address(
         self,
         latitude,
         longitude,
@@ -4529,7 +4529,7 @@ class AppServiceController(AppBaseController):
                     continue
 
                 distance = (
-                    self._distance_meters(
+                    self._service_distance_meters(
                         latitude,
                         longitude,
                         lat,
@@ -4561,7 +4561,7 @@ class AppServiceController(AppBaseController):
                 <= 250
             ):
                 return (
-                    self._normalize_address(
+                    self._service_normalize_address(
                         best.get(
                             "address"
                         )
@@ -4578,7 +4578,7 @@ class AppServiceController(AppBaseController):
 
             return False
 
-    def _nominatim_address(
+    def _service_nominatim_address(
         self,
         latitude,
         longitude,
@@ -4623,7 +4623,7 @@ class AppServiceController(AppBaseController):
             )
 
             return (
-                self._normalize_address(
+                self._service_normalize_address(
                     data.get(
                         "display_name"
                     )
@@ -4667,7 +4667,7 @@ class AppServiceController(AppBaseController):
 
         try:
             ticket = (
-                self._get_service(
+                self._service_get_service(
                     service_id,
                     user,
                 )
@@ -4683,7 +4683,7 @@ class AppServiceController(AppBaseController):
             )
 
             latitude = (
-                self._safe_float(
+                self._service_safe_float(
                     data.get(
                         "latitude"
                     )
@@ -4695,7 +4695,7 @@ class AppServiceController(AppBaseController):
             )
 
             longitude = (
-                self._safe_float(
+                self._service_safe_float(
                     data.get(
                         "longitude"
                     )
@@ -4726,7 +4726,7 @@ class AppServiceController(AppBaseController):
                 )
 
             address = (
-                self._traccar_address(
+                self._service_traccar_address(
                     latitude,
                     longitude,
                 )
@@ -4740,7 +4740,7 @@ class AppServiceController(AppBaseController):
 
             if not address:
                 address = (
-                    self._nominatim_address(
+                    self._service_nominatim_address(
                         latitude,
                         longitude,
                     )
@@ -4808,7 +4808,7 @@ class AppServiceController(AppBaseController):
 
         try:
             ticket = (
-                self._get_service(
+                self._service_get_service(
                     service_id,
                     user,
                 )
@@ -4907,7 +4907,7 @@ class AppServiceController(AppBaseController):
                     ),
 
                     "service": (
-                        self._serialize_service_detail(
+                        self._service_serialize_service_detail(
                             ticket
                         )
                     ),
@@ -4945,7 +4945,7 @@ class AppServiceController(AppBaseController):
 
         try:
             ticket = (
-                self._get_service(
+                self._service_get_service(
                     service_id,
                     user,
                 )
@@ -4970,7 +4970,7 @@ class AppServiceController(AppBaseController):
                         ),
 
                         "service": (
-                            self._serialize_service_detail(
+                            self._service_serialize_service_detail(
                                 ticket
                             )
                         ),
@@ -5055,7 +5055,7 @@ class AppServiceController(AppBaseController):
                         ),
 
                         "service": (
-                            self._serialize_service_detail(
+                            self._service_serialize_service_detail(
                                 ticket
                             )
                         ),
@@ -5073,7 +5073,7 @@ class AppServiceController(AppBaseController):
                     ),
 
                     "service": (
-                        self._serialize_service_detail(
+                        self._service_serialize_service_detail(
                             ticket
                         )
                     ),

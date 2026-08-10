@@ -68,20 +68,20 @@ class AppRepairController(AppBaseController):
     # GENERIC HELPERS
     # ============================================================
 
-    def _model_exists(self, model_name):
+    def _repair_model_exists(self, model_name):
         return model_name in request.env.registry
 
-    def _safe_value(self, record, field_name, default=False):
+    def _repair_safe_value(self, record, field_name, default=False):
         if record and field_name in record._fields:
             return record[field_name]
         return default
 
-    def _safe_text(self, value):
+    def _repair_safe_text(self, value):
         if value in (None, False):
             return ""
         return str(value)
 
-    def _selection_label_safe(self, record, field_name):
+    def _repair_selection_label_safe(self, record, field_name):
         if (
             not record
             or field_name not in record._fields
@@ -118,7 +118,7 @@ class AppRepairController(AppBaseController):
             except Exception:
                 return str(value)
 
-    def _many2one_or_false(self, record, field_name):
+    def _repair_many2one_or_false(self, record, field_name):
         if (
             field_name not in record._fields
             or not record[field_name]
@@ -126,7 +126,7 @@ class AppRepairController(AppBaseController):
             return False
         return self._many2one(record[field_name])
 
-    def _record_code(self, record):
+    def _repair_record_code(self, record):
         if not record:
             return ""
 
@@ -139,7 +139,7 @@ class AppRepairController(AppBaseController):
 
         return ""
 
-    def _selection_options(self, record, field_name):
+    def _repair_selection_options(self, record, field_name):
         if field_name not in record._fields:
             return []
 
@@ -152,7 +152,7 @@ class AppRepairController(AppBaseController):
             for value, label in (selection or [])
         ]
 
-    def _many2one_options(self, record, field_name):
+    def _repair_many2one_options(self, record, field_name):
         if field_name not in record._fields:
             return []
 
@@ -161,7 +161,7 @@ class AppRepairController(AppBaseController):
             return []
 
         model_name = field.comodel_name
-        if not model_name or not self._model_exists(model_name):
+        if not model_name or not self._repair_model_exists(model_name):
             return []
 
         Model = request.env[model_name]
@@ -174,7 +174,7 @@ class AppRepairController(AppBaseController):
 
         result = []
         for item in records:
-            code = self._record_code(item)
+            code = self._repair_record_code(item)
             result.append(
                 {
                     "id": item.id,
@@ -193,7 +193,7 @@ class AppRepairController(AppBaseController):
     # Finalizados se calculan por fecha_finalizacion.
     # ============================================================
 
-    def _timezone(self, user):
+    def _repair_timezone(self, user):
         try:
             return pytz.timezone(
                 user.tz or "America/Lima"
@@ -201,7 +201,7 @@ class AppRepairController(AppBaseController):
         except Exception:
             return pytz.timezone("America/Lima")
 
-    def _local_range_to_utc(
+    def _repair_local_range_to_utc(
         self,
         timezone,
         start_date,
@@ -228,17 +228,17 @@ class AppRepairController(AppBaseController):
             fields.Datetime.to_string(end_utc),
         )
 
-    def _today_range(self, user):
-        timezone = self._timezone(user)
+    def _repair_today_range(self, user):
+        timezone = self._repair_timezone(user)
         today = datetime.now(timezone).date()
-        return self._local_range_to_utc(
+        return self._repair_local_range_to_utc(
             timezone,
             today,
             today,
         )
 
-    def _month_ranges(self, user):
-        timezone = self._timezone(user)
+    def _repair_month_ranges(self, user):
+        timezone = self._repair_timezone(user)
         today = datetime.now(timezone).date()
 
         current_start = today.replace(day=1)
@@ -258,12 +258,12 @@ class AppRepairController(AppBaseController):
         previous_start = previous_end.replace(day=1)
 
         return {
-            "current": self._local_range_to_utc(
+            "current": self._repair_local_range_to_utc(
                 timezone,
                 current_start,
                 current_end,
             ),
-            "previous": self._local_range_to_utc(
+            "previous": self._repair_local_range_to_utc(
                 timezone,
                 previous_start,
                 previous_end,
@@ -274,7 +274,7 @@ class AppRepairController(AppBaseController):
     # SECURITY
     # ============================================================
 
-    def _get_repair(self, repair_id, user):
+    def _repair_get_repair(self, repair_id, user):
         return request.env[self.REPAIR_MODEL].search(
             [
                 ("id", "=", repair_id),
@@ -284,7 +284,7 @@ class AppRepairController(AppBaseController):
         )
 
     def _repair_or_error(self, repair_id, user):
-        repair = self._get_repair(repair_id, user)
+        repair = self._repair_get_repair(repair_id, user)
 
         if repair:
             return repair, None
@@ -301,14 +301,14 @@ class AppRepairController(AppBaseController):
             status=404,
         )
 
-    def _is_finalized(self, repair):
+    def _repair_is_finalized(self, repair):
         return repair.estado_id in self.FINAL_STATES
 
     # ============================================================
     # SUBPARTS
     # ============================================================
 
-    def _serialize_subpart(self, subpart):
+    def _repair_serialize_subpart(self, subpart):
         result = {
             "id": subpart.id,
             "name": subpart.display_name,
@@ -327,29 +327,21 @@ class AppRepairController(AppBaseController):
 
         return result
 
-    def _available_component_subparts(
+    def _repair_available_component_subparts(
         self,
         evaluation,
-        ticket=None,
     ):
         """
-        Devuelve subpartes disponibles para componentes.
+        Subpartes disponibles para una evaluación de componente
+        de Reparaciones.
 
-        Reparaciones:
-        - La evaluación tiene subpartes_ids.
-        - Se usa el catálogo directo de componente.subparte.
-
-        Servicios:
-        - ticket.componente.evaluacion no tiene subpartes_ids.
-        - Se obtiene el catálogo desde modelo.maquina.componente
-          usando modelo de máquina + tipo + color.
+        Este helper NO se utiliza en Servicios.
         """
-
-        # --------------------------------------------------------
-        # REPARACIONES
-        # --------------------------------------------------------
-        if "subpartes_ids" in evaluation._fields:
-            if not evaluation.componente_tipo_id:
+        if (
+            "subpartes_ids" not in evaluation._fields
+            or not evaluation.componente_tipo_id
+        ):
+            if "subpartes_ids" in evaluation._fields:
                 model_name = (
                     evaluation._fields[
                         "subpartes_ids"
@@ -359,263 +351,100 @@ class AppRepairController(AppBaseController):
                     model_name
                 ].browse([])
 
-            model_name = (
-                evaluation._fields[
-                    "subpartes_ids"
-                ].comodel_name
-            )
+            return []
 
-            Model = request.env[
-                model_name
-            ]
-
-            domain = []
-
-            if "tipo_id" in Model._fields:
-                domain.append(
-                    (
-                        "tipo_id",
-                        "=",
-                        evaluation.componente_tipo_id.id,
-                    )
-                )
-
-            if (
-                "color_id" in Model._fields
-                and "color_id" in evaluation._fields
-                and evaluation.color_id
-            ):
-                domain.append(
-                    (
-                        "color_id",
-                        "in",
-                        [
-                            False,
-                            evaluation.color_id.id,
-                        ],
-                    )
-                )
-
-            if "active" in Model._fields:
-                domain.append(
-                    ("active", "=", True)
-                )
-
-            return Model.search(
-                domain,
-                order="id asc",
-            )
-
-        # --------------------------------------------------------
-        # SERVICIOS
-        # --------------------------------------------------------
-        if (
-            not ticket
-            or "componente_tipo_id"
-            not in evaluation._fields
-            or not evaluation.componente_tipo_id
-        ):
-            return request.env[
-                "componente.subparte"
-            ].browse([])
-
-        if (
-            "product_alquiler"
-            not in ticket._fields
-            or not ticket.product_alquiler
-        ):
-            return request.env[
-                "componente.subparte"
-            ].browse([])
-
-        product = ticket.product_alquiler
-
-        modelo = (
-            product.name
-            if (
-                "name" in product._fields
-                and product.name
-                and hasattr(product.name, "_fields")
-            )
-            else False
+        model_name = (
+            evaluation._fields[
+                "subpartes_ids"
+            ].comodel_name
         )
 
-        if not modelo:
-            return request.env[
-                "componente.subparte"
-            ].browse([])
-
-        MMC = request.env[
-            "modelo.maquina.componente"
+        Model = request.env[
+            model_name
         ]
 
-        domain = [
-            (
-                "modelo_id",
-                "=",
-                modelo.id,
-            ),
-            (
-                "tipo_id",
-                "=",
-                evaluation.componente_tipo_id.id,
-            ),
-        ]
+        domain = []
+
+        if "tipo_id" in Model._fields:
+            domain.append(
+                (
+                    "tipo_id",
+                    "=",
+                    evaluation.componente_tipo_id.id,
+                )
+            )
 
         if (
-            "color_id" in MMC._fields
+            "color_id" in Model._fields
             and "color_id" in evaluation._fields
             and evaluation.color_id
         ):
             domain.append(
                 (
                     "color_id",
-                    "=",
-                    evaluation.color_id.id,
+                    "in",
+                    [
+                        False,
+                        evaluation.color_id.id,
+                    ],
                 )
             )
 
-        components = MMC.search(
-            domain
-        )
-
-        # Igual que el flujo web: fallback sin color.
-        if (
-            not components
-            and "color_id" in evaluation._fields
-            and evaluation.color_id
-        ):
-            components = MMC.search(
-                [
-                    (
-                        "modelo_id",
-                        "=",
-                        modelo.id,
-                    ),
-                    (
-                        "tipo_id",
-                        "=",
-                        evaluation.componente_tipo_id.id,
-                    ),
-                ]
-            )
-
-        # Último fallback utilizado por el flujo web: solo tipo.
-        if not components:
-            components = MMC.search(
-                [
-                    (
-                        "tipo_id",
-                        "=",
-                        evaluation.componente_tipo_id.id,
-                    ),
-                ]
-            )
-
-        subpart_ids = []
-
-        for component in components:
-            if "detalle_ids" not in component._fields:
-                continue
-
-            for detail in component.detalle_ids:
-                if (
-                    "subparte_id" in detail._fields
-                    and detail.subparte_id
-                    and detail.subparte_id.id
-                    not in subpart_ids
-                ):
-                    subpart_ids.append(
-                        detail.subparte_id.id
-                    )
-
-        return request.env[
-            "componente.subparte"
-        ].browse(
-            subpart_ids
-        )
-
-
-    def _available_accessory_subparts(
-        self,
-        evaluation,
-        ticket=None,
-    ):
-        """
-        Devuelve subpartes disponibles para accesorios.
-
-        Reparaciones usa subparte_ids de la evaluación.
-        Servicios busca componente.subparte por tipo_id.
-        """
-
-        # --------------------------------------------------------
-        # REPARACIONES
-        # --------------------------------------------------------
-        if "subparte_ids" in evaluation._fields:
-            model_name = (
-                evaluation._fields[
-                    "subparte_ids"
-                ].comodel_name
-            )
-
-            Model = request.env[
-                model_name
-            ]
-
-            domain = []
-
-            if (
-                "tipo_id" in Model._fields
-                and "tipo_id" in evaluation._fields
-                and evaluation.tipo_id
-            ):
-                domain.append(
-                    (
-                        "tipo_id",
-                        "=",
-                        evaluation.tipo_id.id,
-                    )
-                )
-
-            if "active" in Model._fields:
-                domain.append(
-                    ("active", "=", True)
-                )
-
-            return Model.search(
-                domain,
-                order="id asc",
-            )
-
-        # --------------------------------------------------------
-        # SERVICIOS
-        # --------------------------------------------------------
-        if (
-            "tipo_id" not in evaluation._fields
-            or not evaluation.tipo_id
-        ):
-            return request.env[
-                "componente.subparte"
-            ].browse([])
-
-        Subpart = request.env[
-            "componente.subparte"
-        ]
-
-        domain = [
-            (
-                "tipo_id",
-                "=",
-                evaluation.tipo_id.id,
-            )
-        ]
-
-        if "active" in Subpart._fields:
+        if "active" in Model._fields:
             domain.append(
                 ("active", "=", True)
             )
 
-        return Subpart.search(
+        return Model.search(
+            domain,
+            order="id asc",
+        )
+
+
+    def _repair_available_accessory_subparts(
+        self,
+        evaluation,
+    ):
+        """
+        Subpartes disponibles para una evaluación de accesorio
+        de Reparaciones.
+
+        Este helper NO se utiliza en Servicios.
+        """
+        if "subparte_ids" not in evaluation._fields:
+            return []
+
+        model_name = (
+            evaluation._fields[
+                "subparte_ids"
+            ].comodel_name
+        )
+
+        Model = request.env[
+            model_name
+        ]
+
+        domain = []
+
+        if (
+            "tipo_id" in Model._fields
+            and "tipo_id" in evaluation._fields
+            and evaluation.tipo_id
+        ):
+            domain.append(
+                (
+                    "tipo_id",
+                    "=",
+                    evaluation.tipo_id.id,
+                )
+            )
+
+        if "active" in Model._fields:
+            domain.append(
+                ("active", "=", True)
+            )
+
+        return Model.search(
             domain,
             order="id asc",
         )
@@ -624,56 +453,48 @@ class AppRepairController(AppBaseController):
     # CHECKLIST SERIALIZERS
     # ============================================================
 
-    def _serialize_component(
+    def _repair_serialize_component(
         self,
         item,
         include_options=False,
     ):
         """
-        Compatible con:
-        - reparacion.componente.evaluacion
-        - ticket.componente.evaluacion
-
-        Servicios no tiene subpartes_ids, por eso las
-        subpartes se consideran opcionales.
+        Serializa exclusivamente reparacion.componente.evaluacion.
         """
-
-        state = (
-            item.estado_id
-            if (
-                "estado_id" in item._fields
-                and item.estado_id
-            )
-            else False
-        )
-
         state_code = (
-            self._record_code(state)
-            if state
+            self._repair_record_code(
+                item.estado_id
+            )
+            if item.estado_id
             else ""
         )
 
-        selected = []
-
-        if "subpartes_ids" in item._fields:
-            selected = [
-                self._serialize_subpart(subpart)
-                for subpart in item.subpartes_ids
-            ]
+        selected = [
+            self._repair_serialize_subpart(
+                subpart
+            )
+            for subpart in item.subpartes_ids
+        ]
 
         result = {
             "id": item.id,
-            "component": self._many2one_or_false(
-                item,
-                "componente_tipo_id",
+            "component": (
+                self._repair_many2one_or_false(
+                    item,
+                    "componente_tipo_id",
+                )
             ),
-            "color": self._many2one_or_false(
-                item,
-                "color_id",
+            "color": (
+                self._repair_many2one_or_false(
+                    item,
+                    "color_id",
+                )
             ),
-            "state": self._many2one_or_false(
-                item,
-                "estado_id",
+            "state": (
+                self._repair_many2one_or_false(
+                    item,
+                    "estado_id",
+                )
             ),
             "state_code": state_code,
             "requires_change": (
@@ -681,79 +502,67 @@ class AppRepairController(AppBaseController):
             ),
             "observations": (
                 item.observaciones or ""
-                if "observaciones" in item._fields
-                else ""
             ),
             "selected_subparts": selected,
         }
 
         if include_options:
             result["state_options"] = (
-                self._many2one_options(
+                self._repair_many2one_options(
                     item,
                     "estado_id",
                 )
             )
 
-            if "subpartes_ids" in item._fields:
-                result["available_subparts"] = [
-                    self._serialize_subpart(subpart)
-                    for subpart
-                    in self._available_component_subparts(
-                        item
-                    )
-                ]
-            else:
-                result["available_subparts"] = []
+            result["available_subparts"] = [
+                self._repair_serialize_subpart(
+                    subpart
+                )
+                for subpart
+                in self._repair_available_component_subparts(
+                    item
+                )
+            ]
 
         return result
 
-    def _serialize_accessory(
+
+    def _repair_serialize_accessory(
         self,
         item,
         include_options=False,
     ):
         """
-        Compatible con:
-        - reparacion.accesorio.evaluacion
-        - ticket.accesorio.evaluacion
-
-        Servicios no tiene subparte_ids, por eso las
-        subpartes se consideran opcionales.
+        Serializa exclusivamente reparacion.accesorio.evaluacion.
         """
-
-        state = (
-            item.estado_id
-            if (
-                "estado_id" in item._fields
-                and item.estado_id
-            )
-            else False
-        )
-
         state_code = (
-            self._record_code(state)
-            if state
+            self._repair_record_code(
+                item.estado_id
+            )
+            if item.estado_id
             else ""
         )
 
-        selected = []
-
-        if "subparte_ids" in item._fields:
-            selected = [
-                self._serialize_subpart(subpart)
-                for subpart in item.subparte_ids
-            ]
+        selected = [
+            self._repair_serialize_subpart(
+                subpart
+            )
+            for subpart in item.subparte_ids
+        ]
 
         result = {
             "id": item.id,
-            "accessory": self._many2one_or_false(
-                item,
-                "tipo_id",
+            "accessory": (
+                self._repair_many2one_or_false(
+                    item,
+                    "tipo_id",
+                )
             ),
-            "state": self._many2one_or_false(
-                item,
-                "estado_id",
+            "state": (
+                self._repair_many2one_or_false(
+                    item,
+                    "estado_id",
+                )
             ),
             "state_code": state_code,
             "requires_change": (
@@ -761,30 +570,27 @@ class AppRepairController(AppBaseController):
             ),
             "observations": (
                 item.observaciones or ""
-                if "observaciones" in item._fields
-                else ""
             ),
             "selected_subparts": selected,
         }
 
         if include_options:
             result["state_options"] = (
-                self._many2one_options(
+                self._repair_many2one_options(
                     item,
                     "estado_id",
                 )
             )
 
-            if "subparte_ids" in item._fields:
-                result["available_subparts"] = [
-                    self._serialize_subpart(subpart)
-                    for subpart
-                    in self._available_accessory_subparts(
-                        item
-                    )
-                ]
-            else:
-                result["available_subparts"] = []
+            result["available_subparts"] = [
+                self._repair_serialize_subpart(
+                    subpart
+                )
+                for subpart
+                in self._repair_available_accessory_subparts(
+                    item
+                )
+            ]
 
         return result
 
@@ -793,7 +599,7 @@ class AppRepairController(AppBaseController):
     # Originales únicamente. Sin GPS, sin watermark.
     # ============================================================
 
-    def _serialize_photo(self, photo):
+    def _repair_serialize_photo(self, photo):
         return {
             "id": photo.id,
             "name": photo.nombre_foto or "",
@@ -818,10 +624,10 @@ class AppRepairController(AppBaseController):
     # INTERVENTIONS
     # ============================================================
 
-    def _serialize_intervention_detail(self, detail):
+    def _repair_serialize_intervention_detail(self, detail):
         return {
             "id": detail.id,
-            "subpart": self._many2one_or_false(
+            "subpart": self._repair_many2one_or_false(
                 detail,
                 "subparte_id",
             ),
@@ -831,7 +637,7 @@ class AppRepairController(AppBaseController):
             "note": detail.nota or "",
         }
 
-    def _serialize_intervention(self, item):
+    def _repair_serialize_intervention(self, item):
         return {
             "id": item.id,
             "component": item.componente or "",
@@ -845,7 +651,7 @@ class AppRepairController(AppBaseController):
             "observation": item.observacion or "",
             "is_replacement": bool(item.es_cambio),
             "details": [
-                self._serialize_intervention_detail(
+                self._repair_serialize_intervention_detail(
                     detail
                 )
                 for detail in item.detalle_ids
@@ -856,7 +662,7 @@ class AppRepairController(AppBaseController):
     # REPAIR SERIALIZER
     # ============================================================
 
-    def _serialize_repair(
+    def _repair_serialize_repair(
         self,
         repair,
         detail=False,
@@ -865,21 +671,21 @@ class AppRepairController(AppBaseController):
             "id": repair.id,
             "reference": repair.name or "",
             "state": repair.estado_id or "",
-            "state_label": self._selection_label_safe(
+            "state_label": self._repair_selection_label_safe(
                 repair,
                 "estado_id",
             ),
-            "finalized": self._is_finalized(repair),
-            "responsible": self._many2one_or_false(
+            "finalized": self._repair_is_finalized(repair),
+            "responsible": self._repair_many2one_or_false(
                 repair,
                 "responsable_id",
             ),
-            "machine": self._many2one_or_false(
+            "machine": self._repair_many2one_or_false(
                 repair,
                 "maquina_id",
             ),
             "serial": repair.serie_id or "",
-            "client": self._many2one_or_false(
+            "client": self._repair_many2one_or_false(
                 repair,
                 "cliente_id",
             ),
@@ -934,7 +740,7 @@ class AppRepairController(AppBaseController):
             return result
 
         components = [
-            self._serialize_component(
+            self._repair_serialize_component(
                 item,
                 include_options=True,
             )
@@ -942,7 +748,7 @@ class AppRepairController(AppBaseController):
         ]
 
         accessories = [
-            self._serialize_accessory(
+            self._repair_serialize_accessory(
                 item,
                 include_options=True,
             )
@@ -950,7 +756,7 @@ class AppRepairController(AppBaseController):
         ]
 
         photos = [
-            self._serialize_photo(photo)
+            self._repair_serialize_photo(photo)
             for photo in repair.fotos_ids.sorted(
                 key=lambda photo: (
                     photo.sequence,
@@ -960,11 +766,11 @@ class AppRepairController(AppBaseController):
         ]
 
         interventions = []
-        if self._model_exists(
+        if self._repair_model_exists(
             self.INTERVENTION_MODEL
         ):
             interventions = [
-                self._serialize_intervention(item)
+                self._repair_serialize_intervention(item)
                 for item
                 in request.env[
                     self.INTERVENTION_MODEL
@@ -990,7 +796,7 @@ class AppRepairController(AppBaseController):
                     else ""
                 ) or "",
                 "quality_label": (
-                    self._selection_label_safe(
+                    self._repair_selection_label_safe(
                         repair,
                         "calidad_id",
                     )
@@ -999,7 +805,7 @@ class AppRepairController(AppBaseController):
                     else ""
                 ),
                 "quality_options": (
-                    self._selection_options(
+                    self._repair_selection_options(
                         repair,
                         "calidad_id",
                     )
@@ -1008,7 +814,7 @@ class AppRepairController(AppBaseController):
                     else []
                 ),
                 "state_options": (
-                    self._selection_options(
+                    self._repair_selection_options(
                         repair,
                         "estado_id",
                     )
@@ -1055,7 +861,7 @@ class AppRepairController(AppBaseController):
     # SUMMARY
     # ============================================================
 
-    def _build_summary(self, user):
+    def _repair_build_summary(self, user):
         Repair = request.env[self.REPAIR_MODEL]
 
         base_domain = [
@@ -1063,9 +869,9 @@ class AppRepairController(AppBaseController):
         ]
 
         today_start, today_end = (
-            self._today_range(user)
+            self._repair_today_range(user)
         )
-        ranges = self._month_ranges(user)
+        ranges = self._repair_month_ranges(user)
         current_start, current_end = (
             ranges["current"]
         )
@@ -1237,7 +1043,7 @@ class AppRepairController(AppBaseController):
                 )
 
             elif period == "today":
-                start, end = self._today_range(
+                start, end = self._repair_today_range(
                     user
                 )
                 domain.extend(
@@ -1265,7 +1071,7 @@ class AppRepairController(AppBaseController):
                     else "previous"
                 )
                 start, end = (
-                    self._month_ranges(user)[key]
+                    self._repair_month_ranges(user)[key]
                 )
                 domain.extend(
                     [
@@ -1294,11 +1100,11 @@ class AppRepairController(AppBaseController):
                 {
                     "success": True,
                     "count": len(records),
-                    "summary": self._build_summary(
+                    "summary": self._repair_build_summary(
                         user
                     ),
                     "items": [
-                        self._serialize_repair(
+                        self._repair_serialize_repair(
                             record
                         )
                         for record in records
@@ -1330,7 +1136,7 @@ class AppRepairController(AppBaseController):
             return self._json_response(
                 {
                     "success": True,
-                    "summary": self._build_summary(
+                    "summary": self._repair_build_summary(
                         user
                     ),
                 }
@@ -1372,7 +1178,7 @@ class AppRepairController(AppBaseController):
             return self._json_response(
                 {
                     "success": True,
-                    "repair": self._serialize_repair(
+                    "repair": self._repair_serialize_repair(
                         repair,
                         detail=True,
                     ),
@@ -1412,7 +1218,7 @@ class AppRepairController(AppBaseController):
             if error:
                 return error
 
-            if self._is_finalized(repair):
+            if self._repair_is_finalized(repair):
                 return self._json_response(
                     {
                         "success": False,
@@ -1466,7 +1272,7 @@ class AppRepairController(AppBaseController):
                         "Reparación actualizada "
                         "correctamente."
                     ),
-                    "repair": self._serialize_repair(
+                    "repair": self._repair_serialize_repair(
                         repair,
                         detail=True,
                     ),
@@ -1507,7 +1313,7 @@ class AppRepairController(AppBaseController):
             if error:
                 return error
 
-            if self._is_finalized(repair):
+            if self._repair_is_finalized(repair):
                 return self._json_response(
                     {
                         "success": False,
@@ -1528,7 +1334,7 @@ class AppRepairController(AppBaseController):
             valid_states = {
                 item["value"]
                 for item
-                in self._selection_options(
+                in self._repair_selection_options(
                     repair,
                     "estado_id",
                 )
@@ -1573,7 +1379,7 @@ class AppRepairController(AppBaseController):
                         "Estado actualizado "
                         "correctamente."
                     ),
-                    "repair": self._serialize_repair(
+                    "repair": self._repair_serialize_repair(
                         repair,
                         detail=True,
                     ),
@@ -1614,7 +1420,7 @@ class AppRepairController(AppBaseController):
                 return error
 
             components = [
-                self._serialize_component(
+                self._repair_serialize_component(
                     item,
                     include_options=True,
                 )
@@ -1622,7 +1428,7 @@ class AppRepairController(AppBaseController):
                 in repair.componente_eval_ids
             ]
             accessories = [
-                self._serialize_accessory(
+                self._repair_serialize_accessory(
                     item,
                     include_options=True,
                 )
@@ -1634,7 +1440,7 @@ class AppRepairController(AppBaseController):
                 {
                     "success": True,
                     "read_only": (
-                        self._is_finalized(repair)
+                        self._repair_is_finalized(repair)
                     ),
                     "components": components,
                     "accessories": accessories,
@@ -1694,7 +1500,7 @@ class AppRepairController(AppBaseController):
             if error:
                 return error
 
-            if self._is_finalized(repair):
+            if self._repair_is_finalized(repair):
                 return self._json_response(
                     {
                         "success": False,
@@ -1763,7 +1569,7 @@ class AppRepairController(AppBaseController):
                 ]
 
                 allowed = set(
-                    self._available_component_subparts(
+                    self._repair_available_component_subparts(
                         evaluation
                     ).ids
                 )
@@ -1802,7 +1608,7 @@ class AppRepairController(AppBaseController):
                         "Componente actualizado "
                         "correctamente."
                     ),
-                    "item": self._serialize_component(
+                    "item": self._repair_serialize_component(
                         evaluation,
                         include_options=True,
                     ),
@@ -1843,7 +1649,7 @@ class AppRepairController(AppBaseController):
             if error:
                 return error
 
-            if self._is_finalized(repair):
+            if self._repair_is_finalized(repair):
                 return self._json_response(
                     {
                         "success": False,
@@ -1912,7 +1718,7 @@ class AppRepairController(AppBaseController):
                 ]
 
                 allowed = set(
-                    self._available_accessory_subparts(
+                    self._repair_available_accessory_subparts(
                         evaluation
                     ).ids
                 )
@@ -1951,7 +1757,7 @@ class AppRepairController(AppBaseController):
                         "Accesorio actualizado "
                         "correctamente."
                     ),
-                    "item": self._serialize_accessory(
+                    "item": self._repair_serialize_accessory(
                         evaluation,
                         include_options=True,
                     ),
@@ -2021,14 +1827,14 @@ class AppRepairController(AppBaseController):
                 {
                     "success": True,
                     "selected": [
-                        self._serialize_subpart(item)
+                        self._repair_serialize_subpart(item)
                         for item
                         in evaluation.subpartes_ids
                     ],
                     "available": [
-                        self._serialize_subpart(item)
+                        self._repair_serialize_subpart(item)
                         for item
-                        in self._available_component_subparts(
+                        in self._repair_available_component_subparts(
                             evaluation
                         )
                     ],
@@ -2098,14 +1904,14 @@ class AppRepairController(AppBaseController):
                 {
                     "success": True,
                     "selected": [
-                        self._serialize_subpart(item)
+                        self._repair_serialize_subpart(item)
                         for item
                         in evaluation.subparte_ids
                     ],
                     "available": [
-                        self._serialize_subpart(item)
+                        self._repair_serialize_subpart(item)
                         for item
-                        in self._available_accessory_subparts(
+                        in self._repair_available_accessory_subparts(
                             evaluation
                         )
                     ],
@@ -2166,7 +1972,7 @@ class AppRepairController(AppBaseController):
                         "success": True,
                         "count": len(records),
                         "items": [
-                            self._serialize_intervention(
+                            self._repair_serialize_intervention(
                                 item
                             )
                             for item in records
@@ -2174,7 +1980,7 @@ class AppRepairController(AppBaseController):
                     }
                 )
 
-            if self._is_finalized(repair):
+            if self._repair_is_finalized(repair):
                 return self._json_response(
                     {
                         "success": False,
@@ -2256,7 +2062,7 @@ class AppRepairController(AppBaseController):
                         "Intervención registrada "
                         "correctamente."
                     ),
-                    "item": self._serialize_intervention(
+                    "item": self._repair_serialize_intervention(
                         intervention
                     ),
                 },
@@ -2297,7 +2103,7 @@ class AppRepairController(AppBaseController):
             if error:
                 return error
 
-            if self._is_finalized(repair):
+            if self._repair_is_finalized(repair):
                 return self._json_response(
                     {
                         "success": False,
@@ -2429,7 +2235,7 @@ class AppRepairController(AppBaseController):
                         "Intervención actualizada "
                         "correctamente."
                     ),
-                    "item": self._serialize_intervention(
+                    "item": self._repair_serialize_intervention(
                         intervention
                     ),
                 }
@@ -2500,7 +2306,7 @@ class AppRepairController(AppBaseController):
                         ),
                         "complete": count >= 10,
                         "items": [
-                            self._serialize_photo(
+                            self._repair_serialize_photo(
                                 photo
                             )
                             for photo in photos
@@ -2508,7 +2314,7 @@ class AppRepairController(AppBaseController):
                     }
                 )
 
-            if self._is_finalized(repair):
+            if self._repair_is_finalized(repair):
                 return self._json_response(
                     {
                         "success": False,
@@ -2603,7 +2409,7 @@ class AppRepairController(AppBaseController):
                         "Foto original subida "
                         "correctamente."
                     ),
-                    "photo": self._serialize_photo(
+                    "photo": self._repair_serialize_photo(
                         photo
                     ),
                     "photos_count": count,
@@ -2651,7 +2457,7 @@ class AppRepairController(AppBaseController):
             if error:
                 return error
 
-            if self._is_finalized(repair):
+            if self._repair_is_finalized(repair):
                 return self._json_response(
                     {
                         "success": False,
@@ -2765,7 +2571,7 @@ class AppRepairController(AppBaseController):
                             "finalizada."
                         ),
                         "repair": (
-                            self._serialize_repair(
+                            self._repair_serialize_repair(
                                 repair,
                                 detail=True,
                             )
@@ -2815,7 +2621,7 @@ class AppRepairController(AppBaseController):
                         "Reparación finalizada "
                         "correctamente."
                     ),
-                    "repair": self._serialize_repair(
+                    "repair": self._repair_serialize_repair(
                         repair,
                         detail=True,
                     ),
