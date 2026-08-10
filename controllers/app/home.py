@@ -159,19 +159,32 @@ class AppHomeController(AppBaseController):
             services_active = 0
             services_today = 0
 
+            services_process = 0
+            services_on_route = 0
+            services_on_site = 0
+            services_in_review = 0
+
             if service_visible:
                 Ticket = request.env[
                     "ticket.alquiler"
                 ]
 
+                base_domain = [
+                    (
+                        "responsable",
+                        "=",
+                        user.id,
+                    ),
+                ]
+
+                # ----------------------------------------------
+                # TODOS LOS SERVICIOS SIN FINALIZAR
+                # ----------------------------------------------
+
                 services_active = (
                     Ticket.search_count(
-                        [
-                            (
-                                "responsable",
-                                "=",
-                                user.id,
-                            ),
+                        base_domain
+                        + [
                             (
                                 "estado",
                                 "!=",
@@ -181,14 +194,14 @@ class AppHomeController(AppBaseController):
                     )
                 )
 
+                # ----------------------------------------------
+                # SERVICIOS AGENDADOS PARA HOY
+                # ----------------------------------------------
+
                 services_today = (
                     Ticket.search_count(
-                        [
-                            (
-                                "responsable",
-                                "=",
-                                user.id,
-                            ),
+                        base_domain
+                        + [
                             (
                                 "agenda",
                                 ">=",
@@ -198,6 +211,74 @@ class AppHomeController(AppBaseController):
                                 "agenda",
                                 "<=",
                                 end_today,
+                            ),
+                        ]
+                    )
+                )
+
+                # ----------------------------------------------
+                # ESTADO: PROCESO
+                # ----------------------------------------------
+
+                services_process = (
+                    Ticket.search_count(
+                        base_domain
+                        + [
+                            (
+                                "estado",
+                                "=",
+                                "proceso",
+                            ),
+                        ]
+                    )
+                )
+
+                # ----------------------------------------------
+                # ESTADO: EN RUTA
+                # ----------------------------------------------
+
+                services_on_route = (
+                    Ticket.search_count(
+                        base_domain
+                        + [
+                            (
+                                "estado",
+                                "=",
+                                "en_ruta",
+                            ),
+                        ]
+                    )
+                )
+
+                # ----------------------------------------------
+                # ESTADO: EN SITIO
+                # ----------------------------------------------
+
+                services_on_site = (
+                    Ticket.search_count(
+                        base_domain
+                        + [
+                            (
+                                "estado",
+                                "=",
+                                "en_sitio",
+                            ),
+                        ]
+                    )
+                )
+
+                # ----------------------------------------------
+                # ESTADO: EN REVISIÓN
+                # ----------------------------------------------
+
+                services_in_review = (
+                    Ticket.search_count(
+                        base_domain
+                        + [
+                            (
+                                "estado",
+                                "=",
+                                "en_revision",
                             ),
                         ]
                     )
@@ -287,40 +368,87 @@ class AppHomeController(AppBaseController):
                     )
                 )
 
+            # ====================================================
+            # RESPONSE
+            # ====================================================
+
             return self._json_response(
                 {
                     "success": True,
+
                     "user": self._serialize_user(
                         user
                     ),
+
                     "modules": {
                         "services": {
-                            "visible": service_visible,
-                            "count": services_active,
-                            "today": services_today,
+                            "visible":
+                                service_visible,
+
+                            # Total actualmente no finalizado.
+                            "count":
+                                services_active,
+
+                            # Alias explícito para Flutter.
+                            "unfinished":
+                                services_active,
+
+                            # Agendados para hoy.
+                            "today":
+                                services_today,
+
+                            # Desglose por estado.
+                            "process":
+                                services_process,
+
+                            "on_route":
+                                services_on_route,
+
+                            "on_site":
+                                services_on_site,
+
+                            "in_review":
+                                services_in_review,
                         },
+
                         "repairs": {
-                            "visible": repair_visible,
-                            "count": repairs_active,
+                            "visible":
+                                repair_visible,
+
+                            "count":
+                                repairs_active,
                         },
+
                         "permissions": {
-                            "visible": permission_visible,
+                            "visible":
+                                permission_visible,
+
                             "can_create": (
                                 self._can_create_model(
                                     "mantenimiento.tecnico.ausencia"
                                 )
                             ),
-                            "count": permission_count,
-                            "pending": permission_pending,
+
+                            "count":
+                                permission_count,
+
+                            "pending":
+                                permission_pending,
                         },
+
                         "profile": {
-                            "visible": True,
+                            "visible":
+                                True,
                         },
                     },
                 }
             )
 
         except Exception as exc:
+            _logger.exception(
+                "Error cargando /api/app/home"
+            )
+
             return self._error_response(
                 exc
             )
