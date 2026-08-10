@@ -81,6 +81,43 @@ class AppRepairController(AppBaseController):
             return ""
         return str(value)
 
+    def _selection_label_safe(self, record, field_name):
+        if (
+            not record
+            or field_name not in record._fields
+        ):
+            return ""
+
+        value = record[field_name]
+
+        if value in (None, False, ""):
+            return ""
+
+        field = record._fields[field_name]
+
+        try:
+            selection = field.selection
+
+            if callable(selection):
+                selection = selection(record)
+
+            return dict(selection or []).get(
+                value,
+                str(value),
+            )
+        except Exception:
+            try:
+                selection = field._description_selection(
+                    record.env
+                )
+
+                return dict(selection or []).get(
+                    value,
+                    str(value),
+                )
+            except Exception:
+                return str(value)
+
     def _many2one_or_false(self, record, field_name):
         if (
             field_name not in record._fields
@@ -101,41 +138,6 @@ class AppRepairController(AppBaseController):
                 return str(record[field_name])
 
         return ""
-
-    def _selection_label_safe(self, record, field_name):
-        if not record or field_name not in record._fields:
-            return ""
-
-        value = record[field_name]
-
-        if value in (None, False, ""):
-            return ""
-
-        field = record._fields[field_name]
-
-        try:
-            selection = field.selection
-
-            if callable(selection):
-                selection = selection(record)
-
-            return dict(selection or []).get(
-                value,
-                str(value),
-            )
-
-        except Exception:
-            try:
-                selection = field._description_selection(
-                    record.env
-                )
-
-                return dict(selection or []).get(
-                    value,
-                    str(value),
-                )
-            except Exception:
-                return str(value)
 
     def _selection_options(self, record, field_name):
         if field_name not in record._fields:
@@ -396,78 +398,89 @@ class AppRepairController(AppBaseController):
     # CHECKLIST SERIALIZERS
     # ============================================================
 
-    def _serialize_component(self, item):
-        """Serializa componentes de Reparaciones y Servicios."""
+    def _serialize_component(
+        self,
+        item,
+        include_options=False,
+    ):
+        """
+        Compatible con:
+        - reparacion.componente.evaluacion
+        - ticket.componente.evaluacion
 
-        component = item.componente_tipo_id if "componente_tipo_id" in item._fields else False
-        color = item.color_id if "color_id" in item._fields else False
-        state = item.estado_id if "estado_id" in item._fields else False
-        observations = item.observaciones if "observaciones" in item._fields else ""
+        Servicios no tiene subpartes_ids, por eso las
+        subpartes se consideran opcionales.
+        """
 
-        selected_subparts = []
+        state = (
+            item.estado_id
+            if (
+                "estado_id" in item._fields
+                and item.estado_id
+            )
+            else False
+        )
+
+        state_code = (
+            self._record_code(state)
+            if state
+            else ""
+        )
+
+        selected = []
+
         if "subpartes_ids" in item._fields:
-            selected_subparts = [
+            selected = [
                 self._serialize_subpart(subpart)
                 for subpart in item.subpartes_ids
             ]
 
-        available_subparts = []
-        if "subpartes_ids" in item._fields:
-            try:
-                available_subparts = [
-                    self._serialize_subpart(subpart)
-                    for subpart in self._available_component_subparts(item)
-                ]
-            except Exception:
-                available_subparts = []
-
-        state_options = []
-        if state and getattr(state, "_name", None):
-            try:
-                state_options = [
-                    {
-                        "id": option.id,
-                        "name": option.display_name or option.name or "",
-                        "label": option.display_name or option.name or "",
-                        "code": option.code if "code" in option._fields else "",
-                        "requires_change": (
-                            bool(option.requiere_cambio)
-                            if "requiere_cambio" in option._fields
-                            else False
-                        ),
-                    }
-                    for option in item.env[state._name].search([])
-                ]
-            except Exception:
-                state_options = []
-
-        state_code = ""
-        if state:
-            if "code" in state._fields:
-                state_code = state.code or ""
-            elif "codigo" in state._fields:
-                state_code = state.codigo or ""
-
-        requires_change = False
-        if state:
-            if "requiere_cambio" in state._fields:
-                requires_change = bool(state.requiere_cambio)
-            elif state_code == "requiere_cambio":
-                requires_change = True
-
-        return {
+        result = {
             "id": item.id,
-            "component": self._m2o_data(component),
-            "color": self._m2o_data(color),
-            "state": self._m2o_data(state),
+            "component": self._many2one_or_false(
+                item,
+                "componente_tipo_id",
+            ),
+            "color": self._many2one_or_false(
+                item,
+                "color_id",
+            ),
+            "state": self._many2one_or_false(
+                item,
+                "estado_id",
+            ),
             "state_code": state_code,
-            "requires_change": requires_change,
-            "observations": observations or "",
-            "selected_subparts": selected_subparts,
-            "available_subparts": available_subparts,
-            "state_options": state_options,
+            "requires_change": (
+                state_code == "requiere_cambio"
+            ),
+            "observations": (
+                item.observaciones or ""
+                if "observaciones" in item._fields
+                else ""
+            ),
+            "selected_subparts": selected,
         }
 
+        if include_options:
+            result["state_options"] = (
+                self._many2one_options(
+                    item,
+                    "estado_id",
+                )
+            )
+
+            if "subpartes_ids" in item._fields:
+                result["available_subparts"] = [
+                    self._serialize_subpart(subpart)
+                    for subpart
+                    in self._available_component_subparts(
+                        item
+                    )
+                ]
+            else:
+                result["available_subparts"] = []
+
+        return result
 
     def _serialize_accessory(
         self,
