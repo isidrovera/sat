@@ -396,62 +396,78 @@ class AppRepairController(AppBaseController):
     # CHECKLIST SERIALIZERS
     # ============================================================
 
-    def _serialize_component(
-        self,
-        item,
-        include_options=False,
-    ):
-        state_code = (
-            self._record_code(item.estado_id)
-            if item.estado_id
-            else ""
-        )
+    def _serialize_component(self, item):
+        """Serializa componentes de Reparaciones y Servicios."""
 
-        selected = [
-            self._serialize_subpart(subpart)
-            for subpart in item.subpartes_ids
-        ]
+        component = item.componente_tipo_id if "componente_tipo_id" in item._fields else False
+        color = item.color_id if "color_id" in item._fields else False
+        state = item.estado_id if "estado_id" in item._fields else False
+        observations = item.observaciones if "observaciones" in item._fields else ""
 
-        result = {
-            "id": item.id,
-            "component": self._many2one_or_false(
-                item,
-                "componente_tipo_id",
-            ),
-            "color": self._many2one_or_false(
-                item,
-                "color_id",
-            ),
-            "state": self._many2one_or_false(
-                item,
-                "estado_id",
-            ),
-            "state_code": state_code,
-            "requires_change": (
-                state_code == "requiere_cambio"
-            ),
-            "observations": (
-                item.observaciones or ""
-            ),
-            "selected_subparts": selected,
-        }
-
-        if include_options:
-            result["state_options"] = (
-                self._many2one_options(
-                    item,
-                    "estado_id",
-                )
-            )
-            result["available_subparts"] = [
+        selected_subparts = []
+        if "subpartes_ids" in item._fields:
+            selected_subparts = [
                 self._serialize_subpart(subpart)
-                for subpart
-                in self._available_component_subparts(
-                    item
-                )
+                for subpart in item.subpartes_ids
             ]
 
-        return result
+        available_subparts = []
+        if "subpartes_ids" in item._fields:
+            try:
+                available_subparts = [
+                    self._serialize_subpart(subpart)
+                    for subpart in self._available_component_subparts(item)
+                ]
+            except Exception:
+                available_subparts = []
+
+        state_options = []
+        if state and getattr(state, "_name", None):
+            try:
+                state_options = [
+                    {
+                        "id": option.id,
+                        "name": option.display_name or option.name or "",
+                        "label": option.display_name or option.name or "",
+                        "code": option.code if "code" in option._fields else "",
+                        "requires_change": (
+                            bool(option.requiere_cambio)
+                            if "requiere_cambio" in option._fields
+                            else False
+                        ),
+                    }
+                    for option in item.env[state._name].search([])
+                ]
+            except Exception:
+                state_options = []
+
+        state_code = ""
+        if state:
+            if "code" in state._fields:
+                state_code = state.code or ""
+            elif "codigo" in state._fields:
+                state_code = state.codigo or ""
+
+        requires_change = False
+        if state:
+            if "requiere_cambio" in state._fields:
+                requires_change = bool(state.requiere_cambio)
+            elif state_code == "requiere_cambio":
+                requires_change = True
+
+        return {
+            "id": item.id,
+            "component": self._m2o_data(component),
+            "color": self._m2o_data(color),
+            "state": self._m2o_data(state),
+            "state_code": state_code,
+            "requires_change": requires_change,
+            "observations": observations or "",
+            "selected_subparts": selected_subparts,
+            "available_subparts": available_subparts,
+            "state_options": state_options,
+        }
+
 
     def _serialize_accessory(
         self,
