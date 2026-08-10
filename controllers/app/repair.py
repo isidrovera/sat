@@ -102,6 +102,41 @@ class AppRepairController(AppBaseController):
 
         return ""
 
+    def _selection_label_safe(self, record, field_name):
+        if not record or field_name not in record._fields:
+            return ""
+
+        value = record[field_name]
+
+        if value in (None, False, ""):
+            return ""
+
+        field = record._fields[field_name]
+
+        try:
+            selection = field.selection
+
+            if callable(selection):
+                selection = selection(record)
+
+            return dict(selection or []).get(
+                value,
+                str(value),
+            )
+
+        except Exception:
+            try:
+                selection = field._description_selection(
+                    record.env
+                )
+
+                return dict(selection or []).get(
+                    value,
+                    str(value),
+                )
+            except Exception:
+                return str(value)
+
     def _selection_options(self, record, field_name):
         if field_name not in record._fields:
             return []
@@ -548,7 +583,7 @@ class AppRepairController(AppBaseController):
             "id": repair.id,
             "reference": repair.name or "",
             "state": repair.estado_id or "",
-            "state_label": self._selection_label(
+            "state_label": self._selection_label_safe(
                 repair,
                 "estado_id",
             ),
@@ -673,7 +708,7 @@ class AppRepairController(AppBaseController):
                     else ""
                 ) or "",
                 "quality_label": (
-                    self._selection_label(
+                    self._selection_label_safe(
                         repair,
                         "calidad_id",
                     )
