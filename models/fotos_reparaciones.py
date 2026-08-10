@@ -155,7 +155,7 @@ class ReparacionFoto(models.Model):
 
                     vals['size'] = len(archivo_binario)
 
-                    pcloud_config = self.env['pcloud.configuracion'].search([], limit=1)
+                    pcloud_config = self.env['pcloud.configuracion'].sudo().search([], limit=1)
 
                     if not pcloud_config or not pcloud_config.access_token:
                         raise ValidationError("Configuración de pCloud no encontrada")
@@ -608,7 +608,7 @@ class ReparacionFoto(models.Model):
             return False
 
         try:
-            pcloud_config = self.env['pcloud.configuracion'].search([], limit=1)
+            pcloud_config = self.env['pcloud.configuracion'].sudo().search([], limit=1)
             if not pcloud_config:
                 _logger.error("[DOWNLOAD] No se encontró configuración de pCloud")
                 return False
@@ -645,7 +645,7 @@ class ReparacionFoto(models.Model):
             _logger.info("[DOWNLOAD_MULTIPLE] Creando archivo ZIP")
             zip_buffer = io.BytesIO()
             with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-                pcloud_config = self.env['pcloud.configuracion'].search([], limit=1)
+                pcloud_config = self.env['pcloud.configuracion'].sudo().search([], limit=1)
                 if not pcloud_config:
                     _logger.error("[DOWNLOAD_MULTIPLE] No se encontró configuración de pCloud")
                     return False
@@ -694,7 +694,7 @@ class ReparacionFoto(models.Model):
         for foto in self:
             try:
                 if foto.file_id:
-                    pcloud_config = self.env['pcloud.configuracion'].search([], limit=1)
+                    pcloud_config = self.env['pcloud.configuracion'].sudo().search([], limit=1)
                     if self._delete_from_pcloud(foto.file_id, pcloud_config):
                         _logger.info("[UNLINK] Archivo eliminado de pCloud: %s", foto.id)
                     else:
@@ -984,7 +984,7 @@ class ReparacionFoto(models.Model):
                 raise ValidationError("No se encontró el archivo en pCloud")
     
             # Obtener configuración de pCloud
-            pcloud_config = self.env['pcloud.configuracion'].search([], limit=1)
+            pcloud_config = self.env['pcloud.configuracion'].sudo().search([], limit=1)
             if not pcloud_config or not pcloud_config.access_token:
                 _logger.error(f"[DOWNLOAD_CONTENT] Configuración de pCloud no encontrada o inválida")
                 raise ValidationError("No se encontró configuración de pCloud")
@@ -1085,7 +1085,7 @@ class ReparacionFoto(models.Model):
         _logger.info(f"[DOWNLOAD_LINK] Obteniendo link para foto {self.id}")
         
         try:
-            pcloud_config = self.env['pcloud.configuracion'].search([], limit=1)
+            pcloud_config = self.env['pcloud.configuracion'].sudo().search([], limit=1)
             if not pcloud_config or not pcloud_config.access_token:
                 raise ValidationError("No se encontró configuración de pCloud")
 
@@ -1138,7 +1138,7 @@ class ReparacionFoto(models.Model):
                 _logger.warning("[ZIP] No se encontraron fotos para descargar")
                 return False
 
-            pcloud_config = self.env['pcloud.configuracion'].search([], limit=1)
+            pcloud_config = self.env['pcloud.configuracion'].sudo().search([], limit=1)
             if not pcloud_config or not pcloud_config.access_token:
                 _logger.error("[ZIP] Config pCloud faltante")
                 raise ValidationError("No se encontró configuración de pCloud")
