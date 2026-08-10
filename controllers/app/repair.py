@@ -487,16 +487,37 @@ class AppRepairController(AppBaseController):
         item,
         include_options=False,
     ):
+        """
+        Compatible con:
+        - reparacion.accesorio.evaluacion
+        - ticket.accesorio.evaluacion
+
+        Servicios no tiene subparte_ids, por eso las
+        subpartes se consideran opcionales.
+        """
+
+        state = (
+            item.estado_id
+            if (
+                "estado_id" in item._fields
+                and item.estado_id
+            )
+            else False
+        )
+
         state_code = (
-            self._record_code(item.estado_id)
-            if item.estado_id
+            self._record_code(state)
+            if state
             else ""
         )
 
-        selected = [
-            self._serialize_subpart(subpart)
-            for subpart in item.subparte_ids
-        ]
+        selected = []
+
+        if "subparte_ids" in item._fields:
+            selected = [
+                self._serialize_subpart(subpart)
+                for subpart in item.subparte_ids
+            ]
 
         result = {
             "id": item.id,
@@ -514,6 +535,8 @@ class AppRepairController(AppBaseController):
             ),
             "observations": (
                 item.observaciones or ""
+                if "observaciones" in item._fields
+                else ""
             ),
             "selected_subparts": selected,
         }
@@ -525,13 +548,17 @@ class AppRepairController(AppBaseController):
                     "estado_id",
                 )
             )
-            result["available_subparts"] = [
-                self._serialize_subpart(subpart)
-                for subpart
-                in self._available_accessory_subparts(
-                    item
-                )
-            ]
+
+            if "subparte_ids" in item._fields:
+                result["available_subparts"] = [
+                    self._serialize_subpart(subpart)
+                    for subpart
+                    in self._available_accessory_subparts(
+                        item
+                    )
+                ]
+            else:
+                result["available_subparts"] = []
 
         return result
 
