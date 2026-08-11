@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 
+import base64
 import re
 
-from odoo import http
+from odoo import fields, http
 from odoo.http import request
 
 from .base import AppBaseController
@@ -10,11 +11,10 @@ from .base import AppBaseController
 
 class AppServiceApprovalController(AppBaseController):
     """
-    API para buscar y crear el contacto que dará conformidad
-    a un ticket de servicio.
+    API completa para el visto bueno de un ticket de servicio.
 
-    Esta etapa NO guarda todavía la firma ni finaliza el ticket.
-    Solo resuelve/reutiliza el contacto de la empresa.
+    Permite consultar la conformidad, buscar/crear el contacto
+    responsable y registrar el snapshot histórico con firma.
     """
 
     # ============================================================
@@ -26,6 +26,10 @@ class AppServiceApprovalController(AppBaseController):
             (
                 "/api/app/services/<int:service_id>"
                 "/approval/contact"
+            ),
+            (
+                "/api/app/services/<int:service_id>"
+                "/approval"
             ),
         ],
         type="http",
@@ -365,6 +369,152 @@ class AppServiceApprovalController(AppBaseController):
             "errors": errors,
         }
 
+    def _get_contact_for_company(
+        self,
+        company,
+        contact_id,
+    ):
+        try:
+            contact_id = int(contact_id or 0)
+        except Exception:
+            contact_id = 0
+
+        if not company or not contact_id:
+            return False
+
+        return request.env["res.partner"].search(
+            [
+                ("id", "=", contact_id),
+                ("parent_id", "=", company.id),
+            ],
+            limit=1,
+        )
+
+    def _safe_signature_base64(
+        self,
+        value,
+    ):
+        if not value:
+            return False, False
+
+        value = str(value).strip()
+
+        if "," in value:
+            value = value.split(",", 1)[1]
+
+        try:
+            decoded = base64.b64decode(
+                value,
+                validate=True,
+            )
+        except Exception:
+            return False, False
+
+        if not decoded:
+            return False, False
+
+        if len(decoded) > 3 * 1024 * 1024:
+            return False, False
+
+        is_png = decoded.startswith(
+            b"\\x89PNG\\r\\n\\x1a\\n"
+        )
+        is_jpeg = decoded.startswith(
+            b"\\xff\\xd8\\xff"
+        )
+
+        if not (is_png or is_jpeg):
+            return False, False
+
+        return value, decoded
+
+    def _approval_required_fields(self):
+        return {
+            "conformidad_contacto_id",
+            "conformidad_nombre",
+            "conformidad_dni",
+            "conformidad_celular",
+            "conformidad_correo",
+            "conformidad_firma",
+            "conformidad_firma_filename",
+            "conformidad_fecha",
+            "conformidad_tecnico_id",
+            "conformidad_registrada",
+        }
+
+    def _approval_missing_fields(self, ticket):
+        return sorted(
+            self._approval_required_fields()
+            - set(ticket._fields.keys())
+        )
+
+    def _serialize_approval(self, ticket):
+        contact = (
+            ticket.conformidad_contacto_id
+            if (
+                "conformidad_contacto_id" in ticket._fields
+                and ticket.conformidad_contacto_id
+            )
+            else False
+        )
+
+        technician = (
+            ticket.conformidad_tecnico_id
+            if (
+                "conformidad_tecnico_id" in ticket._fields
+                and ticket.conformidad_tecnico_id
+            )
+            else False
+        )
+
+        return {
+            "registered": bool(
+                ticket.conformidad_registrada
+                if "conformidad_registrada" in ticket._fields
+                else False
+            ),
+            "contact": (
+                self._many2one(contact)
+                if contact
+                else False
+            ),
+            "name": (
+                ticket.conformidad_nombre
+                if "conformidad_nombre" in ticket._fields
+                else False
+            ),
+            "dni": (
+                ticket.conformidad_dni
+                if "conformidad_dni" in ticket._fields
+                else False
+            ),
+            "mobile": (
+                ticket.conformidad_celular
+                if "conformidad_celular" in ticket._fields
+                else False
+            ),
+            "email": (
+                ticket.conformidad_correo
+                if "conformidad_correo" in ticket._fields
+                else False
+            ),
+            "signed_at": (
+                ticket.conformidad_fecha
+                if "conformidad_fecha" in ticket._fields
+                else False
+            ),
+            "technician": (
+                self._many2one(technician)
+                if technician
+                else False
+            ),
+            "has_signature": bool(
+                ticket.conformidad_firma
+                if "conformidad_firma" in ticket._fields
+                else False
+            ),
+        }
+
     # ============================================================
     # BUSCAR CONTACTO POR DNI
     # GET /api/app/services/<id>/approval/contact?dni=12345678
@@ -679,3 +829,314 @@ class AppServiceApprovalController(AppBaseController):
             return self._error_response(
                 exc
             )
+
+    # ============================================================
+    # CONSULTAR VISTO BUENO
+    # GET /api/app/services/<id>/approval
+    # ============================================================
+
+    @http.route(
+        (
+            "/api/app/services/<int:service_id>"
+            "/approval"
+        ),
+        type="http",
+        auth="public",
+        methods=["GET"],
+        csrf=False,
+        save_session=True,
+    )
+    def service_approval_get(
+        self,
+        service_id,
+        **kwargs,
+    ):
+        user, error = self._require_user()
+
+        if error:
+            return error
+
+        try:
+            ticket = self._approval_get_service(
+                service_id,
+                user,
+            )
+
+            if not ticket:
+                return self._approval_service_not_found_response()
+
+            missing_fields = self._approval_missing_fields(
+                ticket
+            )
+
+            if missing_fields:
+                return self._json_response(
+                    {
+                        "success": False,
+                        "code": "APPROVAL_MODEL_NOT_READY",
+                        "message": (
+                            "La estructura de visto bueno todavía "
+                            "no está disponible en Odoo. "
+                            "Actualiza primero el módulo SAT."
+                        ),
+                        "missing_fields": missing_fields,
+                    },
+                    status=500,
+                )
+
+            return self._json_response(
+                {
+                    "success": True,
+                    "approval": self._serialize_approval(
+                        ticket
+                    ),
+                }
+            )
+
+        except Exception as exc:
+            return self._error_response(exc)
+
+    # ============================================================
+    # REGISTRAR VISTO BUENO + FIRMA
+    # POST /api/app/services/<id>/approval
+    # ============================================================
+
+    @http.route(
+        (
+            "/api/app/services/<int:service_id>"
+            "/approval"
+        ),
+        type="http",
+        auth="public",
+        methods=["POST"],
+        csrf=False,
+        save_session=True,
+    )
+    def service_approval_register(
+        self,
+        service_id,
+        **kwargs,
+    ):
+        user, error = self._require_user()
+
+        if error:
+            return error
+
+        try:
+            ticket = self._approval_get_service(
+                service_id,
+                user,
+            )
+
+            if not ticket:
+                return self._approval_service_not_found_response()
+
+            if ticket.estado == "finalizado":
+                return self._json_response(
+                    {
+                        "success": False,
+                        "code": "SERVICE_READ_ONLY",
+                        "message": (
+                            "No se puede registrar o modificar "
+                            "el visto bueno de un ticket finalizado."
+                        ),
+                    },
+                    status=409,
+                )
+
+            missing_fields = self._approval_missing_fields(
+                ticket
+            )
+
+            if missing_fields:
+                return self._json_response(
+                    {
+                        "success": False,
+                        "code": "APPROVAL_MODEL_NOT_READY",
+                        "message": (
+                            "Primero debe actualizarse el módulo "
+                            "SAT con ticket_service_approval.py."
+                        ),
+                        "missing_fields": missing_fields,
+                    },
+                    status=500,
+                )
+
+            company = self._get_ticket_company(
+                ticket
+            )
+
+            if not company:
+                return self._json_response(
+                    {
+                        "success": False,
+                        "code": "SERVICE_WITHOUT_CLIENT",
+                        "message": (
+                            "El ticket no tiene una empresa "
+                            "cliente asociada."
+                        ),
+                    },
+                    status=400,
+                )
+
+            data = self._get_json_body()
+
+            contact = self._get_contact_for_company(
+                company,
+                data.get("contact_id"),
+            )
+
+            if not contact:
+                return self._json_response(
+                    {
+                        "success": False,
+                        "code": "INVALID_APPROVAL_CONTACT",
+                        "message": (
+                            "El contacto seleccionado no existe "
+                            "o no pertenece a la empresa "
+                            "de este ticket."
+                        ),
+                    },
+                    status=400,
+                )
+
+            values = self._validate_contact_payload(
+                data
+            )
+
+            if values["errors"]:
+                return self._json_response(
+                    {
+                        "success": False,
+                        "code": "INVALID_APPROVAL_DATA",
+                        "message": (
+                            "Los datos de quien da conformidad "
+                            "no están completos."
+                        ),
+                        "errors": values["errors"],
+                    },
+                    status=400,
+                )
+
+            contact_dni = self._clean_dni(
+                contact.vat
+                if "vat" in contact._fields
+                else False
+            )
+
+            if (
+                contact_dni
+                and contact_dni != values["dni"]
+            ):
+                return self._json_response(
+                    {
+                        "success": False,
+                        "code": "CONTACT_DNI_MISMATCH",
+                        "message": (
+                            "El DNI enviado no coincide con "
+                            "el contacto seleccionado."
+                        ),
+                    },
+                    status=400,
+                )
+
+            (
+                signature_base64,
+                signature_bytes,
+            ) = self._safe_signature_base64(
+                data.get("signature")
+            )
+
+            if (
+                not signature_base64
+                or not signature_bytes
+            ):
+                return self._json_response(
+                    {
+                        "success": False,
+                        "code": "INVALID_SIGNATURE",
+                        "message": (
+                            "La firma es obligatoria y debe "
+                            "ser una imagen PNG o JPEG válida "
+                            "de hasta 3 MB."
+                        ),
+                    },
+                    status=400,
+                )
+
+            filename = self._clean_text(
+                data.get(
+                    "signature_filename"
+                )
+            )
+
+            if not filename:
+                extension = (
+                    "jpg"
+                    if signature_bytes.startswith(
+                        b"\\xff\\xd8\\xff"
+                    )
+                    else "png"
+                )
+                filename = (
+                    f"firma_{ticket.name or ticket.id}.{extension}"
+                )
+
+            ticket.write(
+                {
+                    "conformidad_contacto_id": contact.id,
+                    "conformidad_nombre": values["name"],
+                    "conformidad_dni": values["dni"],
+                    "conformidad_celular": values["mobile"],
+                    "conformidad_correo": values["email"],
+                    "conformidad_firma": signature_base64,
+                    "conformidad_firma_filename": filename,
+                    "conformidad_fecha": fields.Datetime.now(),
+                    "conformidad_tecnico_id": user.id,
+                }
+            )
+
+            if not ticket.conformidad_registrada:
+                return self._json_response(
+                    {
+                        "success": False,
+                        "code": "APPROVAL_INCOMPLETE",
+                        "message": (
+                            "El visto bueno fue guardado, "
+                            "pero no quedó completo."
+                        ),
+                        "approval": self._serialize_approval(
+                            ticket
+                        ),
+                    },
+                    status=409,
+                )
+
+            ticket.message_post(
+                body=(
+                    "✅ <b>Visto bueno del servicio "
+                    "registrado desde Copier OS App</b><br/>"
+                    f"Persona: {values['name']}<br/>"
+                    f"DNI: {values['dni']}<br/>"
+                    f"Celular: {values['mobile']}<br/>"
+                    f"Correo: {values['email']}<br/>"
+                    f"Técnico: {user.name or 'N/A'}"
+                ),
+                message_type="notification",
+            )
+
+            return self._json_response(
+                {
+                    "success": True,
+                    "message": (
+                        "Visto bueno registrado correctamente."
+                    ),
+                    "approval": self._serialize_approval(
+                        ticket
+                    ),
+                }
+            )
+
+        except Exception as exc:
+            return self._error_response(exc)
+
