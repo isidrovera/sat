@@ -1,12 +1,16 @@
 # -*- coding: utf-8 -*-
 
 import base64
+import logging
 import re
 
 from odoo import fields, http
 from odoo.http import request
 
 from .base import AppBaseController
+
+
+_logger = logging.getLogger(__name__)
 
 
 class AppServiceApprovalController(AppBaseController):
@@ -58,7 +62,13 @@ class AppServiceApprovalController(AppBaseController):
         Solo permite trabajar con tickets asignados
         al técnico autenticado.
         """
-        return request.env[
+        _logger.info(
+            "[APP APPROVAL] Buscando ticket service_id=%s user_id=%s",
+            service_id,
+            user.id,
+        )
+
+        ticket = request.env[
             "ticket.alquiler"
         ].search(
             [
@@ -75,6 +85,15 @@ class AppServiceApprovalController(AppBaseController):
             ],
             limit=1,
         )
+
+        _logger.info(
+            "[APP APPROVAL] Ticket encontrado=%s ticket_id=%s estado=%s",
+            bool(ticket),
+            ticket.id if ticket else False,
+            ticket.estado if ticket else False,
+        )
+
+        return ticket
 
     def _approval_service_not_found_response(
         self,
@@ -417,10 +436,10 @@ class AppServiceApprovalController(AppBaseController):
             return False, False
 
         is_png = decoded.startswith(
-            b"\\x89PNG\\r\\n\\x1a\\n"
+            b"\x89PNG\r\n\x1a\n"
         )
         is_jpeg = decoded.startswith(
-            b"\\xff\\xd8\\xff"
+            b"\xff\xd8\xff"
         )
 
         if not (is_png or is_jpeg):
@@ -443,12 +462,31 @@ class AppServiceApprovalController(AppBaseController):
         }
 
     def _approval_missing_fields(self, ticket):
-        return sorted(
+        missing_fields = sorted(
             self._approval_required_fields()
             - set(ticket._fields.keys())
         )
 
+        if missing_fields:
+            _logger.error(
+                "[APP APPROVAL] Campos de conformidad faltantes "
+                "en ticket.alquiler: %s",
+                ", ".join(missing_fields),
+            )
+        else:
+            _logger.info(
+                "[APP APPROVAL] Todos los campos de conformidad "
+                "están registrados en ticket.alquiler."
+            )
+
+        return missing_fields
+
     def _serialize_approval(self, ticket):
+        _logger.info(
+            "[APP APPROVAL] Serializando conformidad ticket_id=%s",
+            ticket.id,
+        )
+
         contact = (
             ticket.conformidad_contacto_id
             if (
@@ -536,6 +574,14 @@ class AppServiceApprovalController(AppBaseController):
         service_id,
         **kwargs,
     ):
+        _logger.info(
+            "[APP APPROVAL] GET /approval/contact iniciado "
+            "service_id=%s dni=%s",
+            service_id,
+            kwargs.get("dni")
+            or request.httprequest.args.get("dni"),
+        )
+
         user, error = self._require_user()
 
         if error:
@@ -599,6 +645,14 @@ class AppServiceApprovalController(AppBaseController):
             )
 
             if not contact:
+                _logger.info(
+                    "[APP APPROVAL] Contacto NO encontrado "
+                    "service_id=%s company_id=%s dni=%s",
+                    service_id,
+                    company.id,
+                    dni,
+                )
+
                 return self._json_response(
                     {
                         "success": True,
@@ -614,6 +668,14 @@ class AppServiceApprovalController(AppBaseController):
                     }
                 )
 
+            _logger.info(
+                "[APP APPROVAL] Contacto encontrado "
+                "service_id=%s contact_id=%s dni=%s",
+                service_id,
+                contact.id,
+                dni,
+            )
+
             return self._json_response(
                 {
                     "success": True,
@@ -626,6 +688,12 @@ class AppServiceApprovalController(AppBaseController):
             )
 
         except Exception as exc:
+            _logger.exception(
+                "[APP APPROVAL] ERROR GET /approval/contact "
+                "service_id=%s error=%s",
+                service_id,
+                exc,
+            )
             return self._error_response(
                 exc
             )
@@ -660,6 +728,12 @@ class AppServiceApprovalController(AppBaseController):
         service_id,
         **kwargs,
     ):
+        _logger.info(
+            "[APP APPROVAL] POST /approval/contact iniciado "
+            "service_id=%s",
+            service_id,
+        )
+
         user, error = self._require_user()
 
         if error:
@@ -792,8 +866,22 @@ class AppServiceApprovalController(AppBaseController):
                     "l10n_latam_identification_type_id"
                 ] = identification_type.id
 
+            _logger.info(
+                "[APP APPROVAL] Creando contacto "
+                "service_id=%s company_id=%s dni=%s name=%s",
+                service_id,
+                company.id,
+                values["dni"],
+                values["name"],
+            )
+
             contact = Partner.create(
                 partner_vals
+            )
+
+            _logger.info(
+                "[APP APPROVAL] Contacto creado contact_id=%s",
+                contact.id,
             )
 
             ticket.message_post(
@@ -826,6 +914,12 @@ class AppServiceApprovalController(AppBaseController):
             )
 
         except Exception as exc:
+            _logger.exception(
+                "[APP APPROVAL] ERROR POST /approval/contact "
+                "service_id=%s error=%s",
+                service_id,
+                exc,
+            )
             return self._error_response(
                 exc
             )
@@ -851,12 +945,28 @@ class AppServiceApprovalController(AppBaseController):
         service_id,
         **kwargs,
     ):
+        _logger.info(
+            "[APP APPROVAL] GET /approval iniciado service_id=%s",
+            service_id,
+        )
+
         user, error = self._require_user()
 
         if error:
+            _logger.warning(
+                "[APP APPROVAL] GET /approval sin sesión válida "
+                "service_id=%s",
+                service_id,
+            )
             return error
 
         try:
+            _logger.info(
+                "[APP APPROVAL] Usuario autenticado user_id=%s login=%s",
+                user.id,
+                user.login,
+            )
+
             ticket = self._approval_get_service(
                 service_id,
                 user,
@@ -884,16 +994,32 @@ class AppServiceApprovalController(AppBaseController):
                     status=500,
                 )
 
+            approval_data = self._serialize_approval(
+                ticket
+            )
+
+            _logger.info(
+                "[APP APPROVAL] GET /approval OK "
+                "service_id=%s registered=%s has_signature=%s",
+                service_id,
+                approval_data.get("registered"),
+                approval_data.get("has_signature"),
+            )
+
             return self._json_response(
                 {
                     "success": True,
-                    "approval": self._serialize_approval(
-                        ticket
-                    ),
+                    "approval": approval_data,
                 }
             )
 
         except Exception as exc:
+            _logger.exception(
+                "[APP APPROVAL] ERROR GET /approval "
+                "service_id=%s error=%s",
+                service_id,
+                exc,
+            )
             return self._error_response(exc)
 
     # ============================================================
@@ -917,6 +1043,11 @@ class AppServiceApprovalController(AppBaseController):
         service_id,
         **kwargs,
     ):
+        _logger.info(
+            "[APP APPROVAL] POST /approval iniciado service_id=%s",
+            service_id,
+        )
+
         user, error = self._require_user()
 
         if error:
@@ -980,6 +1111,20 @@ class AppServiceApprovalController(AppBaseController):
                 )
 
             data = self._get_json_body()
+
+            _logger.info(
+                "[APP APPROVAL] Payload recibido "
+                "service_id=%s contact_id=%s dni=%s "
+                "name=%s mobile_present=%s email_present=%s "
+                "signature_present=%s",
+                service_id,
+                data.get("contact_id"),
+                data.get("dni"),
+                data.get("name"),
+                bool(data.get("mobile")),
+                bool(data.get("email")),
+                bool(data.get("signature")),
+            )
 
             contact = self._get_contact_for_company(
                 company,
@@ -1051,6 +1196,12 @@ class AppServiceApprovalController(AppBaseController):
                 not signature_base64
                 or not signature_bytes
             ):
+                _logger.warning(
+                    "[APP APPROVAL] Firma inválida "
+                    "service_id=%s",
+                    service_id,
+                )
+
                 return self._json_response(
                     {
                         "success": False,
@@ -1074,13 +1225,23 @@ class AppServiceApprovalController(AppBaseController):
                 extension = (
                     "jpg"
                     if signature_bytes.startswith(
-                        b"\\xff\\xd8\\xff"
+                        b"\xff\xd8\xff"
                     )
                     else "png"
                 )
                 filename = (
                     f"firma_{ticket.name or ticket.id}.{extension}"
                 )
+
+            _logger.info(
+                "[APP APPROVAL] Guardando visto bueno "
+                "service_id=%s contact_id=%s user_id=%s "
+                "signature_bytes=%s",
+                service_id,
+                contact.id,
+                user.id,
+                len(signature_bytes),
+            )
 
             ticket.write(
                 {
@@ -1094,6 +1255,13 @@ class AppServiceApprovalController(AppBaseController):
                     "conformidad_fecha": fields.Datetime.now(),
                     "conformidad_tecnico_id": user.id,
                 }
+            )
+
+            _logger.info(
+                "[APP APPROVAL] Escritura completada "
+                "service_id=%s conformidad_registrada=%s",
+                service_id,
+                ticket.conformidad_registrada,
             )
 
             if not ticket.conformidad_registrada:
@@ -1138,5 +1306,11 @@ class AppServiceApprovalController(AppBaseController):
             )
 
         except Exception as exc:
+            _logger.exception(
+                "[APP APPROVAL] ERROR POST /approval "
+                "service_id=%s error=%s",
+                service_id,
+                exc,
+            )
             return self._error_response(exc)
 
