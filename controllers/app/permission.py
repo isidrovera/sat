@@ -20,10 +20,12 @@ class AppPermissionController(
 ):
 
     # ============================================================
-    # CONSTANTES API
+    # CONSTANTES
     # ============================================================
 
-    MODEL_NAME = "mantenimiento.tecnico.ausencia"
+    MODEL_NAME = (
+        "mantenimiento.tecnico.ausencia"
+    )
 
     DEFAULT_ALLOWED_TECHNICIAN_TYPES = (
         "permiso",
@@ -111,7 +113,9 @@ class AppPermissionController(
         if not field:
             return []
 
-        selection = field.selection
+        selection = (
+            field.selection
+        )
 
         if callable(selection):
             try:
@@ -143,17 +147,11 @@ class AppPermissionController(
         self,
     ):
         """
-        Los tipos que el técnico puede solicitar desde Flutter
-        son configurables desde ir.config_parameter.
-
-        Parámetro:
+        Configurable desde:
             sat.app_permission_allowed_types
 
         Ejemplo:
             permiso,vacaciones,enfermedad,descanso_medico,capacitacion
-
-        De esta manera se pueden habilitar/deshabilitar tipos
-        sin tener que publicar una nueva APK.
         """
 
         ICP = request.env[
@@ -220,6 +218,55 @@ class AppPermissionController(
         )
 
     # ============================================================
+    # TYPE RULES
+    # ============================================================
+
+    def _get_technician_type_rules(
+        self,
+    ):
+        """
+        Obtiene las reglas desde el modelo Odoo.
+
+        Flutter no debe inventar:
+        - si permite horas
+        - si fuerza día completo
+        - si fecha fin es obligatoria
+        - si sustento es obligatorio
+        - horarios sugeridos
+        """
+
+        Permission = (
+            self._permission_model()
+        )
+
+        allowed = set(
+            self._get_allowed_technician_types()
+        )
+
+        if not hasattr(
+            Permission,
+            "get_app_permission_type_rules",
+        ):
+            _logger.warning(
+                "[App Permisos] "
+                "El modelo no tiene "
+                "get_app_permission_type_rules()."
+            )
+            return {}
+
+        rules = (
+            Permission.get_app_permission_type_rules()
+            or {}
+        )
+
+        return {
+            key: value
+            for key, value
+            in rules.items()
+            if key in allowed
+        }
+
+    # ============================================================
     # ACTIONS AVAILABLE FOR TECHNICIAN
     # ============================================================
 
@@ -228,10 +275,10 @@ class AppPermissionController(
         permission,
     ):
         """
-        Flutter no debe decidir qué botones mostrar.
+        Flutter recibe acciones disponibles.
 
-        La API devuelve las acciones disponibles
-        para el técnico según el estado actual.
+        La validación definitiva sigue
+        estando en los métodos del modelo.
         """
 
         state = (
@@ -273,25 +320,13 @@ class AppPermissionController(
         }
 
     # ============================================================
-    # INFORMATION VISIBLE TO TECHNICIAN
+    # RESULT VISIBLE TO TECHNICIAN
     # ============================================================
 
     def _technician_result(
         self,
         permission,
     ):
-        """
-        Devuelve únicamente el resultado administrativo
-        que necesita conocer el trabajador.
-
-        No exponemos:
-        - impacto de meta
-        - tickets afectados
-        - información contable
-        - disponibilidad
-        - detalles internos de gerencia
-        """
-
         result = {
             "show": False,
             "evaluation": False,
@@ -372,12 +407,6 @@ class AppPermissionController(
         self,
         permission,
     ):
-        actions = (
-            self._permission_actions(
-                permission
-            )
-        )
-
         return {
             "id": permission.id,
 
@@ -484,7 +513,11 @@ class AppPermissionController(
                 )
             ),
 
-            "actions": actions,
+            "actions": (
+                self._permission_actions(
+                    permission
+                )
+            ),
         }
 
     # ============================================================
@@ -527,6 +560,10 @@ class AppPermissionController(
 
                     "types": (
                         self._get_technician_type_options()
+                    ),
+
+                    "type_rules": (
+                        self._get_technician_type_rules()
                     ),
 
                     "states": (
@@ -604,14 +641,6 @@ class AppPermissionController(
         month_value,
         user,
     ):
-        """
-        month_value:
-            YYYY-MM
-
-        Si Flutter no manda month,
-        se utiliza el mes actual.
-        """
-
         today = (
             fields.Date.context_today(
                 user
@@ -635,10 +664,12 @@ class AppPermissionController(
             except ValueError:
                 return False
 
-        last_day = calendar.monthrange(
-            year,
-            month,
-        )[1]
+        last_day = (
+            calendar.monthrange(
+                year,
+                month,
+            )[1]
+        )
 
         start_date = datetime(
             year,
@@ -716,55 +747,51 @@ class AppPermissionController(
                     status=400,
                 )
 
-            Permission = (
-                self._permission_model()
+            records = (
+                self._permission_model().search(
+                    [
+                        (
+                            "tecnico_id",
+                            "=",
+                            user.id,
+                        ),
+                        (
+                            "fecha_inicio",
+                            "<=",
+                            month_data[
+                                "end_date"
+                            ],
+                        ),
+                        "|",
+                        (
+                            "fecha_fin",
+                            "=",
+                            False,
+                        ),
+                        (
+                            "fecha_fin",
+                            ">=",
+                            month_data[
+                                "start_date"
+                            ],
+                        ),
+                    ],
+                    order=(
+                        "fecha_inicio desc, "
+                        "id desc"
+                    ),
+                )
             )
 
-            records = Permission.search(
-                [
-                    (
-                        "tecnico_id",
-                        "=",
-                        user.id,
-                    ),
-                    (
-                        "fecha_inicio",
-                        "<=",
-                        month_data[
-                            "end_date"
-                        ],
-                    ),
-                    "|",
-                    (
-                        "fecha_fin",
-                        "=",
-                        False,
-                    ),
-                    (
-                        "fecha_fin",
-                        ">=",
-                        month_data[
-                            "start_date"
-                        ],
-                    ),
-                ],
-                order=(
-                    "fecha_inicio desc, "
-                    "id desc"
-                ),
-            )
-
-            total = len(
-                records
-            )
-
-            draft = 0
-            pending = 0
-            approved = 0
-            rejected = 0
-            active_absence = 0
-            closed = 0
-            cancelled = 0
+            counters = {
+                "draft": 0,
+                "pending": 0,
+                "approved": 0,
+                "rejected": 0,
+                "active_absence": 0,
+                "closed": 0,
+                "cancelled": 0,
+            }
 
             full_day_requests = 0
             partial_requests = 0
@@ -773,33 +800,38 @@ class AppPermissionController(
             approved_hours = 0.0
             hours_to_recover = 0.0
 
-            for record in records:
+            state_map = {
+                "borrador": "draft",
+                "pendiente": "pending",
+                "aprobado": "approved",
+                "rechazado": "rejected",
+                "ausente_activo": "active_absence",
+                "cerrado": "closed",
+                "cancelado": "cancelled",
+            }
 
+            approved_states = {
+                "aprobado",
+                "ausente_activo",
+                "cerrado",
+            }
+
+            for record in records:
                 state = (
                     record.estado
                     or ""
                 )
 
-                if state == "borrador":
-                    draft += 1
+                counter_key = (
+                    state_map.get(
+                        state
+                    )
+                )
 
-                elif state == "pendiente":
-                    pending += 1
-
-                elif state == "aprobado":
-                    approved += 1
-
-                elif state == "rechazado":
-                    rejected += 1
-
-                elif state == "ausente_activo":
-                    active_absence += 1
-
-                elif state == "cerrado":
-                    closed += 1
-
-                elif state == "cancelado":
-                    cancelled += 1
+                if counter_key:
+                    counters[
+                        counter_key
+                    ] += 1
 
                 if record.dia_completo:
                     full_day_requests += 1
@@ -814,22 +846,13 @@ class AppPermissionController(
 
                     total_hours += hours
 
-                    if state in (
-                        "aprobado",
-                        "ausente_activo",
-                        "cerrado",
-                    ):
+                    if state in approved_states:
                         approved_hours += hours
 
                 if (
                     record.evaluacion_administrativa
                     == "recuperar_horas"
-                    and state
-                    in (
-                        "aprobado",
-                        "ausente_activo",
-                        "cerrado",
-                    )
+                    and state in approved_states
                 ):
                     hours_to_recover += (
                         record.horas_a_recuperar
@@ -840,9 +863,11 @@ class AppPermissionController(
                 {
                     "success": True,
 
-                    "month": month_data[
-                        "key"
-                    ],
+                    "month": (
+                        month_data[
+                            "key"
+                        ]
+                    ),
 
                     "period": {
                         "start_date": (
@@ -858,42 +883,22 @@ class AppPermissionController(
                     },
 
                     "summary": {
-                        "total": total,
-
-                        "draft": draft,
-
-                        "pending": pending,
-
-                        "approved": approved,
-
-                        "rejected": rejected,
-
-                        "active_absence": (
-                            active_absence
+                        "total": len(
+                            records
                         ),
-
-                        "closed": closed,
-
-                        "cancelled": (
-                            cancelled
-                        ),
-
+                        **counters,
                         "full_day_requests": (
                             full_day_requests
                         ),
-
                         "partial_requests": (
                             partial_requests
                         ),
-
                         "total_hours": (
                             total_hours
                         ),
-
                         "approved_hours": (
                             approved_hours
                         ),
-
                         "hours_to_recover": (
                             hours_to_recover
                         ),
@@ -1098,7 +1103,7 @@ class AppPermissionController(
             )
 
     # ============================================================
-    # VALIDATE TECHNICIAN TYPE
+    # VALIDATE TYPE
     # ============================================================
 
     def _validate_permission_type(
@@ -1139,7 +1144,10 @@ class AppPermissionController(
         data,
         vals,
     ):
-        if "attachment_base64" not in data:
+        if (
+            "attachment_base64"
+            not in data
+        ):
             return
 
         attachment_base64 = (
@@ -1290,32 +1298,27 @@ class AppPermissionController(
                 )
 
             vals = {
-                # Nunca aceptamos tecnico_id
-                # enviado desde Flutter.
-                "tecnico_id": user.id,
-
+                "tecnico_id": (
+                    user.id
+                ),
                 "tipo": (
                     permission_type
                 ),
-
                 "fecha_inicio": (
                     start_date
                 ),
-
                 "fecha_fin": (
                     data.get(
                         "end_date"
                     )
                     or False
                 ),
-
                 "dia_completo": (
                     data.get(
                         "full_day",
                         True,
                     )
                 ),
-
                 "motivo": (
                     data.get(
                         "reason"
@@ -1367,12 +1370,10 @@ class AppPermissionController(
             return self._json_response(
                 {
                     "success": True,
-
                     "message": (
                         "Solicitud creada "
                         "correctamente."
                     ),
-
                     "permission": (
                         self._serialize_permission(
                             record
@@ -1386,9 +1387,7 @@ class AppPermissionController(
             return self._json_response(
                 {
                     "success": False,
-                    "code": (
-                        "INVALID_DATA"
-                    ),
+                    "code": "INVALID_DATA",
                     "message": str(
                         exc
                     ),
@@ -1553,9 +1552,7 @@ class AppPermissionController(
                 return self._json_response(
                     {
                         "success": False,
-                        "code": (
-                            "NO_DATA"
-                        ),
+                        "code": "NO_DATA",
                         "message": (
                             "No se recibieron cambios."
                         ),
@@ -1570,12 +1567,10 @@ class AppPermissionController(
             return self._json_response(
                 {
                     "success": True,
-
                     "message": (
                         "Solicitud actualizada "
                         "correctamente."
                     ),
-
                     "permission": (
                         self._serialize_permission(
                             record
@@ -1588,9 +1583,7 @@ class AppPermissionController(
             return self._json_response(
                 {
                     "success": False,
-                    "code": (
-                        "INVALID_DATA"
-                    ),
+                    "code": "INVALID_DATA",
                     "message": str(
                         exc
                     ),
@@ -1654,12 +1647,10 @@ class AppPermissionController(
             return self._json_response(
                 {
                     "success": True,
-
                     "message": (
                         "Solicitud enviada "
                         "para aprobación."
                     ),
-
                     "permission": (
                         self._serialize_permission(
                             record
@@ -1724,11 +1715,9 @@ class AppPermissionController(
             return self._json_response(
                 {
                     "success": True,
-
                     "message": (
                         "Solicitud cancelada."
                     ),
-
                     "permission": (
                         self._serialize_permission(
                             record

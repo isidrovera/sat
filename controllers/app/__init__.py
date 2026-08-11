@@ -6,3 +6,4 @@ from . import home
 from . import service
 from . import repair
 from . import permission
+from . import profile
