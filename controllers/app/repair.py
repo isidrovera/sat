@@ -24,6 +24,9 @@ class AppRepairController(AppBaseController):
     INTERVENTION_MODEL = "reparacion.intervencion"
     INTERVENTION_DETAIL_MODEL = "reparacion.intervencion.detalle"
     PHOTO_MODEL = "reparaciones.foto"
+    TECH_PART_REQUEST_MODEL = "solicitud.parte.tecnico"
+    TECH_PART_REQUEST_LINE_MODEL = "solicitud.parte.tecnico.linea"
+    GENERAL_PART_REQUEST_MODEL = "copier.parts.request"
 
     FINAL_STATES = {"finalizado", "entregada"}
 
@@ -47,6 +50,12 @@ class AppRepairController(AppBaseController):
             "/api/app/repairs/<int:repair_id>/interventions/<int:intervention_id>",
             "/api/app/repairs/<int:repair_id>/photos",
             "/api/app/repairs/<int:repair_id>/photos/<int:photo_id>",
+            "/api/app/repairs/<int:repair_id>/photos/<int:photo_id>/content",
+            "/api/app/repairs/<int:repair_id>/part-requests/technician",
+            "/api/app/repairs/<int:repair_id>/part-requests/general",
+            "/api/app/repairs/<int:repair_id>/generate-report",
+            "/api/app/repairs/<int:repair_id>/report-pdf",
+            "/api/app/repairs/<int:repair_id>/qr-report",
         ],
         type="http",
         auth="none",
@@ -659,6 +668,220 @@ class AppRepairController(AppBaseController):
         }
 
     # ============================================================
+    # MOBILE ACTION HELPERS
+    # ============================================================
+
+    def _repair_sync_component_intervention(
+        self,
+        repair,
+        evaluation,
+    ):
+        """
+        Mantiene sincronizadas las subpartes seleccionadas
+        del checklist con reparacion.intervencion.
+
+        Es la misma relación que luego usa action_generar_informe().
+        """
+        get_code = getattr(
+            repair,
+            "_get_componente_code_from_evaluacion",
+            None,
+        )
+
+        if not callable(get_code):
+            return False
+
+        component_code = get_code(
+            evaluation
+        )
+
+        if not component_code:
+            return False
+
+        state_code = (
+            self._repair_record_code(
+                evaluation.estado_id
+            )
+            if evaluation.estado_id
+            else ""
+        )
+
+        Intervention = request.env[
+            self.INTERVENTION_MODEL
+        ]
+
+        intervention = Intervention.search(
+            [
+                (
+                    "reparacion_id",
+                    "=",
+                    repair.id,
+                ),
+                (
+                    "componente_code",
+                    "=",
+                    component_code,
+                ),
+            ],
+            limit=1,
+        )
+
+        selected_subparts = (
+            evaluation.subpartes_ids
+            if (
+                state_code == "requiere_cambio"
+                and "subpartes_ids"
+                in evaluation._fields
+            )
+            else request.env[
+                "componente.subparte"
+            ].browse([])
+        )
+
+        if not selected_subparts:
+            if intervention:
+                intervention.detalle_ids.unlink()
+            return intervention
+
+        ensure_method = getattr(
+            repair,
+            "_ensure_intervencion_for_component",
+            None,
+        )
+
+        if callable(ensure_method):
+            intervention = ensure_method(
+                component_code
+            )
+
+        if not intervention:
+            intervention = Intervention.create(
+                {
+                    "reparacion_id": repair.id,
+                    "componente": "otro",
+                    "componente_code": (
+                        component_code
+                    ),
+                    "accion": "cambiado",
+                    "observacion": (
+                        "Creado automáticamente "
+                        "desde la app al marcar "
+                        '"Requiere cambio".'
+                    ),
+                }
+            )
+
+        intervention.detalle_ids.unlink()
+
+        Detail = request.env[
+            self.INTERVENTION_DETAIL_MODEL
+        ]
+
+        for subpart in selected_subparts:
+            code = ""
+
+            for field_name in (
+                "default_code",
+                "codigo",
+                "code",
+            ):
+                if (
+                    field_name in subpart._fields
+                    and subpart[field_name]
+                ):
+                    code = str(
+                        subpart[field_name]
+                    )
+                    break
+
+            Detail.create(
+                {
+                    "line_id": intervention.id,
+                    "subparte_id": subpart.id,
+                    "accion_sub": "cambiado",
+                    "codigo": code,
+                    "cantidad": 1.0,
+                    "nota": "",
+                }
+            )
+
+        return intervention
+
+
+    def _repair_binary_report_base64(
+        self,
+        xml_id,
+        repair,
+    ):
+        report = request.env.ref(
+            xml_id,
+            raise_if_not_found=False,
+        )
+
+        if not report:
+            raise UserError(
+                "No se encontró el reporte configurado."
+            )
+
+        report_name = (
+            report.report_name
+            if "report_name" in report._fields
+            else False
+        )
+
+        if not report_name:
+            raise UserError(
+                "El reporte no tiene report_name configurado."
+            )
+
+        pdf_content, _ = request.env[
+            "ir.actions.report"
+        ]._render_qweb_pdf(
+            report_name,
+            res_ids=[repair.id],
+        )
+
+        return {
+            "filename": (
+                f"{repair.name or 'reparacion'}.pdf"
+            ),
+            "content_base64": (
+                base64.b64encode(
+                    pdf_content
+                ).decode("ascii")
+            ),
+            "mimetype": "application/pdf",
+        }
+
+
+    def _repair_part_request_summary(
+        self,
+        repair,
+    ):
+        tech_count = 0
+        general_count = 0
+
+        if (
+            "solicitudes_parte_tecnico_ids"
+            in repair._fields
+        ):
+            tech_count = len(
+                repair.solicitudes_parte_tecnico_ids
+            )
+
+        if "parts_request_ids" in repair._fields:
+            general_count = len(
+                repair.parts_request_ids
+            )
+
+        return {
+            "technician": tech_count,
+            "general": general_count,
+            "total": tech_count + general_count,
+        }
+
+
+    # ============================================================
     # REPAIR SERIALIZER
     # ============================================================
 
@@ -829,6 +1052,25 @@ class AppRepairController(AppBaseController):
                     in repair._fields
                     else 0
                 ),
+                "part_requests": (
+                    self._repair_part_request_summary(
+                        repair
+                    )
+                ),
+                "actions": {
+                    "can_request_parts": (
+                        not self._repair_is_finalized(
+                            repair
+                        )
+                    ),
+                    "can_generate_report": (
+                        not self._repair_is_finalized(
+                            repair
+                        )
+                    ),
+                    "can_print_report": True,
+                    "can_print_qr": True,
+                },
                 "checklist_summary": {
                     "components_total": len(components),
                     "components_completed": sum(
@@ -1600,6 +1842,11 @@ class AppRepairController(AppBaseController):
                 )
 
             evaluation.write(vals)
+
+            self._repair_sync_component_intervention(
+                repair,
+                evaluation,
+            )
 
             return self._json_response(
                 {
@@ -2529,6 +2776,791 @@ class AppRepairController(AppBaseController):
             )
         except Exception as exc:
             return self._error_response(exc)
+
+    # ============================================================
+    # PHOTO CONTENT
+    # ============================================================
+
+    @http.route(
+        "/api/app/repairs/<int:repair_id>/photos/<int:photo_id>/content",
+        type="http",
+        auth="public",
+        methods=["GET"],
+        csrf=False,
+        save_session=True,
+    )
+    def repair_photo_content(
+        self,
+        repair_id,
+        photo_id,
+        **kwargs,
+    ):
+        user, error = self._require_user()
+        if error:
+            return error
+
+        try:
+            repair, error = self._repair_or_error(
+                repair_id,
+                user,
+            )
+            if error:
+                return error
+
+            photo = request.env[
+                self.PHOTO_MODEL
+            ].search(
+                [
+                    ("id", "=", photo_id),
+                    ("reparacion_id", "=", repair.id),
+                    ("active", "=", True),
+                ],
+                limit=1,
+            )
+
+            if not photo:
+                return request.make_response(
+                    b"",
+                    headers=[
+                        (
+                            "Content-Type",
+                            "text/plain; charset=utf-8",
+                        )
+                    ],
+                    status=404,
+                )
+
+            method = getattr(
+                photo.sudo(),
+                "get_download_content",
+                None,
+            )
+
+            if not callable(method):
+                raise UserError(
+                    "La foto no dispone de método de descarga."
+                )
+
+            result = method() or {}
+            content = result.get("content") or ""
+
+            if not content:
+                raise UserError(
+                    "No fue posible obtener el contenido de la foto."
+                )
+
+            binary = base64.b64decode(
+                content
+            )
+
+            mimetype = (
+                result.get("content_type")
+                or result.get("mimetype")
+                or photo.mimetype
+                or "image/jpeg"
+            )
+
+            filename = (
+                result.get("filename")
+                or photo.nombre_foto
+                or f"foto_{photo.id}.jpg"
+            )
+
+            return request.make_response(
+                binary,
+                headers=[
+                    ("Content-Type", mimetype),
+                    (
+                        "Content-Disposition",
+                        f'inline; filename="{filename}"',
+                    ),
+                    (
+                        "Cache-Control",
+                        "private, max-age=300",
+                    ),
+                ],
+            )
+
+        except Exception as exc:
+            return self._error_response(exc)
+
+
+    # ============================================================
+    # TECHNICIAN PART REQUEST
+    # ============================================================
+
+    @http.route(
+        "/api/app/repairs/<int:repair_id>/part-requests/technician",
+        type="http",
+        auth="public",
+        methods=["POST"],
+        csrf=False,
+        save_session=True,
+    )
+    def repair_technician_part_request(
+        self,
+        repair_id,
+        **kwargs,
+    ):
+        user, error = self._require_user()
+        if error:
+            return error
+
+        try:
+            repair, error = self._repair_or_error(
+                repair_id,
+                user,
+            )
+            if error:
+                return error
+
+            if self._repair_is_finalized(repair):
+                return self._json_response(
+                    {
+                        "success": False,
+                        "code": "REPAIR_READ_ONLY",
+                        "message": (
+                            "La reparación finalizada "
+                            "es de solo lectura."
+                        ),
+                    },
+                    status=409,
+                )
+
+            data = self._get_json_body()
+            lines = data.get("items") or []
+
+            if not isinstance(lines, list) or not lines:
+                return self._json_response(
+                    {
+                        "success": False,
+                        "code": "PARTS_REQUIRED",
+                        "message": (
+                            "Agregue al menos una parte."
+                        ),
+                    },
+                    status=400,
+                )
+
+            RequestModel = request.env[
+                self.TECH_PART_REQUEST_MODEL
+            ]
+            LineModel = request.env[
+                self.TECH_PART_REQUEST_LINE_MODEL
+            ]
+
+            clean_lines = []
+
+            for index, item in enumerate(
+                lines,
+                start=1,
+            ):
+                if not isinstance(item, dict):
+                    continue
+
+                part = (
+                    item.get("part")
+                    or item.get("parte")
+                    or ""
+                ).strip()
+
+                if not part:
+                    raise ValidationError(
+                        f"La parte #{index} no tiene nombre."
+                    )
+
+                description = (
+                    item.get("description")
+                    or item.get("descripcion")
+                    or ""
+                ).strip()
+
+                image_base64 = (
+                    item.get("image_base64")
+                    or item.get("foto_referencia")
+                    or ""
+                )
+
+                filename = (
+                    item.get("filename")
+                    or item.get(
+                        "foto_referencia_filename"
+                    )
+                    or ""
+                ).strip()
+
+                if image_base64 and "," in image_base64:
+                    image_base64 = image_base64.split(
+                        ",",
+                        1,
+                    )[1]
+
+                if image_base64:
+                    try:
+                        base64.b64decode(
+                            image_base64,
+                            validate=True,
+                        )
+                    except Exception:
+                        raise ValidationError(
+                            f"La foto de referencia de "
+                            f"la parte #{index} no es válida."
+                        )
+
+                clean_lines.append(
+                    {
+                        "part": part,
+                        "description": description,
+                        "image_base64": image_base64,
+                        "filename": filename,
+                    }
+                )
+
+            if not clean_lines:
+                raise ValidationError(
+                    "Agregue al menos una parte válida."
+                )
+
+            solicitud = RequestModel.create(
+                {
+                    "reparacion_id": repair.id,
+                    "tecnico_id": user.id,
+                }
+            )
+
+            for item in clean_lines:
+                LineModel.create(
+                    {
+                        "solicitud_id": solicitud.id,
+                        "parte": item["part"],
+                        "descripcion": item["description"],
+                        "foto_referencia": (
+                            item["image_base64"]
+                            or False
+                        ),
+                        "foto_referencia_filename": (
+                            item["filename"]
+                            or False
+                        ),
+                    }
+                )
+
+            notify = getattr(
+                solicitud,
+                "_notificar_jefe_nueva_solicitud",
+                None,
+            )
+            if callable(notify):
+                notify()
+
+            parts_text = ", ".join(
+                item["part"]
+                for item in clean_lines
+            )
+
+            repair.message_post(
+                body=(
+                    "🔧 <b>Solicitud de parte creada:</b> "
+                    f"{solicitud.name}<br/>"
+                    f"Partes: {parts_text}"
+                )
+            )
+
+            return self._json_response(
+                {
+                    "success": True,
+                    "message": (
+                        "Solicitud de parte enviada "
+                        "correctamente."
+                    ),
+                    "request": {
+                        "id": solicitud.id,
+                        "name": solicitud.name or "",
+                        "state": solicitud.state or "",
+                        "parts_count": len(
+                            solicitud.linea_ids
+                        ),
+                    },
+                },
+                status=201,
+            )
+
+        except (ValidationError, UserError) as exc:
+            return self._json_response(
+                {
+                    "success": False,
+                    "code": "PART_REQUEST_ERROR",
+                    "message": str(exc),
+                },
+                status=400,
+            )
+        except Exception as exc:
+            return self._error_response(exc)
+
+
+    # ============================================================
+    # GENERAL PART REQUEST
+    # ============================================================
+
+    @http.route(
+        "/api/app/repairs/<int:repair_id>/part-requests/general",
+        type="http",
+        auth="public",
+        methods=["POST"],
+        csrf=False,
+        save_session=True,
+    )
+    def repair_general_part_request(
+        self,
+        repair_id,
+        **kwargs,
+    ):
+        user, error = self._require_user()
+        if error:
+            return error
+
+        try:
+            repair, error = self._repair_or_error(
+                repair_id,
+                user,
+            )
+            if error:
+                return error
+
+            if self._repair_is_finalized(repair):
+                return self._json_response(
+                    {
+                        "success": False,
+                        "code": "REPAIR_READ_ONLY",
+                        "message": (
+                            "La reparación finalizada "
+                            "es de solo lectura."
+                        ),
+                    },
+                    status=409,
+                )
+
+            if not repair.maquina_id:
+                raise ValidationError(
+                    "La reparación no tiene máquina."
+                )
+
+            data = self._get_json_body()
+
+            hard_drive = (
+                data.get("hard_drive_required")
+                is True
+            )
+            wheels = (
+                data.get("wheels_required")
+                is True
+            )
+            power_cable = (
+                data.get("power_cable_required")
+                is True
+            )
+
+            if not any(
+                [
+                    hard_drive,
+                    wheels,
+                    power_cable,
+                ]
+            ):
+                raise ValidationError(
+                    "Debe seleccionar al menos una parte: "
+                    "Disco Duro, Ruedas o Cable de Poder."
+                )
+
+            disk_reason = (
+                data.get("hard_drive_reason")
+                or ""
+            ).strip()
+
+            cable_reason = (
+                data.get("power_cable_reason")
+                or ""
+            ).strip()
+
+            if (
+                hard_drive
+                and disk_reason
+                not in {
+                    "sin_disco",
+                    "malogrado",
+                }
+            ):
+                raise ValidationError(
+                    "Debe seleccionar el motivo "
+                    "del Disco Duro."
+                )
+
+            if (
+                power_cable
+                and cable_reason
+                not in {
+                    "sin_cable",
+                    "danado",
+                    "extraviado",
+                }
+            ):
+                raise ValidationError(
+                    "Debe seleccionar el motivo "
+                    "del Cable de Poder."
+                )
+
+            quantity_wheels = int(
+                data.get("wheels_quantity")
+                or 0
+            )
+
+            if wheels and quantity_wheels <= 0:
+                quantity_wheels = 4
+
+            RequestModel = request.env[
+                self.GENERAL_PART_REQUEST_MODEL
+            ]
+
+            record = RequestModel.create(
+                {
+                    "maquina_id": repair.maquina_id.id,
+                    "reparacion_id": repair.id,
+                    "solicitante_id": user.id,
+                    "disco_duro_requerido": hard_drive,
+                    "motivo_disco": (
+                        disk_reason
+                        if hard_drive
+                        else False
+                    ),
+                    "ruedas_requeridas": wheels,
+                    "cantidad_ruedas": (
+                        quantity_wheels
+                        if wheels
+                        else 0
+                    ),
+                    "cable_poder_requerido": power_cable,
+                    "motivo_cable": (
+                        cable_reason
+                        if power_cable
+                        else False
+                    ),
+                }
+            )
+
+            notes = (
+                data.get("notes")
+                or ""
+            ).strip()
+
+            msg = (
+                "<b>Solicitud de Partes Creada:</b><br/>"
+            )
+
+            if hard_drive:
+                labels = {
+                    "sin_disco": "Llegó sin Disco",
+                    "malogrado": "Disco Malogrado",
+                }
+                msg += (
+                    "- Disco Duro: "
+                    f"{labels.get(disk_reason, '')}<br/>"
+                )
+
+            if wheels:
+                msg += (
+                    f"- Ruedas: {quantity_wheels}<br/>"
+                )
+
+            if power_cable:
+                labels = {
+                    "sin_cable": "Llegó sin Cable",
+                    "danado": "Cable Dañado",
+                    "extraviado": "Cable Extraviado",
+                }
+                msg += (
+                    "- Cable de Poder: "
+                    f"{labels.get(cable_reason, '')}<br/>"
+                )
+
+            if notes:
+                msg += (
+                    "<b>Notas:</b><br/>"
+                    f"{notes}"
+                )
+
+            repair.message_post(
+                body=msg
+            )
+
+            return self._json_response(
+                {
+                    "success": True,
+                    "message": (
+                        "Solicitud general de partes "
+                        "creada correctamente."
+                    ),
+                    "request": {
+                        "id": record.id,
+                        "name": record.name or "",
+                        "state": record.state or "",
+                    },
+                },
+                status=201,
+            )
+
+        except (ValidationError, UserError) as exc:
+            return self._json_response(
+                {
+                    "success": False,
+                    "code": "GENERAL_PART_REQUEST_ERROR",
+                    "message": str(exc),
+                },
+                status=400,
+            )
+        except Exception as exc:
+            return self._error_response(exc)
+
+
+    # ============================================================
+    # GENERATE TECHNICAL REPORT
+    # ============================================================
+
+    @http.route(
+        "/api/app/repairs/<int:repair_id>/generate-report",
+        type="http",
+        auth="public",
+        methods=["POST"],
+        csrf=False,
+        save_session=True,
+    )
+    def repair_generate_report(
+        self,
+        repair_id,
+        **kwargs,
+    ):
+        user, error = self._require_user()
+        if error:
+            return error
+
+        try:
+            repair, error = self._repair_or_error(
+                repair_id,
+                user,
+            )
+            if error:
+                return error
+
+            pending_method = getattr(
+                repair,
+                "_check_campos_requieren_cambio_sin_intervencion",
+                None,
+            )
+
+            pending = (
+                pending_method()
+                if callable(pending_method)
+                else []
+            )
+
+            if pending:
+                return self._json_response(
+                    {
+                        "success": False,
+                        "code": "INTERVENTIONS_REQUIRED",
+                        "message": (
+                            "Hay componentes con "
+                            "\"Requiere cambio\" que aún "
+                            "no tienen una intervención "
+                            "con subpartes."
+                        ),
+                        "pending": pending,
+                    },
+                    status=409,
+                )
+
+            method = getattr(
+                repair,
+                "action_generar_informe",
+                None,
+            )
+
+            if not callable(method):
+                raise UserError(
+                    "No existe action_generar_informe()."
+                )
+
+            result = method()
+
+            if (
+                isinstance(result, dict)
+                and result.get("type")
+                == "ir.actions.act_window"
+            ):
+                return self._json_response(
+                    {
+                        "success": False,
+                        "code": "ODOO_ACTION_REQUIRED",
+                        "message": (
+                            "Odoo requiere completar "
+                            "datos adicionales antes de "
+                            "generar el informe."
+                        ),
+                    },
+                    status=409,
+                )
+
+            repair.invalidate_recordset()
+
+            return self._json_response(
+                {
+                    "success": True,
+                    "message": (
+                        "Informe generado correctamente."
+                    ),
+                    "repair": (
+                        self._repair_serialize_repair(
+                            repair,
+                            detail=True,
+                        )
+                    ),
+                }
+            )
+
+        except (ValidationError, UserError) as exc:
+            return self._json_response(
+                {
+                    "success": False,
+                    "code": "REPORT_GENERATION_ERROR",
+                    "message": str(exc),
+                },
+                status=400,
+            )
+        except Exception as exc:
+            return self._error_response(exc)
+
+
+    # ============================================================
+    # REPAIR PDF
+    # ============================================================
+
+    @http.route(
+        "/api/app/repairs/<int:repair_id>/report-pdf",
+        type="http",
+        auth="public",
+        methods=["GET"],
+        csrf=False,
+        save_session=True,
+    )
+    def repair_report_pdf(
+        self,
+        repair_id,
+        **kwargs,
+    ):
+        user, error = self._require_user()
+        if error:
+            return error
+
+        try:
+            repair, error = self._repair_or_error(
+                repair_id,
+                user,
+            )
+            if error:
+                return error
+
+            payload = (
+                self._repair_binary_report_base64(
+                    "sat.action_report_reparaciones_ventas",
+                    repair,
+                )
+            )
+
+            payload.update(
+                {
+                    "success": True,
+                    "kind": "repair_report",
+                }
+            )
+
+            return self._json_response(
+                payload
+            )
+
+        except (ValidationError, UserError) as exc:
+            return self._json_response(
+                {
+                    "success": False,
+                    "code": "REPORT_PDF_ERROR",
+                    "message": str(exc),
+                },
+                status=400,
+            )
+        except Exception as exc:
+            return self._error_response(exc)
+
+
+    # ============================================================
+    # QR REPORT
+    # ============================================================
+
+    @http.route(
+        "/api/app/repairs/<int:repair_id>/qr-report",
+        type="http",
+        auth="public",
+        methods=["GET"],
+        csrf=False,
+        save_session=True,
+    )
+    def repair_qr_report(
+        self,
+        repair_id,
+        **kwargs,
+    ):
+        user, error = self._require_user()
+        if error:
+            return error
+
+        try:
+            repair, error = self._repair_or_error(
+                repair_id,
+                user,
+            )
+            if error:
+                return error
+
+            payload = (
+                self._repair_binary_report_base64(
+                    "sat.action_report_qr_codes_reparaciones_template",
+                    repair,
+                )
+            )
+
+            payload["filename"] = (
+                f"QR_{repair.name or repair.id}.pdf"
+            )
+            payload.update(
+                {
+                    "success": True,
+                    "kind": "qr_report",
+                }
+            )
+
+            return self._json_response(
+                payload
+            )
+
+        except (ValidationError, UserError) as exc:
+            return self._json_response(
+                {
+                    "success": False,
+                    "code": "QR_REPORT_ERROR",
+                    "message": str(exc),
+                },
+                status=400,
+            )
+        except Exception as exc:
+            return self._error_response(exc)
+
 
     # ============================================================
     # FINALIZE
