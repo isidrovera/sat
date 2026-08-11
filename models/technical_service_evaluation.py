@@ -58,6 +58,44 @@ class ClientServiceEvaluation(models.Model):
         tracking=True
     )
 
+    # ==================== PERSONA QUE EVALÚA / VISTO BUENO ====================
+    evaluator_contact_id = fields.Many2one(
+        'res.partner',
+        string='Persona que dio conformidad',
+        tracking=True,
+        index=True,
+        copy=False,
+        help=(
+            'Contacto de la empresa que recibió el servicio y dio conformidad. '
+            'En evaluaciones nuevas se toma del visto bueno del ticket.'
+        )
+    )
+
+    evaluator_name = fields.Char(
+        string='Nombre del evaluador',
+        tracking=True,
+        copy=False
+    )
+
+    evaluator_dni = fields.Char(
+        string='DNI del evaluador',
+        tracking=True,
+        copy=False,
+        index=True
+    )
+
+    evaluator_mobile = fields.Char(
+        string='Celular del evaluador',
+        tracking=True,
+        copy=False
+    )
+
+    evaluator_email = fields.Char(
+        string='Correo del evaluador',
+        tracking=True,
+        copy=False
+    )
+
     evaluation_date = fields.Datetime(
         'Fecha de Evaluación',
         default=fields.Datetime.now,
@@ -74,7 +112,7 @@ class ClientServiceEvaluation(models.Model):
     visit_date = fields.Date(
         'Fecha de Visita',
         tracking=True,
-        help='Fecha real de la visita técnica. Sirve para agrupar varios tickets en una sola evaluación.'
+        help='Fecha real de la visita técnica asociada al ticket evaluado.'
     )
 
     state = fields.Selection([
@@ -286,23 +324,57 @@ class ClientServiceEvaluation(models.Model):
     # ==================== MÉTODOS CREATE Y WRITE ====================
     @api.model_create_multi
     def create(self, vals_list):
-        for vals in vals_list:
+        normalized_vals_list = []
+
+        for incoming_vals in vals_list:
+            vals = dict(incoming_vals or {})
+
+            # Compatibilidad con llamadas antiguas que todavía envían ticket_id.
+            # ticket_id es calculado; el vínculo real se mantiene en ticket_ids.
+            legacy_ticket_id = vals.pop('ticket_id', False)
+            if legacy_ticket_id and not vals.get('ticket_ids'):
+                vals['ticket_ids'] = [(6, 0, [legacy_ticket_id])]
+
             if vals.get('name', 'New') == 'New':
-                vals['name'] = self.env['ir.sequence'].next_by_code('client.service.evaluation') or 'New'
+                vals['name'] = self.env['ir.sequence'].next_by_code(
+                    'client.service.evaluation'
+                ) or 'New'
 
             if not vals.get('token'):
                 vals['token'] = self._generate_token()
 
-            if not vals.get('visit_date') and vals.get('ticket_ids'):
-                visit_date = self._get_visit_date_from_ticket_commands(vals.get('ticket_ids'))
+            ticket = self._get_single_ticket_from_commands(vals.get('ticket_ids'))
+
+            if ticket:
+                if not vals.get('partner_id') and ticket.partner_id:
+                    vals['partner_id'] = ticket.partner_id.id
+
+                if not vals.get('technician_id') and ticket.responsable:
+                    vals['technician_id'] = ticket.responsable.id
+
+                if not vals.get('visit_date'):
+                    vals['visit_date'] = self._get_ticket_visit_date(ticket)
+
+                approval_vals = self._get_evaluator_snapshot_from_ticket(ticket)
+                for field_name, field_value in approval_vals.items():
+                    if field_name not in vals:
+                        vals[field_name] = field_value
+
+            elif not vals.get('visit_date') and vals.get('ticket_ids'):
+                visit_date = self._get_visit_date_from_ticket_commands(
+                    vals.get('ticket_ids')
+                )
                 if visit_date:
                     vals['visit_date'] = visit_date
 
-        records = super(ClientServiceEvaluation, self).create(vals_list)
+            normalized_vals_list.append(vals)
+
+        records = super(ClientServiceEvaluation, self).create(normalized_vals_list)
 
         for record in records:
             partner_name = record.partner_id.name or 'Sin cliente'
             technician_name = record.technician_id.name or 'Sin técnico'
+            evaluator_name = record.evaluator_name or 'Sin persona registrada'
 
             evaluation_date_text = ''
             if record.evaluation_date:
@@ -316,6 +388,7 @@ class ClientServiceEvaluation(models.Model):
                         <ul>
                             <li><strong>Cliente:</strong> {partner_name}</li>
                             <li><strong>Técnico:</strong> {technician_name}</li>
+                            <li><strong>Persona evaluadora:</strong> {evaluator_name}</li>
                             <li><strong>Tickets:</strong> {len(record.ticket_ids)} ticket(s)</li>
                             <li><strong>Fecha:</strong> {evaluation_date_text}</li>
                         </ul>""",
@@ -717,6 +790,86 @@ ACCIONES URGENTES:
 
         return self._get_lima_today()
 
+    def _get_single_ticket_from_commands(self, commands):
+        """
+        Devuelve el primer ticket presente en comandos many2many.
+
+        Las evaluaciones nuevas se crean con un solo ticket, pero se conserva
+        ticket_ids para compatibilidad con el historial existente.
+        """
+        ticket_ids = []
+
+        if not commands:
+            return False
+
+        for command in commands:
+            if isinstance(command, (list, tuple)) and len(command) >= 2:
+                if command[0] == 6 and len(command) >= 3:
+                    ticket_ids.extend(command[2])
+                elif command[0] == 4:
+                    ticket_ids.append(command[1])
+
+        if not ticket_ids:
+            return False
+
+        return self.env['ticket.alquiler'].browse(ticket_ids[:1]).exists()
+
+    def _get_evaluator_snapshot_from_ticket(self, ticket):
+        """
+        Obtiene la persona que dio conformidad desde el ticket.
+
+        Durante desarrollo la conformidad NO es obligatoria. Si el ticket no
+        tiene visto bueno completo, devuelve valores vacíos y el envío utiliza
+        el correo histórico de partner_id como fallback.
+        """
+        if not ticket:
+            return {}
+
+        if 'conformidad_registrada' not in ticket._fields:
+            return {}
+
+        if not ticket.conformidad_registrada:
+            return {}
+
+        return {
+            'evaluator_contact_id': (
+                ticket.conformidad_contacto_id.id
+                if ticket.conformidad_contacto_id
+                else False
+            ),
+            'evaluator_name': ticket.conformidad_nombre or False,
+            'evaluator_dni': ticket.conformidad_dni or False,
+            'evaluator_mobile': ticket.conformidad_celular or False,
+            'evaluator_email': ticket.conformidad_correo or False,
+        }
+
+    def _get_recipient_email(self):
+        """
+        Destinatario real de la encuesta.
+
+        Prioridad:
+        1. Correo snapshot de quien firmó el ticket.
+        2. Correo actual del contacto de conformidad.
+        3. Correo de partner_id, para tickets antiguos o sin visto bueno.
+        """
+        self.ensure_one()
+
+        if self.evaluator_email:
+            return self.evaluator_email.strip()
+
+        if self.evaluator_contact_id and self.evaluator_contact_id.email:
+            return self.evaluator_contact_id.email.strip()
+
+        if self.partner_id and self.partner_id.email:
+            return self.partner_id.email.strip()
+
+        return False
+
+    def _get_mail_email_values(self):
+        self.ensure_one()
+        recipient = self._get_recipient_email()
+        return {'email_to': recipient} if recipient else {}
+
     def _get_visit_date_from_ticket_commands(self, commands):
         """
         Intenta obtener visit_date desde comandos many2many.
@@ -1031,7 +1184,11 @@ ACCIONES URGENTES:
         template = self.env.ref('sat.email_template_service_evaluation_reminder', False)
         if template:
             try:
-                template.send_mail(self.id, force_send=True)
+                template.send_mail(
+                    self.id,
+                    force_send=True,
+                    email_values=self._get_mail_email_values()
+                )
 
                 old_count = self.reminder_count
 
@@ -1044,7 +1201,7 @@ ACCIONES URGENTES:
                     body=f"""<p>🔔 <strong>Recordatorio Enviado</strong></p>
                             <ul>
                                 <li><strong>Recordatorio #{old_count + 1}</strong></li>
-                                <li><strong>Enviado a:</strong> {self.partner_id.email or 'Sin correo'}</li>
+                                <li><strong>Enviado a:</strong> {self._get_recipient_email() or 'Sin correo'}</li>
                                 <li><strong>Fecha:</strong> {fields.Datetime.context_timestamp(self, fields.Datetime.now()).strftime('%d/%m/%Y %H:%M')}</li>
                             </ul>""",
                     message_type='notification',
@@ -1073,7 +1230,11 @@ ACCIONES URGENTES:
         template = self.env.ref('sat.email_template_service_evaluation', False)
         if template:
             try:
-                template.send_mail(self.id, force_send=True)
+                template.send_mail(
+                    self.id,
+                    force_send=True,
+                    email_values=self._get_mail_email_values()
+                )
 
                 self.write({
                     'email_sent': True,
@@ -1085,7 +1246,7 @@ ACCIONES URGENTES:
                 self.message_post(
                     body=f"""<p>📧 <strong>Evaluación Reenviada</strong></p>
                             <ul>
-                                <li><strong>Enviado a:</strong> {self.partner_id.email or 'Sin correo'}</li>
+                                <li><strong>Enviado a:</strong> {self._get_recipient_email() or 'Sin correo'}</li>
                                 <li><strong>Fecha:</strong> {fields.Datetime.context_timestamp(self, fields.Datetime.now()).strftime('%d/%m/%Y %H:%M')}</li>
                             </ul>""",
                     message_type='notification',
@@ -1172,11 +1333,15 @@ ACCIONES URGENTES:
         """
         Cron para enviar evaluaciones.
 
-        - Busca tickets finalizados dentro de una ventana configurable.
-        - Agrupa por cliente + técnico + fecha de visita.
-        - Envía una sola evaluación aunque existan varios tickets/máquinas en esa visita.
-        - Ya NO inyecta 'retiro_tecnico' (campo legado, fuera de la encuesta):
-          las evaluaciones nacen sin respuestas pre-llenadas.
+        Regla nueva:
+        - 1 ticket finalizado = 1 evaluación.
+        - No agrupa máquinas por cliente/técnico/fecha.
+        - Si el ticket tiene conformidad registrada, usa como destinatario a
+          la persona que firmó.
+        - Mientras el nuevo flujo está en desarrollo, si el ticket no tiene
+          conformidad se mantiene como fallback el correo de partner_id.
+        - Las evaluaciones históricas con varios ticket_ids se conservan y
+          siguen evitando duplicados para esos tickets.
         """
         _logger.info("📧 Iniciando envío de evaluaciones de servicio...")
 
@@ -1197,121 +1362,101 @@ ACCIONES URGENTES:
             ]
 
             tickets = self.env['ticket.alquiler'].search(domain)
-            _logger.info(f"🎫 Se encontraron {len(tickets)} tickets finalizados dentro de la ventana de evaluación")
+            _logger.info(
+                f"🎫 Se encontraron {len(tickets)} tickets finalizados "
+                f"dentro de la ventana de evaluación"
+            )
 
             if not tickets:
                 _logger.info("✅ No hay tickets para evaluar")
                 return True
 
             already_evaluated_ticket_ids = self._get_tickets_already_in_evaluations(tickets)
-            pending_tickets = tickets.filtered(lambda ticket: ticket.id not in already_evaluated_ticket_ids)
+            pending_tickets = tickets.filtered(
+                lambda ticket: ticket.id not in already_evaluated_ticket_ids
+            )
 
             _logger.info(
                 f"🎫 Tickets pendientes de evaluación: {len(pending_tickets)} "
                 f"de {len(tickets)} encontrados"
             )
 
-            grouped_tickets = {}
-
-            for ticket in pending_tickets:
-                visit_date = self._get_ticket_visit_date(ticket)
-                key = (ticket.partner_id.id, ticket.responsable.id, visit_date)
-
-                if key not in grouped_tickets:
-                    grouped_tickets[key] = []
-
-                grouped_tickets[key].append(ticket.id)
-
             sent_count = 0
             error_count = 0
-            updated_count = 0
+            skipped_no_email_count = 0
 
-            for (partner_id, technician_id, visit_date), ticket_ids in grouped_tickets.items():
+            for ticket in pending_tickets:
                 try:
-                    partner = self.env['res.partner'].browse(partner_id)
-                    technician = self.env['res.users'].browse(technician_id)
-
-                    existing_eval = self._get_existing_evaluation_for_group(
-                        partner_id,
-                        technician_id,
-                        visit_date
-                    )
-
-                    if existing_eval:
-                        new_ticket_ids = list(set(existing_eval.ticket_ids.ids + ticket_ids))
-
-                        existing_eval.write({
-                            'ticket_ids': [(6, 0, new_ticket_ids)],
-                        })
-
-                        existing_eval.message_post(
-                            body=f"""<p>➕ <strong>Tickets agregados a evaluación existente</strong></p>
-                                    <ul>
-                                        <li><strong>Cliente:</strong> {partner.name}</li>
-                                        <li><strong>Técnico:</strong> {technician.name}</li>
-                                        <li><strong>Fecha de visita:</strong> {visit_date.strftime('%d/%m/%Y')}</li>
-                                        <li><strong>Total tickets:</strong> {len(new_ticket_ids)}</li>
-                                    </ul>""",
-                            message_type='notification',
-                            subtype_xmlid='mail.mt_note'
-                        )
-
-                        updated_count += 1
-
-                        _logger.info(
-                            f"⏭️ Evaluación existente actualizada: {existing_eval.name} - "
-                            f"Cliente: {partner.name}, Técnico: {technician.name}, "
-                            f"Visita: {visit_date}, Tickets: {len(new_ticket_ids)}"
-                        )
-
-                        continue
+                    partner = ticket.partner_id
+                    technician = ticket.responsable
+                    visit_date = self._get_ticket_visit_date(ticket)
 
                     evaluation = self.create({
-                        'ticket_ids': [(6, 0, ticket_ids)],
-                        'partner_id': partner_id,
-                        'technician_id': technician_id,
+                        'ticket_ids': [(6, 0, [ticket.id])],
+                        'partner_id': partner.id,
+                        'technician_id': technician.id,
                         'visit_date': visit_date,
                         'state': 'draft',
                     })
 
+                    recipient = evaluation._get_recipient_email()
+
                     _logger.info(
                         f"📋 Evaluación creada #{evaluation.name} - "
-                        f"Cliente: {partner.name}, "
-                        f"Técnico: {technician.name}, "
-                        f"Visita: {visit_date}, "
-                        f"Tickets: {len(ticket_ids)}"
+                        f"Ticket: {ticket.name}, Cliente: {partner.name}, "
+                        f"Técnico: {technician.name}, Visita: {visit_date}, "
+                        f"Destinatario: {recipient or 'Sin correo'}"
                     )
 
                     evaluation.message_post(
                         body=f"""<p>🤖 <strong>Evaluación Creada Automáticamente</strong></p>
                                 <ul>
+                                    <li><strong>Ticket:</strong> {ticket.name}</li>
                                     <li><strong>Cliente:</strong> {partner.name}</li>
                                     <li><strong>Técnico:</strong> {technician.name}</li>
+                                    <li><strong>Persona evaluadora:</strong> {evaluation.evaluator_name or 'No registrada'}</li>
+                                    <li><strong>Destinatario:</strong> {recipient or 'Sin correo'}</li>
                                     <li><strong>Fecha de visita:</strong> {visit_date.strftime('%d/%m/%Y')}</li>
-                                    <li><strong>Tickets procesados:</strong> {len(ticket_ids)}</li>
                                     <li><strong>Fecha de creación:</strong> {fields.Datetime.context_timestamp(evaluation, fields.Datetime.now()).strftime('%d/%m/%Y %H:%M')}</li>
                                 </ul>""",
                         message_type='notification',
                         subtype_xmlid='mail.mt_note'
                     )
 
+                    if not recipient:
+                        evaluation.write({
+                            'email_delivery_status': 'failed',
+                            'email_error_message': (
+                                'No existe correo del firmante ni correo del cliente para enviar la evaluación.'
+                            )
+                        })
+                        skipped_no_email_count += 1
+                        self.env.cr.commit()
+                        continue
+
                     template = self.env.ref('sat.email_template_service_evaluation', False)
 
                     if template:
                         try:
-                            template.send_mail(evaluation.id, force_send=True)
+                            template.send_mail(
+                                evaluation.id,
+                                force_send=True,
+                                email_values=evaluation._get_mail_email_values()
+                            )
 
                             evaluation.write({
                                 'state': 'sent',
                                 'email_sent': True,
                                 'email_sent_date': fields.Datetime.now(),
-                                'email_delivery_status': 'sent'
+                                'email_delivery_status': 'sent',
+                                'email_error_message': False
                             })
 
                             evaluation.message_post(
                                 body=f"""<p>✅ <strong>Correo Enviado Exitosamente</strong></p>
                                         <ul>
-                                            <li><strong>Destinatario:</strong> {partner.email or 'Sin correo'}</li>
+                                            <li><strong>Ticket:</strong> {ticket.name}</li>
+                                            <li><strong>Destinatario:</strong> {recipient}</li>
                                             <li><strong>Fecha de envío:</strong> {fields.Datetime.context_timestamp(evaluation, fields.Datetime.now()).strftime('%d/%m/%Y %H:%M')}</li>
                                             <li><strong>Estado:</strong> Enviado</li>
                                         </ul>""",
@@ -1319,12 +1464,18 @@ ACCIONES URGENTES:
                                 subtype_xmlid='mail.mt_note'
                             )
 
-                            _logger.info(f"✅ Correo enviado exitosamente para evaluación: {evaluation.name}")
+                            _logger.info(
+                                f"✅ Correo enviado exitosamente para evaluación: "
+                                f"{evaluation.name} / ticket {ticket.name}"
+                            )
                             sent_count += 1
 
                         except Exception as email_error:
                             error_msg = str(email_error)
-                            _logger.error(f"❌ Error al enviar correo para {evaluation.name}: {error_msg}")
+                            _logger.error(
+                                f"❌ Error al enviar correo para {evaluation.name}: "
+                                f"{error_msg}"
+                            )
 
                             evaluation.write({
                                 'email_delivery_status': 'failed',
@@ -1334,6 +1485,8 @@ ACCIONES URGENTES:
                             evaluation.message_post(
                                 body=f"""<p>❌ <strong>Error al Enviar Correo</strong></p>
                                         <ul>
+                                            <li><strong>Ticket:</strong> {ticket.name}</li>
+                                            <li><strong>Destinatario:</strong> {recipient}</li>
                                             <li><strong>Error:</strong> {error_msg}</li>
                                             <li><strong>Fecha:</strong> {fields.Datetime.context_timestamp(evaluation, fields.Datetime.now()).strftime('%d/%m/%Y %H:%M')}</li>
                                         </ul>""",
@@ -1360,9 +1513,7 @@ ACCIONES URGENTES:
 
                     _logger.error(
                         f"❌ Error al procesar evaluación - "
-                        f"Cliente: {partner_id}, "
-                        f"Técnico: {technician_id}, "
-                        f"Visita: {visit_date}: {error_msg}"
+                        f"Ticket: {ticket.id}: {error_msg}"
                     )
 
                     error_count += 1
@@ -1370,16 +1521,16 @@ ACCIONES URGENTES:
             _logger.info(
                 f"📊 Resumen de envío: "
                 f"Enviadas: {sent_count}, "
-                f"Actualizadas: {updated_count}, "
+                f"Sin correo: {skipped_no_email_count}, "
                 f"Errores: {error_count}, "
-                f"Total grupos procesados: {len(grouped_tickets)}"
+                f"Tickets procesados: {len(pending_tickets)}"
             )
 
             return True
 
         except Exception as e:
             self.env.cr.rollback()
-            _logger.error(f"❌ Error general en el cron de evaluaciones: {str(e)}")
+            _logger.error(f"❌ Error general en cron de evaluaciones: {str(e)}")
             raise
 
     @api.model
