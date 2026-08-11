@@ -383,6 +383,11 @@
     <field name="code">FUSER_UPPER</field>
     <field name="tipo_id" ref="comp_tipo_fusora"/>
   </record>
+  <record id="sub_fuser_reset_fuse" model="componente.subparte">
+    <field name="name">Fusible reseteador de fusor</field>
+    <field name="code">FUSER_RESET_FUSE</field>
+    <field name="tipo_id" ref="comp_tipo_fusora"/>
+</record>
   <record id="sub_fuser_film_washers" model="componente.subparte">
     <field name="name">Arandelas de la faja fusora</field>
     <field name="code">FUSER_FILM_WASHERS</field>
