@@ -393,14 +393,22 @@ class MantenimientoTecnicoAusencia(models.Model):
     @api.onchange('tipo')
     def _onchange_tipo(self):
         for rec in self:
-            if rec.tipo in ('permiso', 'falta'):
+            if rec.tipo == 'permiso':
+                # El permiso personal puede ser por día completo o por horas.
+                # No se fuerza dia_completo aquí porque esa decisión corresponde
+                # al solicitante.
+                rec.evaluacion_administrativa = 'pendiente'
+                rec.impacto_evaluacion = 'no_afecta_meta'
+
+                if rec.fecha_inicio and not rec.fecha_fin:
+                    rec.fecha_fin = rec.fecha_inicio
+
+            elif rec.tipo == 'falta':
                 rec.dia_completo = True
                 rec.hora_inicio = 0.0
                 rec.hora_fin = 24.0
+                rec.evaluacion_administrativa = 'pendiente'
                 rec.impacto_evaluacion = 'no_afecta_meta'
-
-                if not rec.evaluacion_administrativa or rec.evaluacion_administrativa == 'no_aplica':
-                    rec.evaluacion_administrativa = 'pendiente'
 
                 if rec.fecha_inicio and not rec.fecha_fin:
                     rec.fecha_fin = rec.fecha_inicio
@@ -427,6 +435,7 @@ class MantenimientoTecnicoAusencia(models.Model):
                 rec.hora_inicio = 0.0
                 rec.hora_fin = 24.0
                 rec.evaluacion_administrativa = 'no_aplica'
+                rec.impacto_evaluacion = 'reduce_meta'
 
                 if rec.fecha_inicio and not rec.fecha_fin:
                     rec.fecha_fin = rec.fecha_inicio
@@ -494,49 +503,186 @@ class MantenimientoTecnicoAusencia(models.Model):
     # ============================================================
 
     @api.model
-    def _normalize_vals(self, vals):
+    def _normalize_vals(self, vals, current=None, for_create=False):
+        """
+        Centraliza reglas de negocio que deben cumplirse independientemente
+        del origen del cambio: formulario web, Flutter, importación o API.
+
+        Los onchange se conservan únicamente para mejorar la experiencia visual
+        en Odoo. La autoridad real queda aquí y en los constraints/acciones.
+        """
         vals = dict(vals or {})
 
-        tipo = vals.get('tipo')
-        fecha_inicio = vals.get('fecha_inicio')
-        fecha_fin = vals.get('fecha_fin')
+        def current_value(field_name, default=False):
+            if field_name in vals:
+                return vals.get(field_name)
 
-        if fecha_inicio and not fecha_fin and tipo != 'enfermedad':
-            vals['fecha_fin'] = fecha_inicio
+            if current:
+                return current[field_name]
 
-        if vals.get('dia_completo') in (True, 'true', '1', 1):
+            return default
+
+        tipo = current_value('tipo', 'permiso') or 'permiso'
+        fecha_inicio = current_value('fecha_inicio', False)
+        fecha_fin = current_value('fecha_fin', False)
+        dia_completo = current_value('dia_completo', True)
+
+        type_changed = for_create or ('tipo' in vals)
+
+        # --------------------------------------------------------
+        # REGLAS POR TIPO
+        # --------------------------------------------------------
+
+        if tipo == 'permiso':
+            # Puede ser día completo o por horas.
+            if type_changed:
+                vals['evaluacion_administrativa'] = 'pendiente'
+                vals['impacto_evaluacion'] = 'no_afecta_meta'
+
+            if fecha_inicio and not fecha_fin:
+                vals['fecha_fin'] = fecha_inicio
+
+        elif tipo == 'falta':
+            vals['dia_completo'] = True
             vals['hora_inicio'] = 0.0
             vals['hora_fin'] = 24.0
 
-        if tipo:
-            if tipo in ('enfermedad', 'descanso_medico', 'vacaciones', 'capacitacion', 'bloqueo_admin'):
-                vals['evaluacion_administrativa'] = 'no_aplica'
+            if type_changed:
+                vals['evaluacion_administrativa'] = 'pendiente'
+                vals['impacto_evaluacion'] = 'no_afecta_meta'
 
-            elif tipo in ('permiso', 'falta'):
-                if not vals.get('evaluacion_administrativa'):
-                    vals['evaluacion_administrativa'] = 'pendiente'
+            if fecha_inicio and not fecha_fin:
+                vals['fecha_fin'] = fecha_inicio
 
-            if tipo in ('vacaciones', 'enfermedad', 'descanso_medico'):
-                vals.setdefault('impacto_evaluacion', 'reduce_meta')
+        elif tipo == 'vacaciones':
+            vals['dia_completo'] = True
+            vals['hora_inicio'] = 0.0
+            vals['hora_fin'] = 24.0
+            vals['evaluacion_administrativa'] = 'no_aplica'
+            vals['impacto_evaluacion'] = 'reduce_meta'
 
-            elif tipo in ('permiso', 'falta'):
-                vals.setdefault('impacto_evaluacion', 'no_afecta_meta')
+            if fecha_inicio and not fecha_fin:
+                vals['fecha_fin'] = fecha_inicio
 
-            elif tipo == 'capacitacion':
-                vals.setdefault('impacto_evaluacion', 'reduce_meta')
+        elif tipo == 'enfermedad':
+            vals['dia_completo'] = True
+            vals['hora_inicio'] = 0.0
+            vals['hora_fin'] = 24.0
+            vals['evaluacion_administrativa'] = 'no_aplica'
+            vals['impacto_evaluacion'] = 'reduce_meta'
+            # Enfermedad sí puede permanecer sin fecha fin.
 
-            elif tipo == 'bloqueo_admin':
-                vals.setdefault('impacto_evaluacion', 'revision_manual')
+        elif tipo == 'descanso_medico':
+            vals['dia_completo'] = True
+            vals['hora_inicio'] = 0.0
+            vals['hora_fin'] = 24.0
+            vals['evaluacion_administrativa'] = 'no_aplica'
+            vals['impacto_evaluacion'] = 'reduce_meta'
 
-        if vals.get('evaluacion_administrativa') == 'recuperar_horas':
+            if fecha_inicio and not fecha_fin:
+                vals['fecha_fin'] = fecha_inicio
+
+        elif tipo == 'capacitacion':
+            vals['evaluacion_administrativa'] = 'no_aplica'
+            vals['impacto_evaluacion'] = 'reduce_meta'
+
+            if type_changed and 'dia_completo' not in vals:
+                vals['dia_completo'] = False
+                dia_completo = False
+
+            if fecha_inicio and not fecha_fin:
+                vals['fecha_fin'] = fecha_inicio
+
+            effective_full_day = vals.get('dia_completo', dia_completo)
+
+            if not effective_full_day:
+                if 'hora_inicio' not in vals and (for_create or type_changed):
+                    vals['hora_inicio'] = 8.0
+
+                if 'hora_fin' not in vals and (for_create or type_changed):
+                    vals['hora_fin'] = 13.0
+
+        elif tipo == 'bloqueo_admin':
+            vals['evaluacion_administrativa'] = 'no_aplica'
+            vals['impacto_evaluacion'] = 'revision_manual'
+
+            if fecha_inicio and not fecha_fin:
+                vals['fecha_fin'] = fecha_inicio
+
+        # --------------------------------------------------------
+        # NORMALIZACIÓN DE JORNADA
+        # --------------------------------------------------------
+
+        effective_full_day = vals.get('dia_completo', dia_completo)
+
+        if effective_full_day in (True, 'true', '1', 1):
+            vals['dia_completo'] = True
+            vals['hora_inicio'] = 0.0
+            vals['hora_fin'] = 24.0
+
+        elif effective_full_day in (False, 'false', '0', 0):
+            vals['dia_completo'] = False
+
+            if tipo == 'capacitacion':
+                default_start = 8.0
+                default_end = 13.0
+            else:
+                default_start = 8.0
+                default_end = 17.0
+
+            if for_create or 'dia_completo' in vals or type_changed:
+                if not current_value('hora_inicio', False) and 'hora_inicio' not in vals:
+                    vals['hora_inicio'] = default_start
+
+                if (
+                    ('hora_fin' not in vals)
+                    and current_value('hora_fin', False) in (False, 0.0, 24.0)
+                ):
+                    vals['hora_fin'] = default_end
+
+        # --------------------------------------------------------
+        # EVALUACIÓN ADMINISTRATIVA / RECUPERACIÓN
+        # --------------------------------------------------------
+
+        effective_evaluation = vals.get(
+            'evaluacion_administrativa',
+            current_value('evaluacion_administrativa', False),
+        )
+
+        if effective_evaluation == 'recuperar_horas':
             vals['impacto_evaluacion'] = 'no_afecta_meta'
 
-            dia_completo = vals.get('dia_completo')
-            hora_inicio = vals.get('hora_inicio')
-            hora_fin = vals.get('hora_fin')
+            effective_full_day = vals.get(
+                'dia_completo',
+                current_value('dia_completo', True),
+            )
+            hora_inicio = vals.get(
+                'hora_inicio',
+                current_value('hora_inicio', 0.0),
+            )
+            hora_fin = vals.get(
+                'hora_fin',
+                current_value('hora_fin', 0.0),
+            )
 
-            if dia_completo in (False, 'false', '0', 0) and hora_fin and hora_inicio is not None and hora_fin > hora_inicio:
-                vals.setdefault('horas_a_recuperar', hora_fin - hora_inicio)
+            if (
+                effective_full_day in (False, 'false', '0', 0)
+                and hora_fin
+                and hora_inicio is not None
+                and hora_fin > hora_inicio
+            ):
+                vals.setdefault(
+                    'horas_a_recuperar',
+                    hora_fin - hora_inicio,
+                )
+
+        elif (
+            'evaluacion_administrativa' in vals
+            or type_changed
+        ):
+            vals['horas_a_recuperar'] = 0.0
+            vals['fecha_limite_recuperacion'] = False
+            vals['detalle_recuperacion'] = False
 
         return vals
     def _requiere_evaluacion_administrativa(self):
@@ -729,7 +875,11 @@ class MantenimientoTecnicoAusencia(models.Model):
         _logger.info("[Ausencias] === CREANDO AUSENCIA ===")
         _logger.info("[Ausencias] Valores recibidos: %s", vals)
 
-        vals = self._normalize_vals(vals)
+        vals = self._normalize_vals(
+            vals,
+            current=None,
+            for_create=True,
+        )
 
         if vals.get('name', 'Nuevo') == 'Nuevo':
             vals['name'] = self.env['ir.sequence'].next_by_code(
@@ -756,13 +906,22 @@ class MantenimientoTecnicoAusencia(models.Model):
         _logger.info("[Ausencias] Registros: %s", self.ids)
         _logger.info("[Ausencias] Valores recibidos: %s", vals)
 
-        vals = self._normalize_vals(vals)
+        # Se normaliza registro por registro porque un write múltiple puede
+        # afectar ausencias con tipos o valores actuales diferentes.
+        for rec in self:
+            normalized_vals = rec._normalize_vals(
+                vals,
+                current=rec,
+                for_create=False,
+            )
 
-        res = super().write(vals)
+            super(MantenimientoTecnicoAusencia, rec).write(
+                normalized_vals
+            )
 
         self._normalize_record_dates()
 
-        return res
+        return True
 
     # ============================================================
     # HELPERS OPERATIVOS
@@ -1068,11 +1227,32 @@ class MantenimientoTecnicoAusencia(models.Model):
 
     def _whatsapp_get_numero_nueva_solicitud(self):
         """
-        Número fijo que recibe la notificación cuando entra una nueva solicitud.
-        Isidro: 975399303
-        Formato usado por la API: 51 + número.
+        Devuelve el destinatario configurado para nuevas solicitudes.
+
+        Parámetro del sistema:
+            sat.permission_whatsapp_new_request_phone
+
+        Puede contener un número individual o un identificador de grupo
+        compatible con el gateway. El cambio de responsable no requiere
+        modificar código ni publicar nuevamente Flutter.
         """
-        return '51975399303'
+        ICP = self.env['ir.config_parameter'].sudo()
+
+        phone = (
+            ICP.get_param(
+                'sat.permission_whatsapp_new_request_phone'
+            )
+            or ''
+        ).strip()
+
+        if not phone:
+            _logger.warning(
+                "[Ausencias][WhatsApp] No está configurado "
+                "sat.permission_whatsapp_new_request_phone"
+            )
+            return False
+
+        return self._whatsapp_clean_phone(phone)
 
     def enviar_mensaje_whatsapp(self, phone, message):
         """
@@ -1330,26 +1510,32 @@ class MantenimientoTecnicoAusencia(models.Model):
     # ============================================================
 
     def _whatsapp_notificar_nueva_solicitud(self):
-        """
-        Nueva solicitud:
-        Se envía siempre a Isidro 975399303.
-        """
         self.ensure_one()
 
         phone = self._whatsapp_get_numero_nueva_solicitud()
-        mensaje = self._build_whatsapp_solicitud_recibida()
 
+        if not phone:
+            self.message_post(
+                body=_(
+                    "No se envió WhatsApp de nueva solicitud porque no existe "
+                    "un destinatario configurado."
+                ),
+                message_type='notification'
+            )
+            return False
+
+        mensaje = self._build_whatsapp_solicitud_recibida()
         enviado = self.enviar_mensaje_whatsapp(phone, mensaje)
 
         if enviado:
             self.message_post(
-                body=_("WhatsApp de nueva solicitud enviado a Isidro."),
+                body=_("WhatsApp de nueva solicitud enviado al responsable configurado."),
                 message_type='notification'
             )
             return True
 
         self.message_post(
-            body=_("No se pudo enviar WhatsApp de nueva solicitud a Isidro."),
+            body=_("No se pudo enviar WhatsApp de nueva solicitud al responsable configurado."),
             message_type='notification'
         )
         return False
