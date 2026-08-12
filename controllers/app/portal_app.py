@@ -5,7 +5,7 @@ import json
 import logging
 import re
 
-from odoo import http
+from odoo import fields, http
 from odoo.http import request
 
 
@@ -436,6 +436,122 @@ class AppPortalController(http.Controller):
 
         return digits
 
+    def _get_counter_freshness(
+        self,
+        equipment,
+        max_age_days=10,
+    ):
+        """
+        Determina si los contadores guardados pueden utilizarse
+        directamente para una solicitud de tóner.
+
+        Regla:
+        - 10 días o menos: contador vigente.
+        - Más de 10 días: pedir lectura manual.
+        - Sin fecha conocida: pedir lectura manual.
+
+        Se toma como fecha más reciente la mejor disponible entre
+        fecha_ultima_actualizacion y pt_last_sync.
+        """
+
+        dates = []
+
+        for field_name in (
+            "fecha_ultima_actualizacion",
+            "pt_last_sync",
+        ):
+            if field_name not in equipment._fields:
+                continue
+
+            raw_value = getattr(
+                equipment,
+                field_name,
+                False,
+            )
+
+            if not raw_value:
+                continue
+
+            try:
+                value = fields.Datetime.to_datetime(
+                    raw_value
+                )
+            except Exception:
+                value = False
+
+            if value:
+                dates.append(
+                    value
+                )
+
+        last_update = (
+            max(dates)
+            if dates
+            else False
+        )
+
+        if not last_update:
+            return {
+                "last_update": False,
+                "age_days": False,
+                "max_age_days": max_age_days,
+                "is_fresh": False,
+                "requires_manual_counter": True,
+                "reason": "missing_date",
+                "message": (
+                    "No existe una fecha reciente de contador. "
+                    "Ingresa el contador actual para continuar."
+                ),
+            }
+
+        now = fields.Datetime.now()
+
+        age_seconds = max(
+            0,
+            (
+                now
+                - last_update
+            ).total_seconds(),
+        )
+
+        age_days = int(
+            age_seconds // 86400
+        )
+
+        requires_manual = (
+            age_seconds
+            > (
+                max_age_days
+                * 86400
+            )
+        )
+
+        return {
+            "last_update": last_update,
+            "age_days": age_days,
+            "max_age_days": max_age_days,
+            "is_fresh": not requires_manual,
+            "requires_manual_counter": (
+                requires_manual
+            ),
+            "reason": (
+                "stale"
+                if requires_manual
+                else "fresh"
+            ),
+            "message": (
+                (
+                    "El contador registrado tiene más de "
+                    f"{max_age_days} días. Ingresa el contador "
+                    "actual para continuar."
+                )
+                if requires_manual
+                else (
+                    "El contador registrado está vigente."
+                )
+            ),
+        }
+
     def _get_toner_stock_info(
         self,
         equipment,
@@ -582,6 +698,12 @@ class AppPortalController(http.Controller):
             ),
             "has_auto_counters": bool(
                 equipment.has_auto_counters
+            ),
+            "counter_freshness": (
+                self._get_counter_freshness(
+                    equipment,
+                    max_age_days=10,
+                )
             ),
             "counters": {
                 "black": (
@@ -2439,9 +2561,24 @@ class AppPortalController(http.Controller):
                 status=400,
             )
 
-        def optional_counter(
+        counter_freshness = (
+            self._get_counter_freshness(
+                equipment,
+                max_age_days=5,
+            )
+        )
+
+        requires_manual_counter = bool(
+            counter_freshness.get(
+                "requires_manual_counter"
+            )
+        )
+
+        def read_counter(
             key,
-            fallback,
+            current_value,
+            required=False,
+            label="contador",
         ):
             raw = data.get(
                 key
@@ -2451,8 +2588,14 @@ class AppPortalController(http.Controller):
                 None,
                 "",
             ):
+                if required:
+                    raise ValueError(
+                        f"Ingresa el {label} actual "
+                        "para continuar."
+                    )
+
                 return int(
-                    fallback
+                    current_value
                     or 0
                 )
 
@@ -2465,28 +2608,49 @@ class AppPortalController(http.Controller):
                 ValueError,
             ):
                 raise ValueError(
-                    "El contador enviado "
-                    "no es válido."
+                    f"El {label} enviado no es válido."
                 )
 
             if value < 0:
                 raise ValueError(
-                    "El contador no puede "
-                    "ser negativo."
+                    f"El {label} no puede ser negativo."
+                )
+
+            stored_value = int(
+                current_value
+                or 0
+            )
+
+            if (
+                stored_value > 0
+                and value < stored_value
+            ):
+                raise ValueError(
+                    f"El {label} actual ({value}) no puede "
+                    f"ser menor al último registrado "
+                    f"({stored_value})."
                 )
 
             return value
 
         try:
-            counter_bn = optional_counter(
+            counter_bn = read_counter(
                 "counter_bn",
                 equipment.contador_bn,
+                required=(
+                    requires_manual_counter
+                ),
+                label="contador B/N",
             )
 
             counter_color = (
-                optional_counter(
+                read_counter(
                     "counter_color",
                     equipment.contador_color,
+                    required=(
+                        requires_manual_counter
+                    ),
+                    label="contador color",
                 )
                 if (
                     equipment.tipo_maquina_id
@@ -2499,9 +2663,16 @@ class AppPortalController(http.Controller):
             return self._json_response(
                 {
                     "success": False,
-                    "code": "INVALID_COUNTER",
+                    "code": (
+                        "COUNTER_UPDATE_REQUIRED"
+                        if requires_manual_counter
+                        else "INVALID_COUNTER"
+                    ),
                     "message": str(
                         error
+                    ),
+                    "counter_freshness": (
+                        counter_freshness
                     ),
                 },
                 status=400,
@@ -2690,6 +2861,53 @@ class AppPortalController(http.Controller):
                 status=500,
             )
 
+        # Si la lectura anterior estaba vencida o no tenía fecha,
+        # los valores enviados por el cliente pasan a ser la nueva
+        # lectura vigente del equipo.
+        #
+        # No actualizamos la fecha cuando el contador ya era reciente,
+        # porque Flutter puede reenviar el mismo valor almacenado y eso
+        # falsearía la antigüedad real de la lectura.
+        if requires_manual_counter:
+            counter_vals = {
+                "contador_bn": (
+                    counter_bn
+                ),
+                "fecha_ultima_actualizacion": (
+                    fields.Datetime.now()
+                ),
+            }
+
+            if (
+                equipment.tipo_maquina_id
+                == "color"
+            ):
+                counter_vals[
+                    "contador_color"
+                ] = counter_color
+
+            try:
+                equipment.sudo().write(
+                    counter_vals
+                )
+
+                _logger.info(
+                    "[APP PORTAL] Contadores actualizados "
+                    "desde solicitud de tóner equipment=%s "
+                    "bn=%s color=%s",
+                    equipment.id,
+                    counter_bn,
+                    counter_color,
+                )
+
+            except Exception:
+                _logger.exception(
+                    "[APP PORTAL] La solicitud de tóner se creó, "
+                    "pero no se pudo actualizar el contador del "
+                    "equipo=%s",
+                    equipment.id,
+                )
+
         submission_id = (
             result.get(
                 "submission_id"
@@ -2726,6 +2944,12 @@ class AppPortalController(http.Controller):
                     "registrada correctamente."
                 ),
                 "validation": validation,
+                "counter_freshness": (
+                    self._get_counter_freshness(
+                        equipment,
+                        max_age_days=10,
+                    )
+                ),
                 "request": (
                     self._serialize_toner_request(
                         submission
@@ -2817,9 +3041,13 @@ class AppPortalController(http.Controller):
                 )
             )
 
+            report_sudo = (
+                report.sudo()
+            )
+
             pdf_content, _report_type = (
-                report.sudo()._render_qweb_pdf(
-                    report.report_name,
+                report_sudo._render_qweb_pdf(
+                    report_sudo.report_name,
                     [
                         ticket.id
                     ],
