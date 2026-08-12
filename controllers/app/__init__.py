@@ -8,3 +8,4 @@ from . import repair
 from . import permission
 from . import profile
 from . import service_approval
+from . import portal_app
