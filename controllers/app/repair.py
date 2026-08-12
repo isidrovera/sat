@@ -1011,7 +1011,49 @@ class AppRepairController(AppBaseController):
 
         result.update(
             {
-                "report": repair.informe or "",
+                # ------------------------------------------------
+                # CAMPOS HTML
+                # ------------------------------------------------
+                # Odoo guarda ambos valores como fields.Html.
+                #
+                # Se mantienen SIN convertir a texto plano para que
+                # Flutter pueda renderizar correctamente párrafos,
+                # listas, negritas, saltos de línea, etc.
+                #
+                # "report" se conserva por compatibilidad con la app
+                # actual. Los nombres *_html son los campos explícitos
+                # que usaremos en la nueva interfaz.
+                "provider_failure_html": (
+                    repair.falla_proveedor
+                    if (
+                        "falla_proveedor"
+                        in repair._fields
+                        and repair.falla_proveedor
+                    )
+                    else ""
+                ),
+                "report_html": (
+                    repair.informe
+                    if (
+                        "informe"
+                        in repair._fields
+                        and repair.informe
+                    )
+                    else ""
+                ),
+                "report": (
+                    repair.informe
+                    if (
+                        "informe"
+                        in repair._fields
+                        and repair.informe
+                    )
+                    else ""
+                ),
+                "provider_problem_photo_available": bool(
+                    "foto_problema" in repair._fields
+                    and repair.foto_problema
+                ),
                 "quality": (
                     repair.calidad_id
                     if "calidad_id"
@@ -1476,6 +1518,7 @@ class AppRepairController(AppBaseController):
             data = self._get_json_body()
 
             allowed = {
+                "falla_proveedor",
                 "informe",
                 "contometrok_id",
                 "calidad_id",
