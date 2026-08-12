@@ -1477,7 +1477,7 @@
             <field name="model_id" ref="model_toner_counter_submission"/>
             <field name="subject">⏳ Aprobación requerida - {{ object.secuencia }} - {{ object.partner_id.name or 'Sin cliente' }}</field>
             <field name="email_from">soporte@andescopiers.com.pe</field>
-            <field name="email_to">lincoln@andescopiersc.com.pe</field>
+            <field name="email_to">lincoln@corapsac.com</field>
             <field name="email_cc">salvarez@andescopiers.com.pe</field>
             <field name="auto_delete" eval="True"/>
             <field name="body_html"><![CDATA[
