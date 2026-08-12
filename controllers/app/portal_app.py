@@ -891,10 +891,107 @@ class AppPortalController(http.Controller):
                     equipment.has_auto_counters
                 ),
             },
-            # El modelo alquiler actualmente no tiene un campo
-            # confirmado de "próximo mantenimiento".
-            # Se mantiene nulo hasta definir su fuente real.
-            "next_maintenance_date": False,
+            # Próximo mantenimiento.
+            #
+            # Prioridad:
+            # 1) fecha_programada_mantenimiento:
+            #    fecha real asignada por el planificador.
+            # 2) fecha_recurrente:
+            #    fecha ideal calculada por la recurrencia.
+            #
+            # Los campos se leen de forma defensiva porque pertenecen
+            # a extensiones del modelo alquiler.
+            "next_maintenance_date": (
+                self._field_value(
+                    equipment,
+                    "fecha_programada_mantenimiento",
+                    False,
+                )
+                or self._field_value(
+                    equipment,
+                    "fecha_recurrente",
+                    False,
+                )
+                or False
+            ),
+            "maintenance": {
+                "scheduled_date": (
+                    self._field_value(
+                        equipment,
+                        "fecha_programada_mantenimiento",
+                        False,
+                    )
+                ),
+                "ideal_date": (
+                    self._field_value(
+                        equipment,
+                        "fecha_recurrente",
+                        False,
+                    )
+                ),
+                "scheduled_hour": (
+                    self._field_value(
+                        equipment,
+                        "hora_programada_mantenimiento",
+                        False,
+                    )
+                ),
+                "duration_hours": (
+                    self._field_value(
+                        equipment,
+                        "duracion_mantenimiento_horas",
+                        False,
+                    )
+                ),
+                "status": (
+                    self._field_value(
+                        equipment,
+                        "estado_planificacion_mantenimiento",
+                        "",
+                    )
+                    or ""
+                ),
+                "status_label": (
+                    self._selection_label(
+                        equipment,
+                        "estado_planificacion_mantenimiento",
+                    )
+                    if (
+                        "estado_planificacion_mantenimiento"
+                        in equipment._fields
+                    )
+                    else ""
+                ),
+                "technician": (
+                    equipment.tecnico_mantenimiento_id.name
+                    if (
+                        "tecnico_mantenimiento_id"
+                        in equipment._fields
+                        and equipment.tecnico_mantenimiento_id
+                    )
+                    else ""
+                ),
+                "zone": (
+                    equipment.zona_mantenimiento_id.name
+                    if (
+                        "zona_mantenimiento_id"
+                        in equipment._fields
+                        and equipment.zona_mantenimiento_id
+                    )
+                    else ""
+                ),
+                "technicians_required": (
+                    self._int_field(
+                        equipment,
+                        "cantidad_tecnicos_mantenimiento",
+                    )
+                    if (
+                        "cantidad_tecnicos_mantenimiento"
+                        in equipment._fields
+                    )
+                    else 0
+                ),
+            },
         }
 
     def _serialize_ticket_summary(
