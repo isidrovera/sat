@@ -2818,10 +2818,11 @@ class AppPortalController(http.Controller):
             )
 
             pdf_content, _report_type = (
-                report.sudo().render_qweb_pdf(
+                report.sudo()._render_qweb_pdf(
+                    report.report_name,
                     [
                         ticket.id
-                    ]
+                    ],
                 )
             )
 
