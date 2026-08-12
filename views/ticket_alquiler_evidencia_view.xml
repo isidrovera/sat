@@ -47,6 +47,7 @@
                             <field name="momento" readonly="1"/>
                             <field name="timestamp_captura" readonly="1"/>
                             <field name="imagen_original_filename" readonly="1"/>
+                            <field name="imagen_procesada_filename" readonly="1"/>
                         </group>
 
                         <group string="Ubicación GPS">
@@ -78,10 +79,18 @@
                             border-radius:10px;
                             box-shadow:0 10px 28px rgba(0,0,0,0.30);
                         ">
+                            <field name="imagen_procesada"
+                                   widget="image"
+                                   readonly="1"
+                                   nolabel="1"
+                                   invisible="not imagen_procesada"
+                                   options="{'size': [1200, 0]}"/>
+
                             <field name="imagen_original"
                                    widget="image"
                                    readonly="1"
                                    nolabel="1"
+                                   invisible="imagen_procesada"
                                    options="{'size': [1200, 0]}"/>
                         </div>
                     </div>
@@ -95,9 +104,10 @@
                         color:#6b7280;
                         font-size:13px;
                     ">
-                        💡 Si la imagen se ve reducida dentro del modal, usa
-                        <strong>“Abrir original”</strong> para verla en tamaño completo
-                        o <strong>“Descargar”</strong> para guardarla.
+                        💡 La vista principal muestra la imagen procesada cuando existe
+                        (fecha, ubicación y precisión GPS). Usa
+                        <strong>“Abrir original”</strong> para consultar la fotografía
+                        sin marcas o <strong>“Descargar”</strong> para guardarla.
                     </div>
 
                     <separator string="Información técnica"/>
@@ -175,6 +185,7 @@
                         <kanban records_draggable="0" create="0" edit="0" delete="0" class="o_evidencia_kanban">
                             <field name="id"/>
                             <field name="imagen_original"/>
+                            <field name="imagen_procesada"/>
                             <field name="timestamp_captura"/>
                             <field name="latitud"/>
                             <field name="longitud"/>
@@ -191,9 +202,16 @@
                                                 title="Ver foto"
                                                 style="display:block; width:100%; border:0; background:transparent; padding:0; cursor:zoom-in; text-align:left;">
                                             <div style="position:relative; width:100%; height:150px; overflow:hidden; border-radius:8px; background:#f1f5f9; border:1px solid #e5e7eb;">
-                                                <img t-att-src="kanban_image('ticket.evidencia.foto', 'imagen_original', record.id.raw_value)"
-                                                     alt="Foto evidencia antes"
-                                                     style="width:100%; height:100%; object-fit:cover; display:block;"/>
+                                                <t t-if="record.imagen_procesada.raw_value">
+                                                    <img t-att-src="kanban_image('ticket.evidencia.foto', 'imagen_procesada', record.id.raw_value)"
+                                                         alt="Foto evidencia antes procesada"
+                                                         style="width:100%; height:100%; object-fit:cover; display:block;"/>
+                                                </t>
+                                                <t t-else="">
+                                                    <img t-att-src="kanban_image('ticket.evidencia.foto', 'imagen_original', record.id.raw_value)"
+                                                         alt="Foto evidencia antes original"
+                                                         style="width:100%; height:100%; object-fit:cover; display:block;"/>
+                                                </t>
 
                                                 <div style="position:absolute; left:8px; top:8px; padding:3px 8px; border-radius:999px; background:rgba(22,163,74,0.92); color:white; font-size:11px; font-weight:700;">
                                                     ANTES
@@ -201,6 +219,11 @@
 
                                                 <div style="position:absolute; right:8px; bottom:8px; padding:4px 8px; border-radius:999px; background:rgba(0,0,0,0.62); color:white; font-size:11px;">
                                                     🔍 Ver
+                                                </div>
+
+                                                <div t-if="record.imagen_procesada.raw_value"
+                                                     style="position:absolute; right:8px; top:8px; padding:3px 8px; border-radius:999px; background:rgba(2,122,72,0.92); color:white; font-size:10px; font-weight:700;">
+                                                    GPS
                                                 </div>
                                             </div>
                                         </button>
@@ -257,6 +280,7 @@
                         <kanban records_draggable="0" create="0" edit="0" delete="0" class="o_evidencia_kanban">
                             <field name="id"/>
                             <field name="imagen_original"/>
+                            <field name="imagen_procesada"/>
                             <field name="timestamp_captura"/>
                             <field name="latitud"/>
                             <field name="longitud"/>
@@ -273,9 +297,16 @@
                                                 title="Ver foto"
                                                 style="display:block; width:100%; border:0; background:transparent; padding:0; cursor:zoom-in; text-align:left;">
                                             <div style="position:relative; width:100%; height:150px; overflow:hidden; border-radius:8px; background:#f1f5f9; border:1px solid #e5e7eb;">
-                                                <img t-att-src="kanban_image('ticket.evidencia.foto', 'imagen_original', record.id.raw_value)"
-                                                     alt="Foto evidencia después"
-                                                     style="width:100%; height:100%; object-fit:cover; display:block;"/>
+                                                <t t-if="record.imagen_procesada.raw_value">
+                                                    <img t-att-src="kanban_image('ticket.evidencia.foto', 'imagen_procesada', record.id.raw_value)"
+                                                         alt="Foto evidencia después procesada"
+                                                         style="width:100%; height:100%; object-fit:cover; display:block;"/>
+                                                </t>
+                                                <t t-else="">
+                                                    <img t-att-src="kanban_image('ticket.evidencia.foto', 'imagen_original', record.id.raw_value)"
+                                                         alt="Foto evidencia después original"
+                                                         style="width:100%; height:100%; object-fit:cover; display:block;"/>
+                                                </t>
 
                                                 <div style="position:absolute; left:8px; top:8px; padding:3px 8px; border-radius:999px; background:rgba(37,99,235,0.92); color:white; font-size:11px; font-weight:700;">
                                                     DESPUÉS
@@ -283,6 +314,11 @@
 
                                                 <div style="position:absolute; right:8px; bottom:8px; padding:4px 8px; border-radius:999px; background:rgba(0,0,0,0.62); color:white; font-size:11px;">
                                                     🔍 Ver
+                                                </div>
+
+                                                <div t-if="record.imagen_procesada.raw_value"
+                                                     style="position:absolute; right:8px; top:8px; padding:3px 8px; border-radius:999px; background:rgba(2,122,72,0.92); color:white; font-size:10px; font-weight:700;">
+                                                    GPS
                                                 </div>
                                             </div>
                                         </button>
