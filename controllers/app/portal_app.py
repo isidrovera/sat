@@ -2813,7 +2813,7 @@ class AppPortalController(http.Controller):
         try:
             report = (
                 request.env.ref(
-                    "sat.report_template_id"
+                    "sat.action_ticket_alquiler"
                 )
             )
 
