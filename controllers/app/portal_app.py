@@ -702,6 +702,511 @@ class AppPortalController(http.Controller):
             "colors": colors,
         }
 
+    def _serialize_delivery_confirmation(
+        self,
+        confirmation,
+    ):
+        """
+        Información de confirmación visible para el cliente.
+
+        No expone notas internas ni datos de gestión que no correspondan
+        al seguimiento de la entrega.
+        """
+
+        if not confirmation:
+            return False
+
+        delivered_by = ""
+
+        if (
+            "delivered_by_user"
+            in confirmation._fields
+            and confirmation.delivered_by_user
+        ):
+            delivered_by = (
+                confirmation.delivered_by_user.name
+                or ""
+            )
+
+        return {
+            "id": confirmation.id,
+            "number": (
+                self._field_value(
+                    confirmation,
+                    "secuencia",
+                    "",
+                )
+                or ""
+            ),
+            "state": (
+                self._field_value(
+                    confirmation,
+                    "state",
+                    "",
+                )
+                or ""
+            ),
+            "state_label": (
+                self._selection_label(
+                    confirmation,
+                    "state",
+                )
+                if "state"
+                in confirmation._fields
+                else ""
+            ),
+            "validation_status": (
+                self._field_value(
+                    confirmation,
+                    "validation_status",
+                    "",
+                )
+                or ""
+            ),
+            "validation_status_label": (
+                self._selection_label(
+                    confirmation,
+                    "validation_status",
+                )
+                if "validation_status"
+                in confirmation._fields
+                else ""
+            ),
+            "delivery_date": (
+                self._field_value(
+                    confirmation,
+                    "delivery_date",
+                    False,
+                )
+            ),
+            "delivery_time": (
+                self._field_value(
+                    confirmation,
+                    "delivery_time",
+                    0,
+                )
+                or 0
+            ),
+            "delivered_by": delivered_by,
+            "received_by": {
+                "name": (
+                    self._field_value(
+                        confirmation,
+                        "received_by_name",
+                        "",
+                    )
+                    or ""
+                ),
+                "position": (
+                    self._field_value(
+                        confirmation,
+                        "received_by_position",
+                        "",
+                    )
+                    or ""
+                ),
+                "dni": (
+                    self._field_value(
+                        confirmation,
+                        "received_by_dni",
+                        "",
+                    )
+                    or ""
+                ),
+            },
+            "delivered_toners": {
+                "black": self._int_field(
+                    confirmation,
+                    "toner_black_delivered",
+                ),
+                "cyan": self._int_field(
+                    confirmation,
+                    "toner_cyan_delivered",
+                ),
+                "magenta": self._int_field(
+                    confirmation,
+                    "toner_magenta_delivered",
+                ),
+                "yellow": self._int_field(
+                    confirmation,
+                    "toner_yellow_delivered",
+                ),
+            },
+            "total_delivered": self._int_field(
+                confirmation,
+                "total_delivered",
+            ),
+            "delivery_notes": (
+                self._field_value(
+                    confirmation,
+                    "delivery_notes",
+                    "",
+                )
+                or ""
+            ),
+            "storage_location": (
+                self._field_value(
+                    confirmation,
+                    "storage_location",
+                    "",
+                )
+                or ""
+            ),
+            "installation_required": (
+                self._bool_field(
+                    confirmation,
+                    "installation_required",
+                )
+            ),
+            "installation_notes": (
+                self._field_value(
+                    confirmation,
+                    "installation_notes",
+                    "",
+                )
+                or ""
+            ),
+            "has_delivery_photo": bool(
+                self._field_value(
+                    confirmation,
+                    "delivery_photo",
+                    False,
+                )
+            ),
+            "has_client_signature": bool(
+                self._field_value(
+                    confirmation,
+                    "client_signature",
+                    False,
+                )
+            ),
+        }
+
+
+    def _serialize_delivery_schedule(
+        self,
+        schedule,
+    ):
+        """
+        Seguimiento de despacho visible para el cliente.
+
+        Importante:
+        - NO devuelve internal_notes.
+        - NO devuelve usuarios internos salvo el nombre de quien entrega
+          dentro de la confirmación final.
+        """
+
+        if not schedule:
+            return False
+
+        confirmation = (
+            schedule.confirmation_id
+            if (
+                "confirmation_id"
+                in schedule._fields
+                and schedule.confirmation_id
+            )
+            else False
+        )
+
+        return {
+            "id": schedule.id,
+            "number": (
+                self._field_value(
+                    schedule,
+                    "secuencia",
+                    "",
+                )
+                or ""
+            ),
+            "state": (
+                self._field_value(
+                    schedule,
+                    "state",
+                    "",
+                )
+                or ""
+            ),
+            "state_label": (
+                self._selection_label(
+                    schedule,
+                    "state",
+                )
+                if "state"
+                in schedule._fields
+                else ""
+            ),
+            "planned_date": (
+                self._field_value(
+                    schedule,
+                    "delivery_date_planned",
+                    False,
+                )
+            ),
+            "confirmed_date": (
+                self._field_value(
+                    schedule,
+                    "delivery_date_confirmed",
+                    False,
+                )
+            ),
+            "actual_date": (
+                self._field_value(
+                    schedule,
+                    "delivery_date_actual",
+                    False,
+                )
+            ),
+            "priority": (
+                self._field_value(
+                    schedule,
+                    "priority",
+                    "",
+                )
+                or ""
+            ),
+            "priority_label": (
+                self._selection_label(
+                    schedule,
+                    "priority",
+                )
+                if "priority"
+                in schedule._fields
+                else ""
+            ),
+            "urgent": self._bool_field(
+                schedule,
+                "urgente",
+            ),
+            "delivery_method": (
+                self._field_value(
+                    schedule,
+                    "delivery_method",
+                    "",
+                )
+                or ""
+            ),
+            "delivery_method_label": (
+                self._selection_label(
+                    schedule,
+                    "delivery_method",
+                )
+                if "delivery_method"
+                in schedule._fields
+                else ""
+            ),
+            "delivery_address": (
+                self._field_value(
+                    schedule,
+                    "delivery_address",
+                    "",
+                )
+                or ""
+            ),
+            "contact": {
+                "name": (
+                    self._field_value(
+                        schedule,
+                        "contact_person",
+                        "",
+                    )
+                    or ""
+                ),
+                "phone": (
+                    self._field_value(
+                        schedule,
+                        "contact_phone",
+                        "",
+                    )
+                    or ""
+                ),
+            },
+            "delivery_company": (
+                self._field_value(
+                    schedule,
+                    "delivery_company",
+                    "",
+                )
+                or ""
+            ),
+            "tracking_number": (
+                self._field_value(
+                    schedule,
+                    "tracking_number",
+                    "",
+                )
+                or ""
+            ),
+            "delivery_status": (
+                self._field_value(
+                    schedule,
+                    "delivery_status",
+                    "",
+                )
+                or ""
+            ),
+            "delivery_status_label": (
+                self._selection_label(
+                    schedule,
+                    "delivery_status",
+                )
+                if "delivery_status"
+                in schedule._fields
+                else ""
+            ),
+            "days_until_delivery": self._int_field(
+                schedule,
+                "days_until_delivery",
+            ),
+            "is_overdue": self._bool_field(
+                schedule,
+                "is_overdue",
+            ),
+            "toners": {
+                "black": self._int_field(
+                    schedule,
+                    "toner_black_qty",
+                ),
+                "cyan": self._int_field(
+                    schedule,
+                    "toner_cyan_qty",
+                ),
+                "magenta": self._int_field(
+                    schedule,
+                    "toner_magenta_qty",
+                ),
+                "yellow": self._int_field(
+                    schedule,
+                    "toner_yellow_qty",
+                ),
+            },
+            "total_units": self._int_field(
+                schedule,
+                "total_units",
+            ),
+            "confirmation": (
+                self._serialize_delivery_confirmation(
+                    confirmation
+                )
+                if confirmation
+                else False
+            ),
+        }
+
+
+    def _serialize_toner_workflow(
+        self,
+        submission,
+    ):
+        """
+        Progreso simplificado para Flutter.
+
+        Mantiene el estado real de Odoo, pero agrupa el flujo en pasos
+        comprensibles para el cliente.
+        """
+
+        state = (
+            self._field_value(
+                submission,
+                "state",
+                "",
+            )
+            or ""
+        )
+
+        terminal_status = ""
+
+        if state == "rechazada_gerencia":
+            terminal_status = "rejected"
+        elif state == "cancelada":
+            terminal_status = "cancelled"
+        elif state == "devuelta":
+            terminal_status = "correction_required"
+
+        state_rank = {
+            "recibida": 0,
+            "evaluacion": 1,
+            "pendiente_gerencia": 2,
+            "aprobada_gerencia": 3,
+            "confirmacion_ventas": 4,
+            "lista_despacho": 5,
+            "en_despacho": 6,
+            "entregada": 7,
+            "rechazada_gerencia": 2,
+            "devuelta": 1,
+            "cancelada": 0,
+        }
+
+        rank = state_rank.get(
+            state,
+            0,
+        )
+
+        steps = [
+            {
+                "key": "received",
+                "label": "Solicitud recibida",
+                "completed": rank >= 0,
+                "active": state == "recibida",
+            },
+            {
+                "key": "evaluation",
+                "label": "En evaluación",
+                "completed": rank >= 1,
+                "active": state in (
+                    "evaluacion",
+                    "devuelta",
+                ),
+            },
+            {
+                "key": "approval",
+                "label": "Aprobación",
+                "completed": rank >= 3,
+                "active": state in (
+                    "pendiente_gerencia",
+                    "aprobada_gerencia",
+                    "rechazada_gerencia",
+                ),
+            },
+            {
+                "key": "stock",
+                "label": "Confirmación de stock",
+                "completed": rank >= 5,
+                "active": state == "confirmacion_ventas",
+            },
+            {
+                "key": "dispatch",
+                "label": "Despacho",
+                "completed": rank >= 6,
+                "active": state in (
+                    "lista_despacho",
+                    "en_despacho",
+                ),
+            },
+            {
+                "key": "delivered",
+                "label": "Entregada",
+                "completed": state == "entregada",
+                "active": state == "entregada",
+            },
+        ]
+
+        return {
+            "state": state,
+            "state_label": (
+                self._selection_label(
+                    submission,
+                    "state",
+                )
+                if "state"
+                in submission._fields
+                else state
+            ),
+            "terminal_status": terminal_status,
+            "steps": steps,
+        }
+
+
     def _serialize_toner_request(
         self,
         submission,
@@ -788,6 +1293,16 @@ class AppPortalController(http.Controller):
                 "",
             )
             or ""
+        )
+
+        delivery = (
+            submission.delivery_scheduled_id
+            if (
+                "delivery_scheduled_id"
+                in submission._fields
+                and submission.delivery_scheduled_id
+            )
+            else False
         )
 
         return {
@@ -913,6 +1428,18 @@ class AppPortalController(http.Controller):
                     "",
                 )
                 or ""
+            ),
+            "workflow": (
+                self._serialize_toner_workflow(
+                    submission
+                )
+            ),
+            "delivery": (
+                self._serialize_delivery_schedule(
+                    delivery
+                )
+                if delivery
+                else False
             ),
         }
 
