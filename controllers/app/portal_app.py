@@ -439,56 +439,40 @@ class AppPortalController(http.Controller):
     def _get_counter_freshness(
         self,
         equipment,
-        max_age_days=10,
+        max_age_days=5,
     ):
         """
         Determina si los contadores guardados pueden utilizarse
         directamente para una solicitud de tóner.
 
         Regla:
-        - 10 días o menos: contador vigente.
-        - Más de 10 días: pedir lectura manual.
+        - 5 días o menos: contador vigente.
+        - Más de 5 días: pedir lectura manual.
         - Sin fecha conocida: pedir lectura manual.
 
-        Se toma como fecha más reciente la mejor disponible entre
-        fecha_ultima_actualizacion y pt_last_sync.
+        Se usa únicamente fecha_ultima_actualizacion, porque representa
+        la fecha real de actualización de los contadores.
         """
 
-        dates = []
-
-        for field_name in (
-            "fecha_ultima_actualizacion",
-            "pt_last_sync",
-        ):
-            if field_name not in equipment._fields:
-                continue
-
-            raw_value = getattr(
-                equipment,
-                field_name,
-                False,
+        raw_value = (
+            equipment.fecha_ultima_actualizacion
+            if (
+                "fecha_ultima_actualizacion"
+                in equipment._fields
             )
-
-            if not raw_value:
-                continue
-
-            try:
-                value = fields.Datetime.to_datetime(
-                    raw_value
-                )
-            except Exception:
-                value = False
-
-            if value:
-                dates.append(
-                    value
-                )
-
-        last_update = (
-            max(dates)
-            if dates
             else False
         )
+
+        try:
+            last_update = (
+                fields.Datetime.to_datetime(
+                    raw_value
+                )
+                if raw_value
+                else False
+            )
+        except Exception:
+            last_update = False
 
         if not last_update:
             return {
@@ -702,7 +686,7 @@ class AppPortalController(http.Controller):
             "counter_freshness": (
                 self._get_counter_freshness(
                     equipment,
-                    max_age_days=10,
+                    max_age_days=5,
                 )
             ),
             "counters": {
@@ -2947,7 +2931,7 @@ class AppPortalController(http.Controller):
                 "counter_freshness": (
                     self._get_counter_freshness(
                         equipment,
-                        max_age_days=10,
+                        max_age_days=5,
                     )
                 ),
                 "request": (
