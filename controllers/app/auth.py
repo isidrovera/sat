@@ -272,6 +272,59 @@ class AppAuthController(http.Controller):
 
         return result
 
+    def _get_user_access(
+        self,
+        user,
+    ):
+        """
+        Determina el tipo de usuario para la app a partir de
+        los grupos estándar de Odoo.
+
+        Prioridad:
+        - Usuario interno: base.group_user
+        - Usuario portal: base.group_portal
+
+        La respuesta es aditiva y no modifica la autenticación,
+        la sesión ni el flujo de 2FA.
+        """
+
+        user.ensure_one()
+
+        is_internal = bool(
+            user.has_group(
+                "base.group_user"
+            )
+        )
+
+        is_portal = bool(
+            user.has_group(
+                "base.group_portal"
+            )
+        )
+
+        if is_internal:
+            return {
+                "user_type": "internal",
+                "app_role": "internal",
+                "is_internal": True,
+                "is_portal": False,
+            }
+
+        if is_portal:
+            return {
+                "user_type": "portal",
+                "app_role": "customer",
+                "is_internal": False,
+                "is_portal": True,
+            }
+
+        return {
+            "user_type": "other",
+            "app_role": "unknown",
+            "is_internal": False,
+            "is_portal": False,
+        }
+
     def _serialize_user(
         self,
         user,
@@ -340,6 +393,10 @@ class AppAuthController(http.Controller):
 
         company = user.company_id
 
+        access = self._get_user_access(
+            user
+        )
+
         return {
             "id": user.id,
             "name": user.name,
@@ -351,6 +408,18 @@ class AppAuthController(http.Controller):
             "active": bool(
                 user.active
             ),
+            "user_type": access[
+                "user_type"
+            ],
+            "app_role": access[
+                "app_role"
+            ],
+            "is_internal": access[
+                "is_internal"
+            ],
+            "is_portal": access[
+                "is_portal"
+            ],
             "company": {
                 "id": company.id,
                 "name": company.name,
