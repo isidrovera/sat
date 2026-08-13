@@ -9,7 +9,6 @@
         <field name="name">app.push.device.list</field>
         <field name="model">app.push.device</field>
         <field name="arch" type="xml">
-
             <list
                 string="Dispositivos Push"
                 create="false"
@@ -52,7 +51,6 @@
                     optional="show"/>
 
             </list>
-
         </field>
     </record>
 
@@ -65,7 +63,6 @@
         <field name="name">app.push.device.form</field>
         <field name="model">app.push.device</field>
         <field name="arch" type="xml">
-
             <form string="Dispositivo Push">
 
                 <sheet>
@@ -111,7 +108,6 @@
 
                         <field
                             name="token"
-                            widget="text"
                             readonly="1"/>
 
                     </group>
@@ -119,7 +115,6 @@
                 </sheet>
 
             </form>
-
         </field>
     </record>
 
@@ -197,29 +192,13 @@
     <!-- ========================================================= -->
 
     <record id="action_app_push_device" model="ir.actions.act_window">
-
-        <field name="name">
-            Dispositivos Copier Support
-        </field>
-
-        <field name="res_model">
-            app.push.device
-        </field>
-
-        <field name="view_mode">
-            list,form
-        </field>
-
-        <field
-            name="search_view_id"
-            ref="view_app_push_device_search"/>
-
-        <field name="context">
-            {'search_default_active': 1}
-        </field>
+        <field name="name">Dispositivos Copier Support</field>
+        <field name="res_model">app.push.device</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_app_push_device_search"/>
+        <field name="context">{'search_default_active': 1}</field>
 
         <field name="help" type="html">
-
             <p class="o_view_nocontent_smiling_face">
                 No hay dispositivos registrados
             </p>
@@ -229,9 +208,7 @@
                 cuando un usuario inicie sesión en Copier Support
                 y registre su token de notificaciones.
             </p>
-
         </field>
-
     </record>
 
 
