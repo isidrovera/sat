@@ -1,0 +1,263 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ========================================================= -->
+    <!-- CONFIGURACIÓN PUSH - LISTA                                -->
+    <!-- ========================================================= -->
+
+    <record id="view_app_push_config_list" model="ir.ui.view">
+        <field name="name">app.push.config.list</field>
+        <field name="model">app.push.config</field>
+        <field name="arch" type="xml">
+
+            <list
+                string="Configuración Push Firebase"
+                default_order="active desc, id desc"
+                delete="false">
+
+                <field name="name"/>
+
+                <field
+                    name="project_id"
+                    optional="show"/>
+
+                <field
+                    name="client_email"
+                    optional="show"/>
+
+                <field
+                    name="credentials_loaded"
+                    optional="show"/>
+
+                <field
+                    name="last_credentials_update"
+                    optional="show"/>
+
+                <field
+                    name="active"
+                    widget="boolean_toggle"
+                    optional="show"/>
+
+            </list>
+
+        </field>
+    </record>
+
+
+    <!-- ========================================================= -->
+    <!-- CONFIGURACIÓN PUSH - FORMULARIO                           -->
+    <!-- ========================================================= -->
+
+    <record id="view_app_push_config_form" model="ir.ui.view">
+        <field name="name">app.push.config.form</field>
+        <field name="model">app.push.config</field>
+        <field name="arch" type="xml">
+
+            <form string="Configuración Push Firebase">
+
+                <header>
+
+                    <button
+                        name="action_load_service_account_json"
+                        type="object"
+                        string="Cargar credenciales"
+                        class="oe_highlight"
+                        invisible="not service_account_json"/>
+
+                    <field
+                        name="active"
+                        widget="boolean_toggle"/>
+
+                </header>
+
+                <sheet>
+
+                    <div class="oe_title">
+
+                        <label for="name"/>
+
+                        <h1>
+                            <field name="name"/>
+                        </h1>
+
+                    </div>
+
+
+                    <!-- ================================================= -->
+                    <!-- ESTADO                                            -->
+                    <!-- ================================================= -->
+
+                    <group>
+
+                        <group string="Firebase">
+
+                            <field
+                                name="project_id"
+                                readonly="1"/>
+
+                            <field
+                                name="client_email"
+                                readonly="1"/>
+
+                            <field
+                                name="private_key_id"
+                                readonly="1"/>
+
+                        </group>
+
+
+                        <group string="Estado">
+
+                            <field
+                                name="credentials_loaded"
+                                readonly="1"/>
+
+                            <field
+                                name="last_credentials_update"
+                                readonly="1"/>
+
+                            <field
+                                name="active"/>
+
+                        </group>
+
+                    </group>
+
+
+                    <!-- ================================================= -->
+                    <!-- CARGAR CREDENCIALES                               -->
+                    <!-- ================================================= -->
+
+                    <group
+                        string="Cuenta de servicio Firebase">
+
+                        <field
+                            name="service_account_json"
+                            placeholder='Pega aquí el contenido completo del archivo JSON descargado desde Firebase...'
+                            nolabel="1"/>
+
+                    </group>
+
+
+                    <!-- ================================================= -->
+                    <!-- INFORMACIÓN                                       -->
+                    <!-- ================================================= -->
+
+                    <div class="alert alert-info" role="alert">
+
+                        <strong>
+                            Seguridad de credenciales
+                        </strong>
+
+                        <br/>
+
+                        El JSON se utiliza únicamente para extraer
+                        los datos necesarios de Firebase.
+
+                        <br/>
+
+                        La clave privada se cifra antes de almacenarse
+                        y el contenido JSON pegado se elimina
+                        automáticamente después de pulsar
+                        "Cargar credenciales".
+
+                    </div>
+
+                </sheet>
+
+            </form>
+
+        </field>
+    </record>
+
+
+    <!-- ========================================================= -->
+    <!-- CONFIGURACIÓN PUSH - BÚSQUEDA                             -->
+    <!-- ========================================================= -->
+
+    <record id="view_app_push_config_search" model="ir.ui.view">
+        <field name="name">app.push.config.search</field>
+        <field name="model">app.push.config</field>
+        <field name="arch" type="xml">
+
+            <search string="Buscar Configuración Push">
+
+                <field name="name"/>
+
+                <field name="project_id"/>
+
+                <field name="client_email"/>
+
+                <separator/>
+
+                <filter
+                    name="active"
+                    string="Activa"
+                    domain="[('active', '=', True)]"/>
+
+                <filter
+                    name="inactive"
+                    string="Inactiva"
+                    domain="[('active', '=', False)]"/>
+
+            </search>
+
+        </field>
+    </record>
+
+
+    <!-- ========================================================= -->
+    <!-- ACCIÓN                                                    -->
+    <!-- ========================================================= -->
+
+    <record id="action_app_push_config" model="ir.actions.act_window">
+
+        <field name="name">
+            Configuración Push Firebase
+        </field>
+
+        <field name="res_model">
+            app.push.config
+        </field>
+
+        <field name="view_mode">
+            list,form
+        </field>
+
+        <field
+            name="search_view_id"
+            ref="view_app_push_config_search"/>
+
+        <field name="context">
+            {'search_default_active': 1}
+        </field>
+
+        <field name="help" type="html">
+
+            <p class="o_view_nocontent_smiling_face">
+                Configura Firebase Cloud Messaging
+            </p>
+
+            <p>
+                Crea una configuración y carga las credenciales
+                de la cuenta de servicio de Firebase.
+            </p>
+
+        </field>
+
+    </record>
+
+
+    <!-- ========================================================= -->
+    <!-- MENÚ                                                      -->
+    <!-- ========================================================= -->
+
+    <menuitem
+        id="menu_app_push_config"
+        name="Configuración Push Firebase"
+        parent="sat.ajustes"
+        action="action_app_push_config"
+        sequence="251"
+        groups="base.group_system"/>
+
+</odoo>

@@ -132,3 +132,4 @@ from . import modelo_maquina_familia
 from . import soporte_alquiler
 from . import ticket_service_approval
 from . import app_push_device
+from . import app_push_config
