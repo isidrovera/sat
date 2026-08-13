@@ -1,0 +1,250 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ========================================================= -->
+    <!-- DISPOSITIVOS PUSH - LISTA                                 -->
+    <!-- ========================================================= -->
+
+    <record id="view_app_push_device_list" model="ir.ui.view">
+        <field name="name">app.push.device.list</field>
+        <field name="model">app.push.device</field>
+        <field name="arch" type="xml">
+
+            <list
+                string="Dispositivos Push"
+                create="false"
+                delete="false"
+                default_order="write_date desc">
+
+                <field name="user_id"/>
+
+                <field
+                    name="device_name"
+                    optional="show"/>
+
+                <field
+                    name="platform"
+                    optional="show"/>
+
+                <field
+                    name="app_version"
+                    optional="show"/>
+
+                <field
+                    name="device_id"
+                    optional="hide"/>
+
+                <field
+                    name="token"
+                    optional="hide"/>
+
+                <field
+                    name="last_seen_at"
+                    optional="show"/>
+
+                <field
+                    name="token_updated_at"
+                    optional="show"/>
+
+                <field
+                    name="active"
+                    widget="boolean_toggle"
+                    optional="show"/>
+
+            </list>
+
+        </field>
+    </record>
+
+
+    <!-- ========================================================= -->
+    <!-- DISPOSITIVOS PUSH - FORMULARIO                            -->
+    <!-- ========================================================= -->
+
+    <record id="view_app_push_device_form" model="ir.ui.view">
+        <field name="name">app.push.device.form</field>
+        <field name="model">app.push.device</field>
+        <field name="arch" type="xml">
+
+            <form string="Dispositivo Push">
+
+                <sheet>
+
+                    <div class="oe_title">
+                        <label for="user_id"/>
+                        <h1>
+                            <field name="user_id"/>
+                        </h1>
+                    </div>
+
+                    <group>
+
+                        <group string="Dispositivo">
+
+                            <field name="device_name"/>
+
+                            <field name="device_id"/>
+
+                            <field name="platform"/>
+
+                            <field name="app_version"/>
+
+                        </group>
+
+                        <group string="Estado">
+
+                            <field name="active"/>
+
+                            <field
+                                name="last_seen_at"
+                                readonly="1"/>
+
+                            <field
+                                name="token_updated_at"
+                                readonly="1"/>
+
+                        </group>
+
+                    </group>
+
+                    <group string="Firebase Cloud Messaging">
+
+                        <field
+                            name="token"
+                            widget="text"
+                            readonly="1"/>
+
+                    </group>
+
+                </sheet>
+
+            </form>
+
+        </field>
+    </record>
+
+
+    <!-- ========================================================= -->
+    <!-- DISPOSITIVOS PUSH - BÚSQUEDA                              -->
+    <!-- ========================================================= -->
+
+    <record id="view_app_push_device_search" model="ir.ui.view">
+        <field name="name">app.push.device.search</field>
+        <field name="model">app.push.device</field>
+        <field name="arch" type="xml">
+
+            <search string="Buscar Dispositivos Push">
+
+                <field name="user_id"/>
+
+                <field name="device_name"/>
+
+                <field name="device_id"/>
+
+                <field name="platform"/>
+
+                <separator/>
+
+                <filter
+                    name="active"
+                    string="Activos"
+                    domain="[('active', '=', True)]"/>
+
+                <filter
+                    name="inactive"
+                    string="Inactivos"
+                    domain="[('active', '=', False)]"/>
+
+                <separator/>
+
+                <filter
+                    name="android"
+                    string="Android"
+                    domain="[('platform', '=', 'android')]"/>
+
+                <filter
+                    name="ios"
+                    string="iOS"
+                    domain="[('platform', '=', 'ios')]"/>
+
+                <group expand="0" string="Agrupar por">
+
+                    <filter
+                        name="group_user"
+                        string="Usuario"
+                        context="{'group_by': 'user_id'}"/>
+
+                    <filter
+                        name="group_platform"
+                        string="Plataforma"
+                        context="{'group_by': 'platform'}"/>
+
+                    <filter
+                        name="group_active"
+                        string="Estado"
+                        context="{'group_by': 'active'}"/>
+
+                </group>
+
+            </search>
+
+        </field>
+    </record>
+
+
+    <!-- ========================================================= -->
+    <!-- ACCIÓN                                                    -->
+    <!-- ========================================================= -->
+
+    <record id="action_app_push_device" model="ir.actions.act_window">
+
+        <field name="name">
+            Dispositivos Copier Support
+        </field>
+
+        <field name="res_model">
+            app.push.device
+        </field>
+
+        <field name="view_mode">
+            list,form
+        </field>
+
+        <field
+            name="search_view_id"
+            ref="view_app_push_device_search"/>
+
+        <field name="context">
+            {'search_default_active': 1}
+        </field>
+
+        <field name="help" type="html">
+
+            <p class="o_view_nocontent_smiling_face">
+                No hay dispositivos registrados
+            </p>
+
+            <p>
+                Los dispositivos aparecerán automáticamente
+                cuando un usuario inicie sesión en Copier Support
+                y registre su token de notificaciones.
+            </p>
+
+        </field>
+
+    </record>
+
+
+    <!-- ========================================================= -->
+    <!-- MENÚ                                                      -->
+    <!-- ========================================================= -->
+
+    <menuitem
+        id="menu_app_push_device"
+        name="Dispositivos Copier Support"
+        parent="sat.ajustes"
+        action="action_app_push_device"
+        sequence="250"
+        groups="base.group_system"/>
+
+</odoo>

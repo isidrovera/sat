@@ -182,6 +182,7 @@
         'views/evaluacion_personal_dashboard_views.xml',
         'views/evaluacion_cierre_mensual_views.xml',
         'views/modelo_maquina_familia_views.xml',
+        'views/app_push_device_views.xml',
         'views/acciones_menus.xml',
         
     ],
