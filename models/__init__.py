@@ -134,3 +134,5 @@ from . import ticket_service_approval
 from . import app_push_device
 from . import app_push_config
 from . import app_push_service
+from . import ticket_push_notification
+from . import repair_push_notification

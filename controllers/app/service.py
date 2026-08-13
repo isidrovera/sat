@@ -1144,6 +1144,33 @@ class AppServiceController(AppBaseController):
                 # ------------------------------------------------
 
                 "meters": {
+                    # ------------------------------------------------
+                    # TIPO DE EQUIPO / CONTADORES VISIBLES
+                    # ------------------------------------------------
+
+                    "machine_type": (
+                        ticket.tipo_id
+                        or False
+                    ),
+
+                    "meter_mode": (
+                        "color"
+                        if ticket.tipo_id == "color"
+                        else "mono"
+                    ),
+
+                    "show_black": True,
+
+                    "show_color": (
+                        ticket.tipo_id == "color"
+                    ),
+
+                    "show_scanner": True,
+
+                    # ------------------------------------------------
+                    # VALORES ACTUALES
+                    # ------------------------------------------------
+
                     "black": (
                         ticket.contometrok_id
                         or False
@@ -1151,7 +1178,8 @@ class AppServiceController(AppBaseController):
 
                     "color": (
                         ticket.contometroc_id
-                        or False
+                        if ticket.tipo_id == "color"
+                        else False
                     ),
 
                     "scanner": (
@@ -1163,6 +1191,10 @@ class AppServiceController(AppBaseController):
                         ticket.total_copias_id
                         or False
                     ),
+
+                    # ------------------------------------------------
+                    # CARGA AUTOMÁTICA
+                    # ------------------------------------------------
 
                     "auto_load_available": (
                         counter_preview[
@@ -1193,6 +1225,8 @@ class AppServiceController(AppBaseController):
                             counter_preview[
                                 "color"
                             ]
+                            if ticket.tipo_id == "color"
+                            else False
                         ),
 
                         "scanner": (
