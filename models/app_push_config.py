@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
 
 import json
-import os
-
-from cryptography.fernet import Fernet, InvalidToken
 
 from odoo import api, fields, models
 from odoo.exceptions import ValidationError
@@ -41,8 +38,8 @@ class AppPushConfig(models.Model):
         readonly=True,
     )
 
-    private_key_encrypted = fields.Text(
-        string="Clave privada cifrada",
+    private_key = fields.Text(
+        string="Clave privada Firebase",
         copy=False,
         readonly=True,
         groups="base.group_system",
@@ -53,10 +50,9 @@ class AppPushConfig(models.Model):
         copy=False,
         groups="base.group_system",
         help=(
-            "Pegue temporalmente aquí el contenido completo "
-            "del JSON descargado desde Firebase. "
-            "Al cargarlo, la clave privada será cifrada "
-            "y este campo quedará vacío."
+            "Pega aquí temporalmente el contenido completo "
+            "del archivo JSON descargado desde Firebase. "
+            "Después de cargarlo, este campo se limpia."
         ),
     )
 
@@ -70,98 +66,25 @@ class AppPushConfig(models.Model):
         readonly=True,
     )
 
+    # ============================================================
+    # ESTADO DE CREDENCIALES
+    # ============================================================
+
     @api.depends(
-        "private_key_encrypted",
+        "project_id",
+        "client_email",
+        "private_key",
     )
     def _compute_credentials_loaded(self):
         for record in self:
             record.credentials_loaded = bool(
-                record.private_key_encrypted
+                record.project_id
+                and record.client_email
+                and record.private_key
             )
 
     # ============================================================
-    # CLAVE MAESTRA
-    # ============================================================
-
-    @api.model
-    def _get_encryption_key(self):
-        key = os.getenv(
-            "COPIER_SUPPORT_PUSH_ENCRYPTION_KEY",
-            "",
-        ).strip()
-
-        if not key:
-            raise ValidationError(
-                "No está configurada la variable de entorno "
-                "COPIER_SUPPORT_PUSH_ENCRYPTION_KEY."
-            )
-
-        return key.encode("utf-8")
-
-    @api.model
-    def _get_fernet(self):
-        try:
-            return Fernet(
-                self._get_encryption_key()
-            )
-        except Exception as exc:
-            raise ValidationError(
-                "COPIER_SUPPORT_PUSH_ENCRYPTION_KEY "
-                "no contiene una clave Fernet válida."
-            ) from exc
-
-    # ============================================================
-    # CIFRADO / DESCIFRADO
-    # ============================================================
-
-    @api.model
-    def _encrypt_private_key(
-        self,
-        private_key,
-    ):
-        if not private_key:
-            raise ValidationError(
-                "La clave privada de Firebase está vacía."
-            )
-
-        return (
-            self._get_fernet()
-            .encrypt(
-                private_key.encode("utf-8")
-            )
-            .decode("utf-8")
-        )
-
-    def _decrypt_private_key(self):
-        self.ensure_one()
-
-        if not self.private_key_encrypted:
-            raise ValidationError(
-                "No existen credenciales Firebase cargadas."
-            )
-
-        try:
-            return (
-                self._get_fernet()
-                .decrypt(
-                    self.private_key_encrypted.encode(
-                        "utf-8"
-                    )
-                )
-                .decode(
-                    "utf-8"
-                )
-            )
-
-        except InvalidToken as exc:
-            raise ValidationError(
-                "No fue posible descifrar la clave privada. "
-                "Verifica la clave maestra configurada "
-                "en el servidor."
-            ) from exc
-
-    # ============================================================
-    # PROCESAR SERVICE ACCOUNT
+    # CARGAR JSON DE FIREBASE
     # ============================================================
 
     def set_service_account_json(
@@ -221,12 +144,6 @@ class AppPushConfig(models.Model):
                 % ", ".join(missing)
             )
 
-        encrypted_private_key = (
-            self._encrypt_private_key(
-                data["private_key"]
-            )
-        )
-
         self.write(
             {
                 "project_id":
@@ -238,8 +155,8 @@ class AppPushConfig(models.Model):
                         "private_key_id"
                     )
                     or False,
-                "private_key_encrypted":
-                    encrypted_private_key,
+                "private_key":
+                    data["private_key"],
                 "service_account_json":
                     False,
                 "last_credentials_update":
@@ -250,7 +167,7 @@ class AppPushConfig(models.Model):
         return True
 
     # ============================================================
-    # BOTÓN DE LA VISTA
+    # BOTÓN CARGAR CREDENCIALES
     # ============================================================
 
     def action_load_service_account_json(self):
@@ -272,11 +189,17 @@ class AppPushConfig(models.Model):
         }
 
     # ============================================================
-    # CREDENCIALES PARA FCM
+    # CREDENCIALES PARA GOOGLE / FCM
     # ============================================================
 
     def get_service_account_credentials(self):
         self.ensure_one()
+
+        if not self.credentials_loaded:
+            raise ValidationError(
+                "Las credenciales Firebase "
+                "no están configuradas."
+            )
 
         return {
             "type": "service_account",
@@ -286,7 +209,7 @@ class AppPushConfig(models.Model):
                 self.private_key_id
                 or "",
             "private_key":
-                self._decrypt_private_key(),
+                self.private_key,
             "client_email":
                 self.client_email,
             "token_uri":
@@ -315,7 +238,7 @@ class AppPushConfig(models.Model):
         return config
 
     # ============================================================
-    # VALIDACIONES
+    # VALIDACIÓN
     # ============================================================
 
     @api.constrains(

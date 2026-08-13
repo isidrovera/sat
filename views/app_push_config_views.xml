@@ -1,10 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
-    <!-- ========================================================= -->
-    <!-- CONFIGURACIÓN PUSH - LISTA                                -->
-    <!-- ========================================================= -->
-
     <record id="view_app_push_config_list" model="ir.ui.view">
         <field name="name">app.push.config.list</field>
         <field name="model">app.push.config</field>
@@ -16,23 +12,10 @@
                 delete="false">
 
                 <field name="name"/>
-
-                <field
-                    name="project_id"
-                    optional="show"/>
-
-                <field
-                    name="client_email"
-                    optional="show"/>
-
-                <field
-                    name="credentials_loaded"
-                    optional="show"/>
-
-                <field
-                    name="last_credentials_update"
-                    optional="show"/>
-
+                <field name="project_id" optional="show"/>
+                <field name="client_email" optional="show"/>
+                <field name="credentials_loaded" optional="show"/>
+                <field name="last_credentials_update" optional="show"/>
                 <field
                     name="active"
                     widget="boolean_toggle"
@@ -43,10 +26,6 @@
         </field>
     </record>
 
-
-    <!-- ========================================================= -->
-    <!-- CONFIGURACIÓN PUSH - FORMULARIO                           -->
-    <!-- ========================================================= -->
 
     <record id="view_app_push_config_form" model="ir.ui.view">
         <field name="name">app.push.config.form</field>
@@ -73,19 +52,12 @@
                 <sheet>
 
                     <div class="oe_title">
-
                         <label for="name"/>
-
                         <h1>
                             <field name="name"/>
                         </h1>
-
                     </div>
 
-
-                    <!-- ================================================= -->
-                    <!-- ESTADO                                            -->
-                    <!-- ================================================= -->
 
                     <group>
 
@@ -105,7 +77,6 @@
 
                         </group>
 
-
                         <group string="Estado">
 
                             <field
@@ -116,50 +87,48 @@
                                 name="last_credentials_update"
                                 readonly="1"/>
 
-                            <field
-                                name="active"/>
+                            <field name="active"/>
 
                         </group>
 
                     </group>
 
 
-                    <!-- ================================================= -->
-                    <!-- CARGAR CREDENCIALES                               -->
-                    <!-- ================================================= -->
-
-                    <group
-                        string="Cuenta de servicio Firebase">
+                    <group string="Cargar cuenta de servicio">
 
                         <field
                             name="service_account_json"
-                            placeholder='Pega aquí el contenido completo del archivo JSON descargado desde Firebase...'
-                            nolabel="1"/>
+                            nolabel="1"
+                            placeholder="Pega aquí el contenido completo del archivo JSON descargado desde Firebase..."/>
 
                     </group>
 
 
-                    <!-- ================================================= -->
-                    <!-- INFORMACIÓN                                       -->
-                    <!-- ================================================= -->
-
-                    <div class="alert alert-info" role="alert">
+                    <div
+                        class="alert alert-warning"
+                        role="alert">
 
                         <strong>
-                            Seguridad de credenciales
+                            Credenciales privadas
                         </strong>
 
                         <br/>
 
-                        El JSON se utiliza únicamente para extraer
-                        los datos necesarios de Firebase.
+                        El JSON se utiliza para cargar
+                        las credenciales de Firebase.
 
                         <br/>
 
-                        La clave privada se cifra antes de almacenarse
-                        y el contenido JSON pegado se elimina
-                        automáticamente después de pulsar
-                        "Cargar credenciales".
+                        Después de pulsar
+                        "Cargar credenciales",
+                        el contenido de este campo
+                        se elimina automáticamente.
+
+                        <br/>
+
+                        La clave privada queda almacenada
+                        internamente en Odoo y solo puede
+                        ser gestionada por administradores.
 
                     </div>
 
@@ -171,10 +140,6 @@
     </record>
 
 
-    <!-- ========================================================= -->
-    <!-- CONFIGURACIÓN PUSH - BÚSQUEDA                             -->
-    <!-- ========================================================= -->
-
     <record id="view_app_push_config_search" model="ir.ui.view">
         <field name="name">app.push.config.search</field>
         <field name="model">app.push.config</field>
@@ -183,9 +148,7 @@
             <search string="Buscar Configuración Push">
 
                 <field name="name"/>
-
                 <field name="project_id"/>
-
                 <field name="client_email"/>
 
                 <separator/>
@@ -206,32 +169,29 @@
     </record>
 
 
-    <!-- ========================================================= -->
-    <!-- ACCIÓN                                                    -->
-    <!-- ========================================================= -->
-
     <record id="action_app_push_config" model="ir.actions.act_window">
-    <field name="name">Configuración Push Firebase</field>
-    <field name="res_model">app.push.config</field>
-    <field name="view_mode">list,form</field>
-    <field name="search_view_id" ref="view_app_push_config_search"/>
-    <field name="context">{'search_default_active': 1}</field>
+        <field name="name">Configuración Push Firebase</field>
+        <field name="res_model">app.push.config</field>
+        <field name="view_mode">list,form</field>
+        <field
+            name="search_view_id"
+            ref="view_app_push_config_search"/>
+        <field name="context">{'search_default_active': 1}</field>
 
-    <field name="help" type="html">
-        <p class="o_view_nocontent_smiling_face">
-            Configura Firebase Cloud Messaging
-        </p>
-        <p>
-            Crea una configuración y carga las credenciales
-            de la cuenta de servicio de Firebase.
-        </p>
-    </field>
-</record>
+        <field name="help" type="html">
 
+            <p class="o_view_nocontent_smiling_face">
+                Configura Firebase Cloud Messaging
+            </p>
 
-    <!-- ========================================================= -->
-    <!-- MENÚ                                                      -->
-    <!-- ========================================================= -->
+            <p>
+                Crea una configuración y carga las credenciales
+                de la cuenta de servicio de Firebase.
+            </p>
+
+        </field>
+    </record>
+
 
     <menuitem
         id="menu_app_push_config"
