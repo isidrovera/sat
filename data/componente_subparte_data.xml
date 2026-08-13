@@ -460,7 +460,7 @@
     <field name="tipo_id" ref="comp_tipo_fusora"/>
   </record>
   <record id="sub_fuser_clean_web" model="componente.subparte">
-    <field name="name">Fieltro de limpieza</field>
+    <field name="name">Web Roller / Manta de limpieza</field>
     <field name="code">FUSER_CLEANING_WEB</field>
     <field name="tipo_id" ref="comp_tipo_fusora"/>
   </record>

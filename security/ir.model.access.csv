@@ -308,3 +308,5 @@ access_evaluacion_cierre_mensual_maquina_user,evaluacion.cierre.mensual.maquina 
 access_evaluacion_cierre_mensual_tecnico_user,evaluacion.cierre.mensual.tecnico usuario,model_evaluacion_cierre_mensual_tecnico,base.group_user,1,1,1,1
 access_evaluacion_cierre_mensual_descarga_user,Descargas de contenedores del cierre mensual,model_evaluacion_cierre_mensual_descarga,base.group_user,1,1,1,1
 access_modelo_maquina_familia_user,modelo.maquina.familia usuario,model_modelo_maquina_familia,base.group_user,1,1,1,1
+access_app_push_device_user,app.push.device user,model_app_push_device,base.group_user,1,1,1,0
+access_app_push_device_admin,app.push.device admin,model_app_push_device,base.group_system,1,1,1,1
