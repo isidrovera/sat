@@ -41,6 +41,8 @@ class AppRepairController(AppBaseController):
             "/api/app/repairs/<int:repair_id>",
             "/api/app/repairs/<int:repair_id>/state",
             "/api/app/repairs/<int:repair_id>/finalize",
+            "/api/app/repairs/<int:repair_id>/andes-verification/options",
+            "/api/app/repairs/<int:repair_id>/andes-verification",
             "/api/app/repairs/<int:repair_id>/checklist",
             "/api/app/repairs/<int:repair_id>/components/<int:evaluation_id>",
             "/api/app/repairs/<int:repair_id>/accessories/<int:evaluation_id>",
@@ -1099,6 +1101,21 @@ class AppRepairController(AppBaseController):
                         repair
                     )
                 ),
+                "andes_verification": {
+                    "verified": bool(
+                        "autenticacion_correcta"
+                        in repair._fields
+                        and repair.autenticacion_correcta
+                    ),
+                    "required": (
+                        not self._repair_is_finalized(repair)
+                        and not bool(
+                            "autenticacion_correcta"
+                            in repair._fields
+                            and repair.autenticacion_correcta
+                        )
+                    ),
+                },
                 "actions": {
                     "can_request_parts": (
                         not self._repair_is_finalized(
@@ -3606,6 +3623,292 @@ class AppRepairController(AppBaseController):
 
 
     # ============================================================
+    # VERIFICACIÓN ANDES
+    # Reutiliza reparacion.autenticacion.wizard.
+    # No devuelve la serie ni el modelo correctos.
+    # ============================================================
+
+    @http.route(
+        "/api/app/repairs/<int:repair_id>/andes-verification/options",
+        type="http",
+        auth="public",
+        methods=["GET"],
+        csrf=False,
+        save_session=True,
+    )
+    def repair_andes_verification_options(
+        self,
+        repair_id,
+        **kwargs,
+    ):
+        user, error = self._require_user()
+        if error:
+            return error
+
+        try:
+            repair, error = (
+                self._repair_or_error(
+                    repair_id,
+                    user,
+                )
+            )
+
+            if error:
+                return error
+
+            if self._repair_is_finalized(repair):
+                return self._json_response(
+                    {
+                        "success": False,
+                        "code": "REPAIR_READ_ONLY",
+                        "message": (
+                            "La reparación finalizada "
+                            "es de solo lectura."
+                        ),
+                    },
+                    status=409,
+                )
+
+            if (
+                "reparacion.autenticacion.wizard"
+                not in request.env.registry
+            ):
+                raise UserError(
+                    "No está disponible el wizard "
+                    "de Verificación Andes."
+                )
+
+            Wizard = request.env[
+                "reparacion.autenticacion.wizard"
+            ]
+
+            if "modelo_id" not in Wizard._fields:
+                raise UserError(
+                    "El wizard de Verificación Andes "
+                    "no tiene el campo modelo_id."
+                )
+
+            model_name = (
+                Wizard._fields[
+                    "modelo_id"
+                ].comodel_name
+            )
+
+            if (
+                not model_name
+                or model_name
+                not in request.env.registry
+            ):
+                raise UserError(
+                    "No está disponible el catálogo "
+                    "de modelos de máquina."
+                )
+
+            Model = request.env[model_name]
+
+            domain = []
+
+            if "active" in Model._fields:
+                domain.append(
+                    ("active", "=", True)
+                )
+
+            models = Model.search(
+                domain,
+                order="name asc, id asc",
+            )
+
+            verified = bool(
+                "autenticacion_correcta"
+                in repair._fields
+                and repair.autenticacion_correcta
+            )
+
+            return self._json_response(
+                {
+                    "success": True,
+                    "verified": verified,
+                    "models": [
+                        {
+                            "id": item.id,
+                            "name": item.display_name,
+                        }
+                        for item in models
+                    ],
+                }
+            )
+
+        except (ValidationError, UserError) as exc:
+            return self._json_response(
+                {
+                    "success": False,
+                    "code": (
+                        "ANDES_VERIFICATION_OPTIONS_ERROR"
+                    ),
+                    "message": str(exc),
+                },
+                status=400,
+            )
+
+        except Exception as exc:
+            return self._error_response(exc)
+
+
+    @http.route(
+        "/api/app/repairs/<int:repair_id>/andes-verification",
+        type="http",
+        auth="public",
+        methods=["POST"],
+        csrf=False,
+        save_session=True,
+    )
+    def repair_andes_verification(
+        self,
+        repair_id,
+        **kwargs,
+    ):
+        user, error = self._require_user()
+        if error:
+            return error
+
+        try:
+            repair, error = (
+                self._repair_or_error(
+                    repair_id,
+                    user,
+                )
+            )
+
+            if error:
+                return error
+
+            if self._repair_is_finalized(repair):
+                return self._json_response(
+                    {
+                        "success": False,
+                        "code": "REPAIR_READ_ONLY",
+                        "message": (
+                            "La reparación finalizada "
+                            "es de solo lectura."
+                        ),
+                    },
+                    status=409,
+                )
+
+            data = self._get_json_body()
+
+            serie = (
+                data.get("serie")
+                or ""
+            ).strip()
+
+            try:
+                modelo_id = int(
+                    data.get("modelo_id")
+                    or 0
+                )
+            except (TypeError, ValueError):
+                modelo_id = 0
+
+            if not serie:
+                return self._json_response(
+                    {
+                        "success": False,
+                        "code": "SERIAL_REQUIRED",
+                        "message": (
+                            "Debe ingresar la serie "
+                            "del equipo."
+                        ),
+                    },
+                    status=400,
+                )
+
+            if modelo_id <= 0:
+                return self._json_response(
+                    {
+                        "success": False,
+                        "code": "MODEL_REQUIRED",
+                        "message": (
+                            "Debe seleccionar el modelo "
+                            "del equipo."
+                        ),
+                    },
+                    status=400,
+                )
+
+            wizard_model = (
+                "reparacion.autenticacion.wizard"
+            )
+
+            if wizard_model not in request.env.registry:
+                raise UserError(
+                    "No está disponible el wizard "
+                    "de Verificación Andes."
+                )
+
+            Wizard = request.env[
+                wizard_model
+            ].with_context(
+                active_model=self.REPAIR_MODEL,
+                active_id=repair.id,
+                active_ids=[repair.id],
+                from_finalizar_reparacion=True,
+            )
+
+            wizard = Wizard.create(
+                {
+                    "serie": serie,
+                    "modelo_id": modelo_id,
+                }
+            )
+
+            # IMPORTANTE:
+            # Se llama al método real del wizard para conservar
+            # exactamente la misma validación usada dentro de Odoo.
+            wizard.validar_acceso()
+
+            repair.invalidate_recordset()
+
+            verified = bool(
+                "autenticacion_correcta"
+                in repair._fields
+                and repair.autenticacion_correcta
+            )
+
+            if not verified:
+                raise ValidationError(
+                    "La Verificación Andes no pudo "
+                    "ser confirmada."
+                )
+
+            return self._json_response(
+                {
+                    "success": True,
+                    "code": "ANDES_VERIFIED",
+                    "message": (
+                        "Verificación Andes completada "
+                        "correctamente."
+                    ),
+                    "verified": True,
+                }
+            )
+
+        except (ValidationError, UserError) as exc:
+            return self._json_response(
+                {
+                    "success": False,
+                    "code": "ANDES_VERIFICATION_FAILED",
+                    "message": str(exc),
+                    "verified": False,
+                },
+                status=400,
+            )
+
+        except Exception as exc:
+            return self._error_response(exc)
+
+
+    # ============================================================
     # FINALIZE
     # Odoo sigue siendo la autoridad.
     # ============================================================
@@ -3672,6 +3975,31 @@ class AppRepairController(AppBaseController):
                 isinstance(result, dict)
                 and result.get("target") == "new"
             ):
+                action_model = (
+                    result.get("res_model")
+                    or ""
+                )
+
+                if (
+                    action_model
+                    == "reparacion.autenticacion.wizard"
+                ):
+                    return self._json_response(
+                        {
+                            "success": False,
+                            "code": (
+                                "ANDES_VERIFICATION_REQUIRED"
+                            ),
+                            "message": (
+                                "Debe completar la "
+                                "Verificación Andes antes "
+                                "de finalizar la reparación."
+                            ),
+                            "verified": False,
+                        },
+                        status=409,
+                    )
+
                 return self._json_response(
                     {
                         "success": False,
