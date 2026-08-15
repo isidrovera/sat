@@ -165,5 +165,34 @@ if config:
             <field name="key">alquiler_geo.google_maps_api_key</field>
             <field name="value"></field>
         </record>
+        <record id="ir_cron_sat_notificar_reservas_por_vencer" model="ir.cron">
+        <field name="name">SAT - Avisar reservas comerciales por vencer</field>
+        <field name="model_id" ref="sat.model_sat_sat"/>
+        <field name="state">code</field>
+        <field name="code">model._cron_notificar_reservas_por_vencer()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">days</field>
+        <field name="active">True</field>
+    </record>
+
+    <record id="ir_cron_sat_liberar_reservas_vencidas" model="ir.cron">
+        <field name="name">SAT - Liberar reservas comerciales vencidas</field>
+        <field name="model_id" ref="sat.model_sat_sat"/>
+        <field name="state">code</field>
+        <field name="code">model._cron_liberar_reservas_vencidas()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">hours</field>
+        <field name="active">True</field>
+    </record>
+
+    <record id="ir_cron_sat_reconciliar_solicitudes_reserva" model="ir.cron">
+        <field name="name">SAT - Reconciliar solicitudes comerciales pendientes</field>
+        <field name="model_id" ref="sat.model_sat_sat"/>
+        <field name="state">code</field>
+        <field name="code">model._cron_reconciliar_solicitudes_reserva()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">days</field>
+        <field name="active">True</field>
+    </record>
     </data>
 </odoo>

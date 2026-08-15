@@ -311,3 +311,13 @@ access_modelo_maquina_familia_user,modelo.maquina.familia usuario,model_modelo_m
 access_app_push_device_user,app.push.device user,model_app_push_device,base.group_user,1,1,1,0
 access_app_push_device_admin,app.push.device admin,model_app_push_device,base.group_system,1,1,1,1
 access_app_push_config_admin,app.push.config admin,model_app_push_config,base.group_system,1,1,1,1
+access_sat_reserva_regla_usuario,sat.reserva.regla usuario,model_sat_reserva_regla,base.group_user,1,0,0,0
+access_sat_reserva_regla_autorizado,sat.reserva.regla autorizado,model_sat_reserva_regla,sat.group_reserva_comercial_autorizado,1,1,1,1
+access_sat_reserva_solicitud_usuario,sat.reserva.solicitud usuario,model_sat_reserva_solicitud,base.group_user,1,1,1,0
+access_sat_reserva_solicitud_autorizado,sat.reserva.solicitud autorizado,model_sat_reserva_solicitud,sat.group_reserva_comercial_autorizado,1,1,1,1
+access_sat_reserva_solicitud_linea_usuario,sat.reserva.solicitud.linea usuario,model_sat_reserva_solicitud_linea,base.group_user,1,1,1,0
+access_sat_reserva_solicitud_linea_autorizado,sat.reserva.solicitud.linea autorizado,model_sat_reserva_solicitud_linea,sat.group_reserva_comercial_autorizado,1,1,1,1
+access_sat_reserva_historial_usuario,sat.reserva.historial usuario,model_sat_reserva_historial,base.group_user,1,0,1,0
+access_sat_reserva_historial_autorizado,sat.reserva.historial autorizado,model_sat_reserva_historial,sat.group_reserva_comercial_autorizado,1,1,1,1
+access_sat_reserva_asignacion_wizard_usuario,sat.reserva.asignacion.wizard usuario,model_sat_reserva_asignacion_wizard,base.group_user,1,1,1,1
+access_sat_reserva_solicitud_wizard_usuario,sat.reserva.solicitud.wizard usuario,model_sat_reserva_solicitud_wizard,base.group_user,1,1,1,1

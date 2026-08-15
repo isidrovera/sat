@@ -54,6 +54,11 @@
             <field name="perm_create" eval="True"/> <!-- Permitir creación si es necesario -->
             <field name="perm_unlink" eval="True"/>
         </record>
-        
+        <record id="group_reserva_comercial_autorizado" model="res.groups">
+    <field name="name">Autorizados Reservas Comerciales</field>
+    <field name="category_id" ref="sat.module_category_sat_reservas"/>
+    <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
+    <field name="comment">Usuarios autorizados para modificar o aprobar condiciones de reservas comerciales.</field>
+</record>
     </data>
 </odoo>
