@@ -184,7 +184,7 @@
         'views/modelo_maquina_familia_views.xml',
         'views/app_push_device_views.xml',
         'views/app_push_config_views.xml',
-        'sat/views/sat_reserva_views_odoo18.xml',
+        'views/sat_reserva_views_odoo18.xml',
         'views/acciones_menus.xml',
         
     ],
