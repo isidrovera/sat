@@ -20,13 +20,11 @@ class SatReservaSecurityMixin(models.AbstractModel):
         if self.env.is_superuser() or user.has_group('base.group_system'):
             return True
 
-        try:
-            if user.has_group('sat.sat_jefes_group_user'):
-                return True
-        except Exception:
-            pass
-
-        return False
+        group = self.env.ref(
+            'sat.group_reserva_comercial_autorizado',
+            raise_if_not_found=False,
+        )
+        return bool(group and user in group.users)
 
     def _reserva_exigir_gerencia(self):
         if not self._reserva_usuario_es_gerencia():
@@ -333,6 +331,7 @@ class SatReservaSolicitud(models.Model):
         [
             ('fecha', 'Hasta una fecha'),
             ('dias', 'Cantidad de días'),
+            ('mantener', 'Mantener vencimiento actual'),
         ],
         string='Plazo solicitado por',
         tracking=True,
@@ -352,6 +351,7 @@ class SatReservaSolicitud(models.Model):
         [
             ('fecha', 'Hasta una fecha'),
             ('dias', 'Cantidad de días'),
+            ('mantener', 'Mantener vencimiento actual'),
         ],
         string='Gerencia aprueba por',
         tracking=True,
@@ -399,6 +399,21 @@ class SatReservaSolicitud(models.Model):
 
     @api.model_create_multi
     def create(self, vals_list):
+        if not self._reserva_usuario_es_gerencia():
+            for vals in vals_list:
+                if vals.get('solicitante_id') and vals.get('solicitante_id') != self.env.user.id:
+                    raise AccessError(_('No puede crear solicitudes a nombre de otro usuario.'))
+                if vals.get('state') not in (False, 'draft'):
+                    raise AccessError(_('Un usuario normal no puede crear una solicitud ya aprobada o procesada.'))
+                if any(vals.get(field) for field in (
+                    'modalidad_aprobacion',
+                    'fecha_aprobada',
+                    'dias_aprobados',
+                    'comentario_gerencia',
+                    'procesado_por_id',
+                    'fecha_procesamiento',
+                )):
+                    raise AccessError(_('Los datos de aprobación solo pueden ser definidos por un usuario autorizado.'))
         records = super().create(vals_list)
 
         for record in records:
@@ -406,6 +421,35 @@ class SatReservaSolicitud(models.Model):
                 record.name = 'RES-%06d' % record.id
 
         return records
+
+    def write(self, vals):
+        vals = dict(vals or {})
+        sensitive_fields = {
+            'state',
+            'modalidad_aprobacion',
+            'fecha_aprobada',
+            'dias_aprobados',
+            'comentario_gerencia',
+            'procesado_por_id',
+            'fecha_procesamiento',
+        }
+        if (
+            sensitive_fields.intersection(vals)
+            and not self.env.context.get('sat_reserva_internal_request_write')
+            and not self._reserva_usuario_es_gerencia()
+        ):
+            raise AccessError(
+                _('Solo un usuario autorizado puede modificar la aprobación o el estado procesado de la solicitud.')
+            )
+        return super().write(vals)
+
+    def unlink(self):
+        for record in self:
+            if record.state != 'draft' or record.line_ids:
+                raise ValidationError(
+                    _('Las solicitudes con trazabilidad no se eliminan. Debe cancelarlas para conservar el historial.')
+                )
+        return super().unlink()
 
     @api.depends('line_ids')
     def _compute_cantidad_maquinas(self):
@@ -439,11 +483,15 @@ class SatReservaSolicitud(models.Model):
                 'extender',
                 'reducir',
                 'cambiar_fecha',
-                'cambiar_cliente',
             )
 
-            if requiere_plazo:
-                if record.modalidad_solicitada == 'fecha':
+            if requiere_plazo or record.tipo_solicitud == 'cambiar_cliente':
+                if record.modalidad_solicitada == 'mantener':
+                    if record.tipo_solicitud != 'cambiar_cliente':
+                        raise ValidationError(
+                            _('Mantener vencimiento solo aplica al cambio de cliente.')
+                        )
+                elif record.modalidad_solicitada == 'fecha':
                     if not record.fecha_solicitada:
                         raise ValidationError(
                             _('Debe indicar la fecha solicitada.')
@@ -474,9 +522,31 @@ class SatReservaSolicitud(models.Model):
                     _('Debe incluir al menos una máquina.')
                 )
 
-            record.state = 'pending'
+            pending_lines = record.line_ids.filtered(lambda item: item.resultado == 'pending')
+            for line in pending_lines:
+                machine = line.maquina_id
+                if machine.estado_ventas_id == 'entregada':
+                    raise ValidationError(
+                        _('La máquina %s ya está entregada y no puede enviarse a autorización.')
+                        % (machine.serie_id or machine.display_name)
+                    )
+                if (
+                    machine.reserva_solicitud_pendiente_id
+                    and machine.reserva_solicitud_pendiente_id != record
+                ):
+                    raise ValidationError(
+                        _('La máquina %(serie)s ya tiene la solicitud pendiente %(solicitud)s.')
+                        % {
+                            'serie': machine.serie_id or machine.display_name,
+                            'solicitud': machine.reserva_solicitud_pendiente_id.display_name,
+                        }
+                    )
 
-            for line in record.line_ids.filtered(lambda item: item.resultado == 'pending'):
+            record.with_context(
+                sat_reserva_internal_request_write=True,
+            ).write({'state': 'pending'})
+
+            for line in pending_lines:
                 machine = line.maquina_id
                 machine.with_context(
                     sat_reserva_internal_write=True,
@@ -498,9 +568,9 @@ class SatReservaSolicitud(models.Model):
 
     def action_cancelar(self):
         for record in self:
-            if record.state in ('approved', 'done'):
+            if record.state not in ('draft', 'pending', 'partial'):
                 raise ValidationError(
-                    _('Una solicitud ya ejecutada no puede cancelarse.')
+                    _('Esta solicitud ya fue procesada y no puede cancelarse.')
                 )
 
             if (
@@ -523,7 +593,9 @@ class SatReservaSolicitud(models.Model):
                         'reserva_solicitud_pendiente_id': False,
                     })
 
-                line.write({
+                line.with_context(
+                    sat_reserva_internal_line_write=True,
+                ).write({
                     'resultado': 'cancelled',
                     'seleccionada': False,
                 })
@@ -538,7 +610,9 @@ class SatReservaSolicitud(models.Model):
                     observacion=record.detalle_motivo,
                 )
 
-            record.state = 'cancelled'
+            record.with_context(
+                sat_reserva_internal_request_write=True,
+            ).write({'state': 'cancelled'})
 
         return True
 
@@ -548,6 +622,8 @@ class SatReservaSolicitud(models.Model):
         for record in self:
             record.line_ids.filtered(
                 lambda line: line.resultado == 'pending'
+            ).with_context(
+                sat_reserva_internal_line_write=True,
             ).write({
                 'seleccionada': True,
             })
@@ -558,7 +634,9 @@ class SatReservaSolicitud(models.Model):
         self._reserva_exigir_gerencia()
 
         for record in self:
-            record.line_ids.write({
+            record.line_ids.with_context(
+                sat_reserva_internal_line_write=True,
+            ).write({
                 'seleccionada': False,
             })
 
@@ -586,6 +664,8 @@ class SatReservaSolicitud(models.Model):
         self.ensure_one()
 
         modalidad = self.modalidad_aprobacion or self.modalidad_solicitada
+        if self.tipo_solicitud == 'cambiar_cliente' and not modalidad:
+            modalidad = 'mantener'
 
         if modalidad == 'fecha':
             fecha = self.fecha_aprobada or self.fecha_solicitada
@@ -598,6 +678,13 @@ class SatReservaSolicitud(models.Model):
             return {
                 'modalidad': 'fecha',
                 'fecha': fecha,
+                'dias': 0,
+            }
+
+        if modalidad == 'mantener':
+            return {
+                'modalidad': 'mantener',
+                'fecha': False,
                 'dias': 0,
             }
 
@@ -631,7 +718,15 @@ class SatReservaSolicitud(models.Model):
         plazo = self._get_plazo_aprobado()
         today = fields.Date.context_today(self)
 
-        if plazo['modalidad'] == 'fecha':
+        if plazo['modalidad'] == 'mantener':
+            if not machine.reserva_fecha_limite:
+                raise ValidationError(
+                    _('La máquina %s no tiene un vencimiento vigente que conservar.')
+                    % (machine.serie_id or machine.display_name)
+                )
+            result = machine.reserva_fecha_limite
+
+        elif plazo['modalidad'] == 'fecha':
             result = plazo['fecha']
 
         elif self.tipo_solicitud == 'extender':
@@ -691,7 +786,7 @@ class SatReservaSolicitud(models.Model):
                 machine = line.maquina_id
 
                 if machine.estado_ventas_id == 'entregada':
-                    line.write({
+                    line.with_context(sat_reserva_internal_line_write=True).write({
                         'resultado': 'done',
                         'seleccionada': False,
                         'comentario_gerencia': 'La máquina ya estaba entregada.',
@@ -711,7 +806,7 @@ class SatReservaSolicitud(models.Model):
                         motivo=request.comentario_gerencia or request.detalle_motivo,
                         solicitud=request,
                     )
-                    line.write({
+                    line.with_context(sat_reserva_internal_line_write=True).write({
                         'resultado': 'released',
                         'seleccionada': False,
                     })
@@ -728,7 +823,7 @@ class SatReservaSolicitud(models.Model):
                         observacion=request.comentario_gerencia or request.detalle_motivo,
                     )
 
-                    line.write({
+                    line.with_context(sat_reserva_internal_line_write=True).write({
                         'resultado': 'approved',
                         'seleccionada': False,
                         'fecha_aprobada': machine.reserva_fecha_limite,
@@ -759,7 +854,7 @@ class SatReservaSolicitud(models.Model):
                     cambiar_cliente=request.tipo_solicitud in ('reservar', 'cambiar_cliente'),
                 )
 
-                line.write({
+                line.with_context(sat_reserva_internal_line_write=True).write({
                     'resultado': 'approved',
                     'seleccionada': False,
                     'fecha_aprobada': fecha_nueva,
@@ -787,7 +882,7 @@ class SatReservaSolicitud(models.Model):
             for line in lines:
                 machine = line.maquina_id
 
-                line.write({
+                line.with_context(sat_reserva_internal_line_write=True).write({
                     'resultado': 'rejected',
                     'seleccionada': False,
                     'comentario_gerencia': request.comentario_gerencia,
@@ -833,18 +928,22 @@ class SatReservaSolicitud(models.Model):
             done = lines.filtered(lambda line: line.resultado == 'done')
 
             if pending:
-                if approved or rejected or released or cancelled or done:
-                    record.state = 'partial'
-                else:
-                    record.state = 'pending'
-                continue
-
-            if approved and not rejected and not released and not cancelled:
-                record.state = 'approved'
+                new_state = (
+                    'partial'
+                    if approved or rejected or released or cancelled or done
+                    else 'pending'
+                )
+            elif approved and not rejected and not released and not cancelled:
+                new_state = 'approved'
             elif rejected and not approved and not released:
-                record.state = 'rejected'
+                new_state = 'rejected'
             else:
-                record.state = 'done'
+                new_state = 'done'
+
+            if record.state != new_state:
+                record.with_context(
+                    sat_reserva_internal_request_write=True,
+                ).write({'state': new_state})
 
 
 class SatReservaSolicitudLinea(models.Model):
@@ -945,6 +1044,41 @@ class SatReservaSolicitudLinea(models.Model):
             'La máquina ya está incluida en esta solicitud.',
         ),
     ]
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        if not self.env.context.get('sat_reserva_internal_line_write'):
+            for vals in vals_list:
+                request = self.env['sat.reserva.solicitud'].browse(vals.get('solicitud_id')).exists()
+                if request and (
+                    request.solicitante_id != self.env.user
+                    and not request._reserva_usuario_es_gerencia()
+                ):
+                    raise AccessError(
+                        _('No puede agregar máquinas a una solicitud de otro usuario.')
+                    )
+        return super().create(vals_list)
+
+    def write(self, vals):
+        protected = {'resultado', 'seleccionada', 'fecha_aprobada', 'comentario_gerencia'}
+        if (
+            protected.intersection(vals or {})
+            and not self.env.context.get('sat_reserva_internal_line_write')
+        ):
+            authorized = all(
+                line.solicitud_id._reserva_usuario_es_gerencia()
+                for line in self
+            )
+            if not authorized:
+                raise AccessError(
+                    _('Solo un usuario autorizado puede procesar líneas de una solicitud.')
+                )
+        return super().write(vals)
+
+    def unlink(self):
+        raise ValidationError(
+            _('Las líneas de solicitudes no se eliminan para conservar la trazabilidad.')
+        )
 
 
 # =============================================================================
@@ -1048,16 +1182,50 @@ class SatReservaHistorial(models.Model):
         string='Observación',
     )
 
+    @api.model_create_multi
+    def create(self, vals_list):
+        if not self.env.context.get('sat_reserva_historial_internal'):
+            user = self.env.user
+            group = self.env.ref(
+                'sat.group_reserva_comercial_autorizado',
+                raise_if_not_found=False,
+            )
+            if not (self.env.is_superuser() or user.has_group('base.group_system') or (group and user in group.users)):
+                raise AccessError(_('El historial comercial solo puede generarse desde el flujo de reservas.'))
+        return super().create(vals_list)
+
+    def write(self, vals):
+        if not self.env.is_superuser():
+            raise AccessError(_('El historial comercial es inmutable.'))
+        return super().write(vals)
+
+    def unlink(self):
+        raise ValidationError(_('El historial comercial no se elimina.'))
+
 
 # =============================================================================
 # HERENCIA DE SAT.SAT
 # =============================================================================
 
 class SatSatReservaComercial(models.Model):
-    _inherit = [
-        'sat.sat',
-        'sat.reserva.security.mixin',
-    ]
+    _inherit = 'sat.sat'
+
+    def _reserva_usuario_es_gerencia(self):
+        user = self.env.user
+        if self.env.is_superuser() or user.has_group('base.group_system'):
+            return True
+        group = self.env.ref(
+            'sat.group_reserva_comercial_autorizado',
+            raise_if_not_found=False,
+        )
+        return bool(group and user in group.users)
+
+    def _reserva_exigir_gerencia(self):
+        if not self._reserva_usuario_es_gerencia():
+            raise AccessError(
+                _('Esta operación requiere autorización de reservas comerciales.')
+            )
+        return True
 
     reserva_estado = fields.Selection(
         [
@@ -1173,6 +1341,18 @@ class SatSatReservaComercial(models.Model):
         compute='_compute_reserva_dias_restantes',
     )
 
+    reserva_ultimo_aviso_fecha = fields.Date(
+        string='Último aviso de vencimiento',
+        copy=False,
+        readonly=True,
+    )
+
+    reserva_ultimo_aviso_dias = fields.Integer(
+        string='Días restantes del último aviso',
+        copy=False,
+        readonly=True,
+    )
+
     reserva_historial_ids = fields.One2many(
         'sat.reserva.historial',
         'maquina_id',
@@ -1194,7 +1374,7 @@ class SatSatReservaComercial(models.Model):
 
             diff = (record.reserva_fecha_limite - today).days
             record.reserva_dias_restantes = diff
-            record.reserva_vencida = diff <= 0
+            record.reserva_vencida = diff < 0
 
     # -------------------------------------------------------------------------
     # Helpers de asesora
@@ -1341,7 +1521,9 @@ class SatSatReservaComercial(models.Model):
     ):
         self.ensure_one()
 
-        return self.env['sat.reserva.historial'].create({
+        return self.env['sat.reserva.historial'].with_context(
+            sat_reserva_historial_internal=True,
+        ).create({
             'maquina_id': self.id,
             'cliente_id': (
                 (cliente or self.reserva_cliente_id or self.cliente_id).id
@@ -1406,6 +1588,8 @@ class SatSatReservaComercial(models.Model):
             'reserva_inicio': fields.Datetime.now(),
             'reserva_fecha_base': base,
             'reserva_estado': 'separada',
+            'reserva_ultimo_aviso_fecha': False,
+            'reserva_ultimo_aviso_dias': 0,
         })
 
         plan = self._reserva_calcular_plazo(cliente=cliente)
@@ -1432,7 +1616,7 @@ class SatSatReservaComercial(models.Model):
 
         today = fields.Date.context_today(self)
 
-        if plan['fecha_limite'] <= today:
+        if plan['fecha_limite'] < today:
             self._reserva_liberar(
                 tipo='automatica',
                 motivo='El plazo desde la fecha base ya había vencido.',
@@ -1494,7 +1678,7 @@ class SatSatReservaComercial(models.Model):
 
         today = fields.Date.context_today(self)
 
-        if plan['fecha_limite'] <= today:
+        if plan['fecha_limite'] < today:
             self._reserva_liberar(
                 tipo='automatica',
                 motivo='La regla aplicable al cliente ya se encontraba vencida.',
@@ -1518,6 +1702,8 @@ class SatSatReservaComercial(models.Model):
         cambiar_cliente=False,
     ):
         self.ensure_one()
+        self._reserva_exigir_gerencia()
+
 
         if not fecha_limite:
             raise ValidationError(
@@ -1545,6 +1731,8 @@ class SatSatReservaComercial(models.Model):
             'reserva_regla_id': False,
             'reserva_solicitud_id': solicitud.id if solicitud else False,
             'reserva_solicitud_pendiente_id': False,
+            'reserva_ultimo_aviso_fecha': False,
+            'reserva_ultimo_aviso_dias': 0,
         }
 
         if not self.reserva_inicio:
@@ -1623,6 +1811,8 @@ class SatSatReservaComercial(models.Model):
         observacion=False,
     ):
         self.ensure_one()
+        self._reserva_exigir_gerencia()
+
 
         if not asesora:
             raise ValidationError(
@@ -1670,6 +1860,9 @@ class SatSatReservaComercial(models.Model):
     ):
         self.ensure_one()
 
+        if tipo == 'manual':
+            self._reserva_exigir_gerencia()
+
         if self.estado_ventas_id == 'entregada':
             return False
 
@@ -1687,7 +1880,7 @@ class SatSatReservaComercial(models.Model):
             )
 
             if pending_lines:
-                pending_lines.write({
+                pending_lines.with_context(sat_reserva_internal_line_write=True).write({
                     'resultado': 'released',
                     'seleccionada': False,
                 })
@@ -1767,7 +1960,7 @@ class SatSatReservaComercial(models.Model):
             )
 
             if pending_lines:
-                pending_lines.write({
+                pending_lines.with_context(sat_reserva_internal_line_write=True).write({
                     'resultado': 'done',
                     'seleccionada': False,
                 })
@@ -1837,7 +2030,7 @@ class SatSatReservaComercial(models.Model):
             'reserva_regla_id': plan['regla'].id if plan['regla'] else False,
         })
 
-        if plan['fecha_limite'] <= fields.Date.context_today(self):
+        if plan['fecha_limite'] < fields.Date.context_today(self):
             self._reserva_liberar(
                 tipo='automatica',
                 motivo='El plazo desde la fecha real de descarga ya venció.',
@@ -2048,24 +2241,181 @@ class SatSatReservaComercial(models.Model):
     # -------------------------------------------------------------------------
 
     @api.model
-    def _cron_liberar_reservas_vencidas(self):
+    def _cron_notificar_reservas_por_vencer(self):
         today = fields.Date.context_today(self)
-
         machines = self.search([
             ('reserva_estado', 'in', ['separada', 'especial', 'confirmada']),
             ('reserva_fecha_limite', '!=', False),
-            ('reserva_fecha_limite', '<=', today),
+            ('reserva_fecha_limite', '>', today),
             ('estado_ventas_id', '!=', 'entregada'),
         ])
 
         count = 0
+        group = self.env.ref(
+            'sat.group_reserva_comercial_autorizado',
+            raise_if_not_found=False,
+        )
+        managers = group.users.filtered(lambda user: user.active) if group else self.env['res.users']
+        activity_type = self.env.ref(
+            'mail.mail_activity_data_todo',
+            raise_if_not_found=False,
+        )
 
+        for machine in machines:
+            days = (machine.reserva_fecha_limite - today).days
+            if days not in (1, 2):
+                continue
+            if (
+                machine.reserva_ultimo_aviso_fecha == today
+                and machine.reserva_ultimo_aviso_dias == days
+            ):
+                continue
+
+            recipients = (machine.reserva_asesora_id | managers).filtered(lambda user: user.active)
+            body = _(
+                'Reserva comercial próxima a vencer.<br/>'
+                '<b>Serie:</b> %(serie)s<br/>'
+                '<b>Cliente:</b> %(cliente)s<br/>'
+                '<b>Asesora:</b> %(asesora)s<br/>'
+                '<b>Fecha límite:</b> %(fecha)s<br/>'
+                '<b>Días restantes:</b> %(dias)s'
+            ) % {
+                'serie': machine.serie_id or machine.display_name,
+                'cliente': (machine.reserva_cliente_id or machine.cliente_id).display_name if (machine.reserva_cliente_id or machine.cliente_id) else 'Sin cliente',
+                'asesora': machine.reserva_asesora_id.name if machine.reserva_asesora_id else 'Sin asesora',
+                'fecha': machine.reserva_fecha_limite,
+                'dias': days,
+            }
+            machine.message_post(
+                body=body,
+                partner_ids=list(set(recipients.mapped('partner_id').ids)),
+                subtype_xmlid='mail.mt_note',
+            )
+
+            if activity_type:
+                for user in recipients:
+                    existing = self.env['mail.activity'].search([
+                        ('res_model_id', '=', self.env['ir.model']._get_id('sat.sat')),
+                        ('res_id', '=', machine.id),
+                        ('activity_type_id', '=', activity_type.id),
+                        ('user_id', '=', user.id),
+                        ('summary', '=', 'Reserva comercial por vencer'),
+                    ], limit=1)
+                    vals = {
+                        'activity_type_id': activity_type.id,
+                        'summary': 'Reserva comercial por vencer',
+                        'note': body,
+                        'date_deadline': today,
+                        'user_id': user.id,
+                        'res_model_id': self.env['ir.model']._get_id('sat.sat'),
+                        'res_id': machine.id,
+                    }
+                    if existing:
+                        existing.write({
+                            'note': body,
+                            'date_deadline': today,
+                        })
+                    else:
+                        self.env['mail.activity'].create(vals)
+
+            machine.with_context(sat_reserva_internal_write=True).write({
+                'reserva_ultimo_aviso_fecha': today,
+                'reserva_ultimo_aviso_dias': days,
+            })
+            count += 1
+
+        return count
+
+    @api.model
+    def _cron_liberar_reservas_vencidas(self):
+        today = fields.Date.context_today(self)
+        machines = self.search([
+            ('reserva_estado', 'in', ['separada', 'especial', 'confirmada']),
+            ('reserva_fecha_limite', '!=', False),
+            ('reserva_fecha_limite', '<', today),
+            ('estado_ventas_id', '!=', 'entregada'),
+        ])
+
+        count = 0
         for machine in machines:
             with self.env.cr.savepoint():
                 machine._reserva_liberar(
                     tipo='automatica',
-                    motivo='Se alcanzó la fecha límite de separación.',
+                    motivo='Se superó la fecha límite de separación.',
                 )
                 count += 1
-
         return count
+
+    @api.model
+    def _cron_reconciliar_solicitudes_reserva(self):
+        requests = self.env['sat.reserva.solicitud'].search([
+            ('state', 'in', ['pending', 'partial']),
+        ])
+        processed = 0
+
+        for request in requests:
+            changed = False
+            with self.env.cr.savepoint():
+                pending_lines = request.line_ids.filtered(
+                    lambda line: line.resultado == 'pending'
+                )
+                for line in pending_lines:
+                    machine = line.maquina_id
+                    if not machine.exists():
+                        line.with_context(sat_reserva_internal_line_write=True).write({
+                            'resultado': 'cancelled',
+                            'seleccionada': False,
+                            'comentario_gerencia': 'La máquina ya no existe.',
+                        })
+                        changed = True
+                        continue
+
+                    if machine.estado_ventas_id == 'entregada':
+                        line.with_context(sat_reserva_internal_line_write=True).write({
+                            'resultado': 'done',
+                            'seleccionada': False,
+                            'comentario_gerencia': 'Cerrada automáticamente porque la máquina fue entregada.',
+                        })
+                        if machine.reserva_solicitud_pendiente_id == request:
+                            machine.with_context(sat_reserva_internal_write=True).write({
+                                'reserva_solicitud_pendiente_id': False,
+                            })
+                        machine._reserva_crear_historial(
+                            tipo_evento='cancelacion',
+                            cliente=machine.reserva_cliente_id or machine.cliente_id,
+                            asesora=machine.reserva_asesora_id,
+                            solicitud=request,
+                            fecha_anterior=machine.reserva_fecha_limite,
+                            motivo='Solicitud cerrada automáticamente por entrega',
+                        )
+                        changed = True
+                        continue
+
+                    if machine.reserva_solicitud_pendiente_id != request:
+                        line.with_context(sat_reserva_internal_line_write=True).write({
+                            'resultado': 'cancelled',
+                            'seleccionada': False,
+                            'comentario_gerencia': 'La solicitud dejó de ser la solicitud pendiente vigente de esta máquina.',
+                        })
+                        machine._reserva_crear_historial(
+                            tipo_evento='cancelacion',
+                            cliente=machine.reserva_cliente_id or machine.cliente_id,
+                            asesora=machine.reserva_asesora_id,
+                            solicitud=request,
+                            fecha_anterior=machine.reserva_fecha_limite,
+                            motivo='Solicitud reconciliada automáticamente',
+                        )
+                        changed = True
+
+                old_state = request.state
+                request._actualizar_estado_solicitud()
+                if changed or request.state != old_state:
+                    request.message_post(
+                        body=_(
+                            'La solicitud comercial fue revisada automáticamente. Estado actual: <b>%s</b>.'
+                        ) % dict(request._fields['state'].selection).get(request.state, request.state),
+                        subtype_xmlid='mail.mt_note',
+                    )
+                    processed += 1
+
+        return processed
