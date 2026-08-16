@@ -172,7 +172,7 @@ if config:
         <field name="code">model._cron_notificar_reservas_por_vencer()</field>
         <field name="interval_number">1</field>
         <field name="interval_type">days</field>
-        <field name="active">True</field>
+        <field name="active">False</field>
     </record>
 
     <record id="ir_cron_sat_liberar_reservas_vencidas" model="ir.cron">
@@ -182,7 +182,7 @@ if config:
         <field name="code">model._cron_liberar_reservas_vencidas()</field>
         <field name="interval_number">1</field>
         <field name="interval_type">hours</field>
-        <field name="active">True</field>
+        <field name="active">False</field>
     </record>
 
     <record id="ir_cron_sat_reconciliar_solicitudes_reserva" model="ir.cron">
@@ -192,7 +192,7 @@ if config:
         <field name="code">model._cron_reconciliar_solicitudes_reserva()</field>
         <field name="interval_number">1</field>
         <field name="interval_type">days</field>
-        <field name="active">True</field>
+        <field name="active">False</field>
     </record>
     </data>
 </odoo>
