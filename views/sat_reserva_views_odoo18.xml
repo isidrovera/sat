@@ -1,0 +1,585 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <data>
+
+        <!-- ============================================================= -->
+        <!-- RESERVAS COMERCIALES - REGLAS                                -->
+        <!-- Solo el grupo autorizado administra estas reglas.             -->
+        <!-- ============================================================= -->
+
+        <record id="view_sat_reserva_regla_list" model="ir.ui.view">
+            <field name="name">sat.reserva.regla.list</field>
+            <field name="model">sat.reserva.regla</field>
+            <field name="arch" type="xml"><list string="Reglas de reservas comerciales" default_order="prioridad desc, id desc" decoration-muted="active == False"><field name="name" string="Regla"/><field name="tipo_aplicacion" string="Aplicación" widget="badge"/><field name="cliente_id" optional="show"/><field name="importacion" optional="show"/><field name="dias_separacion" string="Días"/><field name="fecha_inicio" optional="show"/><field name="fecha_fin" optional="show"/><field name="prioridad" optional="hide"/><field name="active" widget="boolean_toggle"/></list></field>
+        </record>
+
+        <record id="view_sat_reserva_regla_form" model="ir.ui.view">
+            <field name="name">sat.reserva.regla.form</field>
+            <field name="model">sat.reserva.regla</field>
+            <field name="arch" type="xml">
+                <form string="Regla de reserva comercial">
+                    <sheet>
+                        <div class="oe_title">
+                            <label for="name" string="Regla"/>
+                            <h1><field name="name" placeholder="Ej. Cliente interno - 15 días"/></h1>
+                        </div>
+
+                        <div class="alert alert-info" role="status">
+                            Esta configuración define cuántos días puede permanecer separada una máquina. La prioridad funcional es: cliente + importación, cliente y finalmente regla general.
+                        </div>
+
+                        <group>
+                            <group string="Alcance de la regla">
+                                <field name="active"/>
+                                <field name="tipo_aplicacion"/>
+                                <field name="cliente_id" invisible="tipo_aplicacion == 'general'" required="tipo_aplicacion in ('cliente', 'cliente_importacion')"/>
+                                <field name="importacion" invisible="tipo_aplicacion != 'cliente_importacion'" required="tipo_aplicacion == 'cliente_importacion'"/>
+                            </group>
+                            <group string="Plazo y vigencia">
+                                <field name="dias_separacion"/>
+                                <field name="prioridad"/>
+                                <field name="fecha_inicio"/>
+                                <field name="fecha_fin"/>
+                            </group>
+                        </group>
+
+                        <group string="Observaciones">
+                            <field name="observacion" nolabel="1" placeholder="Explique por qué existe esta regla o cualquier condición que gerencia deba recordar..."/>
+                        </group>
+                    </sheet>
+                    <chatter/>
+                </form>
+            </field>
+        </record>
+
+        <record id="view_sat_reserva_regla_search" model="ir.ui.view">
+            <field name="name">sat.reserva.regla.search</field>
+            <field name="model">sat.reserva.regla</field>
+            <field name="arch" type="xml">
+                <search string="Buscar reglas de reservas">
+                    <field name="name"/>
+                    <field name="cliente_id"/>
+                    <field name="importacion"/>
+                    <filter name="filter_reglas_activas" string="Activas" domain="[('active', '=', True)]"/>
+                    <filter name="filter_reglas_generales" string="Generales" domain="[('tipo_aplicacion', '=', 'general')]"/>
+                    <filter name="filter_reglas_cliente" string="Por cliente" domain="[('tipo_aplicacion', '=', 'cliente')]"/>
+                    <filter name="filter_reglas_cliente_importacion" string="Cliente + importación" domain="[('tipo_aplicacion', '=', 'cliente_importacion')]"/>
+                    <group expand="0" string="Agrupar por">
+                        <filter name="group_regla_tipo" string="Tipo" context="{'group_by': 'tipo_aplicacion'}"/>
+                        <filter name="group_regla_cliente" string="Cliente" context="{'group_by': 'cliente_id'}"/>
+                        <filter name="group_regla_activa" string="Activa" context="{'group_by': 'active'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <record id="action_sat_reserva_regla" model="ir.actions.act_window">
+            <field name="name">Reglas y plazos</field>
+            <field name="res_model">sat.reserva.regla</field>
+            <field name="view_mode">list,form</field>
+            <field name="search_view_id" ref="view_sat_reserva_regla_search"/>
+            <field name="context">{'search_default_filter_reglas_activas': 1}</field>
+        </record>
+
+        <!-- ============================================================= -->
+        <!-- SOLICITUDES DE AUTORIZACIÓN                                   -->
+        <!-- ============================================================= -->
+
+        <record id="view_sat_reserva_solicitud_list" model="ir.ui.view">
+            <field name="name">sat.reserva.solicitud.list</field>
+            <field name="model">sat.reserva.solicitud</field>
+            <field name="arch" type="xml">
+                <list string="Solicitudes de reservas" default_order="create_date desc" decoration-warning="state in ('pending', 'partial')" decoration-success="state == 'approved'" decoration-danger="state == 'rejected'" decoration-muted="state in ('done', 'cancelled')">
+                    <field name="name" string="Solicitud"/>
+                    <field name="create_date" string="Creada"/>
+                    <field name="solicitante_id" string="Solicitante"/>
+                    <field name="tipo_solicitud" string="Acción" widget="badge"/>
+                    <field name="motivo" optional="show"/>
+                    <field name="cliente_id" string="Cliente destino" optional="show"/>
+                    <field name="asesora_destino_id" string="Asesora destino" optional="show"/>
+                    <field name="cantidad_maquinas" string="Máquinas"/>
+                    <field name="state" string="Estado" widget="badge"/>
+                    <field name="procesado_por_id" optional="hide"/>
+                    <field name="fecha_procesamiento" optional="hide"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="view_sat_reserva_solicitud_linea_list" model="ir.ui.view">
+            <field name="name">sat.reserva.solicitud.linea.list</field>
+            <field name="model">sat.reserva.solicitud.linea</field>
+            <field name="priority">90</field>
+            <field name="arch" type="xml">
+                <list string="Máquinas de la solicitud" create="0" delete="0" edit="1" decoration-warning="resultado == 'pending'" decoration-success="resultado == 'approved'" decoration-danger="resultado == 'rejected'" decoration-muted="resultado in ('released', 'done', 'cancelled')">
+                    <field name="seleccionada" string="Procesar" groups="sat.group_reserva_comercial_autorizado"/>
+                    <field name="maquina_id" string="Máquina" readonly="1"/>
+                    <field name="serie" readonly="1"/>
+                    <field name="importacion" readonly="1"/>
+                    <field name="cliente_actual_id" readonly="1"/>
+                    <field name="asesora_actual_id" readonly="1"/>
+                    <field name="estado_reserva_anterior" string="Reserva anterior" widget="badge" readonly="1"/>
+                    <field name="fecha_limite_anterior" string="Vencía" readonly="1"/>
+                    <field name="fecha_aprobada" string="Nuevo vencimiento" readonly="1"/>
+                    <field name="resultado" widget="badge" readonly="1"/>
+                    <field name="comentario_gerencia" string="Comentario por máquina" groups="sat.group_reserva_comercial_autorizado"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="view_sat_reserva_solicitud_form" model="ir.ui.view">
+            <field name="name">sat.reserva.solicitud.form</field>
+            <field name="model">sat.reserva.solicitud</field>
+            <field name="arch" type="xml">
+                <form string="Solicitud de autorización comercial">
+                    <header>
+                        <button name="action_enviar_gerencia" string="Enviar a autorización" type="object" icon="fa-paper-plane" class="oe_highlight" invisible="state != 'draft'"/>
+                        <button name="action_cancelar" string="Cancelar solicitud" type="object" icon="fa-times" class="btn-secondary" invisible="state not in ('draft', 'pending', 'partial')"/>
+                        <button name="action_seleccionar_pendientes" string="Seleccionar pendientes" type="object" icon="fa-check-square-o" class="btn-secondary" groups="sat.group_reserva_comercial_autorizado" invisible="state not in ('pending', 'partial')"/>
+                        <button name="action_quitar_seleccion" string="Quitar selección" type="object" icon="fa-square-o" class="btn-secondary" groups="sat.group_reserva_comercial_autorizado" invisible="state not in ('pending', 'partial')"/>
+                        <button name="action_aprobar_seleccionadas" string="Aprobar seleccionadas" type="object" icon="fa-check" class="oe_highlight" groups="sat.group_reserva_comercial_autorizado" invisible="state not in ('pending', 'partial')"/>
+                        <button name="action_rechazar_seleccionadas" string="Rechazar seleccionadas" type="object" icon="fa-ban" class="btn-danger" groups="sat.group_reserva_comercial_autorizado" invisible="state not in ('pending', 'partial')"/>
+                        <field name="state" widget="statusbar" statusbar_visible="draft,pending,partial,approved,rejected,done,cancelled"/>
+                    </header>
+
+                    <sheet>
+                        <div class="oe_title">
+                            <label for="name" string="Solicitud"/>
+                            <h1><field name="name" readonly="1"/></h1>
+                        </div>
+
+                        <div class="alert alert-warning" role="status" invisible="state not in ('pending', 'partial')">
+                            Esta solicitud todavía no modifica el vencimiento de las máquinas. La reserva solo queda protegida cuando un usuario autorizado aprueba la solicitud.
+                        </div>
+
+                        <div class="alert alert-success" role="status" invisible="state != 'approved'">
+                            La solicitud fue aprobada y las máquinas procesadas conservaron el resultado en su historial comercial.
+                        </div>
+
+                        <group>
+                            <group string="Datos de la solicitud">
+                                <field name="solicitante_id" readonly="1"/>
+                                <field name="tipo_solicitud" readonly="state != 'draft'"/>
+                                <field name="motivo" readonly="state != 'draft'"/>
+                                <field name="cliente_id" readonly="state != 'draft'"/>
+                                <field name="asesora_destino_id" readonly="state != 'draft'"/>
+                                <field name="cantidad_maquinas" readonly="1"/>
+                            </group>
+
+                            <group string="Plazo solicitado">
+                                <field name="modalidad_solicitada" readonly="state != 'draft'"/>
+                                <field name="fecha_solicitada" invisible="modalidad_solicitada != 'fecha'" readonly="state != 'draft'"/>
+                                <field name="dias_solicitados" invisible="modalidad_solicitada != 'dias'" readonly="state != 'draft'"/>
+                                <field name="procesado_por_id" readonly="1" invisible="not procesado_por_id"/>
+                                <field name="fecha_procesamiento" readonly="1" invisible="not fecha_procesamiento"/>
+                            </group>
+                        </group>
+
+                        <group string="Sustento">
+                            <field name="detalle_motivo" nolabel="1" readonly="state != 'draft'"/>
+                        </group>
+
+                        <group string="Decisión del autorizado" groups="sat.group_reserva_comercial_autorizado" invisible="state in ('draft', 'cancelled')">
+                            <group string="Plazo aprobado">
+                                <field name="modalidad_aprobacion" readonly="state not in ('pending', 'partial')"/>
+                                <field name="fecha_aprobada" invisible="modalidad_aprobacion != 'fecha'" readonly="state not in ('pending', 'partial')"/>
+                                <field name="dias_aprobados" invisible="modalidad_aprobacion != 'dias'" readonly="state not in ('pending', 'partial')"/>
+                            </group>
+                            <group string="Respuesta">
+                                <field name="comentario_gerencia" placeholder="Comentario, condición o motivo de la decisión..." readonly="state not in ('pending', 'partial')"/>
+                            </group>
+                        </group>
+
+                        <notebook>
+                            <page string="Máquinas" name="reserva_solicitud_maquinas">
+                                <field name="line_ids" nolabel="1" mode="list" readonly="state in ('approved', 'rejected', 'done', 'cancelled')"/>
+                            </page>
+                        </notebook>
+                    </sheet>
+
+                    <chatter/>
+                </form>
+            </field>
+        </record>
+
+        <record id="view_sat_reserva_solicitud_search" model="ir.ui.view">
+            <field name="name">sat.reserva.solicitud.search</field>
+            <field name="model">sat.reserva.solicitud</field>
+            <field name="arch" type="xml">
+                <search string="Buscar solicitudes">
+                    <field name="name"/>
+                    <field name="solicitante_id"/>
+                    <field name="cliente_id"/>
+                    <field name="asesora_destino_id"/>
+                    <filter name="filter_solicitudes_pendientes" string="Pendientes" domain="[('state', 'in', ('pending', 'partial'))]"/>
+                    <filter name="filter_solicitudes_aprobadas" string="Aprobadas" domain="[('state', '=', 'approved')]"/>
+                    <filter name="filter_solicitudes_rechazadas" string="Rechazadas" domain="[('state', '=', 'rejected')]"/>
+                    <filter name="filter_solicitudes_finalizadas" string="Finalizadas" domain="[('state', 'in', ('done', 'cancelled'))]"/>
+                    <group expand="0" string="Agrupar por">
+                        <filter name="group_solicitud_estado" string="Estado" context="{'group_by': 'state'}"/>
+                        <filter name="group_solicitud_tipo" string="Tipo de solicitud" context="{'group_by': 'tipo_solicitud'}"/>
+                        <filter name="group_solicitud_solicitante" string="Solicitante" context="{'group_by': 'solicitante_id'}"/>
+                        <filter name="group_solicitud_cliente" string="Cliente" context="{'group_by': 'cliente_id'}"/>
+                        <filter name="group_solicitud_mes" string="Mes" context="{'group_by': 'create_date:month'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <record id="action_sat_reserva_solicitudes" model="ir.actions.act_window">
+            <field name="name">Solicitudes de reservas</field>
+            <field name="res_model">sat.reserva.solicitud</field>
+            <field name="view_mode">list,form</field>
+            <field name="search_view_id" ref="view_sat_reserva_solicitud_search"/>
+        </record>
+
+        <record id="action_sat_reserva_por_autorizar" model="ir.actions.act_window">
+            <field name="name">Reservas por autorizar</field>
+            <field name="res_model">sat.reserva.solicitud</field>
+            <field name="view_mode">list,form</field>
+            <field name="search_view_id" ref="view_sat_reserva_solicitud_search"/>
+            <field name="domain">[('state', 'in', ('pending', 'partial'))]</field>
+            <field name="context">{'search_default_filter_solicitudes_pendientes': 1}</field>
+        </record>
+
+        <!-- ============================================================= -->
+        <!-- HISTORIAL COMERCIAL                                           -->
+        <!-- ============================================================= -->
+
+        <record id="view_sat_reserva_historial_list" model="ir.ui.view">
+            <field name="name">sat.reserva.historial.list</field>
+            <field name="model">sat.reserva.historial</field>
+            <field name="arch" type="xml">
+                <list string="Historial de reservas" create="0" edit="0" delete="0" default_order="fecha_evento desc">
+                    <field name="fecha_evento" string="Fecha y hora"/>
+                    <field name="maquina_id"/>
+                    <field name="tipo_evento" widget="badge"/>
+                    <field name="cliente_id" optional="show"/>
+                    <field name="asesora_id" optional="show"/>
+                    <field name="fecha_base" optional="hide"/>
+                    <field name="fecha_vencimiento_anterior" string="Vencimiento anterior" optional="show"/>
+                    <field name="fecha_vencimiento_nueva" string="Nuevo vencimiento" optional="show"/>
+                    <field name="ciclo" optional="hide"/>
+                    <field name="usuario_id" string="Ejecutado por" optional="show"/>
+                    <field name="solicitud_id" optional="hide"/>
+                    <field name="regla_id" optional="hide"/>
+                    <field name="motivo" optional="show"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="view_sat_reserva_historial_form" model="ir.ui.view">
+            <field name="name">sat.reserva.historial.form</field>
+            <field name="model">sat.reserva.historial</field>
+            <field name="arch" type="xml">
+                <form string="Evento del historial comercial" create="0" edit="0" delete="0">
+                    <sheet>
+                        <div class="oe_title">
+                            <h1><field name="tipo_evento" widget="badge" readonly="1"/></h1>
+                        </div>
+
+                        <group>
+                            <group string="Evento">
+                                <field name="fecha_evento" readonly="1"/>
+                                <field name="maquina_id" readonly="1"/>
+                                <field name="usuario_id" readonly="1"/>
+                                <field name="ciclo" readonly="1"/>
+                            </group>
+                            <group string="Contexto comercial">
+                                <field name="cliente_id" readonly="1"/>
+                                <field name="asesora_id" readonly="1"/>
+                                <field name="solicitud_id" readonly="1"/>
+                                <field name="regla_id" readonly="1"/>
+                            </group>
+                        </group>
+
+                        <group string="Fechas de la reserva">
+                            <field name="fecha_base" readonly="1"/>
+                            <field name="fecha_vencimiento_anterior" readonly="1"/>
+                            <field name="fecha_vencimiento_nueva" readonly="1"/>
+                        </group>
+
+                        <group string="Detalle">
+                            <field name="motivo" readonly="1"/>
+                            <field name="observacion" readonly="1"/>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="view_sat_reserva_historial_search" model="ir.ui.view">
+            <field name="name">sat.reserva.historial.search</field>
+            <field name="model">sat.reserva.historial</field>
+            <field name="arch" type="xml">
+                <search string="Buscar historial comercial">
+                    <field name="maquina_id"/>
+                    <field name="cliente_id"/>
+                    <field name="asesora_id"/>
+                    <field name="usuario_id"/>
+                    <filter name="filter_historial_liberaciones" string="Liberaciones" domain="[('tipo_evento', 'in', ('liberacion_manual', 'liberacion_automatica'))]"/>
+                    <filter name="filter_historial_aprobaciones" string="Aprobaciones" domain="[('tipo_evento', 'in', ('aprobacion', 'extension', 'reduccion'))]"/>
+                    <filter name="filter_historial_cambios" string="Cambios comerciales" domain="[('tipo_evento', 'in', ('cambio_cliente', 'cambio_asesora'))]"/>
+                    <group expand="0" string="Agrupar por">
+                        <filter name="group_historial_evento" string="Evento" context="{'group_by': 'tipo_evento'}"/>
+                        <filter name="group_historial_asesora" string="Asesora" context="{'group_by': 'asesora_id'}"/>
+                        <filter name="group_historial_cliente" string="Cliente" context="{'group_by': 'cliente_id'}"/>
+                        <filter name="group_historial_mes" string="Mes" context="{'group_by': 'fecha_evento:month'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <record id="action_sat_reserva_historial" model="ir.actions.act_window">
+            <field name="name">Historial de reservas</field>
+            <field name="res_model">sat.reserva.historial</field>
+            <field name="view_mode">list,form</field>
+            <field name="search_view_id" ref="view_sat_reserva_historial_search"/>
+        </record>
+
+        <!-- ============================================================= -->
+        <!-- WIZARD - ASIGNAR / REPARTIR MÁQUINAS                          -->
+        <!-- ============================================================= -->
+
+        <record id="view_sat_reserva_asignacion_wizard_form" model="ir.ui.view">
+            <field name="name">sat.reserva.asignacion.wizard.form</field>
+            <field name="model">sat.reserva.asignacion.wizard</field>
+            <field name="arch" type="xml">
+                <form string="Asignar máquinas a asesoras">
+                    <sheet>
+                        <div class="oe_title">
+                            <h2>Asignación comercial</h2>
+                        </div>
+
+                        <div class="alert alert-info" role="status">
+                            Puede asignar todas las máquinas seleccionadas a una asesora o repartirlas automáticamente entre varias asesoras.
+                        </div>
+
+                        <group>
+                            <group string="Selección">
+                                <field name="cantidad_maquinas" readonly="1"/>
+                                <field name="modo"/>
+                            </group>
+                            <group string="Responsable comercial">
+                                <field name="asesora_id" invisible="modo != 'una'" required="modo == 'una'"/>
+                                <field name="asesora_ids" widget="many2many_tags" invisible="modo != 'repartir'" required="modo == 'repartir'"/>
+                            </group>
+                        </group>
+
+                        <group string="Máquinas seleccionadas">
+                            <field name="maquina_ids" widget="many2many_tags" readonly="1" nolabel="1"/>
+                        </group>
+
+                        <group string="Observación">
+                            <field name="observacion" nolabel="1" placeholder="Observación opcional sobre el reparto o la asignación..."/>
+                        </group>
+                    </sheet>
+
+                    <footer>
+                        <button name="action_asignar" string="Asignar máquinas" type="object" icon="fa-user-plus" class="oe_highlight"/>
+                        <button string="Cancelar" special="cancel" class="btn-secondary"/>
+                    </footer>
+                </form>
+            </field>
+        </record>
+
+        <!-- ============================================================= -->
+        <!-- WIZARD - SOLICITAR AUTORIZACIÓN                               -->
+        <!-- ============================================================= -->
+
+        <record id="view_sat_reserva_solicitud_wizard_form" model="ir.ui.view">
+            <field name="name">sat.reserva.solicitud.wizard.form</field>
+            <field name="model">sat.reserva.solicitud.wizard</field>
+            <field name="arch" type="xml">
+                <form string="Solicitar autorización comercial">
+                    <sheet>
+                        <div class="oe_title">
+                            <h2>Solicitud a autorizados</h2>
+                        </div>
+
+                        <div class="alert alert-warning" role="status">
+                            Enviar esta solicitud no extiende ni congela la reserva actual. El nuevo plazo o cambio comercial se aplica solamente después de la aprobación.
+                        </div>
+
+                        <group>
+                            <group string="Acción solicitada">
+                                <field name="cantidad_maquinas" readonly="1"/>
+                                <field name="tipo_solicitud"/>
+                                <field name="motivo"/>
+                                <field name="cliente_id" invisible="tipo_solicitud not in ('reservar', 'cambiar_cliente')"/>
+                                <field name="asesora_destino_id" invisible="tipo_solicitud != 'cambiar_asesora'"/>
+                            </group>
+
+                            <group string="Plazo solicitado" invisible="tipo_solicitud in ('liberar', 'cambiar_asesora')">
+                                <field name="modalidad_plazo"/>
+                                <field name="fecha_solicitada" invisible="modalidad_plazo != 'fecha'"/>
+                                <field name="dias_solicitados" invisible="modalidad_plazo != 'dias'"/>
+                            </group>
+                        </group>
+
+                        <group string="Sustento obligatorio">
+                            <field name="detalle_motivo" nolabel="1" placeholder="Explique el pago, adelanto, orden de compra, compromiso del cliente o el motivo comercial que justifica la solicitud..."/>
+                        </group>
+
+                        <group string="Máquinas seleccionadas">
+                            <field name="maquina_ids" widget="many2many_tags" readonly="1" nolabel="1"/>
+                        </group>
+                    </sheet>
+
+                    <footer>
+                        <button name="action_crear_solicitud" string="Enviar solicitud" type="object" icon="fa-paper-plane" class="oe_highlight"/>
+                        <button string="Cancelar" special="cancel" class="btn-secondary"/>
+                    </footer>
+                </form>
+            </field>
+        </record>
+
+        <!-- ============================================================= -->
+        <!-- HERENCIA DE LA FICHA DE MÁQUINA SAT.SAT                       -->
+        <!-- Vista base real: sat.maquinas_form_view                       -->
+        <!-- ============================================================= -->
+
+        <record id="view_sat_sat_form_inherit_reserva_comercial" model="ir.ui.view">
+            <field name="name">sat.sat.form.inherit.reserva.comercial</field>
+            <field name="model">sat.sat</field>
+            <field name="inherit_id" ref="sat.maquinas_form_view"/>
+            <field name="priority">90</field>
+            <field name="arch" type="xml">
+
+                <xpath expr="//form/header" position="inside">
+                    <button name="action_asignar_reserva_asesora" string="Asignar reserva" type="object" icon="fa-user-plus" class="btn-secondary" groups="sat.Sat_ventas_group_user,sat.group_reserva_comercial_autorizado" invisible="estado_ventas_id == 'entregada'"/>
+                    <button name="action_solicitar_reserva_comercial" string="Solicitar autorización" type="object" icon="fa-clock-o" class="btn-secondary" groups="sat.Sat_ventas_group_user,sat.group_reserva_comercial_autorizado" invisible="estado_ventas_id == 'entregada'"/>
+                </xpath>
+
+                <xpath expr="//form/sheet/notebook" position="inside">
+                    <page string="Reserva comercial" name="reserva_comercial">
+                        <div class="alert alert-info" role="status" invisible="reserva_estado != 'libre'">
+                            Esta máquina está libre comercialmente. Puede asignarse a una asesora o incluirse en una nueva separación.
+                        </div>
+
+                        <div class="alert alert-warning" role="status" invisible="reserva_estado not in ('separada', 'especial')">
+                            La máquina está separada. Revise la fecha límite y los días restantes antes de comprometerla con otro cliente.
+                        </div>
+
+                        <div class="alert alert-success" role="status" invisible="reserva_estado != 'confirmada'">
+                            La reserva está confirmada por una autorización comercial vigente.
+                        </div>
+
+                        <div class="alert alert-danger" role="alert" invisible="not reserva_vencida">
+                            El plazo comercial ya venció o vence hoy. El proceso automático realizará la liberación según la política configurada.
+                        </div>
+
+                        <group>
+                            <group string="Responsable y cliente">
+                                <field name="reserva_estado" widget="badge" readonly="1"/>
+                                <field name="reserva_asesora_id" readonly="1"/>
+                                <field name="reserva_cliente_id" readonly="1"/>
+                                <field name="reserva_inicio" readonly="1"/>
+                                <field name="reserva_ciclo" readonly="1"/>
+                            </group>
+
+                            <group string="Vigencia comercial">
+                                <field name="reserva_fecha_base" readonly="1"/>
+                                <field name="reserva_fecha_limite" readonly="1"/>
+                                <field name="reserva_dias" readonly="1"/>
+                                <field name="reserva_dias_restantes" readonly="1"/>
+                                <field name="reserva_vencida" readonly="1"/>
+                            </group>
+                        </group>
+
+                        <group string="Origen del plazo">
+                            <group>
+                                <field name="reserva_origen" widget="badge" readonly="1"/>
+                                <field name="reserva_regla_id" readonly="1"/>
+                            </group>
+                            <group>
+                                <field name="reserva_solicitud_id" string="Autorización vigente" readonly="1"/>
+                                <field name="reserva_solicitud_pendiente_id" string="Solicitud pendiente" readonly="1"/>
+                                <field name="reserva_ultimo_aviso_fecha" readonly="1" groups="sat.group_reserva_comercial_autorizado"/>
+                                <field name="reserva_ultimo_aviso_dias" readonly="1" groups="sat.group_reserva_comercial_autorizado"/>
+                            </group>
+                        </group>
+
+                        <separator string="Historial comercial"/>
+
+                        <field name="reserva_historial_ids" nolabel="1" mode="list" readonly="1"/>
+                    </page>
+                </xpath>
+
+            </field>
+        </record>
+
+        <!-- ============================================================= -->
+        <!-- HERENCIA DE LA LISTA DE MÁQUINAS                              -->
+        <!-- Vista base real: sat.maquinas_tree_sat                        -->
+        <!-- Incluye acciones para selección múltiple.                     -->
+        <!-- ============================================================= -->
+
+        <record id="view_sat_sat_list_inherit_reserva_comercial" model="ir.ui.view">
+            <field name="name">sat.sat.list.inherit.reserva.comercial</field>
+            <field name="model">sat.sat</field>
+            <field name="inherit_id" ref="sat.maquinas_tree_sat"/>
+            <field name="priority">90</field>
+            <field name="arch" type="xml">
+
+                <xpath expr="//list/field[1]" position="before">
+                    <header>
+                        <button name="action_asignar_reserva_asesora" string="Asignar / repartir" type="object" icon="fa-users" class="btn-secondary" groups="sat.Sat_ventas_group_user,sat.group_reserva_comercial_autorizado"/>
+                        <button name="action_solicitar_reserva_comercial" string="Solicitar autorización" type="object" icon="fa-clock-o" class="btn-secondary" groups="sat.Sat_ventas_group_user,sat.group_reserva_comercial_autorizado"/>
+                    </header>
+                </xpath>
+
+                <xpath expr="//field[@name='estado_ventas_id']" position="before">
+                    <field name="reserva_estado" string="Reserva" widget="badge" optional="show" decoration-success="reserva_estado == 'confirmada'" decoration-warning="reserva_estado in ('separada', 'especial')" decoration-muted="reserva_estado == 'libre'"/>
+                    <field name="reserva_asesora_id" string="Asesora reserva" optional="show"/>
+                    <field name="reserva_cliente_id" string="Cliente reserva" optional="hide"/>
+                    <field name="reserva_fecha_limite" string="Vence reserva" optional="show"/>
+                    <field name="reserva_dias_restantes" string="Días" optional="show"/>
+                    <field name="reserva_solicitud_pendiente_id" string="Solicitud pendiente" optional="hide"/>
+                </xpath>
+
+            </field>
+        </record>
+
+        <!-- ============================================================= -->
+        <!-- HERENCIA DE BÚSQUEDA DE MÁQUINAS                              -->
+        <!-- ============================================================= -->
+
+        <record id="view_sat_sat_search_inherit_reserva_comercial" model="ir.ui.view">
+            <field name="name">sat.sat.search.inherit.reserva.comercial</field>
+            <field name="model">sat.sat</field>
+            <field name="inherit_id" ref="sat.Sat_search_view"/>
+            <field name="priority">90</field>
+            <field name="arch" type="xml">
+                <xpath expr="//search" position="inside">
+                    <separator/>
+                    <field name="reserva_asesora_id" string="Asesora reserva"/>
+                    <field name="reserva_cliente_id" string="Cliente reserva"/>
+                    <field name="reserva_solicitud_pendiente_id" string="Solicitud pendiente"/>
+                    <filter name="filter_reserva_libres" string="Reserva libre" domain="[('reserva_estado', '=', 'libre')]"/>
+                    <filter name="filter_reserva_separadas" string="Separadas" domain="[('reserva_estado', '=', 'separada')]"/>
+                    <filter name="filter_reserva_especiales" string="Reserva especial" domain="[('reserva_estado', '=', 'especial')]"/>
+                    <filter name="filter_reserva_confirmadas" string="Confirmadas" domain="[('reserva_estado', '=', 'confirmada')]"/>
+                    <filter name="filter_reserva_con_solicitud" string="Con solicitud pendiente" domain="[('reserva_solicitud_pendiente_id', '!=', False)]"/>
+                    <group expand="0" string="Reserva comercial">
+                        <filter name="group_reserva_estado" string="Estado reserva" context="{'group_by': 'reserva_estado'}"/>
+                        <filter name="group_reserva_asesora" string="Asesora reserva" context="{'group_by': 'reserva_asesora_id'}"/>
+                        <filter name="group_reserva_cliente" string="Cliente reserva" context="{'group_by': 'reserva_cliente_id'}"/>
+                        <filter name="group_reserva_vencimiento" string="Vencimiento" context="{'group_by': 'reserva_fecha_limite'}"/>
+                    </group>
+                </xpath>
+            </field>
+        </record>
+
+        <!-- ============================================================= -->
+        <!-- MENÚS                                                         -->
+        <!-- Va después de Reclamos y Garantías (sequence 50).             -->
+        <!-- ============================================================= -->
+
+        <menuitem id="menu_reservas_comerciales_root" name="Reservas Comerciales" parent="menu_corapsac_root" sequence="60"/>
+        <menuitem id="menu_sat_reserva_solicitudes" name="Solicitudes" parent="menu_reservas_comerciales_root" action="action_sat_reserva_solicitudes" sequence="10"/>
+        <menuitem id="menu_sat_reserva_por_autorizar" name="Por autorizar" parent="menu_reservas_comerciales_root" action="action_sat_reserva_por_autorizar" groups="sat.group_reserva_comercial_autorizado" sequence="20"/>
+        <menuitem id="menu_sat_reserva_reglas" name="Reglas y plazos" parent="menu_reservas_comerciales_root" action="action_sat_reserva_regla" groups="sat.group_reserva_comercial_autorizado" sequence="30"/>
+        <menuitem id="menu_sat_reserva_historial" name="Historial" parent="menu_reservas_comerciales_root" action="action_sat_reserva_historial" groups="sat.group_reserva_comercial_autorizado" sequence="40"/>
+
+    </data>
+</odoo>
