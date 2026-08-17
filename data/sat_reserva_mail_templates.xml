@@ -13,7 +13,7 @@
             <field name="model_id" ref="sat.model_sat_reserva_solicitud"/>
             <field name="subject">Reserva comercial {{ object.name }} - requiere autorización</field>
             <field name="description">Notifica a los usuarios autorizados cuando ventas envía una solicitud comercial.</field>
-            <field name="email_from">{{ user.email_formatted or object.env.company.email_formatted }}</field>
+            <field name="email_from">soporte@andescopiers.com.pe</field>
             <field name="email_to"/>
             <field name="email_cc">{{ object.solicitante_id.email or '' }}</field>
             <field name="reply_to">{{ object.solicitante_id.email or user.email or '' }}</field>
@@ -132,7 +132,7 @@
             <field name="model_id" ref="sat.model_sat_reserva_solicitud"/>
             <field name="subject">Aprobada {{ object.name }} - Reserva comercial</field>
             <field name="description">Notifica al solicitante cuando la solicitud comercial queda aprobada.</field>
-            <field name="email_from">{{ user.email_formatted or object.env.company.email_formatted }}</field>
+            <field name="email_from">soporte@andescopiers.com.pe</field>
             <field name="email_to">{{ object.solicitante_id.email or '' }}</field>
             <field name="email_cc"/>
             <field name="reply_to">{{ object.procesado_por_id.email or user.email or '' }}</field>
@@ -190,7 +190,7 @@
             <field name="model_id" ref="sat.model_sat_reserva_solicitud"/>
             <field name="subject">Rechazada {{ object.name }} - Reserva comercial</field>
             <field name="description">Notifica al solicitante cuando la solicitud comercial es rechazada.</field>
-            <field name="email_from">{{ user.email_formatted or object.env.company.email_formatted }}</field>
+            <field name="email_from">soporte@andescopiers.com.pe</field>
             <field name="email_to">{{ object.solicitante_id.email or '' }}</field>
             <field name="email_cc"/>
             <field name="reply_to">{{ object.procesado_por_id.email or user.email or '' }}</field>
@@ -236,7 +236,7 @@
             <field name="model_id" ref="sat.model_sat_reserva_solicitud"/>
             <field name="subject">Resultado parcial {{ object.name }} - Reserva comercial</field>
             <field name="description">Notifica al solicitante cuando existen resultados mixtos o máquinas pendientes.</field>
-            <field name="email_from">{{ user.email_formatted or object.env.company.email_formatted }}</field>
+            <field name="email_from">soporte@andescopiers.com.pe</field>
             <field name="email_to">{{ object.solicitante_id.email or '' }}</field>
             <field name="email_cc"/>
             <field name="reply_to">{{ object.procesado_por_id.email or user.email or '' }}</field>
