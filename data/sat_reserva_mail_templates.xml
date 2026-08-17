@@ -3,7 +3,9 @@
     <data noupdate="0">
 
         <!-- ============================================================= -->
-        <!-- 1. SOLICITUD ENVIADA A GERENCIA / USUARIOS AUTORIZADOS        -->
+        <!-- SOLICITUD A GERENCIA                                          -->
+        <!-- El destinatario principal se inyecta desde Python usando      -->
+        <!-- los usuarios del grupo Autorizados Reservas Comerciales.      -->
         <!-- ============================================================= -->
 
         <record id="mail_template_reserva_solicitud_gerencia" model="mail.template">
@@ -11,6 +13,10 @@
             <field name="model_id" ref="sat.model_sat_reserva_solicitud"/>
             <field name="subject">Reserva comercial {{ object.name }} - requiere autorización</field>
             <field name="description">Notifica a los usuarios autorizados cuando ventas envía una solicitud comercial.</field>
+            <field name="email_from">{{ user.email_formatted or object.env.company.email_formatted }}</field>
+            <field name="email_to"/>
+            <field name="email_cc">{{ object.solicitante_id.email or '' }}</field>
+            <field name="reply_to">{{ object.solicitante_id.email or user.email or '' }}</field>
             <field name="body_html" type="html">
                 <div style="margin:0;padding:0;background:#f5f7fb;font-family:Arial,sans-serif;color:#243044;">
                     <div style="max-width:760px;margin:0 auto;padding:24px;">
@@ -29,11 +35,48 @@
                                 <table style="width:100%;border-collapse:collapse;margin-bottom:22px;font-size:14px;">
                                     <tr><td style="padding:8px 10px;background:#f8fafc;width:32%;font-weight:700;">Solicitud</td><td style="padding:8px 10px;border-bottom:1px solid #edf0f4;"><t t-out="object.name"/></td></tr>
                                     <tr><td style="padding:8px 10px;background:#f8fafc;font-weight:700;">Solicitado por</td><td style="padding:8px 10px;border-bottom:1px solid #edf0f4;"><t t-out="object.solicitante_id.name"/></td></tr>
-                                    <tr><td style="padding:8px 10px;background:#f8fafc;font-weight:700;">Acción solicitada</td><td style="padding:8px 10px;border-bottom:1px solid #edf0f4;"><t t-out="object._reserva_selection_label('tipo_solicitud')"/></td></tr>
-                                    <tr><td style="padding:8px 10px;background:#f8fafc;font-weight:700;">Motivo</td><td style="padding:8px 10px;border-bottom:1px solid #edf0f4;"><t t-out="object._reserva_selection_label('motivo')"/></td></tr>
+                                    <tr>
+                                        <td style="padding:8px 10px;background:#f8fafc;font-weight:700;">Acción solicitada</td>
+                                        <td style="padding:8px 10px;border-bottom:1px solid #edf0f4;">
+                                            <t t-if="object.tipo_solicitud == 'reservar'">Reserva especial</t>
+                                            <t t-elif="object.tipo_solicitud == 'extender'">Extender separación</t>
+                                            <t t-elif="object.tipo_solicitud == 'reducir'">Reducir separación</t>
+                                            <t t-elif="object.tipo_solicitud == 'cambiar_fecha'">Cambiar fecha límite</t>
+                                            <t t-elif="object.tipo_solicitud == 'cambiar_cliente'">Cambiar cliente</t>
+                                            <t t-elif="object.tipo_solicitud == 'cambiar_asesora'">Cambiar asesora</t>
+                                            <t t-elif="object.tipo_solicitud == 'liberar'">Liberar máquinas</t>
+                                            <t t-else=""><t t-out="object.tipo_solicitud or '-'"/></t>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding:8px 10px;background:#f8fafc;font-weight:700;">Motivo</td>
+                                        <td style="padding:8px 10px;border-bottom:1px solid #edf0f4;">
+                                            <t t-if="object.motivo == 'pago'">Cliente pagó</t>
+                                            <t t-elif="object.motivo == 'adelanto'">Cliente dejó adelanto</t>
+                                            <t t-elif="object.motivo == 'confirmacion'">Cliente confirmó compra</t>
+                                            <t t-elif="object.motivo == 'orden_compra'">Orden de compra recibida</t>
+                                            <t t-elif="object.motivo == 'empresa_interna'">Empresa interna</t>
+                                            <t t-elif="object.motivo == 'espera_recojo'">Esperando recojo</t>
+                                            <t t-elif="object.motivo == 'espera_documentacion'">Esperando documentación</t>
+                                            <t t-elif="object.motivo == 'espera_revision'">Esperando revisión técnica</t>
+                                            <t t-elif="object.motivo == 'espera_reparacion'">Esperando reparación</t>
+                                            <t t-elif="object.motivo == 'cambio_cliente'">Cambio de cliente solicitado</t>
+                                            <t t-elif="object.motivo == 'cambio_asesora'">Cambio de asesora solicitado</t>
+                                            <t t-elif="object.motivo == 'otro'">Otro</t>
+                                            <t t-else=""><t t-out="object.motivo or '-'"/></t>
+                                        </td>
+                                    </tr>
                                     <tr><td style="padding:8px 10px;background:#f8fafc;font-weight:700;">Cliente destino</td><td style="padding:8px 10px;border-bottom:1px solid #edf0f4;"><t t-out="object.cliente_id.name or 'No aplica'"/></td></tr>
                                     <tr><td style="padding:8px 10px;background:#f8fafc;font-weight:700;">Asesora destino</td><td style="padding:8px 10px;border-bottom:1px solid #edf0f4;"><t t-out="object.asesora_destino_id.name or 'No aplica'"/></td></tr>
-                                    <tr><td style="padding:8px 10px;background:#f8fafc;font-weight:700;">Plazo solicitado</td><td style="padding:8px 10px;border-bottom:1px solid #edf0f4;"><t t-if="object.modalidad_solicitada == 'fecha'">Hasta <t t-out="object.fecha_solicitada"/></t><t t-elif="object.modalidad_solicitada == 'dias'"><t t-out="object.dias_solicitados"/> días</t><t t-elif="object.modalidad_solicitada == 'mantener'">Mantener vencimiento actual</t><t t-else="">No aplica</t></td></tr>
+                                    <tr>
+                                        <td style="padding:8px 10px;background:#f8fafc;font-weight:700;">Plazo solicitado</td>
+                                        <td style="padding:8px 10px;border-bottom:1px solid #edf0f4;">
+                                            <t t-if="object.modalidad_solicitada == 'fecha'">Hasta <t t-out="object.fecha_solicitada"/></t>
+                                            <t t-elif="object.modalidad_solicitada == 'dias'"><t t-out="object.dias_solicitados"/> días</t>
+                                            <t t-elif="object.modalidad_solicitada == 'mantener'">Mantener vencimiento actual</t>
+                                            <t t-else="">No aplica</t>
+                                        </td>
+                                    </tr>
                                     <tr><td style="padding:8px 10px;background:#f8fafc;font-weight:700;">Máquinas</td><td style="padding:8px 10px;"><t t-out="object.cantidad_maquinas"/></td></tr>
                                 </table>
 
@@ -67,7 +110,7 @@
                                 </table>
 
                                 <div style="text-align:center;margin:28px 0 10px;">
-                                    <a t-att-href="object._reserva_get_backend_url()" style="display:inline-block;background:#1f4b99;color:#ffffff;text-decoration:none;padding:13px 24px;border-radius:8px;font-weight:700;font-size:14px;">Revisar solicitud en Odoo</a>
+                                    <a t-att-href="object.get_base_url() + '/web#id=' + str(object.id) + '&amp;model=sat.reserva.solicitud&amp;view_type=form'" style="display:inline-block;background:#1f4b99;color:#ffffff;text-decoration:none;padding:13px 24px;border-radius:8px;font-weight:700;font-size:14px;">Revisar solicitud en Odoo</a>
                                 </div>
 
                                 <p style="font-size:12px;color:#6f7886;line-height:1.5;margin-top:20px;">
@@ -81,7 +124,7 @@
         </record>
 
         <!-- ============================================================= -->
-        <!-- 2. SOLICITUD APROBADA                                         -->
+        <!-- APROBADA                                                       -->
         <!-- ============================================================= -->
 
         <record id="mail_template_reserva_aprobada" model="mail.template">
@@ -89,6 +132,10 @@
             <field name="model_id" ref="sat.model_sat_reserva_solicitud"/>
             <field name="subject">Aprobada {{ object.name }} - Reserva comercial</field>
             <field name="description">Notifica al solicitante cuando la solicitud comercial queda aprobada.</field>
+            <field name="email_from">{{ user.email_formatted or object.env.company.email_formatted }}</field>
+            <field name="email_to">{{ object.solicitante_id.email or '' }}</field>
+            <field name="email_cc"/>
+            <field name="reply_to">{{ object.procesado_por_id.email or user.email or '' }}</field>
             <field name="body_html" type="html">
                 <div style="margin:0;padding:0;background:#f5f7fb;font-family:Arial,sans-serif;color:#243044;">
                     <div style="max-width:760px;margin:0 auto;padding:24px;">
@@ -98,17 +145,13 @@
                                 <div style="font-size:24px;font-weight:700;margin-top:6px;">Solicitud aprobada</div>
                                 <div style="font-size:15px;margin-top:4px;"><t t-out="object.name"/></div>
                             </div>
-
                             <div style="padding:24px 26px;">
                                 <p style="font-size:15px;line-height:1.6;">Hola <strong><t t-out="object.solicitante_id.name"/></strong>, tu solicitud fue procesada favorablemente.</p>
-
                                 <table style="width:100%;border-collapse:collapse;margin:18px 0 22px;font-size:14px;">
                                     <tr><td style="padding:8px 10px;background:#f4faf7;width:32%;font-weight:700;">Procesado por</td><td style="padding:8px 10px;border-bottom:1px solid #edf0f4;"><t t-out="object.procesado_por_id.name or '-'"/></td></tr>
-                                    <tr><td style="padding:8px 10px;background:#f4faf7;font-weight:700;">Acción</td><td style="padding:8px 10px;border-bottom:1px solid #edf0f4;"><t t-out="object._reserva_selection_label('tipo_solicitud')"/></td></tr>
                                     <tr><td style="padding:8px 10px;background:#f4faf7;font-weight:700;">Comentario</td><td style="padding:8px 10px;"><t t-out="object.comentario_gerencia or 'Sin comentario adicional'"/></td></tr>
                                 </table>
 
-                                <div style="font-size:16px;font-weight:700;margin-bottom:10px;">Resultado por máquina</div>
                                 <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:24px;">
                                     <thead><tr style="background:#eaf7f0;"><th style="text-align:left;padding:9px 8px;">Máquina</th><th style="text-align:left;padding:9px 8px;">Serie</th><th style="text-align:left;padding:9px 8px;">Resultado</th><th style="text-align:left;padding:9px 8px;">Nuevo vencimiento</th></tr></thead>
                                     <tbody>
@@ -116,14 +159,21 @@
                                             <tr>
                                                 <td style="padding:9px 8px;border-bottom:1px solid #edf0f4;"><t t-out="line.maquina_id.display_name"/></td>
                                                 <td style="padding:9px 8px;border-bottom:1px solid #edf0f4;"><t t-out="line.serie or '-'"/></td>
-                                                <td style="padding:9px 8px;border-bottom:1px solid #edf0f4;"><t t-out="object._reserva_line_resultado_label(line)"/></td>
+                                                <td style="padding:9px 8px;border-bottom:1px solid #edf0f4;">
+                                                    <t t-if="line.resultado == 'approved'">Aprobada</t>
+                                                    <t t-elif="line.resultado == 'released'">Liberada</t>
+                                                    <t t-elif="line.resultado == 'done'">Finalizada</t>
+                                                    <t t-elif="line.resultado == 'rejected'">Rechazada</t>
+                                                    <t t-elif="line.resultado == 'pending'">Pendiente</t>
+                                                    <t t-else=""><t t-out="line.resultado or '-'"/></t>
+                                                </td>
                                                 <td style="padding:9px 8px;border-bottom:1px solid #edf0f4;"><t t-out="line.fecha_aprobada or line.maquina_id.reserva_fecha_limite or '-'"/></td>
                                             </tr>
                                         </t>
                                     </tbody>
                                 </table>
 
-                                <div style="text-align:center;margin:26px 0 8px;"><a t-att-href="object._reserva_get_backend_url()" style="display:inline-block;background:#16794d;color:#ffffff;text-decoration:none;padding:13px 24px;border-radius:8px;font-weight:700;">Ver solicitud en Odoo</a></div>
+                                <div style="text-align:center;margin:26px 0 8px;"><a t-att-href="object.get_base_url() + '/web#id=' + str(object.id) + '&amp;model=sat.reserva.solicitud&amp;view_type=form'" style="display:inline-block;background:#16794d;color:#ffffff;text-decoration:none;padding:13px 24px;border-radius:8px;font-weight:700;">Ver solicitud en Odoo</a></div>
                             </div>
                         </div>
                     </div>
@@ -132,14 +182,18 @@
         </record>
 
         <!-- ============================================================= -->
-        <!-- 3. SOLICITUD RECHAZADA                                        -->
+        <!-- RECHAZADA                                                      -->
         <!-- ============================================================= -->
 
         <record id="mail_template_reserva_rechazada" model="mail.template">
             <field name="name">Reservas comerciales - Solicitud rechazada</field>
             <field name="model_id" ref="sat.model_sat_reserva_solicitud"/>
             <field name="subject">Rechazada {{ object.name }} - Reserva comercial</field>
-            <field name="description">Notifica al solicitante cuando todas las máquinas procesadas resultan rechazadas.</field>
+            <field name="description">Notifica al solicitante cuando la solicitud comercial es rechazada.</field>
+            <field name="email_from">{{ user.email_formatted or object.env.company.email_formatted }}</field>
+            <field name="email_to">{{ object.solicitante_id.email or '' }}</field>
+            <field name="email_cc"/>
+            <field name="reply_to">{{ object.procesado_por_id.email or user.email or '' }}</field>
             <field name="body_html" type="html">
                 <div style="margin:0;padding:0;background:#f5f7fb;font-family:Arial,sans-serif;color:#243044;">
                     <div style="max-width:760px;margin:0 auto;padding:24px;">
@@ -149,33 +203,23 @@
                                 <div style="font-size:24px;font-weight:700;margin-top:6px;">Solicitud rechazada</div>
                                 <div style="font-size:15px;margin-top:4px;"><t t-out="object.name"/></div>
                             </div>
-
                             <div style="padding:24px 26px;">
                                 <p style="font-size:15px;line-height:1.6;">Hola <strong><t t-out="object.solicitante_id.name"/></strong>, la solicitud fue revisada y rechazada.</p>
-
-                                <div style="padding:13px 15px;background:#fff1f1;border:1px solid #efcaca;border-radius:8px;margin:16px 0 22px;">
-                                    <div style="font-weight:700;margin-bottom:5px;">Comentario del autorizado</div>
-                                    <div style="white-space:pre-line;"><t t-out="object.comentario_gerencia or 'Sin comentario adicional'"/></div>
-                                </div>
+                                <div style="padding:13px 15px;background:#fff1f1;border:1px solid #efcaca;border-radius:8px;margin:16px 0 22px;"><div style="font-weight:700;margin-bottom:5px;">Comentario del autorizado</div><div style="white-space:pre-line;"><t t-out="object.comentario_gerencia or 'Sin comentario adicional'"/></div></div>
 
                                 <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:24px;">
                                     <thead><tr style="background:#fbecec;"><th style="text-align:left;padding:9px 8px;">Máquina</th><th style="text-align:left;padding:9px 8px;">Serie</th><th style="text-align:left;padding:9px 8px;">Vencimiento que continúa</th><th style="text-align:left;padding:9px 8px;">Comentario</th></tr></thead>
                                     <tbody>
                                         <t t-foreach="object.line_ids" t-as="line">
                                             <t t-if="line.resultado == 'rejected'">
-                                                <tr>
-                                                    <td style="padding:9px 8px;border-bottom:1px solid #edf0f4;"><t t-out="line.maquina_id.display_name"/></td>
-                                                    <td style="padding:9px 8px;border-bottom:1px solid #edf0f4;"><t t-out="line.serie or '-'"/></td>
-                                                    <td style="padding:9px 8px;border-bottom:1px solid #edf0f4;"><t t-out="line.maquina_id.reserva_fecha_limite or line.fecha_limite_anterior or '-'"/></td>
-                                                    <td style="padding:9px 8px;border-bottom:1px solid #edf0f4;"><t t-out="line.comentario_gerencia or object.comentario_gerencia or '-'"/></td>
-                                                </tr>
+                                                <tr><td style="padding:9px 8px;border-bottom:1px solid #edf0f4;"><t t-out="line.maquina_id.display_name"/></td><td style="padding:9px 8px;border-bottom:1px solid #edf0f4;"><t t-out="line.serie or '-'"/></td><td style="padding:9px 8px;border-bottom:1px solid #edf0f4;"><t t-out="line.maquina_id.reserva_fecha_limite or line.fecha_limite_anterior or '-'"/></td><td style="padding:9px 8px;border-bottom:1px solid #edf0f4;"><t t-out="line.comentario_gerencia or object.comentario_gerencia or '-'"/></td></tr>
                                             </t>
                                         </t>
                                     </tbody>
                                 </table>
 
                                 <p style="font-size:13px;color:#8a3434;line-height:1.5;"><strong>Importante:</strong> un rechazo no amplía ni reinicia el plazo comercial vigente.</p>
-                                <div style="text-align:center;margin:26px 0 8px;"><a t-att-href="object._reserva_get_backend_url()" style="display:inline-block;background:#a83232;color:#ffffff;text-decoration:none;padding:13px 24px;border-radius:8px;font-weight:700;">Ver solicitud en Odoo</a></div>
+                                <div style="text-align:center;margin:26px 0 8px;"><a t-att-href="object.get_base_url() + '/web#id=' + str(object.id) + '&amp;model=sat.reserva.solicitud&amp;view_type=form'" style="display:inline-block;background:#a83232;color:#ffffff;text-decoration:none;padding:13px 24px;border-radius:8px;font-weight:700;">Ver solicitud en Odoo</a></div>
                             </div>
                         </div>
                     </div>
@@ -184,14 +228,18 @@
         </record>
 
         <!-- ============================================================= -->
-        <!-- 4. SOLICITUD PARCIAL / MIXTA                                  -->
+        <!-- PARCIAL                                                        -->
         <!-- ============================================================= -->
 
         <record id="mail_template_reserva_parcial" model="mail.template">
             <field name="name">Reservas comerciales - Solicitud parcial</field>
             <field name="model_id" ref="sat.model_sat_reserva_solicitud"/>
             <field name="subject">Resultado parcial {{ object.name }} - Reserva comercial</field>
-            <field name="description">Notifica al solicitante cuando quedan máquinas pendientes o existen resultados mixtos.</field>
+            <field name="description">Notifica al solicitante cuando existen resultados mixtos o máquinas pendientes.</field>
+            <field name="email_from">{{ user.email_formatted or object.env.company.email_formatted }}</field>
+            <field name="email_to">{{ object.solicitante_id.email or '' }}</field>
+            <field name="email_cc"/>
+            <field name="reply_to">{{ object.procesado_por_id.email or user.email or '' }}</field>
             <field name="body_html" type="html">
                 <div style="margin:0;padding:0;background:#f5f7fb;font-family:Arial,sans-serif;color:#243044;">
                     <div style="max-width:760px;margin:0 auto;padding:24px;">
@@ -201,49 +249,33 @@
                                 <div style="font-size:24px;font-weight:700;margin-top:6px;">Solicitud procesada parcialmente</div>
                                 <div style="font-size:15px;margin-top:4px;"><t t-out="object.name"/></div>
                             </div>
-
                             <div style="padding:24px 26px;">
                                 <p style="font-size:15px;line-height:1.6;">Hola <strong><t t-out="object.solicitante_id.name"/></strong>, tu solicitud tiene resultados parciales o todavía mantiene máquinas pendientes.</p>
 
-                                <div style="font-size:16px;font-weight:700;color:#16794d;margin:20px 0 8px;">Aprobadas / procesadas</div>
-                                <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:20px;">
-                                    <thead><tr style="background:#eaf7f0;"><th style="text-align:left;padding:8px;">Máquina</th><th style="text-align:left;padding:8px;">Serie</th><th style="text-align:left;padding:8px;">Resultado</th><th style="text-align:left;padding:8px;">Vencimiento</th></tr></thead>
+                                <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:24px;">
+                                    <thead><tr style="background:#fff7df;"><th style="text-align:left;padding:8px;">Máquina</th><th style="text-align:left;padding:8px;">Serie</th><th style="text-align:left;padding:8px;">Resultado</th><th style="text-align:left;padding:8px;">Vencimiento</th></tr></thead>
                                     <tbody>
                                         <t t-foreach="object.line_ids" t-as="line">
-                                            <t t-if="line.resultado in ('approved', 'released', 'done')">
-                                                <tr><td style="padding:8px;border-bottom:1px solid #edf0f4;"><t t-out="line.maquina_id.display_name"/></td><td style="padding:8px;border-bottom:1px solid #edf0f4;"><t t-out="line.serie or '-'"/></td><td style="padding:8px;border-bottom:1px solid #edf0f4;"><t t-out="object._reserva_line_resultado_label(line)"/></td><td style="padding:8px;border-bottom:1px solid #edf0f4;"><t t-out="line.fecha_aprobada or line.maquina_id.reserva_fecha_limite or '-'"/></td></tr>
-                                            </t>
-                                        </t>
-                                    </tbody>
-                                </table>
-
-                                <div style="font-size:16px;font-weight:700;color:#a83232;margin:20px 0 8px;">Rechazadas</div>
-                                <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:20px;">
-                                    <thead><tr style="background:#fbecec;"><th style="text-align:left;padding:8px;">Máquina</th><th style="text-align:left;padding:8px;">Serie</th><th style="text-align:left;padding:8px;">Comentario</th></tr></thead>
-                                    <tbody>
-                                        <t t-foreach="object.line_ids" t-as="line">
-                                            <t t-if="line.resultado == 'rejected'">
-                                                <tr><td style="padding:8px;border-bottom:1px solid #edf0f4;"><t t-out="line.maquina_id.display_name"/></td><td style="padding:8px;border-bottom:1px solid #edf0f4;"><t t-out="line.serie or '-'"/></td><td style="padding:8px;border-bottom:1px solid #edf0f4;"><t t-out="line.comentario_gerencia or object.comentario_gerencia or '-'"/></td></tr>
-                                            </t>
-                                        </t>
-                                    </tbody>
-                                </table>
-
-                                <div style="font-size:16px;font-weight:700;color:#926818;margin:20px 0 8px;">Pendientes</div>
-                                <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:22px;">
-                                    <thead><tr style="background:#fff7df;"><th style="text-align:left;padding:8px;">Máquina</th><th style="text-align:left;padding:8px;">Serie</th><th style="text-align:left;padding:8px;">Vencimiento actual</th></tr></thead>
-                                    <tbody>
-                                        <t t-foreach="object.line_ids" t-as="line">
-                                            <t t-if="line.resultado == 'pending'">
-                                                <tr><td style="padding:8px;border-bottom:1px solid #edf0f4;"><t t-out="line.maquina_id.display_name"/></td><td style="padding:8px;border-bottom:1px solid #edf0f4;"><t t-out="line.serie or '-'"/></td><td style="padding:8px;border-bottom:1px solid #edf0f4;"><t t-out="line.maquina_id.reserva_fecha_limite or line.fecha_limite_anterior or '-'"/></td></tr>
-                                            </t>
+                                            <tr>
+                                                <td style="padding:8px;border-bottom:1px solid #edf0f4;"><t t-out="line.maquina_id.display_name"/></td>
+                                                <td style="padding:8px;border-bottom:1px solid #edf0f4;"><t t-out="line.serie or '-'"/></td>
+                                                <td style="padding:8px;border-bottom:1px solid #edf0f4;">
+                                                    <t t-if="line.resultado == 'approved'">Aprobada</t>
+                                                    <t t-elif="line.resultado == 'rejected'">Rechazada</t>
+                                                    <t t-elif="line.resultado == 'released'">Liberada</t>
+                                                    <t t-elif="line.resultado == 'done'">Finalizada</t>
+                                                    <t t-elif="line.resultado == 'cancelled'">Cancelada</t>
+                                                    <t t-elif="line.resultado == 'pending'">Pendiente</t>
+                                                    <t t-else=""><t t-out="line.resultado or '-'"/></t>
+                                                </td>
+                                                <td style="padding:8px;border-bottom:1px solid #edf0f4;"><t t-out="line.fecha_aprobada or line.maquina_id.reserva_fecha_limite or line.fecha_limite_anterior or '-'"/></td>
+                                            </tr>
                                         </t>
                                     </tbody>
                                 </table>
 
                                 <div style="padding:12px 14px;background:#fff8e8;border:1px solid #f0dda9;border-radius:8px;white-space:pre-line;font-size:13px;"><strong>Comentario:</strong> <t t-out="object.comentario_gerencia or 'Sin comentario adicional'"/></div>
-
-                                <div style="text-align:center;margin:26px 0 8px;"><a t-att-href="object._reserva_get_backend_url()" style="display:inline-block;background:#b7791f;color:#ffffff;text-decoration:none;padding:13px 24px;border-radius:8px;font-weight:700;">Ver estado de la solicitud</a></div>
+                                <div style="text-align:center;margin:26px 0 8px;"><a t-att-href="object.get_base_url() + '/web#id=' + str(object.id) + '&amp;model=sat.reserva.solicitud&amp;view_type=form'" style="display:inline-block;background:#b7791f;color:#ffffff;text-decoration:none;padding:13px 24px;border-radius:8px;font-weight:700;">Ver estado de la solicitud</a></div>
                             </div>
                         </div>
                     </div>
