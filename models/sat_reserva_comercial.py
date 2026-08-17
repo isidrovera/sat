@@ -1,9 +1,13 @@
 # -*- coding: utf-8 -*-
 
 from datetime import date, timedelta
+import logging
 
 from odoo import api, fields, models, _
 from odoo.exceptions import AccessError, ValidationError
+
+
+_logger = logging.getLogger(__name__)
 
 
 # =============================================================================
@@ -512,7 +516,7 @@ class SatReservaSolicitud(models.Model):
                         _('Debe indicar si solicita una fecha o una cantidad de días.')
                     )
 
-    def action_enviar_gerencia(self):
+    # -------------------------------------------------------------------------\n    # CORREOS Y ENLACES DE SOLICITUDES\n    # -------------------------------------------------------------------------\n\n    def _reserva_get_backend_url(self):\n        self.ensure_one()\n        base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url') or ''\n        return '%s/web#id=%s&model=sat.reserva.solicitud&view_type=form' % (\n            base_url.rstrip('/'),\n            self.id,\n        )\n\n    def _reserva_selection_label(self, field_name, value=None):\n        self.ensure_one()\n        field = self._fields.get(field_name)\n        if not field or not getattr(field, 'selection', None):\n            return value or ''\n        current_value = getattr(self, field_name) if value is None else value\n        selection = field.selection\n        if callable(selection):\n            selection = selection(self.env[self._name])\n        return dict(selection).get(current_value, current_value or '')\n\n    def _reserva_line_resultado_label(self, line):\n        self.ensure_one()\n        selection = line._fields['resultado'].selection\n        if callable(selection):\n            selection = selection(line)\n        return dict(selection).get(line.resultado, line.resultado or '')\n\n    def _reserva_emails_autorizados(self):\n        self.ensure_one()\n        group = self.env.ref(\n            'sat.group_reserva_comercial_autorizado',\n            raise_if_not_found=False,\n        )\n        if not group:\n            return []\n        users = group.users.filtered(lambda user: user.active and user.email)\n        emails = []\n        seen = set()\n        for user in users:\n            email = (user.email or '').strip()\n            key = email.lower()\n            if email and key not in seen:\n                seen.add(key)\n                emails.append(email)\n        return emails\n\n    def _reserva_enviar_template(self, template_xmlid, email_to, contexto=None):\n        self.ensure_one()\n        if not email_to:\n            return False\n        template = self.env.ref(template_xmlid, raise_if_not_found=False)\n        if not template:\n            _logger.error(\n                'Reservas comerciales: no existe la plantilla %s para %s',\n                template_xmlid,\n                self.display_name,\n            )\n            self.message_post(\n                body=_(\n                    'No se pudo preparar el correo porque no existe la plantilla %s.'\n                ) % template_xmlid,\n                subtype_xmlid='mail.mt_note',\n            )\n            return False\n        try:\n            mail_id = template.with_context(**(contexto or {})).send_mail(\n                self.id,\n                force_send=True,\n                raise_exception=False,\n                email_values={\n                    'email_to': email_to,\n                },\n            )\n            return bool(mail_id)\n        except Exception:\n            _logger.exception(\n                'Reservas comerciales: error enviando plantilla %s para solicitud %s',\n                template_xmlid,\n                self.display_name,\n            )\n            self.message_post(\n                body=_(\n                    'La solicitud se procesó correctamente, pero ocurrió un error al intentar enviar el correo automático.'\n                ),\n                subtype_xmlid='mail.mt_note',\n            )\n            return False\n\n    def _reserva_notificar_gerencia(self):\n        self.ensure_one()\n        emails = self._reserva_emails_autorizados()\n        if not emails:\n            raise ValidationError(\n                _(\n                    'No hay usuarios activos con correo en el grupo "Autorizados Reservas Comerciales". '\n                    'Configure al menos un usuario autorizado con dirección de correo antes de enviar la solicitud.'\n                )\n            )\n        sent = self._reserva_enviar_template(\n            'sat.mail_template_reserva_solicitud_gerencia',\n            ','.join(emails),\n        )\n        if sent:\n            self.message_post(\n                body=_(\n                    'Solicitud enviada por correo a los usuarios autorizados: %s'\n                ) % ', '.join(emails),\n                subtype_xmlid='mail.mt_note',\n            )\n        return sent\n\n    def _reserva_tipo_resultado_correo(self):\n        self.ensure_one()\n        lines = self.line_ids\n        pending = lines.filtered(lambda line: line.resultado == 'pending')\n        rejected = lines.filtered(lambda line: line.resultado == 'rejected')\n        accepted = lines.filtered(\n            lambda line: line.resultado in ('approved', 'released', 'done')\n        )\n        if pending or (rejected and accepted):\n            return 'partial'\n        if rejected and not accepted:\n            return 'rejected'\n        return 'approved'\n\n    def _reserva_notificar_solicitante_resultado(self):\n        self.ensure_one()\n        email = (self.solicitante_id.email or '').strip()\n        if not email:\n            self.message_post(\n                body=_(\n                    'No se envió el correo de resultado porque el solicitante %s no tiene correo configurado.'\n                ) % self.solicitante_id.display_name,\n                subtype_xmlid='mail.mt_note',\n            )\n            return False\n        result_type = self._reserva_tipo_resultado_correo()\n        template_xmlid = {\n            'approved': 'sat.mail_template_reserva_aprobada',\n            'rejected': 'sat.mail_template_reserva_rechazada',\n            'partial': 'sat.mail_template_reserva_parcial',\n        }[result_type]\n        sent = self._reserva_enviar_template(template_xmlid, email)\n        if sent:\n            self.message_post(\n                body=_(\n                    'Resultado de la solicitud enviado por correo a %s.'\n                ) % email,\n                subtype_xmlid='mail.mt_note',\n            )\n        return sent\n\n    def action_enviar_gerencia(self):
         for record in self:
             if record.state != 'draft':
                 continue
@@ -520,6 +524,15 @@ class SatReservaSolicitud(models.Model):
             if not record.line_ids:
                 raise ValidationError(
                     _('Debe incluir al menos una máquina.')
+                )
+
+            # Antes de cambiar el estado, validar que exista al menos un destinatario autorizado.
+            if not record._reserva_emails_autorizados():
+                raise ValidationError(
+                    _(
+                        'No hay usuarios activos con correo en el grupo "Autorizados Reservas Comerciales". '
+                        'Configure al menos un usuario autorizado con dirección de correo antes de enviar la solicitud.'
+                    )
                 )
 
             pending_lines = record.line_ids.filtered(lambda item: item.resultado == 'pending')
@@ -563,6 +576,8 @@ class SatReservaSolicitud(models.Model):
                     motivo=dict(record._fields['motivo'].selection).get(record.motivo, record.motivo),
                     observacion=record.detalle_motivo,
                 )
+
+            record._reserva_notificar_gerencia()
 
         return True
 
@@ -865,6 +880,7 @@ class SatReservaSolicitud(models.Model):
                 'fecha_procesamiento': fields.Datetime.now(),
             })
             request._actualizar_estado_solicitud()
+            request._reserva_notificar_solicitante_resultado()
 
         return True
 
@@ -910,6 +926,7 @@ class SatReservaSolicitud(models.Model):
                 'fecha_procesamiento': fields.Datetime.now(),
             })
             request._actualizar_estado_solicitud()
+            request._reserva_notificar_solicitante_resultado()
 
         return True
 
