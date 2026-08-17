@@ -1,0 +1,1901 @@
+/* ==========================================================
+   SAT - GESTIÓN DE ALQUILERES
+   Diseño profesional para Odoo 18
+========================================================== */
+
+.sat_rental_form {
+    --sat-primary: #2f5f8f;
+    --sat-primary-dark: #244b72;
+    --sat-primary-soft: #eef5fb;
+
+    --sat-success: #2e7d5b;
+    --sat-success-soft: #edf8f3;
+
+    --sat-warning: #b7791f;
+    --sat-warning-soft: #fff8e8;
+
+    --sat-danger: #b74444;
+    --sat-danger-soft: #fff1f1;
+
+    --sat-info: #2b7a9a;
+    --sat-info-soft: #edf8fc;
+
+    --sat-neutral-50: #f8fafc;
+    --sat-neutral-100: #f1f5f9;
+    --sat-neutral-200: #e2e8f0;
+    --sat-neutral-300: #cbd5e1;
+    --sat-neutral-500: #64748b;
+    --sat-neutral-700: #334155;
+    --sat-neutral-900: #0f172a;
+
+    --sat-radius-sm: 8px;
+    --sat-radius-md: 12px;
+    --sat-radius-lg: 16px;
+
+    --sat-shadow-sm:
+        0 1px 2px rgba(15, 23, 42, 0.05),
+        0 1px 3px rgba(15, 23, 42, 0.08);
+
+    --sat-shadow-md:
+        0 4px 12px rgba(15, 23, 42, 0.08),
+        0 2px 6px rgba(15, 23, 42, 0.05);
+}
+
+
+/* ==========================================================
+   FORMULARIO GENERAL
+========================================================== */
+
+.sat_rental_form .o_form_sheet_bg {
+    background:
+        linear-gradient(
+            180deg,
+            #f8fafc 0%,
+            #f1f5f9 100%
+        );
+}
+
+.sat_rental_form .o_form_sheet {
+    max-width: 1500px;
+    padding: 24px 28px 34px;
+    border: 1px solid var(--sat-neutral-200);
+    border-radius: var(--sat-radius-lg);
+    box-shadow: var(--sat-shadow-sm);
+    background: #ffffff;
+}
+
+.sat_rental_form .o_form_label {
+    color: var(--sat-neutral-700);
+    font-weight: 600;
+}
+
+.sat_rental_form .o_input,
+.sat_rental_form .o_field_widget input,
+.sat_rental_form .o_field_widget textarea,
+.sat_rental_form .o_field_widget select {
+    border-color: var(--sat-neutral-300);
+    border-radius: 7px;
+}
+
+.sat_rental_form .o_input:focus,
+.sat_rental_form .o_field_widget input:focus,
+.sat_rental_form .o_field_widget textarea:focus,
+.sat_rental_form .o_field_widget select:focus {
+    border-color: var(--sat-primary);
+    box-shadow: 0 0 0 3px rgba(47, 95, 143, 0.12);
+}
+
+
+/* ==========================================================
+   CABECERA
+========================================================== */
+
+.sat_rental_form .sat_rental_header {
+    gap: 6px;
+    padding: 9px 14px;
+    border-bottom: 1px solid var(--sat-neutral-200);
+    background: #ffffff;
+}
+
+.sat_rental_form .sat_rental_header .btn {
+    min-height: 34px;
+    padding: 6px 12px;
+    border-radius: 7px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.sat_rental_form .sat_rental_header .btn-primary,
+.sat_rental_form .sat_rental_header .oe_highlight {
+    border-color: var(--sat-primary);
+    background: var(--sat-primary);
+    color: #ffffff;
+}
+
+.sat_rental_form .sat_rental_header .btn-primary:hover,
+.sat_rental_form .sat_rental_header .oe_highlight:hover {
+    border-color: var(--sat-primary-dark);
+    background: var(--sat-primary-dark);
+}
+
+.sat_rental_form .sat_rental_header .btn-secondary {
+    border-color: var(--sat-neutral-300);
+    background: #ffffff;
+    color: var(--sat-neutral-700);
+}
+
+.sat_rental_form .sat_rental_header .btn-secondary:hover {
+    border-color: var(--sat-primary);
+    background: var(--sat-primary-soft);
+    color: var(--sat-primary-dark);
+}
+
+
+/* ==========================================================
+   BARRAS DE ESTADO
+   Disponibilidad y estado técnico
+========================================================== */
+
+.sat_rental_form .sat_rental_header .o_statusbar_status {
+    display: flex;
+    align-items: center;
+    margin-left: 12px;
+    overflow: visible;
+}
+
+/* Estados normales: visibles, sin fondo blanco */
+.sat_rental_form
+.sat_rental_header
+.o_statusbar_status
+.o_arrow_button {
+    min-height: 34px;
+    padding: 7px 18px 7px 22px !important;
+    border-color: #aebfce !important;
+    background-color: #e8eef4 !important;
+    color: #334a60 !important;
+    font-size: 12px;
+    font-weight: 700;
+    opacity: 1 !important;
+    box-shadow: none !important;
+    transition:
+        background-color 0.18s ease,
+        border-color 0.18s ease,
+        color 0.18s ease;
+}
+
+/* Flechas de los estados normales */
+.sat_rental_form
+.sat_rental_header
+.o_statusbar_status
+.o_arrow_button::before {
+    border-left-color: #aebfce !important;
+}
+
+.sat_rental_form
+.sat_rental_header
+.o_statusbar_status
+.o_arrow_button::after {
+    border-left-color: #e8eef4 !important;
+}
+
+/* Hover */
+.sat_rental_form
+.sat_rental_header
+.o_statusbar_status
+.o_arrow_button:hover {
+    border-color: #5c86a9 !important;
+    background-color: #d3e4f2 !important;
+    color: #173f61 !important;
+}
+
+.sat_rental_form
+.sat_rental_header
+.o_statusbar_status
+.o_arrow_button:hover::before {
+    border-left-color: #5c86a9 !important;
+}
+
+.sat_rental_form
+.sat_rental_header
+.o_statusbar_status
+.o_arrow_button:hover::after {
+    border-left-color: #d3e4f2 !important;
+}
+
+/* Estado actual: contraste alto */
+.sat_rental_form
+.sat_rental_header
+.o_statusbar_status
+.o_arrow_button.o_arrow_button_current,
+.sat_rental_form
+.sat_rental_header
+.o_statusbar_status
+.o_arrow_button[aria-current="step"],
+.sat_rental_form
+.sat_rental_header
+.o_statusbar_status
+.o_arrow_button.active {
+    border-color: #0d7180 !important;
+    background-color: #0d7180 !important;
+    color: #ffffff !important;
+    font-weight: 800;
+    opacity: 1 !important;
+    box-shadow:
+        0 2px 6px rgba(13, 113, 128, 0.28),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.14) !important;
+}
+
+.sat_rental_form
+.sat_rental_header
+.o_statusbar_status
+.o_arrow_button.o_arrow_button_current::before,
+.sat_rental_form
+.sat_rental_header
+.o_statusbar_status
+.o_arrow_button[aria-current="step"]::before,
+.sat_rental_form
+.sat_rental_header
+.o_statusbar_status
+.o_arrow_button.active::before {
+    border-left-color: #0d7180 !important;
+}
+
+.sat_rental_form
+.sat_rental_header
+.o_statusbar_status
+.o_arrow_button.o_arrow_button_current::after,
+.sat_rental_form
+.sat_rental_header
+.o_statusbar_status
+.o_arrow_button[aria-current="step"]::after,
+.sat_rental_form
+.sat_rental_header
+.o_statusbar_status
+.o_arrow_button.active::after {
+    border-left-color: #0d7180 !important;
+}
+
+/* Odoo puede renderizar los estados no seleccionados como disabled.
+   Deben seguir viéndose claramente. */
+.sat_rental_form
+.sat_rental_header
+.o_statusbar_status
+.o_arrow_button:disabled,
+.sat_rental_form
+.sat_rental_header
+.o_statusbar_status
+.o_arrow_button.disabled {
+    border-color: #bdc9d5 !important;
+    background-color: #edf2f6 !important;
+    color: #536779 !important;
+    opacity: 1 !important;
+}
+
+.sat_rental_form
+.sat_rental_header
+.o_statusbar_status
+.o_arrow_button:disabled::before,
+.sat_rental_form
+.sat_rental_header
+.o_statusbar_status
+.o_arrow_button.disabled::before {
+    border-left-color: #bdc9d5 !important;
+}
+
+.sat_rental_form
+.sat_rental_header
+.o_statusbar_status
+.o_arrow_button:disabled::after,
+.sat_rental_form
+.sat_rental_header
+.o_statusbar_status
+.o_arrow_button.disabled::after {
+    border-left-color: #edf2f6 !important;
+}
+
+/* Conserva el color fuerte incluso si el estado actual también llega disabled */
+.sat_rental_form
+.sat_rental_header
+.o_statusbar_status
+.o_arrow_button.o_arrow_button_current:disabled,
+.sat_rental_form
+.sat_rental_header
+.o_statusbar_status
+.o_arrow_button[aria-current="step"]:disabled {
+    border-color: #0d7180 !important;
+    background-color: #0d7180 !important;
+    color: #ffffff !important;
+}
+
+.sat_rental_form
+.sat_rental_header
+.o_statusbar_status
+.o_arrow_button.o_arrow_button_current:disabled::before,
+.sat_rental_form
+.sat_rental_header
+.o_statusbar_status
+.o_arrow_button[aria-current="step"]:disabled::before {
+    border-left-color: #0d7180 !important;
+}
+
+.sat_rental_form
+.sat_rental_header
+.o_statusbar_status
+.o_arrow_button.o_arrow_button_current:disabled::after,
+.sat_rental_form
+.sat_rental_header
+.o_statusbar_status
+.o_arrow_button[aria-current="step"]:disabled::after {
+    border-left-color: #0d7180 !important;
+}
+
+/* Botón de estados ocultos: los tres puntos */
+.sat_rental_form
+.sat_rental_header
+.o_statusbar_status
+.o_statusbar_status_dropdown,
+.sat_rental_form
+.sat_rental_header
+.o_statusbar_status
+.dropdown-toggle {
+    min-height: 34px;
+    border: 1px solid #aebfce !important;
+    border-radius: 6px;
+    background: #e8eef4 !important;
+    color: #334a60 !important;
+    opacity: 1 !important;
+}
+
+.sat_rental_form
+.sat_rental_header
+.o_statusbar_status
+.o_statusbar_status_dropdown:hover,
+.sat_rental_form
+.sat_rental_header
+.o_statusbar_status
+.dropdown-toggle:hover {
+    border-color: #5c86a9 !important;
+    background: #d3e4f2 !important;
+    color: #173f61 !important;
+}
+
+
+/* ==========================================================
+   ALERTAS
+========================================================== */
+
+.sat_rental_alert {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    margin: 12px 18px 0;
+    padding: 14px 18px;
+    border-width: 1px;
+    border-left-width: 5px;
+    border-radius: var(--sat-radius-md);
+    box-shadow: var(--sat-shadow-sm);
+}
+
+.sat_rental_alert_icon {
+    display: flex;
+    flex: 0 0 38px;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    font-size: 19px;
+}
+
+.sat_rental_alert_content {
+    min-width: 0;
+}
+
+.sat_rental_alert_title {
+    margin-bottom: 3px;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.sat_rental_alert_text {
+    color: var(--sat-neutral-700);
+    font-size: 13px;
+    line-height: 1.45;
+}
+
+.sat_rental_alert_value {
+    margin-top: 6px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.sat_rental_alert_help {
+    margin-top: 5px;
+    color: var(--sat-neutral-500);
+    font-size: 12px;
+}
+
+.sat_rental_alert_danger {
+    border-color: #efcaca;
+    border-left-color: var(--sat-danger);
+    background: var(--sat-danger-soft);
+    color: #842929;
+}
+
+.sat_rental_alert_danger .sat_rental_alert_icon {
+    background: #ffe0e0;
+    color: var(--sat-danger);
+}
+
+.sat_rental_alert_warning {
+    border-color: #ead7ad;
+    border-left-color: var(--sat-warning);
+    background: var(--sat-warning-soft);
+    color: #80520f;
+}
+
+.sat_rental_alert_warning .sat_rental_alert_icon {
+    background: #ffedc2;
+    color: var(--sat-warning);
+}
+
+.sat_rental_location_value {
+    display: inline-flex;
+    margin-left: 4px;
+    padding: 2px 8px;
+    border: 1px solid #e4c98c;
+    border-radius: 999px;
+    background: #ffffff;
+    font-weight: 700;
+}
+
+
+/* ==========================================================
+   BOTONES ESTADÍSTICOS
+========================================================== */
+
+.sat_rental_button_box .oe_stat_button {
+    min-width: 120px;
+    border: 1px solid var(--sat-neutral-200);
+    border-radius: var(--sat-radius-sm);
+    background: var(--sat-neutral-50);
+    color: var(--sat-neutral-700);
+    transition:
+        background 0.18s ease,
+        border-color 0.18s ease,
+        transform 0.18s ease;
+}
+
+.sat_rental_button_box .oe_stat_button:hover {
+    border-color: #b9cee2;
+    background: var(--sat-primary-soft);
+    color: var(--sat-primary-dark);
+    transform: translateY(-1px);
+}
+
+.sat_rental_button_box .oe_stat_button .o_button_icon {
+    color: var(--sat-primary);
+}
+
+
+/* ==========================================================
+   IDENTIDAD DEL EQUIPO
+========================================================== */
+
+.sat_rental_identity {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    margin: 14px 0 18px;
+    padding: 18px 20px;
+    border: 1px solid var(--sat-neutral-200);
+    border-radius: var(--sat-radius-lg);
+    background:
+        linear-gradient(
+            135deg,
+            #ffffff 0%,
+            #f7fafc 100%
+        );
+    box-shadow: var(--sat-shadow-sm);
+}
+
+.sat_rental_identity_icon {
+    display: flex;
+    flex: 0 0 58px;
+    align-items: center;
+    justify-content: center;
+    width: 58px;
+    height: 58px;
+    border-radius: 15px;
+    background: var(--sat-primary-soft);
+    color: var(--sat-primary);
+    font-size: 25px;
+}
+
+.sat_rental_identity_content {
+    min-width: 0;
+    flex: 1;
+}
+
+.sat_rental_identity_label {
+    margin-bottom: 2px;
+    color: var(--sat-neutral-500);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.sat_rental_identity_title {
+    margin: 0;
+    color: var(--sat-neutral-900);
+    font-size: 25px;
+    font-weight: 700;
+    line-height: 1.25;
+}
+
+.sat_rental_identity_title .o_field_widget {
+    width: 100%;
+}
+
+.sat_rental_identity_meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    margin-top: 8px;
+}
+
+.sat_rental_identity_meta_item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--sat-neutral-500);
+    font-size: 12px;
+}
+
+.sat_rental_identity_meta_item i {
+    color: var(--sat-primary);
+}
+
+
+/* ==========================================================
+   RESUMEN OPERATIVO
+========================================================== */
+
+.sat_rental_summary {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.sat_rental_summary_item {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    min-width: 0;
+    padding: 12px 14px;
+    border: 1px solid var(--sat-neutral-200);
+    border-radius: var(--sat-radius-md);
+    background: #ffffff;
+    box-shadow: var(--sat-shadow-sm);
+}
+
+.sat_rental_summary_icon {
+    display: flex;
+    flex: 0 0 36px;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 9px;
+    background: var(--sat-primary-soft);
+    color: var(--sat-primary);
+    font-size: 15px;
+}
+
+.sat_rental_summary_content {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+}
+
+.sat_rental_summary_label {
+    margin-bottom: 2px;
+    color: var(--sat-neutral-500);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+}
+
+.sat_rental_summary_content .o_field_widget {
+    overflow: hidden;
+    color: var(--sat-neutral-900);
+    font-size: 13px;
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+
+/* ==========================================================
+   GRUPOS DEL FORMULARIO
+========================================================== */
+
+.sat_rental_main_groups {
+    margin-top: 4px;
+}
+
+.sat_rental_form .sat_rental_group {
+    margin-bottom: 14px;
+    padding: 14px 16px 10px;
+    border: 1px solid var(--sat-neutral-200);
+    border-left-width: 4px;
+    border-radius: var(--sat-radius-md);
+    background: #ffffff;
+    box-shadow: var(--sat-shadow-sm);
+}
+
+.sat_rental_form .sat_rental_group > tbody > tr:first-child th,
+.sat_rental_form .sat_rental_group .o_group_name {
+    color: var(--sat-neutral-900);
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.sat_rental_group_primary {
+    border-left-color: var(--sat-primary) !important;
+    background:
+        linear-gradient(
+            135deg,
+            #ffffff 0%,
+            #f8fbfe 100%
+        ) !important;
+}
+
+.sat_rental_group_info {
+    border-left-color: var(--sat-info) !important;
+    background:
+        linear-gradient(
+            135deg,
+            #ffffff 0%,
+            #f5fbfd 100%
+        ) !important;
+}
+
+.sat_rental_group_success {
+    border-left-color: var(--sat-success) !important;
+    background:
+        linear-gradient(
+            135deg,
+            #ffffff 0%,
+            #f6fbf8 100%
+        ) !important;
+}
+
+.sat_rental_group_warning {
+    border-left-color: var(--sat-warning) !important;
+    background:
+        linear-gradient(
+            135deg,
+            #ffffff 0%,
+            #fffaf0 100%
+        ) !important;
+}
+
+.sat_rental_group_danger {
+    border-left-color: var(--sat-danger) !important;
+    background:
+        linear-gradient(
+            135deg,
+            #ffffff 0%,
+            #fff8f8 100%
+        ) !important;
+}
+
+.sat_rental_group_neutral {
+    border-left-color: var(--sat-neutral-500) !important;
+    background: var(--sat-neutral-50) !important;
+}
+
+.sat_rental_review_actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.sat_rental_review_actions .btn {
+    min-height: 34px;
+    padding: 6px 12px;
+    border-radius: 7px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+
+/* ==========================================================
+   PESTAÑAS
+========================================================== */
+
+.sat_rental_notebook {
+    margin-top: 20px;
+}
+
+.sat_rental_notebook > .nav-tabs {
+    gap: 3px;
+    padding: 5px 5px 0;
+    border: 1px solid var(--sat-neutral-200);
+    border-bottom: 0;
+    border-radius: var(--sat-radius-md) var(--sat-radius-md) 0 0;
+    background: var(--sat-neutral-50);
+}
+
+.sat_rental_notebook > .nav-tabs .nav-link {
+    padding: 9px 14px;
+    border: 0;
+    border-radius: 8px 8px 0 0;
+    color: var(--sat-neutral-500);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.sat_rental_notebook > .nav-tabs .nav-link:hover {
+    background: #ffffff;
+    color: var(--sat-primary);
+}
+
+.sat_rental_notebook > .nav-tabs .nav-link.active {
+    border-bottom: 3px solid var(--sat-primary);
+    background: #ffffff;
+    color: var(--sat-primary-dark);
+}
+
+.sat_rental_notebook .tab-content {
+    padding: 18px;
+    border: 1px solid var(--sat-neutral-200);
+    border-radius: 0 0 var(--sat-radius-md) var(--sat-radius-md);
+    background: #ffffff;
+}
+
+.sat_rental_page_header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 18px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--sat-neutral-200);
+}
+
+.sat_rental_page_icon {
+    display: flex;
+    flex: 0 0 40px;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: var(--sat-primary-soft);
+    color: var(--sat-primary);
+    font-size: 17px;
+}
+
+.sat_rental_page_header h3 {
+    margin: 0 0 2px;
+    color: var(--sat-neutral-900);
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.sat_rental_page_header p {
+    margin: 0;
+    color: var(--sat-neutral-500);
+    font-size: 12px;
+}
+
+.sat_rental_description textarea {
+    min-height: 150px !important;
+    padding: 12px;
+    line-height: 1.5;
+    resize: vertical;
+}
+
+.sat_rental_problem_image img {
+    max-width: 340px;
+    max-height: 260px;
+    border: 1px solid var(--sat-neutral-200);
+    border-radius: var(--sat-radius-md);
+    object-fit: contain;
+}
+
+.sat_rental_sale_price input {
+    color: var(--sat-success);
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.sat_rental_purchase_price input {
+    color: var(--sat-danger);
+    font-size: 16px;
+    font-weight: 700;
+}
+
+
+/* ==========================================================
+   TABLAS INTERNAS
+========================================================== */
+
+.sat_rental_embedded_list {
+    border: 1px solid var(--sat-neutral-200);
+    border-radius: var(--sat-radius-md);
+    overflow: hidden;
+}
+
+.sat_rental_embedded_list .o_list_table {
+    margin-bottom: 0;
+}
+
+.sat_rental_embedded_list .o_list_table thead {
+    background: var(--sat-neutral-50);
+}
+
+.sat_rental_embedded_list .o_list_table thead th {
+    height: 40px;
+    border-bottom: 1px solid var(--sat-neutral-200);
+    color: var(--sat-neutral-700);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.sat_rental_embedded_list .o_list_table tbody td {
+    height: 42px;
+    vertical-align: middle;
+    font-size: 12px;
+}
+
+.sat_rental_embedded_list .o_list_table tbody tr:hover {
+    background: #f8fbfe;
+}
+
+
+/* ==========================================================
+   DASHBOARD DE PRUEBAS
+========================================================== */
+
+.sat_pruebas_fullwidth_container {
+    width: 100%;
+    margin-bottom: 20px;
+    padding: 16px;
+    border: 1px solid var(--sat-neutral-200);
+    border-radius: var(--sat-radius-md);
+    background:
+        linear-gradient(
+            135deg,
+            #f8fafc 0%,
+            #ffffff 100%
+        );
+}
+
+
+/* ==========================================================
+   VISTA LISTA
+========================================================== */
+
+.sat_rental_list {
+    --sat-list-primary: #2f5f8f;
+    --sat-list-border: #e2e8f0;
+    --sat-list-muted: #64748b;
+}
+
+.sat_rental_list .o_list_table {
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.sat_rental_list .o_list_table thead {
+    position: sticky;
+    z-index: 2;
+    top: 0;
+    background: #f8fafc;
+}
+
+.sat_rental_list .o_list_table thead th {
+    height: 42px;
+    border-bottom: 1px solid var(--sat-list-border);
+    background: #f8fafc;
+    color: #475569;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.025em;
+    text-transform: uppercase;
+}
+
+.sat_rental_list .o_list_table tbody td {
+    height: 45px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+    border-bottom-color: #edf1f5;
+    color: #334155;
+    font-size: 12px;
+    vertical-align: middle;
+}
+
+.sat_rental_list .o_list_table tbody tr {
+    transition:
+        background 0.16s ease,
+        box-shadow 0.16s ease;
+}
+
+.sat_rental_list .o_list_table tbody tr:hover {
+    background: #f6f9fc;
+}
+
+.sat_rental_list .o_list_table tbody tr.o_data_row_selected {
+    background: #edf5fc;
+}
+
+.sat_rental_list .sat_rental_model_cell {
+    color: var(--sat-list-primary);
+    font-weight: 700;
+}
+
+.sat_rental_list .sat_rental_counter_cell {
+    color: #0f172a;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+}
+
+.sat_rental_list .o_badge {
+    min-width: 82px;
+    padding: 4px 9px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+
+/* ==========================================================
+   BOTONES DE LISTA
+========================================================== */
+
+.sat_rental_list .sat_rental_list_action {
+    width: 29px;
+    min-width: 29px;
+    height: 29px;
+    margin-right: 3px;
+    padding: 0;
+    border: 1px solid #d7dee7;
+    border-radius: 7px;
+    background: #ffffff;
+    color: #526273;
+    font-size: 12px;
+    transition:
+        background 0.16s ease,
+        border-color 0.16s ease,
+        color 0.16s ease,
+        transform 0.16s ease;
+}
+
+.sat_rental_list .sat_rental_list_action:hover {
+    border-color: #aebdcb;
+    background: #f1f5f9;
+    color: #1e293b;
+    transform: translateY(-1px);
+}
+
+.sat_rental_list .sat_rental_list_action_primary {
+    border-color: #b7cee3;
+    background: #eef5fb;
+    color: var(--sat-list-primary);
+}
+
+.sat_rental_list .sat_rental_list_action_primary:hover {
+    border-color: var(--sat-list-primary);
+    background: var(--sat-list-primary);
+    color: #ffffff;
+}
+
+.sat_rental_list .sat_rental_list_action_location {
+    border-color: #d6e3ef;
+    background: #f6f9fc;
+    color: #46647f;
+}
+
+
+/* ==========================================================
+   KANBAN GENERAL
+========================================================== */
+
+.sat_rental_kanban {
+    --sat-card-primary: #2f5f8f;
+    --sat-card-success: #2e7d5b;
+    --sat-card-warning: #b7791f;
+    --sat-card-danger: #b74444;
+    --sat-card-info: #2b7a9a;
+    --sat-card-muted: #64748b;
+}
+
+.sat_rental_kanban.o_kanban_view {
+    gap: 12px;
+    padding: 14px;
+    background: #f4f7fa;
+}
+
+.sat_rental_kanban .o_kanban_group {
+    min-width: 280px;
+    max-width: 330px;
+    padding: 8px;
+    border-radius: 12px;
+    background: rgba(241, 245, 249, 0.82);
+}
+
+.sat_rental_kanban .o_kanban_group_header {
+    margin-bottom: 8px;
+    padding: 8px 9px;
+    border-bottom: 1px solid #dbe3ec;
+}
+
+.sat_rental_kanban .o_kanban_group_title {
+    color: #334155;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+
+/* ==========================================================
+   TARJETA KANBAN
+========================================================== */
+
+.sat_rental_card {
+    position: relative;
+    min-width: 0;
+    margin-bottom: 10px;
+    overflow: hidden;
+    border: 1px solid #dde5ed;
+    border-radius: 12px;
+    background: #ffffff;
+    box-shadow:
+        0 2px 5px rgba(15, 23, 42, 0.05),
+        0 1px 2px rgba(15, 23, 42, 0.04);
+    cursor: pointer;
+    transition:
+        border-color 0.18s ease,
+        box-shadow 0.18s ease,
+        transform 0.18s ease;
+}
+
+.sat_rental_card:hover {
+    border-color: #b8cadb;
+    box-shadow:
+        0 8px 20px rgba(15, 23, 42, 0.10),
+        0 3px 8px rgba(15, 23, 42, 0.06);
+    transform: translateY(-2px);
+}
+
+.sat_rental_card_state_line {
+    position: absolute;
+    z-index: 2;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 4px;
+    background: var(--sat-card-muted);
+}
+
+.sat_rental_card_state_finalizado .sat_rental_card_state_line,
+.sat_rental_card_state_entregada .sat_rental_card_state_line {
+    background: var(--sat-card-success);
+}
+
+.sat_rental_card_state_con_problemas .sat_rental_card_state_line {
+    background: var(--sat-card-warning);
+}
+
+.sat_rental_card_state_de_partes .sat_rental_card_state_line {
+    background: var(--sat-card-danger);
+}
+
+.sat_rental_card_state_para_revision .sat_rental_card_state_line,
+.sat_rental_card_state_en_revision .sat_rental_card_state_line {
+    background: var(--sat-card-info);
+}
+
+.sat_rental_card_state_asignado .sat_rental_card_state_line {
+    background: var(--sat-card-primary);
+}
+
+
+/* ==========================================================
+   CABECERA DEL KANBAN
+========================================================== */
+
+.sat_rental_card_header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 12px 12px 8px 15px;
+}
+
+.sat_rental_card_title_area {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 9px;
+}
+
+.sat_rental_card_machine_icon {
+    display: flex;
+    flex: 0 0 34px;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+    background: #eef5fb;
+    color: var(--sat-card-primary);
+    font-size: 15px;
+}
+
+.sat_rental_card_title_content {
+    min-width: 0;
+}
+
+.sat_rental_card_title {
+    overflow: hidden;
+    color: #172033;
+    font-size: 13px;
+    font-weight: 750;
+    line-height: 1.3;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sat_rental_card_serial {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 3px;
+    color: #64748b;
+    font-size: 10px;
+}
+
+.sat_rental_card_serial i {
+    color: #8292a5;
+}
+
+.sat_rental_card_serial strong {
+    overflow: hidden;
+    max-width: 120px;
+    color: #334155;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sat_rental_card_problem {
+    display: flex;
+    flex: 0 0 28px;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: 1px solid #f0bcbc;
+    border-radius: 8px;
+    background: #fff0f0;
+    color: var(--sat-card-danger);
+    animation: sat-equipment-alert-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes sat-equipment-alert-pulse {
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 rgba(183, 68, 68, 0);
+    }
+
+    50% {
+        box-shadow: 0 0 0 4px rgba(183, 68, 68, 0.10);
+    }
+}
+
+
+/* ==========================================================
+   BADGES DEL KANBAN
+========================================================== */
+
+.sat_rental_card_badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    padding: 0 12px 9px 15px;
+}
+
+.sat_rental_card_badges .o_badge {
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-size: 9px;
+    font-weight: 750;
+}
+
+
+/* ==========================================================
+   CUERPO DEL KANBAN
+========================================================== */
+
+.sat_rental_card_body {
+    padding: 10px 12px 10px 15px;
+    border-top: 1px solid #edf1f5;
+}
+
+.sat_rental_card_row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    margin-bottom: 8px;
+}
+
+.sat_rental_card_row:last-child {
+    margin-bottom: 0;
+}
+
+.sat_rental_card_row_icon {
+    display: flex;
+    flex: 0 0 25px;
+    align-items: center;
+    justify-content: center;
+    width: 25px;
+    height: 25px;
+    border-radius: 7px;
+    background: #f1f5f9;
+    color: #5f7388;
+    font-size: 11px;
+}
+
+.sat_rental_card_row_content {
+    display: flex;
+    min-width: 0;
+    flex: 1;
+    flex-direction: column;
+}
+
+.sat_rental_card_row_label {
+    color: #8290a2;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+}
+
+.sat_rental_card_row_value {
+    overflow: hidden;
+    color: #334155;
+    font-size: 11px;
+    line-height: 1.3;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sat_rental_card_metrics {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+    margin: 9px 0;
+}
+
+.sat_rental_card_metric {
+    min-width: 0;
+    padding: 7px 9px;
+    border: 1px solid #e5ebf1;
+    border-radius: 8px;
+    background: #f8fafc;
+}
+
+.sat_rental_card_metric_label {
+    display: block;
+    margin-bottom: 2px;
+    color: #8290a2;
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.035em;
+    text-transform: uppercase;
+}
+
+.sat_rental_card_metric_value {
+    display: block;
+    overflow: hidden;
+    color: #1e293b;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+
+/* ==========================================================
+   INFORMACIÓN COMPLEMENTARIA KANBAN
+========================================================== */
+
+.sat_rental_card_extra {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 8px 12px 8px 15px;
+    border-top: 1px dashed #dce4ec;
+    background: #fbfcfd;
+}
+
+.sat_rental_card_extra_item {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 5px;
+    color: #64748b;
+    font-size: 9px;
+}
+
+.sat_rental_card_extra_item i {
+    width: 13px;
+    color: #73889d;
+    text-align: center;
+}
+
+.sat_rental_card_extra_item strong {
+    overflow: hidden;
+    color: #334155;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+
+/* ==========================================================
+   PIE DE TARJETA KANBAN
+========================================================== */
+
+.sat_rental_card_footer {
+    display: flex;
+    min-height: 34px;
+    align-items: center;
+    justify-content: space-between;
+    padding: 7px 12px 7px 15px;
+    border-top: 1px solid #edf1f5;
+    background: #f8fafc;
+}
+
+.sat_rental_card_type {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 5px;
+    overflow: hidden;
+    color: #64748b;
+    font-size: 9px;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sat_rental_card_type i {
+    color: var(--sat-card-primary);
+}
+
+.sat_rental_card_ingress {
+    font-size: 13px;
+}
+
+
+/* ==========================================================
+   KANBAN SIN AGRUPAR
+========================================================== */
+
+.sat_rental_kanban:not(.o_kanban_grouped) {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(275px, 1fr));
+    align-items: start;
+    gap: 12px;
+}
+
+.sat_rental_kanban:not(.o_kanban_grouped) .o_kanban_record {
+    width: auto;
+    margin: 0;
+}
+
+
+/* ==========================================================
+   RESPONSIVE
+========================================================== */
+
+@media (max-width: 1200px) {
+    .sat_rental_summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .sat_rental_form .o_form_sheet {
+        padding-right: 20px;
+        padding-left: 20px;
+    }
+}
+
+@media (max-width: 992px) {
+    .sat_rental_form .sat_rental_header {
+        flex-wrap: wrap;
+    }
+
+    .sat_rental_identity {
+        align-items: flex-start;
+    }
+
+    .sat_rental_identity_title {
+        font-size: 21px;
+    }
+
+    .sat_rental_kanban .o_kanban_group {
+        min-width: 270px;
+    }
+}
+
+@media (max-width: 768px) {
+    .sat_rental_form .o_form_sheet {
+        padding: 15px 12px 24px;
+        border-radius: 0;
+    }
+
+    .sat_rental_alert {
+        margin-right: 8px;
+        margin-left: 8px;
+    }
+
+    .sat_rental_identity {
+        flex-direction: column;
+        padding: 15px;
+    }
+
+    .sat_rental_identity_icon {
+        width: 46px;
+        height: 46px;
+        flex-basis: 46px;
+        font-size: 20px;
+    }
+
+    .sat_rental_identity_meta {
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .sat_rental_summary {
+        grid-template-columns: 1fr;
+    }
+
+    .sat_rental_notebook .tab-content {
+        padding: 12px;
+    }
+
+    .sat_rental_page_header {
+        align-items: flex-start;
+    }
+
+    .sat_rental_kanban:not(.o_kanban_grouped) {
+        grid-template-columns: 1fr;
+    }
+}
+
+
+/* ==========================================================
+   MODO OSCURO DE ODOO
+========================================================== */
+
+.o_web_client.o_dark_mode .sat_rental_form {
+    --sat-neutral-50: #1d2530;
+    --sat-neutral-100: #242d39;
+    --sat-neutral-200: #344050;
+    --sat-neutral-300: #465366;
+    --sat-neutral-500: #a7b2c0;
+    --sat-neutral-700: #d4dbe5;
+    --sat-neutral-900: #f5f7fa;
+}
+
+.o_web_client.o_dark_mode .sat_rental_form .o_form_sheet,
+.o_web_client.o_dark_mode .sat_rental_identity,
+.o_web_client.o_dark_mode .sat_rental_summary_item,
+.o_web_client.o_dark_mode .sat_rental_form .sat_rental_group,
+.o_web_client.o_dark_mode .sat_rental_notebook .tab-content {
+    border-color: #344050;
+    background: #202833 !important;
+    color: #e7ebf0;
+}
+
+.o_web_client.o_dark_mode .sat_rental_form .o_form_sheet_bg {
+    background: #171d25;
+}
+
+.o_web_client.o_dark_mode .sat_rental_identity_title,
+.o_web_client.o_dark_mode .sat_rental_page_header h3,
+.o_web_client.o_dark_mode .sat_rental_summary_content .o_field_widget {
+    color: #f3f5f8;
+}
+
+.o_web_client.o_dark_mode .sat_rental_notebook > .nav-tabs {
+    border-color: #344050;
+    background: #1b222c;
+}
+
+.o_web_client.o_dark_mode .sat_rental_notebook > .nav-tabs .nav-link.active {
+    background: #202833;
+    color: #9fc6eb;
+}
+
+.o_web_client.o_dark_mode .sat_rental_card {
+    border-color: #344050;
+    background: #202833;
+}
+
+.o_web_client.o_dark_mode .sat_rental_card_title,
+.o_web_client.o_dark_mode .sat_rental_card_metric_value,
+.o_web_client.o_dark_mode .sat_rental_card_row_value {
+    color: #edf1f5;
+}
+
+.o_web_client.o_dark_mode .sat_rental_card_body,
+.o_web_client.o_dark_mode .sat_rental_card_footer,
+.o_web_client.o_dark_mode .sat_rental_card_extra,
+.o_web_client.o_dark_mode .sat_rental_card_metric {
+    border-color: #344050;
+    background: #242d39;
+}
+
+/* ==========================================================
+   ALQUILER - PANELES OPERATIVOS
+   Complementos específicos de la vista de alquiler
+========================================================== */
+
+.sat_rental_form .sat_rental_panel {
+    margin-bottom: 16px;
+    overflow: hidden;
+    border: 1px solid var(--sat-neutral-200);
+    border-left-width: 4px;
+    border-radius: var(--sat-radius-md);
+    background: #ffffff;
+    box-shadow: var(--sat-shadow-sm);
+}
+
+.sat_rental_form .sat_rental_panel_primary {
+    border-left-color: var(--sat-primary);
+}
+
+.sat_rental_form .sat_rental_panel_info {
+    border-left-color: var(--sat-info);
+}
+
+.sat_rental_form .sat_rental_panel_success {
+    border-left-color: var(--sat-success);
+}
+
+.sat_rental_form .sat_rental_panel_warning {
+    border-left-color: var(--sat-warning);
+}
+
+.sat_rental_form .sat_rental_panel_state {
+    border-left-color: var(--sat-neutral-500);
+}
+
+.sat_rental_form .sat_rental_panel_header {
+    padding: 12px 15px;
+    border-bottom: 1px solid var(--sat-neutral-200);
+    background: var(--sat-neutral-50);
+    color: var(--sat-neutral-900);
+}
+
+.sat_rental_form .sat_rental_panel_header h5,
+.sat_rental_form .sat_rental_panel_header h6 {
+    margin: 0;
+    color: inherit;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.sat_rental_form .sat_rental_panel_header i {
+    margin-right: 7px;
+    color: var(--sat-primary);
+}
+
+.sat_rental_form .sat_rental_panel_body,
+.sat_rental_form .sat_rental_panel .card-body {
+    padding: 15px;
+}
+
+.sat_rental_form .sat_rental_panel_footer {
+    padding: 14px 15px;
+    border-top: 1px solid var(--sat-neutral-200);
+    background: #fbfcfd;
+}
+
+.sat_rental_form .sat_rental_panel .btn {
+    min-height: 36px;
+    border-radius: 7px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+
+/* ==========================================================
+   AVISOS DE ESTADO DEL SERVICIO
+========================================================== */
+
+.sat_rental_form .sat_rental_state_notice {
+    padding: 10px 12px;
+    border-width: 1px;
+    border-left-width: 4px;
+    border-radius: 8px;
+    font-size: 12px;
+}
+
+.sat_rental_form .sat_rental_state_notice_success {
+    border-color: #bfe3d2;
+    border-left-color: var(--sat-success);
+    background: var(--sat-success-soft);
+    color: #245f48;
+}
+
+.sat_rental_form .sat_rental_state_notice_warning {
+    border-color: #ecd6a5;
+    border-left-color: var(--sat-warning);
+    background: var(--sat-warning-soft);
+    color: #80520f;
+}
+
+.sat_rental_form .sat_rental_state_notice_danger {
+    border-color: #edc8c8;
+    border-left-color: var(--sat-danger);
+    background: var(--sat-danger-soft);
+    color: #842929;
+}
+
+.sat_rental_form .sat_rental_state_notice_info {
+    border-color: #c4dfe9;
+    border-left-color: var(--sat-info);
+    background: var(--sat-info-soft);
+    color: #235f77;
+}
+
+.sat_rental_form .sat_rental_state_notice_muted {
+    border-color: var(--sat-neutral-300);
+    border-left-color: var(--sat-neutral-500);
+    background: var(--sat-neutral-100);
+    color: var(--sat-neutral-700);
+}
+
+
+/* ==========================================================
+   KANBAN DE ALQUILER
+========================================================== */
+
+.sat_rental_kanban .sat_rental_card {
+    position: relative;
+    margin-bottom: 12px;
+    overflow: hidden;
+    border: 1px solid #dfe7ee;
+    border-radius: 12px;
+    background: #ffffff;
+    box-shadow:
+        0 2px 5px rgba(15, 23, 42, 0.05),
+        0 8px 18px rgba(15, 23, 42, 0.04);
+    transition:
+        transform 0.16s ease,
+        box-shadow 0.16s ease,
+        border-color 0.16s ease;
+}
+
+.sat_rental_kanban .sat_rental_card:hover {
+    border-color: #bfd0df;
+    box-shadow:
+        0 4px 10px rgba(15, 23, 42, 0.07),
+        0 10px 24px rgba(15, 23, 42, 0.06);
+    transform: translateY(-1px);
+}
+
+.sat_rental_kanban .sat_rental_card_header {
+    min-height: 108px;
+    padding: 18px 16px 14px;
+    border-bottom: 1px solid #e7edf2;
+    background:
+        linear-gradient(
+            135deg,
+            #f8fbfe 0%,
+            #eef5fb 100%
+        );
+    color: #1f3b55;
+}
+
+.sat_rental_kanban .sat_rental_card_header .text-white,
+.sat_rental_kanban .sat_rental_card_header .text-white-50 {
+    color: #334155 !important;
+}
+
+.sat_rental_kanban .sat_rental_card_header strong {
+    display: block;
+    max-width: calc(100% - 78px);
+    overflow: hidden;
+    color: #173f61;
+    font-size: 14px;
+    font-weight: 800;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sat_rental_kanban .sat_rental_card_icon,
+.sat_rental_kanban .sat_rental_card_meta_icon {
+    width: 15px;
+    margin-right: 7px;
+    color: #2f5f8f;
+    font-size: 13px;
+    text-align: center;
+}
+
+.sat_rental_kanban .sat_rental_card_body {
+    padding: 10px;
+    background: #ffffff;
+}
+
+.sat_rental_kanban .sat_rental_metric {
+    min-height: 66px;
+    padding: 8px 5px;
+    border: 1px solid #e2e8f0;
+    border-radius: 9px;
+    background: #f8fafc;
+    color: #334155;
+    box-shadow: none;
+}
+
+.sat_rental_kanban .sat_rental_metric:hover {
+    border-color: #b9cee2;
+    background: #eef5fb;
+    color: #244b72;
+}
+
+.sat_rental_kanban .sat_rental_metric_icon {
+    margin-bottom: 3px;
+    color: #2f5f8f;
+    font-size: 14px;
+}
+
+.sat_rental_kanban .sat_rental_metric .fw-bold {
+    color: #0f172a;
+    font-size: 15px;
+    line-height: 1.1;
+}
+
+.sat_rental_kanban .sat_rental_card_action {
+    min-height: 31px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 5px 7px;
+    border-radius: 7px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.sat_rental_kanban .sat_rental_card_action_secondary {
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    color: #475569;
+}
+
+.sat_rental_kanban .sat_rental_card_action_primary {
+    border: 1px solid #2f5f8f;
+    background: #2f5f8f;
+    color: #ffffff;
+}
+
+.sat_rental_kanban .sat_rental_card_action_success {
+    border: 1px solid #2e7d5b;
+    background: #2e7d5b;
+    color: #ffffff;
+}
+
+.sat_rental_kanban .sat_rental_card_action_secondary:hover {
+    border-color: #2f5f8f;
+    background: #eef5fb;
+    color: #244b72;
+}
+
+.sat_rental_kanban .sat_rental_card_action_primary:hover {
+    border-color: #244b72;
+    background: #244b72;
+    color: #ffffff;
+}
+
+.sat_rental_kanban .sat_rental_card_action_success:hover {
+    border-color: #246447;
+    background: #246447;
+    color: #ffffff;
+}
+
+.sat_rental_kanban .position-absolute .badge {
+    border: 1px solid rgba(255, 255, 255, 0.72);
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
+    font-size: 10px !important;
+    font-weight: 700;
+}
+
+
+/* ==========================================================
+   LISTA DE ALQUILERES
+========================================================== */
+
+.sat_rental_list .o_list_table tbody td {
+    height: 46px;
+}
+
+.sat_rental_list .o_list_table tbody td:nth-child(5),
+.sat_rental_list .o_list_table tbody td:nth-child(6) {
+    font-weight: 700;
+}
+
+.sat_rental_list .badge {
+    border-radius: 999px;
+    padding: 4px 8px;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+
+/* ==========================================================
+   AJUSTES RESPONSIVE ESPECÍFICOS DE ALQUILER
+========================================================== */
+
+@media (max-width: 1200px) {
+    .sat_rental_summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .sat_rental_form .sat_rental_header {
+        flex-wrap: wrap;
+    }
+}
+
+@media (max-width: 768px) {
+    .sat_rental_form .sat_rental_panel_header,
+    .sat_rental_form .sat_rental_panel_body,
+    .sat_rental_form .sat_rental_panel .card-body,
+    .sat_rental_form .sat_rental_panel_footer {
+        padding-right: 11px;
+        padding-left: 11px;
+    }
+
+    .sat_rental_kanban .sat_rental_card_header strong {
+        max-width: calc(100% - 65px);
+    }
+}
+
+
+/* ==========================================================
+   MODO OSCURO - COMPLEMENTOS DE ALQUILER
+========================================================== */
+
+.o_web_client.o_dark_mode .sat_rental_form .sat_rental_panel,
+.o_web_client.o_dark_mode .sat_rental_form .sat_rental_panel_header,
+.o_web_client.o_dark_mode .sat_rental_form .sat_rental_panel_body,
+.o_web_client.o_dark_mode .sat_rental_form .sat_rental_panel .card-body,
+.o_web_client.o_dark_mode .sat_rental_form .sat_rental_panel_footer,
+.o_web_client.o_dark_mode .sat_rental_kanban .sat_rental_card,
+.o_web_client.o_dark_mode .sat_rental_kanban .sat_rental_card_body,
+.o_web_client.o_dark_mode .sat_rental_kanban .sat_rental_metric {
+    border-color: #344050;
+    background: #202833;
+    color: #e7ebf0;
+}
+
+.o_web_client.o_dark_mode .sat_rental_kanban .sat_rental_card_header {
+    border-color: #344050;
+    background: #242d39;
+}
+
+.o_web_client.o_dark_mode .sat_rental_kanban .sat_rental_card_header strong,
+.o_web_client.o_dark_mode .sat_rental_kanban .sat_rental_card_header .text-white,
+.o_web_client.o_dark_mode .sat_rental_kanban .sat_rental_card_header .text-white-50,
+.o_web_client.o_dark_mode .sat_rental_kanban .sat_rental_metric .fw-bold {
+    color: #edf1f5 !important;
+}

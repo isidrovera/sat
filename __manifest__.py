@@ -229,6 +229,7 @@
             'sat/static/src/css/sat_table_styles.css',
             'sat/static/src/css/gallery.css',
             'sat/static/src/css/geo_map_widget.css',
+            'sat/static/src/css/alquiler_styles_mejorado.css',
             #'sat/static/src/css/contadores_dashboard.css',
             
             # SCSS existente
