@@ -73,6 +73,7 @@ class SatReservaSolicitudWizard(models.TransientModel):
         [
             ('fecha', 'Hasta una fecha'),
             ('dias', 'Cantidad de días'),
+            ('mantener', 'Mantener vencimiento actual'),
         ],
         string='Definir plazo por',
         default='fecha',
@@ -98,24 +99,32 @@ class SatReservaSolicitudWizard(models.TransientModel):
             self.fecha_solicitada = False
             self.dias_solicitados = 0
 
+        elif self.tipo_solicitud == 'cambiar_cliente':
+            self.motivo = 'cambio_cliente'
+            self.modalidad_plazo = 'mantener'
+            self.fecha_solicitada = False
+            self.dias_solicitados = 0
+
         elif self.tipo_solicitud == 'cambiar_fecha':
             self.modalidad_plazo = 'fecha'
 
         elif not self.modalidad_plazo:
             self.modalidad_plazo = 'fecha'
 
-        if self.tipo_solicitud == 'cambiar_cliente':
-            self.motivo = 'cambio_cliente'
-
-        elif self.tipo_solicitud == 'cambiar_asesora':
+        if self.tipo_solicitud == 'cambiar_asesora':
             self.motivo = 'cambio_asesora'
 
     @api.onchange('modalidad_plazo')
     def _onchange_modalidad_plazo(self):
         if self.modalidad_plazo == 'fecha':
             self.dias_solicitados = 0
+
         elif self.modalidad_plazo == 'dias':
             self.fecha_solicitada = False
+
+        elif self.modalidad_plazo == 'mantener':
+            self.fecha_solicitada = False
+            self.dias_solicitados = 0
 
     def _validar(self):
         self.ensure_one()
@@ -161,46 +170,76 @@ class SatReservaSolicitudWizard(models.TransientModel):
                         _('Los días solicitados deben ser mayores a cero.')
                     )
 
+            elif self.modalidad_plazo == 'mantener':
+                if self.tipo_solicitud != 'cambiar_cliente':
+                    raise ValidationError(
+                        _('Mantener vencimiento actual solo se usa para cambio de cliente.')
+                    )
+
+                sin_vencimiento = self.maquina_ids.filtered(
+                    lambda machine: not machine.reserva_fecha_limite
+                )
+
+                if sin_vencimiento:
+                    raise ValidationError(
+                        _(
+                            'Estas máquinas no tienen un vencimiento actual que conservar: %s'
+                        )
+                        % ', '.join(
+                            sin_vencimiento.mapped('serie_id')
+                        )
+                    )
+
             else:
                 raise ValidationError(
                     _('Debe definir el plazo solicitado.')
                 )
 
-        if self.tipo_solicitud in ('extender', 'reducir', 'cambiar_fecha'):
-            without_deadline = self.maquina_ids.filtered(
+        if self.tipo_solicitud in (
+            'extender',
+            'reducir',
+            'cambiar_fecha',
+        ):
+            sin_vencimiento = self.maquina_ids.filtered(
                 lambda machine: not machine.reserva_fecha_limite
             )
 
-            if without_deadline:
+            if sin_vencimiento:
                 raise ValidationError(
                     _(
                         'Estas máquinas no tienen una reserva con vencimiento: %s'
                     )
-                    % ', '.join(without_deadline.mapped('serie_id'))
+                    % ', '.join(
+                        sin_vencimiento.mapped('serie_id')
+                    )
                 )
 
-        delivered = self.maquina_ids.filtered(
+        entregadas = self.maquina_ids.filtered(
             lambda machine: machine.estado_ventas_id == 'entregada'
         )
 
-        if delivered:
+        if entregadas:
             raise ValidationError(
                 _(
                     'No puede incluir máquinas entregadas: %s'
                 )
-                % ', '.join(delivered.mapped('serie_id'))
+                % ', '.join(
+                    entregadas.mapped('serie_id')
+                )
             )
 
-        pending = self.maquina_ids.filtered(
+        pendientes = self.maquina_ids.filtered(
             lambda machine: machine.reserva_solicitud_pendiente_id
         )
 
-        if pending:
+        if pendientes:
             raise ValidationError(
                 _(
                     'Estas máquinas ya tienen una solicitud pendiente: %s'
                 )
-                % ', '.join(pending.mapped('serie_id'))
+                % ', '.join(
+                    pendientes.mapped('serie_id')
+                )
             )
 
         return True
@@ -209,31 +248,10 @@ class SatReservaSolicitudWizard(models.TransientModel):
         self.ensure_one()
         self._validar()
 
-        request = self.env['sat.reserva.solicitud'].create({
-            'cliente_id': self.cliente_id.id if self.cliente_id else False,
-            'asesora_destino_id': (
-                self.asesora_destino_id.id
-                if self.asesora_destino_id
-                else False
-            ),
-            'tipo_solicitud': self.tipo_solicitud,
-            'motivo': self.motivo,
-            'detalle_motivo': self.detalle_motivo,
-            'modalidad_solicitada': self.modalidad_plazo or False,
-            'fecha_solicitada': (
-                self.fecha_solicitada
-                if self.modalidad_plazo == 'fecha'
-                else False
-            ),
-            'dias_solicitados': (
-                self.dias_solicitados
-                if self.modalidad_plazo == 'dias'
-                else 0
-            ),
-        })
+        line_commands = []
 
-        request.write({
-            'line_ids': [
+        for machine in self.maquina_ids:
+            line_commands.append(
                 (
                     0,
                     0,
@@ -254,9 +272,49 @@ class SatReservaSolicitudWizard(models.TransientModel):
                         'fecha_limite_anterior': machine.reserva_fecha_limite,
                     },
                 )
-                for machine in self.maquina_ids
-            ],
-        })
+            )
+
+        request_vals = {
+            'cliente_id': (
+                self.cliente_id.id
+                if self.cliente_id
+                else False
+            ),
+            'asesora_destino_id': (
+                self.asesora_destino_id.id
+                if self.asesora_destino_id
+                else False
+            ),
+            'tipo_solicitud': self.tipo_solicitud,
+            'motivo': self.motivo,
+            'detalle_motivo': self.detalle_motivo,
+            'modalidad_solicitada': self.modalidad_plazo or False,
+            'fecha_solicitada': (
+                self.fecha_solicitada
+                if self.modalidad_plazo == 'fecha'
+                else False
+            ),
+            'dias_solicitados': (
+                self.dias_solicitados
+                if self.modalidad_plazo == 'dias'
+                else 0
+            ),
+            'line_ids': line_commands,
+        }
+
+        request = self.env[
+            'sat.reserva.solicitud'
+        ].create(
+            request_vals
+        )
+
+        if not request.line_ids:
+            raise ValidationError(
+                _(
+                    'No se pudieron crear las líneas de máquinas de la solicitud. '
+                    'La operación fue cancelada para evitar una solicitud incompleta.'
+                )
+            )
 
         request.action_enviar_gerencia()
 
