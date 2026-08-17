@@ -5,11 +5,11 @@
       <field name="name">reparaciones.reparaciones.form</field>
       <field name="model">reparaciones.reparaciones</field>
       <field name="arch" type="xml">
-        <form string="Gestión de Reparaciones">
+        <form string="Gestión de Reparaciones" class="sat_repair_form">
           <!-- CRÍTICO: Cargar estado_id ANTES para evaluaciones de invisible -->
           <field name="estado_id" invisible="1"/>
           <!-- HEADER: Con botones mejorados e iconos modernos -->
-          <header>
+          <header class="sat_repair_header">
             <button name="action_generar_informe"
               type="object"
               string="Generar Informe Técnico"
@@ -66,7 +66,7 @@
               invisible="estado_id != 'en_revision'"/>
           </header>
           <sheet>
-            <div class="oe_button_box" name="button_box">
+            <div class="oe_button_box sat_repair_button_box" name="button_box">
               <button name="action_view_component_evaluations"
                 type="object"
                 class="oe_stat_button"
@@ -94,26 +94,44 @@
                    widget="statinfo"/>
               </button>
             </div>
-            <!-- TÍTULO DE LA REPARACIÓN -->
-            <div class="oe_title">
-              <label for="name" style="font-size: 16px; color: #212529;">Referencia de Reparación</label>
-              <h1>
-                <field name="name" placeholder="Número/ID de Reparación" style="font-size: 20px;" />
-              </h1>
+            <!-- IDENTIDAD PRINCIPAL -->
+            <div class="sat_repair_identity">
+              <div class="sat_repair_identity_icon"><i class="fa fa-wrench"/></div>
+              <div class="sat_repair_identity_content">
+                <div class="sat_repair_identity_label">Reparación técnica</div>
+                <h1 class="sat_repair_identity_title">
+                  <field name="name" placeholder="Número/ID de Reparación"/>
+                </h1>
+                <div class="sat_repair_identity_client">
+                  <i class="fa fa-building"/>
+                  <field name="cliente_id" placeholder="Seleccione el cliente" widget="many2one_avatar"/>
+                </div>
+              </div>
             </div>
-            <!-- CLIENTE -->
-            <div class="oe_title">
-              <label for="cliente_id" style="font-size: 16px; color: #212529;">Cliente</label>
-              <h1>
-                <field name="cliente_id" placeholder="Seleccione el cliente"
-                  widget="many2one_avatar" style="font-size: 20px;" />
-              </h1>
+
+            <!-- RESUMEN OPERATIVO -->
+            <div class="sat_repair_summary">
+              <div class="sat_repair_summary_item">
+                <div class="sat_repair_summary_icon"><i class="fa fa-map-marker"/></div>
+                <div class="sat_repair_summary_content"><span class="sat_repair_summary_label">Ubicación</span><field name="ubicacion_id" readonly="1"/></div>
+              </div>
+              <div class="sat_repair_summary_item">
+                <div class="sat_repair_summary_icon"><i class="fa fa-exclamation-circle"/></div>
+                <div class="sat_repair_summary_content"><span class="sat_repair_summary_label">Prioridad</span><field name="prioridad" readonly="1"/></div>
+              </div>
+              <div class="sat_repair_summary_item">
+                <div class="sat_repair_summary_icon"><i class="fa fa-user"/></div>
+                <div class="sat_repair_summary_content"><span class="sat_repair_summary_label">Técnico</span><field name="responsable_id" readonly="1"/></div>
+              </div>
+              <div class="sat_repair_summary_item">
+                <div class="sat_repair_summary_icon"><i class="fa fa-flag"/></div>
+                <div class="sat_repair_summary_content"><span class="sat_repair_summary_label">Estado</span><field name="estado_id" readonly="1"/></div>
+              </div>
             </div>
             <!-- DATOS PRINCIPALES EN GRUPOS -->
             <group>
               <!-- GRUPO: DATOS PARA REVISIÓN -->
-              <group string="Datos para la revisión"
-                style="background-color: #f0f9ff; border-radius: 8px; padding: 15px; border-left: 4px solid #0d6efd;">
+              <group string="Datos para la revisión" class="sat_repair_group sat_repair_group_primary">
                 <field name="prioridad" widget="badge"
                   help="Define la urgencia de atención: Alta (24h), Media (48h), Baja (72h). Asignaciones de prioridad alta requieren aprobación de supervisor." />
                 <field name="tipo_revision" widget="badge"
@@ -127,8 +145,7 @@
                   help="Número de contacto directo del técnico para coordinaciones urgentes." />
               </group>
               <!-- GRUPO: DATOS DEL EQUIPO -->
-              <group string="Datos del equipo"
-                style="background-color: #f8f9fa; border-radius: 8px; padding: 15px; border-left: 4px solid #495057;">
+              <group string="Datos del equipo" class="sat_repair_group sat_repair_group_neutral">
                 <field name="importacion"
                   help="Referencia del lote de importación al que pertenece este equipo." />
                 <field name="nombre_proveedor"
@@ -140,10 +157,9 @@
                   help="Marca del fabricante del equipo." />
                 <field name="maquina_id" domain="[('estado_ventas_id', '=', 'sin_revisar')]"
                   options="{'no_create': True}" readonly="estado_id == 'en_revision'"
-                  style="user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none;"
+                  class="sat_repair_locked_field"
                   help="Modelo específico del equipo. Esta información es crucial para la identificación de partes compatibles." />
-                <field name="serie_id" readonly="1"
-                  style="user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none;"
+                <field name="serie_id" readonly="1" class="sat_repair_locked_field"
                   help="NÚMERO DE SERIE ÚNICO. Verifique física y visualmente que coincida con lo que aparece en la etiqueta del equipo." />
                 <field name="contometrok_id"
                   help="Contador interno de impresiones/copias, ubicado en configuración o menú de información del equipo." />
@@ -156,9 +172,9 @@
                 <field name="pcloud_folder_id" readonly="1"/>
               </group>
             </group>
-            <notebook>
+            <notebook class="sat_repair_notebook">
               <!-- PESTAÑA: INFORME TÉCNICO -->
-              <page string="Informe Técnico">
+              <page string="Informe técnico" name="informe_tecnico" class="sat_repair_page">
                 <group>
                   <group>
                     <field name="informe"
@@ -181,7 +197,7 @@
                   </group>
                 </group>
                 <!-- Configuración de generación -->
-                <group string="⚙️ Configuración">
+                <group string="Configuración" class="sat_repair_group sat_repair_group_info">
                   <group>
                     <field name="modo_generacion_informe" widget="radio"
                       options="{'horizontal': true}" />
@@ -198,7 +214,7 @@
                 </group>
                 <separator />
                 <!-- Observaciones del técnico -->
-                <group string="📝 Observaciones del Técnico">
+                <group string="Observaciones del técnico" class="sat_repair_group sat_repair_group_neutral">
                   <field name="observaciones_tecnico"
                     widget="html"
                     placeholder="Escribe aquí observaciones generales sobre esta reparación.&#10;&#10;Ejemplos:&#10;- 'Equipo con bajo uso, solo 15k copias'&#10;- 'Cliente reporta atascos frecuentes en bandeja 2'&#10;- 'Fusora hace ruido al imprimir'&#10;&#10;La IA usará este texto para generar un informe más preciso y contextualizado."
@@ -208,29 +224,29 @@
                 <separator />
                 <!-- Información de auditoría -->
                 <group invisible="informe_generado_por_ia == False">
-                  <div class="alert alert-info" role="alert" style="margin-bottom: 0px;">
+                  <div class="alert alert-info sat_repair_alert sat_repair_alert_info" role="alert">
                     <i class="fa fa-info-circle" />
                     <strong>Este informe fue generado con Inteligencia Artificial</strong> basándose en las evaluaciones técnicas del checklist. Puedes editarlo manualmente si es necesario.
                   </div>
                 </group>
               </page>
               <!-- PESTAÑA: CHECK LIST NUEVO -->
-              <page string="Check List" name="evaluaciones">
+              <page string="Check List" name="evaluaciones" class="sat_repair_page">
 
-    <div style="margin: 10px 0; padding: 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 10px; color: white; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
-        <h4 style="margin-top: 0; font-size: 18px; color: white; font-weight: 600;">
+    <div class="sat_repair_section_intro sat_repair_section_intro_primary">
+        <h4>
             <i class="fa fa-cogs"></i> Sistema de Evaluación por Componentes
         </h4>
-        <p style="margin-bottom: 0; font-size: 14px; opacity: 0.95;">
+        <p>
             ✅
             <b>Importante:</b> Debe completar el ESTADO de TODOS los componentes antes de finalizar
         </p>
     </div>
 
-    <separator string="📋 Componentes Evaluados"/>
+    <separator string="Componentes evaluados"/>
 
     <field name="evaluacion_ids" nolabel="1" mode="kanban">
-        <kanban class="o_componente_eval_kanban" records_draggable="0" create="true" delete="true">
+        <kanban class="o_componente_eval_kanban sat_repair_component_kanban" records_draggable="0" create="true" delete="true">
             <field name="componente_tipo_id"/>
             <field name="color_id"/>
             <field name="estado_id"/>
@@ -278,27 +294,27 @@
         </kanban>
     </field>
 
-    <div class="alert alert-info" role="alert" style="margin-top: 15px; border-left: 4px solid #667eea;">
+    <div class="alert alert-info sat_repair_alert sat_repair_alert_info" role="alert">
         <i class="fa fa-info-circle"></i>
         <b>Guía Visual:</b> Tarjetas rojas necesitan estado. Tarjetas verdes están completas.
     </div>
 
 </page>
-<page string="Accesorios" name="accesorios_eval">
+<page string="Accesorios" name="accesorios_eval" class="sat_repair_page">
 
-    <div style="margin: 10px 0; padding: 15px; background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); border-radius: 10px; color: white; box-shadow: 0 4px 15px rgba(17, 153, 142, 0.3);">
-        <h4 style="margin-top: 0; font-size: 18px; color: white; font-weight: 600;">
+    <div class="sat_repair_section_intro sat_repair_section_intro_success">
+        <h4>
             <i class="fa fa-puzzle-piece"></i> Evaluación de Accesorios
         </h4>
-        <p style="margin-bottom: 0; font-size: 14px; opacity: 0.95;">
+        <p>
             ✅ Evalúe los accesorios opcionales instalados
         </p>
     </div>
 
-    <separator string="🔌 Accesorios Evaluados"/>
+    <separator string="Accesorios evaluados"/>
 
     <field name="accesorio_eval_ids" nolabel="1" mode="kanban">
-        <kanban class="o_accesorio_eval_kanban" records_draggable="0" create="false" delete="true">
+        <kanban class="o_accesorio_eval_kanban sat_repair_component_kanban" records_draggable="0" create="false" delete="true">
             <field name="tipo_id"/>
             <field name="estado_id"/>
             <field name="subparte_ids"/>
@@ -345,19 +361,19 @@
         </kanban>
     </field>
 
-    <div class="alert alert-success" role="alert" style="margin-top: 15px; border-left: 4px solid #38ef7d;">
+    <div class="alert alert-success sat_repair_alert sat_repair_alert_success" role="alert">
         <i class="fa fa-lightbulb-o"></i>
         <b>Tip:</b> Si un accesorio no aplica al modelo, márquelo como "No Aplica"
     </div>
 
 </page>
               <!-- PESTAÑA: DETALLE DE FALLA PROVEEDOR -->
-              <page string="Detalle de falla proveedor">
+              <page string="Falla proveedor" name="falla_proveedor_page" class="sat_repair_page">
                 <group>
                   <group>
                     <field name="falla_proveedor"
                       placeholder="Describa exactamente la falla reportada por el proveedor..."
-                      style="min-height: 120px; font-family: 'Courier New', monospace; padding: 10px; background-color: #fff9f9;" />
+                      class="sat_repair_failure_text sat_repair_failure_text_danger" />
                   </group>
                   <group>
                     <field name="foto_problema" widget="image" />
@@ -365,27 +381,27 @@
                 </group>
               </page>
               <!-- PESTAÑA: DETALLE FALLA VENTAS -->
-              <page string="Detalle falla ventas">
+              <page string="Falla ventas" name="falla_ventas_page" class="sat_repair_page">
                 <group>
                   <group>
                     <field name="falla_ventas"
                       placeholder="Detalle aquí los problemas reportados por ventas y cualquier compromiso comercial relacionado..."
-                      style="min-height: 120px; font-family: 'Courier New', monospace; padding: 10px; background-color: #fffbf0;" />
+                      class="sat_repair_failure_text sat_repair_failure_text_warning" />
                   </group>
                   <group>
                   </group>
                 </group>
               </page>
               <!-- PESTAÑA: GALERÍA DE FOTOS -->
-              <page string="Galería de Fotos" name="fotos">
+              <page string="Galería de fotos" name="fotos" class="sat_repair_page">
                 <!-- Galería de imágenes -->
-                <div class="w-100" style="margin:15px 0;">
+                <div class="w-100 sat_repair_gallery">
                   <field name="fotos_ids" widget="gallery_widget" class="w-100"/>
                 </div>
               </page>
-            <page string="Demoras y Alertas" name="avances_alertas">
+            <page string="Demoras y alertas" name="avances_alertas" class="sat_repair_page">
               <group>
-                  <group string="Seguimiento de demora">
+                  <group string="Seguimiento de demora" class="sat_repair_group sat_repair_group_warning">
                       <field name="avance_estado_alerta" widget="badge"/>
                       <field name="avance_alertas_activas"/>
                       <field name="fecha_inicio_revision" readonly="1"/>
@@ -393,7 +409,7 @@
                       <field name="fecha_proxima_alerta_avance" readonly="1"/>
                   </group>
 
-                  <group string="Alertas al jefe de área">
+                  <group string="Alertas al jefe de área" class="sat_repair_group sat_repair_group_info">
                       <field name="jefe_area_user_id"/>
                       <field name="ultima_alerta_avance_jefe" readonly="1"/>
                       <field name="cantidad_alertas_avance_jefe" readonly="1"/>
@@ -410,7 +426,7 @@
               <separator string="Historial de demoras reportadas"/>
 
               <field name="avance_ids" readonly="1">
-                  <list string="Demoras reportadas">
+                  <list string="Demoras reportadas" class="sat_repair_embedded_list">
                       <field name="create_date" string="Fecha"/>
                       <field name="user_id" string="Registrado por"/>
                       <field name="responsable_id" string="Técnico"/>
@@ -432,7 +448,7 @@
       <field name="name">reparaciones.reparaciones.list</field>
       <field name="model">reparaciones.reparaciones</field>
       <field name="arch" type="xml">
-        <list string="Reparaciones" default_order="id desc">
+        <list string="Reparaciones" default_order="id desc" class="sat_repair_list">
           <field name="create_date" string="Agendado" widget="remaining_days" width="80%" />
           <field name="cliente_id" widget="many2one_avatar" />
           <field name="marca" />
@@ -561,7 +577,7 @@
       <field name="name">reparaciones.kanban</field>
       <field name="model">reparaciones.reparaciones</field>
       <field name="arch" type="xml">
-        <kanban class="o_kanban_dashboard" default_group_by="estado_id"
+        <kanban class="o_kanban_dashboard sat_repair_kanban" default_group_by="estado_id"
           decoration-success="estado_id == 'finalizado'"
           sample="1">
           <field name="name" />
@@ -582,16 +598,16 @@
             colors='{"finalizado": "success", "con_problemas": "warning", "de_partes": "danger", "en_revision": "info"}' />
           <templates>
             <t t-name="card">
-              <div class="oe_kanban_global_click position-relative shadow-sm rounded">
+              <div class="oe_kanban_global_click sat_repair_card">
                 <!-- Header con número de reparación -->
-                <div class="d-flex justify-content-between align-items-center p-2 bg-light border-bottom">
+                <div class="sat_repair_card_header">
                   <div class="d-flex align-items-center">
                     <i class="fa fa-file-invoice text-primary me-2" title="Número de Reparación" />
                     <field name="name" class="fw-bold" />
                   </div>
                 </div>
                 <!-- Contenido principal -->
-                <div class="p-3">
+                <div class="sat_repair_card_body">
                   <!-- Cliente y Asesora -->
                   <div class="d-flex align-items-center mb-2">
                     <i class="fa fa-building text-info me-2" title="Cliente" />
@@ -665,7 +681,7 @@
                     </div>
                   </div>
                   <!-- Footer con técnico -->
-                  <div class="pt-2 border-top">
+                  <div class="sat_repair_card_footer">
                     <div class="d-flex align-items-center">
                       <i class="fa fa-male text-primary me-1" title="Técnico" />
                       <span class="text-muted me-1">Técnico:</span>
