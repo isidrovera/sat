@@ -231,6 +231,7 @@
             'sat/static/src/css/geo_map_widget.css',
             'sat/static/src/css/alquiler_styles_mejorado.css',
             'sat/static/src/css/reparaciones_styles_mejorado.css',
+            'sat/static/src/css/ticket_alquiler_styles_mejorado.css',
             #'sat/static/src/css/contadores_dashboard.css',
             
             # SCSS existente

@@ -1,0 +1,535 @@
+/* ==========================================================
+   SAT - TICKETS DE SERVICIO / PEDIDOS DE REPUESTOS
+   Línea visual compatible con Equipos, Alquileres y Reparaciones
+   Odoo 18
+========================================================== */
+
+.sat_ticket_form,
+.sat_parts_order_form,
+.sat_parts_history_form {
+    --sat-primary: #2f5f8f;
+    --sat-primary-dark: #244b72;
+    --sat-primary-soft: #eef5fb;
+    --sat-success: #2e7d5b;
+    --sat-success-soft: #edf8f3;
+    --sat-warning: #b7791f;
+    --sat-warning-soft: #fff8e8;
+    --sat-danger: #b74444;
+    --sat-danger-soft: #fff1f1;
+    --sat-info: #2b7a9a;
+    --sat-info-soft: #edf8fc;
+    --sat-neutral-50: #f8fafc;
+    --sat-neutral-100: #f1f5f9;
+    --sat-neutral-200: #e2e8f0;
+    --sat-neutral-300: #cbd5e1;
+    --sat-neutral-500: #64748b;
+    --sat-neutral-700: #334155;
+    --sat-neutral-900: #0f172a;
+    --sat-radius-sm: 8px;
+    --sat-radius-md: 12px;
+    --sat-radius-lg: 16px;
+    --sat-shadow-sm: 0 1px 2px rgba(15,23,42,.05), 0 1px 3px rgba(15,23,42,.08);
+    --sat-shadow-md: 0 4px 12px rgba(15,23,42,.08), 0 2px 6px rgba(15,23,42,.05);
+}
+
+/* ==========================================================
+   FORMULARIO GENERAL
+========================================================== */
+.sat_ticket_form .o_form_sheet_bg,
+.sat_parts_order_form .o_form_sheet_bg,
+.sat_parts_history_form .o_form_sheet_bg {
+    background: linear-gradient(180deg,#f8fafc 0%,#f1f5f9 100%);
+}
+
+.sat_ticket_form .o_form_sheet,
+.sat_parts_order_form .o_form_sheet,
+.sat_parts_history_form .o_form_sheet {
+    max-width: 1500px;
+    padding: 24px 28px 34px;
+    border: 1px solid var(--sat-neutral-200);
+    border-radius: var(--sat-radius-lg);
+    background: #fff;
+    box-shadow: var(--sat-shadow-sm);
+}
+
+.sat_ticket_form .o_form_label,
+.sat_parts_order_form .o_form_label,
+.sat_parts_history_form .o_form_label {
+    color: var(--sat-neutral-700);
+    font-weight: 600;
+}
+
+.sat_ticket_form .o_input,
+.sat_ticket_form .o_field_widget input,
+.sat_ticket_form .o_field_widget textarea,
+.sat_ticket_form .o_field_widget select,
+.sat_parts_order_form .o_input,
+.sat_parts_order_form .o_field_widget input,
+.sat_parts_order_form .o_field_widget textarea,
+.sat_parts_order_form .o_field_widget select {
+    border-color: var(--sat-neutral-300);
+    border-radius: 7px;
+}
+
+/* ==========================================================
+   CABECERA / STATUSBAR
+========================================================== */
+.sat_ticket_form .sat_ticket_header,
+.sat_parts_order_form .sat_parts_order_header {
+    gap: 6px;
+    padding: 9px 14px;
+    border-bottom: 1px solid var(--sat-neutral-200);
+    background: #fff;
+}
+
+.sat_ticket_header button,
+.sat_parts_order_header button {
+    min-height: 34px;
+    padding: 6px 11px;
+    border-radius: 7px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.sat_ticket_header .btn-primary,
+.sat_ticket_header .oe_highlight,
+.sat_parts_order_header .btn-primary,
+.sat_parts_order_header .oe_highlight {
+    border-color: var(--sat-primary);
+    background: var(--sat-primary);
+    color: #fff;
+}
+.sat_ticket_header .btn-success,
+.sat_parts_order_header .btn-success { border-color: var(--sat-success); background: var(--sat-success); color:#fff; }
+.sat_ticket_header .btn-warning,
+.sat_parts_order_header .btn-warning { border-color: var(--sat-warning); background: var(--sat-warning-soft); color:#80520f; }
+.sat_ticket_header .btn-danger,
+.sat_parts_order_header .btn-danger { border-color: var(--sat-danger); background: var(--sat-danger); color:#fff; }
+.sat_ticket_header .btn-info { border-color: var(--sat-info); background: var(--sat-info-soft); color:#17546d; }
+.sat_ticket_header .btn-secondary { border-color: var(--sat-neutral-300); background:#fff; color:var(--sat-neutral-700); }
+
+.sat_ticket_header .o_statusbar_status,
+.sat_parts_order_header .o_statusbar_status {
+    display:flex;
+    align-items:center;
+    margin-right:10px;
+    overflow:visible;
+}
+
+.sat_ticket_header .o_statusbar_status .o_arrow_button,
+.sat_parts_order_header .o_statusbar_status .o_arrow_button {
+    min-height:34px;
+    padding:7px 17px 7px 21px !important;
+    border-color:#aebfce !important;
+    background:#e8eef4 !important;
+    color:#334a60 !important;
+    font-size:12px;
+    font-weight:700;
+    opacity:1 !important;
+    box-shadow:none !important;
+}
+.sat_ticket_header .o_statusbar_status .o_arrow_button::before,
+.sat_parts_order_header .o_statusbar_status .o_arrow_button::before { border-left-color:#aebfce !important; }
+.sat_ticket_header .o_statusbar_status .o_arrow_button::after,
+.sat_parts_order_header .o_statusbar_status .o_arrow_button::after { border-left-color:#e8eef4 !important; }
+
+.sat_ticket_header .o_statusbar_status .o_arrow_button.o_arrow_button_current,
+.sat_ticket_header .o_statusbar_status .o_arrow_button[aria-current="step"],
+.sat_ticket_header .o_statusbar_status .o_arrow_button.active,
+.sat_parts_order_header .o_statusbar_status .o_arrow_button.o_arrow_button_current,
+.sat_parts_order_header .o_statusbar_status .o_arrow_button[aria-current="step"],
+.sat_parts_order_header .o_statusbar_status .o_arrow_button.active {
+    border-color:#0d7180 !important;
+    background:#0d7180 !important;
+    color:#fff !important;
+    box-shadow:0 2px 6px rgba(13,113,128,.28) !important;
+}
+.sat_ticket_header .o_statusbar_status .o_arrow_button.o_arrow_button_current::before,
+.sat_ticket_header .o_statusbar_status .o_arrow_button[aria-current="step"]::before,
+.sat_parts_order_header .o_statusbar_status .o_arrow_button.o_arrow_button_current::before,
+.sat_parts_order_header .o_statusbar_status .o_arrow_button[aria-current="step"]::before { border-left-color:#0d7180 !important; }
+.sat_ticket_header .o_statusbar_status .o_arrow_button.o_arrow_button_current::after,
+.sat_ticket_header .o_statusbar_status .o_arrow_button[aria-current="step"]::after,
+.sat_parts_order_header .o_statusbar_status .o_arrow_button.o_arrow_button_current::after,
+.sat_parts_order_header .o_statusbar_status .o_arrow_button[aria-current="step"]::after { border-left-color:#0d7180 !important; }
+
+/* ==========================================================
+   BOTONES ESTADÍSTICOS
+========================================================== */
+.sat_ticket_button_box .oe_stat_button,
+.sat_parts_order_button_box .oe_stat_button {
+    min-width:118px;
+    border:1px solid var(--sat-neutral-200);
+    border-radius:var(--sat-radius-sm);
+    background:var(--sat-neutral-50);
+    color:var(--sat-neutral-700);
+    transition:background .18s ease,border-color .18s ease,transform .18s ease;
+}
+.sat_ticket_button_box .oe_stat_button:hover,
+.sat_parts_order_button_box .oe_stat_button:hover {
+    border-color:#b9cee2;
+    background:var(--sat-primary-soft);
+    color:var(--sat-primary-dark);
+    transform:translateY(-1px);
+}
+.sat_ticket_button_box .oe_stat_button .o_button_icon,
+.sat_parts_order_button_box .oe_stat_button .o_button_icon { color:var(--sat-primary); }
+.sat_ticket_button_box .sat_ticket_stat_danger .o_button_icon { color:var(--sat-danger); }
+
+/* ==========================================================
+   IDENTIDAD TICKET
+========================================================== */
+.sat_ticket_identity,
+.sat_parts_order_identity {
+    display:flex;
+    align-items:center;
+    gap:18px;
+    margin:14px 0 14px;
+    padding:18px 20px;
+    border:1px solid var(--sat-neutral-200);
+    border-radius:var(--sat-radius-lg);
+    background:linear-gradient(135deg,#fff 0%,#f7fafc 100%);
+    box-shadow:var(--sat-shadow-sm);
+}
+.sat_ticket_identity_icon,
+.sat_parts_order_identity_icon {
+    display:flex;
+    flex:0 0 58px;
+    align-items:center;
+    justify-content:center;
+    width:58px;
+    height:58px;
+    border-radius:15px;
+    background:var(--sat-primary-soft);
+    color:var(--sat-primary);
+    font-size:25px;
+}
+.sat_ticket_identity_content,
+.sat_parts_order_identity_content { min-width:0; flex:1; }
+.sat_ticket_identity_label,
+.sat_parts_order_identity_label {
+    margin-bottom:2px;
+    color:var(--sat-neutral-500);
+    font-size:11px;
+    font-weight:800;
+    letter-spacing:.05em;
+    text-transform:uppercase;
+}
+.sat_ticket_identity_title,
+.sat_parts_order_identity_title {
+    margin:0;
+    color:var(--sat-neutral-900);
+    font-size:25px;
+    font-weight:750;
+    line-height:1.25;
+}
+.sat_ticket_identity_meta,
+.sat_parts_order_identity_meta {
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px 18px;
+    margin-top:8px;
+}
+.sat_ticket_identity_meta_item,
+.sat_parts_order_identity_meta > span {
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    color:var(--sat-neutral-500);
+    font-size:12px;
+    font-weight:600;
+}
+.sat_ticket_identity_meta i,
+.sat_parts_order_identity_meta i { color:var(--sat-primary); }
+
+/* ==========================================================
+   RESUMEN OPERATIVO
+========================================================== */
+.sat_ticket_summary,
+.sat_parts_order_summary {
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:12px;
+    margin-bottom:20px;
+}
+.sat_ticket_summary_item,
+.sat_parts_order_summary_item {
+    min-width:0;
+    padding:12px 14px;
+    border:1px solid var(--sat-neutral-200);
+    border-radius:var(--sat-radius-md);
+    background:#fff;
+    box-shadow:var(--sat-shadow-sm);
+}
+.sat_ticket_summary_item { display:flex; align-items:center; gap:11px; }
+.sat_ticket_summary_icon {
+    display:flex;
+    flex:0 0 36px;
+    align-items:center;
+    justify-content:center;
+    width:36px;
+    height:36px;
+    border-radius:9px;
+    background:var(--sat-primary-soft);
+    color:var(--sat-primary);
+    font-size:15px;
+}
+.sat_ticket_summary_content { display:flex; min-width:0; flex-direction:column; }
+.sat_ticket_summary_label,
+.sat_parts_order_summary_item > span {
+    display:block;
+    margin-bottom:2px;
+    color:var(--sat-neutral-500);
+    font-size:10px;
+    font-weight:800;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+}
+.sat_ticket_summary_content .o_field_widget,
+.sat_parts_order_summary_item .o_field_widget {
+    overflow:hidden;
+    color:var(--sat-neutral-900);
+    font-size:13px;
+    font-weight:700;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+}
+
+/* ==========================================================
+   GRUPOS / ALERTAS
+========================================================== */
+.sat_ticket_form .sat_ticket_group,
+.sat_parts_order_form .sat_parts_order_group {
+    margin-bottom:14px;
+    padding:14px 16px 10px;
+    border:1px solid var(--sat-neutral-200);
+    border-left-width:4px;
+    border-radius:var(--sat-radius-md);
+    background:#fff;
+    box-shadow:var(--sat-shadow-sm);
+}
+.sat_ticket_group_primary,
+.sat_parts_order_group_primary { border-left-color:var(--sat-primary) !important; background:#f8fbfe !important; }
+.sat_ticket_group_info,
+.sat_parts_order_group_info { border-left-color:var(--sat-info) !important; background:#f5fbfd !important; }
+.sat_parts_order_group_success { border-left-color:var(--sat-success) !important; background:#f6fbf8 !important; }
+.sat_parts_order_group_warning { border-left-color:var(--sat-warning) !important; background:#fffaf0 !important; }
+
+.sat_ticket_alert,
+.sat_parts_order_alert {
+    margin:12px 0;
+    padding:12px 16px;
+    border-width:1px;
+    border-left-width:4px;
+    border-radius:var(--sat-radius-md);
+    box-shadow:var(--sat-shadow-sm);
+}
+.sat_ticket_alert_info { border-left-color:var(--sat-info); background:var(--sat-info-soft); }
+.sat_ticket_alert_success { border-left-color:var(--sat-success); background:var(--sat-success-soft); }
+.sat_parts_order_alert_danger { border-left-color:var(--sat-danger); background:var(--sat-danger-soft); }
+.sat_parts_order_alert_warning { border-left-color:var(--sat-warning); background:var(--sat-warning-soft); }
+.sat_parts_order_alert_success { border-left-color:var(--sat-success); background:var(--sat-success-soft); }
+
+/* ==========================================================
+   NOTEBOOK
+========================================================== */
+.sat_ticket_notebook,
+.sat_parts_order_notebook { margin-top:20px; }
+.sat_ticket_notebook > .nav-tabs,
+.sat_parts_order_notebook > .nav-tabs {
+    gap:3px;
+    padding:5px 5px 0;
+    border:1px solid var(--sat-neutral-200);
+    border-bottom:0;
+    border-radius:var(--sat-radius-md) var(--sat-radius-md) 0 0;
+    background:var(--sat-neutral-50);
+}
+.sat_ticket_notebook > .nav-tabs .nav-link,
+.sat_parts_order_notebook > .nav-tabs .nav-link {
+    padding:9px 13px;
+    border:0;
+    border-radius:8px 8px 0 0;
+    color:var(--sat-neutral-500);
+    font-size:12px;
+    font-weight:700;
+}
+.sat_ticket_notebook > .nav-tabs .nav-link:hover,
+.sat_parts_order_notebook > .nav-tabs .nav-link:hover { background:#fff; color:var(--sat-primary); }
+.sat_ticket_notebook > .nav-tabs .nav-link.active,
+.sat_parts_order_notebook > .nav-tabs .nav-link.active {
+    border-bottom:3px solid var(--sat-primary);
+    background:#fff;
+    color:var(--sat-primary-dark);
+}
+.sat_ticket_notebook .tab-content,
+.sat_parts_order_notebook .tab-content {
+    padding:18px;
+    border:1px solid var(--sat-neutral-200);
+    border-radius:0 0 var(--sat-radius-md) var(--sat-radius-md);
+    background:#fff;
+}
+
+/* ==========================================================
+   EVALUACIONES COMPONENTES / ACCESORIOS
+========================================================== */
+.sat_ticket_eval_intro {
+    display:flex;
+    align-items:center;
+    gap:12px;
+    margin:2px 0 14px;
+    padding:12px 14px;
+    border:1px solid #c9deef;
+    border-left:4px solid var(--sat-primary);
+    border-radius:var(--sat-radius-md);
+    background:var(--sat-primary-soft);
+}
+.sat_ticket_eval_intro > i {
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:36px;
+    height:36px;
+    border-radius:9px;
+    background:#fff;
+    color:var(--sat-primary);
+}
+.sat_ticket_eval_intro > div { display:flex; flex-direction:column; }
+.sat_ticket_eval_intro strong { color:var(--sat-neutral-900); font-size:14px; }
+.sat_ticket_eval_intro span { margin-top:2px; color:var(--sat-neutral-500); font-size:12px; }
+.sat_ticket_eval_intro_success { border-color:#c8e6d8; border-left-color:var(--sat-success); background:var(--sat-success-soft); }
+.sat_ticket_eval_intro_success > i { color:var(--sat-success); }
+
+.sat_ticket_form .o_componente_card {
+    height:100%;
+    padding:14px;
+    border:1px solid var(--sat-neutral-200);
+    border-left-width:4px;
+    border-radius:var(--sat-radius-md);
+    background:#fff;
+    box-shadow:var(--sat-shadow-sm);
+}
+.sat_ticket_form .o_componente_card.o_card_danger { border-left-color:var(--sat-danger); background:var(--sat-danger-soft); }
+.sat_ticket_form .o_componente_card.o_card_warning { border-left-color:var(--sat-warning); background:var(--sat-warning-soft); }
+.sat_ticket_form .o_componente_card.o_card_success { border-left-color:var(--sat-success); background:var(--sat-success-soft); }
+.sat_ticket_form .o_card_header { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:12px; }
+.sat_ticket_form .o_card_title { color:var(--sat-neutral-900); font-size:14px; font-weight:800; }
+.sat_ticket_form .o_card_subtitle { margin-top:2px; color:var(--sat-neutral-500); font-size:11px; }
+.sat_ticket_form .o_card_delete { color:var(--sat-danger); font-weight:800; text-decoration:none; }
+.sat_ticket_form .o_card_field { margin-top:10px; }
+.sat_ticket_form .o_card_field_label { display:block; margin-bottom:5px; color:var(--sat-neutral-500); font-size:10px; font-weight:800; letter-spacing:.04em; }
+
+/* ==========================================================
+   LISTA DE TICKETS
+========================================================== */
+.sat_ticket_list .o_list_table,
+.sat_parts_order_list .o_list_table,
+.sat_parts_history_list .o_list_table { border-collapse:separate; border-spacing:0; }
+.sat_ticket_list .o_list_table thead,
+.sat_parts_order_list .o_list_table thead,
+.sat_parts_history_list .o_list_table thead { position:sticky; z-index:2; top:0; background:#f8fafc; }
+.sat_ticket_list .o_list_table thead th,
+.sat_parts_order_list .o_list_table thead th,
+.sat_parts_history_list .o_list_table thead th {
+    height:42px;
+    border-bottom:1px solid #e2e8f0;
+    background:#f8fafc;
+    color:#475569;
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:.025em;
+    text-transform:uppercase;
+}
+.sat_ticket_list .o_list_table tbody td,
+.sat_parts_order_list .o_list_table tbody td,
+.sat_parts_history_list .o_list_table tbody td {
+    height:45px;
+    padding-top:6px;
+    padding-bottom:6px;
+    border-bottom-color:#edf1f5;
+    color:#334155;
+    font-size:12px;
+    vertical-align:middle;
+}
+.sat_ticket_list .o_list_table tbody tr:hover,
+.sat_parts_order_list .o_list_table tbody tr:hover,
+.sat_parts_history_list .o_list_table tbody tr:hover { background:#f6f9fc; }
+
+/* ==========================================================
+   KANBAN TICKETS
+========================================================== */
+.sat_ticket_kanban .sat_ticket_card {
+    overflow:hidden;
+    border:1px solid #e2e8f0;
+    border-radius:12px;
+    background:#fff;
+    box-shadow:var(--sat-shadow-sm);
+    transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;
+}
+.sat_ticket_kanban .sat_ticket_card:hover {
+    transform:translateY(-2px);
+    border-color:#b9cee2;
+    box-shadow:var(--sat-shadow-md);
+}
+.sat_ticket_kanban .sat_ticket_card > .p-2 {
+    border-bottom:1px solid #e2e8f0;
+    background:#f8fafc;
+}
+.sat_ticket_kanban .sat_ticket_card .p-3 { font-size:12px; }
+.sat_ticket_kanban .sat_ticket_card .fa { color:var(--sat-primary); }
+
+/* ==========================================================
+   PEDIDOS DE REPUESTOS
+========================================================== */
+.sat_parts_order_form .sat_parts_order_summary_item:nth-child(1) { border-left:4px solid var(--sat-primary); }
+.sat_parts_order_form .sat_parts_order_summary_item:nth-child(2) { border-left:4px solid var(--sat-info); }
+.sat_parts_order_form .sat_parts_order_summary_item:nth-child(3) { border-left:4px solid var(--sat-neutral-500); }
+.sat_parts_order_form .sat_parts_order_summary_item:nth-child(4) { border-left:4px solid var(--sat-success); }
+
+.sat_parts_order_form .sat_parts_order_notebook .o_list_table thead th {
+    background:#f8fafc;
+    color:#475569;
+    font-size:11px;
+    font-weight:700;
+    text-transform:uppercase;
+}
+.sat_parts_order_form .sat_parts_order_notebook .o_list_table tbody td { font-size:12px; vertical-align:middle; }
+
+/* ==========================================================
+   TRACKING / MAPA
+========================================================== */
+.sat_ticket_form [name="tracking_gps_page"] .o_group,
+.sat_ticket_form [name="ubicacion_ticket_page"] .o_group {
+    margin-bottom:12px;
+}
+.sat_ticket_form [name="tracking_gps_page"] .o_group > tbody,
+.sat_ticket_form [name="ubicacion_ticket_page"] .o_group > tbody {
+    background:#fff;
+}
+
+/* ==========================================================
+   RESPONSIVE
+========================================================== */
+@media (max-width: 1200px) {
+    .sat_ticket_summary,
+    .sat_parts_order_summary { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .sat_ticket_header .o_statusbar_status,
+    .sat_parts_order_header .o_statusbar_status { margin-left:0; }
+}
+
+@media (max-width: 768px) {
+    .sat_ticket_form .o_form_sheet,
+    .sat_parts_order_form .o_form_sheet,
+    .sat_parts_history_form .o_form_sheet { padding:14px 12px 24px; border-radius:0; }
+    .sat_ticket_identity,
+    .sat_parts_order_identity { align-items:flex-start; gap:12px; padding:14px; }
+    .sat_ticket_identity_icon,
+    .sat_parts_order_identity_icon { flex-basis:44px; width:44px; height:44px; border-radius:11px; font-size:19px; }
+    .sat_ticket_identity_title,
+    .sat_parts_order_identity_title { font-size:20px; }
+    .sat_ticket_summary,
+    .sat_parts_order_summary { grid-template-columns:1fr; gap:8px; }
+    .sat_ticket_notebook .tab-content,
+    .sat_parts_order_notebook .tab-content { padding:12px; }
+    .sat_ticket_header button,
+    .sat_parts_order_header button { min-height:32px; padding:5px 9px; font-size:11px; }
+}
