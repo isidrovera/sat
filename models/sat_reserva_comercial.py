@@ -903,7 +903,7 @@ class SatReservaSolicitud(models.Model):
             base = machine.reserva_fecha_limite or today
             if base < today:
                 base = today
-            result = base + timedelta(days=plazo['dias'])
+            result = machine._reserva_sumar_dias_comerciales(base, plazo['dias'])
 
         elif self.tipo_solicitud == 'reducir':
             if not machine.reserva_fecha_limite:
@@ -916,13 +916,13 @@ class SatReservaSolicitud(models.Model):
                     }
                 )
 
-            result = machine.reserva_fecha_limite - timedelta(days=plazo['dias'])
+            result = machine._reserva_restar_dias_comerciales(machine.reserva_fecha_limite, plazo['dias'])
 
             if result < today:
                 result = today
 
         else:
-            result = today + timedelta(days=plazo['dias'])
+            result = machine._reserva_sumar_dias_comerciales(today, plazo['dias'])
 
         if result and result < today:
             raise ValidationError(
@@ -1647,6 +1647,72 @@ class SatSatReservaComercial(models.Model):
 
         return today
 
+    # -------------------------------------------------------------------------
+    # Calendario comercial compartido
+    # -------------------------------------------------------------------------
+
+    def _reserva_fecha_es_dia_comercial(self, fecha):
+        """
+        Para reservas comerciales:
+        - lunes a sábado cuentan como día completo;
+        - domingo no cuenta;
+        - feriado o cierre manual activo en whatsapp.calendar.event no cuenta.
+        """
+        self.ensure_one()
+
+        if not fecha:
+            return False
+
+        fecha = fields.Date.to_date(fecha)
+
+        if fecha.weekday() == 6:
+            return False
+
+        calendario = self.env['whatsapp.calendar.event']
+        return not calendario.is_closed_date(fecha)
+
+    def _reserva_sumar_dias_comerciales(self, fecha_base, dias):
+        """Suma días comerciales sin consumir la fecha base."""
+        self.ensure_one()
+
+        fecha = fields.Date.to_date(fecha_base)
+        dias = int(dias or 0)
+
+        if not fecha or dias <= 0:
+            return fecha
+
+        acumulados = 0
+        cursor = fecha
+
+        while acumulados < dias:
+            cursor += timedelta(days=1)
+
+            if self._reserva_fecha_es_dia_comercial(cursor):
+                acumulados += 1
+
+        return cursor
+
+    def _reserva_restar_dias_comerciales(self, fecha_base, dias):
+        """Resta días comerciales sin consumir la fecha base."""
+        self.ensure_one()
+
+        fecha = fields.Date.to_date(fecha_base)
+        dias = int(dias or 0)
+
+        if not fecha or dias <= 0:
+            return fecha
+
+        acumulados = 0
+        cursor = fecha
+
+        while acumulados < dias:
+            cursor -= timedelta(days=1)
+
+            if self._reserva_fecha_es_dia_comercial(cursor):
+                acumulados += 1
+
+        return cursor
+
     def _reserva_calcular_plazo(self, cliente=False):
         self.ensure_one()
 
@@ -1656,7 +1722,7 @@ class SatSatReservaComercial(models.Model):
 
         return {
             'fecha_base': base,
-            'fecha_limite': base + timedelta(days=days),
+            'fecha_limite': self._reserva_sumar_dias_comerciales(base, days),
             'dias': days,
             'regla': rule,
             'origen': rule.tipo_aplicacion if rule else 'general',
