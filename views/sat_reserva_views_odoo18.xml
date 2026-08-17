@@ -132,7 +132,6 @@
             <field name="arch" type="xml">
                 <form string="Solicitud de autorización comercial">
                     <header>
-                        <button name="action_enviar_gerencia" string="Enviar a autorización" type="object" icon="fa-paper-plane" class="oe_highlight" invisible="state != 'draft'"/>
                         <button name="action_cancelar" string="Cancelar solicitud" type="object" icon="fa-times" class="btn-secondary" invisible="state not in ('draft', 'pending', 'partial')"/>
                         <button name="action_seleccionar_pendientes" string="Seleccionar pendientes" type="object" icon="fa-check-square-o" class="btn-secondary" groups="sat.group_reserva_comercial_autorizado" invisible="state not in ('pending', 'partial')"/>
                         <button name="action_quitar_seleccion" string="Quitar selección" type="object" icon="fa-square-o" class="btn-secondary" groups="sat.group_reserva_comercial_autorizado" invisible="state not in ('pending', 'partial')"/>
