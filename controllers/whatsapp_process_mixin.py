@@ -781,7 +781,168 @@ class WhatsAppProcessMixin:
             return response
 
         # ======================================================
-        # 9) Horario/refrigerio: informa, pero permite registrar
+        # 9) Confirmación pendiente de atención humana
+        # ======================================================
+        session_context = self._get_session_context_safe(session)
+        pending_human_confirmation = bool(
+            session_context.get("pending_human_confirmation")
+        )
+
+        if pending_human_confirmation:
+            _logger.info(
+                "[WA-HUMAN] Respuesta a confirmación pendiente | partner_id=%s session_id=%s message=%r",
+                partner.id if partner else False,
+                session.id if session else False,
+                message_text[:160] if message_text else "",
+            )
+
+            if self._is_yes(message_text):
+                original_message = (
+                    session_context.get("human_confirmation_message")
+                    or message_text
+                )
+                reason = (
+                    session_context.get("human_confirmation_reason")
+                    or "Cliente confirmó atención humana."
+                )
+                intent_result_context = (
+                    session_context.get("human_confirmation_intent")
+                    if isinstance(session_context.get("human_confirmation_intent"), dict)
+                    else {}
+                )
+
+                handoff = self._activate_human_handoff(
+                    partner=partner,
+                    session=session,
+                    initial_message=original_message,
+                    reason=reason,
+                    intent_result=intent_result_context,
+                )
+
+                reply = self._render_template(
+                    "human_take",
+                    partner=partner,
+                    session=session,
+                    fallback=(
+                        "👨‍💼 Listo. Te derivé con un asesor de "
+                        "*ANDES SOLUTION COPIERS*. Por favor espera un momento."
+                    ),
+                )
+
+                emitted = self._emit_bot_reply(
+                    session=session,
+                    partner=partner,
+                    identifiers=identifiers,
+                    content=reply,
+                    intent="human",
+                    payload=payload,
+                    template="human_take",
+                )
+
+                response = {
+                    "ok": True,
+                    "found": True,
+                    "human_mode": True,
+                    "bot_reply": True,
+                    "stop_bot": True,
+                    "handoff_created": bool(handoff),
+                    "handoff_id": handoff.id if handoff else False,
+                    "partner_id": partner.id,
+                    "session_id": session.id,
+                    "message": reply,
+                    "outbox_id": emitted.get("outbox_id"),
+                    "business": business_status,
+                    "profile": partner.get_whatsapp_profile_payload(),
+                }
+
+                _logger.info(
+                    "[WA-HUMAN] Confirmación SÍ procesada | partner_id=%s session_id=%s handoff_id=%s human_mode=%s outbox_id=%s",
+                    partner.id if partner else False,
+                    session.id if session else False,
+                    handoff.id if handoff else False,
+                    bool(getattr(partner, "whatsapp_human_mode", False)),
+                    emitted.get("outbox_id"),
+                )
+
+                self._safe_log_api(
+                    endpoint,
+                    payload,
+                    response,
+                    identifiers,
+                    partner=partner,
+                    session=session,
+                    start_ts=start_ts,
+                )
+                return response
+
+            if self._is_no(message_text):
+                self._clear_human_confirmation_pending(
+                    session,
+                    clear_unknown=True,
+                )
+
+                reply = (
+                    "Perfecto, continuamos con el asistente virtual.\n\n"
+                    + self._build_main_menu_text(partner=partner, session=session)
+                )
+
+                emitted = self._emit_bot_reply(
+                    session=session,
+                    partner=partner,
+                    identifiers=identifiers,
+                    content=reply,
+                    intent="human_declined",
+                    payload=payload,
+                )
+
+                response = {
+                    "ok": True,
+                    "found": True,
+                    "human_mode": False,
+                    "bot_reply": True,
+                    "stop_bot": False,
+                    "human_declined": True,
+                    "partner_id": partner.id,
+                    "session_id": session.id,
+                    "message": reply,
+                    "outbox_id": emitted.get("outbox_id"),
+                    "business": business_status,
+                    "profile": partner.get_whatsapp_profile_payload(),
+                }
+
+                _logger.info(
+                    "[WA-HUMAN] Confirmación NO procesada | partner_id=%s session_id=%s outbox_id=%s",
+                    partner.id if partner else False,
+                    session.id if session else False,
+                    emitted.get("outbox_id"),
+                )
+
+                self._safe_log_api(
+                    endpoint,
+                    payload,
+                    response,
+                    identifiers,
+                    partner=partner,
+                    session=session,
+                    start_ts=start_ts,
+                )
+                return response
+
+            # Si el cliente respondió otra cosa, no lo bloqueamos en un sí/no.
+            # Se cancela la confirmación y el mensaje actual continúa por la
+            # detección normal de intención.
+            self._clear_human_confirmation_pending(
+                session,
+                clear_unknown=False,
+            )
+            _logger.info(
+                "[WA-HUMAN] Respuesta distinta de SÍ/NO; se continúa con clasificación normal | partner_id=%s session_id=%s",
+                partner.id if partner else False,
+                session.id if session else False,
+            )
+
+        # ======================================================
+        # 10) Horario/refrigerio: informa, pero permite registrar
         # ======================================================
         outside_hours_note = False
 
@@ -795,7 +956,7 @@ class WhatsAppProcessMixin:
             )
 
         # ======================================================
-        # 10) Continuar flujo activo
+        # 11) Continuar flujo activo
         # ======================================================
         if session.current_flow != "none" and session.conversation_state != "idle":
             _logger.info(
@@ -827,12 +988,19 @@ class WhatsAppProcessMixin:
                 payload=payload,
             )
 
+            current_human_mode = bool(
+                getattr(partner, "whatsapp_human_mode", False)
+            )
+
             response = {
                 "ok": True,
                 "found": True,
                 "continued_flow": True,
                 "flow": session.current_flow,
                 "step": session.conversation_state,
+                "human_mode": current_human_mode,
+                "bot_reply": bool(reply),
+                "stop_bot": current_human_mode,
                 "partner_id": partner.id,
                 "session_id": session.id,
                 "message": reply,
@@ -862,7 +1030,7 @@ class WhatsAppProcessMixin:
             return response
 
         # ======================================================
-        # 11) Detectar intención y ejecutar acción
+        # 12) Detectar intención y ejecutar acción
         # ======================================================
         _logger.info(
             "[WA-PROCESS] Detectar intención | partner_id=%s session_id=%s message=%s ai_provider=%s ai_intent=%s ai_sub_intent=%s ai_confidence=%s ai_reason=%s",
@@ -912,6 +1080,11 @@ class WhatsAppProcessMixin:
             reply = "%s\n\n%s" % (outside_hours_note, reply)
 
         if not reply:
+            current_human_mode = bool(
+                action_result.get("human_mode")
+                or getattr(partner, "whatsapp_human_mode", False)
+            )
+
             response = {
                 "ok": True,
                 "found": False,
@@ -919,6 +1092,10 @@ class WhatsAppProcessMixin:
                 "applies_to": applies_to,
                 "intent": intent_result,
                 "action": action_result,
+                "human_mode": current_human_mode,
+                "bot_reply": False,
+                "stop_bot": bool(action_result.get("stop_bot") or current_human_mode),
+                "handoff_id": action_result.get("handoff_id") or False,
                 "partner_id": partner.id,
                 "session_id": session.id,
                 "message": False,
@@ -948,12 +1125,24 @@ class WhatsAppProcessMixin:
             template=action_result.get("template") or intent_result.get("response_template") or False,
         )
 
+        current_human_mode = bool(
+            action_result.get("human_mode")
+            or getattr(partner, "whatsapp_human_mode", False)
+        )
+
         response = {
             "ok": True,
             "found": bool(intent_result.get("found")),
             "applies_to": applies_to,
             "intent": intent_result,
             "action": action_result,
+            "human_mode": current_human_mode,
+            "bot_reply": bool(reply),
+            "stop_bot": bool(action_result.get("stop_bot") or current_human_mode),
+            "handoff_id": action_result.get("handoff_id") or False,
+            "pending_human_confirmation": bool(
+                action_result.get("pending_human_confirmation")
+            ),
             "partner_id": partner.id,
             "session_id": session.id,
             "message": reply,
@@ -963,11 +1152,14 @@ class WhatsAppProcessMixin:
         }
 
         _logger.info(
-            "[WA-PROCESS] Respuesta final emitida | partner_id=%s session_id=%s intent=%s action=%s outbox_id=%s",
+            "[WA-PROCESS] Respuesta final emitida | partner_id=%s session_id=%s intent=%s action=%s human_mode=%s pending_human_confirmation=%s stop_bot=%s outbox_id=%s",
             partner.id if partner else False,
             session.id if session else False,
             action_result.get("intent") or intent_result.get("intent") or False,
             action_result.get("action") or intent_result.get("action") or False,
+            current_human_mode,
+            bool(action_result.get("pending_human_confirmation")),
+            bool(action_result.get("stop_bot") or current_human_mode),
             emitted.get("outbox_id"),
         )
 
