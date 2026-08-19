@@ -94,9 +94,9 @@
                     <field name="create_date" string="Creada"/>
                     <field name="solicitante_id" string="Solicitante"/>
                     <field name="tipo_solicitud" string="Acción" widget="badge"/>
-                    <field name="motivo" optional="show"/>
-                    <field name="cliente_id" string="Cliente destino" optional="show"/>
-                    <field name="asesora_destino_id" string="Asesora destino" optional="show"/>
+                    <field name="motivo" optional="hide"/>
+                    <field name="cliente_id" string="Cliente destino" optional="hide"/>
+                    <field name="asesora_destino_id" string="Asesora destino" optional="hide"/>
                     <field name="cantidad_maquinas" string="Máquinas"/>
                     <field name="state" string="Estado" widget="badge"/>
                     <field name="procesado_por_id" optional="hide"/>
@@ -147,7 +147,7 @@
                         </div>
 
                         <div class="alert alert-warning" role="status" invisible="state not in ('pending', 'partial')">
-                            Esta solicitud todavía no modifica el vencimiento de las máquinas. La reserva solo queda protegida cuando un usuario autorizado aprueba la solicitud.
+                            Esta solicitud todavía no modifica el vencimiento de las máquinas. La reserva solo queda protegida cuando gerencia aprueba la solicitud.
                         </div>
 
                         <div class="alert alert-success" role="status" invisible="state != 'approved'">
@@ -177,7 +177,7 @@
                             <field name="detalle_motivo" nolabel="1" readonly="state != 'draft'"/>
                         </group>
 
-                        <group string="Decisión del autorizado" groups="sat.group_reserva_comercial_autorizado" invisible="state in ('draft', 'cancelled')">
+                        <group string="Decisión de gerencia" groups="sat.group_reserva_comercial_autorizado" invisible="state in ('draft', 'cancelled')">
                             <group string="Plazo aprobado">
                                 <field name="modalidad_aprobacion" readonly="state not in ('pending', 'partial')"/>
                                 <field name="fecha_aprobada" invisible="modalidad_aprobacion != 'fecha'" readonly="state not in ('pending', 'partial')"/>
@@ -261,7 +261,7 @@
                     <field name="usuario_id" string="Ejecutado por" optional="show"/>
                     <field name="solicitud_id" optional="hide"/>
                     <field name="regla_id" optional="hide"/>
-                    <field name="motivo" optional="show"/>
+                    <field name="motivo" optional="hide"/>
                 </list>
             </field>
         </record>
@@ -392,7 +392,7 @@
                 <form string="Solicitar autorización comercial">
                     <sheet>
                         <div class="oe_title">
-                            <h2>Solicitud a autorizados</h2>
+                            <h2>Solicitud a gerencia</h2>
                         </div>
 
                         <div class="alert alert-warning" role="status">
@@ -446,7 +446,7 @@
 
                 <xpath expr="//form/header" position="inside">
                     <button name="action_asignar_reserva_asesora" string="Asignar reserva" type="object" icon="fa-user-plus" class="btn-secondary" groups="sat.Sat_ventas_group_user,sat.group_reserva_comercial_autorizado" invisible="estado_ventas_id == 'entregada'"/>
-                    <button name="action_solicitar_reserva_comercial" string="Solicitar autorización" type="object" icon="fa-clock-o" class="btn-secondary" groups="sat.Sat_ventas_group_user,sat.group_reserva_comercial_autorizado" invisible="estado_ventas_id == 'entregada'"/>
+                    <button name="action_solicitar_reserva_comercial" string="Solicitar autorización" type="object" icon="fa-clock-o" class="btn-secondary" groups="base.group_user" invisible="estado_ventas_id == 'entregada'"/>
                 </xpath>
 
                 <xpath expr="//form/sheet/notebook" position="inside">
@@ -523,7 +523,7 @@
                 <xpath expr="//list/field[1]" position="before">
                     <header>
                         <button name="action_asignar_reserva_asesora" string="Asignar / repartir" type="object" icon="fa-users" class="btn-secondary" groups="sat.Sat_ventas_group_user,sat.group_reserva_comercial_autorizado"/>
-                        <button name="action_solicitar_reserva_comercial" string="Solicitar autorización" type="object" icon="fa-clock-o" class="btn-secondary" groups="sat.Sat_ventas_group_user,sat.group_reserva_comercial_autorizado"/>
+                        <button name="action_solicitar_reserva_comercial" string="Solicitar autorización" type="object" icon="fa-clock-o" class="btn-secondary" groups="base.group_user"/>
                     </header>
                 </xpath>
 

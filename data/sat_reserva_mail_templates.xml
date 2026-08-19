@@ -5,7 +5,7 @@
         <!-- ============================================================= -->
         <!-- SOLICITUD A GERENCIA                                          -->
         <!-- El destinatario principal se inyecta desde Python usando      -->
-        <!-- los usuarios del grupo Autorizados Reservas Comerciales.      -->
+        <!-- los usuarios de gerencia pertenecientes al grupo Autorizados Reservas Comerciales.      -->
         <!-- ============================================================= -->
 
         <record id="mail_template_reserva_solicitud_gerencia" model="mail.template">
@@ -14,7 +14,7 @@
             <field name="subject">Reserva comercial {{ object.name }} - requiere autorización</field>
             <field name="description">Notifica a los usuarios autorizados cuando ventas envía una solicitud comercial.</field>
             <field name="email_from">soporte@andescopiers.com.pe</field>
-            <field name="email_to">salvarez@andescopiers.com.pe</field>           
+            <field name="email_to"/>           
             <field name="body_html" type="html">
                 <div style="margin:0;padding:0;background:#f5f7fb;font-family:Arial,sans-serif;color:#243044;">
                     <div style="max-width:760px;margin:0 auto;padding:24px;">
