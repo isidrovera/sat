@@ -275,6 +275,12 @@ class SatReservaSolicitudWizard(models.TransientModel):
             )
 
         request_vals = {
+            # La solicitud siempre nace como borrador.
+            # Esto evita que un default_state del contexto intente crearla
+            # directamente como pendiente, algo reservado al flujo interno.
+            'state': 'draft',
+            'solicitante_id': self.env.user.id,
+
             'cliente_id': (
                 self.cliente_id.id
                 if self.cliente_id
