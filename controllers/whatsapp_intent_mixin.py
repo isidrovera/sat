@@ -356,6 +356,31 @@ class WhatsAppIntentMixin:
             or ""
         )
 
+        # Si la intención actual ya fue reconocida, se limpia el
+        # contador de unknown previo sin borrar el resto del contexto.
+        if session and intent not in ("unknown", "human") and action not in ("ai", "handoff"):
+            try:
+                context = session.get_context()
+                if isinstance(context, dict):
+                    changed = False
+                    for key in ("unknown_attempts", "last_unknown_message"):
+                        if key in context:
+                            context.pop(key, None)
+                            changed = True
+                    if changed:
+                        session.set_context(context)
+                        _logger.info(
+                            "[WA-HUMAN] Contador unknown limpiado por intención reconocida | session_id=%s intent=%s action=%s",
+                            session.id,
+                            intent,
+                            action,
+                        )
+            except Exception:
+                _logger.exception(
+                    "[WA-HUMAN] No se pudo limpiar contador unknown | session_id=%s",
+                    session.id if session else False,
+                )
+
         _logger.info(
             "[WA-INTENT] Ejecutando acción | partner_id=%s session_id=%s intent=%s action=%s target_flow=%s template=%s",
             partner.id if partner else False,
@@ -537,49 +562,64 @@ class WhatsAppIntentMixin:
                 "stop": False,
             }
         # ======================================================
-        # Handoff humano
-        # IMPORTANTE: antes de action == reply
+        # Solicitud de atención humana
+        #
+        # Primero se pide confirmación. El modo humano se activa
+        # recién cuando el cliente responde SÍ en /process.
         # ======================================================
         if action == "handoff" or intent == "human":
-            try:
-                request.env["whatsapp.handoff"].sudo().create_unknown_intent_handoff(
-                    partner,
-                    session=session,
-                    initial_message=message_text,
-                    context={
-                        "reason": result.get("ai_reason")
-                        or result.get("reason")
-                        or "Cliente solicita atención humana.",
-                        "intent_result": result,
-                    },
-                )
-            except Exception:
-                _logger.exception(
-                    "[WA-INTENT] No se pudo crear handoff humano partner=%s session=%s",
-                    partner.id if partner else False,
-                    session.id if session else False,
-                )
-
-            if partner:
-                partner.whatsapp_enable_human_mode_api(taken_by_name="Bot WhatsApp")
+            reason = (
+                result.get("ai_reason")
+                or result.get("reason")
+                or "Cliente solicita atención humana."
+            )
 
             if session:
-                session.action_set_human()
+                try:
+                    context = session.get_context()
+                    if not isinstance(context, dict):
+                        context = {}
 
-            message = self._render_template(
-                template or "human_take",
-                partner=partner,
-                session=session,
-                fallback="👨‍💼 Un asesor continuará con la atención.",
+                    context.update({
+                        "pending_human_confirmation": True,
+                        "human_confirmation_message": message_text or False,
+                        "human_confirmation_reason": reason,
+                        "human_confirmation_intent": result,
+                    })
+                    context.pop("unknown_attempts", None)
+                    context.pop("last_unknown_message", None)
+                    session.set_context(context)
+
+                    _logger.info(
+                        "[WA-HUMAN] Confirmación humana pendiente | partner_id=%s session_id=%s reason=%s",
+                        partner.id if partner else False,
+                        session.id if session else False,
+                        reason,
+                    )
+                except Exception:
+                    _logger.exception(
+                        "[WA-HUMAN] Error guardando confirmación humana | partner_id=%s session_id=%s",
+                        partner.id if partner else False,
+                        session.id if session else False,
+                    )
+
+            message = (
+                "👨‍💼 ¿Deseas que te atienda un asesor humano de "
+                "*ANDES SOLUTION COPIERS*?\n\n"
+                "Responde *SÍ* para derivarte o *NO* para continuar "
+                "con el asistente virtual."
             )
 
             return {
                 "content": message,
                 "intent": "human",
-                "action": "handoff",
-                "template": template or "human_take",
+                "action": "confirm_handoff",
+                "template": False,
                 "create_outbox": True,
                 "stop": True,
+                "stop_bot": False,
+                "pending_human_confirmation": True,
+                "human_mode": False,
             }
 
         # ======================================================
@@ -827,48 +867,117 @@ class WhatsAppIntentMixin:
             }
 
         # ======================================================
-        # Fallback: no entendido => handoff
+        # Fallback: intención no entendida
+        #
+        # 1er intento: pedir aclaración.
+        # 2do intento consecutivo: preguntar si desea asesor.
+        # No se activa modo humano sin confirmación del cliente.
         # ======================================================
-        try:
-            request.env["whatsapp.handoff"].sudo().create_unknown_intent_handoff(
-                partner,
-                session=session,
-                initial_message=message_text,
-                context={
-                    "reason": "Intención no reconocida automáticamente.",
-                    "intent_result": result,
-                },
-            )
-        except Exception:
-            _logger.exception(
-                "[WA-INTENT] No se pudo crear handoff de intención desconocida partner=%s session=%s",
-                partner.id if partner else False,
-                session.id if session else False,
-            )
-
-        if partner:
-            partner.whatsapp_enable_human_mode_api(taken_by_name="Bot WhatsApp")
+        context = {}
+        unknown_attempts = 0
 
         if session:
-            session.action_set_human()
+            try:
+                context = session.get_context()
+                if not isinstance(context, dict):
+                    context = {}
+                unknown_attempts = int(context.get("unknown_attempts") or 0)
+            except Exception:
+                context = {}
+                unknown_attempts = 0
+                _logger.exception(
+                    "[WA-HUMAN] Error leyendo contador unknown | session_id=%s",
+                    session.id if session else False,
+                )
 
-        message = self._render_template(
-            "unknown_with_menu",
-            partner=partner,
-            session=session,
-            fallback=(
-                "No pude identificar con seguridad tu solicitud. "
-                "Un asesor continuará con la atención."
-            ),
+        unknown_attempts += 1
+
+        if unknown_attempts <= 1:
+            if session:
+                try:
+                    context["unknown_attempts"] = 1
+                    context["last_unknown_message"] = message_text or False
+                    context.pop("pending_human_confirmation", None)
+                    context.pop("human_confirmation_message", None)
+                    context.pop("human_confirmation_reason", None)
+                    context.pop("human_confirmation_intent", None)
+                    session.set_context(context)
+                except Exception:
+                    _logger.exception(
+                        "[WA-HUMAN] Error guardando primer unknown | session_id=%s",
+                        session.id if session else False,
+                    )
+
+            _logger.info(
+                "[WA-HUMAN] Primer unknown: se solicita aclaración | partner_id=%s session_id=%s message=%r",
+                partner.id if partner else False,
+                session.id if session else False,
+                message_text[:160] if message_text else "",
+            )
+
+            message = (
+                "No pude identificar con seguridad tu consulta.\n\n"
+                "Puedes indicarme qué necesitas:\n"
+                "*1* 🖨️ Solicitar tóner\n"
+                "*2* 🛠️ Registrar servicio técnico\n"
+                "*3* 💻 Asistencia remota\n"
+                "*4* 👨‍💼 Hablar con un técnico\n\n"
+                "También puedes escribir nuevamente tu consulta con un poco más de detalle."
+            )
+
+            return {
+                "content": message,
+                "intent": intent or "unknown",
+                "action": "clarify",
+                "template": False,
+                "create_outbox": True,
+                "stop": True,
+                "stop_bot": False,
+                "pending_human_confirmation": False,
+                "human_mode": False,
+            }
+
+        reason = "La consulta no pudo identificarse después de un intento de aclaración."
+
+        if session:
+            try:
+                context["unknown_attempts"] = unknown_attempts
+                context["last_unknown_message"] = message_text or False
+                context["pending_human_confirmation"] = True
+                context["human_confirmation_message"] = message_text or False
+                context["human_confirmation_reason"] = reason
+                context["human_confirmation_intent"] = result
+                session.set_context(context)
+            except Exception:
+                _logger.exception(
+                    "[WA-HUMAN] Error guardando confirmación tras unknown | session_id=%s",
+                    session.id if session else False,
+                )
+
+        _logger.info(
+            "[WA-HUMAN] Segundo unknown: se solicita confirmación humana | partner_id=%s session_id=%s attempts=%s",
+            partner.id if partner else False,
+            session.id if session else False,
+            unknown_attempts,
+        )
+
+        message = (
+            "Todavía no pude identificar con seguridad tu consulta.\n\n"
+            "¿Deseas que te atienda un asesor humano?\n"
+            "Responde *SÍ* para derivarte o *NO* para continuar "
+            "con el asistente virtual."
         )
 
         return {
             "content": message,
             "intent": intent or "unknown",
-            "action": action or "ai",
-            "template": "unknown_with_menu",
+            "action": "confirm_handoff",
+            "template": False,
             "create_outbox": True,
             "stop": True,
+            "stop_bot": False,
+            "pending_human_confirmation": True,
+            "human_mode": False,
         }
 
     # ==========================================================

@@ -209,6 +209,162 @@ class WhatsAppProcessMixin:
 
         return registration_state
 
+
+    # ==========================================================
+    # Helpers: contexto / confirmación / handoff humano
+    # ==========================================================
+    def _get_session_context_safe(self, session):
+        """Devuelve el contexto de sesión como dict sin romper /process."""
+        if not session:
+            return {}
+
+        try:
+            context = session.get_context()
+            if isinstance(context, dict):
+                return context
+        except Exception:
+            _logger.exception(
+                "[WA-HUMAN] Error leyendo contexto de sesión | session_id=%s",
+                session.id if session else False,
+            )
+
+        return {}
+
+    def _write_session_context_safe(self, session, context):
+        """Guarda el contexto de sesión de forma segura."""
+        if not session or not isinstance(context, dict):
+            return False
+
+        try:
+            session.set_context(context)
+            return True
+        except Exception:
+            _logger.exception(
+                "[WA-HUMAN] Error guardando contexto de sesión | session_id=%s keys=%s",
+                session.id if session else False,
+                list(context.keys()) if isinstance(context, dict) else [],
+            )
+            return False
+
+    def _clear_human_confirmation_pending(self, session, clear_unknown=False):
+        """Limpia solo las claves usadas por la confirmación humana."""
+        if not session:
+            return False
+
+        context = self._get_session_context_safe(session)
+
+        for key in (
+            "pending_human_confirmation",
+            "human_confirmation_message",
+            "human_confirmation_reason",
+            "human_confirmation_intent",
+        ):
+            context.pop(key, None)
+
+        if clear_unknown:
+            context.pop("unknown_attempts", None)
+            context.pop("last_unknown_message", None)
+
+        saved = self._write_session_context_safe(session, context)
+
+        _logger.info(
+            "[WA-HUMAN] Confirmación humana limpiada | session_id=%s clear_unknown=%s saved=%s",
+            session.id if session else False,
+            clear_unknown,
+            saved,
+        )
+        return saved
+
+    def _activate_human_handoff(
+        self,
+        partner,
+        session=False,
+        initial_message=False,
+        reason=False,
+        intent_result=None,
+    ):
+        """
+        Activa de forma consistente el handoff humano y evita duplicados activos.
+        """
+        intent_result = intent_result if isinstance(intent_result, dict) else {}
+        Handoff = request.env["whatsapp.handoff"].sudo()
+        handoff = Handoff
+
+        try:
+            domain = [
+                ("partner_id", "=", partner.id if partner else False),
+                ("state", "in", ["pending", "assigned", "open", "escalated"]),
+            ]
+            if session:
+                domain.append(("session_id", "=", session.id))
+
+            handoff = Handoff.search(domain, order="id desc", limit=1)
+
+            if handoff:
+                _logger.info(
+                    "[WA-HUMAN] Reutilizando handoff activo | handoff_id=%s partner_id=%s session_id=%s state=%s",
+                    handoff.id,
+                    partner.id if partner else False,
+                    session.id if session else False,
+                    handoff.state,
+                )
+            else:
+                handoff = Handoff.create_unknown_intent_handoff(
+                    partner,
+                    session=session,
+                    initial_message=initial_message,
+                    context={
+                        "reason": reason or "Cliente confirmó atención humana.",
+                        "intent_result": intent_result,
+                        "confirmed_by_customer": True,
+                    },
+                )
+                _logger.info(
+                    "[WA-HUMAN] Handoff creado | handoff_id=%s partner_id=%s session_id=%s",
+                    handoff.id if handoff else False,
+                    partner.id if partner else False,
+                    session.id if session else False,
+                )
+        except Exception:
+            handoff = Handoff
+            _logger.exception(
+                "[WA-HUMAN] Error creando/reutilizando handoff | partner_id=%s session_id=%s",
+                partner.id if partner else False,
+                session.id if session else False,
+            )
+
+        if partner:
+            try:
+                partner.whatsapp_enable_human_mode_api(
+                    taken_by_name="Bot WhatsApp"
+                )
+                _logger.info(
+                    "[WA-HUMAN] Partner puesto en modo humano | partner_id=%s human_mode=%s",
+                    partner.id,
+                    bool(getattr(partner, "whatsapp_human_mode", False)),
+                )
+            except Exception:
+                _logger.exception(
+                    "[WA-HUMAN] Error activando modo humano en partner | partner_id=%s",
+                    partner.id,
+                )
+
+        if session:
+            try:
+                session.action_set_human()
+                _logger.info(
+                    "[WA-HUMAN] Sesión puesta en modo humano | session_id=%s state=%s",
+                    session.id,
+                    session.state,
+                )
+            except Exception:
+                _logger.exception(
+                    "[WA-HUMAN] Error poniendo sesión en modo humano | session_id=%s",
+                    session.id,
+                )
+
+        return handoff if handoff else False
+
     # ==========================================================
     # Proceso principal
     # ==========================================================
