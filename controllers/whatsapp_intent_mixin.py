@@ -874,7 +874,16 @@ class WhatsAppIntentMixin:
     # ==========================================================
     # Menú principal
     # ==========================================================
-    def _build_main_menu_text(self, partner=False):
+    def _build_main_menu_text(self, partner=False, session=False):
+        # ``session`` se acepta por compatibilidad con otros mixins.
+        # El menú no depende de la sesión para construir su contenido,
+        # pero algunos flujos (por ejemplo selección de empresa) la pasan.
+        _logger.debug(
+            "[WA-MENU] Construyendo menú principal | partner_id=%s session_id=%s",
+            partner.id if partner else False,
+            session.id if session else False,
+        )
+
         company_name = "Sin empresa activa"
 
         try:

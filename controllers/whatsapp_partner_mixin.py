@@ -577,10 +577,19 @@ class WhatsAppPartnerMixin:
     # ==========================================================
     def _company_selection_message(self, partner, session=False):
         if not partner:
+            _logger.warning("[WA-COMPANY] _company_selection_message sin partner")
             return "No pude identificar el contacto."
 
         partner_name = partner.name.split()[0] if partner.name else "cliente"
         companies = partner.whatsapp_company_ids
+
+        _logger.info(
+            "[WA-COMPANY] Preparando selección de empresa | partner_id=%s session_id=%s company_count=%s active_company_id=%s",
+            partner.id,
+            session.id if session else False,
+            len(companies),
+            partner.whatsapp_active_company_id.id if partner.whatsapp_active_company_id else False,
+        )
 
         if not companies:
             return self._render_template(
@@ -610,6 +619,14 @@ class WhatsAppPartnerMixin:
                         "[WA-COMPANY] Error actualizando sesión empresa única session=%s",
                         session.id if session else False,
                     )
+
+            _logger.info(
+                "[WA-COMPANY] Empresa única seleccionada | partner_id=%s session_id=%s company_id=%s company_name=%s",
+                partner.id,
+                session.id if session else False,
+                company.id,
+                company.display_name,
+            )
 
             return "%s\n%s\n\n%s" % (
                 company.name or "Empresa",

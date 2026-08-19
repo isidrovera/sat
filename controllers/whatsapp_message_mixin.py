@@ -2,6 +2,7 @@
 
 import json
 import logging
+from datetime import timedelta
 
 from odoo import fields
 from odoo.http import request
@@ -18,33 +19,43 @@ class WhatsAppMessageMixin:
         Session = request.env["whatsapp.session"].sudo()
 
         if not partner:
+            _logger.warning("[WA-SESSION] _get_or_create_session llamado sin partner")
             return Session
+
+        identifiers = identifiers or {}
 
         active_session = Session.search([
             ("partner_id", "=", partner.id),
             ("state", "in", ["open", "human"]),
         ], order="last_message_at desc, id desc", limit=1)
 
+        _logger.info(
+            "[WA-SESSION] Resolviendo sesión | partner_id=%s active_session_id=%s state=%s flow=%s step=%s last_message_at=%s force_new=%s intent=%s human_mode=%s",
+            partner.id,
+            active_session.id if active_session else False,
+            active_session.state if active_session else False,
+            active_session.current_flow if active_session else False,
+            active_session.conversation_state if active_session else False,
+            active_session.last_message_at if active_session else False,
+            bool(force_new_session),
+            intent or False,
+            bool(partner.whatsapp_human_mode),
+        )
+
         # ======================================================
-        # IMPORTANTE:
         # Si existe una sesión con flujo activo, NO debe expirar
-        # por el timeout general del partner.
-        #
-        # Ejemplo:
-        # - current_flow = toner
-        # - conversation_state = awaiting_machine_selection_toner
-        #
-        # Si el cliente responde "1", esa respuesta debe continuar
-        # el flujo activo, no iniciar nuevamente el menú/tóner.
+        # por el timeout general del partner. El flujo tiene su
+        # propio conversation_state_expires_at.
         # ======================================================
         if active_session and active_session.current_flow != "none":
             try:
                 if active_session.is_conversation_expired():
                     _logger.info(
-                        "[WA-SESSION] Flujo activo expirado por timeout interno | session=%s flow=%s step=%s",
+                        "[WA-SESSION] Flujo activo expirado por timeout interno | session=%s flow=%s step=%s expires_at=%s",
                         active_session.id,
                         active_session.current_flow,
                         active_session.conversation_state,
+                        active_session.conversation_state_expires_at,
                     )
                     active_session.reset_conversation(reason="expired")
                 else:
@@ -57,22 +68,10 @@ class WhatsAppMessageMixin:
                         ),
                     }
 
-                    resolved_phone = self._resolve_identifier_phone(
-                        identifiers,
-                        partner=partner,
-                    )
-                    resolved_jid = self._resolve_identifier_jid(
-                        identifiers,
-                        partner=partner,
-                    )
-                    resolved_lid = self._resolve_identifier_lid(
-                        identifiers,
-                        partner=partner,
-                    )
-                    resolved_raw_jid = self._resolve_identifier_raw_jid(
-                        identifiers,
-                        partner=partner,
-                    )
+                    resolved_phone = self._resolve_identifier_phone(identifiers, partner=partner)
+                    resolved_jid = self._resolve_identifier_jid(identifiers, partner=partner)
+                    resolved_lid = self._resolve_identifier_lid(identifiers, partner=partner)
+                    resolved_raw_jid = self._resolve_identifier_raw_jid(identifiers, partner=partner)
 
                     if resolved_phone:
                         vals["phone"] = resolved_phone
@@ -98,7 +97,6 @@ class WhatsAppMessageMixin:
                         active_session.current_flow,
                         active_session.conversation_state,
                     )
-
                     return active_session
 
             except Exception:
@@ -108,13 +106,80 @@ class WhatsAppMessageMixin:
                 )
 
         # ======================================================
-        # Solo usar timeout general cuando NO hay flujo activo.
+        # Timeout general cuando NO hay flujo activo.
+        #
+        # Protección conservadora:
+        # /profile y /process pueden ejecutarse con milisegundos de
+        # diferencia. Si el partner reporta timeout pero la sesión
+        # activa acaba de ser creada/tocada, no la expiramos de
+        # inmediato. Esto evita el patrón 192->193->194 observado
+        # en logs sin desactivar el timeout normal de sesiones.
         # ======================================================
-        is_expired = False
+        partner_reports_expired = False
+        expiration_check_error = False
         try:
-            is_expired = partner._whatsapp_is_session_expired()
+            partner_reports_expired = bool(partner._whatsapp_is_session_expired())
+        except Exception as exc:
+            expiration_check_error = str(exc)
+            _logger.exception(
+                "[WA-SESSION] Error evaluando timeout general del partner | partner_id=%s session_id=%s",
+                partner.id,
+                active_session.id if active_session else False,
+            )
+            partner_reports_expired = False
+
+        guard_seconds = 120
+        try:
+            raw_guard = request.env["ir.config_parameter"].sudo().get_param(
+                "sat.whatsapp_session_expire_guard_seconds",
+                "120",
+            )
+            guard_seconds = max(0, int(raw_guard or 120))
         except Exception:
+            guard_seconds = 120
+
+        now = fields.Datetime.now()
+        recent_active_session = False
+        session_age_seconds = False
+
+        if active_session and active_session.last_message_at:
+            try:
+                age = now - active_session.last_message_at
+                session_age_seconds = max(0, int(age.total_seconds()))
+                recent_active_session = session_age_seconds <= guard_seconds
+            except Exception:
+                recent_active_session = False
+                session_age_seconds = False
+
+        is_expired = partner_reports_expired
+        if (
+            is_expired
+            and active_session
+            and active_session.current_flow == "none"
+            and recent_active_session
+            and not force_new_session
+        ):
+            _logger.warning(
+                "[WA-SESSION] Timeout general ignorado por guardia de sesión reciente | partner_id=%s session_id=%s age_seconds=%s guard_seconds=%s",
+                partner.id,
+                active_session.id,
+                session_age_seconds,
+                guard_seconds,
+            )
             is_expired = False
+
+        _logger.info(
+            "[WA-SESSION] Resultado timeout general | partner_id=%s session_id=%s partner_reports_expired=%s effective_expired=%s recent=%s age_seconds=%s guard_seconds=%s force_new=%s check_error=%s",
+            partner.id,
+            active_session.id if active_session else False,
+            partner_reports_expired,
+            is_expired,
+            recent_active_session,
+            session_age_seconds,
+            guard_seconds,
+            bool(force_new_session),
+            expiration_check_error or False,
+        )
 
         if force_new_session or is_expired:
             if (
@@ -122,42 +187,49 @@ class WhatsAppMessageMixin:
                 and active_session.state == "open"
                 and active_session.current_flow == "none"
             ):
+                _logger.info(
+                    "[WA-SESSION] Expirando sesión por timeout/force_new | partner_id=%s session_id=%s force_new=%s effective_expired=%s",
+                    partner.id,
+                    active_session.id,
+                    bool(force_new_session),
+                    is_expired,
+                )
                 active_session.action_expire()
 
             active_session = Session
 
         if not active_session:
-            active_session = Session.create({
+            create_vals = {
                 "partner_id": partner.id,
                 "active_company_id": (
                     partner.whatsapp_active_company_id.id
                     if partner.whatsapp_active_company_id
                     else False
                 ),
-                "phone": self._resolve_identifier_phone(
-                    identifiers,
-                    partner=partner,
-                ),
-                "jid": self._resolve_identifier_jid(
-                    identifiers,
-                    partner=partner,
-                ),
-                "lid": self._resolve_identifier_lid(
-                    identifiers,
-                    partner=partner,
-                ),
-                "raw_jid": self._resolve_identifier_raw_jid(
-                    identifiers,
-                    partner=partner,
-                ),
+                "phone": self._resolve_identifier_phone(identifiers, partner=partner),
+                "jid": self._resolve_identifier_jid(identifiers, partner=partner),
+                "lid": self._resolve_identifier_lid(identifiers, partner=partner),
+                "raw_jid": self._resolve_identifier_raw_jid(identifiers, partner=partner),
                 "state": "human" if partner.whatsapp_human_mode else "open",
                 "source": "whatsapp",
                 "last_intent": intent or False,
-            })
+            }
+
+            active_session = Session.create(create_vals)
+
+            _logger.info(
+                "[WA-SESSION] Nueva sesión resuelta | partner_id=%s session_id=%s state=%s phone=%s jid=%s lid=%s",
+                partner.id,
+                active_session.id,
+                active_session.state,
+                active_session.phone or False,
+                active_session.jid or False,
+                active_session.lid or False,
+            )
 
         else:
             vals = {
-                "last_message_at": fields.Datetime.now(),
+                "last_message_at": now,
                 "active_company_id": (
                     partner.whatsapp_active_company_id.id
                     if partner.whatsapp_active_company_id
@@ -165,22 +237,10 @@ class WhatsAppMessageMixin:
                 ),
             }
 
-            resolved_phone = self._resolve_identifier_phone(
-                identifiers,
-                partner=partner,
-            )
-            resolved_jid = self._resolve_identifier_jid(
-                identifiers,
-                partner=partner,
-            )
-            resolved_lid = self._resolve_identifier_lid(
-                identifiers,
-                partner=partner,
-            )
-            resolved_raw_jid = self._resolve_identifier_raw_jid(
-                identifiers,
-                partner=partner,
-            )
+            resolved_phone = self._resolve_identifier_phone(identifiers, partner=partner)
+            resolved_jid = self._resolve_identifier_jid(identifiers, partner=partner)
+            resolved_lid = self._resolve_identifier_lid(identifiers, partner=partner)
+            resolved_raw_jid = self._resolve_identifier_raw_jid(identifiers, partner=partner)
 
             if resolved_phone:
                 vals["phone"] = resolved_phone
@@ -199,6 +259,15 @@ class WhatsAppMessageMixin:
                 vals["state"] = "open"
 
             active_session.write(vals)
+
+            _logger.info(
+                "[WA-SESSION] Sesión existente reutilizada | partner_id=%s session_id=%s state=%s flow=%s step=%s",
+                partner.id,
+                active_session.id,
+                active_session.state,
+                active_session.current_flow,
+                active_session.conversation_state,
+            )
 
         return active_session
 
