@@ -67,24 +67,51 @@ class WhatsAppRemoteMixin:
 
                 if media:
                     try:
-                        media.mark_for_human_review(reason="Imagen/documento enviado como código AnyDesk.")
+                        media.mark_for_human_review(
+                            reason="Imagen/documento enviado como código AnyDesk."
+                        )
                     except Exception:
                         pass
 
-                    request.env["whatsapp.handoff"].sudo().create_remote_handoff(
-                        partner,
-                        session=session,
-                        anydesk_code=False,
-                        initial_message=text_clean or "Cliente envió imagen/documento con AnyDesk.",
-                        media=media,
-                        context={
-                            "reason": "Cliente envió media para código AnyDesk.",
-                            "flow_context": context,
-                        },
+                    handoff = (
+                        request.env["whatsapp.handoff"]
+                        .sudo()
+                        .create_remote_support_handoff(
+                            partner,
+                            session=session,
+                            anydesk_code=False,
+                            initial_message=(
+                                text_clean
+                                or "Cliente envió imagen/documento con AnyDesk."
+                            ),
+                            media=media,
+                            context={
+                                "reason": "Cliente envió media para código AnyDesk.",
+                                "flow_context": context,
+                            },
+                        )
                     )
 
-                    partner.whatsapp_enable_human_mode_api(taken_by_name="Bot WhatsApp")
+                    _logger.info(
+                        "[WA-REMOTE] Handoff remoto por media creado | "
+                        "handoff_id=%s partner=%s session=%s",
+                        handoff.id if handoff else False,
+                        partner.id if partner else False,
+                        session.id if session else False,
+                    )
+
+                    partner.whatsapp_enable_human_mode_api(
+                        taken_by_name="Bot WhatsApp"
+                    )
                     session.action_set_human()
+
+                    _logger.info(
+                        "[WA-REMOTE] Modo humano activado por media | "
+                        "partner=%s session=%s handoff_id=%s",
+                        partner.id if partner else False,
+                        session.id if session else False,
+                        handoff.id if handoff else False,
+                    )
 
                     return (
                         "Recibí la imagen/documento con tu código AnyDesk. "
@@ -92,6 +119,13 @@ class WhatsAppRemoteMixin:
                     )
 
             if not self._looks_like_anydesk(text_clean):
+                _logger.info(
+                    "[WA-REMOTE] Código AnyDesk inválido | "
+                    "partner=%s session=%s value=%r",
+                    partner.id if partner else False,
+                    session.id if session else False,
+                    text_clean,
+                )
                 return (
                     "No reconozco un código AnyDesk válido. "
                     "Envíame solo los números del código, entre 6 y 12 dígitos."
@@ -106,6 +140,14 @@ class WhatsAppRemoteMixin:
                 },
             )
 
+            _logger.info(
+                "[WA-REMOTE] Código AnyDesk aceptado | "
+                "partner=%s session=%s anydesk=%s next_state=awaiting_remote_problem",
+                partner.id if partner else False,
+                session.id if session else False,
+                anydesk_code,
+            )
+
             return (
                 "Código AnyDesk recibido: %s\n\n"
                 "Ahora descríbenos brevemente el problema que presenta el equipo."
@@ -113,7 +155,10 @@ class WhatsAppRemoteMixin:
 
         if state == "awaiting_remote_problem":
             if len(text_clean) < 3:
-                return "Por favor describe brevemente el problema para que el técnico pueda ayudarte."
+                return (
+                    "Por favor describe brevemente el problema "
+                    "para que el técnico pueda ayudarte."
+                )
 
             context = session.update_context({
                 "remote_problem": text_clean,
@@ -121,25 +166,40 @@ class WhatsAppRemoteMixin:
 
             anydesk_code = context.get("anydesk_code") or ""
 
-            request.env["whatsapp.handoff"].sudo().create_remote_handoff(
-                partner,
-                session=session,
-                anydesk_code=anydesk_code,
-                initial_message=text_clean,
-                context={
-                    "reason": "Solicitud de soporte remoto.",
-                    "flow_context": context,
-                },
+            handoff = (
+                request.env["whatsapp.handoff"]
+                .sudo()
+                .create_remote_support_handoff(
+                    partner,
+                    session=session,
+                    anydesk_code=anydesk_code,
+                    initial_message=text_clean,
+                    context={
+                        "reason": "Solicitud de soporte remoto.",
+                        "flow_context": context,
+                    },
+                )
+            )
+
+            _logger.info(
+                "[WA-REMOTE] Handoff remoto creado | "
+                "handoff_id=%s partner=%s session=%s anydesk=%s problem=%r",
+                handoff.id if handoff else False,
+                partner.id if partner else False,
+                session.id if session else False,
+                anydesk_code,
+                text_clean,
             )
 
             partner.whatsapp_enable_human_mode_api(taken_by_name="Bot WhatsApp")
             session.action_set_human()
 
             _logger.info(
-                "[WA-REMOTE] Handoff remoto creado partner=%s session=%s anydesk=%s",
+                "[WA-REMOTE] Modo humano activado | "
+                "partner=%s session=%s handoff_id=%s",
                 partner.id if partner else False,
                 session.id if session else False,
-                anydesk_code,
+                handoff.id if handoff else False,
             )
 
             return self._render_template(
@@ -162,4 +222,7 @@ class WhatsAppRemoteMixin:
             session.id if session else False,
         )
 
-        return "Estoy procesando tu solicitud de soporte remoto. Por favor continúa con la información solicitada."
+        return (
+            "Estoy procesando tu solicitud de soporte remoto. "
+            "Por favor continúa con la información solicitada."
+        )
