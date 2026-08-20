@@ -528,11 +528,11 @@
                 </xpath>
 
                 <xpath expr="//field[@name='estado_ventas_id']" position="before">
-                    <field name="reserva_estado" string="Reserva" widget="badge" optional="show" decoration-success="reserva_estado == 'confirmada'" decoration-warning="reserva_estado in ('separada', 'especial')" decoration-muted="reserva_estado == 'libre'"/>
-                    <field name="reserva_asesora_id" string="Asesora reserva" optional="show"/>
+                    <field name="reserva_estado" string="Reserva" widget="badge" optional="hide" decoration-success="reserva_estado == 'confirmada'" decoration-warning="reserva_estado in ('separada', 'especial')" decoration-muted="reserva_estado == 'libre'"/>
+                    <field name="reserva_asesora_id" string="Asesora reserva" optional="hide"/>
                     <field name="reserva_cliente_id" string="Cliente reserva" optional="hide"/>
-                    <field name="reserva_fecha_limite" string="Vence reserva" optional="show"/>
-                    <field name="reserva_dias_restantes" string="Días" optional="show"/>
+                    <field name="reserva_fecha_limite" string="Vence reserva" optional="hide"/>
+                    <field name="reserva_dias_restantes" string="Días" optional="hide"/>
                     <field name="reserva_solicitud_pendiente_id" string="Solicitud pendiente" optional="hide"/>
                 </xpath>
 
