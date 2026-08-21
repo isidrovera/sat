@@ -11,6 +11,78 @@ _logger = logging.getLogger(__name__)
 
 
 class WhatsAppEndpointMixin:
+    """
+    Endpoints públicos utilizados por n8n / Baileys.
+
+    Este mixin conserva las rutas y contratos JSON existentes y delega
+    la lógica funcional a los modelos/mixins correspondientes.
+
+    En particular:
+    - outbox/pending delega en whatsapp.outbox.get_pending_payload();
+    - los ACK delegan en métodos idempotentes del modelo outbox;
+    - human/take y human/release mantienen sincronizados partner,
+      sesión y handoffs;
+    - los identificadores numéricos recibidos desde API se validan antes
+      de realizar browse() para evitar errores 500 por payload inválido.
+    """
+
+    def _endpoint_positive_int(
+        self,
+        value,
+        default=False,
+        minimum=1,
+        maximum=False,
+    ):
+        try:
+            parsed = int(value)
+        except Exception:
+            return default
+
+        if parsed < minimum:
+            return default
+
+        if maximum and parsed > maximum:
+            return maximum
+
+        return parsed
+
+    def _endpoint_bool(
+        self,
+        value,
+        default=False,
+    ):
+        if value is None:
+            return bool(default)
+
+        if isinstance(value, bool):
+            return value
+
+        if isinstance(value, (int, float)):
+            return bool(value)
+
+        text = str(value).strip().lower()
+
+        if text in (
+            "1",
+            "true",
+            "yes",
+            "si",
+            "sí",
+            "on",
+        ):
+            return True
+
+        if text in (
+            "0",
+            "false",
+            "no",
+            "off",
+            "",
+        ):
+            return False
+
+        return bool(default)
+
     # ==========================================================
     # Endpoint: perfil
     # ==========================================================
@@ -389,7 +461,13 @@ class WhatsAppEndpointMixin:
     # ==========================================================
     # Endpoint: outbox pendientes
     # ==========================================================
-    @http.route("/sat/whatsapp/outbox/pending", type="json", auth="public", methods=["POST"], csrf=False)
+    @http.route(
+        "/sat/whatsapp/outbox/pending",
+        type="json",
+        auth="public",
+        methods=["POST"],
+        csrf=False,
+    )
     def whatsapp_outbox_pending(self, **kwargs):
         start_ts = time.time()
         endpoint = "/sat/whatsapp/outbox/pending"
@@ -397,7 +475,11 @@ class WhatsAppEndpointMixin:
         identifiers = self._extract_identifiers(payload)
 
         if not self._check_token():
-            response = self._json_error("No autorizado", "UNAUTHORIZED", 401)
+            response = self._json_error(
+                "No autorizado",
+                "UNAUTHORIZED",
+                401,
+            )
             self._safe_log_api(
                 endpoint,
                 payload,
@@ -408,18 +490,22 @@ class WhatsAppEndpointMixin:
             )
             return response
 
-        limit = payload.get("limit") or 20
-        partner_id = payload.get("partner_id") or False
+        limit = self._endpoint_positive_int(
+            payload.get("limit"),
+            default=20,
+            minimum=1,
+            maximum=100,
+        )
 
-        try:
-            limit = int(limit)
-        except Exception:
-            limit = 20
+        partner_id = self._endpoint_positive_int(
+            payload.get("partner_id"),
+            default=False,
+            minimum=1,
+        )
 
-        if limit > 100:
-            limit = 100
+        Outbox = request.env["whatsapp.outbox"].sudo()
 
-        items = request.env["whatsapp.outbox"].sudo().get_pending_payload(
+        items = Outbox.get_pending_payload(
             limit=limit,
             partner_id=partner_id,
         )
@@ -429,6 +515,14 @@ class WhatsAppEndpointMixin:
             "count": len(items),
             "items": items,
         }
+
+        _logger.info(
+            "[WA-ENDPOINT] Outbox pendientes entregados | "
+            "count=%s limit=%s partner_id=%s",
+            len(items),
+            limit,
+            partner_id or False,
+        )
 
         self._safe_log_api(
             endpoint,
@@ -442,7 +536,13 @@ class WhatsAppEndpointMixin:
     # ==========================================================
     # Endpoint: tomar humano
     # ==========================================================
-    @http.route("/sat/whatsapp/human/take", type="json", auth="public", methods=["POST"], csrf=False)
+    @http.route(
+        "/sat/whatsapp/human/take",
+        type="json",
+        auth="public",
+        methods=["POST"],
+        csrf=False,
+    )
     def whatsapp_human_take(self, **kwargs):
         start_ts = time.time()
         endpoint = "/sat/whatsapp/human/take"
@@ -450,7 +550,11 @@ class WhatsAppEndpointMixin:
         identifiers = self._extract_identifiers(payload)
 
         if not self._check_token():
-            response = self._json_error("No autorizado", "UNAUTHORIZED", 401)
+            response = self._json_error(
+                "No autorizado",
+                "UNAUTHORIZED",
+                401,
+            )
             self._safe_log_api(
                 endpoint,
                 payload,
@@ -461,8 +565,15 @@ class WhatsAppEndpointMixin:
             )
             return response
 
-        taken_by_name = payload.get("taken_by_name") or payload.get("agent_name") or "API / n8n"
-        reason = payload.get("reason") or "Tomado por asesor desde API."
+        taken_by_name = (
+            payload.get("taken_by_name")
+            or payload.get("agent_name")
+            or "API / n8n"
+        )
+        reason = (
+            payload.get("reason")
+            or "Tomado por asesor desde API."
+        )
 
         if not self._has_any_identifier(identifiers):
             response = self._json_error(
@@ -481,13 +592,18 @@ class WhatsAppEndpointMixin:
             )
             return response
 
-        partner = self._find_partner_by_identifiers(identifiers)
+        partner = self._find_partner_by_identifiers(
+            identifiers
+        )
 
         if not partner:
             response = {
                 "ok": True,
                 "found": False,
-                "message": "Contacto no encontrado. No se activó modo humano.",
+                "message": (
+                    "Contacto no encontrado. "
+                    "No se activó modo humano."
+                ),
             }
             self._safe_log_api(
                 endpoint,
@@ -499,21 +615,81 @@ class WhatsAppEndpointMixin:
             )
             return response
 
-        self._update_partner_identifiers(partner, identifiers)
+        self._update_partner_identifiers(
+            partner,
+            identifiers,
+        )
 
-        session = self._get_or_create_session(partner, identifiers)
+        session = self._get_or_create_session(
+            partner,
+            identifiers,
+        )
 
-        partner.whatsapp_enable_human_mode_api(taken_by_name=taken_by_name)
-        session.action_set_human()
+        Handoff = request.env[
+            "whatsapp.handoff"
+        ].sudo()
 
-        request.env["whatsapp.handoff"].sudo().create({
-            "session_id": session.id,
-            "partner_id": partner.id,
-            "company_id": partner.whatsapp_active_company_id.id if partner.whatsapp_active_company_id else False,
-            "state": "open",
-            "taken_by_name": taken_by_name,
-            "reason": reason,
-        })
+        handoff = Handoff.search([
+            ("partner_id", "=", partner.id),
+            ("session_id", "=", session.id),
+            ("state", "in", [
+                "pending",
+                "assigned",
+                "open",
+                "escalated",
+            ]),
+        ], order="taken_at desc, id desc", limit=1)
+
+        # Si ya existe una derivación para esta conversación, reutilizarla
+        # evita crear handoffs duplicados por llamadas repetidas de n8n.
+        if handoff:
+            handoff.write({
+                "state": "open",
+                "taken_by_name": taken_by_name,
+                "reason": reason or handoff.reason,
+            })
+
+            try:
+                handoff._activate_human_context()
+            except Exception:
+                _logger.exception(
+                    "[WA-HUMAN] No se pudo sincronizar handoff existente | "
+                    "handoff_id=%s",
+                    handoff.id,
+                )
+        else:
+            handoff = Handoff.create({
+                "session_id": session.id,
+                "partner_id": partner.id,
+                "company_id": (
+                    partner.whatsapp_active_company_id.id
+                    if partner.whatsapp_active_company_id
+                    else False
+                ),
+                "state": "open",
+                "taken_by_name": taken_by_name,
+                "reason": reason,
+                "handoff_type": "manual",
+            })
+
+            try:
+                handoff._activate_human_context()
+            except Exception:
+                _logger.exception(
+                    "[WA-HUMAN] No se pudo sincronizar nuevo handoff | "
+                    "handoff_id=%s",
+                    handoff.id,
+                )
+
+        # Compatibilidad defensiva si se despliega endpoint antes que
+        # whatsapp_handoff_PROFESIONAL.py.
+        if not partner.whatsapp_human_mode:
+            partner.whatsapp_enable_human_mode_api(
+                taken_by_name=taken_by_name
+            )
+
+        if session.state != "human":
+            session.action_set_human()
 
         suggested = {
             "template": "human_take",
@@ -521,7 +697,10 @@ class WhatsAppEndpointMixin:
                 "human_take",
                 partner=partner,
                 session=session,
-                fallback="Un asesor continuará con la atención.",
+                fallback=(
+                    "👨‍💼 Un integrante de nuestro equipo "
+                    "continuará con la atención por este chat."
+                ),
             ),
         }
 
@@ -530,9 +709,25 @@ class WhatsAppEndpointMixin:
             "found": True,
             "partner_id": partner.id,
             "session_id": session.id,
+            "handoff_id": (
+                handoff.id
+                if handoff
+                else False
+            ),
             "suggested": suggested,
-            "profile": partner.get_whatsapp_profile_payload(),
+            "profile": (
+                partner.get_whatsapp_profile_payload()
+            ),
         }
+
+        _logger.info(
+            "[WA-HUMAN] Atención tomada por API | "
+            "partner_id=%s session_id=%s handoff_id=%s agent=%s",
+            partner.id,
+            session.id,
+            handoff.id if handoff else False,
+            taken_by_name,
+        )
 
         self._safe_log_api(
             endpoint,
@@ -548,7 +743,13 @@ class WhatsAppEndpointMixin:
     # ==========================================================
     # Endpoint: liberar humano
     # ==========================================================
-    @http.route("/sat/whatsapp/human/release", type="json", auth="public", methods=["POST"], csrf=False)
+    @http.route(
+        "/sat/whatsapp/human/release",
+        type="json",
+        auth="public",
+        methods=["POST"],
+        csrf=False,
+    )
     def whatsapp_human_release(self, **kwargs):
         start_ts = time.time()
         endpoint = "/sat/whatsapp/human/release"
@@ -556,7 +757,11 @@ class WhatsAppEndpointMixin:
         identifiers = self._extract_identifiers(payload)
 
         if not self._check_token():
-            response = self._json_error("No autorizado", "UNAUTHORIZED", 401)
+            response = self._json_error(
+                "No autorizado",
+                "UNAUTHORIZED",
+                401,
+            )
             self._safe_log_api(
                 endpoint,
                 payload,
@@ -567,7 +772,11 @@ class WhatsAppEndpointMixin:
             )
             return response
 
-        released_by_name = payload.get("released_by_name") or payload.get("agent_name") or "API / n8n"
+        released_by_name = (
+            payload.get("released_by_name")
+            or payload.get("agent_name")
+            or "API / n8n"
+        )
 
         if not self._has_any_identifier(identifiers):
             response = self._json_error(
@@ -586,13 +795,18 @@ class WhatsAppEndpointMixin:
             )
             return response
 
-        partner = self._find_partner_by_identifiers(identifiers)
+        partner = self._find_partner_by_identifiers(
+            identifiers
+        )
 
         if not partner:
             response = {
                 "ok": True,
                 "found": False,
-                "message": "Contacto no encontrado. No se liberó modo humano.",
+                "message": (
+                    "Contacto no encontrado. "
+                    "No se liberó modo humano."
+                ),
             }
             self._safe_log_api(
                 endpoint,
@@ -604,31 +818,65 @@ class WhatsAppEndpointMixin:
             )
             return response
 
-        self._update_partner_identifiers(partner, identifiers)
+        self._update_partner_identifiers(
+            partner,
+            identifiers,
+        )
 
-        session = self._get_or_create_session(partner, identifiers)
+        session = self._get_or_create_session(
+            partner,
+            identifiers,
+        )
 
-        partner.whatsapp_release_human_mode_api()
-        session.action_reopen()
+        Handoff = request.env[
+            "whatsapp.handoff"
+        ].sudo()
 
-        handoff = request.env["whatsapp.handoff"].sudo().search([
+        handoffs = Handoff.search([
             ("partner_id", "=", partner.id),
             ("session_id", "=", session.id),
-            ("state", "in", ["pending", "assigned", "open", "escalated"]),
-        ], order="taken_at desc, id desc", limit=1)
+            ("state", "in", [
+                "pending",
+                "assigned",
+                "open",
+                "escalated",
+            ]),
+        ], order="taken_at desc, id desc")
 
-        if handoff:
+        handoff_ids = handoffs.ids
+
+        # Al liberar la conversación desde API, cerramos todas las
+        # derivaciones activas de esa sesión. Si se cerrara solo la última,
+        # otra derivación activa podría mantener el partner en modo humano.
+        for handoff in handoffs:
             try:
-                handoff.write({
-                    "state": "released",
-                    "released_by_name": released_by_name,
-                })
                 handoff.action_release()
+
+                if (
+                    released_by_name
+                    and handoff.released_by_name
+                    != released_by_name
+                ):
+                    handoff.write({
+                        "released_by_name": (
+                            released_by_name
+                        ),
+                    })
+
             except Exception:
                 _logger.exception(
-                    "[WA-HUMAN] No se pudo liberar handoff id=%s",
-                    handoff.id if handoff else False,
+                    "[WA-HUMAN] No se pudo liberar handoff | "
+                    "handoff_id=%s",
+                    handoff.id,
                 )
+
+        # Compatibilidad si no existía handoff o si se despliega este
+        # endpoint antes que la versión profesional del modelo.
+        if partner.whatsapp_human_mode:
+            partner.whatsapp_release_human_mode_api()
+
+        if session.state == "human":
+            session.action_reopen()
 
         suggested = {
             "template": "human_release",
@@ -636,7 +884,10 @@ class WhatsAppEndpointMixin:
                 "human_release",
                 partner=partner,
                 session=session,
-                fallback="El modo humano fue desactivado. El asistente virtual puede continuar.",
+                fallback=(
+                    "✅ La atención humana finalizó. "
+                    "El asistente virtual puede continuar."
+                ),
             ),
         }
 
@@ -645,10 +896,27 @@ class WhatsAppEndpointMixin:
             "found": True,
             "partner_id": partner.id,
             "session_id": session.id,
-            "handoff_id": handoff.id if handoff else False,
+            "handoff_id": (
+                handoff_ids[0]
+                if handoff_ids
+                else False
+            ),
+            "handoff_ids": handoff_ids,
+            "released_count": len(handoff_ids),
             "suggested": suggested,
-            "profile": partner.get_whatsapp_profile_payload(),
+            "profile": (
+                partner.get_whatsapp_profile_payload()
+            ),
         }
+
+        _logger.info(
+            "[WA-HUMAN] Atención liberada por API | "
+            "partner_id=%s session_id=%s handoffs=%s agent=%s",
+            partner.id,
+            session.id,
+            handoff_ids,
+            released_by_name,
+        )
 
         self._safe_log_api(
             endpoint,
@@ -666,7 +934,13 @@ class WhatsAppEndpointMixin:
     # ==========================================================
     # Endpoint: marcar outbox enviado
     # ==========================================================
-    @http.route("/sat/whatsapp/outbox/mark-sent", type="json", auth="public", methods=["POST"], csrf=False)
+    @http.route(
+        "/sat/whatsapp/outbox/mark-sent",
+        type="json",
+        auth="public",
+        methods=["POST"],
+        csrf=False,
+    )
     def whatsapp_outbox_mark_sent(self, **kwargs):
         start_ts = time.time()
         endpoint = "/sat/whatsapp/outbox/mark-sent"
@@ -674,7 +948,11 @@ class WhatsAppEndpointMixin:
         identifiers = self._extract_identifiers(payload)
 
         if not self._check_token():
-            response = self._json_error("No autorizado", "UNAUTHORIZED", 401)
+            response = self._json_error(
+                "No autorizado",
+                "UNAUTHORIZED",
+                401,
+            )
             self._safe_log_api(
                 endpoint,
                 payload,
@@ -685,7 +963,11 @@ class WhatsAppEndpointMixin:
             )
             return response
 
-        outbox_id = payload.get("outbox_id")
+        outbox_id = self._endpoint_positive_int(
+            payload.get("outbox_id"),
+            default=False,
+        )
+
         external_message_id = (
             payload.get("external_message_id")
             or payload.get("message_id")
@@ -694,7 +976,7 @@ class WhatsAppEndpointMixin:
 
         if not outbox_id:
             response = self._json_error(
-                "outbox_id requerido",
+                "outbox_id requerido o inválido",
                 "OUTBOX_ID_REQUIRED",
                 400,
             )
@@ -709,7 +991,12 @@ class WhatsAppEndpointMixin:
             )
             return response
 
-        outbox = request.env["whatsapp.outbox"].sudo().browse(int(outbox_id)).exists()
+        outbox = (
+            request.env["whatsapp.outbox"]
+            .sudo()
+            .browse(outbox_id)
+            .exists()
+        )
 
         if not outbox:
             response = self._json_error(
@@ -728,14 +1015,40 @@ class WhatsAppEndpointMixin:
             )
             return response
 
-        outbox.action_mark_sent(external_message_id=external_message_id)
+        previous_state = outbox.state
+
+        outbox.action_mark_sent(
+            external_message_id=(
+                external_message_id
+            )
+        )
 
         response = {
             "ok": True,
             "outbox_id": outbox.id,
+            "previous_state": previous_state,
             "state": outbox.state,
-            "external_message_id": outbox.external_message_id,
+            "external_message_id": (
+                outbox.external_message_id
+            ),
+            "idempotent": (
+                previous_state
+                in (
+                    "sent",
+                    "delivered",
+                    "read",
+                )
+            ),
         }
+
+        _logger.info(
+            "[WA-ENDPOINT] ACK sent | "
+            "outbox_id=%s previous=%s current=%s external_id=%s",
+            outbox.id,
+            previous_state,
+            outbox.state,
+            outbox.external_message_id or False,
+        )
 
         self._safe_log_api(
             endpoint,
@@ -751,7 +1064,13 @@ class WhatsAppEndpointMixin:
     # ==========================================================
     # Endpoint: marcar outbox fallido
     # ==========================================================
-    @http.route("/sat/whatsapp/outbox/mark-failed", type="json", auth="public", methods=["POST"], csrf=False)
+    @http.route(
+        "/sat/whatsapp/outbox/mark-failed",
+        type="json",
+        auth="public",
+        methods=["POST"],
+        csrf=False,
+    )
     def whatsapp_outbox_mark_failed(self, **kwargs):
         start_ts = time.time()
         endpoint = "/sat/whatsapp/outbox/mark-failed"
@@ -759,7 +1078,11 @@ class WhatsAppEndpointMixin:
         identifiers = self._extract_identifiers(payload)
 
         if not self._check_token():
-            response = self._json_error("No autorizado", "UNAUTHORIZED", 401)
+            response = self._json_error(
+                "No autorizado",
+                "UNAUTHORIZED",
+                401,
+            )
             self._safe_log_api(
                 endpoint,
                 payload,
@@ -770,11 +1093,14 @@ class WhatsAppEndpointMixin:
             )
             return response
 
-        outbox_id = payload.get("outbox_id")
+        outbox_id = self._endpoint_positive_int(
+            payload.get("outbox_id"),
+            default=False,
+        )
 
         if not outbox_id:
             response = self._json_error(
-                "outbox_id requerido",
+                "outbox_id requerido o inválido",
                 "OUTBOX_ID_REQUIRED",
                 400,
             )
@@ -789,7 +1115,12 @@ class WhatsAppEndpointMixin:
             )
             return response
 
-        outbox = request.env["whatsapp.outbox"].sudo().browse(int(outbox_id)).exists()
+        outbox = (
+            request.env["whatsapp.outbox"]
+            .sudo()
+            .browse(outbox_id)
+            .exists()
+        )
 
         if not outbox:
             response = self._json_error(
@@ -808,19 +1139,57 @@ class WhatsAppEndpointMixin:
             )
             return response
 
+        previous_state = outbox.state
+
+        schedule_retry = self._endpoint_bool(
+            payload.get("schedule_retry"),
+            default=True,
+        )
+
         outbox.action_mark_failed(
-            error_message=payload.get("error_message") or "Error reportado por n8n/Baileys",
-            error_code=payload.get("error_code") or False,
-            schedule_retry=payload.get("schedule_retry", True),
+            error_message=(
+                payload.get("error_message")
+                or "Error reportado por n8n/Baileys"
+            ),
+            error_code=(
+                payload.get("error_code")
+                or False
+            ),
+            schedule_retry=schedule_retry,
         )
 
         response = {
             "ok": True,
             "outbox_id": outbox.id,
+            "previous_state": previous_state,
             "state": outbox.state,
             "retry_count": outbox.retry_count,
+            "max_retries": outbox.max_retries,
             "next_retry_at": outbox.next_retry_at,
+            "schedule_retry": schedule_retry,
+            "ignored_terminal_state": (
+                previous_state
+                in (
+                    "sent",
+                    "delivered",
+                    "read",
+                    "cancelled",
+                )
+            ),
         }
+
+        _logger.info(
+            "[WA-ENDPOINT] ACK failed | "
+            "outbox_id=%s previous=%s current=%s retry=%s/%s "
+            "schedule_retry=%s error_code=%s",
+            outbox.id,
+            previous_state,
+            outbox.state,
+            outbox.retry_count,
+            outbox.max_retries,
+            schedule_retry,
+            payload.get("error_code") or False,
+        )
 
         self._safe_log_api(
             endpoint,

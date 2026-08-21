@@ -9,6 +9,19 @@ _logger = logging.getLogger(__name__)
 
 
 class WhatsAppIntentMixin:
+    """
+    Detección y ejecución de intenciones para WhatsApp.
+
+    Principios de esta versión:
+    - Gemini/n8n interpreta, Odoo valida y ejecuta.
+    - No se modifica el umbral de IA ni el mapeo de intenciones.
+    - La solicitud de atención humana siempre requiere confirmación.
+    - Los mensajes se renderizan desde whatsapp.template cuando existe
+      una plantilla profesional disponible.
+    - La navegación principal se mantiene consistente con MENU,
+      ATRÁS y CANCELAR.
+    """
+
     # ==========================================================
     # Detectar intención
     # ==========================================================
@@ -35,11 +48,15 @@ class WhatsAppIntentMixin:
         after_hours = not bool(business_status.get("is_open"))
 
         _logger.info(
-            "[WA-INTENT] INICIO detectar intención | partner_id=%s session_id=%s applies_to=%s flow=%s text=%s",
+            "[WA-INTENT] INICIO detectar intención | "
+            "partner_id=%s session_id=%s applies_to=%s flow=%s "
+            "after_hours=%s business_reason=%s text=%s",
             partner.id if partner else False,
             session.id if session else False,
             applies_to,
             current_flow,
+            after_hours,
+            business_status.get("reason") or False,
             text,
         )
 
@@ -329,6 +346,88 @@ class WhatsAppIntentMixin:
         return result, applies_to
 
     # ==========================================================
+    # Helpers de presentación / disponibilidad
+    # ==========================================================
+    def _intent_business_status_safe(self, business_status=None):
+        if isinstance(business_status, dict) and business_status:
+            return business_status
+
+        try:
+            status = self._compute_business_status()
+            return status if isinstance(status, dict) else {}
+        except Exception:
+            _logger.exception(
+                "[WA-INTENT] No se pudo evaluar estado horario"
+            )
+            return {}
+
+    def _intent_realtime_unavailable(self, business_status=None):
+        status = self._intent_business_status_safe(
+            business_status
+        )
+        return not bool(status.get("is_open"))
+
+    def _render_human_confirmation(
+        self,
+        partner,
+        session,
+    ):
+        return self._render_template(
+            "human_confirmation",
+            partner=partner,
+            session=session,
+            fallback=(
+                "👨‍💼 *Atención con un asesor*\n\n"
+                "¿Deseas que tu conversación sea derivada a uno "
+                "de nuestros asesores?\n\n"
+                "Responde:\n"
+                "*SI* — solicitar atención humana\n"
+                "*NO* — continuar con el asistente virtual\n\n"
+                "🏠 También puedes escribir *MENU*."
+            ),
+        )
+
+    def _render_first_clarification(
+        self,
+        partner,
+        session,
+    ):
+        return self._render_template(
+            "clarification_first",
+            partner=partner,
+            session=session,
+            fallback=(
+                "🤔 *Necesito un poco más de información*\n\n"
+                "No pude identificar con suficiente seguridad lo que "
+                "necesitas. Describe brevemente tu consulta o selecciona "
+                "una opción:\n\n"
+                "*1* 🖨️ Solicitar tóner\n"
+                "*2* 🛠️ Registrar servicio técnico\n"
+                "*3* 💻 Asistencia remota\n"
+                "*4* 👨‍💼 Hablar con un técnico\n"
+                "*5* 🏢 Cambiar / ver empresa activa\n\n"
+                "Escribe *MENU* para volver al menú principal."
+            ),
+        )
+
+    def _render_human_offer_after_clarification(
+        self,
+        partner,
+        session,
+    ):
+        return self._render_template(
+            "clarification_human_offer",
+            partner=partner,
+            session=session,
+            fallback=(
+                "🤝 *Podemos derivar tu consulta*\n\n"
+                "Todavía no pude identificar con claridad tu solicitud.\n\n"
+                "¿Deseas que un asesor continúe la atención?\n\n"
+                "Responde *SI* o *NO*."
+            ),
+        )
+
+    # ==========================================================
     # Ejecutar intención
     # ==========================================================
     def _execute_intent_action(
@@ -406,7 +505,11 @@ class WhatsAppIntentMixin:
                 template or "cancel_flow_reply",
                 partner=partner,
                 session=session,
-                fallback="✅ Se canceló la operación actual. Puedes escribir MENÚ para ver las opciones disponibles.",
+                fallback=(
+                    "✅ *Operación cancelada*\n\n"
+                    "La gestión actual fue cancelada correctamente.\n\n"
+                    "Escribe *MENU* para volver al menú principal."
+                ),
             )
 
             return {
@@ -463,9 +566,17 @@ class WhatsAppIntentMixin:
 
             if not business_message:
                 if business_status.get("is_open"):
-                    business_message = "Estamos en horario de atención."
+                    business_message = (
+                        "Nuestro equipo se encuentra disponible "
+                        "dentro del horario de atención."
+                    )
                 else:
-                    business_message = "En este momento estamos fuera de horario de atención."
+                    business_message = (
+                        "En este momento no contamos con atención "
+                        "en tiempo real. Las solicitudes de tóner y "
+                        "servicio técnico pueden continuar registrándose "
+                        "por este canal."
+                    )
 
             message = self._render_template(
                 template or "business_hours_query",
@@ -518,7 +629,7 @@ class WhatsAppIntentMixin:
                     partner=partner,
                     session=session,
                     company=company,
-                    fallback=self._build_main_menu_text(partner=partner),
+                    fallback=self._build_main_menu_text(partner=partner, session=session),
                 )
             else:
                 message = self._get_greeting_message(
@@ -550,7 +661,7 @@ class WhatsAppIntentMixin:
                 partner=partner,
                 session=session,
                 company=company,
-                fallback=self._build_main_menu_text(partner=partner),
+                fallback=self._build_main_menu_text(partner=partner, session=session),
             )
 
             return {
@@ -573,6 +684,63 @@ class WhatsAppIntentMixin:
                 or result.get("reason")
                 or "Cliente solicita atención humana."
             )
+
+            # Protección defensiva adicional:
+            # process_mixin ya bloquea humano fuera de horario antes de
+            # ejecutar esta acción. Esto evita que una llamada directa a
+            # este método pueda saltarse esa política.
+            if self._intent_realtime_unavailable(
+                business_status
+            ):
+                message = self._render_template(
+                    "human_unavailable",
+                    partner=partner,
+                    session=session,
+                    extra={
+                        "business_reason": (
+                            business_status.get("reason_label")
+                            or business_status.get("reason")
+                            or "Fuera de horario"
+                        ),
+                        "business_message": (
+                            business_status.get("message")
+                            or ""
+                        ),
+                        "display_hours": (
+                            business_status.get("display_hours")
+                            or ""
+                        ),
+                    },
+                    fallback=(
+                        "👨‍💼 *Atención directa con un técnico*\n\n"
+                        "En este momento la atención directa con nuestro "
+                        "equipo técnico no se encuentra disponible.\n\n"
+                        "Puedes registrar una solicitud de tóner o "
+                        "servicio técnico para que sea atendida al "
+                        "retomar el horario correspondiente.\n\n"
+                        "Escribe *MENU* para volver al menú principal."
+                    ),
+                )
+
+                _logger.info(
+                    "[WA-HUMAN] Solicitud humana bloqueada por horario | "
+                    "partner_id=%s session_id=%s reason=%s",
+                    partner.id if partner else False,
+                    session.id if session else False,
+                    business_status.get("reason") or False,
+                )
+
+                return {
+                    "content": message,
+                    "intent": "human",
+                    "action": "human_unavailable",
+                    "template": "human_unavailable",
+                    "create_outbox": True,
+                    "stop": True,
+                    "stop_bot": False,
+                    "pending_human_confirmation": False,
+                    "human_mode": False,
+                }
 
             if session:
                 try:
@@ -603,18 +771,16 @@ class WhatsAppIntentMixin:
                         session.id if session else False,
                     )
 
-            message = (
-                "👨‍💼 ¿Deseas que te atienda un asesor humano de "
-                "*ANDES SOLUTION COPIERS*?\n\n"
-                "Responde *SÍ* para derivarte o *NO* para continuar "
-                "con el asistente virtual."
+            message = self._render_human_confirmation(
+                partner=partner,
+                session=session,
             )
 
             return {
                 "content": message,
                 "intent": "human",
                 "action": "confirm_handoff",
-                "template": False,
+                "template": "human_confirmation",
                 "create_outbox": True,
                 "stop": True,
                 "stop_bot": False,
@@ -635,7 +801,7 @@ class WhatsAppIntentMixin:
                     if partner and partner.whatsapp_active_company_id
                     else False
                 ),
-                fallback=self._build_main_menu_text(partner),
+                fallback=self._build_main_menu_text(partner=partner, session=session),
             )
 
             return {
@@ -664,7 +830,10 @@ class WhatsAppIntentMixin:
                 template or "ask_dni",
                 partner=partner,
                 session=session,
-                fallback="Para poder ayudarte, por favor envíame tu DNI de 8 dígitos.",
+                fallback=(
+                    "👋 Para identificarte y continuar con la atención, "
+                    "envíanos tu *DNI de 8 dígitos*."
+                ),
             )
 
             return {
@@ -694,7 +863,10 @@ class WhatsAppIntentMixin:
                 template or "ask_ruc",
                 partner=partner,
                 session=session,
-                fallback="Ahora envíame el RUC de tu empresa para completar el registro.",
+                fallback=(
+                    "Ahora envíanos el *RUC de 11 dígitos* de la empresa "
+                    "con la que deseas realizar la atención."
+                ),
             )
 
             return {
@@ -814,7 +986,12 @@ class WhatsAppIntentMixin:
                 extra={
                     "service_link": service_link,
                 },
-                fallback="Puedes registrar tu servicio técnico aquí:\n%s" % service_link,
+                fallback=(
+                    "🛠️ *Registro de servicio técnico*\n\n"
+                    "Puedes registrar tu solicitud mediante el siguiente "
+                    "enlace:\n\n%s\n\n"
+                    "Escribe *MENU* para volver al menú principal."
+                ) % service_link,
             )
 
             return {
@@ -834,7 +1011,11 @@ class WhatsAppIntentMixin:
                 template or "thanks_reply",
                 partner=partner,
                 session=session,
-                fallback="Con gusto. Estamos para ayudarte.",
+                fallback=(
+                    "Con mucho gusto. 🙌\n\n"
+                    "Estamos para ayudarte. Si necesitas realizar otra "
+                    "gestión, escribe *MENU*."
+                ),
             )
 
             return {
@@ -854,7 +1035,11 @@ class WhatsAppIntentMixin:
                 template or "goodbye_reply",
                 partner=partner,
                 session=session,
-                fallback="Gracias por comunicarte con ANDES SOLUTION COPIERS. Que tengas un excelente día.",
+                fallback=(
+                    "Gracias por comunicarte con *ANDES SOLUTION COPIERS*. 👋\n\n"
+                    "Cuando necesites una nueva gestión, puedes escribirnos "
+                    "nuevamente por este mismo medio."
+                ),
             )
 
             return {
@@ -915,21 +1100,16 @@ class WhatsAppIntentMixin:
                 message_text[:160] if message_text else "",
             )
 
-            message = (
-                "No pude identificar con seguridad tu consulta.\n\n"
-                "Puedes indicarme qué necesitas:\n"
-                "*1* 🖨️ Solicitar tóner\n"
-                "*2* 🛠️ Registrar servicio técnico\n"
-                "*3* 💻 Asistencia remota\n"
-                "*4* 👨‍💼 Hablar con un técnico\n\n"
-                "También puedes escribir nuevamente tu consulta con un poco más de detalle."
+            message = self._render_first_clarification(
+                partner=partner,
+                session=session,
             )
 
             return {
                 "content": message,
                 "intent": intent or "unknown",
                 "action": "clarify",
-                "template": False,
+                "template": "clarification_first",
                 "create_outbox": True,
                 "stop": True,
                 "stop_bot": False,
@@ -938,6 +1118,65 @@ class WhatsAppIntentMixin:
             }
 
         reason = "La consulta no pudo identificarse después de un intento de aclaración."
+
+        if self._intent_realtime_unavailable(
+            business_status
+        ):
+            if session:
+                try:
+                    context["unknown_attempts"] = 1
+                    context["last_unknown_message"] = (
+                        message_text
+                        or False
+                    )
+                    context.pop(
+                        "pending_human_confirmation",
+                        None,
+                    )
+                    context.pop(
+                        "human_confirmation_message",
+                        None,
+                    )
+                    context.pop(
+                        "human_confirmation_reason",
+                        None,
+                    )
+                    context.pop(
+                        "human_confirmation_intent",
+                        None,
+                    )
+                    session.set_context(context)
+                except Exception:
+                    _logger.exception(
+                        "[WA-HUMAN] Error evitando oferta humana "
+                        "fuera de horario | session_id=%s",
+                        session.id if session else False,
+                    )
+
+            _logger.info(
+                "[WA-HUMAN] Segundo unknown sin oferta humana "
+                "por horario | partner_id=%s session_id=%s reason=%s",
+                partner.id if partner else False,
+                session.id if session else False,
+                business_status.get("reason") or False,
+            )
+
+            message = self._render_first_clarification(
+                partner=partner,
+                session=session,
+            )
+
+            return {
+                "content": message,
+                "intent": intent or "unknown",
+                "action": "clarify",
+                "template": "clarification_first",
+                "create_outbox": True,
+                "stop": True,
+                "stop_bot": False,
+                "pending_human_confirmation": False,
+                "human_mode": False,
+            }
 
         if session:
             try:
@@ -961,18 +1200,16 @@ class WhatsAppIntentMixin:
             unknown_attempts,
         )
 
-        message = (
-            "Todavía no pude identificar con seguridad tu consulta.\n\n"
-            "¿Deseas que te atienda un asesor humano?\n"
-            "Responde *SÍ* para derivarte o *NO* para continuar "
-            "con el asistente virtual."
+        message = self._render_human_offer_after_clarification(
+            partner=partner,
+            session=session,
         )
 
         return {
             "content": message,
             "intent": intent or "unknown",
             "action": "confirm_handoff",
-            "template": False,
+            "template": "clarification_human_offer",
             "create_outbox": True,
             "stop": True,
             "stop_bot": False,
@@ -984,47 +1221,67 @@ class WhatsAppIntentMixin:
     # Menú principal
     # ==========================================================
     def _build_main_menu_text(self, partner=False, session=False):
-        # ``session`` se acepta por compatibilidad con otros mixins.
-        # El menú no depende de la sesión para construir su contenido,
-        # pero algunos flujos (por ejemplo selección de empresa) la pasan.
+        """
+        Construye el menú principal de respaldo.
+
+        La plantilla main_menu_technical continúa siendo la opción preferida.
+        Este método garantiza una respuesta profesional aun cuando la
+        plantilla no esté disponible.
+        """
         _logger.debug(
-            "[WA-MENU] Construyendo menú principal | partner_id=%s session_id=%s",
+            "[WA-MENU] Construyendo menú principal | "
+            "partner_id=%s session_id=%s",
             partner.id if partner else False,
             session.id if session else False,
         )
 
+        partner_name = ""
         company_name = "Sin empresa activa"
 
         try:
-            if partner and partner.whatsapp_active_company_id:
-                company_name = partner.whatsapp_active_company_id.display_name
+            if partner:
+                partner_name = (
+                    partner.name
+                    or ""
+                )
+                if partner.whatsapp_active_company_id:
+                    company_name = (
+                        partner.whatsapp_active_company_id.display_name
+                        or company_name
+                    )
         except Exception:
             pass
 
-        show_company_option = False
-        try:
-            if partner and len(partner.whatsapp_company_ids) > 1:
-                show_company_option = True
-        except Exception:
-            show_company_option = False
+        greeting = (
+            "Hola, %s. 👋"
+            % partner_name
+            if partner_name
+            else "Hola. 👋"
+        )
 
         lines = [
-            "Hola 👋 Soy el asistente virtual de *ANDES SOLUTION COPIERS*.",
+            greeting,
             "",
-            "Empresa activa: 🏢 *%s*" % company_name,
+            "Soy el asistente virtual de *ANDES SOLUTION COPIERS*.",
             "",
-            "¿En qué podemos ayudarte hoy?",
+            "🏢 Empresa activa: *%s*" % company_name,
+            "",
+            "¿En qué podemos ayudarte?",
             "",
             "*1* 🖨️ Solicitar tóner",
             "*2* 🛠️ Registrar servicio técnico",
             "*3* 💻 Asistencia remota",
             "*4* 👨‍💼 Hablar con un técnico",
+            "*5* 🏢 Cambiar / ver empresa activa",
+            "",
+            "Responde con el *número* de una opción.",
+            "",
+            "Durante cualquier proceso puedes escribir:",
+            "↩️ *ATRÁS* para regresar al paso anterior",
+            "🏠 *MENU* para volver al menú principal",
+            "❌ *CANCELAR* para cancelar la operación actual",
+            "",
+            "También puedes escribir directamente tu consulta.",
         ]
-
-        if show_company_option:
-            lines.append("*5* 🏢 Cambiar / ver empresa activa")
-
-        lines.append("")
-        lines.append("También puedes escribir directamente tu consulta.")
 
         return "\n".join(lines)

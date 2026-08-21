@@ -12,6 +12,117 @@ _logger = logging.getLogger(__name__)
 
 
 class WhatsAppMessageMixin:
+    """
+    Sesiones, mensajes, media y outbox del controlador WhatsApp.
+
+    El timeout general y el timeout de flujo se mantienen separados.
+    Los mensajes con external_message_id se registran de forma idempotente
+    para soportar reintentos de n8n/Baileys sin duplicar persistencia.
+    """
+    """
+    Gestión de sesiones, mensajes, media y outbox de WhatsApp.
+
+    Principios:
+    - una conversación con flujo activo usa su propio timeout interno;
+    - una conversación sin flujo activo conserva el timeout general
+      reportado por res.partner;
+    - la guardia reciente de 120 segundos se mantiene únicamente como
+      protección contra carreras entre /profile y /process;
+    - no se amplía artificialmente esa guardia para ocultar errores del
+      método partner._whatsapp_is_session_expired();
+    - todos los mensajes y salidas quedan trazables mediante logs.
+    """
+
+    # ==========================================================
+    # Diagnóstico de sesión
+    # ==========================================================
+    def _session_expiration_diagnostics(
+        self,
+        partner,
+        active_session=False,
+    ):
+        """
+        Reúne información de diagnóstico sin alterar la decisión de timeout.
+
+        El objetivo es poder identificar qué dato hace que
+        partner._whatsapp_is_session_expired() devuelva True.
+
+        No se asume ningún nombre de campo como obligatorio: solo se
+        incluyen los que realmente existen.
+        """
+        diagnostics = {
+            "partner_id": partner.id if partner else False,
+            "session_id": active_session.id if active_session else False,
+        }
+
+        if partner:
+            for field_name in [
+                "whatsapp_last_message_at",
+                "whatsapp_last_interaction_at",
+                "whatsapp_session_started_at",
+                "whatsapp_session_expires_at",
+                "whatsapp_last_user_message_at",
+                "whatsapp_last_bot_message_at",
+                "whatsapp_human_mode_since",
+                "whatsapp_human_mode",
+                "whatsapp_registration_state",
+            ]:
+                if field_name in partner._fields:
+                    try:
+                        diagnostics[field_name] = partner[field_name]
+                    except Exception:
+                        diagnostics[field_name] = "<error>"
+
+        if active_session:
+            for field_name in [
+                "state",
+                "current_flow",
+                "conversation_state",
+                "last_message_at",
+                "started_at",
+                "expires_at",
+                "conversation_state_expires_at",
+                "last_user_message_at",
+                "last_bot_message_at",
+                "closed_at",
+            ]:
+                if field_name in active_session._fields:
+                    try:
+                        diagnostics["session_%s" % field_name] = (
+                            active_session[field_name]
+                        )
+                    except Exception:
+                        diagnostics["session_%s" % field_name] = "<error>"
+
+        return diagnostics
+
+    def _log_session_expiration_diagnostics(
+        self,
+        partner,
+        active_session=False,
+        partner_reports_expired=False,
+        effective_expired=False,
+        force_new_session=False,
+        guard_seconds=False,
+        session_age_seconds=False,
+    ):
+        diagnostics = self._session_expiration_diagnostics(
+            partner=partner,
+            active_session=active_session,
+        )
+
+        _logger.info(
+            "[WA-SESSION-DIAG] Timeout | "
+            "partner_reports_expired=%s effective_expired=%s "
+            "force_new=%s guard_seconds=%s age_seconds=%s data=%s",
+            bool(partner_reports_expired),
+            bool(effective_expired),
+            bool(force_new_session),
+            guard_seconds,
+            session_age_seconds,
+            diagnostics,
+        )
+
     # ==========================================================
     # Sesiones / mensajes / media / outbox
     # ==========================================================
@@ -30,7 +141,10 @@ class WhatsAppMessageMixin:
         ], order="last_message_at desc, id desc", limit=1)
 
         _logger.info(
-            "[WA-SESSION] Resolviendo sesión | partner_id=%s active_session_id=%s state=%s flow=%s step=%s last_message_at=%s force_new=%s intent=%s human_mode=%s",
+            "[WA-SESSION] Resolviendo sesión | "
+            "partner_id=%s active_session_id=%s state=%s "
+            "flow=%s step=%s last_message_at=%s "
+            "force_new=%s intent=%s human_mode=%s",
             partner.id,
             active_session.id if active_session else False,
             active_session.state if active_session else False,
@@ -169,7 +283,10 @@ class WhatsAppMessageMixin:
             is_expired = False
 
         _logger.info(
-            "[WA-SESSION] Resultado timeout general | partner_id=%s session_id=%s partner_reports_expired=%s effective_expired=%s recent=%s age_seconds=%s guard_seconds=%s force_new=%s check_error=%s",
+            "[WA-SESSION] Resultado timeout general | "
+            "partner_id=%s session_id=%s partner_reports_expired=%s "
+            "effective_expired=%s recent=%s age_seconds=%s "
+            "guard_seconds=%s force_new=%s check_error=%s",
             partner.id,
             active_session.id if active_session else False,
             partner_reports_expired,
@@ -179,6 +296,16 @@ class WhatsAppMessageMixin:
             guard_seconds,
             bool(force_new_session),
             expiration_check_error or False,
+        )
+
+        self._log_session_expiration_diagnostics(
+            partner=partner,
+            active_session=active_session,
+            partner_reports_expired=partner_reports_expired,
+            effective_expired=is_expired,
+            force_new_session=force_new_session,
+            guard_seconds=guard_seconds,
+            session_age_seconds=session_age_seconds,
         )
 
         if force_new_session or is_expired:
@@ -218,7 +345,8 @@ class WhatsAppMessageMixin:
             active_session = Session.create(create_vals)
 
             _logger.info(
-                "[WA-SESSION] Nueva sesión resuelta | partner_id=%s session_id=%s state=%s phone=%s jid=%s lid=%s",
+                "[WA-SESSION] Nueva sesión creada | "
+                "partner_id=%s session_id=%s state=%s phone=%s jid=%s lid=%s",
                 partner.id,
                 active_session.id,
                 active_session.state,
@@ -296,7 +424,7 @@ class WhatsAppMessageMixin:
 
         company = partner.whatsapp_active_company_id if partner and partner.whatsapp_active_company_id else False
 
-        return request.env["whatsapp.media"].sudo().create({
+        media = request.env["whatsapp.media"].sudo().create({
             "name": filename or caption or "Media WhatsApp",
             "message_id": message.id if message else False,
             "session_id": session.id if session else False,
@@ -311,6 +439,20 @@ class WhatsAppMessageMixin:
             "raw_payload": payload,
         })
 
+        _logger.info(
+            "[WA-MEDIA] Media registrada | "
+            "media_id=%s session_id=%s partner_id=%s type=%s "
+            "external_media_id=%s has_url=%s",
+            media.id if media else False,
+            session.id if session else False,
+            partner.id if partner else False,
+            media_type,
+            external_media_id or False,
+            bool(media_url),
+        )
+
+        return media
+
     def _record_whatsapp_message(
         self,
         session,
@@ -324,15 +466,67 @@ class WhatsAppMessageMixin:
         payload=False,
         external_message_id=False,
     ):
+        """
+        Registra un mensaje de forma idempotente cuando existe
+        ``external_message_id``.
+
+        IMPORTANTE:
+        - un duplicado NO vuelve a crear media;
+        - un duplicado NO vuelve a ejecutar session.touch();
+        - el recordset retornado lleva context ``wa_duplicate_message=True``
+          para que /process pueda detener posteriormente una repetición antes
+          de ejecutar lógica de negocio u outbox.
+
+        Para mensajes sin external_message_id se conserva exactamente el
+        comportamiento de creación normal.
+        """
         Message = request.env["whatsapp.message"].sudo()
 
         if not session:
             return Message
 
         payload = payload or {}
-        company = partner.whatsapp_active_company_id if partner and partner.whatsapp_active_company_id else False
+        identifiers = identifiers or {}
+        company = (
+            partner.whatsapp_active_company_id
+            if partner and partner.whatsapp_active_company_id
+            else False
+        )
 
-        message = Message.create({
+        external_message_id = (
+            str(external_message_id).strip()
+            if external_message_id
+            else False
+        )
+
+        # ------------------------------------------------------
+        # Idempotencia previa
+        # ------------------------------------------------------
+        if external_message_id:
+            existing = Message.find_duplicate(
+                external_message_id=external_message_id,
+                session_id=session.id,
+            )
+
+            if existing:
+                _logger.warning(
+                    "[WA-MESSAGE] Mensaje entrante/saliente duplicado | "
+                    "external_id=%s message_id=%s session_id=%s "
+                    "direction=%s role=%s status=%s",
+                    external_message_id,
+                    existing.id,
+                    session.id,
+                    direction,
+                    role,
+                    getattr(existing, "processing_status", False),
+                )
+
+                return existing.with_context(
+                    wa_duplicate_message=True,
+                    wa_duplicate_external_message_id=external_message_id,
+                )
+
+        vals = {
             "session_id": session.id,
             "partner_id": partner.id if partner else False,
             "company_id": company.id if company else False,
@@ -340,19 +534,69 @@ class WhatsAppMessageMixin:
             "direction": direction,
             "message_type": message_type or "text",
             "content": content or "",
-            "phone": self._resolve_identifier_phone(identifiers, partner=partner) or False,
-            "jid": self._resolve_identifier_jid(identifiers, partner=partner) or False,
-            "lid": self._resolve_identifier_lid(identifiers, partner=partner) or False,
-            "raw_jid": self._resolve_identifier_raw_jid(identifiers, partner=partner) or False,
+            "phone": self._resolve_identifier_phone(
+                identifiers,
+                partner=partner,
+            ) or False,
+            "jid": self._resolve_identifier_jid(
+                identifiers,
+                partner=partner,
+            ) or False,
+            "lid": self._resolve_identifier_lid(
+                identifiers,
+                partner=partner,
+            ) or False,
+            "raw_jid": self._resolve_identifier_raw_jid(
+                identifiers,
+                partner=partner,
+            ) or False,
             "external_message_id": external_message_id or False,
             "intent": intent or False,
-            "media_url": payload.get("media_url") or payload.get("url") or False,
-            "media_mimetype": payload.get("media_mimetype") or payload.get("mimetype") or False,
+            "media_url": (
+                payload.get("media_url")
+                or payload.get("url")
+                or False
+            ),
+            "media_mimetype": (
+                payload.get("media_mimetype")
+                or payload.get("mimetype")
+                or False
+            ),
             "current_flow": session.current_flow if session else "none",
             "flow_step": session.conversation_state if session else False,
             "raw_payload": payload,
             "message_date": fields.Datetime.now(),
-        })
+        }
+
+        # Usar API idempotente del modelo cuando esté disponible.
+        # El fallback permite un despliegue escalonado sin romper el bot.
+        if hasattr(Message, "create_idempotent"):
+            message = Message.create_idempotent(vals)
+        else:
+            message = Message.create(vals)
+
+        # Protección adicional: si create_idempotent devolviera un existente
+        # por una carrera entre la búsqueda anterior y create(), no crear media
+        # ni tocar nuevamente la sesión.
+        if (
+            external_message_id
+            and message
+            and message.external_message_id == external_message_id
+            and message.message_date
+            and message.id
+        ):
+            # Solo consideramos carrera si el registro retornado no corresponde
+            # aproximadamente a esta creación. El contexto del modelo no indica
+            # por sí mismo si creó o reutilizó, así que verificamos si ya tenía
+            # media asociada o un payload distinto únicamente como diagnóstico.
+            duplicate_after_create = bool(
+                message.env.context.get("wa_duplicate_message")
+            )
+        else:
+            duplicate_after_create = False
+
+        if duplicate_after_create:
+            return message
 
         self._create_media_from_payload(
             session=session,
@@ -361,18 +605,43 @@ class WhatsAppMessageMixin:
             payload=payload,
         )
 
-        if direction == "in":
-            session.touch(intent=intent, user_message=content)
-        else:
-            session.touch(intent=intent, bot_message=content)
+        _logger.info(
+            "[WA-MESSAGE] Mensaje registrado | "
+            "message_id=%s session_id=%s partner_id=%s "
+            "direction=%s role=%s type=%s intent=%s flow=%s step=%s "
+            "external_id=%s",
+            message.id if message else False,
+            session.id if session else False,
+            partner.id if partner else False,
+            direction,
+            role,
+            message_type or "text",
+            intent or False,
+            session.current_flow if session else "none",
+            session.conversation_state if session else False,
+            external_message_id or False,
+        )
 
-        return message
+        if direction == "in":
+            session.touch(
+                intent=intent,
+                user_message=content,
+            )
+        else:
+            session.touch(
+                intent=intent,
+                bot_message=content,
+            )
+
+        return message.with_context(
+            wa_duplicate_message=False,
+        )
 
     def _create_outbox(self, session, partner, identifiers, content, message_type="text", media=False, payload=False):
         Outbox = request.env["whatsapp.outbox"].sudo()
         company = partner.whatsapp_active_company_id if partner and partner.whatsapp_active_company_id else False
 
-        return Outbox.create({
+        outbox = Outbox.create({
             "session_id": session.id if session else False,
             "partner_id": partner.id if partner else False,
             "company_id": company.id if company else False,
@@ -388,6 +657,20 @@ class WhatsAppMessageMixin:
             "raw_payload": payload or {},
         })
 
+        _logger.info(
+            "[WA-OUTBOX] Salida encolada | "
+            "outbox_id=%s session_id=%s partner_id=%s "
+            "type=%s flow=%s step=%s",
+            outbox.id if outbox else False,
+            session.id if session else False,
+            partner.id if partner else False,
+            message_type or "text",
+            session.current_flow if session else "none",
+            session.conversation_state if session else False,
+        )
+
+        return outbox
+
     def _emit_bot_reply(
         self,
         session,
@@ -402,6 +685,9 @@ class WhatsAppMessageMixin:
         create_outbox=True,
     ):
         payload = payload or {}
+
+        if content is False or content is None:
+            content = ""
 
         if template:
             payload = dict(payload)
@@ -433,11 +719,26 @@ class WhatsAppMessageMixin:
             if outbox and message:
                 outbox.write({"message_id": message.id})
 
-        return {
+        result = {
             "message_id": message.id if message else False,
             "outbox_id": outbox.id if outbox else False,
             "message": content,
         }
+
+        _logger.info(
+            "[WA-EMIT] Respuesta del bot registrada | "
+            "session_id=%s partner_id=%s message_id=%s outbox_id=%s "
+            "intent=%s template=%s create_outbox=%s",
+            session.id if session else False,
+            partner.id if partner else False,
+            result.get("message_id"),
+            result.get("outbox_id"),
+            intent or False,
+            template or False,
+            bool(create_outbox),
+        )
+
+        return result
 
     # ==========================================================
     # Payload helpers

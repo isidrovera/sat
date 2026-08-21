@@ -15,6 +15,20 @@ _logger = logging.getLogger(__name__)
 
 
 class WhatsAppContextMixin:
+    """
+    Contexto conversacional compartido para WhatsApp.
+
+    Responsabilidades:
+    - renderizar plantillas;
+    - construir mensajes sugeridos;
+    - seleccionar saludo;
+    - calcular horario/calendario;
+    - clasificar el contexto funcional del contacto.
+
+    Principio importante:
+    el estado del contacto y el estado del horario son conceptos distintos.
+    """
+
     # ==========================================================
     # Templates / textos
     # ==========================================================
@@ -27,6 +41,15 @@ class WhatsAppContextMixin:
         extra=None,
         fallback=False,
     ):
+        if not template_name:
+            _logger.warning(
+                "[WA-TEMPLATE] Render solicitado sin nombre | "
+                "partner_id=%s session_id=%s",
+                partner.id if partner else False,
+                session.id if session else False,
+            )
+            return fallback
+
         try:
             text = request.env["whatsapp.template"].sudo().get_rendered(
                 name=template_name,
@@ -35,11 +58,33 @@ class WhatsAppContextMixin:
                 company=company if company else False,
                 extra=extra or {},
             )
-            return text or fallback
+
+            if text:
+                _logger.debug(
+                    "[WA-TEMPLATE] Plantilla renderizada | "
+                    "template=%s partner_id=%s session_id=%s",
+                    template_name,
+                    partner.id if partner else False,
+                    session.id if session else False,
+                )
+                return text
+
+            _logger.warning(
+                "[WA-TEMPLATE] Plantilla vacía/no disponible; usando fallback | "
+                "template=%s partner_id=%s session_id=%s",
+                template_name,
+                partner.id if partner else False,
+                session.id if session else False,
+            )
+            return fallback
+
         except Exception:
             _logger.exception(
-                "[SAT-WHATSAPP-API] Error renderizando template %s",
+                "[WA-TEMPLATE] Error renderizando plantilla | "
+                "template=%s partner_id=%s session_id=%s",
                 template_name,
+                partner.id if partner else False,
+                session.id if session else False,
             )
             return fallback
 
@@ -82,20 +127,42 @@ class WhatsAppContextMixin:
         )
 
         fallback_map = {
-            "ask_dni": "Para poder ayudarte, por favor envíame tu DNI de 8 dígitos.",
-            "ask_ruc": "Gracias. Ahora envíame el RUC de tu empresa para completar el registro.",
-            "blocked_contact": "Tu número no está habilitado para atención por este canal.",
-            "human_mode_active": "Tu conversación está siendo atendida por un asesor.",
-            "after_hours": business_status.get("message") if business_status else "Estamos fuera de horario de atención.",
-            "in_break": business_status.get("message") if business_status else "Estamos en horario de refrigerio.",
-            "select_company": "Tienes más de una empresa asociada. Indica con cuál deseas continuar.",
+            "ask_dni": (
+                "👋 Para identificarte y continuar con la atención, "
+                "envíanos tu *DNI de 8 dígitos*."
+            ),
+            "ask_ruc": (
+                "🏢 Ahora envíanos el *RUC de 11 dígitos* de la empresa "
+                "con la que deseas realizar la atención."
+            ),
+            "blocked_contact": (
+                "⚠️ Este número no se encuentra habilitado actualmente "
+                "para recibir atención mediante este canal."
+            ),
+            "human_mode_active": (
+                "👨‍💼 Tu conversación está siendo atendida por un integrante "
+                "de nuestro equipo. La atención continuará por este mismo chat."
+            ),
+            "after_hours": (
+                business_status.get("message")
+                if business_status
+                else "En este momento nos encontramos fuera del horario de atención."
+            ),
+            "in_break": (
+                business_status.get("message")
+                if business_status
+                else "En este momento nuestro equipo se encuentra en horario de refrigerio."
+            ),
+            "select_company": (
+                "🏢 Selecciona la empresa con la que deseas realizar esta atención."
+            ),
             "greeting_registered": "¿En qué podemos ayudarte?",
         }
 
         if business_status and business_status.get("template_name"):
             fallback_map[template_name] = business_status.get("message") or fallback_map.get(
                 template_name,
-                "En este momento no tenemos atención disponible.",
+                "En este momento no contamos con atención en tiempo real.",
             )
 
         company = (
@@ -161,7 +228,14 @@ class WhatsAppContextMixin:
         if partner and partner.name:
             name = ", %s" % partner.name.split()[0]
 
-        fallback = "%s%s. ¿En qué podemos ayudarte?" % (fallback, name)
+        fallback = (
+            "%s%s. 👋\n\n"
+            "Soy el asistente virtual de *ANDES SOLUTION COPIERS*.\n\n"
+            "¿En qué podemos ayudarte?"
+        ) % (
+            fallback,
+            name,
+        )
 
         company = (
             partner.whatsapp_active_company_id
@@ -221,6 +295,16 @@ class WhatsAppContextMixin:
 
             status = status or {}
 
+            _logger.info(
+                "[WA-HOURS] Estado por calendario | "
+                "date=%s event_id=%s event_type=%s is_open=%s reason=%s",
+                today,
+                event.id if event else False,
+                event.event_type if event else False,
+                bool(status.get("is_open")),
+                status.get("reason") or event.event_type,
+            )
+
             return {
                 "is_open": bool(status.get("is_open")),
                 "reason": status.get("reason") or event.event_type,
@@ -238,6 +322,13 @@ class WhatsAppContextMixin:
         ], limit=1)
 
         if not hours:
+            _logger.warning(
+                "[WA-HOURS] No existe configuración para el día | "
+                "date=%s day_of_week=%s; se conserva is_open=True",
+                today,
+                day_of_week,
+            )
+
             return {
                 "is_open": True,
                 "reason": "no_hours_config",
@@ -261,6 +352,16 @@ class WhatsAppContextMixin:
         status = status or {}
 
         if status:
+            _logger.info(
+                "[WA-HOURS] Estado horario calculado | "
+                "date=%s day=%s hour=%s is_open=%s reason=%s",
+                today,
+                day_of_week,
+                current_float,
+                bool(status.get("is_open")),
+                status.get("reason") or "open",
+            )
+
             return {
                 "is_open": bool(status.get("is_open")),
                 "reason": status.get("reason") or "open",
@@ -317,21 +418,68 @@ class WhatsAppContextMixin:
             "display_hours": hours.get_display_hours(),
         }
 
-    def _get_applies_to(self, partner, business_status=False):
+    def _get_applies_to(
+        self,
+        partner,
+        business_status=False,
+        session=False,
+    ):
+        """
+        Devuelve únicamente el contexto funcional del contacto.
+
+        ``business_status`` se conserva como argumento por compatibilidad,
+        pero ya no cambia el valor de applies_to.
+
+        Ejemplos correctos:
+            registered + break
+            registered + after_hours
+            registered + open
+
+        La disponibilidad horaria se evalúa por separado después de detectar
+        la intención.
+        """
         if not partner:
-            return "new"
+            applies_to = "new"
 
-        if partner.whatsapp_blocked or partner.whatsapp_access_level == "blocked":
-            return "blocked"
+        elif (
+            partner.whatsapp_blocked
+            or partner.whatsapp_access_level == "blocked"
+        ):
+            applies_to = "blocked"
 
-        if partner.whatsapp_human_mode:
-            return "human"
+        elif partner.whatsapp_human_mode:
+            applies_to = "human"
 
-        if business_status and not business_status.get("is_open"):
-            return "after_hours"
+        else:
+            registration_state = getattr(
+                partner,
+                "whatsapp_registration_state",
+                "none",
+            )
 
-        registration_state = getattr(partner, "whatsapp_registration_state", "none")
-        if registration_state != "registered":
-            return "new"
+            applies_to = (
+                "registered"
+                if registration_state == "registered"
+                else "new"
+            )
 
-        return "registered"
+        _logger.info(
+            "[WA-CONTEXT] Contexto funcional resuelto | "
+            "partner_id=%s session_id=%s applies_to=%s "
+            "business_is_open=%s business_reason=%s",
+            partner.id if partner else False,
+            session.id if session else False,
+            applies_to,
+            (
+                business_status.get("is_open")
+                if isinstance(business_status, dict)
+                else False
+            ),
+            (
+                business_status.get("reason")
+                if isinstance(business_status, dict)
+                else False
+            ),
+        )
+
+        return applies_to

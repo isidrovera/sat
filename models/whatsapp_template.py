@@ -10,6 +10,17 @@ _logger = logging.getLogger(__name__)
 
 
 class WhatsappTemplate(models.Model):
+    """
+    Plantillas reutilizables para respuestas WhatsApp.
+
+    El motor usa variables simples con sintaxis ``{{variable}}``.
+    Las variables ausentes se sustituyen por cadena vacía para no romper
+    la conversación.
+
+    Las plantillas pueden recibir valores base desde partner/session/company
+    y valores adicionales mediante ``extra``.
+    """
+
     _name = "whatsapp.template"
     _description = "Plantilla WhatsApp"
     _order = "category asc, name asc"
@@ -186,83 +197,303 @@ class WhatsappTemplate(models.Model):
         return result
 
     # ==========================================================
-    # Render
+    # Helpers de render
     # ==========================================================
-    def render_template(self, partner=False, session=False, company=False, extra=None):
-        self.ensure_one()
-        extra = extra or {}
+    def _safe_template_value(self, value):
+        """
+        Convierte valores de plantilla a texto de forma segura.
 
-        # Validar precondiciones
-        if self.requires_partner and not partner:
-            _logger.warning(
-                "[WA-TEMPLATE] Plantilla requiere partner pero no se proveyó name=%s",
-                self.name,
+        Evita que recordsets, listas o dicts provoquen representaciones
+        técnicas inesperadas en WhatsApp.
+        """
+        if value is None or value is False:
+            return ""
+
+        if isinstance(value, (str, int, float)):
+            return str(value)
+
+        if isinstance(value, bool):
+            return "Sí" if value else "No"
+
+        if isinstance(value, (list, tuple, set)):
+            return ", ".join(
+                self._safe_template_value(item)
+                for item in value
+                if item not in (None, False, "")
             )
-            return self._render_fallback(partner, session, company, extra)
 
+        if isinstance(value, dict):
+            return ", ".join(
+                "%s: %s" % (
+                    key,
+                    self._safe_template_value(val),
+                )
+                for key, val in value.items()
+            )
+
+        if hasattr(value, "display_name"):
+            return value.display_name or ""
+
+        return str(value)
+
+    def _build_template_values(
+        self,
+        partner=False,
+        session=False,
+        company=False,
+        extra=None,
+    ):
         active_company = company
-        if not active_company and partner and getattr(partner, "whatsapp_active_company_id", False):
-            active_company = partner.whatsapp_active_company_id
-        if not active_company and partner and partner.parent_id:
+
+        if (
+            not active_company
+            and partner
+            and getattr(
+                partner,
+                "whatsapp_active_company_id",
+                False,
+            )
+        ):
+            active_company = (
+                partner.whatsapp_active_company_id
+            )
+
+        if (
+            not active_company
+            and partner
+            and partner.parent_id
+        ):
             active_company = partner.parent_id
 
-        if self.requires_company and not active_company:
-            _logger.warning(
-                "[WA-TEMPLATE] Plantilla requiere empresa pero no se proveyó name=%s",
-                self.name,
-            )
-            return self._render_fallback(partner, session, company, extra)
-
-        text = self.body or ""
-
-        # Variables base
         values = {
-            "partner_name": partner.name if partner else "",
-            "contact_name": partner.name if partner else "",
-            "first_name": self._get_first_name(partner) if partner else "",
-            "company_name": active_company.name if active_company else "",
-            "company_vat": active_company.vat if active_company else "",
-            "partner_vat": partner.vat if partner and partner.vat else "",
-            "session_name": session.name if session else "",
-            "session_id": str(session.id) if session else "",
-            "phone": (partner.whatsapp_number or partner.mobile or partner.phone) if partner else "",
+            "partner_name": (
+                partner.name
+                if partner
+                else ""
+            ),
+            "contact_name": (
+                partner.name
+                if partner
+                else ""
+            ),
+            "first_name": (
+                self._get_first_name(partner)
+                if partner
+                else ""
+            ),
+            "company_name": (
+                active_company.name
+                if active_company
+                else ""
+            ),
+            "company_vat": (
+                active_company.vat
+                if active_company
+                else ""
+            ),
+            "partner_vat": (
+                partner.vat
+                if partner and partner.vat
+                else ""
+            ),
+            "session_name": (
+                session.name
+                if session
+                else ""
+            ),
+            "session_id": (
+                str(session.id)
+                if session
+                else ""
+            ),
+            "phone": (
+                (
+                    getattr(
+                        partner,
+                        "whatsapp_number",
+                        False,
+                    )
+                    or partner.mobile
+                    or partner.phone
+                    or ""
+                )
+                if partner
+                else ""
+            ),
         }
 
-        # Override con extra
-        values.update(extra)
+        if isinstance(extra, dict):
+            values.update(extra)
 
-        # Reemplazo robusto con regex (acepta espacios alrededor del nombre)
+        return values, active_company
+
+    def _replace_template_variables(
+        self,
+        text,
+        values,
+        template_name=False,
+    ):
+        text = text or ""
+        values = values or {}
+
+        variable_pattern = re.compile(
+            r"\{\{\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*\}\}"
+        )
+
+        used_variables = set(
+            variable_pattern.findall(text)
+        )
+
+        missing_variables = sorted([
+            name
+            for name in used_variables
+            if name not in values
+        ])
+
+        if missing_variables:
+            _logger.warning(
+                "[WA-TEMPLATE] Variables no suministradas | "
+                "template=%s vars=%s",
+                template_name or False,
+                missing_variables,
+            )
+
         def replace_var(match):
             var_name = match.group(1).strip()
-            return str(values.get(var_name, "") or "")
+            return self._safe_template_value(
+                values.get(var_name, "")
+            )
 
         try:
-            text = re.sub(r"\{\{\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*\}\}", replace_var, text)
-        except Exception as e:
-            _logger.exception(
-                "[WA-TEMPLATE] Error renderizando plantilla name=%s error=%s",
-                self.name, str(e),
+            return variable_pattern.sub(
+                replace_var,
+                text,
             )
-            return self._render_fallback(partner, session, company, extra)
+        except Exception:
+            _logger.exception(
+                "[WA-TEMPLATE] Error sustituyendo variables | "
+                "template=%s",
+                template_name or False,
+            )
+            return text
 
-        # Actualizar métricas de uso
+    # ==========================================================
+    # Render
+    # ==========================================================
+    def render_template(
+        self,
+        partner=False,
+        session=False,
+        company=False,
+        extra=None,
+        _fallback_chain=None,
+    ):
+        """
+        Renderiza la plantilla activa usando variables base + ``extra``.
+
+        Variables desconocidas:
+            se sustituyen por cadena vacía y dejan warning en log.
+
+        Fallback:
+            se protege contra referencias circulares.
+        """
+        self.ensure_one()
+
+        extra = (
+            extra
+            if isinstance(extra, dict)
+            else {}
+        )
+
+        fallback_chain = list(
+            _fallback_chain or []
+        )
+
+        if self.name in fallback_chain:
+            _logger.error(
+                "[WA-TEMPLATE] Ciclo de fallback detectado | "
+                "chain=%s current=%s",
+                fallback_chain,
+                self.name,
+            )
+            return self.body or ""
+
+        fallback_chain.append(
+            self.name
+        )
+
+        values, active_company = (
+            self._build_template_values(
+                partner=partner,
+                session=session,
+                company=company,
+                extra=extra,
+            )
+        )
+
+        if self.requires_partner and not partner:
+            _logger.warning(
+                "[WA-TEMPLATE] Requiere partner | template=%s",
+                self.name,
+            )
+            return self._render_fallback(
+                partner,
+                session,
+                company,
+                extra,
+                fallback_chain=fallback_chain,
+            )
+
+        if (
+            self.requires_company
+            and not active_company
+        ):
+            _logger.warning(
+                "[WA-TEMPLATE] Requiere empresa | template=%s",
+                self.name,
+            )
+            return self._render_fallback(
+                partner,
+                session,
+                company,
+                extra,
+                fallback_chain=fallback_chain,
+            )
+
+        text = self._replace_template_variables(
+            self.body or "",
+            values,
+            template_name=self.name,
+        )
+
         try:
             self.sudo().write({
-                "usage_count": self.usage_count + 1,
+                "usage_count": (
+                    self.usage_count + 1
+                ),
                 "last_used_at": fields.Datetime.now(),
             })
         except Exception:
             _logger.exception(
-                "[WA-TEMPLATE] No se pudo actualizar usage_count name=%s",
+                "[WA-TEMPLATE] No se pudo actualizar uso | "
+                "template=%s",
                 self.name,
             )
 
         _logger.debug(
-            "[WA-TEMPLATE] Renderizada name=%s partner=%s company=%s len=%s",
+            "[WA-TEMPLATE] Render completado | "
+            "template=%s partner=%s company=%s "
+            "session=%s len=%s extra_keys=%s",
             self.name,
             partner.id if partner else False,
-            active_company.id if active_company else False,
+            (
+                active_company.id
+                if active_company
+                else False
+            ),
+            session.id if session else False,
             len(text),
+            sorted(extra.keys()),
         )
 
         return text
@@ -272,30 +503,91 @@ class WhatsappTemplate(models.Model):
             return ""
         return partner.name.split()[0]
 
-    def _render_fallback(self, partner, session, company, extra):
+    def _render_fallback(
+        self,
+        partner,
+        session,
+        company,
+        extra,
+        fallback_chain=None,
+    ):
         self.ensure_one()
+
+        fallback_chain = list(
+            fallback_chain or []
+        )
+
         if not self.fallback_template_name:
             _logger.warning(
-                "[WA-TEMPLATE] Sin fallback configurado, devolviendo body crudo name=%s",
+                "[WA-TEMPLATE] Sin fallback configurado | template=%s",
                 self.name,
             )
-            return self.body or ""
+
+            values, _active_company = (
+                self._build_template_values(
+                    partner=partner,
+                    session=session,
+                    company=company,
+                    extra=extra,
+                )
+            )
+
+            return self._replace_template_variables(
+                self.body or "",
+                values,
+                template_name=self.name,
+            )
+
+        if (
+            self.fallback_template_name
+            in fallback_chain
+        ):
+            _logger.error(
+                "[WA-TEMPLATE] Fallback circular bloqueado | "
+                "template=%s fallback=%s chain=%s",
+                self.name,
+                self.fallback_template_name,
+                fallback_chain,
+            )
+            return ""
 
         fallback = self.search([
-            ("name", "=", self.fallback_template_name),
+            (
+                "name",
+                "=",
+                self.fallback_template_name,
+            ),
             ("active", "=", True),
         ], limit=1)
 
         if not fallback:
             _logger.warning(
-                "[WA-TEMPLATE] Fallback no encontrado name=%s fallback=%s",
-                self.name, self.fallback_template_name,
+                "[WA-TEMPLATE] Fallback no encontrado | "
+                "template=%s fallback=%s",
+                self.name,
+                self.fallback_template_name,
             )
-            return self.body or ""
+
+            values, _active_company = (
+                self._build_template_values(
+                    partner=partner,
+                    session=session,
+                    company=company,
+                    extra=extra,
+                )
+            )
+
+            return self._replace_template_variables(
+                self.body or "",
+                values,
+                template_name=self.name,
+            )
 
         _logger.info(
-            "[WA-TEMPLATE] Usando fallback name=%s -> %s",
-            self.name, self.fallback_template_name,
+            "[WA-TEMPLATE] Aplicando fallback | "
+            "template=%s fallback=%s",
+            self.name,
+            self.fallback_template_name,
         )
 
         return fallback.render_template(
@@ -303,15 +595,33 @@ class WhatsappTemplate(models.Model):
             session=session,
             company=company,
             extra=extra,
+            _fallback_chain=fallback_chain,
         )
 
     # ==========================================================
     # API pública
     # ==========================================================
     @api.model
-    def get_rendered(self, name, partner=False, session=False, company=False, extra=None):
+    def get_rendered(
+        self,
+        name,
+        partner=False,
+        session=False,
+        company=False,
+        extra=None,
+    ):
+        """
+        API pública principal usada por controllers y respuestas automáticas.
+        """
+        name = (
+            str(name or "")
+            .strip()
+        )
+
         if not name:
-            _logger.error("[WA-TEMPLATE] get_rendered llamado sin name")
+            _logger.error(
+                "[WA-TEMPLATE] get_rendered sin nombre"
+            )
             return False
 
         template = self.search([
@@ -321,7 +631,9 @@ class WhatsappTemplate(models.Model):
 
         if not template:
             _logger.warning(
-                "[WA-TEMPLATE] Plantilla no encontrada o inactiva name=%s", name,
+                "[WA-TEMPLATE] Plantilla inexistente/inactiva | "
+                "template=%s",
+                name,
             )
             return False
 
@@ -330,20 +642,36 @@ class WhatsappTemplate(models.Model):
                 partner=partner,
                 session=session,
                 company=company,
-                extra=extra,
+                extra=(
+                    extra
+                    if isinstance(extra, dict)
+                    else {}
+                ),
             )
-        except Exception as e:
+
+        except Exception:
             _logger.exception(
-                "[WA-TEMPLATE] Error en get_rendered name=%s error=%s",
-                name, str(e),
+                "[WA-TEMPLATE] Falló get_rendered | "
+                "template=%s partner=%s session=%s",
+                name,
+                partner.id if partner else False,
+                session.id if session else False,
             )
             return False
 
     @api.model
-    def render_with_fallback(self, name, fallback_text, partner=False, session=False, company=False, extra=None):
+    def render_with_fallback(
+        self,
+        name,
+        fallback_text,
+        partner=False,
+        session=False,
+        company=False,
+        extra=None,
+    ):
         """
-        Renderiza una plantilla y si no existe o falla, devuelve fallback_text
-        con sustitución básica de variables.
+        Renderiza por nombre y, si no existe/falla, procesa fallback_text
+        con exactamente el mismo motor de variables.
         """
         rendered = self.get_rendered(
             name=name,
@@ -357,35 +685,31 @@ class WhatsappTemplate(models.Model):
             return rendered
 
         _logger.info(
-            "[WA-TEMPLATE] Usando fallback_text inline name=%s", name,
+            "[WA-TEMPLATE] Usando fallback inline | template=%s",
+            name or False,
         )
 
-        # Aplicar sustitución básica al fallback
-        text = fallback_text or ""
-        if not text:
-            return ""
-
-        values = {
-            "partner_name": partner.name if partner else "",
-            "contact_name": partner.name if partner else "",
-            "first_name": partner.name.split()[0] if (partner and partner.name) else "",
-            "company_name": company.name if company else "",
-        }
-        if extra:
-            values.update(extra)
-
-        try:
-            def replace_var(match):
-                var_name = match.group(1).strip()
-                return str(values.get(var_name, "") or "")
-            text = re.sub(r"\{\{\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*\}\}", replace_var, text)
-        except Exception:
-            _logger.exception(
-                "[WA-TEMPLATE] Error sustituyendo variables en fallback_text name=%s",
-                name,
+        values, _active_company = (
+            self._build_template_values(
+                partner=partner,
+                session=session,
+                company=company,
+                extra=(
+                    extra
+                    if isinstance(extra, dict)
+                    else {}
+                ),
             )
+        )
 
-        return text
+        return self._replace_template_variables(
+            fallback_text or "",
+            values,
+            template_name=(
+                "%s:inline_fallback"
+                % (name or "unnamed")
+            ),
+        )
 
     # ==========================================================
     # Acciones del backend
@@ -399,6 +723,11 @@ class WhatsappTemplate(models.Model):
             "first_name": "Juan",
             "company_name": "Empresa Demo S.A.C.",
             "company_vat": "20123456789",
+            "anydesk_code": "123456789",
+            "remote_problem": "No puedo imprimir.",
+            "business_reason": "Fuera de horario",
+            "business_message": "La atención continuará al retomar el horario.",
+            "display_hours": "Lunes a viernes 08:30 - 18:00",
         })
         _logger.info(
             "[WA-TEMPLATE] Preview generado name=%s", self.name,

@@ -10,6 +10,20 @@ _logger = logging.getLogger(__name__)
 
 
 class WhatsappAutoResponse(models.Model):
+    """
+    Respuestas automáticas simples previas/complementarias a la IA.
+
+    La coincidencia textual y el contexto se evalúan por separado:
+
+    - ``applies_to`` describe el tipo funcional del contacto;
+    - ``is_after_hours`` describe disponibilidad horaria;
+    - ``current_flow`` describe el flujo conversacional activo.
+
+    Se conserva compatibilidad con reglas antiguas configuradas con
+    ``applies_to='after_hours'`` sin volver a mezclar ese valor con el
+    contexto real del contacto.
+    """
+
     _name = "whatsapp.auto.response"
     _description = "Respuesta automática WhatsApp"
     _order = "priority desc, sequence asc, name asc"
@@ -181,6 +195,54 @@ class WhatsappAutoResponse(models.Model):
     def _normalize_text(self, text):
         return (text or "").strip().lower()
 
+    def _is_context_applicable(
+        self,
+        applies_to=False,
+        is_after_hours=False,
+        current_flow=False,
+    ):
+        """
+        Valida contexto sin mezclar estado de contacto y horario.
+
+        Compatibilidad:
+        una regla legacy con applies_to='after_hours' únicamente aplica
+        cuando is_after_hours=True.
+        """
+        self.ensure_one()
+
+        current_flow = current_flow or "none"
+        contact_scope = applies_to or False
+
+        if self.applies_to == "after_hours":
+            if not is_after_hours:
+                return False
+        elif contact_scope and self.applies_to not in (
+            "all",
+            contact_scope,
+        ):
+            return False
+
+        if (
+            self.only_business_hours
+            and is_after_hours
+        ):
+            return False
+
+        if (
+            self.only_after_hours
+            and not is_after_hours
+        ):
+            return False
+
+        if (
+            self.only_during_idle
+            and current_flow
+            and current_flow != "none"
+        ):
+            return False
+
+        return True
+
     def _match_text(self, message):
         self.ensure_one()
 
@@ -225,65 +287,77 @@ class WhatsappAutoResponse(models.Model):
 
         return False
 
-    def _render_response(self, partner=False, extra=None, session=False):
+    def _render_response(
+        self,
+        partner=False,
+        extra=None,
+        session=False,
+    ):
+        """
+        Renderiza usando whatsapp.template cuando existe template_name.
+
+        El fallback inline usa el mismo motor de variables del modelo
+        whatsapp.template para mantener comportamiento consistente.
+        """
         self.ensure_one()
-        extra = extra or {}
 
-        # Si tiene plantilla asociada, intentar renderizar desde whatsapp.template
+        extra = (
+            extra
+            if isinstance(extra, dict)
+            else {}
+        )
+
+        Template = self.env[
+            "whatsapp.template"
+        ].sudo()
+
         if self.template_name:
-            try:
-                rendered = self.env["whatsapp.template"].sudo().get_rendered(
-                    name=self.template_name,
-                    partner=partner if partner else False,
-                    session=session if session else False,
-                    extra=extra,
-                )
-                if rendered:
-                    _logger.debug(
-                        "[WA-AUTO] Renderizado desde template name=%s",
-                        self.template_name,
+            rendered = Template.render_with_fallback(
+                name=self.template_name,
+                fallback_text=self.response or "",
+                partner=partner if partner else False,
+                session=session if session else False,
+                company=(
+                    partner.whatsapp_active_company_id
+                    if partner
+                    and getattr(
+                        partner,
+                        "whatsapp_active_company_id",
+                        False,
                     )
-                    return rendered
-            except Exception as e:
-                _logger.warning(
-                    "[WA-AUTO] Error renderizando template %s, usando response: %s",
-                    self.template_name, str(e),
+                    else False
+                ),
+                extra=extra,
+            )
+
+            if rendered:
+                _logger.debug(
+                    "[WA-AUTO] Respuesta renderizada con template | "
+                    "rule_id=%s template=%s",
+                    self.id,
+                    self.template_name,
                 )
+                return rendered
 
-        text = self.response or ""
-
-        partner_name = partner.name if partner else ""
-        company_name = ""
-
-        if partner:
-            active_company = getattr(partner, "whatsapp_active_company_id", False)
-            if active_company:
-                company_name = active_company.name or ""
-            elif partner.parent_id:
-                company_name = partner.parent_id.name or ""
-
-        values = {
-            "partner_name": partner_name,
-            "contact_name": partner_name,
-            "first_name": partner_name.split()[0] if partner_name else "",
-            "company_name": company_name,
-        }
-        values.update(extra)
-
-        try:
-            def replace_var(match):
-                var_name = match.group(1).strip()
-                return str(values.get(var_name, "") or "")
-            text = re.sub(
-                r"\{\{\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*\}\}",
-                replace_var, text,
+        # Aunque no exista template_name, utilizar el mismo motor
+        # compartido para sustituir variables del texto inline.
+        values, _active_company = (
+            Template._build_template_values(
+                partner=partner if partner else False,
+                session=session if session else False,
+                company=False,
+                extra=extra,
             )
-        except Exception:
-            _logger.exception(
-                "[WA-AUTO] Error sustituyendo variables id=%s", self.id,
-            )
+        )
 
-        return text
+        return Template._replace_template_variables(
+            self.response or "",
+            values,
+            template_name=(
+                "auto_response:%s"
+                % (self.name or self.id)
+            ),
+        )
 
     # ==========================================================
     # Create / Write con logs
@@ -298,62 +372,177 @@ class WhatsappAutoResponse(models.Model):
             )
         return records
 
+    def write(self, vals):
+        result = super().write(vals)
+
+        tracked = {
+            "active",
+            "trigger",
+            "match_type",
+            "applies_to",
+            "only_business_hours",
+            "only_after_hours",
+            "only_during_idle",
+            "response",
+            "template_name",
+            "priority",
+            "sequence",
+        }
+
+        if tracked.intersection(vals.keys()):
+            for rec in self:
+                _logger.info(
+                    "[WA-AUTO] Modificada | "
+                    "id=%s name=%s active=%s applies_to=%s "
+                    "match_type=%s priority=%s sequence=%s",
+                    rec.id,
+                    rec.name,
+                    rec.active,
+                    rec.applies_to,
+                    rec.match_type,
+                    rec.priority,
+                    rec.sequence,
+                )
+
+        return result
+
     # ==========================================================
     # API pública
     # ==========================================================
     @api.model
-    def find_response(self, message, partner=False, applies_to=False,
-                      is_after_hours=False, extra=None, session=False, current_flow=False):
+    def find_response(
+        self,
+        message,
+        partner=False,
+        applies_to=False,
+        is_after_hours=False,
+        extra=None,
+        session=False,
+        current_flow=False,
+    ):
         """
-        Busca la primera respuesta automática que coincida.
-        """
-        if not message:
-            return {"found": False, "response": False}
+        Busca la primera respuesta automática aplicable.
 
-        _logger.debug(
-            "[WA-AUTO] find_response message=%r applies_to=%s after_hours=%s flow=%s",
-            (message[:80] + "...") if len(message) > 80 else message,
-            applies_to, is_after_hours, current_flow,
+        Orden conservado:
+            priority desc, sequence asc, name asc
+        """
+        message_clean = (
+            str(message or "")
+            .strip()
         )
 
-        domain = [("active", "=", True)]
+        if not message_clean:
+            return {
+                "found": False,
+                "response": False,
+            }
 
-        if applies_to:
-            domain += [("applies_to", "in", ["all", applies_to])]
+        current_flow = (
+            current_flow
+            or (
+                session.current_flow
+                if session
+                else "none"
+            )
+            or "none"
+        )
 
-        rules = self.search(domain, order="priority desc, sequence asc, name asc")
+        _logger.debug(
+            "[WA-AUTO] Buscando respuesta | "
+            "message=%r applies_to=%s after_hours=%s "
+            "flow=%s partner=%s",
+            (
+                message_clean[:80] + "..."
+                if len(message_clean) > 80
+                else message_clean
+            ),
+            applies_to or False,
+            bool(is_after_hours),
+            current_flow,
+            partner.id if partner else False,
+        )
 
-        _logger.debug("[WA-AUTO] Evaluando %s respuestas activas", len(rules))
+        # No filtramos applies_to desde SQL porque necesitamos conservar
+        # compatibilidad con reglas legacy applies_to='after_hours' mientras
+        # el contacto real puede seguir siendo registered.
+        rules = self.search(
+            [("active", "=", True)],
+            order=(
+                "priority desc, "
+                "sequence asc, "
+                "name asc"
+            ),
+        )
+
+        _logger.debug(
+            "[WA-AUTO] Evaluando reglas | count=%s",
+            len(rules),
+        )
 
         for rule in rules:
             try:
-                if rule.only_business_hours and is_after_hours:
+                if not rule._is_context_applicable(
+                    applies_to=applies_to,
+                    is_after_hours=is_after_hours,
+                    current_flow=current_flow,
+                ):
+                    _logger.debug(
+                        "[WA-AUTO] Regla descartada por contexto | "
+                        "id=%s name=%s rule_scope=%s contact_scope=%s "
+                        "after_hours=%s flow=%s",
+                        rule.id,
+                        rule.name,
+                        rule.applies_to,
+                        applies_to or False,
+                        bool(is_after_hours),
+                        current_flow,
+                    )
                     continue
 
-                if rule.only_after_hours and not is_after_hours:
-                    continue
-
-                if rule.only_during_idle and current_flow and current_flow != "none":
-                    continue
-
-                if not rule._match_text(message):
+                if not rule._match_text(
+                    message_clean
+                ):
                     continue
 
                 try:
                     rule.sudo().write({
-                        "last_used_at": fields.Datetime.now(),
-                        "use_count": rule.use_count + 1,
-                        "last_matched_message": (message[:500] if message else False),
+                        "last_used_at": (
+                            fields.Datetime.now()
+                        ),
+                        "use_count": (
+                            rule.use_count + 1
+                        ),
+                        "last_matched_message": (
+                            message_clean[:500]
+                        ),
                     })
-                except Exception as e:
-                    _logger.warning(
-                        "[WA-AUTO] No se pudo actualizar métricas id=%s error=%s",
-                        rule.id, str(e),
+                except Exception:
+                    _logger.exception(
+                        "[WA-AUTO] Error actualizando métricas | "
+                        "id=%s name=%s",
+                        rule.id,
+                        rule.name,
                     )
 
+                response_text = (
+                    rule._render_response(
+                        partner=partner,
+                        extra=extra,
+                        session=session,
+                    )
+                )
+
                 _logger.info(
-                    "[WA-AUTO] Match: id=%s name=%s category=%s",
-                    rule.id, rule.name, rule.category,
+                    "[WA-AUTO] Match | "
+                    "id=%s name=%s category=%s applies_to=%s "
+                    "after_hours=%s flow=%s template=%s",
+                    rule.id,
+                    rule.name,
+                    rule.category,
+                    rule.applies_to,
+                    bool(is_after_hours),
+                    current_flow,
+                    rule.template_name or False,
                 )
 
                 return {
@@ -361,23 +550,34 @@ class WhatsappAutoResponse(models.Model):
                     "response_id": rule.id,
                     "name": rule.name,
                     "category": rule.category,
-                    "response": rule._render_response(
-                        partner=partner, extra=extra, session=session,
-                    ),
+                    "response": response_text,
                     "stop_flow": rule.stop_flow,
-                    "allow_ai_after": rule.allow_ai_after,
+                    "allow_ai_after": (
+                        rule.allow_ai_after
+                    ),
                     "applies_to": rule.applies_to,
-                    "template_name": rule.template_name or False,
+                    "template_name": (
+                        rule.template_name
+                        or False
+                    ),
                 }
 
-            except Exception as e:
+            except Exception:
                 _logger.exception(
-                    "[WA-AUTO] Error evaluando id=%s error=%s",
-                    rule.id, str(e),
+                    "[WA-AUTO] Error evaluando regla | "
+                    "id=%s name=%s",
+                    rule.id,
+                    rule.name,
                 )
                 continue
 
-        _logger.debug("[WA-AUTO] Sin match para mensaje")
+        _logger.debug(
+            "[WA-AUTO] Sin coincidencia | "
+            "applies_to=%s after_hours=%s flow=%s",
+            applies_to or False,
+            bool(is_after_hours),
+            current_flow,
+        )
 
         return {
             "found": False,

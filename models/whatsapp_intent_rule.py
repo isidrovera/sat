@@ -162,6 +162,11 @@ class WhatsappIntentRule(models.Model):
         default="all",
         required=True,
         index=True,
+        help=(
+            "Contexto funcional al que pertenece la regla. "
+            "Este campo no debe confundirse con el estado horario recibido "
+            "por is_after_hours en el motor de detección."
+        ),
     )
 
     requires_registered = fields.Boolean(
@@ -177,6 +182,10 @@ class WhatsappIntentRule(models.Model):
     only_during_business_hours = fields.Boolean(
         string="Solo en horario laboral",
         default=False,
+        help=(
+            "Si está activo, la regla no se evalúa cuando el motor recibe "
+            "is_after_hours=True."
+        ),
     )
 
     only_during_idle = fields.Boolean(
@@ -481,6 +490,17 @@ class WhatsappIntentRule(models.Model):
     def _is_applicable(self, applies_to=False, is_after_hours=False, current_flow=False):
         """
         Verifica si la regla aplica al contexto actual.
+
+        IMPORTANTE:
+        - ``applies_to`` representa el contexto funcional/contacto que el
+          controlador decidió evaluar.
+        - ``is_after_hours`` representa exclusivamente si la consulta ocurre
+          fuera del horario disponible para atención en tiempo real.
+        - ``current_flow`` representa el flujo conversacional activo.
+
+        Se mantienen exactamente los mismos criterios funcionales del motor.
+        Los logs DEBUG únicamente permiten saber por qué una regla fue
+        descartada.
         """
         self.ensure_one()
 
@@ -489,20 +509,49 @@ class WhatsappIntentRule(models.Model):
 
         # Filtro por tipo de contacto/contexto
         if applies_to and self.applies_to not in ("all", applies_to):
+            _logger.debug(
+                "[WA-INTENT] Regla no aplicable por contexto | "
+                "rule_id=%s name=%s rule_applies_to=%s requested_applies_to=%s",
+                self.id,
+                self.name,
+                self.applies_to,
+                applies_to,
+            )
             return False
 
         # Solo en horario laboral
         if self.only_during_business_hours and is_after_hours:
+            _logger.debug(
+                "[WA-INTENT] Regla no aplicable por horario | "
+                "rule_id=%s name=%s only_business_hours=True after_hours=True",
+                self.id,
+                self.name,
+            )
             return False
 
         # Solo cuando no hay flujo activo
         if self.only_during_idle and current_flow and current_flow != "none":
+            _logger.debug(
+                "[WA-INTENT] Regla no aplicable por flujo activo | "
+                "rule_id=%s name=%s current_flow=%s",
+                self.id,
+                self.name,
+                current_flow,
+            )
             return False
 
         # Filtro por flujos específicos
         if current_flow and current_flow != "none":
             flows_filter = self._get_applies_to_flows_list()
             if flows_filter and current_flow.lower() not in flows_filter:
+                _logger.debug(
+                    "[WA-INTENT] Regla no aplicable por lista de flujos | "
+                    "rule_id=%s name=%s current_flow=%s allowed_flows=%s",
+                    self.id,
+                    self.name,
+                    current_flow,
+                    flows_filter,
+                )
                 return False
 
         return True
@@ -577,7 +626,7 @@ class WhatsappIntentRule(models.Model):
             }
 
         _logger.info(
-            "[WA-INTENT] detect_intent message=%r applies_to=%s after_hours=%s flow=%s partner=%s",
+            "[WA-INTENT] Detectando intención | message=%r contact_scope=%s after_hours=%s flow=%s partner=%s",
             (message_clean[:80] + "...") if len(message_clean) > 80 else message_clean,
             applies_to,
             is_after_hours,
@@ -616,7 +665,7 @@ class WhatsappIntentRule(models.Model):
                     )
 
                 _logger.info(
-                    "[WA-INTENT] Match: regla=%s id=%s intent=%s action=%s score=%s template=%s flow=%s",
+                    "[WA-INTENT] Regla seleccionada | rule=%s id=%s intent=%s action=%s score=%s template=%s target_flow=%s",
                     rule.name,
                     rule.id,
                     rule.intent,
@@ -652,7 +701,7 @@ class WhatsappIntentRule(models.Model):
                 continue
 
         _logger.info(
-            "[WA-INTENT] Sin match para message=%r applies_to=%s flow=%s reglas=%s",
+            "[WA-INTENT] Sin coincidencia | message=%r contact_scope=%s flow=%s evaluated_rules=%s",
             (message_clean[:80] + "...") if len(message_clean) > 80 else message_clean,
             applies_to,
             current_flow,
@@ -736,7 +785,7 @@ class WhatsappIntentRule(models.Model):
                 )
 
         _logger.info(
-            "[WA-INTENT] detect_intent_with_alternatives message=%r matches=%s",
+            "[WA-INTENT] Alternativas evaluadas | message=%r matches=%s",
             (message_clean[:80] + "...") if len(message_clean) > 80 else message_clean,
             len(matches),
         )

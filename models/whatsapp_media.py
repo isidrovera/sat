@@ -13,6 +13,20 @@ _logger = logging.getLogger(__name__)
 
 
 class WhatsappMedia(models.Model):
+    """
+    Evidencias y archivos intercambiados por WhatsApp.
+
+    Responsabilidades:
+    - conservar el payload original;
+    - registrar URL/ID externo;
+    - descargar el archivo a ir.attachment cuando sea necesario;
+    - asociarlo a tickets, solicitudes o handoffs;
+    - controlar revisión humana y estado de procesamiento.
+
+    Esta versión mantiene el modelo y sus flujos existentes, añadiendo
+    validaciones defensivas, límites configurables y logs más precisos.
+    """
+
     _name = "whatsapp.media"
     _description = "Media WhatsApp"
     _order = "create_date desc, id desc"
@@ -190,6 +204,15 @@ class WhatsappMedia(models.Model):
 
     reviewed_at = fields.Datetime(string="Revisada en")
 
+    review_note = fields.Text(
+        string="Motivo / nota de revisión",
+        help=(
+            "Motivo por el que la evidencia requiere revisión humana. "
+            "Se mantiene separado de process_error para no confundir "
+            "una revisión visual con un fallo técnico."
+        ),
+    )
+
     # ==========================================================
     # Computes
     # ==========================================================
@@ -281,137 +304,423 @@ class WhatsappMedia(models.Model):
     # ==========================================================
     # Descarga / conversión a attachment
     # ==========================================================
+    def _get_download_timeout_seconds(self):
+        value = (
+            self.env["ir.config_parameter"]
+            .sudo()
+            .get_param(
+                "sat.whatsapp_media_download_timeout_seconds",
+                "30",
+            )
+        )
+
+        try:
+            timeout = int(value)
+        except Exception:
+            timeout = 30
+
+        return max(
+            5,
+            min(timeout, 120),
+        )
+
+    def _get_max_download_bytes(self):
+        """
+        Límite defensivo de descarga.
+
+        25 MB por defecto; configurable en ir.config_parameter.
+        Un valor <= 0 desactiva el límite.
+        """
+        value = (
+            self.env["ir.config_parameter"]
+            .sudo()
+            .get_param(
+                "sat.whatsapp_media_max_download_mb",
+                "25",
+            )
+        )
+
+        try:
+            max_mb = float(value)
+        except Exception:
+            max_mb = 25.0
+
+        if max_mb <= 0:
+            return False
+
+        return int(
+            max_mb * 1024 * 1024
+        )
+
+    def _normalize_response_mimetype(
+        self,
+        response=False,
+    ):
+        self.ensure_one()
+
+        mimetype = (
+            self.mimetype
+            or (
+                response.headers.get("Content-Type")
+                if response
+                else False
+            )
+            or "application/octet-stream"
+        )
+
+        return (
+            str(mimetype)
+            .split(";", 1)[0]
+            .strip()
+            or "application/octet-stream"
+        )
+
     def download_and_create_attachment(self):
         """
-        Descarga el archivo desde la URL externa y lo guarda como ir.attachment.
-        Se llama típicamente desde n8n después de recibir el archivo de Baileys.
+        Descarga la URL externa y crea un ir.attachment.
+
+        La operación es idempotente: si attachment_id ya existe, no vuelve
+        a descargar el archivo.
         """
         self.ensure_one()
 
         if self.attachment_id:
             _logger.debug(
-                "[WA-MEDIA] Media id=%s ya tiene attachment id=%s, omitiendo descarga",
-                self.id, self.attachment_id.id,
+                "[WA-MEDIA] Descarga omitida; attachment existente | "
+                "media_id=%s attachment_id=%s",
+                self.id,
+                self.attachment_id.id,
             )
             return self.attachment_id
 
         if not self.url:
-            _logger.warning(
-                "[WA-MEDIA] download_and_create_attachment sin URL id=%s", self.id,
+            message = (
+                "La media no tiene URL externa disponible."
             )
+
+            _logger.warning(
+                "[WA-MEDIA] Descarga sin URL | media_id=%s",
+                self.id,
+            )
+
+            self.write({
+                "is_processed": False,
+                "process_error": message,
+            })
             return False
 
         try:
             import requests
-            _logger.info(
-                "[WA-MEDIA] Descargando archivo id=%s url=%s", self.id, self.url,
+
+            timeout = (
+                self._get_download_timeout_seconds()
             )
-            response = requests.get(self.url, timeout=30)
+            max_bytes = (
+                self._get_max_download_bytes()
+            )
+
+            _logger.info(
+                "[WA-MEDIA] Iniciando descarga | "
+                "media_id=%s type=%s timeout=%ss max_bytes=%s url=%s",
+                self.id,
+                self.media_type,
+                timeout,
+                max_bytes or False,
+                self.url,
+            )
+
+            response = requests.get(
+                self.url,
+                timeout=timeout,
+                stream=True,
+                allow_redirects=True,
+            )
             response.raise_for_status()
 
-            content = response.content
-            filename = self.filename or self._guess_filename_from_url()
-            mimetype = self.mimetype or response.headers.get(
-                "Content-Type", "application/octet-stream",
+            content_length = (
+                response.headers.get(
+                    "Content-Length"
+                )
+                or False
             )
 
-            attachment = self.env["ir.attachment"].sudo().create({
-                "name": filename or "whatsapp_media_%s" % self.id,
-                "datas": base64.b64encode(content),
-                "mimetype": mimetype,
-                "res_model": "whatsapp.media",
-                "res_id": self.id,
-            })
+            if (
+                max_bytes
+                and content_length
+            ):
+                try:
+                    if int(content_length) > max_bytes:
+                        raise ValidationError(
+                            _(
+                                "El archivo supera el tamaño máximo "
+                                "permitido para WhatsApp."
+                            )
+                        )
+                except ValueError:
+                    pass
+
+            chunks = []
+            total_size = 0
+
+            for chunk in response.iter_content(
+                chunk_size=64 * 1024
+            ):
+                if not chunk:
+                    continue
+
+                total_size += len(chunk)
+
+                if (
+                    max_bytes
+                    and total_size > max_bytes
+                ):
+                    raise ValidationError(
+                        _(
+                            "El archivo supera el tamaño máximo "
+                            "permitido para WhatsApp."
+                        )
+                    )
+
+                chunks.append(chunk)
+
+            content = b"".join(
+                chunks
+            )
+
+            if not content:
+                raise ValidationError(
+                    _(
+                        "La descarga no devolvió contenido."
+                    )
+                )
+
+            filename = (
+                self.filename
+                or self._guess_filename_from_url()
+                or "whatsapp_media_%s" % self.id
+            )
+
+            mimetype = (
+                self._normalize_response_mimetype(
+                    response
+                )
+            )
+
+            attachment = (
+                self.env["ir.attachment"]
+                .sudo()
+                .create({
+                    "name": filename,
+                    "datas": base64.b64encode(
+                        content
+                    ),
+                    "mimetype": mimetype,
+                    "res_model": "whatsapp.media",
+                    "res_id": self.id,
+                })
+            )
+
+            now = fields.Datetime.now()
 
             self.write({
                 "attachment_id": attachment.id,
-                "file_size": len(content),
+                "file_size": total_size,
                 "filename": filename,
                 "mimetype": mimetype,
                 "is_processed": True,
-                "processed_at": fields.Datetime.now(),
+                "processed_at": now,
                 "process_error": False,
             })
 
             _logger.info(
-                "[WA-MEDIA] Archivo descargado id=%s attachment=%s size=%s",
-                self.id, attachment.id, len(content),
+                "[WA-MEDIA] Descarga completada | "
+                "media_id=%s attachment_id=%s size=%s "
+                "mimetype=%s filename=%s",
+                self.id,
+                attachment.id,
+                total_size,
+                mimetype,
+                filename,
             )
 
             return attachment
 
-        except Exception as e:
-            _logger.exception(
-                "[WA-MEDIA] Error descargando archivo id=%s url=%s error=%s",
-                self.id, self.url, str(e),
+        except Exception as exc:
+            error_message = str(
+                exc
             )
+
+            _logger.exception(
+                "[WA-MEDIA] Error descargando | "
+                "media_id=%s url=%s error=%s",
+                self.id,
+                self.url,
+                error_message,
+            )
+
             self.write({
                 "is_processed": False,
-                "process_error": str(e),
+                "processed_at": False,
+                "process_error": error_message,
             })
+
             return False
 
     def _guess_filename_from_url(self):
         self.ensure_one()
+
         if not self.url:
             return False
+
         try:
-            path = urlparse(self.url).path
-            filename = path.rsplit("/", 1)[-1]
-            return filename or False
+            from urllib.parse import unquote
+
+            path = (
+                urlparse(
+                    self.url
+                ).path
+                or ""
+            )
+
+            filename = (
+                path.rsplit("/", 1)[-1]
+                or ""
+            )
+
+            filename = (
+                unquote(filename)
+                .strip()
+            )
+
+            return (
+                filename
+                or False
+            )
+
         except Exception:
+            _logger.exception(
+                "[WA-MEDIA] Error obteniendo filename desde URL | "
+                "media_id=%s url=%s",
+                self.id,
+                self.url,
+            )
             return False
 
     # ==========================================================
     # Asociación con registro de negocio
     # ==========================================================
-    def attach_to_record(self, model, res_id, purpose=False):
+    def attach_to_record(
+        self,
+        model,
+        res_id,
+        purpose=False,
+    ):
         """
-        Asocia esta media a un registro de negocio (ticket, solicitud, handoff, etc.).
-        Si tiene attachment, también lo re-vincula al registro destino.
+        Asocia la media y, si existe, su ir.attachment al registro destino.
+        """
+        if not model:
+            raise ValidationError(
+                _("El modelo relacionado es obligatorio.")
+            )
 
-        :param model: nombre del modelo (ej. 'toner.counter.submission')
-        :param res_id: id del registro
-        :param purpose: propósito opcional (anydesk_code, service_issue, etc.)
-        """
+        try:
+            res_id = int(
+                res_id
+            )
+        except Exception:
+            raise ValidationError(
+                _("El ID del registro relacionado no es válido.")
+            )
+
+        if res_id <= 0:
+            raise ValidationError(
+                _("El ID del registro relacionado no es válido.")
+            )
+
+        if model not in self.env:
+            raise ValidationError(
+                _(
+                    "El modelo relacionado no existe: %s"
+                )
+                % model
+            )
+
+        target = (
+            self.env[model]
+            .sudo()
+            .browse(res_id)
+            .exists()
+        )
+
+        if not target:
+            raise ValidationError(
+                _(
+                    "El registro relacionado %s,%s no existe."
+                )
+                % (
+                    model,
+                    res_id,
+                )
+            )
+
         for media in self:
             vals = {
                 "related_model": model,
                 "related_res_id": res_id,
             }
+
             if purpose:
-                valid_purposes = dict(media._fields["purpose"].selection)
+                valid_purposes = dict(
+                    media._fields[
+                        "purpose"
+                    ].selection
+                )
+
                 if purpose in valid_purposes:
                     vals["purpose"] = purpose
                 else:
                     _logger.warning(
-                        "[WA-MEDIA] purpose inválido id=%s purpose=%s",
-                        media.id, purpose,
+                        "[WA-MEDIA] Purpose no válido; se conserva actual | "
+                        "media_id=%s purpose=%s",
+                        media.id,
+                        purpose,
                     )
 
-            _logger.info(
-                "[WA-MEDIA] Asociando media id=%s a %s,%s purpose=%s",
-                media.id, model, res_id, purpose,
+            media.write(
+                vals
             )
 
-            media.write(vals)
-
-            # Re-vincular el attachment si existe
             if media.attachment_id:
                 try:
                     media.attachment_id.sudo().write({
                         "res_model": model,
                         "res_id": res_id,
                     })
-                    _logger.debug(
-                        "[WA-MEDIA] Attachment id=%s re-vinculado a %s,%s",
-                        media.attachment_id.id, model, res_id,
-                    )
-                except Exception as e:
+                except Exception:
                     _logger.exception(
-                        "[WA-MEDIA] Error re-vinculando attachment media_id=%s error=%s",
-                        media.id, str(e),
+                        "[WA-MEDIA] Error vinculando attachment | "
+                        "media_id=%s attachment_id=%s target=%s,%s",
+                        media.id,
+                        media.attachment_id.id,
+                        model,
+                        res_id,
                     )
+                    raise
+
+            _logger.info(
+                "[WA-MEDIA] Media asociada | "
+                "media_id=%s attachment_id=%s target=%s,%s purpose=%s",
+                media.id,
+                (
+                    media.attachment_id.id
+                    if media.attachment_id
+                    else False
+                ),
+                model,
+                res_id,
+                vals.get("purpose")
+                or media.purpose,
+            )
 
         return True
 
@@ -419,18 +728,34 @@ class WhatsappMedia(models.Model):
     # Revisión humana
     # ==========================================================
     def mark_for_human_review(self, reason=False):
-        """Marca esta media para que un agente la revise."""
+        """
+        Marca la evidencia para revisión humana.
+
+        El motivo se guarda en review_note y no en process_error, porque
+        solicitar revisión visual no representa un fallo de procesamiento.
+        """
         for media in self:
-            _logger.info(
-                "[WA-MEDIA] Marcando para revisión humana id=%s reason=%s",
-                media.id, reason,
-            )
-            media.write({
+            vals = {
                 "requires_human_review": True,
                 "review_status": "pending",
-            })
+                "reviewed_by_id": False,
+                "reviewed_at": False,
+            }
+
             if reason:
-                media.write({"process_error": reason})
+                vals["review_note"] = reason
+
+            media.write(
+                vals
+            )
+
+            _logger.info(
+                "[WA-MEDIA] Revisión humana solicitada | "
+                "media_id=%s reason=%s",
+                media.id,
+                reason or False,
+            )
+
         return True
 
     def action_mark_reviewed(self):
@@ -475,8 +800,11 @@ class WhatsappMedia(models.Model):
             if ai_summary:
                 vals["ai_summary"] = ai_summary
             _logger.info(
-                "[WA-MEDIA] Media procesada id=%s ai_summary=%s",
-                media.id, bool(ai_summary),
+                "[WA-MEDIA] Procesamiento completado | "
+                "media_id=%s attachment_id=%s ai_summary=%s",
+                media.id,
+                media.attachment_id.id if media.attachment_id else False,
+                bool(ai_summary),
             )
             media.write(vals)
         return True
@@ -485,8 +813,11 @@ class WhatsappMedia(models.Model):
         """Marca como fallido en procesamiento."""
         for media in self:
             _logger.warning(
-                "[WA-MEDIA] Error procesando media id=%s error=%s",
-                media.id, error_message,
+                "[WA-MEDIA] Procesamiento fallido | "
+                "media_id=%s attachment_id=%s error=%s",
+                media.id,
+                media.attachment_id.id if media.attachment_id else False,
+                error_message,
             )
             media.write({
                 "is_processed": False,

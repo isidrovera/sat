@@ -3,6 +3,11 @@
 from odoo import api, fields, models, _
 from odoo.exceptions import ValidationError
 
+import logging
+
+
+_logger = logging.getLogger(__name__)
+
 
 class ResPartner(models.Model):
     _inherit = "res.partner"
@@ -170,7 +175,11 @@ class ResPartner(models.Model):
     whatsapp_session_timeout_minutes = fields.Integer(
         string="Tiempo nueva sesión (min)",
         default=480,
-        help="Minutos de inactividad para considerar una nueva conversación. 480 = 8 horas.",
+        help=(
+            "Minutos de inactividad para considerar una nueva conversación. "
+            "480 = 8 horas. La actividad efectiva se toma de la fecha más "
+            "reciente entre el contacto y su sesión WhatsApp activa."
+        ),
     )
 
     # ==========================================================
@@ -633,9 +642,18 @@ class ResPartner(models.Model):
     # Sesión / conversación
     # ==========================================================
     def whatsapp_touch_message(self, intent=False, force_new_session=False):
+        """
+        Actualiza la actividad resumida almacenada en res.partner.
+
+        Este método se conserva por compatibilidad con endpoints o
+        integraciones que todavía lo invoquen. La fuente de actividad más
+        precisa para una conversación activa es whatsapp.session.
+        """
         now = fields.Datetime.now()
 
         for partner in self:
+            was_expired = partner._whatsapp_is_session_expired(now)
+
             vals = {
                 "whatsapp_last_message_at": now,
             }
@@ -643,24 +661,151 @@ class ResPartner(models.Model):
             if intent:
                 vals["whatsapp_last_intent"] = intent
 
-            if force_new_session or partner._whatsapp_is_session_expired(now):
+            if force_new_session or was_expired:
                 vals["whatsapp_last_session_at"] = now
 
             partner.write(vals)
 
-    def _whatsapp_is_session_expired(self, now=None):
+            _logger.debug(
+                "[WA-PARTNER-SESSION] Touch partner | "
+                "partner_id=%s intent=%s force_new=%s was_expired=%s now=%s",
+                partner.id,
+                intent or False,
+                bool(force_new_session),
+                bool(was_expired),
+                now,
+            )
+
+        return True
+
+    def _whatsapp_get_latest_activity(self):
+        """
+        Devuelve la actividad WhatsApp más reciente conocida.
+
+        Fuentes, en orden de comparación:
+        1. res.partner.whatsapp_last_message_at
+        2. whatsapp.session.last_message_at de la sesión activa más reciente
+
+        El problema anterior era que el controlador actualizaba
+        whatsapp.session.last_message_at pero no siempre llamaba
+        whatsapp_touch_message(), dejando el campo del partner desfasado.
+        """
         self.ensure_one()
 
-        if not self.whatsapp_last_message_at:
+        partner_last = False
+        if self.whatsapp_last_message_at:
+            try:
+                partner_last = fields.Datetime.to_datetime(
+                    self.whatsapp_last_message_at
+                )
+            except Exception:
+                _logger.exception(
+                    "[WA-PARTNER-SESSION] Fecha del partner inválida | "
+                    "partner_id=%s value=%s",
+                    self.id,
+                    self.whatsapp_last_message_at,
+                )
+
+        session = False
+        session_last = False
+
+        try:
+            if "whatsapp.session" in self.env:
+                Session = self.env["whatsapp.session"].sudo()
+                session = Session.search([
+                    ("partner_id", "=", self.id),
+                    ("state", "in", ["open", "human"]),
+                ], order="last_message_at desc, id desc", limit=1)
+
+                if session and session.last_message_at:
+                    session_last = fields.Datetime.to_datetime(
+                        session.last_message_at
+                    )
+        except Exception:
+            _logger.exception(
+                "[WA-PARTNER-SESSION] No se pudo consultar sesión activa | "
+                "partner_id=%s",
+                self.id,
+            )
+            session = False
+            session_last = False
+
+        candidates = [
+            value
+            for value in [partner_last, session_last]
+            if value
+        ]
+
+        latest = max(candidates) if candidates else False
+
+        return {
+            "latest": latest,
+            "partner_last": partner_last,
+            "session_last": session_last,
+            "session": session,
+        }
+
+    def _whatsapp_is_session_expired(self, now=None):
+        """
+        Indica si la conversación general está vencida por inactividad.
+
+        IMPORTANTE:
+        Antes se utilizaba únicamente whatsapp_last_message_at del partner.
+        El controlador moderno mantiene la actividad principalmente en
+        whatsapp.session.last_message_at, por lo que ambos valores podían
+        quedar desincronizados y producir ``expired=True`` incluso cuando la
+        sesión acababa de recibir un mensaje.
+
+        Ahora se utiliza la actividad más reciente disponible entre ambas
+        fuentes, manteniendo el timeout configurable existente.
+        """
+        self.ensure_one()
+
+        now_dt = fields.Datetime.to_datetime(
+            now or fields.Datetime.now()
+        )
+
+        activity = self._whatsapp_get_latest_activity()
+        last_dt = activity.get("latest")
+        session = activity.get("session")
+
+        if not last_dt:
+            _logger.info(
+                "[WA-PARTNER-SESSION] Sesión general sin actividad previa | "
+                "partner_id=%s -> expired=True",
+                self.id,
+            )
             return True
 
-        now_dt = fields.Datetime.to_datetime(now or fields.Datetime.now())
-        last_dt = fields.Datetime.to_datetime(self.whatsapp_last_message_at)
+        diff_seconds = max(
+            0.0,
+            (now_dt - last_dt).total_seconds(),
+        )
 
-        diff_seconds = (now_dt - last_dt).total_seconds()
-        timeout_seconds = max(self.whatsapp_session_timeout_minutes or 480, 1) * 60
+        timeout_minutes = max(
+            self.whatsapp_session_timeout_minutes or 480,
+            1,
+        )
+        timeout_seconds = timeout_minutes * 60
+        expired = diff_seconds > timeout_seconds
 
-        return diff_seconds > timeout_seconds
+        _logger.info(
+            "[WA-PARTNER-SESSION] Evaluación timeout general | "
+            "partner_id=%s session_id=%s now=%s partner_last=%s "
+            "session_last=%s effective_last=%s age_seconds=%s "
+            "timeout_minutes=%s expired=%s",
+            self.id,
+            session.id if session else False,
+            now_dt,
+            activity.get("partner_last"),
+            activity.get("session_last"),
+            last_dt,
+            int(diff_seconds),
+            timeout_minutes,
+            expired,
+        )
+
+        return expired
 
     # ==========================================================
     # Payload API / n8n

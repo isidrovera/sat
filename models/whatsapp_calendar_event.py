@@ -10,6 +10,22 @@ _logger = logging.getLogger(__name__)
 
 
 class WhatsappCalendarEvent(models.Model):
+    """
+    Excepciones de calendario utilizadas por WhatsApp y otros procesos
+    laborales compartidos.
+
+    Responsabilidad exclusiva:
+    determinar si una fecha/hora está abierta, cerrada o en refrigerio
+    especial. Este modelo no decide intención, tipo de contacto ni modo
+    humano.
+
+    Tipos:
+    - holiday: feriado nacional;
+    - manual_closed: cierre manual;
+    - special_hours: horario excepcional para una fecha;
+    - info: evento informativo que no altera disponibilidad.
+    """
+
     _name = "whatsapp.calendar.event"
     _description = "Calendario WhatsApp"
     _order = "event_date asc, name asc"
@@ -60,7 +76,10 @@ class WhatsappCalendarEvent(models.Model):
     is_closed = fields.Boolean(
         string="Cerrado todo el día",
         default=True,
-        help="Si está activo, WhatsApp se considera fuera de horario todo el día.",
+        help=(
+            "Si está activo, la fecha se considera cerrada todo el día. "
+            "Para Horario especial e Informativo normalmente debe estar desactivado."
+        ),
     )
 
     special_open_time = fields.Float(
@@ -144,13 +163,107 @@ class WhatsappCalendarEvent(models.Model):
     # ==========================================================
     @api.model_create_multi
     def create(self, vals_list):
-        records = super().create(vals_list)
+        normalized_list = []
+
+        for vals in vals_list:
+            vals = dict(vals or {})
+            event_type = vals.get(
+                "event_type",
+                "holiday",
+            )
+
+            # El default histórico de is_closed es True. Para eventos que
+            # por definición no son cierres totales, corregimos solo cuando
+            # el valor no fue especificado explícitamente.
+            if "is_closed" not in vals:
+                if event_type in (
+                    "special_hours",
+                    "info",
+                ):
+                    vals["is_closed"] = False
+                elif event_type in (
+                    "holiday",
+                    "manual_closed",
+                ):
+                    vals["is_closed"] = True
+
+            normalized_list.append(
+                vals
+            )
+
+        records = super().create(
+            normalized_list
+        )
+
         for rec in records:
             _logger.info(
-                "[WA-CAL] Evento creado id=%s name=%s date=%s type=%s source=%s",
-                rec.id, rec.name, rec.event_date, rec.event_type, rec.source,
+                "[WA-CAL] Evento creado | "
+                "id=%s name=%s date=%s type=%s source=%s "
+                "is_closed=%s display_hours=%s",
+                rec.id,
+                rec.name,
+                rec.event_date,
+                rec.event_type,
+                rec.source,
+                rec.is_closed,
+                rec.get_display_hours(),
             )
+
         return records
+
+    def write(self, vals):
+        vals = dict(vals or {})
+
+        # Si el usuario cambia el tipo y no indicó expresamente is_closed,
+        # mantener una configuración coherente con ese nuevo tipo.
+        if (
+            "event_type" in vals
+            and "is_closed" not in vals
+        ):
+            if vals["event_type"] in (
+                "special_hours",
+                "info",
+            ):
+                vals["is_closed"] = False
+            elif vals["event_type"] in (
+                "holiday",
+                "manual_closed",
+            ):
+                vals["is_closed"] = True
+
+        result = super().write(
+            vals
+        )
+
+        tracked = {
+            "active",
+            "event_date",
+            "event_type",
+            "is_closed",
+            "special_open_time",
+            "special_close_time",
+            "has_special_break",
+            "special_break_start",
+            "special_break_end",
+            "message",
+            "template_name",
+        }
+
+        if tracked.intersection(vals.keys()):
+            for rec in self:
+                _logger.info(
+                    "[WA-CAL] Evento modificado | "
+                    "id=%s date=%s type=%s active=%s is_closed=%s "
+                    "display_hours=%s",
+                    rec.id,
+                    rec.event_date,
+                    rec.event_type,
+                    rec.active,
+                    rec.is_closed,
+                    rec.get_display_hours(),
+                )
+
+        return result
 
     # ==========================================================
     # Helpers
@@ -185,51 +298,117 @@ class WhatsappCalendarEvent(models.Model):
 
     def evaluate_status(self, current_hour_float):
         """
-        Evalúa el estado del evento para una hora dada.
+        Evalúa exclusivamente disponibilidad para una hora decimal.
 
-        :param current_hour_float: hora decimal
-        :return: dict con is_open, reason, message, etc.
+        El dict retornado es compatible con _compute_business_status().
         """
         self.ensure_one()
 
-        if self.event_type in ("holiday", "manual_closed") or self.is_closed:
-            _logger.info(
-                "[WA-CAL] Evento cerrado id=%s date=%s type=%s",
-                self.id, self.event_date, self.event_type,
+        try:
+            current_hour_float = float(
+                current_hour_float
             )
+        except Exception:
+            _logger.warning(
+                "[WA-CAL] Hora inválida para evaluar evento | "
+                "id=%s value=%r",
+                self.id,
+                current_hour_float,
+            )
+            current_hour_float = 0.0
+
+        if (
+            self.event_type in (
+                "holiday",
+                "manual_closed",
+            )
+            or self.is_closed
+        ):
+            _logger.info(
+                "[WA-CAL] Fecha cerrada por calendario | "
+                "id=%s date=%s type=%s name=%s",
+                self.id,
+                self.event_date,
+                self.event_type,
+                self.name,
+            )
+
             return {
                 "is_open": False,
                 "reason": self.event_type,
                 "reason_label": self.name,
-                "message": self.message or "Hoy no tenemos atención. Puedes dejarnos tu consulta.",
-                "template_name": self.template_name or False,
+                "message": (
+                    self.message
+                    or (
+                        "Hoy no contamos con atención en tiempo real. "
+                        "Puedes registrar solicitudes permitidas por este canal."
+                    )
+                ),
+                "template_name": (
+                    self.template_name
+                    or False
+                ),
                 "event_id": self.id,
-                "display_hours": self.get_display_hours(),
+                "display_hours": (
+                    self.get_display_hours()
+                ),
             }
 
         if self.event_type == "special_hours":
-            in_work = self.special_open_time <= current_hour_float <= self.special_close_time
+            in_work = (
+                self.special_open_time
+                <= current_hour_float
+                <= self.special_close_time
+            )
+
             in_break = (
                 self.has_special_break
-                and self.special_break_start <= current_hour_float <= self.special_break_end
+                and self.special_break_start
+                <= current_hour_float
+                <= self.special_break_end
             )
 
             if in_break:
                 _logger.info(
-                    "[WA-CAL] Evento en break especial id=%s hour=%s",
-                    self.id, current_hour_float,
+                    "[WA-CAL] Refrigerio especial | "
+                    "id=%s date=%s hour=%s break=%s-%s",
+                    self.id,
+                    self.event_date,
+                    current_hour_float,
+                    self.special_break_start,
+                    self.special_break_end,
                 )
+
                 return {
                     "is_open": False,
                     "reason": "special_hours_break",
                     "reason_label": self.name,
-                    "message": self.message or "Estamos en refrigerio especial.",
-                    "template_name": self.template_name or False,
+                    "message": (
+                        self.message
+                        or (
+                            "En este momento nuestro equipo se encuentra "
+                            "en horario de refrigerio especial."
+                        )
+                    ),
+                    "template_name": (
+                        self.template_name
+                        or False
+                    ),
                     "event_id": self.id,
-                    "display_hours": self.get_display_hours(),
+                    "display_hours": (
+                        self.get_display_hours()
+                    ),
                 }
 
             if in_work:
+                _logger.debug(
+                    "[WA-CAL] Horario especial abierto | "
+                    "id=%s date=%s hour=%s",
+                    self.id,
+                    self.event_date,
+                    current_hour_float,
+                )
+
                 return {
                     "is_open": True,
                     "reason": "special_hours_open",
@@ -237,26 +416,51 @@ class WhatsappCalendarEvent(models.Model):
                     "message": False,
                     "template_name": False,
                     "event_id": self.id,
-                    "display_hours": self.get_display_hours(),
+                    "display_hours": (
+                        self.get_display_hours()
+                    ),
                 }
+
+            _logger.info(
+                "[WA-CAL] Fuera de horario especial | "
+                "id=%s date=%s hour=%s hours=%s",
+                self.id,
+                self.event_date,
+                current_hour_float,
+                self.get_display_hours(),
+            )
 
             return {
                 "is_open": False,
                 "reason": "special_hours_closed",
                 "reason_label": self.name,
-                "message": self.message or "Estamos fuera de horario especial.",
-                "template_name": self.template_name or False,
+                "message": (
+                    self.message
+                    or (
+                        "En este momento nos encontramos fuera "
+                        "del horario especial de atención."
+                    )
+                ),
+                "template_name": (
+                    self.template_name
+                    or False
+                ),
                 "event_id": self.id,
-                "display_hours": self.get_display_hours(),
+                "display_hours": (
+                    self.get_display_hours()
+                ),
             }
 
-        # event_type = "info" no afecta apertura
+        # Informativo: no cambia disponibilidad.
         return {
             "is_open": True,
             "reason": "info_event",
             "reason_label": self.name,
             "message": self.message or False,
-            "template_name": self.template_name or False,
+            "template_name": (
+                self.template_name
+                or False
+            ),
             "event_id": self.id,
             "display_hours": "",
         }
@@ -270,12 +474,31 @@ class WhatsappCalendarEvent(models.Model):
         if not work_date:
             return False
 
+        try:
+            work_date = fields.Date.to_date(
+                work_date
+            )
+        except Exception:
+            _logger.warning(
+                "[WA-CAL] Fecha inválida en is_closed_date | value=%r",
+                work_date,
+            )
+            return False
+
         event = self.search([
             ("event_date", "=", work_date),
             ("active", "=", True),
             ("is_closed", "=", True),
-            ("event_type", "in", ["holiday", "manual_closed"]),
+            (
+                "event_type",
+                "in",
+                [
+                    "holiday",
+                    "manual_closed",
+                ],
+            ),
         ], limit=1)
+
         return bool(event)
 
     @api.model
@@ -362,15 +585,16 @@ class WhatsappCalendarEvent(models.Model):
     def load_peru_holidays(self, year=False):
         year = int(year or fields.Date.today().year)
 
-        _logger.info("[WA-CAL] Cargando feriados Perú año=%s", year)
+        _logger.info("[WA-CAL] Cargando feriados Perú | year=%s", year)
 
         holidays = self.get_peru_holidays(year)
         created = 0
         updated = 0
 
         default_message = (
-            "Hoy no tenemos atención por feriado. "
-            "Puedes dejarnos tu consulta y te responderemos el siguiente día hábil."
+            "Hoy nuestro equipo se encuentra fuera del horario regular por feriado. "
+            "Las solicitudes habilitadas por el asistente virtual pueden registrarse "
+            "normalmente; la atención remota o humana continuará en horario disponible."
         )
 
         for holiday_date, holiday_name in holidays:
@@ -398,8 +622,10 @@ class WhatsappCalendarEvent(models.Model):
                 created += 1
 
         _logger.info(
-            "[WA-CAL] Feriados Perú cargados año=%s created=%s updated=%s",
-            year, created, updated,
+            "[WA-CAL] Feriados Perú cargados | year=%s created=%s updated=%s",
+            year,
+            created,
+            updated,
         )
 
         return {

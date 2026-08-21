@@ -10,6 +10,22 @@ _logger = logging.getLogger(__name__)
 
 
 class WhatsappMessage(models.Model):
+    """
+    Registro persistente de mensajes WhatsApp.
+
+    Este modelo conserva:
+    - relación con sesión/contacto/empresa;
+    - payload original;
+    - snapshot del flujo;
+    - estado de procesamiento;
+    - adjuntos;
+    - idempotencia por external_message_id.
+
+    La creación normal sigue disponible, pero se incorpora
+    ``create_idempotent()`` para que los controladores puedan evitar
+    duplicados antes de llegar a la restricción SQL.
+    """
+
     _name = "whatsapp.message"
     _description = "Mensaje WhatsApp"
     _order = "message_date asc, id asc"
@@ -234,7 +250,12 @@ class WhatsappMessage(models.Model):
     ]
 
     def init(self):
-        """Crear índice compuesto para acelerar búsqueda de duplicados."""
+        """
+        Índice compuesto para acelerar búsquedas de idempotencia.
+
+        La restricción SQL UNIQUE existente sigue siendo la última barrera
+        contra duplicados.
+        """
         self.env.cr.execute("""
             CREATE INDEX IF NOT EXISTS whatsapp_message_external_session_idx
             ON whatsapp_message (external_message_id, session_id)
@@ -291,15 +312,19 @@ class WhatsappMessage(models.Model):
 
         for msg in messages:
             _logger.info(
-                "[WA-MESSAGE] Mensaje creado id=%s session=%s direction=%s role=%s type=%s intent=%s flow=%s step=%s",
+                "[WA-MESSAGE] Mensaje creado | "
+                "id=%s session=%s partner=%s direction=%s role=%s "
+                "type=%s intent=%s flow=%s step=%s external_id=%s",
                 msg.id,
                 msg.session_id.id if msg.session_id else False,
+                msg.partner_id.id if msg.partner_id else False,
                 msg.direction,
                 msg.role,
                 msg.message_type,
                 msg.intent,
                 msg.current_flow,
                 msg.flow_step,
+                msg.external_message_id or False,
             )
 
             # --------------------------------------------------
@@ -330,6 +355,48 @@ class WhatsappMessage(models.Model):
                 )
 
         return messages
+
+    @api.model
+    def create_idempotent(self, vals):
+        """
+        Crea un mensaje o devuelve el existente si ya fue recibido.
+
+        Se recomienda para mensajes entrantes con external_message_id.
+        Si no existe external_message_id, conserva create() normal.
+        """
+        vals = dict(vals or {})
+
+        external_message_id = (
+            vals.get("external_message_id")
+            or False
+        )
+        session_id = (
+            vals.get("session_id")
+            or False
+        )
+
+        if (
+            external_message_id
+            and session_id
+        ):
+            existing = self.find_duplicate(
+                external_message_id=external_message_id,
+                session_id=session_id,
+            )
+
+            if existing:
+                _logger.info(
+                    "[WA-MESSAGE] create_idempotent reutiliza existente | "
+                    "external_id=%s session_id=%s message_id=%s",
+                    external_message_id,
+                    session_id,
+                    existing.id,
+                )
+                return existing
+
+        return self.create(
+            vals
+        )
 
     # ==========================================================
     # Helpers raw_payload
@@ -372,97 +439,205 @@ class WhatsappMessage(models.Model):
     # Métodos de procesamiento
     # ==========================================================
     def mark_processing(self):
-        """Marca el mensaje como en procesamiento."""
+        """Marca el mensaje como en procesamiento de forma defensiva."""
         for msg in self:
+            if msg.processing_status in (
+                "processed",
+                "ignored",
+            ):
+                _logger.debug(
+                    "[WA-MESSAGE] mark_processing ignorado | "
+                    "id=%s status=%s",
+                    msg.id,
+                    msg.processing_status,
+                )
+                continue
+
             _logger.debug(
-                "[WA-MESSAGE] Marcando como procesando id=%s", msg.id,
+                "[WA-MESSAGE] Marcando como procesando | id=%s from=%s",
+                msg.id,
+                msg.processing_status,
             )
-            msg.write({"processing_status": "processing"})
+
+            msg.write({
+                "processing_status": "processing",
+            })
+
         return True
 
-    def mark_processed(self, intent=False, flow_step=False, current_flow=False, confidence_score=False):
+    def mark_processed(
+        self,
+        intent=False,
+        flow_step=False,
+        current_flow=False,
+        confidence_score=False,
+    ):
         """
         Marca el mensaje como procesado correctamente.
 
-        :param intent: si se detectó intent, guardarlo
-        :param flow_step: paso del flujo al momento de procesarlo
-        :param current_flow: flujo activo al procesarlo
-        :param confidence_score: score de confianza de la detección
+        También limpia errores de intentos anteriores.
         """
         for msg in self:
             vals = {
                 "processing_status": "processed",
                 "processed_at": fields.Datetime.now(),
+                "is_error": False,
+                "error_message": False,
             }
+
             if intent:
                 vals["intent"] = intent
+
             if flow_step:
                 vals["flow_step"] = flow_step
+
             if current_flow:
                 vals["current_flow"] = current_flow
-            if confidence_score is not False and confidence_score is not None:
-                vals["confidence_score"] = confidence_score
+
+            if (
+                confidence_score is not False
+                and confidence_score is not None
+            ):
+                try:
+                    score = float(confidence_score)
+                    vals["confidence_score"] = max(
+                        0.0,
+                        min(score, 1.0),
+                    )
+                except Exception:
+                    _logger.warning(
+                        "[WA-MESSAGE] confidence_score inválido | "
+                        "message_id=%s value=%r",
+                        msg.id,
+                        confidence_score,
+                    )
 
             _logger.info(
-                "[WA-MESSAGE] Mensaje procesado id=%s intent=%s flow=%s step=%s score=%s",
-                msg.id, intent, current_flow, flow_step, confidence_score,
+                "[WA-MESSAGE] Procesamiento completado | "
+                "id=%s intent=%s flow=%s step=%s score=%s",
+                msg.id,
+                intent or msg.intent,
+                current_flow or msg.current_flow,
+                flow_step or msg.flow_step,
+                vals.get(
+                    "confidence_score",
+                    msg.confidence_score,
+                ),
             )
-            msg.write(vals)
+
+            msg.write(
+                vals
+            )
+
         return True
 
     def mark_failed(self, error_message=False):
-        """Marca el mensaje como fallido."""
+        """Marca el procesamiento como fallido."""
         for msg in self:
             _logger.warning(
-                "[WA-MESSAGE] Mensaje fallido id=%s error=%s",
-                msg.id, error_message,
+                "[WA-MESSAGE] Procesamiento fallido | "
+                "id=%s session=%s error=%s",
+                msg.id,
+                msg.session_id.id if msg.session_id else False,
+                error_message or False,
             )
+
             msg.write({
                 "processing_status": "failed",
                 "processed_at": fields.Datetime.now(),
                 "is_error": True,
-                "error_message": error_message or "",
+                "error_message": (
+                    error_message
+                    or "Error procesando mensaje WhatsApp"
+                ),
             })
+
         return True
 
     def mark_ignored(self, reason=False):
-        """Marca el mensaje como ignorado (duplicado, sin partner, etc.)."""
+        """
+        Marca el mensaje como ignorado.
+
+        Ignorado no equivale a error: puede tratarse de duplicado,
+        mensaje de sistema o evento que no requiere respuesta.
+        """
         for msg in self:
             _logger.info(
-                "[WA-MESSAGE] Mensaje ignorado id=%s reason=%s",
-                msg.id, reason,
+                "[WA-MESSAGE] Mensaje ignorado | "
+                "id=%s session=%s reason=%s",
+                msg.id,
+                msg.session_id.id if msg.session_id else False,
+                reason or False,
             )
+
             msg.write({
                 "processing_status": "ignored",
                 "processed_at": fields.Datetime.now(),
+                "is_error": False,
                 "error_message": reason or "",
             })
+
         return True
 
     # ==========================================================
     # Idempotencia
     # ==========================================================
     @api.model
-    def find_duplicate(self, external_message_id, session_id=False):
+    def find_duplicate(
+        self,
+        external_message_id,
+        session_id=False,
+    ):
         """
-        Busca un mensaje duplicado por external_message_id.
-        Si session_id se provee, restringe la búsqueda a esa sesión.
+        Busca un duplicado por ID externo.
 
-        :return: recordset (vacío si no hay duplicado)
+        Cuando se conoce la sesión, se restringe la búsqueda a ella para
+        respetar la restricción SQL existente.
         """
+        external_message_id = (
+            str(external_message_id or "")
+            .strip()
+        )
+
         if not external_message_id:
             return self.browse()
 
-        domain = [("external_message_id", "=", external_message_id)]
-        if session_id:
-            domain.append(("session_id", "=", session_id))
+        domain = [
+            (
+                "external_message_id",
+                "=",
+                external_message_id,
+            ),
+        ]
 
-        existing = self.search(domain, limit=1)
+        if session_id:
+            try:
+                session_id = int(
+                    session_id
+                )
+            except Exception:
+                session_id = False
+
+        if session_id:
+            domain.append(
+                ("session_id", "=", session_id)
+            )
+
+        existing = self.search(
+            domain,
+            order="id desc",
+            limit=1,
+        )
 
         if existing:
             _logger.info(
-                "[WA-MESSAGE] Duplicado detectado external_id=%s session=%s existing_id=%s",
-                external_message_id, session_id, existing.id,
+                "[WA-MESSAGE] Duplicado detectado | "
+                "external_id=%s session_id=%s existing_id=%s "
+                "status=%s",
+                external_message_id,
+                session_id or False,
+                existing.id,
+                existing.processing_status,
             )
 
         return existing
@@ -478,8 +653,10 @@ class WhatsappMessage(models.Model):
         """
         for msg in self:
             _logger.debug(
-                "[WA-MESSAGE] Marcando como respuesta de menú id=%s option=%r",
-                msg.id, option_selected,
+                "[WA-MESSAGE] Respuesta de menú registrada | "
+                "id=%s option=%r",
+                msg.id,
+                option_selected,
             )
             msg.write({
                 "is_menu_response": True,

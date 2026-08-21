@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version='1.0' encoding='UTF-8'?>
 <odoo>
     <data noupdate="0">
 
@@ -7,7 +7,13 @@
             <field name="title">Solicitar DNI</field>
             <field name="category">dni</field>
             <field name="body">
-                Buenos días 👋 Para poder ayudarte, por favor envíame tu *DNI de 8 dígitos*.
+👋 *Bienvenido(a) a ANDES SOLUTION COPIERS*
+
+Para identificarte y continuar con la atención, envíanos por favor tu *DNI de 8 dígitos*.
+
+🔒 Utilizaremos este dato únicamente para validar tu registro y las empresas asociadas.
+
+Puedes escribir *MENU* en cualquier momento para volver al menú principal.
 </field>
             <field name="active">True</field>
         </record>
@@ -16,8 +22,11 @@
             <field name="title">Solicitar RUC</field>
             <field name="category">ruc</field>
             <field name="body">
-                Gracias {{partner_name}}. Ahora envíame el *RUC de tu empresa* para completar el
-                registro.
+Gracias, {{partner_name}}. ✅
+
+Ahora envíanos el *RUC de 11 dígitos* de la empresa con la que deseas realizar la atención.
+
+Puedes escribir *MENU* para volver al menú principal.
 </field>
             <field name="active">True</field>
         </record>
@@ -26,8 +35,13 @@
             <field name="title">Error validando DNI</field>
             <field name="category">dni</field>
             <field name="body">
-                No pude validar el DNI automáticamente. Por favor verifica el número o espera la
-                atención de un asesor.
+⚠️ *No pudimos validar el DNI*
+
+Verifica que hayas enviado exactamente *8 dígitos* e inténtalo nuevamente.
+
+Si el número es correcto y el inconveniente continúa, podremos orientarte con la siguiente alternativa de atención disponible.
+
+Escribe *MENU* para volver al menú principal.
 </field>
             <field name="active">True</field>
         </record>
@@ -36,7 +50,13 @@
             <field name="title">Error validando RUC</field>
             <field name="category">ruc</field>
             <field name="body">
-                No pude validar el RUC automáticamente. Verifica el número e intenta nuevamente.
+⚠️ *No pudimos validar el RUC*
+
+Verifica que hayas enviado exactamente *11 dígitos* e inténtalo nuevamente.
+
+Si el número es correcto y el inconveniente continúa, podremos orientarte con la siguiente alternativa de atención disponible.
+
+Escribe *MENU* para volver al menú principal.
 </field>
             <field name="active">True</field>
         </record>
@@ -45,8 +65,14 @@
             <field name="title">Registro completado</field>
             <field name="category">registration</field>
             <field name="body">
-                ✅ Registro completado correctamente para: *{{company_name}}* ¿En qué podemos
-                ayudarte?
+✅ *Registro completado correctamente*
+
+Empresa activa:
+🏢 *{{company_name}}*
+
+Ya puedes utilizar nuestros servicios por este canal.
+
+Escribe *MENU* para ver las opciones disponibles.
 </field>
             <field name="active">True</field>
         </record>
@@ -55,51 +81,86 @@
             <field name="title">Contacto bloqueado</field>
             <field name="category">blocked</field>
             <field name="body">
-                Tu número no está habilitado para atención por este canal.
+⚠️ *Canal de atención no disponible*
+
+Este número no se encuentra habilitado actualmente para recibir atención mediante este canal.
+
+Si consideras que se trata de un error, comunícate con tu contacto habitual de ANDES SOLUTION COPIERS.
 </field>
             <field name="active">True</field>
         </record>
         <record id="whatsapp_template_human_mode_active" model="whatsapp.template">
             <field name="name">human_mode_active</field>
-            <field name="title">Modo humano activo</field>
+            <field name="title">Atención humana activa</field>
             <field name="category">human</field>
             <field name="body">
-                👨‍💼 Tu conversación está siendo atendida por un asesor. Por favor espera su
-                respuesta.
+👨‍💼 *Atención con asesor en curso*
+
+Tu conversación está siendo atendida por un integrante de nuestro equipo.
+
+Por favor mantente atento(a) a este chat; la atención continuará por este mismo medio.
 </field>
             <field name="active">True</field>
         </record>
         <record id="whatsapp_template_human_take" model="whatsapp.template">
             <field name="name">human_take</field>
-            <field name="title">Chat tomado por humano</field>
+            <field name="title">Conversación tomada por asesor</field>
             <field name="category">human</field>
             <field name="body">
-                👨‍💼 Un asesor continuará con la atención.
+👨‍💼 *Un asesor continuará tu atención*
+
+Tu solicitud ya fue derivada a nuestro equipo.
+
+Por favor mantente atento(a) a este chat para continuar la atención por este mismo medio.
 </field>
             <field name="active">True</field>
         </record>
         <record id="whatsapp_template_human_release" model="whatsapp.template">
             <field name="name">human_release</field>
-            <field name="title">Bot liberado</field>
+            <field name="title">Asistente virtual habilitado nuevamente</field>
             <field name="category">human</field>
             <field name="body">
-                ✅ El bot ha sido habilitado nuevamente para continuar la atención.
+✅ *Atención del asistente virtual habilitada*
+
+La atención humana ha finalizado y nuestro asistente virtual está disponible nuevamente.
+
+Escribe *MENU* para ver las opciones disponibles.
 </field>
             <field name="active">True</field>
         </record>
         <record id="whatsapp_template_after_hours" model="whatsapp.template">
             <field name="name">after_hours</field>
-            <field name="title">Fuera de horario</field>
+            <field name="title">Fuera de horario de atención</field>
             <field name="category">after_hours</field>
-            <field name="body"> {{business_message}} </field>
+            <field name="body">
+🌙 *Fuera de horario de atención*
+
+{{business_message}}
+
+Puedes continuar registrando por este canal:
+*1* 🖨️ Solicitud de tóner
+*2* 🛠️ Servicio técnico
+*5* 🏢 Cambiar / ver empresa activa
+
+La *asistencia remota* y la *atención directa con un técnico* estarán disponibles al retomar nuestro horario de atención.
+
+Escribe *MENU* para volver al menú principal.
+</field>
             <field name="active">True</field>
         </record>
         <record id="whatsapp_template_business_open" model="whatsapp.template">
             <field name="name">business_open</field>
-            <field name="title">Horario abierto</field>
+            <field name="title">Horario de atención disponible</field>
             <field name="category">fallback</field>
             <field name="body">
-                ✅ Estamos en horario de atención. {{display_hours}}
+✅ *Estamos en horario de atención*
+
+Horario de hoy:
+{{display_hours}}
+
+Puedes continuar con cualquiera de las opciones disponibles en nuestro menú.
+
+Escribe *MENU* para ver el menú principal.
 </field>
             <field name="active">True</field>
         </record>
@@ -108,9 +169,15 @@
             <field name="title">Seleccionar empresa</field>
             <field name="category">company</field>
             <field name="body">
-                Hola {{partner_name}} 👋 Estas son tus empresas asociadas. Responde con el *número*
-                de la empresa que deseas usar. Luego podrás solicitar tóner o registrar servicio
-                para la empresa seleccionada. Para regresar al menú principal, escribe *MENU*.
+🏢 *Selecciona la empresa para esta atención*
+
+Hola, {{partner_name}}. Estas son las empresas asociadas a tu contacto.
+
+Responde únicamente con el *número* de la empresa que deseas utilizar.
+
+Después de seleccionarla podrás continuar con la solicitud correspondiente.
+
+Escribe *MENU* para volver al menú principal.
 </field>
             <field name="active">True</field>
         </record>
@@ -119,10 +186,19 @@
             <field name="title">Empresa seleccionada</field>
             <field name="category">company</field>
             <field name="body">
-                ✅ Empresa seleccionada correctamente: 🏢 *{{company_name}}* ¿Qué deseas realizar?
-                *1* 🖨️ Solicitar tóner *2* 🛠️ Registrar servicio técnico *3* 💻 Asistencia remota
-                *4* 👨‍💼 Hablar con un técnico *5* 🏢 Cambiar / ver empresa activa Para regresar al
-                menú principal, escribe *MENU*.
+✅ *Empresa seleccionada correctamente*
+
+🏢 Empresa activa: *{{company_name}}*
+
+¿Qué deseas realizar?
+
+*1* 🖨️ Solicitar tóner
+*2* 🛠️ Registrar servicio técnico
+*3* 💻 Asistencia remota
+*4* 👨‍💼 Hablar con un técnico
+*5* 🏢 Cambiar / ver empresa activa
+
+Escribe el *número* de una opción o *MENU* para volver a mostrar este menú.
 </field>
             <field name="active">True</field>
         </record>
@@ -131,16 +207,26 @@
             <field name="title">Saludo registrado</field>
             <field name="category">greeting</field>
             <field name="body">
-                Hola {{partner_name}} 
-                👋 Soy el asistente virtual de *ANDES SOLUTION COPIERS*.
-                Empresa activa: 🏢 *{{company_name}}* 
-                ¿En qué podemos ayudarte hoy? 
-                *1* 🖨️ Solicitar tóner 
-                *2* 🛠️ Registrar servicio técnico 
-                *3* 💻 Asistencia remota 
-                *4* 👨‍💼 Hablar con un técnico 
-                *5* 🏢 Cambiar / ver empresa activa Para atención
-                
+👋 Hola, {{partner_name}}.
+
+Soy el asistente virtual de *ANDES SOLUTION COPIERS*.
+
+🏢 Empresa activa: *{{company_name}}*
+
+¿En qué podemos ayudarte?
+
+*1* 🖨️ Solicitar tóner
+*2* 🛠️ Registrar servicio técnico
+*3* 💻 Asistencia remota
+*4* 👨‍💼 Hablar con un técnico
+*5* 🏢 Cambiar / ver empresa activa
+
+Responde con el *número* de una opción.
+
+Durante cualquier proceso puedes escribir:
+↩️ *ATRÁS* para regresar al paso anterior
+🏠 *MENU* para volver al menú principal
+❌ *CANCELAR* para cancelar la operación actual
 </field>
             <field name="active">True</field>
         </record>
@@ -149,23 +235,35 @@
             <field name="title">Link de servicio</field>
             <field name="category">service</field>
             <field name="body">
-                🛠️ *Registro de servicio técnico* Para registrar tu solicitud de servicio, ingresa
-                al siguiente enlace: {{service_link}} Si prefieres atención directa, escribe
-                *ASESOR* para derivarte con un técnico.
+🛠️ *Registro de servicio técnico*
+
+Puedes registrar tu solicitud mediante el siguiente enlace:
+
+{{service_link}}
+
+Si deseas continuar utilizando este chat, escribe *MENU* para ver las opciones disponibles.
 </field>
             <field name="active">True</field>
         </record>
         <record id="whatsapp_template_fallback" model="whatsapp.template">
             <field name="name">fallback</field>
-            <field name="title">No entendido - derivar a asesor</field>
-            <field name="category">human</field>
+            <field name="title">Consulta no identificada</field>
+            <field name="category">fallback</field>
             <field name="body">
-        No pude identificar con seguridad tu consulta.
+🤔 *Necesito un poco más de información*
 
-        Para evitar darte una respuesta incorrecta, voy a derivarte con un asesor de *ANDES SOLUTION COPIERS*. 👨‍💼
+No pude identificar con suficiente seguridad lo que necesitas.
 
-        Por favor espera un momento.
-            </field>
+Puedes escribir nuevamente tu consulta con un poco más de detalle o elegir una opción:
+
+*1* 🖨️ Solicitar tóner
+*2* 🛠️ Registrar servicio técnico
+*3* 💻 Asistencia remota
+*4* 👨‍💼 Hablar con un técnico
+*5* 🏢 Cambiar / ver empresa activa
+
+También puedes escribir *MENU* para volver al menú principal.
+</field>
             <field name="active">True</field>
         </record>
         <!--
@@ -182,96 +280,135 @@
             <field name="title">Menú principal técnico</field>
             <field name="category">fallback</field>
             <field name="body">
-                Hola {{partner_name}} 
-                👋 Soy el asistente virtual de *ANDES SOLUTION COPIERS*.
-                Empresa activa: 🏢 *{{company_name}}* 
-                ¿En qué podemos ayudarte hoy? 
-                *1* 🖨️ Solicitar tóner 
-                *2* 🛠️ Registrar servicio técnico 
-                *3* 💻 Asistencia remota 
-                *4* 👨‍💼 Hablar con un técnico 
-                *5* 🏢 Cambiar / ver empresa activa Para atención.
-               
+👋 Hola, {{partner_name}}.
+
+Soy el asistente virtual de *ANDES SOLUTION COPIERS*.
+
+🏢 Empresa activa: *{{company_name}}*
+
+¿En qué podemos ayudarte?
+
+*1* 🖨️ Solicitar tóner
+*2* 🛠️ Registrar servicio técnico
+*3* 💻 Asistencia remota
+*4* 👨‍💼 Hablar con un técnico
+*5* 🏢 Cambiar / ver empresa activa
+
+Responde con el *número* de una opción.
+
+Durante cualquier proceso puedes escribir:
+↩️ *ATRÁS* para regresar al paso anterior
+🏠 *MENU* para volver al menú principal
+❌ *CANCELAR* para cancelar la operación actual
 </field>
             <field name="active">True</field>
         </record>
         <record id="whatsapp_template_toner_contact_help" model="whatsapp.template">
             <field name="name">toner_contact_help</field>
-            <field name="title">Ayuda tóner / contacto</field>
-            <field name="category">service</field>
+            <field name="title">Ayuda para solicitud de tóner</field>
+            <field name="category">toner</field>
             <field name="body">
-                🖨️ *Solicitud de tóner / suministros* Para solicitar tóner puedes continuar por
-                este chat. Si no deseas llenar el formulario o necesitas ayuda, puedes contactar al
-                área correspondiente: 
-                *Área de suministros / tóner* 
-                👤 *Jennifer Allpes* 
-                📞 Teléfono: 51999332772 
-                📧 Correo: alquiler@andescopiers.com.pe 
-                👤 *Lizeth Acuña* 
-                📞 Teléfono: 51981597727 
-                📧 Correo: comercial01@andescopiers.com.pe 
-                Si deseas regresar al menú principal, escribe *MENU*.
+🖨️ *Tóner y suministros*
+
+Puedes registrar tu solicitud directamente por este chat.
+
+Si necesitas orientación adicional, puedes comunicarte con:
+
+👤 *Jennifer Allpes*
+📞 51999332772
+📧 alquiler@andescopiers.com.pe
+
+👤 *Lizeth Acuña*
+📞 51981597727
+📧 comercial01@andescopiers.com.pe
+
+Escribe *MENU* para volver al menú principal.
 </field>
             <field name="active">True</field>
         </record>
         <record id="whatsapp_template_sales_contact" model="whatsapp.template">
             <field name="name">sales_contact</field>
-            <field name="title">Contacto ventas / alquiler</field>
-            <field name="category">fallback</field>
+            <field name="title">Ventas, alquiler y cotizaciones</field>
+            <field name="category">sales</field>
             <field name="body">
-                💼 *Ventas / alquiler de equipos* Gracias por contactarnos. Para consultas sobre
-                *venta, alquiler o cotización de fotocopiadoras*, puedes comunicarte directamente
-                con nuestra área comercial: 
-                👤 *Jennifer Allpes* 
-                📞 Teléfono: 51999332772 
-                📧 Correo:   alquiler@andescopiers.com.pe 
-                👤 *Lizeth Acuña* 
-                📞 Teléfono: 51981597727
-                📧 Correo:  comercial01@andescopiers.com.pe 
-                Si deseas regresar al menú principal, escribe *MENU*.
+💼 *Ventas, alquiler y cotizaciones*
+
+Gracias por comunicarte con *ANDES SOLUTION COPIERS*.
+
+Para consultas sobre venta, alquiler, renovación o cotización de equipos, puedes contactar a nuestro equipo comercial:
+
+👤 *Jennifer Allpes*
+📞 51999332772
+📧 alquiler@andescopiers.com.pe
+
+👤 *Lizeth Acuña*
+📞 51981597727
+📧 comercial01@andescopiers.com.pe
+
+Escribe *MENU* para volver al menú principal.
 </field>
             <field name="active">True</field>
         </record>
         <record id="whatsapp_template_billing_contact" model="whatsapp.template">
             <field name="name">billing_contact</field>
-            <field name="title">Contacto facturación / pagos</field>
-            <field name="category">fallback</field>
+            <field name="title">Facturación, pagos y administración</field>
+            <field name="category">billing</field>
             <field name="body">
-                🧾 *Facturación / pagos / administración* Gracias por contactarnos. Para consultas
-                sobre *facturación, pagos, recibos, guías, comprobantes o temas administrativos*,
-                puedes comunicarte directamente con nuestra área comercial / administrativa: 
-                👤 *Jennifer Allpes* 
-                📞 Teléfono: 51999332772 
-                📧 Correo: alquiler@andescopiers.com.pe
-                👤 *Lizeth Acuña* 
-                📞 Teléfono: 51981597727 
-                📧 Correo: comercial01@andescopiers.com.pe 
-                Si deseas regresar al menú principal, escribe *MENU*.
+🧾 *Facturación, pagos y administración*
+
+Para consultas sobre facturas, pagos, comprobantes, guías, cobranzas u otros temas administrativos, puedes comunicarte con:
+
+👤 *Jennifer Allpes*
+📞 51999332772
+📧 alquiler@andescopiers.com.pe
+
+👤 *Lizeth Acuña*
+📞 51981597727
+📧 comercial01@andescopiers.com.pe
+
+Escribe *MENU* para volver al menú principal.
 </field>
             <field name="active">True</field>
         </record>
         <record id="whatsapp_template_remote_contact_help" model="whatsapp.template">
             <field name="name">remote_contact_help</field>
-            <field name="title">Ayuda soporte remoto</field>
-            <field name="category">service</field>
+            <field name="title">Ayuda para asistencia remota</field>
+            <field name="category">remote</field>
             <field name="body">
-                💻 *Asistencia remota* Podemos ayudarte con: • Configuración de escáner • Correo •
-                Carpeta compartida • Drivers • AnyDesk • Conexión de impresora en red Por favor
-                envíanos tu código *AnyDesk* o una foto de la pantalla donde aparece el código.
+💻 *Asistencia remota*
+
+Podemos ayudarte con configuraciones relacionadas con:
+
+• Escáner y correo
+• Carpetas compartidas
+• Drivers y configuración de impresión
+• Conexión de impresoras en red
+• AnyDesk y revisión remota
+
+Cuando el asistente lo solicite, envía tu *código AnyDesk*.
+
+↩️ Escribe *ATRÁS* para regresar.
+🏠 Escribe *MENU* para volver al menú principal.
 </field>
             <field name="active">True</field>
         </record>
         <record id="whatsapp_template_unknown_with_menu" model="whatsapp.template">
             <field name="name">unknown_with_menu</field>
-            <field name="title">No entendido - derivar a asesor</field>
-            <field name="category">human</field>
+            <field name="title">Consulta no identificada - solicitar aclaración</field>
+            <field name="category">fallback</field>
             <field name="body">
-        No pude identificar con seguridad tu consulta.
+🤔 *No pude identificar con claridad tu solicitud*
 
-        Para evitar darte una respuesta incorrecta, voy a derivarte con un asesor de *ANDES SOLUTION COPIERS*. 👨‍💼
+Para ayudarte correctamente, describe brevemente qué necesitas o selecciona una opción:
 
-        Por favor espera un momento.
-            </field>
+*1* 🖨️ Solicitar tóner
+*2* 🛠️ Registrar servicio técnico
+*3* 💻 Asistencia remota
+*4* 👨‍💼 Hablar con un técnico
+*5* 🏢 Cambiar / ver empresa activa
+
+Escribe *MENU* para volver al menú principal.
+</field>
             <field name="active">True</field>
         </record>
         <record id="whatsapp_template_thanks_reply" model="whatsapp.template">
@@ -279,7 +416,9 @@
             <field name="title">Respuesta agradecimiento</field>
             <field name="category">fallback</field>
             <field name="body">
-                Con gusto {{partner_name}} 🙌 Estamos para ayudarte.
+Con mucho gusto, {{partner_name}}. 🙌
+
+Estamos para ayudarte. Si necesitas realizar otra gestión, escribe *MENU*.
 </field>
             <field name="active">True</field>
         </record>
@@ -288,18 +427,24 @@
             <field name="title">Respuesta despedida</field>
             <field name="category">fallback</field>
             <field name="body">
-                Gracias por comunicarte con *ANDES SOLUTION COPIERS*, {{partner_name}} 👋 Que tengas
-                un excelente día.
+Gracias por comunicarte con *ANDES SOLUTION COPIERS*, {{partner_name}}. 👋
+
+Ha sido un gusto atenderte.
+
+Cuando necesites realizar una nueva gestión, puedes escribirnos nuevamente por este mismo medio.
 </field>
             <field name="active">True</field>
         </record>
         <record id="whatsapp_template_cancel_flow_reply" model="whatsapp.template">
             <field name="name">cancel_flow_reply</field>
-            <field name="title">Cancelar flujo</field>
+            <field name="title">Operación cancelada</field>
             <field name="category">fallback</field>
             <field name="body">
-                ✅ Se canceló la operación actual. Puedes escribir *MENÚ* para ver las opciones
-                disponibles.
+✅ *Operación cancelada*
+
+La gestión que estabas realizando fue cancelada correctamente.
+
+Escribe *MENU* para volver al menú principal.
 </field>
             <field name="active">True</field>
         </record>
@@ -312,7 +457,145 @@
         <!--
  ========================================================= 
 -->
-        <record id="whatsapp_auto_response_saludo_hola" model="whatsapp.auto.response">
+        <record id="whatsapp_template_in_break" model="whatsapp.template"><field name="name">in_break</field><field name="title">Horario de refrigerio</field><field name="category">after_hours</field><field name="body">
+🕐 *Horario de refrigerio*
+
+{{business_message}}
+
+Puedes continuar registrando por este canal:
+*1* 🖨️ Solicitud de tóner
+*2* 🛠️ Servicio técnico
+*5* 🏢 Cambiar / ver empresa activa
+
+Durante el refrigerio no se encuentra disponible:
+*3* 💻 Asistencia remota
+*4* 👨‍💼 Atención directa con un técnico
+
+Estas opciones estarán disponibles nuevamente al finalizar el horario de refrigerio.
+
+Escribe *MENU* para volver al menú principal.
+</field><field name="description">Plantilla mostrada cuando el horario comercial está en refrigerio.</field><field name="active">True</field></record><record id="whatsapp_template_ask_anydesk_code" model="whatsapp.template"><field name="name">ask_anydesk_code</field><field name="title">Solicitar código AnyDesk</field><field name="category">anydesk</field><field name="body">
+💻 *Asistencia remota · Código AnyDesk*
+
+Para continuar, envíanos el *código AnyDesk* del equipo o computadora que deseas que revisemos.
+
+El código debe contener entre *6 y 12 dígitos*.
+
+↩️ Escribe *ATRÁS* para regresar.
+🏠 Escribe *MENU* para volver al menú principal.
+❌ Escribe *CANCELAR* para cancelar esta solicitud.
+</field><field name="description">Solicita el código AnyDesk al iniciar el flujo de soporte remoto.</field><field name="active">True</field></record><record id="whatsapp_template_remote_handoff_created" model="whatsapp.template"><field name="name">remote_handoff_created</field><field name="title">Asistencia remota derivada</field><field name="category">remote</field><field name="body">
+✅ *Solicitud de asistencia remota registrada*
+
+Hemos recibido la información necesaria y la solicitud fue derivada a nuestro equipo técnico.
+
+💻 Código AnyDesk: *{{anydesk_code}}*
+📝 Problema reportado: {{remote_problem}}
+
+Un técnico continuará la atención por este mismo chat cuando tome la solicitud.
+
+Por favor mantén AnyDesk disponible para facilitar la conexión.
+</field><field name="description">Confirmación enviada al completar el flujo remoto y crear el handoff.</field><field name="active">True</field></record><record id="whatsapp_template_navigation_help" model="whatsapp.template"><field name="name">navigation_help</field><field name="title">Ayuda de navegación</field><field name="category">fallback</field><field name="body">
+ℹ️ *Opciones de navegación*
+
+Durante cualquier proceso puedes utilizar:
+
+↩️ *ATRÁS* — regresar al paso anterior
+🏠 *MENU* — volver al menú principal
+❌ *CANCELAR* — cancelar la operación actual
+
+También puedes responder directamente a la pregunta que aparece en pantalla.
+</field><field name="description">Ayuda estándar de navegación para todos los flujos.</field><field name="active">True</field></record><record id="whatsapp_template_invalid_option" model="whatsapp.template"><field name="name">invalid_option</field><field name="title">Opción no válida</field><field name="category">error</field><field name="body">
+⚠️ *No pude relacionar esa respuesta con las opciones disponibles*
+
+Revisa las opciones mostradas e inténtalo nuevamente.
+
+↩️ Escribe *ATRÁS* para regresar al paso anterior.
+🏠 Escribe *MENU* para volver al menú principal.
+❌ Escribe *CANCELAR* para cancelar la operación.
+</field><field name="description">Respuesta estándar ante una opción inválida dentro de un flujo.</field><field name="active">True</field></record><record id="whatsapp_template_back_step" model="whatsapp.template"><field name="name">back_step</field><field name="title">Regresar al paso anterior</field><field name="category">fallback</field><field name="body">
+↩️ *Regresamos al paso anterior*
+
+Puedes modificar la información solicitada y continuar con el proceso.
+
+Escribe *MENU* si deseas volver al menú principal.
+</field><field name="description">Mensaje estándar al ejecutar la navegación ATRÁS.</field><field name="active">True</field></record><record id="whatsapp_template_human_confirmation" model="whatsapp.template"><field name="name">human_confirmation</field><field name="title">Confirmar atención humana</field><field name="category">confirmation</field><field name="body">
+👨‍💼 *Atención con un asesor*
+
+¿Deseas que tu conversación sea derivada a un integrante de nuestro equipo?
+
+Responde:
+*SI* — derivar la conversación
+*NO* — continuar con el asistente virtual
+
+También puedes escribir *MENU* para volver al menú principal.
+</field><field name="description">Confirmación previa antes de activar intervención humana.</field><field name="active">True</field></record><record id="whatsapp_template_human_confirmation_cancelled" model="whatsapp.template"><field name="name">human_confirmation_cancelled</field><field name="title">Atención humana no solicitada</field><field name="category">human</field><field name="body">
+✅ Continuaremos con el asistente virtual.
+
+Puedes escribir tu consulta o *MENU* para ver las opciones disponibles.
+</field><field name="description">Respuesta cuando el cliente rechaza la derivación humana.</field><field name="active">True</field></record><record id="whatsapp_template_human_unavailable" model="whatsapp.template"><field name="name">human_unavailable</field><field name="title">Atención humana fuera de horario</field><field name="category">after_hours</field><field name="body">
+👨‍💼 *Atención directa con un técnico*
+
+En este momento la atención directa con nuestro equipo técnico no se encuentra disponible.
+
+Puedes registrar una solicitud de:
+*1* 🖨️ Tóner
+*2* 🛠️ Servicio técnico
+
+La solicitud quedará registrada para ser atendida al retomar el horario correspondiente.
+
+Escribe *MENU* para volver al menú principal.
+</field><field name="description">Respuesta cuando se solicita un técnico durante refrigerio o fuera de horario.</field><field name="active">True</field></record><record id="whatsapp_template_remote_unavailable" model="whatsapp.template"><field name="name">remote_unavailable</field><field name="title">Asistencia remota fuera de horario</field><field name="category">after_hours</field><field name="body">
+💻 *Asistencia remota*
+
+La asistencia remota requiere la disponibilidad de uno de nuestros técnicos y en este momento no se encuentra disponible.
+
+Puedes registrar un *servicio técnico* y nuestro equipo continuará la atención al retomar el horario correspondiente.
+
+*2* 🛠️ Registrar servicio técnico
+
+Escribe *MENU* para volver al menú principal.
+</field><field name="description">Respuesta cuando se solicita soporte remoto durante refrigerio o fuera de horario.</field><field name="active">True</field></record><record id="whatsapp_template_clarification_first" model="whatsapp.template"><field name="name">clarification_first</field><field name="title">Primera solicitud de aclaración</field><field name="category">fallback</field><field name="body">
+🤔 *Necesito un poco más de información*
+
+No pude identificar con suficiente seguridad lo que necesitas.
+
+Describe brevemente tu consulta o selecciona una opción:
+
+*1* 🖨️ Solicitar tóner
+*2* 🛠️ Registrar servicio técnico
+*3* 💻 Asistencia remota
+*4* 👨‍💼 Hablar con un técnico
+*5* 🏢 Cambiar / ver empresa activa
+
+Escribe *MENU* para volver al menú principal.
+</field><field name="description">Primera respuesta cuando la intención no puede determinarse con seguridad.</field><field name="active">True</field></record><record id="whatsapp_template_clarification_human_offer" model="whatsapp.template"><field name="name">clarification_human_offer</field><field name="title">Ofrecer atención humana tras aclaración</field><field name="category">confirmation</field><field name="body">
+🤝 *Podemos derivar tu consulta*
+
+Todavía no pude identificar con suficiente claridad tu solicitud.
+
+¿Deseas que un asesor continúe la atención?
+
+Responde:
+*SI* — solicitar atención de un asesor
+*NO* — continuar con el asistente virtual
+
+También puedes escribir *MENU* para volver al menú principal.
+</field><field name="description">Oferta de handoff después de intentos de aclaración fallidos.</field><field name="active">True</field></record><record id="whatsapp_template_toner_after_hours_registered" model="whatsapp.template"><field name="name">toner_after_hours_registered</field><field name="title">Tóner registrado fuera de horario</field><field name="category">toner</field><field name="body">
+✅ *Solicitud de tóner registrada*
+
+Tu solicitud quedó registrada correctamente.
+
+En este momento nos encontramos fuera del horario de atención disponible para gestión inmediata. Nuestro equipo continuará con la solicitud al retomar sus actividades.
+
+Puedes escribir *MENU* para realizar otra gestión.
+</field><field name="description">Confirmación preparada para solicitudes de tóner registradas fuera de horario.</field><field name="active">True</field></record><record id="whatsapp_template_onsite_after_hours_registered" model="whatsapp.template"><field name="name">onsite_after_hours_registered</field><field name="title">Servicio técnico registrado fuera de horario</field><field name="category">onsite</field><field name="body">
+✅ *Servicio técnico registrado*
+
+Tu solicitud quedó registrada correctamente y será revisada por nuestro equipo al retomar el horario de atención.
+
+Si necesitas realizar otra gestión, escribe *MENU*.
+</field><field name="description">Confirmación preparada para tickets de servicio registrados fuera de horario.</field><field name="active">True</field></record><record id="whatsapp_auto_response_saludo_hola" model="whatsapp.auto.response">
             <field name="name">Saludo - hola</field>
             <field name="active">True</field>
             <field name="sequence">10</field>
@@ -322,15 +605,21 @@
             <field name="match_type">contains</field>
             <field name="applies_to">all</field>
             <field name="response">
-                Hola {{partner_name}} 
-                👋 Empresa activa: 🏢 *{{company_name}}* 
-                ¿En qué podemos ayudarte? 
-                *1* 🖨️ Solicitar tóner 
-                *2* 🛠️ Registrar servicio técnico 
-                *3* 💻
-                Asistencia remota 
-                *4* 👨‍💼 Hablar con un técnico 
-                *5* 🏢 Cambiar / ver empresa activa.
+👋 Hola, {{partner_name}}.
+
+Soy el asistente virtual de *ANDES SOLUTION COPIERS*.
+
+🏢 Empresa activa: *{{company_name}}*
+
+¿En qué podemos ayudarte?
+
+*1* 🖨️ Solicitar tóner
+*2* 🛠️ Registrar servicio técnico
+*3* 💻 Asistencia remota
+*4* 👨‍💼 Hablar con un técnico
+*5* 🏢 Cambiar / ver empresa activa
+
+Responde con el *número* de una opción o escribe *MENU*.
 </field>
             <field name="stop_flow">False</field>
             <field name="allow_ai_after">True</field>
@@ -345,15 +634,21 @@
             <field name="match_type">contains</field>
             <field name="applies_to">all</field>
             <field name="response">
-                Buenos días {{partner_name}} 
-                👋 Empresa activa: 
-                🏢 *{{company_name}}* 
-                ¿En qué podemos ayudarte? 
-                *1* 🖨️ Solicitar tóner 
-                *2* 🛠️ Registrar servicio técnico 
-                *3* 💻 Asistencia remota 
-                *4* 👨‍💼 Hablar con un técnico 
-                *5* 🏢 Cambiar / ver empresa activa.
+☀️ Buenos días, {{partner_name}}.
+
+Soy el asistente virtual de *ANDES SOLUTION COPIERS*.
+
+🏢 Empresa activa: *{{company_name}}*
+
+¿En qué podemos ayudarte?
+
+*1* 🖨️ Solicitar tóner
+*2* 🛠️ Registrar servicio técnico
+*3* 💻 Asistencia remota
+*4* 👨‍💼 Hablar con un técnico
+*5* 🏢 Cambiar / ver empresa activa
+
+Responde con el *número* de una opción o escribe *MENU*.
 </field>
             <field name="stop_flow">False</field>
             <field name="allow_ai_after">True</field>
@@ -368,15 +663,21 @@
             <field name="match_type">contains</field>
             <field name="applies_to">all</field>
             <field name="response">
-                Buenas tardes {{partner_name}} 
-                👋 Empresa activa: 🏢 *{{company_name}}* 
-                ¿En qué
-                podemos ayudarte? 
-                *1* 🖨️ Solicitar tóner 
-                *2* 🛠️ Registrar servicio técnico 
-                *3* 💻 Asistencia remota 
-                *4* 👨‍💼 Hablar con un técnico 
-                *5* 🏢 Cambiar / ver empresa activa.
+🌤️ Buenas tardes, {{partner_name}}.
+
+Soy el asistente virtual de *ANDES SOLUTION COPIERS*.
+
+🏢 Empresa activa: *{{company_name}}*
+
+¿En qué podemos ayudarte?
+
+*1* 🖨️ Solicitar tóner
+*2* 🛠️ Registrar servicio técnico
+*3* 💻 Asistencia remota
+*4* 👨‍💼 Hablar con un técnico
+*5* 🏢 Cambiar / ver empresa activa
+
+Responde con el *número* de una opción o escribe *MENU*.
 </field>
             <field name="stop_flow">False</field>
             <field name="allow_ai_after">True</field>
@@ -391,7 +692,7 @@
             <field name="match_type">regex</field>
             <field name="applies_to">blocked</field>
             <field name="response">
-                Tu número no está habilitado para atención por este canal.
+⚠️ Este número no se encuentra habilitado actualmente para recibir atención mediante este canal.
 </field>
             <field name="stop_flow">True</field>
             <field name="allow_ai_after">False</field>
@@ -405,7 +706,13 @@
             <field name="trigger">.*</field>
             <field name="match_type">regex</field>
             <field name="applies_to">after_hours</field>
-            <field name="response">{{business_message}}</field>
+            <field name="response">
+🌙 *Fuera de horario de atención*
+
+{{business_message}}
+
+Puedes registrar solicitudes de *tóner* y *servicio técnico*. La asistencia remota y la atención directa con un técnico estarán disponibles al retomar nuestro horario.
+</field>
             <field name="stop_flow">False</field>
             <field name="allow_ai_after">True</field>
             <field name="only_after_hours">True</field>
@@ -420,7 +727,7 @@
             <field name="match_type">regex</field>
             <field name="applies_to">human</field>
             <field name="response">
-                👨‍💼 Tu conversación está siendo atendida por un asesor.
+👨‍💼 Tu conversación está siendo atendida por un integrante de nuestro equipo. Por favor mantente atento(a) a este chat.
 </field>
             <field name="stop_flow">True</field>
             <field name="allow_ai_after">False</field>
@@ -434,7 +741,9 @@
             <field name="trigger">gracias</field>
             <field name="match_type">contains</field>
             <field name="applies_to">all</field>
-            <field name="response"> Con gusto {{partner_name}} 🙌 </field>
+            <field name="response">
+Con mucho gusto, {{partner_name}}. 🙌 Si necesitas realizar otra gestión, escribe *MENU*.
+</field>
             <field name="stop_flow">True</field>
             <field name="allow_ai_after">False</field>
         </record>
@@ -1206,20 +1515,23 @@
 
 <record id="whatsapp_template_business_hours_query" model="whatsapp.template">
     <field name="name">business_hours_query</field>
-    <field name="title">Consulta horario de atención</field>
+    <field name="title">Consulta de horario de atención</field>
     <field name="category">fallback</field>
     <field name="body">
 🕒 *Horario de atención*
 
-Estado actual: *{{business_reason}}*
+Estado actual:
+*{{business_reason}}*
 
 Horario de hoy:
 {{display_hours}}
 
 {{business_message}}
 
-Puedes dejarnos tu consulta por este medio y te responderemos según disponibilidad.
-    </field>
+Las solicitudes de *tóner* y *servicio técnico* pueden registrarse por este canal incluso fuera del horario de atención.
+
+Escribe *MENU* para volver al menú principal.
+</field>
     <field name="active">True</field>
 </record>
 

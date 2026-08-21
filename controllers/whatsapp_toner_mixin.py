@@ -11,6 +11,131 @@ _logger = logging.getLogger(__name__)
 
 
 class WhatsAppTonerMixin:
+    """
+    Flujo conversacional para solicitudes de tóner.
+
+    La lógica de negocio existente se conserva:
+    - selección de equipo;
+    - selección de color;
+    - cantidad;
+    - lectura automática/manual de contadores;
+    - observaciones;
+    - confirmación;
+    - creación de toner.counter.submission.
+
+    Este mixin también presenta cada paso con mensajes consistentes
+    y navegación clara para WhatsApp.
+    """
+
+    # ==========================================================
+    # Presentación / navegación
+    # ==========================================================
+    def _toner_navigation_footer(self, include_back=True):
+        if hasattr(self, "_flow_navigation_footer"):
+            try:
+                return self._flow_navigation_footer(
+                    include_back=include_back
+                )
+            except Exception:
+                pass
+
+        lines = []
+        if include_back:
+            lines.append("↩️ Escribe *ATRÁS* para regresar al paso anterior.")
+        lines.append("🏠 Escribe *MENU* para volver al menú principal.")
+        lines.append("❌ Escribe *CANCELAR* para cancelar la solicitud.")
+        return "\n".join(lines)
+
+    def _toner_business_status_safe(self):
+        try:
+            status = self._compute_business_status()
+            return status if isinstance(status, dict) else {}
+        except Exception:
+            _logger.exception(
+                "[WA-TONER] No se pudo evaluar horario para derivación"
+            )
+            return {}
+
+    def _toner_create_handoff_safe(
+        self,
+        partner,
+        session,
+        initial_message,
+        reason,
+        context=None,
+    ):
+        """
+        Crea el handoff de respaldo sin prometer atención inmediata
+        cuando estamos en refrigerio o fuera de horario.
+
+        En horario abierto conserva el comportamiento existente:
+        activa modo humano y sesión humana.
+
+        Fuera de horario deja la solicitud pendiente para revisión y
+        no activa una conversación humana inmediata.
+        """
+        context = context if isinstance(context, dict) else {}
+        business_status = self._toner_business_status_safe()
+        realtime_available = bool(business_status.get("is_open"))
+
+        handoff = False
+        try:
+            handoff = (
+                request.env["whatsapp.handoff"]
+                .sudo()
+                .create_unknown_intent_handoff(
+                    partner,
+                    session=session,
+                    initial_message=initial_message or "",
+                    context={
+                        "reason": reason,
+                        "flow_context": context,
+                        "business_status": business_status,
+                        "pending_until_business_hours": not realtime_available,
+                    },
+                )
+            )
+        except Exception:
+            _logger.exception(
+                "[WA-TONER] Error creando handoff de respaldo | "
+                "partner_id=%s session_id=%s reason=%s",
+                partner.id if partner else False,
+                session.id if session else False,
+                reason,
+            )
+
+        if realtime_available:
+            try:
+                partner.whatsapp_enable_human_mode_api(
+                    taken_by_name="Bot WhatsApp"
+                )
+                session.action_set_human()
+            except Exception:
+                _logger.exception(
+                    "[WA-TONER] Error activando modo humano | "
+                    "partner_id=%s session_id=%s",
+                    partner.id if partner else False,
+                    session.id if session else False,
+                )
+
+            return handoff, True, business_status
+
+        # No dejamos un flujo roto esperando una respuesta humana
+        # que no puede llegar inmediatamente.
+        try:
+            if session and session.current_flow != "none":
+                session.reset_conversation(
+                    reason="toner_pending_handoff_after_hours"
+                )
+        except Exception:
+            _logger.exception(
+                "[WA-TONER] No se pudo cerrar flujo pendiente fuera de horario | "
+                "session_id=%s",
+                session.id if session else False,
+            )
+
+        return handoff, False, business_status
+
     # ==========================================================
     # Tóner WhatsApp: helpers de máquina, color y contadores
     # ==========================================================
@@ -144,19 +269,35 @@ class WhatsAppTonerMixin:
         is_color = self._toner_is_color_machine(machine)
         recent, reason = self._toner_has_recent_counters(machine)
 
-        lines = []
-        lines.append("Contadores registrados del equipo:")
-        lines.append("• B/N: %s" % (data.get("counter_bn") or 0))
+        lines = [
+            "📊 *Contadores registrados del equipo*",
+            "",
+            "• B/N: *%s*" % (data.get("counter_bn") or 0),
+        ]
 
         if is_color:
-            lines.append("• Color: %s" % (data.get("counter_color") or 0))
+            lines.append(
+                "• Color: *%s*" % (data.get("counter_color") or 0)
+            )
 
-        lines.append("• Actualización: %s" % (data.get("counter_date_text") or "sin fecha"))
+        lines.append(
+            "• Última actualización: %s"
+            % (data.get("counter_date_text") or "sin fecha")
+        )
+        lines.append("")
 
         if recent:
-            lines.append("Usaré estos contadores porque están actualizados dentro de las últimas 48 horas.")
+            lines.append(
+                "Estos contadores se encuentran dentro de la ventana "
+                "de actualización de 48 horas y serán utilizados "
+                "automáticamente."
+            )
         else:
-            lines.append("Estos contadores no están actualizados o están incompletos, por eso te pediré el contador actual.")
+            lines.append(
+                "Los contadores no están suficientemente actualizados "
+                "o se encuentran incompletos. Por seguridad te solicitaré "
+                "la lectura actual."
+            )
 
         return "\n".join(lines)
 
@@ -227,9 +368,22 @@ class WhatsAppTonerMixin:
             },
         ]
 
-        lines = ["¿Qué color de tóner necesitas?"]
+        lines = [
+            "🎨 *Selecciona el tóner o color que necesitas*",
+            "",
+        ]
         for option in options:
-            lines.append("%s. %s" % (option["position"], option["label"]))
+            lines.append(
+                "*%s* %s" % (
+                    option["position"],
+                    option["label"],
+                )
+            )
+
+        lines.extend([
+            "",
+            "Responde con el *número* de una opción.",
+        ])
 
         return {
             "auto_select": False,
@@ -316,7 +470,11 @@ class WhatsAppTonerMixin:
 
         return {
             "valid": False,
-            "message": "No reconozco ese color. Responde con el número de la opción.",
+            "message": (
+                "⚠️ *Opción no válida*\n\n"
+                "No pude relacionar tu respuesta con los colores disponibles. "
+                "Responde con el *número* de una opción."
+            ),
         }
 
     def _toner_colors_label(self, colors, fallback_label=False):
@@ -369,14 +527,27 @@ class WhatsAppTonerMixin:
             session.advance_state("awaiting_toner_observations", vals)
 
             msg = [
-                "Usaré los contadores actuales registrados del equipo:",
-                "• B/N: %s" % vals["counter_bn"],
+                "📊 *Contadores verificados*",
+                "",
+                "Utilizaré los contadores registrados recientemente:",
+                "• B/N: *%s*" % vals["counter_bn"],
             ]
             if is_color:
-                msg.append("• Color: %s" % vals["counter_color"])
-            msg.append("• Actualización: %s" % (vals.get("counter_date_text") or "sin fecha"))
-            msg.append("")
-            msg.append("¿Deseas agregar alguna observación? Si no, escribe NO.")
+                msg.append(
+                    "• Color: *%s*" % vals["counter_color"]
+                )
+            msg.append(
+                "• Actualización: %s"
+                % (vals.get("counter_date_text") or "sin fecha")
+            )
+            msg.extend([
+                "",
+                "📝 *Observaciones*",
+                "¿Deseas agregar alguna observación a la solicitud?",
+                "Si no deseas agregar ninguna, responde *NO*.",
+                "",
+                self._toner_navigation_footer(include_back=True),
+            ])
             return "\n".join(msg)
 
         vals = dict(context_update)
@@ -390,8 +561,13 @@ class WhatsAppTonerMixin:
         reference = self._toner_counter_reference_text(machine)
         return (
             "%s\n\n"
-            "Indícame el contador B/N actual del equipo."
-        ) % reference
+            "🧮 *Contador B/N*\n\n"
+            "Envíame el contador B/N actual del equipo utilizando solo números.\n\n"
+            "%s"
+        ) % (
+            reference,
+            self._toner_navigation_footer(include_back=True),
+        )
 
     def _toner_build_confirmation_summary(self, context):
         is_color = bool(context.get("machine_is_color"))
@@ -401,27 +577,37 @@ class WhatsAppTonerMixin:
         )
 
         lines = [
-            "Confirma tu solicitud de tóner:",
+            "✅ *Confirma tu solicitud de tóner*",
             "",
-            "Equipo: %s" % (context.get("machine_label") or ""),
-            "Tipo de equipo: %s" % ("Color" if is_color else "Monocromático"),
-            "Tóner solicitado: %s" % colors_label,
-            "Cantidad: %s" % (context.get("toner_quantity") or "1"),
-            "Contador B/N: %s" % (context.get("counter_bn") or ""),
+            "🖨️ Equipo: *%s*" % (context.get("machine_label") or ""),
+            "⚙️ Tipo: %s" % ("Color" if is_color else "Monocromático"),
+            "🎨 Tóner solicitado: *%s*" % colors_label,
+            "📦 Cantidad: *%s*" % (context.get("toner_quantity") or "1"),
+            "📊 Contador B/N: *%s*" % (context.get("counter_bn") or ""),
         ]
 
         if is_color:
-            lines.append("Contador color: %s" % (context.get("counter_color") or ""))
+            lines.append(
+                "📊 Contador color: *%s*"
+                % (context.get("counter_color") or "")
+            )
 
         if context.get("counter_source") == "alquiler":
-            lines.append("Contadores cargados desde el equipo: Sí")
+            lines.append("🔄 Contadores cargados automáticamente: Sí")
             if context.get("counter_date_text"):
-                lines.append("Fecha contador: %s" % context.get("counter_date_text"))
+                lines.append(
+                    "🕒 Fecha de lectura: %s"
+                    % context.get("counter_date_text")
+                )
 
         lines.extend([
-            "Observaciones: %s" % (context.get("observations") or "Sin observaciones"),
+            "📝 Observaciones: %s"
+            % (context.get("observations") or "Sin observaciones"),
             "",
-            "Responde SI para confirmar o NO para cancelar.",
+            "Responde:",
+            "*SI* — registrar la solicitud",
+            "*ATRÁS* — modificar el paso anterior",
+            "*CANCELAR* — cancelar la solicitud",
         ])
 
         return "\n".join(lines)
@@ -554,24 +740,53 @@ class WhatsAppTonerMixin:
         )
 
         if not machines:
-            request.env["whatsapp.handoff"].sudo().create_unknown_intent_handoff(
-                partner,
-                session=session,
-                initial_message=(payload or {}).get("message") or (payload or {}).get("text") or "",
-                context={"reason": "No se encontraron equipos alquilados para tóner."},
+            initial_message = (
+                (payload or {}).get("message")
+                or (payload or {}).get("text")
+                or ""
             )
-            partner.whatsapp_enable_human_mode_api(taken_by_name="Bot WhatsApp")
-            session.action_set_human()
+
+            handoff, human_active, business_status = (
+                self._toner_create_handoff_safe(
+                    partner=partner,
+                    session=session,
+                    initial_message=initial_message,
+                    reason=(
+                        "No se encontraron equipos alquilados "
+                        "para la solicitud de tóner."
+                    ),
+                    context={
+                        "company_id": company.id if company else False,
+                    },
+                )
+            )
 
             _logger.warning(
-                "[WA-TONER] Sin máquinas para partner=%s company=%s. Se deriva a humano.",
+                "[WA-TONER] Sin máquinas | partner=%s company=%s "
+                "handoff_id=%s human_active=%s business_reason=%s",
                 partner.id if partner else False,
                 company.id if company else False,
+                handoff.id if handoff else False,
+                human_active,
+                business_status.get("reason") if business_status else False,
             )
 
+            if human_active:
+                return (
+                    "🖨️ *Solicitud de tóner*\n\n"
+                    "No encontré equipos alquilados asociados a la empresa "
+                    "activa. He derivado el caso a nuestro equipo para que "
+                    "pueda ayudarte a identificar el equipo y continuar "
+                    "la solicitud.\n\n"
+                    "Por favor mantente atento(a) a este chat."
+                )
+
             return (
-                "No encontré equipos alquilados asociados a tu empresa. "
-                "Voy a derivarte con un asesor para ayudarte con la solicitud de tóner."
+                "🖨️ *Solicitud de tóner*\n\n"
+                "No encontré equipos alquilados asociados a la empresa "
+                "activa. Dejé el caso registrado para revisión de nuestro "
+                "equipo al retomar el horario de atención.\n\n"
+                "🏠 Escribe *MENU* para volver al menú principal."
             )
 
         options = []
@@ -624,8 +839,16 @@ class WhatsAppTonerMixin:
 
         return self._build_machine_menu(
             machines,
-            "Claro. Estos son tus equipos alquilados. Responde con el número del equipo para solicitar tóner:",
-            footer="Luego de seleccionar el equipo podré continuar la solicitud. También puedes escribir LINK después de elegir el equipo si prefieres llenar el formulario.",
+            (
+                "🖨️ *Solicitud de tóner · Paso 1*\n\n"
+                "Selecciona el equipo para el cual necesitas tóner.\n"
+                "Responde con el *número* correspondiente:"
+            ),
+            footer=(
+                "Después de seleccionar el equipo continuaremos con el "
+                "tipo de tóner, cantidad y contadores.\n\n"
+                + self._toner_navigation_footer(include_back=True)
+            ),
             include_link=False,
             link=False,
         )
@@ -655,8 +878,10 @@ class WhatsAppTonerMixin:
 
             if not link:
                 return (
-                    "Primero selecciona el equipo de la lista. "
-                    "Luego podré enviarte el enlace correcto del formulario de tóner."
+                    "ℹ️ Primero selecciona el equipo de la lista. "
+                    "Después podré enviarte el enlace correcto del formulario "
+                    "de tóner.\n\n"
+                    + self._toner_navigation_footer(include_back=True)
                 )
 
             _logger.info(
@@ -664,7 +889,14 @@ class WhatsAppTonerMixin:
                 session.id,
                 link,
             )
-            return "Puedes registrar tu solicitud de tóner aquí:\n%s" % link
+            return (
+                "🔗 *Formulario de solicitud de tóner*\n\n"
+                "%s\n\n"
+                "%s"
+            ) % (
+                link,
+                self._toner_navigation_footer(include_back=True),
+            )
 
         # ==========================================================
         # CANCELAR FLUJO
@@ -676,7 +908,11 @@ class WhatsAppTonerMixin:
             "awaiting_toner_confirmation",
         ]:
             session.reset_conversation(reason="abandoned")
-            return "Listo, cancelé la solicitud de tóner. Si necesitas algo más, escríbenos."
+            return (
+                "✅ *Solicitud de tóner cancelada*\n\n"
+                "La operación actual fue cancelada.\n\n"
+                "Escribe *MENU* para volver al menú principal."
+            )
 
         # ==========================================================
         # 1) SELECCIÓN DE EQUIPO
@@ -693,7 +929,11 @@ class WhatsAppTonerMixin:
                     len(options),
                     session.id,
                 )
-                return "Por favor responde con el número del equipo de la lista."
+                return (
+                    "⚠️ *No pude identificar ese equipo*\n\n"
+                    "Responde con el *número* de uno de los equipos mostrados.\n\n"
+                    + self._toner_navigation_footer(include_back=True)
+                )
 
             selected = options[index - 1]
             machine = request.env["alquiler"].sudo().browse(int(selected.get("id"))).exists()
@@ -704,7 +944,11 @@ class WhatsAppTonerMixin:
                     selected,
                     session.id,
                 )
-                return "No pude encontrar ese equipo. Por favor intenta nuevamente."
+                return (
+                    "⚠️ El equipo seleccionado ya no se encuentra disponible. "
+                    "Selecciona nuevamente uno de los equipos de la lista.\n\n"
+                    + self._toner_navigation_footer(include_back=True)
+                )
 
             machine_label = selected.get("label") or self._get_machine_label(machine)
             is_color = bool(selected.get("is_color"))
@@ -745,10 +989,17 @@ class WhatsAppTonerMixin:
                 )
 
                 return (
-                    "Equipo seleccionado:\n%s\n\n"
-                    "Este equipo es monocromático, solicitaré tóner negro.\n\n"
-                    "¿Cuántos tóner necesitas? Responde con un número."
-                ) % machine_label
+                    "✅ *Equipo seleccionado*\n"
+                    "%s\n\n"
+                    "⚫ Este equipo es monocromático, por lo que se "
+                    "seleccionó automáticamente *tóner negro*.\n\n"
+                    "📦 *Solicitud de tóner · Cantidad*\n"
+                    "¿Cuántos tóner necesitas? Responde únicamente con un número.\n\n"
+                    "%s"
+                ) % (
+                    machine_label,
+                    self._toner_navigation_footer(include_back=True),
+                )
 
             context_update.update({
                 "toner_color_options": color_menu.get("options") or [],
@@ -766,10 +1017,15 @@ class WhatsAppTonerMixin:
             )
 
             return (
-                "Equipo seleccionado:\n%s\n\n%s"
+                "✅ *Equipo seleccionado*\n"
+                "%s\n\n"
+                "%s\n\n"
+                "%s"
             ) % (
                 machine_label,
-                color_menu.get("menu_text") or "¿Qué color de tóner necesitas?",
+                color_menu.get("menu_text")
+                or "¿Qué color de tóner necesitas?",
+                self._toner_navigation_footer(include_back=True),
             )
 
         # ==========================================================
@@ -780,7 +1036,10 @@ class WhatsAppTonerMixin:
             result = self._toner_resolve_color_selection(text_clean, options)
 
             if not result.get("valid"):
-                return result.get("message") or "No reconozco ese color. Responde con el número de la opción."
+                return (
+                    result.get("message")
+                    or "⚠️ No pude identificar ese color."
+                ) + "\n\n" + self._toner_navigation_footer(include_back=True)
 
             option = result.get("option") or {}
             colors = option.get("colors") or []
@@ -806,9 +1065,14 @@ class WhatsAppTonerMixin:
             )
 
             return (
-                "Tóner seleccionado: %s\n\n"
-                "¿Cuántos tóner necesitas? Responde con un número."
-            ) % color_label
+                "✅ Tóner seleccionado: *%s*\n\n"
+                "📦 *Solicitud de tóner · Cantidad*\n"
+                "¿Cuántos tóner necesitas? Responde únicamente con un número.\n\n"
+                "%s"
+            ) % (
+                color_label,
+                self._toner_navigation_footer(include_back=True),
+            )
 
         # ==========================================================
         # 3) CANTIDAD
@@ -817,7 +1081,12 @@ class WhatsAppTonerMixin:
             qty_raw = self._only_digits(text_clean)
 
             if not qty_raw:
-                return "Por favor indica la cantidad en número. Ejemplo: 1"
+                return (
+                    "⚠️ *Cantidad no válida*\n\n"
+                    "Indica la cantidad utilizando solo números. "
+                    "Ejemplo: *1*.\n\n"
+                    + self._toner_navigation_footer(include_back=True)
+                )
 
             try:
                 qty = int(qty_raw)
@@ -825,26 +1094,58 @@ class WhatsAppTonerMixin:
                 qty = 0
 
             if qty <= 0:
-                return "La cantidad debe ser mayor a cero. Indica la cantidad en número."
+                return (
+                    "⚠️ La cantidad debe ser mayor a cero. "
+                    "Indica nuevamente la cantidad en números.\n\n"
+                    + self._toner_navigation_footer(include_back=True)
+                )
 
             if qty > 10:
-                return "La cantidad parece muy alta. Por favor confirma escribiendo una cantidad menor o escribe ASESOR."
+                return (
+                    "⚠️ *Cantidad fuera del rango habitual*\n\n"
+                    "La cantidad indicada es mayor a 10 unidades. "
+                    "Revisa el dato e ingresa nuevamente una cantidad válida.\n\n"
+                    + self._toner_navigation_footer(include_back=True)
+                )
 
             machine = self._toner_get_selected_machine_from_context(context)
 
             if not machine:
-                request.env["whatsapp.handoff"].sudo().create_unknown_intent_handoff(
-                    partner,
-                    session=session,
-                    initial_message=text_clean,
-                    context={
-                        "reason": "No se encontró máquina seleccionada al pedir cantidad de tóner.",
-                        "flow_context": context,
-                    },
+                handoff, human_active, business_status = (
+                    self._toner_create_handoff_safe(
+                        partner=partner,
+                        session=session,
+                        initial_message=text_clean,
+                        reason=(
+                            "No se encontró la máquina seleccionada "
+                            "al solicitar la cantidad de tóner."
+                        ),
+                        context=context,
+                    )
                 )
-                partner.whatsapp_enable_human_mode_api(taken_by_name="Bot WhatsApp")
-                session.action_set_human()
-                return "No pude encontrar el equipo seleccionado. Te estoy derivando con un asesor."
+
+                _logger.warning(
+                    "[WA-TONER] Equipo perdido durante flujo | "
+                    "session=%s handoff_id=%s human_active=%s reason=%s",
+                    session.id if session else False,
+                    handoff.id if handoff else False,
+                    human_active,
+                    business_status.get("reason") if business_status else False,
+                )
+
+                if human_active:
+                    return (
+                        "⚠️ No pude recuperar el equipo seleccionado. "
+                        "He derivado la conversación a nuestro equipo para "
+                        "continuar la solicitud."
+                    )
+
+                return (
+                    "⚠️ No pude recuperar el equipo seleccionado. "
+                    "El caso quedó registrado para revisión al retomar el "
+                    "horario de atención.\n\n"
+                    "Escribe *MENU* para iniciar una nueva gestión."
+                )
 
             _logger.info(
                 "[WA-TONER] Cantidad recibida qty=%s machine=%s session=%s",
@@ -868,7 +1169,12 @@ class WhatsAppTonerMixin:
             value = self._only_digits(text_clean)
 
             if not value:
-                return "Por favor envía el contador B/N actual en número. Este dato es obligatorio."
+                return (
+                    "⚠️ *Contador B/N no válido*\n\n"
+                    "Envía la lectura actual utilizando solo números. "
+                    "Este dato es obligatorio.\n\n"
+                    + self._toner_navigation_footer(include_back=True)
+                )
 
             machine = self._toner_get_selected_machine_from_context(context)
             is_color = self._toner_is_color_machine(machine)
@@ -888,7 +1194,13 @@ class WhatsAppTonerMixin:
                     session.id,
                 )
 
-                return "Ahora envía el contador color actual. Este dato es obligatorio para equipos color."
+                return (
+                    "✅ Contador B/N recibido.\n\n"
+                    "🎨 *Contador color*\n"
+                    "Ahora envía el contador color actual utilizando solo números. "
+                    "Este dato es obligatorio para equipos color.\n\n"
+                    + self._toner_navigation_footer(include_back=True)
+                )
 
             session.advance_state(
                 "awaiting_toner_observations",
@@ -905,7 +1217,12 @@ class WhatsAppTonerMixin:
                 session.id,
             )
 
-            return "¿Deseas agregar alguna observación? Si no, escribe NO."
+            return (
+                "📝 *Observaciones*\n\n"
+                "¿Deseas agregar alguna observación a la solicitud? "
+                "Si no deseas agregar ninguna, responde *NO*.\n\n"
+                + self._toner_navigation_footer(include_back=True)
+            )
 
         # ==========================================================
         # 5) CONTADOR COLOR
@@ -919,7 +1236,12 @@ class WhatsAppTonerMixin:
                     text_clean,
                     session.id,
                 )
-                return "Por favor envía el contador color actual en número. Este dato es obligatorio para equipos color."
+                return (
+                    "⚠️ *Contador color no válido*\n\n"
+                    "Envía la lectura actual utilizando solo números. "
+                    "Este dato es obligatorio para equipos color.\n\n"
+                    + self._toner_navigation_footer(include_back=True)
+                )
 
             session.advance_state(
                 "awaiting_toner_observations",
@@ -935,7 +1257,12 @@ class WhatsAppTonerMixin:
                 session.id,
             )
 
-            return "¿Deseas agregar alguna observación? Si no, escribe NO."
+            return (
+                "📝 *Observaciones*\n\n"
+                "¿Deseas agregar alguna observación a la solicitud? "
+                "Si no deseas agregar ninguna, responde *NO*.\n\n"
+                + self._toner_navigation_footer(include_back=True)
+            )
 
         # ==========================================================
         # 6) OBSERVACIONES
@@ -970,9 +1297,16 @@ class WhatsAppTonerMixin:
                         "[WA-TONER] Confirmación cancelada session=%s",
                         session.id,
                     )
-                    return "Listo, cancelé la solicitud de tóner."
+                    return (
+                        "✅ *Solicitud de tóner cancelada*\n\n"
+                        "No se registró ninguna solicitud.\n\n"
+                        "Escribe *MENU* para volver al menú principal."
+                    )
 
-                return "Por favor responde SI para confirmar o NO para cancelar."
+                return (
+                    "⚠️ Para finalizar, responde *SI* para registrar la solicitud, "
+                    "*ATRÁS* para modificarla o *CANCELAR* para salir."
+                )
 
             context = session.get_context()
             rec, error = self._create_toner_request(partner, session, context)
@@ -987,34 +1321,54 @@ class WhatsAppTonerMixin:
                 )
 
                 return (
-                    "Solicitud de tóner registrada correctamente.\n"
-                    "Número de referencia: %s"
+                    "✅ *Solicitud de tóner registrada correctamente*\n\n"
+                    "Número de referencia: *%s*\n\n"
+                    "Nuestro equipo continuará con la gestión de acuerdo "
+                    "con el proceso de atención correspondiente.\n\n"
+                    "Escribe *MENU* si deseas realizar otra gestión."
                 ) % (rec.display_name or rec.id)
 
-            request.env["whatsapp.handoff"].sudo().create_unknown_intent_handoff(
-                partner,
-                session=session,
-                initial_message=text_clean,
-                context={
-                    "reason": "No se pudo crear solicitud de tóner automáticamente.",
-                    "error": error,
-                    "flow_context": context,
-                },
+            handoff, human_active, business_status = (
+                self._toner_create_handoff_safe(
+                    partner=partner,
+                    session=session,
+                    initial_message=text_clean,
+                    reason=(
+                        "No se pudo crear la solicitud de tóner "
+                        "automáticamente."
+                    ),
+                    context={
+                        "error": error,
+                        "flow_context": context,
+                    },
+                )
             )
 
-            partner.whatsapp_enable_human_mode_api(taken_by_name="Bot WhatsApp")
-            session.action_set_human()
-
             _logger.error(
-                "[WA-TONER] No se pudo crear solicitud. Derivando a humano session=%s error=%s context=%s",
+                "[WA-TONER] No se pudo crear solicitud | "
+                "session=%s error=%s handoff_id=%s human_active=%s "
+                "business_reason=%s context=%s",
                 session.id,
                 error,
+                handoff.id if handoff else False,
+                human_active,
+                business_status.get("reason") if business_status else False,
                 context,
             )
 
+            if human_active:
+                return (
+                    "⚠️ *No pudimos completar el registro automáticamente*\n\n"
+                    "Recibimos toda la información de la solicitud y el caso "
+                    "fue derivado a nuestro equipo para completarlo.\n\n"
+                    "Por favor mantente atento(a) a este chat."
+                )
+
             return (
-                "Recibí la información, pero no pude registrar la solicitud automáticamente. "
-                "Te estoy derivando con un asesor para completarla."
+                "⚠️ *No pudimos completar el registro automáticamente*\n\n"
+                "Recibimos la información y dejamos el caso pendiente para "
+                "revisión de nuestro equipo al retomar el horario de atención.\n\n"
+                "Escribe *MENU* si deseas realizar otra gestión."
             )
 
         # ==========================================================
@@ -1026,4 +1380,8 @@ class WhatsAppTonerMixin:
             session.id if session else False,
         )
 
-        return "Estoy procesando tu solicitud de tóner. Por favor continúa con la información solicitada."
+        return (
+            "⚠️ No pude determinar en qué paso de la solicitud te encuentras.\n\n"
+            "Para continuar de forma segura, escribe *MENU* y selecciona "
+            "nuevamente la opción de tóner."
+        )

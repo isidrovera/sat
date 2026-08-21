@@ -10,6 +10,17 @@ _logger = logging.getLogger(__name__)
 
 
 class WhatsappHandoff(models.Model):
+    """
+    Derivaciones de WhatsApp hacia atención humana o revisión manual.
+
+    Un handoff puede permanecer en estado pending sin activar modo humano.
+    Esto permite registrar casos fuera de horario sin prometer atención
+    inmediata.
+
+    El modo humano se sincroniza cuando un handoff es realmente tomado y
+    se libera de forma segura cuando ya no quedan derivaciones activas.
+    """
+
     _name = "whatsapp.handoff"
     _description = "Derivación humana WhatsApp"
     _order = "taken_at desc, id desc"
@@ -254,6 +265,183 @@ class WhatsappHandoff(models.Model):
         return True
 
     # ==========================================================
+    # Sincronización partner / sesión
+    # ==========================================================
+    def _active_handoff_domain(
+        self,
+        partner=False,
+        session=False,
+        exclude_ids=None,
+    ):
+        domain = [
+            ("state", "in", ["pending", "assigned", "open", "escalated"]),
+        ]
+
+        if partner:
+            domain.append(("partner_id", "=", partner.id))
+
+        if session:
+            domain.append(("session_id", "=", session.id))
+
+        if exclude_ids:
+            domain.append(("id", "not in", list(exclude_ids)))
+
+        return domain
+
+    def _activate_human_context(self):
+        """
+        Sincroniza contacto y sesión cuando un handoff es realmente tomado.
+
+        Crear un handoff pending NO activa atención humana.
+        """
+        for handoff in self:
+            partner = handoff.partner_id
+            session = handoff.session_id
+
+            if partner and not partner.whatsapp_human_mode:
+                try:
+                    partner.sudo().whatsapp_enable_human_mode_api(
+                        taken_by_name=(
+                            handoff.taken_by_name
+                            or (
+                                handoff.assigned_to_id.name
+                                if handoff.assigned_to_id
+                                else False
+                            )
+                            or self.env.user.name
+                        )
+                    )
+                except Exception:
+                    _logger.exception(
+                        "[WA-HANDOFF] Error activando modo humano | "
+                        "handoff_id=%s partner_id=%s",
+                        handoff.id,
+                        partner.id,
+                    )
+
+            if session and session.state != "human":
+                try:
+                    session.sudo().action_set_human()
+                except Exception:
+                    _logger.exception(
+                        "[WA-HANDOFF] Error sincronizando sesión humana | "
+                        "handoff_id=%s session_id=%s",
+                        handoff.id,
+                        session.id,
+                    )
+
+        return True
+
+    def _release_human_context_if_unused(self):
+        """
+        Libera partner y sesión únicamente cuando ya no existe otro
+        handoff activo relacionado con la misma conversación.
+        """
+        for handoff in self:
+            partner = handoff.partner_id
+            session = handoff.session_id
+
+            if not partner:
+                continue
+
+            remaining = self.sudo().search_count(
+                self._active_handoff_domain(
+                    partner=partner,
+                    session=session if session else False,
+                    exclude_ids=handoff.ids,
+                )
+            )
+
+            if remaining:
+                _logger.info(
+                    "[WA-HANDOFF] Contexto humano permanece activo | "
+                    "handoff_id=%s partner_id=%s session_id=%s remaining=%s",
+                    handoff.id,
+                    partner.id,
+                    session.id if session else False,
+                    remaining,
+                )
+                continue
+
+            if partner.whatsapp_human_mode:
+                try:
+                    partner.sudo().whatsapp_release_human_mode_api()
+                except Exception:
+                    _logger.exception(
+                        "[WA-HANDOFF] Error liberando modo humano | "
+                        "handoff_id=%s partner_id=%s",
+                        handoff.id,
+                        partner.id,
+                    )
+
+            if session and session.state == "human":
+                try:
+                    session.sudo().action_reopen()
+                except Exception:
+                    _logger.exception(
+                        "[WA-HANDOFF] Error reabriendo sesión | "
+                        "handoff_id=%s session_id=%s",
+                        handoff.id,
+                        session.id,
+                    )
+
+        return True
+
+    def _prepare_creation_context(
+        self,
+        context=None,
+        default_reason=False,
+    ):
+        context = dict(context or {})
+        reason = (
+            context.get("reason")
+            or default_reason
+            or False
+        )
+        return context, reason
+
+    def _attach_media_safe(
+        self,
+        handoff,
+        media=False,
+    ):
+        if not handoff or not media:
+            return True
+
+        try:
+            media_ids = (
+                media.ids
+                if hasattr(media, "ids")
+                else []
+            )
+
+            if not media_ids and getattr(media, "id", False):
+                media_ids = [media.id]
+
+            if media_ids:
+                handoff.write({
+                    "media_ids": [
+                        (4, media_id)
+                        for media_id in media_ids
+                    ],
+                })
+
+                _logger.info(
+                    "[WA-HANDOFF] Media vinculada | "
+                    "handoff_id=%s media_ids=%s",
+                    handoff.id,
+                    media_ids,
+                )
+
+        except Exception:
+            _logger.exception(
+                "[WA-HANDOFF] Error vinculando media | handoff_id=%s",
+                handoff.id if handoff else False,
+            )
+
+        return True
+
+    # ==========================================================
     # Create con logs
     # ==========================================================
     @api.model_create_multi
@@ -275,11 +463,23 @@ class WhatsappHandoff(models.Model):
         records = super().create(vals_list)
 
         for rec in records:
+            context = rec.get_context_data()
+
             _logger.info(
-                "[WA-HANDOFF] Creado id=%s partner=%s session=%s type=%s priority=%s reason=%r",
-                rec.id, rec.partner_id.id,
+                "[WA-HANDOFF] Creado | "
+                "id=%s partner=%s session=%s company=%s machine=%s "
+                "type=%s state=%s priority=%s "
+                "pending_until_business_hours=%s reason=%r",
+                rec.id,
+                rec.partner_id.id,
                 rec.session_id.id if rec.session_id else False,
-                rec.handoff_type, rec.priority, rec.reason,
+                rec.company_id.id if rec.company_id else False,
+                rec.machine_id.id if rec.machine_id else False,
+                rec.handoff_type,
+                rec.state,
+                rec.priority,
+                bool(context.get("pending_until_business_hours")),
+                rec.reason,
             )
 
         return records
@@ -292,8 +492,10 @@ class WhatsappHandoff(models.Model):
         user_id = user_id or self.env.user.id
         for handoff in self:
             _logger.info(
-                "[WA-HANDOFF] Asignando id=%s user=%s",
-                handoff.id, user_id,
+                "[WA-HANDOFF] Asignando | id=%s from_state=%s user=%s",
+                handoff.id,
+                handoff.state,
+                user_id,
             )
             handoff.write({
                 "state": "assigned",
@@ -309,13 +511,18 @@ class WhatsappHandoff(models.Model):
                 "[WA-HANDOFF] Tomado id=%s user=%s",
                 handoff.id, self.env.user.id,
             )
+            now = fields.Datetime.now()
+
             handoff.write({
                 "state": "open",
                 "assigned_to_id": self.env.user.id,
-                "assigned_at": fields.Datetime.now(),
+                "assigned_at": handoff.assigned_at or now,
                 "taken_by_id": self.env.user.id,
                 "taken_by_name": self.env.user.name,
             })
+
+            handoff._activate_human_context()
+
         return True
 
     def action_release(self):
@@ -336,6 +543,9 @@ class WhatsappHandoff(models.Model):
                 "released_by_id": self.env.user.id,
                 "released_by_name": self.env.user.name,
             })
+
+            handoff._release_human_context_if_unused()
+
         return True
 
     def action_cancel(self, reason=False):
@@ -351,8 +561,15 @@ class WhatsappHandoff(models.Model):
                 "released_by_name": self.env.user.name,
             }
             if reason:
-                vals["reason"] = (handoff.reason or "") + "\n[Cancelación] " + reason
+                vals["reason"] = (
+                    (handoff.reason or "")
+                    + "\n[Cancelación] "
+                    + reason
+                )
+
             handoff.write(vals)
+            handoff._release_human_context_if_unused()
+
         return True
 
     def action_escalate(self, reason=False):
@@ -374,107 +591,159 @@ class WhatsappHandoff(models.Model):
     # Helpers de creación rápida
     # ==========================================================
     @api.model
-    def create_remote_support_handoff(self, partner, session=False, machine=False,
-                                       anydesk_code=False, initial_message=False,
-                                       media=False, context=None):
-        """Crea handoff para soporte remoto con código AnyDesk."""
-        context = context or {}
+    def create_remote_support_handoff(
+        self,
+        partner,
+        session=False,
+        machine=False,
+        anydesk_code=False,
+        initial_message=False,
+        media=False,
+        context=None,
+    ):
+        """
+        Crea un handoff de soporte remoto.
+
+        Respeta context['reason'] cuando el flujo que llama necesita
+        explicar una causa más específica.
+        """
+        context, reason = self._prepare_creation_context(
+            context=context,
+            default_reason="Soporte remoto solicitado por cliente.",
+        )
+
         if anydesk_code:
             context["anydesk_code"] = anydesk_code
 
         _logger.info(
-            "[WA-HANDOFF] Creando remote_support partner=%s machine=%s anydesk=%s",
+            "[WA-HANDOFF] Creando remote_support | "
+            "partner=%s session=%s machine=%s anydesk=%s "
+            "pending_after_hours=%s",
             partner.id if partner else False,
+            session.id if session else False,
             machine.id if machine else False,
-            anydesk_code,
+            anydesk_code or False,
+            bool(context.get("pending_until_business_hours")),
         )
 
-        vals = {
+        handoff = self.create({
             "partner_id": partner.id if partner else False,
             "session_id": session.id if session else False,
-            "company_id": partner.whatsapp_active_company_id.id if partner and partner.whatsapp_active_company_id else False,
+            "company_id": (
+                partner.whatsapp_active_company_id.id
+                if partner and partner.whatsapp_active_company_id
+                else False
+            ),
             "machine_id": machine.id if machine else False,
             "anydesk_code": anydesk_code or False,
             "handoff_type": "remote_support",
             "priority": "2",
             "state": "pending",
             "initial_message": initial_message or False,
-            "context_data": json.dumps(context, ensure_ascii=False, default=str),
-            "reason": "Soporte remoto solicitado por cliente.",
-        }
+            "context_data": context,
+            "reason": reason,
+        })
 
-        handoff = self.create(vals)
-
-        if media:
-            try:
-                handoff.write({"media_ids": [(4, m.id) for m in media]})
-            except Exception as e:
-                _logger.warning(
-                    "[WA-HANDOFF] No se pudo vincular media id=%s error=%s",
-                    handoff.id, str(e),
-                )
+        self._attach_media_safe(
+            handoff,
+            media=media,
+        )
 
         return handoff
 
     @api.model
-    def create_unknown_intent_handoff(self, partner, session=False,
-                                      initial_message=False, context=None):
-        """Crea handoff cuando no se detectó intención."""
-        context = context or {}
+    def create_unknown_intent_handoff(
+        self,
+        partner,
+        session=False,
+        initial_message=False,
+        context=None,
+    ):
+        """
+        Crea un handoff para intención desconocida o revisión manual.
+        """
+        context, reason = self._prepare_creation_context(
+            context=context,
+            default_reason="Intención no reconocida automáticamente.",
+        )
 
         _logger.info(
-            "[WA-HANDOFF] Creando unknown_intent partner=%s message=%r",
+            "[WA-HANDOFF] Creando unknown_intent | "
+            "partner=%s session=%s pending_after_hours=%s message=%r",
             partner.id if partner else False,
-            (initial_message[:80] + "...") if initial_message and len(initial_message) > 80 else initial_message,
+            session.id if session else False,
+            bool(context.get("pending_until_business_hours")),
+            (
+                initial_message[:80] + "..."
+                if initial_message and len(initial_message) > 80
+                else initial_message
+            ),
         )
 
         return self.create({
             "partner_id": partner.id if partner else False,
             "session_id": session.id if session else False,
-            "company_id": partner.whatsapp_active_company_id.id if partner and partner.whatsapp_active_company_id else False,
+            "company_id": (
+                partner.whatsapp_active_company_id.id
+                if partner and partner.whatsapp_active_company_id
+                else False
+            ),
             "handoff_type": "unknown_intent",
             "priority": "1",
             "state": "pending",
             "initial_message": initial_message or False,
-            "context_data": json.dumps(context, ensure_ascii=False, default=str),
-            "reason": "Intención no reconocida automáticamente.",
+            "context_data": context,
+            "reason": reason,
         })
 
     @api.model
-    def create_onsite_handoff(self, partner, session=False, machine=False,
-                              initial_message=False, media=False, context=None):
-        """Crea handoff para servicio presencial."""
-        context = context or {}
-
-        _logger.info(
-            "[WA-HANDOFF] Creando onsite_support partner=%s machine=%s",
-            partner.id if partner else False,
-            machine.id if machine else False,
+    def create_onsite_handoff(
+        self,
+        partner,
+        session=False,
+        machine=False,
+        initial_message=False,
+        media=False,
+        context=None,
+    ):
+        """
+        Crea un handoff asociado a servicio presencial/revisión manual.
+        """
+        context, reason = self._prepare_creation_context(
+            context=context,
+            default_reason="Servicio presencial solicitado por cliente.",
         )
 
-        vals = {
+        _logger.info(
+            "[WA-HANDOFF] Creando onsite_support | "
+            "partner=%s session=%s machine=%s pending_after_hours=%s",
+            partner.id if partner else False,
+            session.id if session else False,
+            machine.id if machine else False,
+            bool(context.get("pending_until_business_hours")),
+        )
+
+        handoff = self.create({
             "partner_id": partner.id if partner else False,
             "session_id": session.id if session else False,
-            "company_id": partner.whatsapp_active_company_id.id if partner and partner.whatsapp_active_company_id else False,
+            "company_id": (
+                partner.whatsapp_active_company_id.id
+                if partner and partner.whatsapp_active_company_id
+                else False
+            ),
             "machine_id": machine.id if machine else False,
             "handoff_type": "onsite_support",
             "priority": "1",
             "state": "pending",
             "initial_message": initial_message or False,
-            "context_data": json.dumps(context, ensure_ascii=False, default=str),
-            "reason": "Servicio presencial solicitado por cliente.",
-        }
+            "context_data": context,
+            "reason": reason,
+        })
 
-        handoff = self.create(vals)
-
-        if media:
-            try:
-                handoff.write({"media_ids": [(4, m.id) for m in media]})
-            except Exception as e:
-                _logger.warning(
-                    "[WA-HANDOFF] No se pudo vincular media id=%s error=%s",
-                    handoff.id, str(e),
-                )
+        self._attach_media_safe(
+            handoff,
+            media=media,
+        )
 
         return handoff
 
@@ -503,23 +772,90 @@ class WhatsappHandoff(models.Model):
 
     def to_payload(self):
         self.ensure_one()
+
+        context = self.get_context_data()
+
         return {
             "id": self.id,
             "name": self.name,
-            "partner_id": self.partner_id.id if self.partner_id else False,
-            "partner_name": self.partner_id.name if self.partner_id else False,
-            "company_id": self.company_id.id if self.company_id else False,
-            "company_name": self.company_id.name if self.company_id else False,
-            "machine_id": self.machine_id.id if self.machine_id else False,
-            "machine_serie": self.machine_id.serie if self.machine_id else False,
+
+            "partner_id": (
+                self.partner_id.id
+                if self.partner_id
+                else False
+            ),
+            "partner_name": (
+                self.partner_id.name
+                if self.partner_id
+                else False
+            ),
+
+            "company_id": (
+                self.company_id.id
+                if self.company_id
+                else False
+            ),
+            "company_name": (
+                self.company_id.name
+                if self.company_id
+                else False
+            ),
+
+            "machine_id": (
+                self.machine_id.id
+                if self.machine_id
+                else False
+            ),
+            "machine_serie": (
+                self.machine_id.serie
+                if self.machine_id
+                and "serie" in self.machine_id._fields
+                else False
+            ),
+
             "handoff_type": self.handoff_type,
             "state": self.state,
             "priority": self.priority,
+
             "anydesk_code": self.anydesk_code,
             "initial_message": self.initial_message,
             "reason": self.reason,
-            "taken_at": self.taken_at.isoformat() if self.taken_at else False,
-            "assigned_to_id": self.assigned_to_id.id if self.assigned_to_id else False,
-            "assigned_to_name": self.assigned_to_id.name if self.assigned_to_id else False,
-            "context": self.get_context_data(),
+
+            "taken_at": (
+                self.taken_at.isoformat()
+                if self.taken_at
+                else False
+            ),
+
+            "assigned_to_id": (
+                self.assigned_to_id.id
+                if self.assigned_to_id
+                else False
+            ),
+            "assigned_to_name": (
+                self.assigned_to_id.name
+                if self.assigned_to_id
+                else False
+            ),
+
+            "released_at": (
+                self.released_at.isoformat()
+                if self.released_at
+                else False
+            ),
+            "released_by_id": (
+                self.released_by_id.id
+                if self.released_by_id
+                else False
+            ),
+            "released_by_name": (
+                self.released_by_name
+                or False
+            ),
+
+            "pending_until_business_hours": bool(
+                context.get("pending_until_business_hours")
+            ),
+
+            "context": context,
         }

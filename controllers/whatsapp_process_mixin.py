@@ -25,7 +25,8 @@ class WhatsAppProcessMixin:
     - Registrar mensaje entrante.
     - Validar bloqueado / humano / registro / empresa.
     - Continuar flujo activo.
-    - Detectar intención.
+    - Detectar intención con el horario real, sin alterar el tipo de contacto.
+    - Aplicar disponibilidad después de conocer la intención.
     - Ejecutar acción.
     - Emitir respuesta y outbox.
     """
@@ -366,6 +367,243 @@ class WhatsAppProcessMixin:
         return handoff if handoff else False
 
     # ==========================================================
+    # Helpers: disponibilidad según horario
+    # ==========================================================
+    def _is_realtime_attention_unavailable(self, business_status):
+        """
+        Devuelve True cuando no existe atención en tiempo real.
+
+        Se considera no disponible:
+        - refrigerio;
+        - fuera de horario;
+        - día no laboral;
+        - feriado/cierre manual;
+        - cualquier estado calendario que indique is_open=False.
+
+        Esto NO bloquea el registro de solicitudes que pueden quedar
+        pendientes, como tóner o servicio técnico presencial.
+        """
+        business_status = business_status or {}
+        return not bool(business_status.get("is_open"))
+
+    def _is_navigation_command_safe(self, message):
+        """
+        Detecta comandos de navegación sin depender del estado del flujo.
+
+        Se usa en /process para permitir navegación incluso cuando el flujo
+        remoto está bloqueado por horario. Si WhatsAppFlowMixin expone sus
+        helpers, se reutilizan; si no, existe fallback local compatible.
+        """
+        message = str(message or "").strip()
+
+        try:
+            if hasattr(self, "_is_flow_menu_command") and self._is_flow_menu_command(message):
+                return True
+        except Exception:
+            pass
+
+        try:
+            if hasattr(self, "_is_flow_back_command") and self._is_flow_back_command(message):
+                return True
+        except Exception:
+            pass
+
+        try:
+            if hasattr(self, "_is_flow_cancel_command") and self._is_flow_cancel_command(message):
+                return True
+        except Exception:
+            pass
+
+        normalized = message.strip().lower()
+
+        return normalized in {
+            "menu",
+            "menú",
+            "inicio",
+            "opciones",
+            "ayuda",
+            "atras",
+            "atrás",
+            "volver",
+            "regresar",
+            "retroceder",
+            "cancelar",
+            "salir",
+            "terminar",
+            "anular",
+        }
+
+    def _get_realtime_blocked_intent(self, intent_result):
+        """
+        Indica si una intención requiere atención humana en tiempo real.
+
+        Política:
+        - remote_service / flujo remote: requiere técnico disponible.
+        - human / handoff: requiere atención humana disponible.
+        - tóner, servicio presencial y empresa NO se bloquean aquí.
+        """
+        intent_result = intent_result or {}
+
+        intent = str(intent_result.get("intent") or "").strip().lower()
+        action = str(intent_result.get("action") or "").strip().lower()
+        target_flow = str(intent_result.get("target_flow") or "").strip().lower()
+
+        if (
+            intent == "human"
+            or action == "handoff"
+        ):
+            return "human"
+
+        if (
+            intent == "remote_service"
+            or action == "start_flow_remote"
+            or target_flow == "remote"
+        ):
+            return "remote"
+
+        return False
+
+    def _render_realtime_unavailable(
+        self,
+        blocked_type,
+        partner,
+        session,
+        business_status,
+    ):
+        """
+        Renderiza una respuesta profesional para acciones que requieren
+        atención en tiempo real y no están disponibles por horario.
+        """
+        business_status = business_status or {}
+        reason = business_status.get("reason") or "after_hours"
+
+        extra = {
+            "business_reason": business_status.get("reason_label") or reason,
+            "business_message": business_status.get("message") or "",
+            "display_hours": business_status.get("display_hours") or "",
+        }
+
+        if blocked_type == "remote":
+            return self._render_template(
+                "remote_unavailable",
+                partner=partner,
+                session=session,
+                extra=extra,
+                fallback=(
+                    "💻 *Asistencia remota*\n\n"
+                    "En este momento la asistencia remota no se encuentra "
+                    "disponible. Puedes registrar un servicio técnico y "
+                    "nuestro equipo continuará la atención al retomar el "
+                    "horario correspondiente.\n\n"
+                    "Escribe *MENU* para volver al menú principal."
+                ),
+            )
+
+        return self._render_template(
+            "human_unavailable",
+            partner=partner,
+            session=session,
+            extra=extra,
+            fallback=(
+                "👨‍💼 *Atención directa con un técnico*\n\n"
+                "En este momento la atención directa con nuestro equipo "
+                "técnico no se encuentra disponible. Puedes registrar una "
+                "solicitud de tóner o servicio técnico para ser atendida "
+                "al retomar el horario correspondiente.\n\n"
+                "Escribe *MENU* para volver al menú principal."
+            ),
+        )
+
+    def _emit_realtime_unavailable_response(
+        self,
+        endpoint,
+        payload,
+        identifiers,
+        start_ts,
+        partner,
+        session,
+        business_status,
+        blocked_type,
+        intent_result=False,
+    ):
+        """
+        Emite una respuesta estándar cuando una intención de atención
+        en tiempo real está bloqueada por horario.
+        """
+        reply = self._render_realtime_unavailable(
+            blocked_type=blocked_type,
+            partner=partner,
+            session=session,
+            business_status=business_status,
+        )
+
+        intent_name = (
+            "remote_service"
+            if blocked_type == "remote"
+            else "human"
+        )
+
+        template_name = (
+            "remote_unavailable"
+            if blocked_type == "remote"
+            else "human_unavailable"
+        )
+
+        emitted = self._emit_bot_reply(
+            session=session,
+            partner=partner,
+            identifiers=identifiers,
+            content=reply,
+            intent=intent_name,
+            payload=payload,
+            template=template_name,
+        )
+
+        response = {
+            "ok": True,
+            "found": True,
+            "availability_blocked": True,
+            "blocked_service": blocked_type,
+            "human_mode": False,
+            "bot_reply": True,
+            "stop_bot": False,
+            "partner_id": partner.id if partner else False,
+            "session_id": session.id if session else False,
+            "message": reply,
+            "outbox_id": emitted.get("outbox_id"),
+            "business": business_status,
+            "intent": intent_result or False,
+            "profile": (
+                partner.get_whatsapp_profile_payload()
+                if partner
+                else False
+            ),
+        }
+
+        _logger.info(
+            "[WA-HOURS] Acción bloqueada por disponibilidad | "
+            "partner_id=%s session_id=%s blocked_service=%s "
+            "reason=%s outbox_id=%s",
+            partner.id if partner else False,
+            session.id if session else False,
+            blocked_type,
+            (business_status or {}).get("reason") or False,
+            emitted.get("outbox_id"),
+        )
+
+        self._safe_log_api(
+            endpoint,
+            payload,
+            response,
+            identifiers,
+            partner=partner if partner else False,
+            session=session if session else False,
+            start_ts=start_ts,
+        )
+
+        return response
+
+    # ==========================================================
     # Proceso principal
     # ==========================================================
     def _process_whatsapp_conversation(self, endpoint, payload, identifiers, start_ts=False):
@@ -525,16 +763,86 @@ class WhatsAppProcessMixin:
         )
 
         _logger.info(
-            "[WA-PROCESS] Mensaje entrante registrado | message_id=%s partner_id=%s session_id=%s business_reason=%s business_open=%s",
+            "[WA-PROCESS] Mensaje entrante registrado | "
+            "message_id=%s partner_id=%s session_id=%s "
+            "external_message_id=%s business_reason=%s business_open=%s",
             incoming_message.id if incoming_message else False,
             partner.id if partner else False,
             session.id if session else False,
+            external_message_id or False,
             business_status.get("reason") if business_status else False,
             business_status.get("is_open") if business_status else False,
         )
 
         # ======================================================
-        # 5) Contacto bloqueado
+        # 5) Idempotencia del mensaje entrante
+        # ======================================================
+        duplicate_message = bool(
+            incoming_message
+            and incoming_message.env.context.get(
+                "wa_duplicate_message"
+            )
+        )
+
+        if duplicate_message:
+            _logger.warning(
+                "[WA-PROCESS] Mensaje duplicado detenido antes de negocio | "
+                "message_id=%s external_message_id=%s "
+                "partner_id=%s session_id=%s processing_status=%s",
+                incoming_message.id,
+                external_message_id or False,
+                partner.id if partner else False,
+                session.id if session else False,
+                getattr(
+                    incoming_message,
+                    "processing_status",
+                    False,
+                ),
+            )
+
+            response = {
+                "ok": True,
+                "found": True,
+                "duplicate": True,
+                "ignored": True,
+                "bot_reply": False,
+                "stop_bot": False,
+                "message_id": incoming_message.id,
+                "external_message_id": (
+                    incoming_message.external_message_id
+                    or external_message_id
+                    or False
+                ),
+                "processing_status": getattr(
+                    incoming_message,
+                    "processing_status",
+                    False,
+                ),
+                "partner_id": partner.id,
+                "session_id": session.id,
+                "message": False,
+                "outbox_id": False,
+                "business": business_status,
+                "profile": (
+                    partner.get_whatsapp_profile_payload()
+                ),
+            }
+
+            self._safe_log_api(
+                endpoint,
+                payload,
+                response,
+                identifiers,
+                partner=partner,
+                session=session,
+                status="duplicate",
+                start_ts=start_ts,
+            )
+
+            return response
+
+        # ======================================================
+        # 6) Contacto bloqueado
         # ======================================================
         if partner.whatsapp_blocked or partner.whatsapp_access_level == "blocked":
             reply = self._render_template(
@@ -577,7 +885,7 @@ class WhatsAppProcessMixin:
             return response
 
         # ======================================================
-        # 6) Modo humano activo
+        # 7) Modo humano activo
         # ======================================================
         if partner.whatsapp_human_mode:
             _logger.info(
@@ -611,7 +919,7 @@ class WhatsAppProcessMixin:
             return response
 
         # ======================================================
-        # 7) Registro DNI/RUC pendiente
+        # 8) Registro DNI/RUC pendiente
         # ======================================================
         registration_state = (
             getattr(partner, "whatsapp_registration_state", "none")
@@ -842,7 +1150,7 @@ class WhatsAppProcessMixin:
                 return response
 
         # ======================================================
-        # 8) Selección de empresa pendiente
+        # 9) Selección de empresa pendiente
         # ======================================================
         if (
             session.current_flow == "registration"
@@ -937,7 +1245,7 @@ class WhatsAppProcessMixin:
             return response
 
         # ======================================================
-        # 9) Confirmación pendiente de atención humana
+        # 10) Confirmación pendiente de atención humana
         # ======================================================
         session_context = self._get_session_context_safe(session)
         pending_human_confirmation = bool(
@@ -953,6 +1261,38 @@ class WhatsAppProcessMixin:
             )
 
             if self._is_yes(message_text):
+                if self._is_realtime_attention_unavailable(business_status):
+                    self._clear_human_confirmation_pending(
+                        session,
+                        clear_unknown=True,
+                    )
+
+                    _logger.info(
+                        "[WA-HUMAN] Confirmación SÍ bloqueada por horario | "
+                        "partner_id=%s session_id=%s reason=%s",
+                        partner.id if partner else False,
+                        session.id if session else False,
+                        (business_status or {}).get("reason") or False,
+                    )
+
+                    return self._emit_realtime_unavailable_response(
+                        endpoint=endpoint,
+                        payload=payload,
+                        identifiers=identifiers,
+                        start_ts=start_ts,
+                        partner=partner,
+                        session=session,
+                        business_status=business_status,
+                        blocked_type="human",
+                        intent_result={
+                            "found": True,
+                            "intent": "human",
+                            "action": "handoff",
+                            "target_flow": "none",
+                            "source": "pending_confirmation",
+                        },
+                    )
+
                 original_message = (
                     session_context.get("human_confirmation_message")
                     or message_text
@@ -1098,7 +1438,7 @@ class WhatsAppProcessMixin:
             )
 
         # ======================================================
-        # 10) Horario/refrigerio: informa, pero permite registrar
+        # 11) Horario/refrigerio: informa, pero permite registrar
         # ======================================================
         outside_hours_note = False
 
@@ -1112,9 +1452,68 @@ class WhatsAppProcessMixin:
             )
 
         # ======================================================
-        # 11) Continuar flujo activo
+        # 12) Continuar flujo activo
         # ======================================================
         if session.current_flow != "none" and session.conversation_state != "idle":
+            navigation_command = self._is_navigation_command_safe(message_text)
+
+            if (
+                session.current_flow == "remote"
+                and self._is_realtime_attention_unavailable(business_status)
+                and not navigation_command
+            ):
+                _logger.info(
+                    "[WA-HOURS] Flujo remoto activo detenido por disponibilidad | "
+                    "partner_id=%s session_id=%s step=%s reason=%s",
+                    partner.id if partner else False,
+                    session.id if session else False,
+                    session.conversation_state,
+                    (business_status or {}).get("reason") or False,
+                )
+
+                try:
+                    session.reset_conversation(
+                        reason="remote_unavailable_by_business_hours"
+                    )
+                except Exception:
+                    _logger.exception(
+                        "[WA-HOURS] No se pudo resetear flujo remoto bloqueado | "
+                        "session_id=%s",
+                        session.id if session else False,
+                    )
+
+                return self._emit_realtime_unavailable_response(
+                    endpoint=endpoint,
+                    payload=payload,
+                    identifiers=identifiers,
+                    start_ts=start_ts,
+                    partner=partner,
+                    session=session,
+                    business_status=business_status,
+                    blocked_type="remote",
+                    intent_result={
+                        "found": True,
+                        "intent": "remote_service",
+                        "action": "start_flow_remote",
+                        "target_flow": "remote",
+                        "source": "active_flow",
+                    },
+                )
+
+            if (
+                session.current_flow == "remote"
+                and self._is_realtime_attention_unavailable(business_status)
+                and navigation_command
+            ):
+                _logger.info(
+                    "[WA-NAV] Navegación permitida en flujo remoto fuera de horario | "
+                    "partner_id=%s session_id=%s step=%s command=%r",
+                    partner.id if partner else False,
+                    session.id if session else False,
+                    session.conversation_state,
+                    message_text,
+                )
+
             _logger.info(
                 "[WA-PROCESS] Continuando flujo activo | partner_id=%s session_id=%s flow=%s step=%s message=%s",
                 partner.id if partner else False,
@@ -1186,7 +1585,7 @@ class WhatsAppProcessMixin:
             return response
 
         # ======================================================
-        # 12) Detectar intención y ejecutar acción
+        # 13) Detectar intención y ejecutar acción
         # ======================================================
         _logger.info(
             "[WA-PROCESS] Detectar intención | partner_id=%s session_id=%s message=%s ai_provider=%s ai_intent=%s ai_sub_intent=%s ai_confidence=%s ai_reason=%s",
@@ -1200,6 +1599,10 @@ class WhatsAppProcessMixin:
             payload.get("ai_reason") or False,
         )
 
+        # La clasificación funcional del contacto ya no depende de is_open.
+        # _get_applies_to() distingue new/registered/blocked/human, mientras
+        # business_status conserva el horario REAL para reglas
+        # only_business_hours / only_after_hours.
         intent_result, applies_to = self._detect_intent(
             message_text,
             partner=partner if partner else False,
@@ -1209,6 +1612,37 @@ class WhatsAppProcessMixin:
         )
 
         intent_result = intent_result or {"found": False}
+
+        _logger.info(
+            "[WA-HOURS] Intención detectada antes de validar disponibilidad | "
+            "partner_id=%s session_id=%s applies_to=%s intent=%s action=%s "
+            "target_flow=%s business_reason=%s business_is_open=%s",
+            partner.id if partner else False,
+            session.id if session else False,
+            applies_to,
+            intent_result.get("intent") or False,
+            intent_result.get("action") or False,
+            intent_result.get("target_flow") or False,
+            (business_status or {}).get("reason") or False,
+            bool((business_status or {}).get("is_open")),
+        )
+
+        blocked_type = False
+        if self._is_realtime_attention_unavailable(business_status):
+            blocked_type = self._get_realtime_blocked_intent(intent_result)
+
+        if blocked_type:
+            return self._emit_realtime_unavailable_response(
+                endpoint=endpoint,
+                payload=payload,
+                identifiers=identifiers,
+                start_ts=start_ts,
+                partner=partner,
+                session=session,
+                business_status=business_status,
+                blocked_type=blocked_type,
+                intent_result=intent_result,
+            )
 
         # ======================================================
         # IMPORTANTE:
@@ -1233,7 +1667,18 @@ class WhatsAppProcessMixin:
         reply = action_result.get("content") or ""
 
         if outside_hours_note and reply:
-            reply = "%s\n\n%s" % (outside_hours_note, reply)
+            action_template = (
+                action_result.get("template")
+                or intent_result.get("response_template")
+                or False
+            )
+            if action_template not in (
+                "remote_unavailable",
+                "human_unavailable",
+                "in_break",
+                "after_hours",
+            ):
+                reply = "%s\n\n%s" % (outside_hours_note, reply)
 
         if not reply:
             current_human_mode = bool(

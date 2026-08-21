@@ -11,6 +11,22 @@ _logger = logging.getLogger(__name__)
 
 
 class WhatsappSession(models.Model):
+    """
+    Sesión conversacional de WhatsApp.
+
+    Existen dos niveles de expiración distintos:
+
+    1. Sesión general del contacto
+       Se decide fuera de este modelo mediante
+       res.partner._whatsapp_is_session_expired().
+
+    2. Flujo conversacional activo
+       Se controla aquí mediante conversation_state_expires_at.
+
+    Este modelo no debe utilizar el timeout del flujo para cerrar una
+    sesión general ni viceversa.
+    """
+
     _name = "whatsapp.session"
     _description = "Sesión WhatsApp"
     _order = "last_message_at desc, create_date desc"
@@ -175,7 +191,10 @@ class WhatsappSession(models.Model):
     conversation_state_expires_at = fields.Datetime(
         string="Expira flujo en",
         index=True,
-        help="Si el cliente no responde antes de esta fecha, el flujo se resetea a idle.",
+        help=(
+            "Expiración exclusiva del flujo conversacional activo. "
+            "No representa el vencimiento general de la sesión WhatsApp."
+        ),
     )
 
     flow_started_at = fields.Datetime(string="Inicio del flujo")
@@ -263,8 +282,17 @@ class WhatsappSession(models.Model):
         sessions = super().create(vals_list)
         for session in sessions:
             _logger.info(
-                "[WA-SESSION] Sesión creada id=%s partner=%s phone=%s state=%s",
-                session.id, session.partner_id.id, session.phone, session.state,
+                "[WA-SESSION] Sesión creada | "
+                "id=%s partner=%s phone=%s state=%s started_at=%s "
+                "last_message_at=%s flow=%s step=%s",
+                session.id,
+                session.partner_id.id,
+                session.phone,
+                session.state,
+                session.started_at,
+                session.last_message_at,
+                session.current_flow,
+                session.conversation_state,
             )
         return sessions
 
@@ -354,6 +382,21 @@ class WhatsappSession(models.Model):
             )
 
         self.write(vals)
+
+        _logger.debug(
+            "[WA-SESSION] Touch | id=%s state=%s flow=%s step=%s "
+            "intent=%s user_message=%s bot_message=%s last_message_at=%s "
+            "flow_expires_at=%s",
+            self.id,
+            self.state,
+            self.current_flow,
+            self.conversation_state,
+            intent or False,
+            bool(user_message),
+            bool(bot_message),
+            self.last_message_at,
+            self.conversation_state_expires_at,
+        )
         return True
 
     # ==========================================================
@@ -433,16 +476,28 @@ class WhatsappSession(models.Model):
     # Máquina de estados: API pública
     # ==========================================================
     def _get_conversation_timeout_minutes(self):
+        """
+        Timeout EXCLUSIVO de un flujo activo.
+
+        No debe confundirse con el timeout general de res.partner.
+        Se conserva el valor por defecto existente de 15 minutos.
+        """
         param = self.env["ir.config_parameter"].sudo().get_param(
-            "sat.whatsapp_conversation_state_timeout_minutes", "15",
+            "sat.whatsapp_conversation_state_timeout_minutes",
+            "15",
         )
+
         try:
-            return int(param)
+            timeout_minutes = int(param)
         except Exception:
             _logger.warning(
-                "[WA-SESSION] Parámetro timeout inválido: %r, usando 15", param,
+                "[WA-SESSION] Parámetro de timeout de flujo inválido | "
+                "value=%r default=15",
+                param,
             )
-            return 15
+            timeout_minutes = 15
+
+        return timeout_minutes
 
     def start_flow(self, flow_name, initial_state, context=None):
         """
@@ -486,8 +541,16 @@ class WhatsappSession(models.Model):
         })
 
         _logger.info(
-            "[WA-SESSION] Flujo iniciado id=%s partner=%s flow=%s initial_state=%s context_keys=%s",
-            self.id, self.partner_id.id, flow_name, initial_state, list(context.keys()),
+            "[WA-SESSION] Flujo iniciado | "
+            "id=%s partner=%s flow=%s initial_state=%s timeout_min=%s "
+            "expires_at=%s context_keys=%s",
+            self.id,
+            self.partner_id.id,
+            flow_name,
+            initial_state,
+            timeout_minutes,
+            self.conversation_state_expires_at,
+            list(context.keys()),
         )
         return True
 
@@ -529,8 +592,14 @@ class WhatsappSession(models.Model):
             self.update_context(context_update)
 
         _logger.info(
-            "[WA-SESSION] Estado avanzado id=%s flow=%s new_state=%s context_update_keys=%s",
-            self.id, self.current_flow, new_state,
+            "[WA-SESSION] Estado avanzado | "
+            "id=%s flow=%s new_state=%s extend_timeout=%s "
+            "expires_at=%s context_update_keys=%s",
+            self.id,
+            self.current_flow,
+            new_state,
+            bool(extend_timeout),
+            self.conversation_state_expires_at,
             list(context_update.keys()) if context_update else [],
         )
         return True
@@ -555,8 +624,13 @@ class WhatsappSession(models.Model):
             self.update_context(final_context_update)
 
         _logger.info(
-            "[WA-SESSION] Flujo completado id=%s flow=%s reason=%s",
-            self.id, self.current_flow, close_reason,
+            "[WA-SESSION] Flujo completado | "
+            "id=%s partner=%s flow=%s step=%s reason=%s",
+            self.id,
+            self.partner_id.id if self.partner_id else False,
+            self.current_flow,
+            self.conversation_state,
+            close_reason,
         )
 
         self.write({
@@ -574,8 +648,15 @@ class WhatsappSession(models.Model):
         """
         self.ensure_one()
         _logger.info(
-            "[WA-SESSION] Reseteando conversación id=%s flow=%s reason=%s",
-            self.id, self.current_flow, reason,
+            "[WA-SESSION] Reseteando conversación | "
+            "id=%s partner=%s flow=%s step=%s reason=%s "
+            "flow_expires_at=%s",
+            self.id,
+            self.partner_id.id if self.partner_id else False,
+            self.current_flow,
+            self.conversation_state,
+            reason,
+            self.conversation_state_expires_at,
         )
         self.write({
             "close_reason": reason if reason in dict(self._fields["close_reason"].selection) else False,
@@ -584,16 +665,42 @@ class WhatsappSession(models.Model):
         return True
 
     def is_conversation_expired(self):
-        """True si el flujo activo ya superó su tiempo de expiración."""
+        """
+        Devuelve True únicamente si expiró el flujo conversacional activo.
+
+        Esta función NO evalúa el timeout general del contacto.
+        """
         self.ensure_one()
-        if self.current_flow == "none" or not self.conversation_state_expires_at:
-            return False
-        expired = fields.Datetime.now() > self.conversation_state_expires_at
-        if expired:
+
+        if (
+            self.current_flow == "none"
+            or self.conversation_state == "idle"
+            or not self.conversation_state_expires_at
+        ):
             _logger.debug(
-                "[WA-SESSION] Flujo expirado id=%s expires_at=%s",
-                self.id, self.conversation_state_expires_at,
+                "[WA-SESSION] Timeout de flujo no aplicable | "
+                "id=%s flow=%s step=%s expires_at=%s",
+                self.id,
+                self.current_flow,
+                self.conversation_state,
+                self.conversation_state_expires_at,
             )
+            return False
+
+        now = fields.Datetime.now()
+        expired = now > self.conversation_state_expires_at
+
+        _logger.debug(
+            "[WA-SESSION] Evaluando timeout de flujo | "
+            "id=%s flow=%s step=%s now=%s expires_at=%s expired=%s",
+            self.id,
+            self.current_flow,
+            self.conversation_state,
+            now,
+            self.conversation_state_expires_at,
+            expired,
+        )
+
         return expired
 
     # ==========================================================
@@ -615,8 +722,10 @@ class WhatsappSession(models.Model):
         ])
 
         _logger.info(
-            "[WA-SESSION] cron_expire_conversations: %s flujos a expirar",
+            "[WA-SESSION] Cron expiración de flujos | "
+            "count=%s now=%s",
             len(expired_sessions),
+            now,
         )
 
         for session in expired_sessions:
@@ -629,7 +738,8 @@ class WhatsappSession(models.Model):
                 )
 
         return True
-        # ==========================================================
+
+    # ==========================================================
     # Cron: liberar modo humano por inactividad
     # ==========================================================
     @api.model
@@ -669,10 +779,12 @@ class WhatsappSession(models.Model):
         ])
 
         _logger.info(
-            "[WA-SESSION] cron_auto_release_human_mode: %s sesiones a liberar | timeout=%s min | cutoff=%s",
+            "[WA-HUMAN] Cron auto-release | "
+            "sessions=%s timeout_minutes=%s cutoff=%s now=%s",
             len(sessions),
             timeout_minutes,
             cutoff,
+            now,
         )
 
         Handoff = self.env["whatsapp.handoff"].sudo()
@@ -684,11 +796,22 @@ class WhatsappSession(models.Model):
                 if not partner:
                     continue
 
+                inactivity_minutes = False
+                try:
+                    inactivity_minutes = int(
+                        (now - session.last_message_at).total_seconds() / 60
+                    )
+                except Exception:
+                    inactivity_minutes = False
+
                 _logger.info(
-                    "[WA-SESSION] Liberando modo humano por inactividad | session=%s partner=%s last_message_at=%s timeout=%s",
+                    "[WA-HUMAN] Liberando modo humano por inactividad | "
+                    "session=%s partner=%s last_message_at=%s "
+                    "inactivity_minutes=%s timeout_minutes=%s",
                     session.id,
                     partner.id,
                     session.last_message_at,
+                    inactivity_minutes,
                     timeout_minutes,
                 )
 

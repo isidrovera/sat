@@ -14,19 +14,28 @@
             <field name="code">model.cron_expire_conversations()</field>
             <field name="user_id" ref="base.user_root"/>
             <field name="interval_number">5</field>
-            <field name="interval_type">minutes</field>            
+            <field name="interval_type">minutes</field>
             <field name="active" eval="True"/>
             <field name="priority">10</field>
         </record>
+
+        <!--
+            Libera conversaciones que permanecen en modo humano
+            después del tiempo de inactividad configurado en:
+            sat.whatsapp_human_auto_release_minutes
+        -->
         <record id="ir_cron_whatsapp_auto_release_human_mode" model="ir.cron">
             <field name="name">WhatsApp: Liberar modo humano por inactividad</field>
             <field name="model_id" ref="model_whatsapp_session"/>
             <field name="state">code</field>
             <field name="code">model.cron_auto_release_human_mode()</field>
+            <field name="user_id" ref="base.user_root"/>
             <field name="interval_number">5</field>
             <field name="interval_type">minutes</field>
-            <field name="active">True</field>
+            <field name="active" eval="True"/>
+            <field name="priority">10</field>
         </record>
+
         <!--
             Cron que cada 2 minutos busca outbox en estado 'failed'
             con next_retry_at vencido y los pasa a 'pending' para
@@ -39,16 +48,37 @@
             <field name="code">model.cron_retry_failed()</field>
             <field name="user_id" ref="base.user_root"/>
             <field name="interval_number">2</field>
-            <field name="interval_type">minutes</field> 
+            <field name="interval_type">minutes</field>
             <field name="active" eval="True"/>
             <field name="priority">10</field>
         </record>
 
         <!--
+            NUEVO:
+            Recupera mensajes que quedaron reservados en 'queued'
+            o detenidos en 'sending' sin recibir ACK del gateway/n8n.
+
+            El tiempo de lease de queued se configura con:
+            sat.whatsapp_outbox_queue_lease_minutes
+
+            El timeout de sending se configura con:
+            sat.whatsapp_outbox_sending_timeout_minutes
+        -->
+        <record id="ir_cron_whatsapp_outbox_recover_stale_processing" model="ir.cron">
+            <field name="name">WhatsApp: Recuperar mensajes salientes atascados</field>
+            <field name="model_id" ref="model_whatsapp_outbox"/>
+            <field name="state">code</field>
+            <field name="code">model.cron_recover_stale_processing()</field>
+            <field name="user_id" ref="base.user_root"/>
+            <field name="interval_number">2</field>
+            <field name="interval_type">minutes</field>
+            <field name="active" eval="True"/>
+            <field name="priority">9</field>
+        </record>
+
+        <!--
             Cron diario de limpieza: elimina outbox enviados,
             entregados, leídos o cancelados con más de 30 días.
-            Si quieres conservar histórico más tiempo, ajusta el
-            parámetro days en la llamada al método.
         -->
         <record id="ir_cron_whatsapp_outbox_cleanup_old" model="ir.cron">
             <field name="name">WhatsApp: Limpiar outbox antiguos</field>
@@ -57,12 +87,28 @@
             <field name="code">model.cron_cleanup_old(days=30)</field>
             <field name="user_id" ref="base.user_root"/>
             <field name="interval_number">1</field>
-            <field name="interval_type">days</field>            
+            <field name="interval_type">days</field>
             <field name="active" eval="True"/>
             <field name="priority">20</field>
-            <field name="nextcall" eval="(DateTime.now() + timedelta(hours=3)).strftime('%Y-%m-%d 03:00:00')"/>
         </record>
 
+        <!--
+            NUEVO:
+            Mantiene cargados los feriados peruanos del próximo año.
+            El método es idempotente: actualiza los existentes y crea
+            solamente los que falten.
+        -->
+        <record id="ir_cron_whatsapp_calendar_load_next_year_holidays" model="ir.cron">
+            <field name="name">WhatsApp: Cargar feriados Perú próximo año</field>
+            <field name="model_id" ref="model_whatsapp_calendar_event"/>
+            <field name="state">code</field>
+            <field name="code">model.cron_load_next_year_holidays()</field>
+            <field name="user_id" ref="base.user_root"/>
+            <field name="interval_number">1</field>
+            <field name="interval_type">months</field>
+            <field name="active" eval="True"/>
+            <field name="priority">20</field>
+        </record>
 
     </data>
 </odoo>

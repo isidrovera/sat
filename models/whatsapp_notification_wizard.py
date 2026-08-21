@@ -13,6 +13,16 @@ from odoo.exceptions import UserError
 _logger = logging.getLogger(__name__)
 
 class WhatsappNotificationWizard(models.TransientModel):
+    """
+    Wizard de asignación y notificación a grupos de WhatsApp.
+
+    Este flujo es independiente del bot conversacional y de whatsapp.outbox:
+    utiliza directamente el gateway configurado para consultar grupos y
+    enviar mensajes a un grupo específico.
+
+    Se conserva esa arquitectura para no mezclar destinatarios de grupos con
+    el outbox individual del asistente WhatsApp.
+    """
     _name = 'whatsapp.notification.wizard'
     _description = 'Wizard para Notificar Grupos WhatsApp'
 
@@ -61,16 +71,56 @@ class WhatsappNotificationWizard(models.TransientModel):
         help="Información adicional para incluir en la notificación"
     )
 
+    def _get_gateway_config(self):
+        ICP = self.env["ir.config_parameter"].sudo()
+
+        base_url = (
+            ICP.get_param(
+                "sat.whatsapp_gateway_base_url"
+            )
+            or ""
+        ).strip()
+
+        api_key = (
+            ICP.get_param(
+                "sat.whatsapp_gateway_api_key"
+            )
+            or ""
+        ).strip()
+
+        return {
+            "base_url": base_url.rstrip("/"),
+            "api_key": api_key,
+        }
+
+    def _get_gateway_timeout(self, purpose="send"):
+        ICP = self.env["ir.config_parameter"].sudo()
+
+        if purpose == "groups":
+            key = "sat.whatsapp_gateway_groups_timeout_seconds"
+            default = 10
+        else:
+            key = "sat.whatsapp_gateway_send_timeout_seconds"
+            default = 30
+
+        value = ICP.get_param(key, str(default))
+
+        try:
+            timeout = int(value)
+        except Exception:
+            timeout = default
+
+        return max(3, min(timeout, 120))
+
     @api.model
     def _get_grupos_disponibles(self):
         """Obtiene todos los grupos disponibles desde la API configurada en parámetros del sistema."""
         grupos = []
 
         try:
-            ICP = self.env["ir.config_parameter"].sudo()
-
-            base_url = ICP.get_param("sat.whatsapp_gateway_base_url")
-            api_key = ICP.get_param("sat.whatsapp_gateway_api_key")
+            config = self._get_gateway_config()
+            base_url = config["base_url"]
+            api_key = config["api_key"]
 
             if not base_url:
                 _logger.error("❌ Falta configurar el parámetro sat.whatsapp_gateway_base_url")
@@ -80,14 +130,17 @@ class WhatsappNotificationWizard(models.TransientModel):
                 _logger.error("❌ Falta configurar el parámetro sat.whatsapp_gateway_api_key")
                 return [("", "Falta configurar API Key")]
 
-            base_url = base_url.rstrip("/")
             url = f"{base_url}/api/groups"
 
             headers = {
                 "x-api-key": api_key,
             }
 
-            response = requests.get(url, headers=headers, timeout=10)
+            response = requests.get(
+                url,
+                headers=headers,
+                timeout=self._get_gateway_timeout("groups"),
+            )
 
             if response.status_code == 200:
                 data = response.json()
@@ -201,10 +254,9 @@ class WhatsappNotificationWizard(models.TransientModel):
         mensaje = self._generar_mensaje_notificacion()
 
         try:
-            ICP = self.env["ir.config_parameter"].sudo()
-
-            base_url = ICP.get_param("sat.whatsapp_gateway_base_url")
-            api_key = ICP.get_param("sat.whatsapp_gateway_api_key")
+            config = self._get_gateway_config()
+            base_url = config["base_url"]
+            api_key = config["api_key"]
 
             if not base_url:
                 _logger.error("❌ Falta configurar sat.whatsapp_gateway_base_url")
@@ -220,7 +272,6 @@ class WhatsappNotificationWizard(models.TransientModel):
                     "Parámetro requerido: sat.whatsapp_gateway_api_key"
                 )
 
-            base_url = base_url.rstrip("/")
             url = f"{base_url}/api/send-message"
 
             data = {
@@ -242,7 +293,7 @@ class WhatsappNotificationWizard(models.TransientModel):
                 url,
                 headers=headers,
                 json=data,
-                timeout=30,
+                timeout=self._get_gateway_timeout("send"),
             )
 
             _logger.info(
@@ -335,10 +386,15 @@ class WhatsappNotificationWizard(models.TransientModel):
                 raise UserError(f"Error de conexión HTTP: {response.status_code}")
 
         except requests.exceptions.Timeout:
-            _logger.error("⏰ Timeout al enviar notificación WhatsApp (30s)")
+            timeout = self._get_gateway_timeout("send")
+            _logger.error(
+                "⏰ Timeout al enviar notificación WhatsApp (%ss)",
+                timeout,
+            )
             raise UserError(
                 "Tiempo de espera agotado al enviar la notificación. "
-                "El servidor tardó más de 30 segundos en responder."
+                "El gateway superó el tiempo configurado de %s segundos."
+                % timeout
             )
 
         except requests.exceptions.ConnectionError as e:
@@ -458,27 +514,70 @@ class WhatsappNotificationWizard(models.TransientModel):
                 wizard.resumen_servicios = ''
 
     # MODIFICA: create() con logs
-    @api.model
-    def create(self, vals):
-        _logger.info("🧩 [wizard.create] vals=%s", vals)
-        wizard = super().create(vals)
-        _logger.info("🧩 [wizard.create] creado id=%s es_asignacion_masiva=%s tickets=%s",
-                    wizard.id, wizard.es_asignacion_masiva, len(wizard.tickets_masivos_ids))
+    @api.model_create_multi
+    def create(self, vals_list):
+        """
+        Override batch-safe para Odoo 18.
 
-        if wizard.es_asignacion_masiva and wizard.tickets_masivos_ids:
-            _logger.info("🧩 [wizard.create] generando líneas...")
-            wizard._crear_lineas_tickets()
-            # defaults de apoyo
-            primer = wizard.tickets_masivos_ids[0]
-            if not wizard.tecnico_asignado and getattr(primer, 'responsable', False):
-                wizard.tecnico_asignado = primer.responsable
-            if not wizard.fecha_visita and getattr(primer, 'agenda', False):
-                wizard.fecha_visita = primer.agenda
-            if getattr(primer, 'asistencia_id', False):
-                wizard.asistencia_directa = primer.asistencia_id
+        Conserva la generación automática de líneas y los valores de apoyo
+        tomados del primer ticket de cada wizard masivo.
+        """
+        vals_list = [
+            dict(vals or {})
+            for vals in vals_list
+        ]
 
-        _logger.info("🧩 [wizard.create] listo: lines=%s", len(wizard.ticket_line_ids))
-        return wizard
+        _logger.info(
+            "🧩 [wizard.create] cantidad=%s",
+            len(vals_list),
+        )
+
+        wizards = super().create(vals_list)
+
+        for wizard in wizards:
+            _logger.info(
+                "🧩 [wizard.create] creado id=%s "
+                "es_asignacion_masiva=%s tickets=%s",
+                wizard.id,
+                wizard.es_asignacion_masiva,
+                len(wizard.tickets_masivos_ids),
+            )
+
+            if (
+                wizard.es_asignacion_masiva
+                and wizard.tickets_masivos_ids
+            ):
+                wizard._crear_lineas_tickets()
+
+                primer = wizard.tickets_masivos_ids[0]
+                update_vals = {}
+
+                if (
+                    not wizard.tecnico_asignado
+                    and getattr(primer, "responsable", False)
+                ):
+                    update_vals["tecnico_asignado"] = primer.responsable.id
+
+                if (
+                    not wizard.fecha_visita
+                    and getattr(primer, "agenda", False)
+                ):
+                    update_vals["fecha_visita"] = primer.agenda
+
+                if getattr(primer, "asistencia_id", False):
+                    update_vals["asistencia_directa"] = primer.asistencia_id
+
+                if update_vals:
+                    wizard.write(update_vals)
+
+            _logger.info(
+                "🧩 [wizard.create] listo id=%s lines=%s",
+                wizard.id,
+                len(wizard.ticket_line_ids),
+            )
+
+        return wizards
+
 
 
     # MODIFICA: _crear_lineas_tickets() con logs finos
@@ -709,6 +808,12 @@ class WhatsappNotificationWizard(models.TransientModel):
         # que actualmente tienes en el wizard
         
         self.ensure_one()
+
+        if not self.ticket_id:
+            raise UserError(
+                "No se encontró el ticket asociado al wizard."
+            )
+
         
         try:
             # 1. Enviar notificación si está habilitada
@@ -901,6 +1006,12 @@ class WhatsappNotificationWizard(models.TransientModel):
     def action_cancelar(self):
         """Cancelar el wizard y proceder directamente con la asignación"""
         self.ensure_one()
+
+        if not self.ticket_id:
+            raise UserError(
+                "No se encontró el ticket asociado al wizard."
+            )
+
         
         # Registrar que se canceló el wizard
         self.ticket_id.message_post(
@@ -955,6 +1066,12 @@ class WhatsappNotificationWizard(models.TransientModel):
     def action_enviar_notificacion(self):
         """Acción: Enviar notificación y proceder con el ticket"""
         self.ensure_one()
+
+        if not self.ticket_id:
+            raise UserError(
+                "No se encontró el ticket asociado al wizard."
+            )
+
         
         try:
             # 1. Validar que hay grupo seleccionado
@@ -980,6 +1097,12 @@ class WhatsappNotificationWizard(models.TransientModel):
     def action_solo_notificar(self):
         """Acción: Solo enviar notificación sin proceder con el ticket"""
         self.ensure_one()
+
+        if not self.ticket_id:
+            raise UserError(
+                "No se encontró el ticket asociado al wizard."
+            )
+
         
         try:
             # 1. Validar que hay grupo seleccionado
