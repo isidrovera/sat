@@ -252,11 +252,363 @@ class TicketAlquiler(models.Model):
     calendar_event_id = fields.Many2one('calendar.event', string='Evento de Calendario')
 
     # ============================================================
+    # DISPONIBILIDAD DEL TÉCNICO / AUSENCIAS
+    # ============================================================
+
+    def _get_timezone_disponibilidad(self):
+        """Zona horaria usada para validar agenda, permisos y bloqueos."""
+        return timezone(self.env.user.tz or 'America/Lima')
+
+    def _datetime_utc_to_local_disponibilidad(self, fecha_dt):
+        """
+        Convierte un Datetime UTC naive de Odoo a hora local naive.
+
+        Odoo almacena los Datetime en UTC. Los permisos y disponibilidades
+        se registran por fecha/hora local, por lo que la comparación debe
+        hacerse en la zona horaria del usuario (Lima por defecto).
+        """
+        if not fecha_dt:
+            return False
+
+        fecha_dt = fields.Datetime.to_datetime(fecha_dt)
+        local_tz = self._get_timezone_disponibilidad()
+
+        if fecha_dt.tzinfo:
+            return fecha_dt.astimezone(local_tz).replace(tzinfo=None)
+
+        return UTC.localize(fecha_dt).astimezone(local_tz).replace(tzinfo=None)
+
+    def _get_perfil_tecnico_disponibilidad(self, tecnico):
+        """Devuelve el perfil operativo activo asociado al usuario técnico."""
+        if not tecnico:
+            return self.env['mantenimiento.tecnico.perfil']
+
+        return self.env['mantenimiento.tecnico.perfil'].search([
+            ('tecnico_id', '=', tecnico.id),
+            ('active', '=', True),
+        ], limit=1)
+
+    def _get_bloqueos_tecnico_fecha(self, tecnico, fecha_local):
+        """
+        Devuelve todos los bloqueos aprobados y no disponibles del técnico
+        para la fecha indicada.
+
+        Estos registros son creados por el flujo de permisos/ausencias cuando
+        la solicitud es aprobada.
+        """
+        Disponibilidad = self.env['mantenimiento.tecnico.disponibilidad']
+
+        if not tecnico or not fecha_local:
+            return Disponibilidad
+
+        if isinstance(fecha_local, datetime):
+            fecha_local = fecha_local.date()
+
+        perfil = self._get_perfil_tecnico_disponibilidad(tecnico)
+        if not perfil:
+            return Disponibilidad
+
+        return Disponibilidad.search([
+            ('perfil_id', '=', perfil.id),
+            ('fecha', '=', fecha_local),
+            ('estado', '=', 'aprobado'),
+            ('disponible', '=', False),
+        ], order='sequence desc, id desc')
+
+    def _get_ausencia_tecnico_fecha(self, tecnico, fecha_local):
+        """
+        Busca la ausencia aprobada/activa del técnico en una fecha.
+        Se utiliza para enriquecer el mensaje mostrado al usuario.
+        """
+        Ausencia = self.env['mantenimiento.tecnico.ausencia']
+
+        if not tecnico or not fecha_local:
+            return Ausencia
+
+        if isinstance(fecha_local, datetime):
+            fecha_local = fecha_local.date()
+
+        return Ausencia.search([
+            ('tecnico_id', '=', tecnico.id),
+            ('estado', 'in', ['aprobado', 'ausente_activo']),
+            ('fecha_inicio', '<=', fecha_local),
+            '|',
+            ('fecha_fin', '=', False),
+            ('fecha_fin', '>=', fecha_local),
+        ], order='fecha_inicio desc, id desc', limit=1)
+
+    def _format_hora_float_disponibilidad(self, value):
+        """Convierte una hora Float de Odoo (ej. 13.5) en 13:30."""
+        value = float(value or 0.0)
+        horas = int(value)
+        minutos = int(round((value - horas) * 60))
+
+        if minutos >= 60:
+            horas += 1
+            minutos = 0
+
+        horas = max(0, min(horas, 24))
+        minutos = max(0, min(minutos, 59))
+        return "%02d:%02d" % (horas, minutos)
+
+    def _get_intervalo_ticket_local(self, agenda, tipo_servicio=False, duracion_horas=False):
+        """
+        Devuelve (inicio_local, fin_local) para validar el ticket.
+        """
+        if not agenda:
+            return False, False
+
+        inicio_local = self._datetime_utc_to_local_disponibilidad(agenda)
+        if not inicio_local:
+            return False, False
+
+        if duracion_horas in (False, None):
+            duracion_horas = self._get_duracion_servicio_masivo(
+                tipo_servicio or 'revision'
+            )
+
+        try:
+            duracion_horas = float(duracion_horas or 0.0)
+        except (TypeError, ValueError):
+            duracion_horas = 0.0
+
+        if duracion_horas <= 0:
+            duracion_horas = 1.0
+
+        fin_local = inicio_local + timedelta(hours=duracion_horas)
+        return inicio_local, fin_local
+
+    def _evaluar_disponibilidad_tecnico_intervalo(
+        self,
+        tecnico,
+        inicio_local,
+        fin_local,
+    ):
+        """
+        Evalúa un intervalo local contra todos los bloqueos aprobados.
+
+        Retorna un diccionario:
+            disponible: bool
+            bloqueo: registro de disponibilidad o False
+            ausencia: registro de ausencia o False
+        """
+        if not tecnico or not inicio_local or not fin_local:
+            return {
+                'disponible': True,
+                'bloqueo': False,
+                'ausencia': False,
+            }
+
+        # Los tickets actuales se programan dentro de un mismo día laboral.
+        # No obstante, si en el futuro un intervalo cruza medianoche, también
+        # revisamos cada fecha implicada para evitar huecos de validación.
+        fecha_actual = inicio_local.date()
+        fecha_fin = fin_local.date()
+
+        while fecha_actual <= fecha_fin:
+            bloqueos = self._get_bloqueos_tecnico_fecha(
+                tecnico,
+                fecha_actual,
+            )
+
+            for bloqueo in bloqueos:
+                dia_completo = bool(
+                    getattr(bloqueo, 'dia_completo', False)
+                )
+
+                if dia_completo:
+                    inicio_dia = datetime.combine(
+                        fecha_actual,
+                        datetime.min.time(),
+                    )
+                    fin_dia = inicio_dia + timedelta(days=1)
+
+                    if inicio_local < fin_dia and fin_local > inicio_dia:
+                        return {
+                            'disponible': False,
+                            'bloqueo': bloqueo,
+                            'ausencia': self._get_ausencia_tecnico_fecha(
+                                tecnico,
+                                fecha_actual,
+                            ),
+                        }
+                    continue
+
+                hora_inicio = float(
+                    getattr(bloqueo, 'hora_inicio', 0.0) or 0.0
+                )
+                hora_fin = float(
+                    getattr(bloqueo, 'hora_fin', 0.0) or 0.0
+                )
+
+                # Un bloqueo parcial sin rango válido se trata como bloqueo
+                # fuerte para no permitir una asignación insegura.
+                if hora_fin <= hora_inicio:
+                    return {
+                        'disponible': False,
+                        'bloqueo': bloqueo,
+                        'ausencia': self._get_ausencia_tecnico_fecha(
+                            tecnico,
+                            fecha_actual,
+                        ),
+                    }
+
+                inicio_bloqueo = datetime.combine(
+                    fecha_actual,
+                    datetime.min.time(),
+                ) + timedelta(hours=hora_inicio)
+
+                fin_bloqueo = datetime.combine(
+                    fecha_actual,
+                    datetime.min.time(),
+                ) + timedelta(hours=hora_fin)
+
+                if inicio_local < fin_bloqueo and fin_local > inicio_bloqueo:
+                    return {
+                        'disponible': False,
+                        'bloqueo': bloqueo,
+                        'ausencia': self._get_ausencia_tecnico_fecha(
+                            tecnico,
+                            fecha_actual,
+                        ),
+                    }
+
+            fecha_actual += timedelta(days=1)
+
+        return {
+            'disponible': True,
+            'bloqueo': False,
+            'ausencia': False,
+        }
+
+    def _build_mensaje_tecnico_no_disponible(
+        self,
+        tecnico,
+        inicio_local,
+        fin_local,
+        resultado,
+    ):
+        """Construye un mensaje claro para la asignación rechazada."""
+        bloqueo = resultado.get('bloqueo') if resultado else False
+        ausencia = resultado.get('ausencia') if resultado else False
+
+        motivo = False
+        if ausencia:
+            tipo_label = dict(ausencia._fields['tipo'].selection).get(
+                ausencia.tipo,
+                ausencia.tipo,
+            )
+            motivo = tipo_label
+        elif bloqueo:
+            motivo = getattr(bloqueo, 'motivo', False)
+
+        if bloqueo and getattr(bloqueo, 'dia_completo', False):
+            mensaje = _(
+                "El técnico %s no está disponible el %s.\n\n"
+                "Horario solicitado: %s - %s."
+            ) % (
+                tecnico.name,
+                inicio_local.strftime('%d/%m/%Y'),
+                inicio_local.strftime('%H:%M'),
+                fin_local.strftime('%H:%M'),
+            )
+        else:
+            hora_inicio = getattr(bloqueo, 'hora_inicio', 0.0) if bloqueo else 0.0
+            hora_fin = getattr(bloqueo, 'hora_fin', 0.0) if bloqueo else 0.0
+
+            mensaje = _(
+                "El técnico %s no está disponible en ese horario.\n\n"
+                "Fecha: %s\n"
+                "Horario solicitado: %s - %s\n"
+                "Horario bloqueado: %s - %s"
+            ) % (
+                tecnico.name,
+                inicio_local.strftime('%d/%m/%Y'),
+                inicio_local.strftime('%H:%M'),
+                fin_local.strftime('%H:%M'),
+                self._format_hora_float_disponibilidad(hora_inicio),
+                self._format_hora_float_disponibilidad(hora_fin),
+            )
+
+        if motivo:
+            mensaje += _("\nMotivo: %s") % motivo
+
+        mensaje += _(
+            "\n\nSeleccione otro técnico o programe el ticket fuera del horario bloqueado."
+        )
+
+        return mensaje
+
+    def _validar_disponibilidad_tecnico(
+        self,
+        tecnico,
+        agenda,
+        tipo_servicio=False,
+        duracion_horas=False,
+        raise_error=True,
+    ):
+        """
+        Valida un técnico contra sus permisos/ausencias aprobados.
+
+        Esta es la validación central utilizada por create(), write() y la
+        asignación masiva. No depende de la interfaz, por lo que también protege
+        API, Flutter, importaciones y automatizaciones.
+        """
+        if not tecnico or not agenda:
+            return True
+
+        inicio_local, fin_local = self._get_intervalo_ticket_local(
+            agenda=agenda,
+            tipo_servicio=tipo_servicio,
+            duracion_horas=duracion_horas,
+        )
+
+        if not inicio_local or not fin_local:
+            return True
+
+        resultado = self._evaluar_disponibilidad_tecnico_intervalo(
+            tecnico=tecnico,
+            inicio_local=inicio_local,
+            fin_local=fin_local,
+        )
+
+        if resultado.get('disponible'):
+            return True
+
+        if raise_error:
+            raise UserError(
+                self._build_mensaje_tecnico_no_disponible(
+                    tecnico=tecnico,
+                    inicio_local=inicio_local,
+                    fin_local=fin_local,
+                    resultado=resultado,
+                )
+            )
+
+        return False
+
+    # ============================================================
     # CRUD
     # ============================================================
 
     @api.model
     def create(self, vals):
+        # ============================================================
+        # VALIDAR DISPONIBILIDAD DEL TÉCNICO
+        # ============================================================
+        responsable_id = vals.get('responsable')
+        agenda = vals.get('agenda')
+
+        if responsable_id and agenda:
+            tecnico = self.env['res.users'].browse(responsable_id)
+            if tecnico.exists():
+                self._validar_disponibilidad_tecnico(
+                    tecnico=tecnico,
+                    agenda=agenda,
+                    tipo_servicio=vals.get('tipo_servicio_id', 'revision'),
+                    duracion_horas=vals.get('duracion_programada_horas', False),
+                )
+
         # Validar instalación
         if vals.get('tipo_servicio_id') == 'instalacion' and vals.get('product_alquiler'):
             equipo = self.env['alquiler'].browse(vals['product_alquiler'])
@@ -288,6 +640,52 @@ class TicketAlquiler(models.Model):
             _logger.warning("[ticket.alquiler] No se pudieron cargar evaluaciones para ticket ID %s: %s", record.id, str(e))
 
         return record
+
+    def write(self, vals):
+        """
+        Protege cambios posteriores de técnico, agenda, tipo o duración.
+
+        La validación se ejecuta antes del super().write(), de forma que una
+        asignación inválida nunca llega a guardarse aunque provenga de API,
+        Flutter, importación, wizard o automatización.
+        """
+        campos_disponibilidad = {
+            'responsable',
+            'agenda',
+            'tipo_servicio_id',
+            'duracion_programada_horas',
+        }
+
+        if campos_disponibilidad.intersection(vals.keys()):
+            for record in self:
+                responsable_id = vals.get(
+                    'responsable',
+                    record.responsable.id if record.responsable else False,
+                )
+                agenda = vals.get('agenda', record.agenda)
+                tipo_servicio = vals.get(
+                    'tipo_servicio_id',
+                    record.tipo_servicio_id,
+                )
+
+                if 'duracion_programada_horas' in vals:
+                    duracion_horas = vals.get('duracion_programada_horas')
+                elif 'duracion_programada_horas' in record._fields:
+                    duracion_horas = record.duracion_programada_horas
+                else:
+                    duracion_horas = False
+
+                if responsable_id and agenda:
+                    tecnico = self.env['res.users'].browse(responsable_id)
+                    if tecnico.exists():
+                        record._validar_disponibilidad_tecnico(
+                            tecnico=tecnico,
+                            agenda=agenda,
+                            tipo_servicio=tipo_servicio,
+                            duracion_horas=duracion_horas,
+                        )
+
+        return super(TicketAlquiler, self).write(vals)
 
     # ============================================================
     # AUTO-CARGA DE EVALUACIONES
@@ -1929,18 +2327,58 @@ class TicketAlquiler(models.Model):
         Indica si el técnico tiene activada la excepción manual para permitir
         varias asignaciones en la misma fecha y horario.
 
-        Si existe una disponibilidad aprobada con disponible=False, se mantiene
-        como bloqueo fuerte y no se permite asignar.
+        Los bloqueos por permiso/ausencia se validan por intervalo mediante
+        _validar_disponibilidad_tecnico(). De esta manera un permiso parcial
+        (por ejemplo 09:00-13:00) no bloquea indebidamente toda la tarde.
         """
-        disponibilidad = self._get_disponibilidad_tecnico_fecha_masiva(tecnico, fecha_dt)
+        if not tecnico or not fecha_dt:
+            return False
 
-        if disponibilidad and not disponibilidad.disponible:
-            raise UserError(_(
-                "El técnico %s no está disponible para la fecha %s."
-            ) % (
-                tecnico.name,
-                fields.Datetime.to_datetime(fecha_dt).strftime('%d/%m/%Y'),
-            ))
+        fecha_local = fields.Datetime.to_datetime(fecha_dt).date()
+        perfil = self._get_perfil_tecnico_disponibilidad(tecnico)
+
+        if not perfil:
+            return False
+
+        Disponibilidad = self.env['mantenimiento.tecnico.disponibilidad']
+
+        # Un bloqueo de día completo sí impide cualquier asignación del día.
+        bloqueo_dia_completo = Disponibilidad.search([
+            ('perfil_id', '=', perfil.id),
+            ('fecha', '=', fecha_local),
+            ('estado', '=', 'aprobado'),
+            ('disponible', '=', False),
+            ('dia_completo', '=', True),
+        ], limit=1)
+
+        if bloqueo_dia_completo:
+            inicio_local = fields.Datetime.to_datetime(fecha_dt)
+            if not isinstance(inicio_local, datetime):
+                inicio_local = datetime.combine(fecha_local, datetime.min.time())
+
+            fin_local = inicio_local + timedelta(hours=1)
+            resultado = {
+                'disponible': False,
+                'bloqueo': bloqueo_dia_completo,
+                'ausencia': self._get_ausencia_tecnico_fecha(tecnico, fecha_local),
+            }
+            raise UserError(
+                self._build_mensaje_tecnico_no_disponible(
+                    tecnico=tecnico,
+                    inicio_local=inicio_local,
+                    fin_local=fin_local,
+                    resultado=resultado,
+                )
+            )
+
+        # Para la excepción de múltiples asignaciones solo consideramos
+        # registros explícitamente disponibles.
+        disponibilidad = Disponibilidad.search([
+            ('perfil_id', '=', perfil.id),
+            ('fecha', '=', fecha_local),
+            ('estado', '=', 'aprobado'),
+            ('disponible', '=', True),
+        ], order='sequence desc, id desc', limit=1)
 
         if not disponibilidad:
             return False
@@ -2061,6 +2499,17 @@ class TicketAlquiler(models.Model):
                         excluir_ticket_id=excluir_ticket_id,
                         ocupaciones_temporales=ocupaciones_temporales,
                     )
+
+                    # También tratar permisos/ausencias como ocupación del
+                    # intervalo. Así un permiso parcial hace que el planificador
+                    # salte al siguiente horario libre en lugar de asignarlo.
+                    if not ocupado:
+                        resultado_disponibilidad = self._evaluar_disponibilidad_tecnico_intervalo(
+                            tecnico=tecnico,
+                            inicio_local=inicio_dt,
+                            fin_local=fin_dt,
+                        )
+                        ocupado = not resultado_disponibilidad.get('disponible')
 
                     if not ocupado:
                         return inicio_dt
@@ -2251,6 +2700,17 @@ class TicketAlquiler(models.Model):
                     exc_info=True,
                 )
                 raise
+
+            # Validación definitiva del permiso/ausencia para el slot calculado.
+            # Es obligatoria también cuando se permite la excepción de múltiples
+            # asignaciones, porque esa excepción nunca debe saltarse una ausencia.
+            agenda_libre_utc = self._datetime_local_naive_to_utc_masivo(agenda_libre)
+            self._validar_disponibilidad_tecnico(
+                tecnico=tecnico,
+                agenda=agenda_libre_utc,
+                tipo_servicio=tipo_servicio,
+                duracion_horas=duracion_horas,
+            )
 
             agenda_fin = agenda_libre + timedelta(hours=duracion_horas)
 

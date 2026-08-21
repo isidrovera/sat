@@ -37,9 +37,169 @@ class Reparaciones(models.Model):
         except ValueError:
             raise UserError(_("No se encontró la acción de reporte 'sat.action_report_reparaciones_ventas'."))
         return report.report_action(self)
+
+    # ============================================================
+    # DISPONIBILIDAD DEL TÉCNICO / PERMISOS Y AUSENCIAS
+    # ============================================================
+
+    def _datetime_local_reparacion(self, value=None):
+        """
+        Convierte un Datetime de Odoo a hora local de Lima.
+
+        Reparaciones no tiene una agenda programada como ticket.alquiler,
+        por lo que la validación se realiza contra la fecha/hora actual
+        cuando se asigna un responsable.
+        """
+        value = value or fields.Datetime.now()
+        value = fields.Datetime.to_datetime(value)
+
+        local_dt = fields.Datetime.context_timestamp(
+            self.with_context(tz='America/Lima'),
+            value,
+        )
+
+        # Para las comparaciones internas no necesitamos conservar tzinfo.
+        return local_dt.replace(tzinfo=None)
+
+    def _get_ausencias_activas_tecnico_reparacion(self, tecnico, fecha_local):
+        """
+        Obtiene permisos/ausencias ya aprobados que afectan al técnico
+        en la fecha indicada.
+
+        Solo bloquean estados realmente aprobados/activos. Una solicitud
+        pendiente, rechazada, cancelada o cerrada no impide asignar.
+        """
+        if not tecnico or not fecha_local:
+            return self.env['mantenimiento.tecnico.ausencia']
+
+        if isinstance(fecha_local, datetime):
+            fecha_local = fecha_local.date()
+
+        return self.env['mantenimiento.tecnico.ausencia'].search([
+            ('tecnico_id', '=', tecnico.id),
+            ('estado', 'in', ['aprobado', 'ausente_activo']),
+            ('fecha_inicio', '<=', fecha_local),
+            '|',
+            ('fecha_fin', '=', False),
+            ('fecha_fin', '>=', fecha_local),
+        ], order='fecha_inicio desc, id desc')
+
+    def _format_hora_reparacion(self, value):
+        """Formatea un Float de Odoo (8.5) como 08:30."""
+        value = float(value or 0.0)
+        horas = int(value)
+        minutos = int(round((value - horas) * 60))
+
+        if minutos >= 60:
+            horas += 1
+            minutos = 0
+
+        return '%02d:%02d' % (horas, minutos)
+
+    def _validar_disponibilidad_tecnico_reparacion(
+        self,
+        tecnico,
+        fecha_hora=None,
+        raise_error=True,
+    ):
+        """
+        Valida si un técnico puede recibir una reparación en este momento.
+
+        Reglas:
+        - Día completo: bloquea toda asignación durante esa fecha.
+        - Permiso por horas: bloquea únicamente mientras la hora actual
+          se encuentre dentro del rango aprobado.
+        - Pendiente/rechazado/cancelado/cerrado: no bloquean.
+
+        Retorna True si puede asignarse y False si está bloqueado cuando
+        raise_error=False. Si raise_error=True lanza UserError.
+        """
+        if not tecnico:
+            return True
+
+        fecha_local = self._datetime_local_reparacion(fecha_hora)
+        ausencias = self._get_ausencias_activas_tecnico_reparacion(
+            tecnico,
+            fecha_local,
+        )
+
+        if not ausencias:
+            return True
+
+        hora_actual = (
+            fecha_local.hour
+            + (fecha_local.minute / 60.0)
+            + (fecha_local.second / 3600.0)
+        )
+
+        for ausencia in ausencias:
+            tipo_label = dict(ausencia._fields['tipo'].selection).get(
+                ausencia.tipo,
+                ausencia.tipo or 'Ausencia',
+            )
+
+            # Día completo: bloqueo absoluto durante la fecha.
+            if ausencia.dia_completo:
+                mensaje = _(
+                    "El técnico %s no puede recibir una reparación en este momento.\n\n"
+                    "Fecha: %s\n"
+                    "Motivo: %s\n"
+                    "La ausencia está aprobada por día completo."
+                ) % (
+                    tecnico.name,
+                    fecha_local.strftime('%d/%m/%Y'),
+                    tipo_label,
+                )
+
+                if raise_error:
+                    raise UserError(mensaje)
+
+                return False
+
+            # Permiso/ausencia por horas.
+            hora_inicio = ausencia.hora_inicio or 0.0
+            hora_fin = ausencia.hora_fin or 0.0
+
+            if hora_fin > hora_inicio and hora_inicio <= hora_actual < hora_fin:
+                mensaje = _(
+                    "El técnico %s no puede recibir una reparación en este momento.\n\n"
+                    "Fecha: %s\n"
+                    "Hora actual: %s\n"
+                    "Horario bloqueado: %s - %s\n"
+                    "Motivo: %s"
+                ) % (
+                    tecnico.name,
+                    fecha_local.strftime('%d/%m/%Y'),
+                    fecha_local.strftime('%H:%M'),
+                    self._format_hora_reparacion(hora_inicio),
+                    self._format_hora_reparacion(hora_fin),
+                    tipo_label,
+                )
+
+                if raise_error:
+                    raise UserError(mensaje)
+
+                return False
+
+        return True
+
     @api.model_create_multi
     def create(self, vals_list):
         """ Crea una secuencia para el modelo de reparaciones y gestiona la creación de carpetas en pCloud """
+
+        # ========================================
+        # VALIDACIÓN PREVIA: DISPONIBILIDAD DEL TÉCNICO
+        # ========================================
+        for vals in vals_list:
+            responsable_id = vals.get('responsable_id')
+            if responsable_id:
+                tecnico = self.env['res.users'].browse(responsable_id)
+                if tecnico.exists():
+                    self._validar_disponibilidad_tecnico_reparacion(
+                        tecnico=tecnico,
+                        fecha_hora=fields.Datetime.now(),
+                        raise_error=True,
+                    )
 
         # ========================================
         # VALIDACIÓN PREVIA: Verificar configuración del modelo
@@ -940,6 +1100,26 @@ class Reparaciones(models.Model):
     
             
     def write(self, vals):
+        # ============================================================
+        # VALIDAR CAMBIO DE RESPONSABLE
+        # ============================================================
+        if 'responsable_id' in vals and vals.get('responsable_id'):
+            nuevo_tecnico = self.env['res.users'].browse(vals['responsable_id'])
+
+            if nuevo_tecnico.exists():
+                for rec in self:
+                    responsable_actual_id = rec.responsable_id.id if rec.responsable_id else False
+
+                    # Validar únicamente cuando realmente se asigna o cambia técnico.
+                    # Así un técnico que entra en permiso no queda impedido de guardar
+                    # avances de una reparación que ya tenía asignada previamente.
+                    if responsable_actual_id != nuevo_tecnico.id:
+                        rec._validar_disponibilidad_tecnico_reparacion(
+                            tecnico=nuevo_tecnico,
+                            fecha_hora=fields.Datetime.now(),
+                            raise_error=True,
+                        )
+
         finalizado = vals.get('estado_id') == 'finalizado'
         if finalizado:
             for rec in self:
@@ -1009,6 +1189,38 @@ class Reparaciones(models.Model):
 
     def _create_next_reparacion(self):
         _logger.info('Inicio de la función _create_next_reparacion para el registro con ID %s', self.id)
+
+        # ============================================================
+        # VALIDAR DISPONIBILIDAD ANTES DE AUTOASIGNAR OTRA MÁQUINA
+        # ============================================================
+        if not self.responsable_id:
+            _logger.info(
+                'La reparación %s no tiene responsable. No se autoasigna otra máquina.',
+                self.id,
+            )
+            return
+
+        tecnico_disponible = self._validar_disponibilidad_tecnico_reparacion(
+            tecnico=self.responsable_id,
+            fecha_hora=fields.Datetime.now(),
+            raise_error=False,
+        )
+
+        if not tecnico_disponible:
+            _logger.info(
+                'El técnico %s está con permiso/ausencia aprobada. '
+                'No se le asignará automáticamente otra reparación.',
+                self.responsable_id.name,
+            )
+
+            self.message_post(
+                body=_(
+                    "⛔ <b>No se realizó la autoasignación de la siguiente máquina.</b><br/>"
+                    "El técnico <b>%s</b> tiene un permiso o ausencia aprobada "
+                    "vigente en este momento."
+                ) % (self.responsable_id.name or 'N/A')
+            )
+            return
 
         # Verificar si el técnico tiene algún registro en estado 'en_revision'
         if self.env['reparaciones.reparaciones'].search_count([('responsable_id', '=', self.responsable_id.id), ('estado_id', '=', 'en_revision')]) > 0:
