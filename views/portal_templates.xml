@@ -498,6 +498,14 @@
                                     
                                     <div class="equipo-title">
                                         <h3><t t-esc="equipo.name.name"/></h3>
+                                        <t t-if="portal_has_multiple_companies and equipo.cliente_id">
+                                            <div class="mb-2">
+                                                <span class="badge rounded-pill bg-light text-dark border">
+                                                    <i class="fa fa-building me-1"></i>
+                                                    <t t-esc="equipo.cliente_id.name"/>
+                                                </span>
+                                            </div>
+                                        </t>
                                         <div class="equipo-meta">
                                             <span class="equipo-meta-item">
                                                 <i class="fa fa-industry"></i>
@@ -1377,6 +1385,14 @@
                                     <i class="fa fa-print me-2"></i>
                                     <t t-esc="equipo.name.name"/>
                                 </h1>
+                                <t t-if="portal_has_multiple_companies and equipo.cliente_id">
+                                    <div class="mb-3">
+                                        <span class="hero-badge">
+                                            <i class="fa fa-building"></i>
+                                            <t t-esc="equipo.cliente_id.name"/>
+                                        </span>
+                                    </div>
+                                </t>
                                 <div class="hero-meta">
                                     <div class="hero-badge">
                                         <i class="fa fa-barcode"></i>
@@ -2127,6 +2143,14 @@
                                     
                                     <div class="ticket-title">
                                         <h3><t t-esc="ticket.name"/></h3>
+                                        <t t-if="portal_has_multiple_companies and ticket.partner_id">
+                                            <div class="mb-2">
+                                                <span class="badge rounded-pill bg-light text-dark border">
+                                                    <i class="fa fa-building me-1"></i>
+                                                    <t t-esc="ticket.partner_id.name"/>
+                                                </span>
+                                            </div>
+                                        </t>
                                         <div class="ticket-meta">
                                             <i class="fa fa-calendar-plus"></i>
                                             <span>Creado: <t t-esc="ticket.create_date.strftime('%d/%m/%Y')"/></span>
