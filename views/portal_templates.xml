@@ -497,15 +497,17 @@
                                     </div>
                                     
                                     <div class="equipo-title">
-                                        <h3><t t-esc="equipo.name.name"/></h3>
-                                        <t t-if="portal_has_multiple_companies and equipo.cliente_id">
+                                        <!-- Cliente / Empresa primero -->
+                                        <t t-if="equipo.cliente_id">
                                             <div class="mb-2">
-                                                <span class="badge rounded-pill bg-light text-dark border">
+                                                <span class="badge rounded-pill bg-light text-dark border" style="font-size: 0.9rem; font-weight: 700;">
                                                     <i class="fa fa-building me-1"></i>
                                                     <t t-esc="equipo.cliente_id.name"/>
                                                 </span>
                                             </div>
                                         </t>
+                                        <!-- Luego los datos del equipo -->
+                                        <h3><t t-esc="equipo.name.name"/></h3>
                                         <div class="equipo-meta">
                                             <span class="equipo-meta-item">
                                                 <i class="fa fa-industry"></i>
@@ -1381,11 +1383,8 @@
                     <div class="hero-content">
                         <div class="row align-items-center">
                             <div class="col-lg-8 mb-3 mb-lg-0">
-                                <h1 class="hero-title">
-                                    <i class="fa fa-print me-2"></i>
-                                    <t t-esc="equipo.name.name"/>
-                                </h1>
-                                <t t-if="portal_has_multiple_companies and equipo.cliente_id">
+                                <!-- Cliente / Empresa primero -->
+                                <t t-if="equipo.cliente_id">
                                     <div class="mb-3">
                                         <span class="hero-badge">
                                             <i class="fa fa-building"></i>
@@ -1393,6 +1392,11 @@
                                         </span>
                                     </div>
                                 </t>
+                                <!-- Luego el equipo -->
+                                <h1 class="hero-title">
+                                    <i class="fa fa-print me-2"></i>
+                                    <t t-esc="equipo.name.name"/>
+                                </h1>
                                 <div class="hero-meta">
                                     <div class="hero-badge">
                                         <i class="fa fa-barcode"></i>
@@ -1493,6 +1497,17 @@
                             </div>
                             <div class="info-card-body">
                                 <table class="info-table">
+                                    <t t-if="equipo.cliente_id">
+                                        <tr>
+                                            <td>Cliente / Empresa</td>
+                                            <td>
+                                                <strong>
+                                                    <i class="fa fa-building me-1"></i>
+                                                    <t t-esc="equipo.cliente_id.name"/>
+                                                </strong>
+                                            </td>
+                                        </tr>
+                                    </t>
                                     <tr>
                                         <td>Modelo</td>
                                         <td><t t-esc="equipo.name.name"/></td>
@@ -2142,15 +2157,17 @@
                                     </div>
                                     
                                     <div class="ticket-title">
-                                        <h3><t t-esc="ticket.name"/></h3>
-                                        <t t-if="portal_has_multiple_companies and ticket.partner_id">
+                                        <!-- Cliente / Empresa primero -->
+                                        <t t-if="ticket.partner_id">
                                             <div class="mb-2">
-                                                <span class="badge rounded-pill bg-light text-dark border">
+                                                <span class="badge rounded-pill bg-light text-dark border" style="font-size: 0.9rem; font-weight: 700;">
                                                     <i class="fa fa-building me-1"></i>
                                                     <t t-esc="ticket.partner_id.name"/>
                                                 </span>
                                             </div>
                                         </t>
+                                        <!-- Luego el ticket -->
+                                        <h3><t t-esc="ticket.name"/></h3>
                                         <div class="ticket-meta">
                                             <i class="fa fa-calendar-plus"></i>
                                             <span>Creado: <t t-esc="ticket.create_date.strftime('%d/%m/%Y')"/></span>
