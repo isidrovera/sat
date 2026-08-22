@@ -30,6 +30,10 @@
                             string="Deprecados"
                             domain="[('state','=','deprecated')]"/>
 
+                    <filter name="default_brand"
+                            string="Predeterminados"
+                            domain="[('is_default_for_brand','=',True)]"/>
+
                     <group expand="0" string="Agrupar por">
 
                         <filter name="group_brand"
@@ -59,13 +63,16 @@
                 <list string="Perfiles SNMP"
                       default_order="priority desc, sequence, name">
 
-                    <field name="sequence" widget="handle"/>
+                    <field name="sequence"
+                           widget="handle"/>
 
                     <field name="name"/>
                     <field name="code"/>
                     <field name="marca_id"/>
                     <field name="family"/>
-                    <field name="series" optional="hide"/>
+                    <field name="series"
+                           optional="hide"/>
+
                     <field name="technology"/>
 
                     <field name="version"/>
@@ -80,7 +87,14 @@
                     <field name="required_metric_count"
                            optional="hide"/>
 
-                    <field name="validation_confidence"
+                    <field name="enabled_metric_count"
+                           optional="hide"/>
+
+                    <field name="success_rate"
+                           string="Éxito %"
+                           optional="show"/>
+
+                    <field name="confidence"
                            optional="show"/>
 
                     <field name="is_default_for_brand"
@@ -103,10 +117,15 @@
 
                     <header>
 
+                        <button name="action_set_draft"
+                                type="object"
+                                string="Borrador"
+                                invisible="state == 'draft'"/>
+
                         <button name="action_set_testing"
                                 type="object"
                                 string="Pasar a Pruebas"
-                                invisible="state != 'draft'"/>
+                                invisible="state == 'testing'"/>
 
                         <button name="action_validate"
                                 type="object"
@@ -128,6 +147,7 @@
                     <sheet>
 
                         <div class="oe_title">
+                            <label for="name"/>
                             <h1>
                                 <field name="name"/>
                             </h1>
@@ -140,13 +160,16 @@
 
                                 <field name="code"/>
                                 <field name="marca_id"/>
+                                <field name="marca_codigo"
+                                       readonly="1"/>
+
                                 <field name="family"/>
                                 <field name="series"/>
                                 <field name="technology"/>
 
                             </group>
 
-                            <group string="Versión">
+                            <group string="Configuración">
 
                                 <field name="version"/>
                                 <field name="revision"/>
@@ -162,6 +185,14 @@
 
                         <notebook>
 
+                            <page string="Descripción">
+
+                                <field name="description"
+                                       nolabel="1"/>
+
+                            </page>
+
+
                             <page string="Detección">
 
                                 <group>
@@ -169,11 +200,12 @@
                                     <group string="Enterprise">
 
                                         <field name="enterprise_ids"/>
+
                                         <field name="enterprise_strict"/>
 
                                     </group>
 
-                                    <group string="Matching">
+                                    <group string="Coincidencia">
 
                                         <field name="minimum_match_score"/>
 
@@ -266,23 +298,54 @@
 
                                 <group>
 
-                                    <group>
+                                    <group string="Métricas">
+
                                         <field name="metric_count"
                                                readonly="1"/>
+
                                         <field name="required_metric_count"
                                                readonly="1"/>
+
                                         <field name="enabled_metric_count"
                                                readonly="1"/>
+
                                     </group>
 
-                                    <group>
-                                        <field name="validation_success_count"
+                                    <group string="Pruebas">
+
+                                        <field name="tested_device_count"
                                                readonly="1"/>
-                                        <field name="validation_failure_count"
+
+                                        <field name="successful_device_count"
                                                readonly="1"/>
-                                        <field name="validation_confidence"
+
+                                        <field name="failed_device_count"
                                                readonly="1"/>
+
+                                        <field name="success_rate"
+                                               readonly="1"/>
+
+                                        <field name="confidence"
+                                               readonly="1"/>
+
                                     </group>
+
+                                </group>
+
+                                <group string="Última validación">
+
+                                    <field name="last_validation_date"
+                                           readonly="1"/>
+
+                                    <field name="last_validation_user_id"
+                                           readonly="1"/>
+
+                                </group>
+
+                                <group string="Notas de validación">
+
+                                    <field name="validation_notes"
+                                           nolabel="1"/>
 
                                 </group>
 
@@ -292,11 +355,13 @@
                             <page string="Agente">
 
                                 <group>
+
                                     <field name="last_agent_request"
                                            readonly="1"/>
 
                                     <field name="agent_request_count"
                                            readonly="1"/>
+
                                 </group>
 
                             </page>
