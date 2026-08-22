@@ -1,0 +1,388 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- ============================================================= -->
+        <!-- SEARCH                                                        -->
+        <!-- ============================================================= -->
+
+        <record id="view_monitoring_network_search" model="ir.ui.view">
+            <field name="name">sat.monitoring.network.search</field>
+            <field name="model">sat.monitoring.network</field>
+            <field name="arch" type="xml">
+
+                <search string="Redes de Monitoreo">
+
+                    <field name="name"/>
+                    <field name="code"/>
+                    <field name="agent_id"/>
+                    <field name="partner_id"/>
+                    <field name="cidr"/>
+                    <field name="gateway"/>
+
+                    <filter name="active"
+                            string="Activas"
+                            domain="[('active','=',True)]"/>
+
+                    <filter name="discovery"
+                            string="Discovery activo"
+                            domain="[('discovery_enabled','=',True)]"/>
+
+                    <filter name="polling"
+                            string="Polling activo"
+                            domain="[('polling_enabled','=',True)]"/>
+
+                    <group expand="0" string="Agrupar por">
+
+                        <filter name="group_agent"
+                                string="Agente"
+                                context="{'group_by':'agent_id'}"/>
+
+                        <filter name="group_partner"
+                                string="Cliente"
+                                context="{'group_by':'partner_id'}"/>
+
+                    </group>
+
+                </search>
+
+            </field>
+        </record>
+
+
+        <!-- ============================================================= -->
+        <!-- LIST                                                          -->
+        <!-- ============================================================= -->
+
+        <record id="view_monitoring_network_list" model="ir.ui.view">
+            <field name="name">sat.monitoring.network.list</field>
+            <field name="model">sat.monitoring.network</field>
+            <field name="arch" type="xml">
+
+                <list string="Redes de Monitoreo"
+                      default_order="agent_id, sequence, name">
+
+                    <field name="sequence"
+                           widget="handle"/>
+
+                    <field name="name"/>
+                    <field name="code"/>
+                    <field name="agent_id"/>
+                    <field name="partner_id"/>
+                    <field name="branch_name"
+                           optional="hide"/>
+
+                    <field name="cidr"/>
+
+                    <field name="gateway"
+                           optional="hide"/>
+
+                    <field name="discovery_enabled"/>
+
+                    <field name="polling_enabled"/>
+
+                    <field name="device_count"
+                           string="Equipos"/>
+
+                    <field name="last_discovery_date"
+                           optional="show"/>
+
+                    <field name="active"/>
+
+                </list>
+
+            </field>
+        </record>
+
+
+        <!-- ============================================================= -->
+        <!-- FORM                                                          -->
+        <!-- ============================================================= -->
+
+        <record id="view_monitoring_network_form" model="ir.ui.view">
+            <field name="name">sat.monitoring.network.form</field>
+            <field name="model">sat.monitoring.network</field>
+            <field name="arch" type="xml">
+
+                <form string="Red de Monitoreo">
+
+                    <sheet>
+
+                        <div class="oe_title">
+
+                            <label for="name"/>
+
+                            <h1>
+                                <field name="name"/>
+                            </h1>
+
+                        </div>
+
+
+                        <group>
+
+                            <group string="Identificación">
+
+                                <field name="code"/>
+                                <field name="agent_id"/>
+                                <field name="partner_id"/>
+                                <field name="branch_name"/>
+                                <field name="sequence"/>
+                                <field name="active"/>
+
+                            </group>
+
+                            <group string="Red">
+
+                                <field name="cidr"/>
+                                <field name="network_address"
+                                       readonly="1"/>
+
+                                <field name="prefix_length"
+                                       readonly="1"/>
+
+                                <field name="netmask"
+                                       readonly="1"/>
+
+                                <field name="broadcast_address"
+                                       readonly="1"/>
+
+                                <field name="ip_version"
+                                       readonly="1"/>
+
+                                <field name="host_count"
+                                       readonly="1"/>
+
+                            </group>
+
+                        </group>
+
+
+                        <notebook>
+
+                            <!-- ========================================= -->
+                            <!-- CONFIGURACIÓN DE RED                     -->
+                            <!-- ========================================= -->
+
+                            <page string="Red">
+
+                                <group>
+
+                                    <group>
+                                        <field name="gateway"/>
+                                        <field name="vlan_id"/>
+                                        <field name="dns_servers"/>
+                                    </group>
+
+                                    <group>
+                                        <field name="max_hosts"/>
+                                        <field name="parallel_limit"/>
+                                    </group>
+
+                                </group>
+
+                            </page>
+
+
+                            <!-- ========================================= -->
+                            <!-- EXCLUSIONES                              -->
+                            <!-- ========================================= -->
+
+                            <page string="Rangos e IP">
+
+                                <group string="IPs excluidas">
+
+                                    <field name="excluded_ips"
+                                           nolabel="1"/>
+
+                                </group>
+
+                                <group string="Rangos excluidos">
+
+                                    <field name="excluded_ranges"
+                                           nolabel="1"/>
+
+                                </group>
+
+                                <group string="IPs incluidas manualmente">
+
+                                    <field name="included_ips"
+                                           nolabel="1"/>
+
+                                </group>
+
+                            </page>
+
+
+                            <!-- ========================================= -->
+                            <!-- DISCOVERY                                -->
+                            <!-- ========================================= -->
+
+                            <page string="Discovery">
+
+                                <group>
+
+                                    <group string="Configuración">
+
+                                        <field name="discovery_enabled"/>
+                                        <field name="discovery_method"/>
+                                        <field name="discovery_interval"/>
+                                        <field name="discovery_timeout"/>
+                                        <field name="discovery_retries"/>
+                                        <field name="snmp_first"/>
+
+                                    </group>
+
+                                    <group string="Creación">
+
+                                        <field name="printers_only"/>
+                                        <field name="auto_create_devices"/>
+                                        <field name="auto_assign_profile"/>
+                                        <field name="monitor_unknown_devices"/>
+
+                                    </group>
+
+                                </group>
+
+                                <group string="Última ejecución">
+
+                                    <group>
+                                        <field name="last_discovery_date"
+                                               readonly="1"/>
+
+                                        <field name="last_discovery_host_count"
+                                               readonly="1"/>
+
+                                        <field name="last_discovery_device_count"
+                                               readonly="1"/>
+                                    </group>
+
+                                    <group>
+                                        <field name="last_discovery_success_count"
+                                               readonly="1"/>
+
+                                        <field name="last_discovery_failure_count"
+                                               readonly="1"/>
+                                    </group>
+
+                                </group>
+
+                                <group string="Último error">
+
+                                    <field name="last_discovery_error"
+                                           nolabel="1"
+                                           readonly="1"/>
+
+                                </group>
+
+                            </page>
+
+
+                            <!-- ========================================= -->
+                            <!-- POLLING                                  -->
+                            <!-- ========================================= -->
+
+                            <page string="Polling">
+
+                                <group>
+
+                                    <field name="polling_enabled"/>
+                                    <field name="polling_interval"/>
+                                    <field name="polling_timeout"/>
+                                    <field name="polling_retries"/>
+
+                                </group>
+
+                            </page>
+
+
+                            <!-- ========================================= -->
+                            <!-- CREDENCIAL                               -->
+                            <!-- ========================================= -->
+
+                            <page string="Credencial"
+                                  groups="base.group_system">
+
+                                <group>
+
+                                    <field name="credential_id"/>
+
+                                    <field name="allow_credential_fallback"/>
+
+                                </group>
+
+                            </page>
+
+
+                            <!-- ========================================= -->
+                            <!-- EQUIPOS                                  -->
+                            <!-- ========================================= -->
+
+                            <page string="Equipos">
+
+                                <field name="device_ids"
+                                       readonly="1">
+
+                                    <list>
+
+                                        <field name="online"
+                                               widget="boolean_toggle"
+                                               readonly="1"/>
+
+                                        <field name="name"/>
+                                        <field name="ip_address"/>
+                                        <field name="marca_id"/>
+                                        <field name="model"/>
+                                        <field name="serial"/>
+
+                                        <field name="status"
+                                               widget="badge"/>
+
+                                        <field name="profile_id"/>
+
+                                        <field name="last_seen"/>
+
+                                    </list>
+
+                                </field>
+
+                            </page>
+
+
+                            <page string="Notas">
+
+                                <field name="notes"
+                                       nolabel="1"/>
+
+                            </page>
+
+                        </notebook>
+
+                    </sheet>
+
+                    <chatter/>
+
+                </form>
+
+            </field>
+        </record>
+
+
+        <!-- ============================================================= -->
+        <!-- ACTION                                                        -->
+        <!-- ============================================================= -->
+
+        <record id="action_monitoring_network"
+                model="ir.actions.act_window">
+
+            <field name="name">Redes de Monitoreo</field>
+            <field name="res_model">sat.monitoring.network</field>
+            <field name="view_mode">list,form</field>
+
+            <field name="search_view_id"
+                   ref="view_monitoring_network_search"/>
+
+        </record>
+
+    </data>
+</odoo>

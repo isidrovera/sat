@@ -1,0 +1,259 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <record id="view_monitoring_alert_search" model="ir.ui.view">
+            <field name="name">sat.monitoring.alert.search</field>
+            <field name="model">sat.monitoring.alert</field>
+            <field name="arch" type="xml">
+
+                <search string="Alertas">
+
+                    <field name="device_id"/>
+                    <field name="partner_id"/>
+                    <field name="name"/>
+                    <field name="code"/>
+
+                    <filter name="active_alerts"
+                            string="Activas"
+                            domain="[('active','=',True)]"/>
+
+                    <filter name="open"
+                            string="Abiertas"
+                            domain="[('state','=','open')]"/>
+
+                    <filter name="acknowledged"
+                            string="Reconocidas"
+                            domain="[('state','=','acknowledged')]"/>
+
+                    <filter name="resolved"
+                            string="Resueltas"
+                            domain="[('state','=','resolved')]"/>
+
+                    <filter name="requires_service"
+                            string="Requiere servicio"
+                            domain="[('requires_service','=',True)]"/>
+
+                    <group expand="0" string="Agrupar por">
+
+                        <filter name="group_device"
+                                string="Equipo"
+                                context="{'group_by':'device_id'}"/>
+
+                        <filter name="group_partner"
+                                string="Cliente"
+                                context="{'group_by':'partner_id'}"/>
+
+                        <filter name="group_severity"
+                                string="Severidad"
+                                context="{'group_by':'severity'}"/>
+
+                        <filter name="group_state"
+                                string="Estado"
+                                context="{'group_by':'state'}"/>
+
+                    </group>
+
+                </search>
+
+            </field>
+        </record>
+
+
+        <record id="view_monitoring_alert_list" model="ir.ui.view">
+            <field name="name">sat.monitoring.alert.list</field>
+            <field name="model">sat.monitoring.alert</field>
+            <field name="arch" type="xml">
+
+                <list string="Alertas"
+                      default_order="severity_rank desc, last_seen desc"
+                      decoration-warning="severity == 'warning'"
+                      decoration-muted="state in ('resolved','ignored')">
+
+                    <field name="severity"
+                           widget="badge"/>
+
+                    <field name="device_id"/>
+
+                    <field name="partner_id"
+                           optional="show"/>
+
+                    <field name="name"/>
+
+                    <field name="category"
+                           optional="show"/>
+
+                    <field name="state"
+                           widget="badge"/>
+
+                    <field name="occurrence_count"
+                           optional="show"/>
+
+                    <field name="first_seen"
+                           optional="hide"/>
+
+                    <field name="last_seen"
+                           optional="show"/>
+
+                    <field name="requires_service"
+                           optional="show"/>
+
+                </list>
+
+            </field>
+        </record>
+
+
+        <record id="view_monitoring_alert_form" model="ir.ui.view">
+            <field name="name">sat.monitoring.alert.form</field>
+            <field name="model">sat.monitoring.alert</field>
+            <field name="arch" type="xml">
+
+                <form string="Alerta SNMP">
+
+                    <header>
+
+                        <button name="action_acknowledge"
+                                type="object"
+                                string="Reconocer"
+                                class="btn-primary"
+                                invisible="state != 'open'"/>
+
+                        <button name="action_resolve"
+                                type="object"
+                                string="Resolver"
+                                invisible="state == 'resolved'"/>
+
+                        <button name="action_ignore"
+                                type="object"
+                                string="Ignorar"
+                                invisible="state == 'ignored'"/>
+
+                        <button name="action_reopen"
+                                type="object"
+                                string="Reabrir"
+                                invisible="state not in ('resolved','ignored')"/>
+
+                        <field name="state"
+                               widget="statusbar"
+                               statusbar_visible="open,acknowledged,resolved,ignored"/>
+
+                    </header>
+
+
+                    <sheet>
+
+                        <div class="oe_title">
+                            <h1>
+                                <field name="name"/>
+                            </h1>
+                        </div>
+
+
+                        <group>
+
+                            <group>
+                                <field name="device_id" readonly="1"/>
+                                <field name="partner_id" readonly="1"/>
+
+                                <field name="severity"
+                                       widget="badge"/>
+
+                                <field name="category"/>
+                                <field name="group"/>
+                                <field name="location"/>
+                            </group>
+
+                            <group>
+                                <field name="first_seen" readonly="1"/>
+                                <field name="last_seen" readonly="1"/>
+                                <field name="occurrence_count" readonly="1"/>
+                                <field name="duration_hours" readonly="1"/>
+                                <field name="requires_service"/>
+                                <field name="requires_review"/>
+                            </group>
+
+                        </group>
+
+
+                        <notebook>
+
+                            <page string="Detalle">
+
+                                <field name="description"/>
+
+                                <group>
+                                    <field name="prevents_printing"/>
+                                    <field name="prevents_copying"/>
+                                    <field name="prevents_scanning"/>
+                                </group>
+
+                            </page>
+
+
+                            <page string="Origen">
+
+                                <group>
+                                    <field name="snapshot_id" readonly="1"/>
+                                    <field name="metric_id" readonly="1"/>
+                                    <field name="oid" readonly="1"/>
+                                    <field name="source_label" readonly="1"/>
+                                    <field name="manufacturer" readonly="1"/>
+                                    <field name="model" readonly="1"/>
+                                    <field name="serial" readonly="1"/>
+                                </group>
+
+                            </page>
+
+
+                            <page string="RAW"
+                                  groups="base.group_system">
+
+                                <field name="raw_value"
+                                       nolabel="1"
+                                       readonly="1"/>
+
+                                <field name="raw_json"
+                                       nolabel="1"
+                                       readonly="1"/>
+
+                            </page>
+
+
+                            <page string="Notas">
+
+                                <field name="notes"
+                                       nolabel="1"/>
+
+                            </page>
+
+                        </notebook>
+
+                    </sheet>
+
+                    <chatter/>
+
+                </form>
+
+            </field>
+        </record>
+
+
+        <record id="action_monitoring_alert"
+                model="ir.actions.act_window">
+
+            <field name="name">Alertas</field>
+            <field name="res_model">sat.monitoring.alert</field>
+            <field name="view_mode">list,form</field>
+
+            <field name="search_view_id"
+                   ref="view_monitoring_alert_search"/>
+
+            <field name="context">
+                {'search_default_active_alerts': 1}
+            </field>
+
+        </record>
+
+    </data>
+</odoo>

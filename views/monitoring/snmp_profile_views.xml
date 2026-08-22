@@ -1,0 +1,329 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <record id="view_snmp_profile_search" model="ir.ui.view">
+            <field name="name">sat.snmp.profile.search</field>
+            <field name="model">sat.snmp.profile</field>
+            <field name="arch" type="xml">
+                <search string="Perfiles SNMP">
+
+                    <field name="name"/>
+                    <field name="code"/>
+                    <field name="marca_id"/>
+                    <field name="family"/>
+                    <field name="series"/>
+
+                    <filter name="active"
+                            string="Activos"
+                            domain="[('active','=',True)]"/>
+
+                    <filter name="validated"
+                            string="Validados"
+                            domain="[('state','=','validated')]"/>
+
+                    <filter name="testing"
+                            string="En pruebas"
+                            domain="[('state','=','testing')]"/>
+
+                    <filter name="deprecated"
+                            string="Deprecados"
+                            domain="[('state','=','deprecated')]"/>
+
+                    <group expand="0" string="Agrupar por">
+
+                        <filter name="group_brand"
+                                string="Marca"
+                                context="{'group_by':'marca_id'}"/>
+
+                        <filter name="group_state"
+                                string="Estado"
+                                context="{'group_by':'state'}"/>
+
+                        <filter name="group_technology"
+                                string="Tecnología"
+                                context="{'group_by':'technology'}"/>
+
+                    </group>
+
+                </search>
+            </field>
+        </record>
+
+
+        <record id="view_snmp_profile_list" model="ir.ui.view">
+            <field name="name">sat.snmp.profile.list</field>
+            <field name="model">sat.snmp.profile</field>
+            <field name="arch" type="xml">
+
+                <list string="Perfiles SNMP"
+                      default_order="priority desc, sequence, name">
+
+                    <field name="sequence" widget="handle"/>
+
+                    <field name="name"/>
+                    <field name="code"/>
+                    <field name="marca_id"/>
+                    <field name="family"/>
+                    <field name="series" optional="hide"/>
+                    <field name="technology"/>
+
+                    <field name="version"/>
+                    <field name="revision"/>
+
+                    <field name="state"
+                           widget="badge"/>
+
+                    <field name="metric_count"
+                           string="Métricas"/>
+
+                    <field name="required_metric_count"
+                           optional="hide"/>
+
+                    <field name="validation_confidence"
+                           optional="show"/>
+
+                    <field name="is_default_for_brand"
+                           optional="hide"/>
+
+                    <field name="active"/>
+
+                </list>
+
+            </field>
+        </record>
+
+
+        <record id="view_snmp_profile_form" model="ir.ui.view">
+            <field name="name">sat.snmp.profile.form</field>
+            <field name="model">sat.snmp.profile</field>
+            <field name="arch" type="xml">
+
+                <form string="Perfil SNMP">
+
+                    <header>
+
+                        <button name="action_set_testing"
+                                type="object"
+                                string="Pasar a Pruebas"
+                                invisible="state != 'draft'"/>
+
+                        <button name="action_validate"
+                                type="object"
+                                string="Validar"
+                                class="btn-primary"
+                                invisible="state == 'validated'"/>
+
+                        <button name="action_deprecate"
+                                type="object"
+                                string="Deprecar"
+                                invisible="state == 'deprecated'"/>
+
+                        <field name="state"
+                               widget="statusbar"
+                               statusbar_visible="draft,testing,validated,deprecated"/>
+
+                    </header>
+
+                    <sheet>
+
+                        <div class="oe_title">
+                            <h1>
+                                <field name="name"/>
+                            </h1>
+                        </div>
+
+
+                        <group>
+
+                            <group string="Identificación">
+
+                                <field name="code"/>
+                                <field name="marca_id"/>
+                                <field name="family"/>
+                                <field name="series"/>
+                                <field name="technology"/>
+
+                            </group>
+
+                            <group string="Versión">
+
+                                <field name="version"/>
+                                <field name="revision"/>
+                                <field name="priority"/>
+                                <field name="sequence"/>
+                                <field name="is_default_for_brand"/>
+                                <field name="active"/>
+
+                            </group>
+
+                        </group>
+
+
+                        <notebook>
+
+                            <page string="Detección">
+
+                                <group>
+
+                                    <group string="Enterprise">
+
+                                        <field name="enterprise_ids"/>
+                                        <field name="enterprise_strict"/>
+
+                                    </group>
+
+                                    <group string="Matching">
+
+                                        <field name="minimum_match_score"/>
+
+                                    </group>
+
+                                </group>
+
+                                <group string="Fabricante">
+                                    <field name="manufacturer_patterns"
+                                           nolabel="1"/>
+                                </group>
+
+                                <group string="Modelos">
+                                    <field name="model_patterns"
+                                           nolabel="1"/>
+                                </group>
+
+                                <group string="Modelos excluidos">
+                                    <field name="excluded_model_patterns"
+                                           nolabel="1"/>
+                                </group>
+
+                                <group string="sysDescr">
+                                    <field name="sysdescr_patterns"
+                                           nolabel="1"/>
+                                </group>
+
+                                <group string="Firmware">
+                                    <field name="firmware_patterns"
+                                           nolabel="1"/>
+                                </group>
+
+                            </page>
+
+
+                            <page string="SNMP">
+
+                                <group>
+
+                                    <group string="Versiones">
+
+                                        <field name="supports_snmp_v1"/>
+                                        <field name="supports_snmp_v2c"/>
+                                        <field name="supports_snmp_v3"/>
+                                        <field name="preferred_snmp_version"/>
+
+                                    </group>
+
+                                    <group string="Estrategia">
+
+                                        <field name="polling_strategy"/>
+                                        <field name="allow_fallback_discovery"/>
+                                        <field name="preserve_raw_data"/>
+
+                                    </group>
+
+                                </group>
+
+                            </page>
+
+
+                            <page string="Métricas">
+
+                                <field name="metric_ids">
+
+                                    <list editable="bottom">
+
+                                        <field name="sequence"
+                                               widget="handle"/>
+
+                                        <field name="code"/>
+                                        <field name="name"/>
+                                        <field name="category"/>
+                                        <field name="method"/>
+
+                                        <field name="oid"
+                                               optional="show"/>
+
+                                        <field name="required"/>
+                                        <field name="active"/>
+
+                                    </list>
+
+                                </field>
+
+                            </page>
+
+
+                            <page string="Validación">
+
+                                <group>
+
+                                    <group>
+                                        <field name="metric_count"
+                                               readonly="1"/>
+                                        <field name="required_metric_count"
+                                               readonly="1"/>
+                                        <field name="enabled_metric_count"
+                                               readonly="1"/>
+                                    </group>
+
+                                    <group>
+                                        <field name="validation_success_count"
+                                               readonly="1"/>
+                                        <field name="validation_failure_count"
+                                               readonly="1"/>
+                                        <field name="validation_confidence"
+                                               readonly="1"/>
+                                    </group>
+
+                                </group>
+
+                            </page>
+
+
+                            <page string="Agente">
+
+                                <group>
+                                    <field name="last_agent_request"
+                                           readonly="1"/>
+
+                                    <field name="agent_request_count"
+                                           readonly="1"/>
+                                </group>
+
+                            </page>
+
+                        </notebook>
+
+                    </sheet>
+
+                    <chatter/>
+
+                </form>
+
+            </field>
+        </record>
+
+
+        <record id="action_snmp_profile"
+                model="ir.actions.act_window">
+
+            <field name="name">Perfiles SNMP</field>
+            <field name="res_model">sat.snmp.profile</field>
+            <field name="view_mode">list,form</field>
+
+            <field name="search_view_id"
+                   ref="view_snmp_profile_search"/>
+
+        </record>
+
+    </data>
+</odoo>

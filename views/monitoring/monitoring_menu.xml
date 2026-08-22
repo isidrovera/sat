@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- ============================================================= -->
+        <!-- MONITOREO SNMP - OPERACIÓN                                   -->
+        <!-- ============================================================= -->
+
+        <menuitem id="menu_monitoring_root"
+                  name="Monitoreo SNMP"
+                  parent="sat_menu_root"
+                  sequence="90"
+                  groups="base.group_user"/>
+
+
+        <menuitem id="menu_monitoring_devices"
+                  name="Equipos"
+                  parent="menu_monitoring_root"
+                  action="action_monitoring_device"
+                  sequence="10"
+                  groups="base.group_user"/>
+
+
+        <menuitem id="menu_monitoring_alerts"
+                  name="Alertas"
+                  parent="menu_monitoring_root"
+                  action="action_monitoring_alert"
+                  sequence="20"
+                  groups="base.group_user"/>
+
+
+        <menuitem id="menu_monitoring_inventory"
+                  name="Inventario Detectado"
+                  parent="menu_monitoring_root"
+                  action="action_monitoring_device_feature"
+                  sequence="30"
+                  groups="base.group_user"/>
+
+
+        <!-- ============================================================= -->
+        <!-- HISTORIAL                                                      -->
+        <!-- ============================================================= -->
+
+        <menuitem id="menu_monitoring_history_root"
+                  name="Historial"
+                  parent="menu_monitoring_root"
+                  sequence="40"
+                  groups="base.group_user"/>
+
+
+        <menuitem id="menu_monitoring_snapshots"
+                  name="Ciclos de Monitoreo"
+                  parent="menu_monitoring_history_root"
+                  action="action_monitoring_snapshot"
+                  sequence="10"
+                  groups="base.group_user"/>
+
+
+        <menuitem id="menu_monitoring_readings"
+                  name="Lecturas SNMP"
+                  parent="menu_monitoring_history_root"
+                  action="action_monitoring_reading"
+                  sequence="20"
+                  groups="base.group_user"/>
+
+
+        <!-- ============================================================= -->
+        <!-- CONFIGURACIÓN                                                  -->
+        <!-- ============================================================= -->
+
+        <menuitem id="menu_monitoring_config_root"
+                  name="Monitoreo SNMP"
+                  parent="sat.ajustes"
+                  sequence="300"
+                  groups="base.group_system"/>
+
+
+        <!-- INFRAESTRUCTURA -->
+
+        <menuitem id="menu_monitoring_agents"
+                  name="Agentes"
+                  parent="menu_monitoring_config_root"
+                  action="action_monitoring_agent"
+                  sequence="10"
+                  groups="base.group_system"/>
+
+
+        <menuitem id="menu_monitoring_networks"
+                  name="Redes"
+                  parent="menu_monitoring_config_root"
+                  action="action_monitoring_network"
+                  sequence="20"
+                  groups="base.group_system"/>
+
+
+        <menuitem id="menu_monitoring_credentials"
+                  name="Credenciales SNMP"
+                  parent="menu_monitoring_config_root"
+                  action="action_snmp_credential"
+                  sequence="30"
+                  groups="base.group_system"/>
+
+
+        <!-- PERFILES -->
+
+        <menuitem id="menu_monitoring_profiles"
+                  name="Perfiles SNMP"
+                  parent="menu_monitoring_config_root"
+                  action="action_snmp_profile"
+                  sequence="40"
+                  groups="base.group_system"/>
+
+
+        <menuitem id="menu_monitoring_metrics"
+                  name="Métricas / OIDs"
+                  parent="menu_monitoring_config_root"
+                  action="action_snmp_profile_metric"
+                  sequence="50"
+                  groups="base.group_system"/>
+
+
+        <!-- EQUIPOS ADMIN -->
+
+        <menuitem id="menu_monitoring_config_devices"
+                  name="Equipos Monitoreados"
+                  parent="menu_monitoring_config_root"
+                  action="action_monitoring_device"
+                  sequence="60"
+                  groups="base.group_system"/>
+
+
+        <!-- HISTORIAL ADMIN -->
+
+        <menuitem id="menu_monitoring_config_snapshots"
+                  name="Snapshots"
+                  parent="menu_monitoring_config_root"
+                  action="action_monitoring_snapshot"
+                  sequence="70"
+                  groups="base.group_system"/>
+
+
+        <menuitem id="menu_monitoring_config_readings"
+                  name="Lecturas"
+                  parent="menu_monitoring_config_root"
+                  action="action_monitoring_reading"
+                  sequence="80"
+                  groups="base.group_system"/>
+
+    </data>
+</odoo>

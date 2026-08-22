@@ -1,0 +1,256 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <record id="view_monitoring_device_feature_search" model="ir.ui.view">
+            <field name="name">sat.monitoring.device.feature.search</field>
+            <field name="model">sat.monitoring.device.feature</field>
+            <field name="arch" type="xml">
+
+                <search string="Inventario Detectado">
+
+                    <field name="device_id"/>
+                    <field name="partner_id"/>
+                    <field name="code"/>
+                    <field name="name"/>
+                    <field name="model"/>
+
+                    <filter name="present"
+                            string="Presentes"
+                            domain="[('present','=',True)]"/>
+
+                    <filter name="removed"
+                            string="Retirados"
+                            domain="[('present','=',False)]"/>
+
+                    <filter name="changed"
+                            string="Cambió"
+                            domain="[('changed','=',True)]"/>
+
+                    <filter name="review"
+                            string="Revisión"
+                            domain="[('requires_review','=',True)]"/>
+
+                    <group expand="0" string="Agrupar por">
+
+                        <filter name="group_device"
+                                string="Equipo"
+                                context="{'group_by':'device_id'}"/>
+
+                        <filter name="group_category"
+                                string="Categoría"
+                                context="{'group_by':'category'}"/>
+
+                        <filter name="group_subgroup"
+                                string="Subgrupo"
+                                context="{'group_by':'subgroup'}"/>
+
+                    </group>
+
+                </search>
+
+            </field>
+        </record>
+
+
+        <record id="view_monitoring_device_feature_list" model="ir.ui.view">
+            <field name="name">sat.monitoring.device.feature.list</field>
+            <field name="model">sat.monitoring.device.feature</field>
+            <field name="arch" type="xml">
+
+                <list string="Inventario Detectado"
+                      default_order="device_id, category, sequence"
+                      decoration-muted="not present"
+                      decoration-warning="changed">
+
+                    <field name="device_id"/>
+
+                    <field name="partner_id"
+                           optional="hide"/>
+
+                    <field name="category"/>
+
+                    <field name="name"/>
+
+                    <field name="present"
+                           widget="boolean_toggle"
+                           readonly="1"/>
+
+                    <field name="value_text"
+                           optional="show"/>
+
+                    <field name="value_numeric"
+                           optional="show"/>
+
+                    <field name="unit"
+                           optional="show"/>
+
+                    <field name="model"
+                           optional="hide"/>
+
+                    <field name="life_percent"
+                           optional="hide"/>
+
+                    <field name="confidence"
+                           optional="hide"/>
+
+                    <field name="last_seen"
+                           optional="show"/>
+
+                </list>
+
+            </field>
+        </record>
+
+
+        <record id="view_monitoring_device_feature_form" model="ir.ui.view">
+            <field name="name">sat.monitoring.device.feature.form</field>
+            <field name="model">sat.monitoring.device.feature</field>
+            <field name="arch" type="xml">
+
+                <form string="Característica Detectada">
+
+                    <sheet>
+
+                        <div class="oe_title">
+                            <h1>
+                                <field name="name"/>
+                            </h1>
+                        </div>
+
+
+                        <group>
+
+                            <group>
+                                <field name="device_id" readonly="1"/>
+                                <field name="category"/>
+                                <field name="subgroup"/>
+                                <field name="code"/>
+                                <field name="feature_type"/>
+                            </group>
+
+                            <group>
+                                <field name="present"/>
+                                <field name="installed"/>
+                                <field name="supported"/>
+                                <field name="confidence"/>
+                                <field name="first_seen" readonly="1"/>
+                                <field name="last_seen" readonly="1"/>
+                            </group>
+
+                        </group>
+
+
+                        <notebook>
+
+                            <page string="Valor">
+
+                                <group>
+                                    <field name="value_boolean"/>
+                                    <field name="value_integer"/>
+                                    <field name="value_numeric"/>
+                                    <field name="value_text"/>
+                                    <field name="unit"/>
+                                    <field name="capacity"/>
+                                    <field name="capacity_unit"/>
+                                    <field name="life_percent"/>
+                                </group>
+
+                            </page>
+
+
+                            <page string="Hardware">
+
+                                <group>
+                                    <field name="manufacturer"/>
+                                    <field name="model"/>
+                                    <field name="serial"/>
+                                    <field name="version"/>
+                                    <field name="component_index"/>
+                                    <field name="component_color"/>
+                                    <field name="component_status"/>
+                                </group>
+
+                            </page>
+
+
+                            <page string="Bandeja">
+
+                                <group>
+                                    <field name="tray_index"/>
+                                    <field name="tray_name"/>
+                                    <field name="paper_size"/>
+                                    <field name="paper_type"/>
+                                    <field name="paper_level"/>
+                                    <field name="paper_level_unit"/>
+                                    <field name="max_capacity"/>
+                                </group>
+
+                            </page>
+
+
+                            <page string="Origen">
+
+                                <group>
+                                    <field name="profile_id" readonly="1"/>
+                                    <field name="metric_id" readonly="1"/>
+                                    <field name="snapshot_id" readonly="1"/>
+                                    <field name="reading_id" readonly="1"/>
+                                    <field name="oid" readonly="1"/>
+                                    <field name="oid_index" readonly="1"/>
+                                    <field name="source_label" readonly="1"/>
+                                    <field name="source_method" readonly="1"/>
+                                </group>
+
+                            </page>
+
+
+                            <page string="RAW"
+                                  groups="base.group_system">
+
+                                <field name="raw_value"
+                                       nolabel="1"
+                                       readonly="1"/>
+
+                                <field name="raw_json"
+                                       nolabel="1"
+                                       readonly="1"/>
+
+                            </page>
+
+
+                            <page string="Notas">
+
+                                <field name="notes"
+                                       nolabel="1"/>
+
+                            </page>
+
+                        </notebook>
+
+                    </sheet>
+
+                </form>
+
+            </field>
+        </record>
+
+
+        <record id="action_monitoring_device_feature"
+                model="ir.actions.act_window">
+
+            <field name="name">Inventario Detectado</field>
+            <field name="res_model">sat.monitoring.device.feature</field>
+            <field name="view_mode">list,form,pivot</field>
+
+            <field name="search_view_id"
+                   ref="view_monitoring_device_feature_search"/>
+
+            <field name="domain">
+                [('active','=',True)]
+            </field>
+
+        </record>
+
+    </data>
+</odoo>

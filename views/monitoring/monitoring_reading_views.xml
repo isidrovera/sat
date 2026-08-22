@@ -1,0 +1,237 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <record id="view_monitoring_reading_search" model="ir.ui.view">
+            <field name="name">sat.monitoring.reading.search</field>
+            <field name="model">sat.monitoring.reading</field>
+            <field name="arch" type="xml">
+
+                <search string="Lecturas SNMP">
+
+                    <field name="device_id"/>
+                    <field name="partner_id"/>
+                    <field name="metric_code"/>
+                    <field name="metric_name"/>
+                    <field name="oid"/>
+
+                    <filter name="success"
+                            string="Correctas"
+                            domain="[('success','=',True)]"/>
+
+                    <filter name="failed"
+                            string="Fallidas"
+                            domain="[('success','=',False)]"/>
+
+                    <filter name="anomaly"
+                            string="Anomalías"
+                            domain="[('anomaly','=',True)]"/>
+
+                    <filter name="review"
+                            string="Revisión"
+                            domain="[('requires_review','=',True)]"/>
+
+                    <group expand="0" string="Agrupar por">
+
+                        <filter name="group_device"
+                                string="Equipo"
+                                context="{'group_by':'device_id'}"/>
+
+                        <filter name="group_category"
+                                string="Categoría"
+                                context="{'group_by':'category'}"/>
+
+                        <filter name="group_metric"
+                                string="Métrica"
+                                context="{'group_by':'metric_code'}"/>
+
+                        <filter name="group_date"
+                                string="Fecha"
+                                context="{'group_by':'date:day'}"/>
+
+                    </group>
+
+                </search>
+
+            </field>
+        </record>
+
+
+        <record id="view_monitoring_reading_list" model="ir.ui.view">
+            <field name="name">sat.monitoring.reading.list</field>
+            <field name="model">sat.monitoring.reading</field>
+            <field name="arch" type="xml">
+
+                <list string="Lecturas SNMP"
+                      default_order="date desc"
+                      decoration-danger="not success"
+                      decoration-warning="anomaly">
+
+                    <field name="date"/>
+                    <field name="device_id"/>
+                    <field name="metric_code"/>
+                    <field name="metric_name"/>
+                    <field name="category"/>
+
+                    <field name="status"
+                           widget="badge"/>
+
+                    <field name="value_text"
+                           optional="show"/>
+
+                    <field name="value_integer"
+                           optional="hide"/>
+
+                    <field name="value_numeric"
+                           optional="show"/>
+
+                    <field name="value_boolean"
+                           optional="hide"/>
+
+                    <field name="unit"
+                           optional="show"/>
+
+                    <field name="delta"
+                           optional="hide"/>
+
+                    <field name="oid"
+                           optional="hide"/>
+
+                    <field name="confidence"
+                           optional="hide"/>
+
+                </list>
+
+            </field>
+        </record>
+
+
+        <record id="view_monitoring_reading_form" model="ir.ui.view">
+            <field name="name">sat.monitoring.reading.form</field>
+            <field name="model">sat.monitoring.reading</field>
+            <field name="arch" type="xml">
+
+                <form string="Lectura SNMP">
+
+                    <sheet>
+
+                        <div class="oe_title">
+                            <h1>
+                                <field name="metric_name" readonly="1"/>
+                            </h1>
+                        </div>
+
+                        <group>
+
+                            <group>
+                                <field name="device_id" readonly="1"/>
+                                <field name="snapshot_id" readonly="1"/>
+                                <field name="date" readonly="1"/>
+                                <field name="metric_code" readonly="1"/>
+                                <field name="category" readonly="1"/>
+                                <field name="subgroup" readonly="1"/>
+                            </group>
+
+                            <group>
+                                <field name="status"
+                                       widget="badge"
+                                       readonly="1"/>
+
+                                <field name="success" readonly="1"/>
+                                <field name="required" readonly="1"/>
+                                <field name="logical_type" readonly="1"/>
+                                <field name="unit" readonly="1"/>
+                                <field name="confidence" readonly="1"/>
+                            </group>
+
+                        </group>
+
+
+                        <notebook>
+
+                            <page string="Valor">
+
+                                <group>
+                                    <field name="value_text" readonly="1"/>
+                                    <field name="value_integer" readonly="1"/>
+                                    <field name="value_numeric" readonly="1"/>
+                                    <field name="value_boolean" readonly="1"/>
+
+                                    <field name="previous_numeric" readonly="1"/>
+                                    <field name="delta" readonly="1"/>
+                                    <field name="changed" readonly="1"/>
+                                </group>
+
+                            </page>
+
+
+                            <page string="Origen SNMP">
+
+                                <group>
+                                    <field name="oid" readonly="1"/>
+                                    <field name="oid_name" readonly="1"/>
+                                    <field name="oid_index" readonly="1"/>
+                                    <field name="source_label" readonly="1"/>
+                                    <field name="source_method" readonly="1"/>
+                                    <field name="discovered_dynamically" readonly="1"/>
+                                </group>
+
+                            </page>
+
+
+                            <page string="Diagnóstico">
+
+                                <group>
+                                    <field name="anomaly" readonly="1"/>
+                                    <field name="requires_review" readonly="1"/>
+                                    <field name="error_message" readonly="1"/>
+
+                                    <field name="sentinel_detected" readonly="1"/>
+                                    <field name="sentinel_value" readonly="1"/>
+                                    <field name="sentinel_interpretation" readonly="1"/>
+                                </group>
+
+                            </page>
+
+
+                            <page string="RAW"
+                                  groups="base.group_system">
+
+                                <group>
+                                    <field name="raw_value_text"
+                                           nolabel="1"
+                                           readonly="1"/>
+                                </group>
+
+                                <group>
+                                    <field name="raw_value_json"
+                                           nolabel="1"
+                                           readonly="1"/>
+                                </group>
+
+                            </page>
+
+                        </notebook>
+
+                    </sheet>
+
+                </form>
+
+            </field>
+        </record>
+
+
+        <record id="action_monitoring_reading"
+                model="ir.actions.act_window">
+
+            <field name="name">Lecturas SNMP</field>
+            <field name="res_model">sat.monitoring.reading</field>
+            <field name="view_mode">list,form,graph,pivot</field>
+
+            <field name="search_view_id"
+                   ref="view_monitoring_reading_search"/>
+
+        </record>
+
+    </data>
+</odoo>

@@ -1,0 +1,348 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <record id="view_snmp_profile_metric_search" model="ir.ui.view">
+            <field name="name">sat.snmp.profile.metric.search</field>
+            <field name="model">sat.snmp.profile.metric</field>
+            <field name="arch" type="xml">
+
+                <search string="Métricas SNMP">
+
+                    <field name="profile_id"/>
+                    <field name="code"/>
+                    <field name="name"/>
+                    <field name="oid"/>
+                    <field name="subgroup"/>
+
+                    <filter name="required"
+                            string="Obligatorias"
+                            domain="[('required','=',True)]"/>
+
+                    <filter name="active"
+                            string="Activas"
+                            domain="[('active','=',True)]"/>
+
+                    <group expand="0" string="Agrupar por">
+
+                        <filter name="group_profile"
+                                string="Perfil"
+                                context="{'group_by':'profile_id'}"/>
+
+                        <filter name="group_category"
+                                string="Categoría"
+                                context="{'group_by':'category'}"/>
+
+                        <filter name="group_method"
+                                string="Método"
+                                context="{'group_by':'method'}"/>
+
+                    </group>
+
+                </search>
+
+            </field>
+        </record>
+
+
+        <record id="view_snmp_profile_metric_list" model="ir.ui.view">
+            <field name="name">sat.snmp.profile.metric.list</field>
+            <field name="model">sat.snmp.profile.metric</field>
+            <field name="arch" type="xml">
+
+                <list string="Métricas / OIDs"
+                      default_order="profile_id, sequence, priority desc">
+
+                    <field name="sequence"
+                           widget="handle"/>
+
+                    <field name="profile_id"/>
+                    <field name="code"/>
+                    <field name="name"/>
+                    <field name="category"/>
+                    <field name="subgroup"
+                           optional="hide"/>
+
+                    <field name="logical_type"/>
+                    <field name="method"/>
+
+                    <field name="oid"
+                           optional="show"/>
+
+                    <field name="required"/>
+
+                    <field name="confidence"
+                           optional="hide"/>
+
+                    <field name="active"/>
+
+                </list>
+
+            </field>
+        </record>
+
+
+        <record id="view_snmp_profile_metric_form" model="ir.ui.view">
+            <field name="name">sat.snmp.profile.metric.form</field>
+            <field name="model">sat.snmp.profile.metric</field>
+            <field name="arch" type="xml">
+
+                <form string="Métrica SNMP">
+
+                    <sheet>
+
+                        <div class="oe_title">
+
+                            <label for="name"/>
+
+                            <h1>
+                                <field name="name"/>
+                            </h1>
+
+                        </div>
+
+
+                        <group>
+
+                            <group string="Métrica">
+
+                                <field name="profile_id"/>
+                                <field name="code"/>
+                                <field name="category"/>
+                                <field name="subgroup"/>
+                                <field name="logical_type"/>
+                                <field name="unit"/>
+
+                            </group>
+
+                            <group string="Configuración">
+
+                                <field name="method"/>
+                                <field name="required"/>
+                                <field name="priority"/>
+                                <field name="sequence"/>
+                                <field name="confidence"/>
+                                <field name="active"/>
+
+                            </group>
+
+                        </group>
+
+
+                        <notebook>
+
+                            <page string="OID Directo">
+
+                                <group>
+                                    <field name="oid"/>
+                                    <field name="oid_fallback"/>
+                                    <field name="fixed_index"/>
+                                    <field name="dynamic_index"/>
+                                </group>
+
+                            </page>
+
+
+                            <page string="Tabla SNMP">
+
+                                <group>
+
+                                    <group>
+                                        <field name="table_base_oid"/>
+                                        <field name="label_column_oid"/>
+                                        <field name="value_column_oid"/>
+                                        <field name="secondary_value_column_oid"/>
+                                        <field name="index_oid"/>
+                                    </group>
+
+                                    <group>
+                                        <field name="label_exact"/>
+                                        <field name="label_regex"/>
+                                        <field name="label_contains"/>
+                                        <field name="label_case_sensitive"/>
+                                    </group>
+
+                                </group>
+
+                            </page>
+
+
+                            <page string="Filtros">
+
+                                <group>
+
+                                    <field name="row_filter_column_oid"/>
+                                    <field name="row_filter_exact"/>
+                                    <field name="row_filter_regex"/>
+
+                                </group>
+
+                            </page>
+
+
+                            <page string="Presencia">
+
+                                <group>
+
+                                    <field name="presence_mode"/>
+                                    <field name="presence_expected_value"/>
+                                    <field name="presence_regex"/>
+
+                                </group>
+
+                            </page>
+
+
+                            <page string="Enumerados">
+
+                                <group>
+
+                                    <field name="enum_map_json"/>
+                                    <field name="unknown_enum_value"/>
+
+                                </group>
+
+                            </page>
+
+
+                            <page string="Bits">
+
+                                <group>
+
+                                    <field name="bit_position"/>
+                                    <field name="bit_mask"/>
+                                    <field name="bit_expected"/>
+
+                                </group>
+
+                            </page>
+
+
+                            <page string="Transformación">
+
+                                <group>
+
+                                    <group>
+                                        <field name="multiplier"/>
+                                        <field name="divisor"/>
+                                        <field name="offset"/>
+                                        <field name="round_digits"/>
+                                        <field name="text_case"/>
+                                    </group>
+
+                                    <group>
+                                        <field name="minimum_value"/>
+                                        <field name="maximum_value"/>
+                                        <field name="sentinel_values"/>
+                                        <field name="sentinel_behavior"/>
+                                    </group>
+
+                                </group>
+
+                            </page>
+
+
+                            <page string="Derivada">
+
+                                <group>
+                                    <field name="derived_formula"/>
+                                    <field name="derived_dependencies"/>
+                                </group>
+
+                            </page>
+
+
+                            <page string="Polling">
+
+                                <group>
+
+                                    <group>
+                                        <field name="polling_group"/>
+                                        <field name="polling_interval"/>
+                                        <field name="timeout"/>
+                                        <field name="retries"/>
+                                    </group>
+
+                                    <group>
+                                        <field name="store_history"/>
+                                        <field name="history_mode"/>
+                                        <field name="history_threshold"/>
+                                    </group>
+
+                                </group>
+
+                            </page>
+
+
+                            <page string="Alertas">
+
+                                <group>
+                                    <field name="alert_condition"/>
+                                    <field name="alert_severity"/>
+                                </group>
+
+                            </page>
+
+
+                            <page string="Pruebas">
+
+                                <group>
+                                    <field name="test_count"
+                                           readonly="1"/>
+
+                                    <field name="test_success_count"
+                                           readonly="1"/>
+
+                                    <field name="test_failure_count"
+                                           readonly="1"/>
+
+                                    <field name="last_test_date"
+                                           readonly="1"/>
+                                </group>
+
+                            </page>
+
+
+                            <page string="Notas">
+
+                                <group string="Descripción">
+                                    <field name="description"
+                                           nolabel="1"/>
+                                </group>
+
+                                <group string="Notas técnicas">
+                                    <field name="technical_notes"
+                                           nolabel="1"/>
+                                </group>
+
+                                <group string="Origen discovery">
+                                    <field name="discovery_source"
+                                           nolabel="1"/>
+                                </group>
+
+                            </page>
+
+                        </notebook>
+
+                    </sheet>
+
+                </form>
+
+            </field>
+        </record>
+
+
+        <record id="action_snmp_profile_metric"
+                model="ir.actions.act_window">
+
+            <field name="name">Métricas / OIDs</field>
+            <field name="res_model">sat.snmp.profile.metric</field>
+            <field name="view_mode">list,form</field>
+
+            <field name="search_view_id"
+                   ref="view_snmp_profile_metric_search"/>
+
+        </record>
+
+    </data>
+</odoo>

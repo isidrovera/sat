@@ -1,0 +1,359 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <record id="view_monitoring_snapshot_search" model="ir.ui.view">
+            <field name="name">sat.monitoring.snapshot.search</field>
+            <field name="model">sat.monitoring.snapshot</field>
+            <field name="arch" type="xml">
+                <search string="Historial de Monitoreo">
+                    <field name="device_id"/>
+                    <field name="partner_id"/>
+                    <field name="agent_id"/>
+                    <field name="network_id"/>
+                    <field name="profile_id"/>
+                    <field name="ip_address"/>
+                    <field name="serial"/>
+
+                    <filter name="success"
+                            string="Correctos"
+                            domain="[('state','=','success')]"/>
+
+                    <filter name="partial"
+                            string="Parciales"
+                            domain="[('state','=','partial')]"/>
+
+                    <filter name="failed"
+                            string="Fallidos"
+                            domain="[('state','in',['failed','timeout','offline'])]"/>
+
+                    <filter name="review"
+                            string="Requiere revisión"
+                            domain="[('requires_review','=',True)]"/>
+
+                    <group expand="0" string="Agrupar por">
+                        <filter name="group_device"
+                                string="Equipo"
+                                context="{'group_by':'device_id'}"/>
+
+                        <filter name="group_partner"
+                                string="Cliente"
+                                context="{'group_by':'partner_id'}"/>
+
+                        <filter name="group_agent"
+                                string="Agente"
+                                context="{'group_by':'agent_id'}"/>
+
+                        <filter name="group_state"
+                                string="Resultado"
+                                context="{'group_by':'state'}"/>
+
+                        <filter name="group_date"
+                                string="Fecha"
+                                context="{'group_by':'date:day'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+
+        <record id="view_monitoring_snapshot_list" model="ir.ui.view">
+            <field name="name">sat.monitoring.snapshot.list</field>
+            <field name="model">sat.monitoring.snapshot</field>
+            <field name="arch" type="xml">
+
+                <list string="Ciclos de Monitoreo"
+                      default_order="date desc"
+                      decoration-success="state == 'success'"
+                      decoration-warning="state == 'partial'"
+                      decoration-danger="state in ('failed','timeout','offline')">
+
+                    <field name="date"/>
+                    <field name="device_id"/>
+                    <field name="partner_id"/>
+                    <field name="ip_address"/>
+
+                    <field name="state"
+                           widget="badge"/>
+
+                    <field name="profile_code"
+                           optional="show"/>
+
+                    <field name="agent_code"
+                           optional="hide"/>
+
+                    <field name="successful_metric_count"
+                           string="OK"
+                           optional="show"/>
+
+                    <field name="failed_metric_count"
+                           string="Fallidas"
+                           optional="show"/>
+
+                    <field name="missing_required_metric_count"
+                           string="Obligatorias faltantes"
+                           optional="hide"/>
+
+                    <field name="metric_success_rate"
+                           string="Éxito %"
+                           optional="show"/>
+
+                    <field name="snmp_response_ms"
+                           string="Respuesta ms"
+                           optional="hide"/>
+
+                    <field name="requires_review"
+                           optional="hide"/>
+
+                </list>
+
+            </field>
+        </record>
+
+
+        <record id="view_monitoring_snapshot_form" model="ir.ui.view">
+            <field name="name">sat.monitoring.snapshot.form</field>
+            <field name="model">sat.monitoring.snapshot</field>
+            <field name="arch" type="xml">
+
+                <form string="Snapshot SNMP">
+
+                    <header>
+                        <field name="state"
+                               widget="statusbar"
+                               statusbar_visible="running,success,partial,failed,timeout,offline"/>
+                    </header>
+
+                    <sheet>
+
+                        <group>
+                            <group string="Equipo">
+                                <field name="device_id" readonly="1"/>
+                                <field name="partner_id" readonly="1"/>
+                                <field name="ip_address" readonly="1"/>
+                                <field name="model" readonly="1"/>
+                                <field name="serial" readonly="1"/>
+                            </group>
+
+                            <group string="Ejecución">
+                                <field name="date" readonly="1"/>
+                                <field name="started_at" readonly="1"/>
+                                <field name="finished_at" readonly="1"/>
+                                <field name="duration_ms" readonly="1"/>
+                                <field name="snmp_response_ms" readonly="1"/>
+                            </group>
+                        </group>
+
+
+                        <notebook>
+
+                            <page string="Resultado">
+
+                                <group>
+                                    <group>
+                                        <field name="attempted_metric_count" readonly="1"/>
+                                        <field name="successful_metric_count" readonly="1"/>
+                                        <field name="failed_metric_count" readonly="1"/>
+                                        <field name="missing_required_metric_count" readonly="1"/>
+                                        <field name="metric_success_rate" readonly="1"/>
+                                    </group>
+
+                                    <group>
+                                        <field name="snmp_version" readonly="1"/>
+                                        <field name="snmp_port" readonly="1"/>
+                                        <field name="error_code" readonly="1"/>
+                                        <field name="requires_review" readonly="1"/>
+                                    </group>
+                                </group>
+
+                                <group string="Error">
+                                    <field name="error_message"
+                                           nolabel="1"
+                                           readonly="1"/>
+                                </group>
+
+                                <group string="Advertencias">
+                                    <field name="warning_message"
+                                           nolabel="1"
+                                           readonly="1"/>
+                                </group>
+
+                            </page>
+
+
+                            <page string="Agente y Red">
+
+                                <group>
+
+                                    <group string="Agente">
+                                        <field name="agent_id" readonly="1"/>
+                                        <field name="agent_code" readonly="1"/>
+                                        <field name="agent_name" readonly="1"/>
+                                        <field name="agent_version" readonly="1"/>
+                                        <field name="agent_hostname" readonly="1"/>
+                                    </group>
+
+                                    <group string="Red">
+                                        <field name="network_id" readonly="1"/>
+                                        <field name="network_code" readonly="1"/>
+                                        <field name="network_cidr" readonly="1"/>
+                                        <field name="branch_name" readonly="1"/>
+                                    </group>
+
+                                </group>
+
+                            </page>
+
+
+                            <page string="Perfil">
+
+                                <group>
+                                    <field name="profile_id" readonly="1"/>
+                                    <field name="profile_code" readonly="1"/>
+                                    <field name="profile_name" readonly="1"/>
+                                    <field name="profile_version" readonly="1"/>
+                                    <field name="profile_revision" readonly="1"/>
+                                    <field name="profile_match_score" readonly="1"/>
+                                    <field name="profile_mismatch" readonly="1"/>
+                                    <field name="profile_mismatch_reason" readonly="1"/>
+                                </group>
+
+                            </page>
+
+
+                            <page string="Identidad">
+
+                                <group>
+
+                                    <group>
+                                        <field name="manufacturer" readonly="1"/>
+                                        <field name="brand_code" readonly="1"/>
+                                        <field name="model" readonly="1"/>
+                                        <field name="serial" readonly="1"/>
+                                        <field name="firmware" readonly="1"/>
+                                    </group>
+
+                                    <group>
+                                        <field name="mac_address" readonly="1"/>
+                                        <field name="hostname" readonly="1"/>
+                                        <field name="enterprise_id" readonly="1"/>
+                                        <field name="engine_id" readonly="1"/>
+                                        <field name="technology" readonly="1"/>
+                                    </group>
+
+                                </group>
+
+                                <group string="sysDescr">
+                                    <field name="sysdescr"
+                                           nolabel="1"
+                                           readonly="1"/>
+                                </group>
+
+                            </page>
+
+
+                            <page string="Lecturas">
+
+                                <field name="reading_ids" readonly="1">
+
+                                    <list>
+
+                                        <field name="date"/>
+                                        <field name="metric_code"/>
+                                        <field name="metric_name"/>
+                                        <field name="category"/>
+
+                                        <field name="status"
+                                               widget="badge"/>
+
+                                        <field name="value_text"
+                                               optional="show"/>
+
+                                        <field name="value_numeric"
+                                               optional="show"/>
+
+                                        <field name="unit"
+                                               optional="show"/>
+
+                                        <field name="oid"
+                                               optional="hide"/>
+
+                                    </list>
+
+                                </field>
+
+                            </page>
+
+
+                            <page string="Alertas">
+
+                                <field name="alert_ids" readonly="1">
+
+                                    <list>
+
+                                        <field name="severity"
+                                               widget="badge"/>
+
+                                        <field name="name"/>
+                                        <field name="category"/>
+
+                                        <field name="state"
+                                               widget="badge"/>
+
+                                        <field name="first_seen"/>
+                                        <field name="last_seen"/>
+
+                                    </list>
+
+                                </field>
+
+                            </page>
+
+
+                            <page string="RAW"
+                                  groups="base.group_system">
+
+                                <group string="Resumen">
+                                    <field name="summary_text"
+                                           nolabel="1"
+                                           readonly="1"/>
+                                </group>
+
+                                <group string="Payload RAW">
+                                    <field name="raw_payload_json"
+                                           nolabel="1"
+                                           readonly="1"/>
+                                </group>
+
+                                <group string="Payload del agente">
+                                    <field name="agent_payload_json"
+                                           nolabel="1"
+                                           readonly="1"/>
+                                </group>
+
+                            </page>
+
+                        </notebook>
+
+                    </sheet>
+
+                </form>
+
+            </field>
+        </record>
+
+
+        <record id="action_monitoring_snapshot"
+                model="ir.actions.act_window">
+
+            <field name="name">Historial de Monitoreo</field>
+            <field name="res_model">sat.monitoring.snapshot</field>
+            <field name="view_mode">list,form,graph,pivot</field>
+
+            <field name="search_view_id"
+                   ref="view_monitoring_snapshot_search"/>
+
+        </record>
+
+    </data>
+</odoo>

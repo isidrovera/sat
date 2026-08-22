@@ -1,0 +1,537 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- ============================================================= -->
+        <!-- SEARCH                                                        -->
+        <!-- ============================================================= -->
+
+        <record id="view_monitoring_agent_search" model="ir.ui.view">
+            <field name="name">sat.monitoring.agent.search</field>
+            <field name="model">sat.monitoring.agent</field>
+            <field name="arch" type="xml">
+
+                <search string="Agentes de Monitoreo">
+
+                    <field name="name"/>
+                    <field name="code"/>
+                    <field name="partner_id"/>
+                    <field name="hostname"/>
+                    <field name="local_ip"/>
+                    <field name="public_ip"/>
+
+                    <filter name="online"
+                            string="Online"
+                            domain="[('online','=',True)]"/>
+
+                    <filter name="offline"
+                            string="Offline"
+                            domain="[('online','=',False)]"/>
+
+                    <filter name="enabled"
+                            string="Habilitados"
+                            domain="[('enabled','=',True)]"/>
+
+                    <filter name="disabled"
+                            string="Deshabilitados"
+                            domain="[('enabled','=',False)]"/>
+
+                    <filter name="with_errors"
+                            string="Con errores"
+                            domain="[('last_error','!=',False)]"/>
+
+                    <group expand="0" string="Agrupar por">
+
+                        <filter name="group_partner"
+                                string="Cliente"
+                                context="{'group_by':'partner_id'}"/>
+
+                        <filter name="group_state"
+                                string="Estado"
+                                context="{'group_by':'state'}"/>
+
+                    </group>
+
+                </search>
+
+            </field>
+        </record>
+
+
+        <!-- ============================================================= -->
+        <!-- LIST                                                          -->
+        <!-- ============================================================= -->
+
+        <record id="view_monitoring_agent_list" model="ir.ui.view">
+            <field name="name">sat.monitoring.agent.list</field>
+            <field name="model">sat.monitoring.agent</field>
+            <field name="arch" type="xml">
+
+                <list string="Agentes de Monitoreo"
+                      default_order="online desc, name"
+                      decoration-success="online"
+                      decoration-danger="not online"
+                      decoration-muted="not enabled">
+
+                    <field name="online"
+                           widget="boolean_toggle"
+                           readonly="1"/>
+
+                    <field name="name"/>
+                    <field name="code"/>
+                    <field name="partner_id"/>
+
+                    <field name="hostname"
+                           optional="show"/>
+
+                    <field name="local_ip"
+                           optional="show"/>
+
+                    <field name="public_ip"
+                           optional="hide"/>
+
+                    <field name="agent_version"
+                           optional="show"/>
+
+                    <field name="state"
+                           widget="badge"/>
+
+                    <field name="network_count"
+                           string="Redes"/>
+
+                    <field name="device_count"
+                           string="Equipos"/>
+
+                    <field name="last_heartbeat"
+                           optional="show"/>
+
+                    <field name="config_revision"
+                           optional="hide"/>
+
+                    <field name="enabled"/>
+
+                </list>
+
+            </field>
+        </record>
+
+
+        <!-- ============================================================= -->
+        <!-- FORM                                                          -->
+        <!-- ============================================================= -->
+
+        <record id="view_monitoring_agent_form" model="ir.ui.view">
+            <field name="name">sat.monitoring.agent.form</field>
+            <field name="model">sat.monitoring.agent</field>
+            <field name="arch" type="xml">
+
+                <form string="Agente de Monitoreo">
+
+                    <header>
+
+                        <button name="action_generate_token"
+                                type="object"
+                                string="Generar Token"
+                                class="btn-primary"
+                                groups="base.group_system"/>
+
+                        <button name="action_revoke_token"
+                                type="object"
+                                string="Revocar Token"
+                                groups="base.group_system"
+                                invisible="not token_hash"/>
+
+                        <button name="action_enable"
+                                type="object"
+                                string="Habilitar"
+                                groups="base.group_system"
+                                invisible="enabled"/>
+
+                        <button name="action_disable"
+                                type="object"
+                                string="Deshabilitar"
+                                groups="base.group_system"
+                                invisible="not enabled"/>
+
+                        <field name="state"
+                               widget="statusbar"/>
+
+                    </header>
+
+
+                    <sheet>
+
+                        <widget name="web_ribbon"
+                                title="OFFLINE"
+                                bg_color="text-bg-danger"
+                                invisible="online"/>
+
+                        <div class="oe_title">
+
+                            <label for="name"/>
+
+                            <h1>
+                                <field name="name"/>
+                            </h1>
+
+                        </div>
+
+
+                        <group>
+
+                            <group string="Identificación">
+
+                                <field name="code"/>
+                                <field name="partner_id"/>
+                                <field name="branch_name"/>
+                                <field name="location_description"/>
+                                <field name="enabled"/>
+                                <field name="active"/>
+
+                            </group>
+
+                            <group string="Estado">
+
+                                <field name="online"
+                                       readonly="1"/>
+
+                                <field name="first_seen"
+                                       readonly="1"/>
+
+                                <field name="last_heartbeat"
+                                       readonly="1"/>
+
+                                <field name="last_config_request"
+                                       readonly="1"/>
+
+                                <field name="config_revision"
+                                       readonly="1"/>
+
+                                <field name="config_synced_revision"
+                                       readonly="1"/>
+
+                            </group>
+
+                        </group>
+
+
+                        <notebook>
+
+                            <!-- ========================================= -->
+                            <!-- SISTEMA                                  -->
+                            <!-- ========================================= -->
+
+                            <page string="Sistema">
+
+                                <group>
+
+                                    <group string="Equipo">
+
+                                        <field name="hostname"
+                                               readonly="1"/>
+
+                                        <field name="os_name"
+                                               readonly="1"/>
+
+                                        <field name="os_version"
+                                               readonly="1"/>
+
+                                        <field name="architecture"
+                                               readonly="1"/>
+
+                                        <field name="python_version"
+                                               readonly="1"/>
+
+                                        <field name="agent_version"
+                                               readonly="1"/>
+
+                                    </group>
+
+                                    <group string="Red">
+
+                                        <field name="local_ip"
+                                               readonly="1"/>
+
+                                        <field name="public_ip"
+                                               readonly="1"/>
+
+                                        <field name="mac_address"
+                                               readonly="1"/>
+
+                                    </group>
+
+                                </group>
+
+                            </page>
+
+
+                            <!-- ========================================= -->
+                            <!-- TOKEN                                    -->
+                            <!-- ========================================= -->
+
+                            <page string="Seguridad"
+                                  groups="base.group_system">
+
+                                <group>
+
+                                    <group string="Token">
+
+                                        <field name="token_preview"
+                                               readonly="1"/>
+
+                                        <field name="token_created_at"
+                                               readonly="1"/>
+
+                                        <field name="token_last_used_at"
+                                               readonly="1"/>
+
+                                    </group>
+
+                                    <group string="Heartbeat">
+
+                                        <field name="heartbeat_interval"/>
+                                        <field name="offline_threshold"/>
+
+                                    </group>
+
+                                </group>
+
+                            </page>
+
+
+                            <!-- ========================================= -->
+                            <!-- DISCOVERY                                -->
+                            <!-- ========================================= -->
+
+                            <page string="Discovery">
+
+                                <group>
+
+                                    <group string="Configuración">
+
+                                        <field name="discovery_enabled"/>
+                                        <field name="discovery_interval"/>
+                                        <field name="discovery_timeout"/>
+                                        <field name="discovery_retries"/>
+                                        <field name="discovery_parallel_limit"/>
+
+                                    </group>
+
+                                    <group string="Estadísticas">
+
+                                        <field name="discovery_count"
+                                               readonly="1"/>
+
+                                        <field name="last_discovery_date"
+                                               readonly="1"/>
+
+                                        <field name="last_discovery_success"
+                                               readonly="1"/>
+
+                                        <field name="last_discovery_failure"
+                                               readonly="1"/>
+
+                                    </group>
+
+                                </group>
+
+                            </page>
+
+
+                            <!-- ========================================= -->
+                            <!-- POLLING                                  -->
+                            <!-- ========================================= -->
+
+                            <page string="Polling">
+
+                                <group>
+
+                                    <group string="Configuración">
+
+                                        <field name="polling_enabled"/>
+                                        <field name="polling_interval"/>
+                                        <field name="polling_timeout"/>
+                                        <field name="polling_retries"/>
+                                        <field name="polling_parallel_limit"/>
+
+                                    </group>
+
+                                    <group string="Estadísticas">
+
+                                        <field name="poll_count"
+                                               readonly="1"/>
+
+                                        <field name="poll_success_count"
+                                               readonly="1"/>
+
+                                        <field name="poll_failure_count"
+                                               readonly="1"/>
+
+                                        <field name="last_poll_date"
+                                               readonly="1"/>
+
+                                    </group>
+
+                                </group>
+
+                            </page>
+
+
+                            <!-- ========================================= -->
+                            <!-- CAPACIDADES                              -->
+                            <!-- ========================================= -->
+
+                            <page string="Capacidades">
+
+                                <group>
+
+                                    <field name="supports_snmp_v1"
+                                           readonly="1"/>
+
+                                    <field name="supports_snmp_v2c"
+                                           readonly="1"/>
+
+                                    <field name="supports_snmp_v3"
+                                           readonly="1"/>
+
+                                    <field name="supports_walk"
+                                           readonly="1"/>
+
+                                    <field name="supports_bulk"
+                                           readonly="1"/>
+
+                                    <field name="supports_icmp"
+                                           readonly="1"/>
+
+                                </group>
+
+                            </page>
+
+
+                            <!-- ========================================= -->
+                            <!-- REDES                                    -->
+                            <!-- ========================================= -->
+
+                            <page string="Redes">
+
+                                <field name="network_ids">
+
+                                    <list>
+
+                                        <field name="sequence"
+                                               widget="handle"/>
+
+                                        <field name="name"/>
+                                        <field name="code"/>
+                                        <field name="partner_id"/>
+                                        <field name="cidr"/>
+
+                                        <field name="discovery_enabled"/>
+
+                                        <field name="device_count"
+                                               string="Equipos"/>
+
+                                        <field name="active"/>
+
+                                    </list>
+
+                                </field>
+
+                            </page>
+
+
+                            <!-- ========================================= -->
+                            <!-- EQUIPOS                                  -->
+                            <!-- ========================================= -->
+
+                            <page string="Equipos">
+
+                                <field name="device_ids"
+                                       readonly="1">
+
+                                    <list>
+
+                                        <field name="online"
+                                               widget="boolean_toggle"
+                                               readonly="1"/>
+
+                                        <field name="name"/>
+                                        <field name="partner_id"/>
+                                        <field name="ip_address"/>
+                                        <field name="model"/>
+                                        <field name="serial"/>
+                                        <field name="status"
+                                               widget="badge"/>
+                                        <field name="last_seen"/>
+
+                                    </list>
+
+                                </field>
+
+                            </page>
+
+
+                            <!-- ========================================= -->
+                            <!-- ERRORES                                  -->
+                            <!-- ========================================= -->
+
+                            <page string="Errores">
+
+                                <group>
+
+                                    <field name="last_error_date"
+                                           readonly="1"/>
+
+                                    <field name="error_count"
+                                           readonly="1"/>
+
+                                </group>
+
+                                <group string="Último error">
+
+                                    <field name="last_error"
+                                           nolabel="1"
+                                           readonly="1"/>
+
+                                </group>
+
+                            </page>
+
+
+                            <page string="Notas">
+
+                                <field name="notes"
+                                       nolabel="1"/>
+
+                            </page>
+
+                        </notebook>
+
+                    </sheet>
+
+                    <chatter/>
+
+                </form>
+
+            </field>
+        </record>
+
+
+        <!-- ============================================================= -->
+        <!-- ACTION                                                        -->
+        <!-- ============================================================= -->
+
+        <record id="action_monitoring_agent"
+                model="ir.actions.act_window">
+
+            <field name="name">Agentes de Monitoreo</field>
+            <field name="res_model">sat.monitoring.agent</field>
+            <field name="view_mode">list,form</field>
+
+            <field name="search_view_id"
+                   ref="view_monitoring_agent_search"/>
+
+        </record>
+
+    </data>
+</odoo>
