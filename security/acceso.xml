@@ -54,6 +54,11 @@
             <field name="perm_create" eval="True"/>
             <field name="perm_unlink" eval="True"/>
         </record>
+        <record id="sat_alquiler_group_user" model="res.groups">
+    <field name="name">Área alquiler</field>
+    <field name="category_id" ref="module_sat_category"/>
+    <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
+</record>
 
     </data>
 </odoo>

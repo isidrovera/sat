@@ -277,12 +277,16 @@ class AppAuthController(http.Controller):
         user,
     ):
         """
-        Determina el tipo de usuario para la app a partir de
-        los grupos estándar de Odoo.
+        Determina el tipo de usuario y el rol principal
+        que utilizará la app móvil.
 
         Prioridad:
-        - Usuario interno: base.group_user
-        - Usuario portal: base.group_portal
+        - Portal
+        - Gerencia / autorizados de reservas comerciales
+        - Jefes de área
+        - Ventas
+        - Técnica
+        - Usuario interno genérico
 
         La respuesta es aditiva y no modifica la autenticación,
         la sesión ni el flujo de 2FA.
@@ -302,20 +306,43 @@ class AppAuthController(http.Controller):
             )
         )
 
-        if is_internal:
-            return {
-                "user_type": "internal",
-                "app_role": "internal",
-                "is_internal": True,
-                "is_portal": False,
-            }
-
         if is_portal:
             return {
                 "user_type": "portal",
                 "app_role": "customer",
                 "is_internal": False,
                 "is_portal": True,
+            }
+
+        if is_internal:
+            if user.has_group(
+                "sat.group_reserva_comercial_autorizado"
+            ):
+                app_role = "manager"
+
+            elif user.has_group(
+                "sat.sat_jefes_group_user"
+            ):
+                app_role = "manager"
+
+            elif user.has_group(
+                "sat.Sat_ventas_group_user"
+            ):
+                app_role = "sales"
+
+            elif user.has_group(
+                "sat.sat_tecnica_group_user"
+            ):
+                app_role = "technician"
+
+            else:
+                app_role = "internal"
+
+            return {
+                "user_type": "internal",
+                "app_role": app_role,
+                "is_internal": True,
+                "is_portal": False,
             }
 
         return {
