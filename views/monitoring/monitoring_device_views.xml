@@ -58,13 +58,13 @@
                     <filter
                         name="with_alerts"
                         string="Con alertas"
-                        domain="[('has_active_alert', '=', True)]"
+                        domain="[('active_alert_count', '&gt;', 0)]"
                     />
 
                     <filter
                         name="without_alerts"
                         string="Sin alertas"
-                        domain="[('has_active_alert', '=', False)]"
+                        domain="[('active_alert_count', '=', 0)]"
                     />
 
                     
@@ -227,7 +227,7 @@
                     string="Equipos Monitoreados"
                     default_order="online desc, last_seen desc, name asc"
                     decoration-danger="not online"
-                    decoration-warning="has_active_alert"
+                    decoration-warning="active_alert_count &gt; 0"
                     decoration-muted="not monitoring_enabled"
                 >
 
