@@ -53,6 +53,8 @@ class AppSalesController(AppBaseController):
             "/api/app/sales/machines/<int:machine_id>/reserve",
             "/api/app/sales/machines/<int:machine_id>/customer",
             "/api/app/sales/machines/<int:machine_id>/release",
+            "/api/app/sales/machines/<int:machine_id>/review",
+            "/api/app/sales/machines/<int:machine_id>/review/remove",
             "/api/app/sales/requests",
             "/api/app/sales/requests/<int:request_id>",
             "/api/app/sales/requests/<int:request_id>/cancel",
@@ -1399,6 +1401,150 @@ class AppSalesController(AppBaseController):
                     "machine": self._serialize_machine(refreshed, user, detail=True),
                 }
             )
+        except Exception as exc:
+            return self._error_response(exc)
+
+    @http.route(
+        "/api/app/sales/machines/<int:machine_id>/review",
+        type="http",
+        auth="public",
+        methods=["POST"],
+        csrf=False,
+        save_session=True,
+    )
+    def sales_machine_review(self, machine_id, **kwargs):
+        """
+        Coloca la máquina en la cola de revisión usando la lógica
+        existente del modelo sat.sat.
+
+        No escribe estado_ventas_id directamente: se llama
+        action_colocar_en_revision() para conservar fecha, puesto
+        de cola, chatter y demás efectos del modelo.
+        """
+        user, error = self._require_sales_user()
+        if error:
+            return error
+
+        try:
+            machine = self._get_machine(
+                machine_id,
+                sudo_read=False,
+            )
+
+            if not machine:
+                return self._machine_not_found()
+
+            current_state = self._field(
+                machine,
+                "estado_ventas_id",
+                "",
+            )
+
+            if current_state != "sin_revisar":
+                return self._json_response(
+                    {
+                        "success": False,
+                        "code": "INVALID_TECHNICAL_STATE",
+                        "message": (
+                            "Solo una máquina en estado "
+                            "'Sin revisar' puede colocarse en revisión."
+                        ),
+                    },
+                    status=409,
+                )
+
+            machine.action_colocar_en_revision()
+
+            refreshed = self._get_machine(
+                machine.id,
+                sudo_read=True,
+            )
+
+            return self._json_response(
+                {
+                    "success": True,
+                    "message": (
+                        "La máquina fue colocada en la cola "
+                        "de revisión correctamente."
+                    ),
+                    "machine": self._serialize_machine(
+                        refreshed,
+                        user,
+                        detail=True,
+                    ),
+                }
+            )
+
+        except Exception as exc:
+            return self._error_response(exc)
+
+    @http.route(
+        "/api/app/sales/machines/<int:machine_id>/review/remove",
+        type="http",
+        auth="public",
+        methods=["POST"],
+        csrf=False,
+        save_session=True,
+    )
+    def sales_machine_review_remove(self, machine_id, **kwargs):
+        """
+        Retira la máquina de la cola de revisión usando
+        action_quitar_de_revision() del modelo sat.sat.
+        """
+        user, error = self._require_sales_user()
+        if error:
+            return error
+
+        try:
+            machine = self._get_machine(
+                machine_id,
+                sudo_read=False,
+            )
+
+            if not machine:
+                return self._machine_not_found()
+
+            current_state = self._field(
+                machine,
+                "estado_ventas_id",
+                "",
+            )
+
+            if current_state != "para_revision":
+                return self._json_response(
+                    {
+                        "success": False,
+                        "code": "INVALID_TECHNICAL_STATE",
+                        "message": (
+                            "Solo una máquina en estado "
+                            "'Para revisión' puede retirarse de la cola."
+                        ),
+                    },
+                    status=409,
+                )
+
+            machine.action_quitar_de_revision()
+
+            refreshed = self._get_machine(
+                machine.id,
+                sudo_read=True,
+            )
+
+            return self._json_response(
+                {
+                    "success": True,
+                    "message": (
+                        "La máquina fue retirada de la cola "
+                        "de revisión correctamente."
+                    ),
+                    "machine": self._serialize_machine(
+                        refreshed,
+                        user,
+                        detail=True,
+                    ),
+                }
+            )
+
         except Exception as exc:
             return self._error_response(exc)
 
