@@ -2,15 +2,10 @@
 <odoo>
     <data>
 
-        <!-- ============================================================= -->
-        <!-- SEARCH                                                        -->
-        <!-- ============================================================= -->
-
         <record id="view_monitoring_agent_search" model="ir.ui.view">
             <field name="name">sat.monitoring.agent.search</field>
             <field name="model">sat.monitoring.agent</field>
             <field name="arch" type="xml">
-
                 <search string="Agentes de Monitoreo">
 
                     <field name="name"/>
@@ -38,7 +33,11 @@
 
                     <filter name="with_errors"
                             string="Con errores"
-                            domain="[('last_error','!=',False)]"/>
+                            domain="[('last_error_message','!=',False)]"/>
+
+                    <filter name="needs_sync"
+                            string="Pendiente sincronizar"
+                            domain="[('needs_config_sync','=',True)]"/>
 
                     <group expand="0" string="Agrupar por">
 
@@ -53,14 +52,9 @@
                     </group>
 
                 </search>
-
             </field>
         </record>
 
-
-        <!-- ============================================================= -->
-        <!-- LIST                                                          -->
-        <!-- ============================================================= -->
 
         <record id="view_monitoring_agent_list" model="ir.ui.view">
             <field name="name">sat.monitoring.agent.list</field>
@@ -68,7 +62,7 @@
             <field name="arch" type="xml">
 
                 <list string="Agentes de Monitoreo"
-                      default_order="online desc, name"
+                      default_order="online desc, last_seen desc, name"
                       decoration-success="online"
                       decoration-danger="not online"
                       decoration-muted="not enabled">
@@ -80,7 +74,6 @@
                     <field name="name"/>
                     <field name="code"/>
                     <field name="partner_id"/>
-
                     <field name="hostname"
                            optional="show"/>
 
@@ -102,10 +95,24 @@
                     <field name="device_count"
                            string="Equipos"/>
 
+                    <field name="online_device_count"
+                           string="Online"
+                           optional="hide"/>
+
+                    <field name="offline_device_count"
+                           string="Offline"
+                           optional="hide"/>
+
                     <field name="last_heartbeat"
                            optional="show"/>
 
                     <field name="config_revision"
+                           optional="hide"/>
+
+                    <field name="last_config_sync_revision"
+                           optional="hide"/>
+
+                    <field name="needs_config_sync"
                            optional="hide"/>
 
                     <field name="enabled"/>
@@ -115,10 +122,6 @@
             </field>
         </record>
 
-
-        <!-- ============================================================= -->
-        <!-- FORM                                                          -->
-        <!-- ============================================================= -->
 
         <record id="view_monitoring_agent_form" model="ir.ui.view">
             <field name="name">sat.monitoring.agent.form</field>
@@ -161,19 +164,19 @@
 
                     <sheet>
 
+                        <field name="token_hash"
+                               invisible="1"/>
+
                         <widget name="web_ribbon"
                                 title="OFFLINE"
                                 bg_color="text-bg-danger"
                                 invisible="online"/>
 
                         <div class="oe_title">
-
                             <label for="name"/>
-
                             <h1>
                                 <field name="name"/>
                             </h1>
-
                         </div>
 
 
@@ -198,16 +201,16 @@
                                 <field name="first_seen"
                                        readonly="1"/>
 
+                                <field name="last_seen"
+                                       readonly="1"/>
+
                                 <field name="last_heartbeat"
                                        readonly="1"/>
 
                                 <field name="last_config_request"
                                        readonly="1"/>
 
-                                <field name="config_revision"
-                                       readonly="1"/>
-
-                                <field name="config_synced_revision"
+                                <field name="needs_config_sync"
                                        readonly="1"/>
 
                             </group>
@@ -216,10 +219,6 @@
 
 
                         <notebook>
-
-                            <!-- ========================================= -->
-                            <!-- SISTEMA                                  -->
-                            <!-- ========================================= -->
 
                             <page string="Sistema">
 
@@ -265,10 +264,6 @@
                             </page>
 
 
-                            <!-- ========================================= -->
-                            <!-- TOKEN                                    -->
-                            <!-- ========================================= -->
-
                             <page string="Seguridad"
                                   groups="base.group_system">
 
@@ -279,7 +274,10 @@
                                         <field name="token_preview"
                                                readonly="1"/>
 
-                                        <field name="token_created_at"
+                                        <field name="token_generated_at"
+                                               readonly="1"/>
+
+                                        <field name="token_generated_by"
                                                readonly="1"/>
 
                                         <field name="token_last_used_at"
@@ -290,7 +288,8 @@
                                     <group string="Heartbeat">
 
                                         <field name="heartbeat_interval"/>
-                                        <field name="offline_threshold"/>
+
+                                        <field name="offline_after_seconds"/>
 
                                     </group>
 
@@ -299,75 +298,38 @@
                             </page>
 
 
-                            <!-- ========================================= -->
-                            <!-- DISCOVERY                                -->
-                            <!-- ========================================= -->
-
-                            <page string="Discovery">
+                            <page string="Discovery y Polling">
 
                                 <group>
 
-                                    <group string="Configuración">
+                                    <group string="Discovery">
 
                                         <field name="discovery_enabled"/>
+
                                         <field name="discovery_interval"/>
-                                        <field name="discovery_timeout"/>
-                                        <field name="discovery_retries"/>
-                                        <field name="discovery_parallel_limit"/>
 
-                                    </group>
-
-                                    <group string="Estadísticas">
+                                        <field name="max_parallel_hosts"/>
 
                                         <field name="discovery_count"
                                                readonly="1"/>
 
-                                        <field name="last_discovery_date"
-                                               readonly="1"/>
-
-                                        <field name="last_discovery_success"
-                                               readonly="1"/>
-
-                                        <field name="last_discovery_failure"
-                                               readonly="1"/>
-
                                     </group>
 
-                                </group>
-
-                            </page>
-
-
-                            <!-- ========================================= -->
-                            <!-- POLLING                                  -->
-                            <!-- ========================================= -->
-
-                            <page string="Polling">
-
-                                <group>
-
-                                    <group string="Configuración">
+                                    <group string="Polling">
 
                                         <field name="polling_enabled"/>
-                                        <field name="polling_interval"/>
-                                        <field name="polling_timeout"/>
-                                        <field name="polling_retries"/>
-                                        <field name="polling_parallel_limit"/>
 
-                                    </group>
+                                        <field name="default_poll_interval"/>
 
-                                    <group string="Estadísticas">
+                                        <field name="max_parallel_snmp"/>
 
                                         <field name="poll_count"
                                                readonly="1"/>
 
-                                        <field name="poll_success_count"
+                                        <field name="successful_poll_count"
                                                readonly="1"/>
 
-                                        <field name="poll_failure_count"
-                                               readonly="1"/>
-
-                                        <field name="last_poll_date"
+                                        <field name="failed_poll_count"
                                                readonly="1"/>
 
                                     </group>
@@ -376,10 +338,6 @@
 
                             </page>
 
-
-                            <!-- ========================================= -->
-                            <!-- CAPACIDADES                              -->
-                            <!-- ========================================= -->
 
                             <page string="Capacidades">
 
@@ -408,16 +366,10 @@
                             </page>
 
 
-                            <!-- ========================================= -->
-                            <!-- REDES                                    -->
-                            <!-- ========================================= -->
-
                             <page string="Redes">
 
                                 <field name="network_ids">
-
                                     <list>
-
                                         <field name="sequence"
                                                widget="handle"/>
 
@@ -425,24 +377,16 @@
                                         <field name="code"/>
                                         <field name="partner_id"/>
                                         <field name="cidr"/>
-
                                         <field name="discovery_enabled"/>
-
+                                        <field name="polling_enabled"/>
                                         <field name="device_count"
                                                string="Equipos"/>
-
                                         <field name="active"/>
-
                                     </list>
-
                                 </field>
 
                             </page>
 
-
-                            <!-- ========================================= -->
-                            <!-- EQUIPOS                                  -->
-                            <!-- ========================================= -->
 
                             <page string="Equipos">
 
@@ -462,6 +406,7 @@
                                         <field name="serial"/>
                                         <field name="status"
                                                widget="badge"/>
+
                                         <field name="last_seen"/>
 
                                     </list>
@@ -471,25 +416,63 @@
                             </page>
 
 
-                            <!-- ========================================= -->
-                            <!-- ERRORES                                  -->
-                            <!-- ========================================= -->
+                            <page string="Sincronización">
+
+                                <group>
+
+                                    <group string="Configuración">
+
+                                        <field name="config_revision"
+                                               readonly="1"/>
+
+                                        <field name="last_config_sync_revision"
+                                               readonly="1"/>
+
+                                        <field name="last_config_sync_at"
+                                               readonly="1"/>
+
+                                        <field name="needs_config_sync"
+                                               readonly="1"/>
+
+                                    </group>
+
+                                    <group string="Estadísticas">
+
+                                        <field name="heartbeat_count"
+                                               readonly="1"/>
+
+                                        <field name="config_request_count"
+                                               readonly="1"/>
+
+                                    </group>
+
+                                </group>
+
+                            </page>
+
 
                             <page string="Errores">
 
                                 <group>
 
-                                    <field name="last_error_date"
-                                           readonly="1"/>
+                                    <group>
 
-                                    <field name="error_count"
-                                           readonly="1"/>
+                                        <field name="last_error_date"
+                                               readonly="1"/>
+
+                                        <field name="last_error_code"
+                                               readonly="1"/>
+
+                                        <field name="consecutive_errors"
+                                               readonly="1"/>
+
+                                    </group>
 
                                 </group>
 
                                 <group string="Último error">
 
-                                    <field name="last_error"
+                                    <field name="last_error_message"
                                            nolabel="1"
                                            readonly="1"/>
 
@@ -516,10 +499,6 @@
             </field>
         </record>
 
-
-        <!-- ============================================================= -->
-        <!-- ACTION                                                        -->
-        <!-- ============================================================= -->
 
         <record id="action_monitoring_agent"
                 model="ir.actions.act_window">
