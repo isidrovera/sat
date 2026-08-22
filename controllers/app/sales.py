@@ -2000,17 +2000,40 @@ class AppSalesController(AppBaseController):
         save_session=True,
     )
     def sales_photo_image(self, photo_id, **kwargs):
+        """
+        Sirve la fotografía directamente a la app.
+
+        Importante:
+        No redirigir a public_link/url_foto. Algunos public_link de pCloud
+        se almacenan como /publink/show?... y al redirigirlos Odoo los
+        interpreta como una ruta local, provocando 404.
+
+        Se reutiliza get_download_content() del modelo reparaciones.foto,
+        que ya es la lógica usada por /gallery/download/<foto_id>.
+        """
         user, error = self._require_sales_user()
         if error:
             return error
+
         try:
             if not self._model_exists(self.PHOTO_MODEL):
                 return self._json_response(
-                    {"success": False, "code": "PHOTO_MODEL_NOT_FOUND"}, status=404
+                    {
+                        "success": False,
+                        "code": "PHOTO_MODEL_NOT_FOUND",
+                    },
+                    status=404,
                 )
-            photo = request.env[self.PHOTO_MODEL].sudo().search(
-                [("id", "=", photo_id)], limit=1
+
+            photo = (
+                request.env[self.PHOTO_MODEL]
+                .sudo()
+                .search(
+                    [("id", "=", photo_id)],
+                    limit=1,
+                )
             )
+
             if not photo:
                 return self._json_response(
                     {
@@ -2021,43 +2044,155 @@ class AppSalesController(AppBaseController):
                     status=404,
                 )
 
-            raw = self._field(photo, "foto_binario", False)
+            # ----------------------------------------------------
+            # 1) MISMA LÓGICA QUE USA LA GALERÍA EXISTENTE
+            # ----------------------------------------------------
+            if hasattr(photo, "get_download_content"):
+                try:
+                    data = photo.get_download_content()
+
+                    if (
+                        data
+                        and data.get("content")
+                    ):
+                        raw = data.get("content")
+
+                        if isinstance(raw, str):
+                            raw = raw.encode("ascii")
+
+                        content = base64.b64decode(raw)
+
+                        if content:
+                            mimetype = (
+                                data.get("content_type")
+                                or self._field(
+                                    photo,
+                                    "mimetype",
+                                    False,
+                                )
+                                or "image/jpeg"
+                            )
+
+                            filename = (
+                                data.get("filename")
+                                or self._field(
+                                    photo,
+                                    "nombre_foto",
+                                    False,
+                                )
+                                or "repair_photo_%s.jpg"
+                                % photo.id
+                            )
+
+                            return request.make_response(
+                                content,
+                                headers=[
+                                    (
+                                        "Content-Type",
+                                        mimetype,
+                                    ),
+                                    (
+                                        "Content-Disposition",
+                                        'inline; filename="%s"'
+                                        % filename.replace(
+                                            '"',
+                                            "",
+                                        ),
+                                    ),
+                                    (
+                                        "Cache-Control",
+                                        "private, max-age=300",
+                                    ),
+                                    (
+                                        "X-Content-Type-Options",
+                                        "nosniff",
+                                    ),
+                                ],
+                            )
+
+                except Exception:
+                    _logger.exception(
+                        "No se pudo obtener la foto %s "
+                        "mediante get_download_content().",
+                        photo.id,
+                    )
+
+            # ----------------------------------------------------
+            # 2) FALLBACK: BINARIO LOCAL SI EXISTE
+            # ----------------------------------------------------
+            raw = self._field(
+                photo,
+                "foto_binario",
+                False,
+            )
+
             if raw:
                 if isinstance(raw, str):
                     raw = raw.encode("ascii")
+
                 try:
                     content = base64.b64decode(raw)
                 except Exception:
                     content = False
+
                 if content:
-                    mimetype = self._field(photo, "mimetype", False) or "image/jpeg"
-                    filename = self._field(photo, "nombre_foto", False) or "repair_photo_%s.jpg" % photo.id
+                    mimetype = (
+                        self._field(
+                            photo,
+                            "mimetype",
+                            False,
+                        )
+                        or "image/jpeg"
+                    )
+
+                    filename = (
+                        self._field(
+                            photo,
+                            "nombre_foto",
+                            False,
+                        )
+                        or "repair_photo_%s.jpg"
+                        % photo.id
+                    )
+
                     return request.make_response(
                         content,
                         headers=[
-                            ("Content-Type", mimetype),
+                            (
+                                "Content-Type",
+                                mimetype,
+                            ),
                             (
                                 "Content-Disposition",
-                                'inline; filename="%s"' % filename.replace('"', ""),
+                                'inline; filename="%s"'
+                                % filename.replace(
+                                    '"',
+                                    "",
+                                ),
                             ),
-                            ("Cache-Control", "private, max-age=300"),
+                            (
+                                "Cache-Control",
+                                "private, max-age=300",
+                            ),
+                            (
+                                "X-Content-Type-Options",
+                                "nosniff",
+                            ),
                         ],
                     )
-
-            external = self._field(photo, "public_link", False) or self._field(
-                photo, "url_foto", False
-            )
-            if external:
-                return request.redirect(external, code=302)
 
             return self._json_response(
                 {
                     "success": False,
                     "code": "PHOTO_CONTENT_NOT_AVAILABLE",
-                    "message": "La fotografía no tiene contenido disponible.",
+                    "message": (
+                        "No fue posible obtener el contenido "
+                        "de la fotografía."
+                    ),
                 },
                 status=404,
             )
+
         except Exception as exc:
             return self._error_response(exc)
 
