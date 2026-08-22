@@ -6,13 +6,14 @@
             <field name="name">sat.monitoring.alert.search</field>
             <field name="model">sat.monitoring.alert</field>
             <field name="arch" type="xml">
-
                 <search string="Alertas">
 
                     <field name="device_id"/>
                     <field name="partner_id"/>
                     <field name="name"/>
                     <field name="code"/>
+                    <field name="serial"/>
+                    <field name="oid"/>
 
                     <filter name="active_alerts"
                             string="Activas"
@@ -30,9 +31,17 @@
                             string="Resueltas"
                             domain="[('state','=','resolved')]"/>
 
+                    <filter name="ignored"
+                            string="Ignoradas"
+                            domain="[('state','=','ignored')]"/>
+
                     <filter name="requires_service"
                             string="Requiere servicio"
                             domain="[('requires_service','=',True)]"/>
+
+                    <filter name="requires_review"
+                            string="Requiere revisión"
+                            domain="[('requires_review','=',True)]"/>
 
                     <group expand="0" string="Agrupar por">
 
@@ -48,6 +57,10 @@
                                 string="Severidad"
                                 context="{'group_by':'severity'}"/>
 
+                        <filter name="group_category"
+                                string="Categoría"
+                                context="{'group_by':'category'}"/>
+
                         <filter name="group_state"
                                 string="Estado"
                                 context="{'group_by':'state'}"/>
@@ -55,7 +68,6 @@
                     </group>
 
                 </search>
-
             </field>
         </record>
 
@@ -67,6 +79,7 @@
 
                 <list string="Alertas"
                       default_order="severity_rank desc, last_seen desc"
+                      decoration-danger="severity == 'critical'"
                       decoration-warning="severity == 'warning'"
                       decoration-muted="state in ('resolved','ignored')">
 
@@ -83,6 +96,9 @@
                     <field name="category"
                            optional="show"/>
 
+                    <field name="location"
+                           optional="hide"/>
+
                     <field name="state"
                            widget="badge"/>
 
@@ -95,8 +111,17 @@
                     <field name="last_seen"
                            optional="show"/>
 
+                    <field name="duration_hours"
+                           optional="hide"/>
+
                     <field name="requires_service"
                            optional="show"/>
+
+                    <field name="requires_review"
+                           optional="hide"/>
+
+                    <field name="active"
+                           optional="hide"/>
 
                 </list>
 
@@ -118,11 +143,6 @@
                                 string="Reconocer"
                                 class="btn-primary"
                                 invisible="state != 'open'"/>
-
-                        <button name="action_resolve"
-                                type="object"
-                                string="Resolver"
-                                invisible="state == 'resolved'"/>
 
                         <button name="action_ignore"
                                 type="object"
@@ -152,25 +172,47 @@
 
                         <group>
 
-                            <group>
-                                <field name="device_id" readonly="1"/>
-                                <field name="partner_id" readonly="1"/>
+                            <group string="Equipo">
+                                <field name="device_id"
+                                       readonly="1"/>
 
+                                <field name="partner_id"
+                                       readonly="1"/>
+
+                                <field name="maquina_id"
+                                       readonly="1"/>
+
+                                <field name="manufacturer"
+                                       readonly="1"/>
+
+                                <field name="model"
+                                       readonly="1"/>
+
+                                <field name="serial"
+                                       readonly="1"/>
+
+                                <field name="firmware"
+                                       readonly="1"/>
+                            </group>
+
+                            <group string="Estado">
                                 <field name="severity"
                                        widget="badge"/>
 
-                                <field name="category"/>
-                                <field name="group"/>
-                                <field name="location"/>
-                            </group>
+                                <field name="severity_rank"
+                                       readonly="1"/>
 
-                            <group>
-                                <field name="first_seen" readonly="1"/>
-                                <field name="last_seen" readonly="1"/>
-                                <field name="occurrence_count" readonly="1"/>
-                                <field name="duration_hours" readonly="1"/>
-                                <field name="requires_service"/>
-                                <field name="requires_review"/>
+                                <field name="active"
+                                       readonly="1"/>
+
+                                <field name="category"
+                                       readonly="1"/>
+
+                                <field name="group"
+                                       readonly="1"/>
+
+                                <field name="location"
+                                       readonly="1"/>
                             </group>
 
                         </group>
@@ -180,12 +222,74 @@
 
                             <page string="Detalle">
 
-                                <field name="description"/>
+                                <group string="Descripción">
+                                    <field name="description"
+                                           nolabel="1"
+                                           readonly="1"/>
+                                </group>
 
                                 <group>
-                                    <field name="prevents_printing"/>
-                                    <field name="prevents_copying"/>
-                                    <field name="prevents_scanning"/>
+                                    <group string="Servicio">
+                                        <field name="requires_service"
+                                               readonly="1"/>
+
+                                        <field name="requires_review"
+                                               readonly="1"/>
+
+                                        <field name="review_reason"
+                                               readonly="1"/>
+                                    </group>
+
+                                    <group string="Impacto">
+                                        <field name="prevents_printing"
+                                               readonly="1"/>
+
+                                        <field name="prevents_copying"
+                                               readonly="1"/>
+
+                                        <field name="prevents_scanning"
+                                               readonly="1"/>
+                                    </group>
+                                </group>
+
+                            </page>
+
+
+                            <page string="Historial">
+
+                                <group>
+
+                                    <group>
+                                        <field name="first_seen"
+                                               readonly="1"/>
+
+                                        <field name="last_seen"
+                                               readonly="1"/>
+
+                                        <field name="resolved_at"
+                                               readonly="1"/>
+
+                                        <field name="occurrence_count"
+                                               readonly="1"/>
+                                    </group>
+
+                                    <group>
+                                        <field name="acknowledged_at"
+                                               readonly="1"/>
+
+                                        <field name="acknowledged_by"
+                                               readonly="1"/>
+
+                                        <field name="duration_seconds"
+                                               readonly="1"/>
+
+                                        <field name="duration_minutes"
+                                               readonly="1"/>
+
+                                        <field name="duration_hours"
+                                               readonly="1"/>
+                                    </group>
+
                                 </group>
 
                             </page>
@@ -194,13 +298,57 @@
                             <page string="Origen">
 
                                 <group>
-                                    <field name="snapshot_id" readonly="1"/>
-                                    <field name="metric_id" readonly="1"/>
-                                    <field name="oid" readonly="1"/>
-                                    <field name="source_label" readonly="1"/>
-                                    <field name="manufacturer" readonly="1"/>
-                                    <field name="model" readonly="1"/>
-                                    <field name="serial" readonly="1"/>
+
+                                    <group>
+                                        <field name="snapshot_id"
+                                               readonly="1"/>
+
+                                        <field name="first_snapshot_id"
+                                               readonly="1"/>
+
+                                        <field name="metric_id"
+                                               readonly="1"/>
+
+                                        <field name="key"
+                                               readonly="1"/>
+
+                                        <field name="code"
+                                               readonly="1"/>
+                                    </group>
+
+                                    <group>
+                                        <field name="oid"
+                                               readonly="1"/>
+
+                                        <field name="oid_name"
+                                               readonly="1"/>
+
+                                        <field name="oid_index"
+                                               readonly="1"/>
+
+                                        <field name="source_label"
+                                               readonly="1"/>
+
+                                        <field name="source_name"
+                                               readonly="1"/>
+
+                                        <field name="snmp_type"
+                                               readonly="1"/>
+                                    </group>
+
+                                </group>
+
+                            </page>
+
+
+                            <page string="Valor">
+
+                                <group>
+                                    <field name="value_text"
+                                           readonly="1"/>
+
+                                    <field name="confidence"
+                                           readonly="1"/>
                                 </group>
 
                             </page>
@@ -209,13 +357,17 @@
                             <page string="RAW"
                                   groups="base.group_system">
 
-                                <field name="raw_value"
-                                       nolabel="1"
-                                       readonly="1"/>
+                                <group string="Valor RAW">
+                                    <field name="raw_value"
+                                           nolabel="1"
+                                           readonly="1"/>
+                                </group>
 
-                                <field name="raw_json"
-                                       nolabel="1"
-                                       readonly="1"/>
+                                <group string="JSON RAW">
+                                    <field name="raw_json"
+                                           nolabel="1"
+                                           readonly="1"/>
+                                </group>
 
                             </page>
 
@@ -249,9 +401,7 @@
             <field name="search_view_id"
                    ref="view_monitoring_alert_search"/>
 
-            <field name="context">
-                {'search_default_active_alerts': 1}
-            </field>
+            <field name="context">{'search_default_active_alerts': 1}</field>
 
         </record>
 
