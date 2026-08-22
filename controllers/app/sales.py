@@ -131,12 +131,56 @@ class AppSalesController(AppBaseController):
             return {"id": value.id, "name": value.display_name}
 
     def _selection(self, record, field_name):
+        """
+        Serializa de forma segura un campo Selection.
+
+        No utiliza AppBaseController._selection_label() porque en Odoo 18
+        algunos campos Selection convierten internamente `selection` en un
+        callable que espera un recordset/modelo, no un Environment. Pasar
+        record.env directamente a ese callable provoca:
+
+            AttributeError: 'Environment' object has no attribute 'env'
+
+        `_description_selection(record.env)` es la API adecuada del propio
+        campo para obtener las opciones traducidas en el entorno actual.
+        """
         value = self._field(record, field_name, False)
+
         if not value:
-            return {"value": False, "label": ""}
+            return {
+                "value": False,
+                "label": "",
+            }
+
+        label = str(value)
+
+        try:
+            field = record._fields.get(field_name)
+
+            if field:
+                selection = field._description_selection(
+                    record.env
+                )
+
+                label = dict(
+                    selection or []
+                ).get(
+                    value,
+                    str(value),
+                )
+
+        except Exception:
+            _logger.exception(
+                "No se pudo obtener la etiqueta Selection "
+                "del campo %s en %s(%s).",
+                field_name,
+                record._name,
+                record.id,
+            )
+
         return {
             "value": value,
-            "label": self._selection_label(record, field_name),
+            "label": label or "",
         }
 
     def _limit(self, value, default=50, maximum=200):
