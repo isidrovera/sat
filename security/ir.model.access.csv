@@ -321,30 +321,3 @@ access_sat_reserva_historial_usuario,sat.reserva.historial usuario,model_sat_res
 access_sat_reserva_historial_autorizado,sat.reserva.historial autorizado,model_sat_reserva_historial,sat.group_reserva_comercial_autorizado,1,1,1,1
 access_sat_reserva_asignacion_wizard_usuario,sat.reserva.asignacion.wizard usuario,model_sat_reserva_asignacion_wizard,base.group_user,1,1,1,1
 access_sat_reserva_solicitud_wizard_usuario,sat.reserva.solicitud.wizard usuario,model_sat_reserva_solicitud_wizard,base.group_user,1,1,1,1
-access_sat_snmp_profile_user,sat.snmp.profile user,model_sat_snmp_profile,base.group_user,1,0,0,0
-access_sat_snmp_profile_system,sat.snmp.profile system,model_sat_snmp_profile,base.group_system,1,1,1,1
-
-access_sat_snmp_profile_metric_user,sat.snmp.profile.metric user,model_sat_snmp_profile_metric,base.group_user,1,0,0,0
-access_sat_snmp_profile_metric_system,sat.snmp.profile.metric system,model_sat_snmp_profile_metric,base.group_system,1,1,1,1
-
-access_sat_snmp_credential_system,sat.snmp.credential system,model_sat_snmp_credential,base.group_system,1,1,1,1
-
-access_sat_monitoring_agent_user,sat.monitoring.agent user,model_sat_monitoring_agent,base.group_user,1,0,0,0
-access_sat_monitoring_agent_system,sat.monitoring.agent system,model_sat_monitoring_agent,base.group_system,1,1,1,1
-
-access_sat_monitoring_network_user,sat.monitoring.network user,model_sat_monitoring_network,base.group_user,1,0,0,0
-access_sat_monitoring_network_system,sat.monitoring.network system,model_sat_monitoring_network,base.group_system,1,1,1,1
-
-access_sat_monitoring_device_user,sat.monitoring.device user,model_sat_monitoring_device,base.group_user,1,0,0,0
-access_sat_monitoring_device_system,sat.monitoring.device system,model_sat_monitoring_device,base.group_system,1,1,1,1
-
-access_sat_monitoring_snapshot_user,sat.monitoring.snapshot user,model_sat_monitoring_snapshot,base.group_user,1,0,0,0
-access_sat_monitoring_snapshot_system,sat.monitoring.snapshot system,model_sat_monitoring_snapshot,base.group_system,1,1,1,1
-
-access_sat_monitoring_reading_user,sat.monitoring.reading user,model_sat_monitoring_reading,base.group_user,1,0,0,0
-access_sat_monitoring_reading_system,sat.monitoring.reading system,model_sat_monitoring_reading,base.group_system,1,1,1,1
-
-access_sat_monitoring_alert_user,sat.monitoring.alert user,model_sat_monitoring_alert,base.group_user,1,1,0,0
-access_sat_monitoring_alert_system,sat.monitoring.alert system,model_sat_monitoring_alert,base.group_system,1,1,1,1
-access_sat_monitoring_device_feature_user,sat.monitoring.device.feature user,model_sat_monitoring_device_feature,base.group_user,1,0,0,0
-access_sat_monitoring_device_feature_system,sat.monitoring.device.feature system,model_sat_monitoring_device_feature,base.group_system,1,1,1,1
