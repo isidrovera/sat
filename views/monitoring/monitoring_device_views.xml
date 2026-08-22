@@ -43,171 +43,71 @@
 
                     <separator string="Estado"/>
 
-                    <filter
-                        name="online"
-                        string="Online"
-                        domain="[('online', '=', True)]"
-                    />
+                    <filter name="online" string="Online" domain="[('online', '=', True)]"/>
 
-                    <filter
-                        name="offline"
-                        string="Offline"
-                        domain="[('online', '=', False)]"
-                    />
+                    <filter name="offline" string="Offline" domain="[('online', '=', False)]"/>
 
-                    <filter
-                        name="with_alerts"
-                        string="Con alertas"
-                        domain="[('active_alert_count', '&gt;', 0)]"
-                    />
+                    <filter name="with_alerts" string="Con alertas" domain="[('active_alert_count', '&gt;', 0)]"/>
 
-                    <filter
-                        name="without_alerts"
-                        string="Sin alertas"
-                        domain="[('active_alert_count', '=', 0)]"
-                    />
+                    <filter name="without_alerts" string="Sin alertas" domain="[('active_alert_count', '=', 0)]"/>
 
                     
 
                     <separator string="Monitoreo"/>
 
-                    <filter
-                        name="monitoring_enabled"
-                        string="Monitoreo activo"
-                        domain="[('monitoring_enabled', '=', True)]"
-                    />
+                    <filter name="monitoring_enabled" string="Monitoreo activo" domain="[('monitoring_enabled', '=', True)]"/>
 
-                    <filter
-                        name="monitoring_disabled"
-                        string="Monitoreo desactivado"
-                        domain="[('monitoring_enabled', '=', False)]"
-                    />
+                    <filter name="monitoring_disabled" string="Monitoreo desactivado" domain="[('monitoring_enabled', '=', False)]"/>
 
-                    <filter
-                        name="needs_discovery"
-                        string="Requiere discovery"
-                        domain="[('needs_discovery', '=', True)]"
-                    />
+                    <filter name="needs_discovery" string="Requiere discovery" domain="[('needs_discovery', '=', True)]"/>
 
-                    <filter
-                        name="without_profile"
-                        string="Sin perfil"
-                        domain="[('profile_id', '=', False)]"
-                    />
+                    <filter name="without_profile" string="Sin perfil" domain="[('profile_id', '=', False)]"/>
 
-                    <filter
-                        name="with_profile"
-                        string="Con perfil"
-                        domain="[('profile_id', '!=', False)]"
-                    />
+                    <filter name="with_profile" string="Con perfil" domain="[('profile_id', '!=', False)]"/>
 
                     
 
                     <separator string="Discovery"/>
 
-                    <filter
-                        name="discovery_new"
-                        string="Nuevos"
-                        domain="[('discovery_state', '=', 'new')]"
-                    />
+                    <filter name="discovery_new" string="Nuevos" domain="[('discovery_state', '=', 'new')]"/>
 
-                    <filter
-                        name="discovery_identified"
-                        string="Identificados"
-                        domain="[('discovery_state', '=', 'identified')]"
-                    />
+                    <filter name="discovery_identified" string="Identificados" domain="[('discovery_state', '=', 'identified')]"/>
 
-                    <filter
-                        name="discovery_profiled"
-                        string="Perfil asignado"
-                        domain="[('discovery_state', '=', 'profiled')]"
-                    />
+                    <filter name="discovery_profiled" string="Perfil asignado" domain="[('discovery_state', '=', 'profiled')]"/>
 
-                    <filter
-                        name="discovery_monitoring"
-                        string="En monitoreo"
-                        domain="[('discovery_state', '=', 'monitoring')]"
-                    />
+                    <filter name="discovery_monitoring" string="En monitoreo" domain="[('discovery_state', '=', 'monitoring')]"/>
 
-                    <filter
-                        name="unsupported"
-                        string="No soportados"
-                        domain="[('discovery_state', '=', 'unsupported')]"
-                    />
+                    <filter name="unsupported" string="No soportados" domain="[('discovery_state', '=', 'unsupported')]"/>
 
-                    <filter
-                        name="ignored"
-                        string="Ignorados"
-                        domain="[('discovery_state', '=', 'ignored')]"
-                    />
+                    <filter name="ignored" string="Ignorados" domain="[('discovery_state', '=', 'ignored')]"/>
 
                     
 
                     <separator string="Tecnología"/>
 
-                    <filter
-                        name="color"
-                        string="Color"
-                        domain="[('technology', '=', 'color')]"
-                    />
+                    <filter name="color" string="Color" domain="[('technology', '=', 'color')]"/>
 
-                    <filter
-                        name="mono"
-                        string="Monocromo"
-                        domain="[('technology', '=', 'mono')]"
-                    />
+                    <filter name="mono" string="Monocromo" domain="[('technology', '=', 'mono')]"/>
 
                     
 
                     <group expand="0" string="Agrupar por">
 
-                        <filter
-                            name="group_partner"
-                            string="Cliente"
-                            context="{'group_by': 'partner_id'}"
-                        />
+                        <filter name="group_partner" string="Cliente" context="{'group_by': 'partner_id'}"/>
 
-                        <filter
-                            name="group_brand"
-                            string="Marca"
-                            context="{'group_by': 'marca_id'}"
-                        />
+                        <filter name="group_brand" string="Marca" context="{'group_by': 'marca_id'}"/>
 
-                        <filter
-                            name="group_agent"
-                            string="Agente"
-                            context="{'group_by': 'agent_id'}"
-                        />
+                        <filter name="group_agent" string="Agente" context="{'group_by': 'agent_id'}"/>
 
-                        <filter
-                            name="group_network"
-                            string="Red"
-                            context="{'group_by': 'network_id'}"
-                        />
+                        <filter name="group_network" string="Red" context="{'group_by': 'network_id'}"/>
 
-                        <filter
-                            name="group_profile"
-                            string="Perfil SNMP"
-                            context="{'group_by': 'profile_id'}"
-                        />
+                        <filter name="group_profile" string="Perfil SNMP" context="{'group_by': 'profile_id'}"/>
 
-                        <filter
-                            name="group_status"
-                            string="Estado"
-                            context="{'group_by': 'status'}"
-                        />
+                        <filter name="group_status" string="Estado" context="{'group_by': 'status'}"/>
 
-                        <filter
-                            name="group_discovery"
-                            string="Discovery"
-                            context="{'group_by': 'discovery_state'}"
-                        />
+                        <filter name="group_discovery" string="Discovery" context="{'group_by': 'discovery_state'}"/>
 
-                        <filter
-                            name="group_technology"
-                            string="Tecnología"
-                            context="{'group_by': 'technology'}"
-                        />
+                        <filter name="group_technology" string="Tecnología" context="{'group_by': 'technology'}"/>
 
                     </group>
 
@@ -223,137 +123,49 @@
             <field name="model">sat.monitoring.device</field>
             <field name="arch" type="xml">
 
-                <list
-                    string="Equipos Monitoreados"
-                    default_order="online desc, last_seen desc, name asc"
-                    decoration-danger="not online"
-                    decoration-warning="active_alert_count &gt; 0"
-                    decoration-muted="not monitoring_enabled"
-                >
+                <list string="Equipos Monitoreados" default_order="online desc, last_seen desc, name asc" decoration-danger="not online" decoration-warning="active_alert_count &gt; 0" decoration-muted="not monitoring_enabled">
 
-                    <field
-                        name="online"
-                        widget="boolean_toggle"
-                        optional="show"
-                        readonly="1"
-                    />
+                    <field name="online" widget="boolean_toggle" optional="show" readonly="1"/>
 
-                    <field
-                        name="name"
-                        optional="show"
-                    />
+                    <field name="name" optional="show"/>
 
-                    <field
-                        name="partner_id"
-                        optional="show"
-                    />
+                    <field name="partner_id" optional="show"/>
 
-                    <field
-                        name="branch_name"
-                        optional="hide"
-                    />
+                    <field name="branch_name" optional="hide"/>
 
-                    <field
-                        name="marca_id"
-                        optional="show"
-                    />
+                    <field name="marca_id" optional="show"/>
 
-                    <field
-                        name="model"
-                        string="Modelo"
-                        optional="show"
-                    />
+                    <field name="model" string="Modelo" optional="show"/>
 
-                    <field
-                        name="serial"
-                        string="Serie"
-                        optional="show"
-                    />
+                    <field name="serial" string="Serie" optional="show"/>
 
-                    <field
-                        name="ip_address"
-                        string="IP"
-                        optional="show"
-                    />
+                    <field name="ip_address" string="IP" optional="show"/>
 
-                    <field
-                        name="hostname"
-                        optional="hide"
-                    />
+                    <field name="hostname" optional="hide"/>
 
-                    <field
-                        name="status"
-                        widget="badge"
-                        optional="show"
-                        decoration-success="status == 'online'"
-                        decoration-danger="status == 'offline'"
-                        decoration-warning="status == 'warning'"
-                    />
+                    <field name="status" widget="badge" optional="show" decoration-success="status == 'online'" decoration-danger="status == 'offline'" decoration-warning="status == 'warning'"/>
 
-                    <field
-                        name="active_alert_count"
-                        string="Alertas"
-                        optional="show"
-                        decoration-danger="active_alert_count &gt; 0"
-                    />
+                    <field name="active_alert_count" string="Alertas" optional="show" decoration-danger="active_alert_count &gt; 0"/>
 
-                    <field
-                        name="highest_alert_severity"
-                        string="Severidad"
-                        widget="badge"
-                        optional="show"
-                    />
+                    <field name="highest_alert_severity" string="Severidad" widget="badge" optional="show"/>
 
-                    <field
-                        name="profile_id"
-                        string="Perfil"
-                        optional="hide"
-                    />
+                    <field name="profile_id" string="Perfil" optional="hide"/>
 
-                    <field
-                        name="profile_match_score"
-                        string="Match"
-                        optional="hide"
-                    />
+                    <field name="profile_match_score" string="Match" optional="hide"/>
 
-                    <field
-                        name="agent_id"
-                        optional="hide"
-                    />
+                    <field name="agent_id" optional="hide"/>
 
-                    <field
-                        name="network_id"
-                        optional="hide"
-                    />
+                    <field name="network_id" optional="hide"/>
 
-                    <field
-                        name="last_seen"
-                        optional="show"
-                    />
+                    <field name="last_seen" optional="show"/>
 
-                    <field
-                        name="last_poll_date"
-                        string="Último Poll"
-                        optional="hide"
-                    />
+                    <field name="last_poll_date" string="Último Poll" optional="hide"/>
 
-                    <field
-                        name="last_response_ms"
-                        string="Respuesta ms"
-                        optional="hide"
-                    />
+                    <field name="last_response_ms" string="Respuesta ms" optional="hide"/>
 
-                    <field
-                        name="discovery_state"
-                        string="Discovery"
-                        widget="badge"
-                        optional="hide"
-                    />
+                    <field name="discovery_state" string="Discovery" widget="badge" optional="hide"/>
 
-                    <field
-                        name="monitoring_enabled"
-                        optional="hide"
-                    />
+                    <field name="monitoring_enabled" optional="hide"/>
 
                 </list>
 
@@ -367,10 +179,7 @@
             <field name="model">sat.monitoring.device</field>
             <field name="arch" type="xml">
 
-                <kanban
-                    default_group_by="partner_id"
-                    class="o_kanban_small_column"
-                >
+                <kanban default_group_by="partner_id" class="o_kanban_small_column">
 
                     <field name="name"/>
                     <field name="partner_id"/>
@@ -410,10 +219,7 @@
                                             <field name="name"/>
                                         </strong>
 
-                                        <div
-                                            class="text-muted"
-                                            t-if="record.partner_id.raw_value"
-                                        >
+                                        <div class="text-muted" t-if="record.partner_id.raw_value">
                                             <field name="partner_id"/>
                                         </div>
 
@@ -421,17 +227,11 @@
 
                                     <div>
 
-                                        <span
-                                            t-if="record.online.raw_value"
-                                            class="badge text-bg-success"
-                                        >
+                                        <span t-if="record.online.raw_value" class="badge text-bg-success">
                                             Online
                                         </span>
 
-                                        <span
-                                            t-else=""
-                                            class="badge text-bg-danger"
-                                        >
+                                        <span t-else="" class="badge text-bg-danger">
                                             Offline
                                         </span>
 
@@ -469,19 +269,14 @@
 
                                 
 
-                                <div
-                                    t-if="record.active_alert_count.raw_value"
-                                    class="alert alert-danger py-1 px-2 mb-0"
-                                >
+                                <div t-if="record.active_alert_count.raw_value" class="alert alert-danger py-1 px-2 mb-0">
                                     <strong>
                                         <field name="active_alert_count"/>
                                     </strong>
 
                                     alerta(s) activa(s)
 
-                                    <span
-                                        t-if="record.highest_alert_severity.raw_value"
-                                    >
+                                    <span t-if="record.highest_alert_severity.raw_value">
                                         -
                                         <field name="highest_alert_severity"/>
                                     </span>
@@ -495,40 +290,28 @@
                                         Tóner
                                     </small>
 
-                                    <div
-                                        t-if="record.toner_black_available.raw_value"
-                                        class="d-flex justify-content-between"
-                                    >
+                                    <div t-if="record.toner_black_available.raw_value" class="d-flex justify-content-between">
                                         <span>Negro</span>
                                         <strong>
                                             <field name="toner_black"/>%
                                         </strong>
                                     </div>
 
-                                    <div
-                                        t-if="record.toner_cyan_available.raw_value"
-                                        class="d-flex justify-content-between"
-                                    >
+                                    <div t-if="record.toner_cyan_available.raw_value" class="d-flex justify-content-between">
                                         <span>Cyan</span>
                                         <strong>
                                             <field name="toner_cyan"/>%
                                         </strong>
                                     </div>
 
-                                    <div
-                                        t-if="record.toner_magenta_available.raw_value"
-                                        class="d-flex justify-content-between"
-                                    >
+                                    <div t-if="record.toner_magenta_available.raw_value" class="d-flex justify-content-between">
                                         <span>Magenta</span>
                                         <strong>
                                             <field name="toner_magenta"/>%
                                         </strong>
                                     </div>
 
-                                    <div
-                                        t-if="record.toner_yellow_available.raw_value"
-                                        class="d-flex justify-content-between"
-                                    >
+                                    <div t-if="record.toner_yellow_available.raw_value" class="d-flex justify-content-between">
                                         <span>Amarillo</span>
                                         <strong>
                                             <field name="toner_yellow"/>%
@@ -580,55 +363,15 @@
 
                     <header>
 
-                        <button
-                            name="action_find_snmp_profile"
-                            type="object"
-                            string="Buscar Perfil"
-                            class="btn-primary"
-                            icon="fa-search"
-                            groups="base.group_system"
-                        />
+                        <button name="action_find_snmp_profile" type="object" string="Buscar Perfil" class="btn-primary" icon="fa-search" groups="base.group_system"/>
 
-                        <button
-                            name="action_enable_monitoring"
-                            type="object"
-                            string="Activar Monitoreo"
-                            icon="fa-play"
-                            groups="base.group_system"
-                            invisible="monitoring_enabled"
-                        />
+                        <button name="action_enable_monitoring" type="object" string="Activar Monitoreo" icon="fa-play" groups="base.group_system" invisible="monitoring_enabled"/>
 
-                        <button
-                            name="action_disable_monitoring"
-                            type="object"
-                            string="Desactivar Monitoreo"
-                            icon="fa-stop"
-                            groups="base.group_system"
-                            invisible="not monitoring_enabled"
-                        />
+                        <button name="action_confirm_printer" type="object" string="Confirmar Impresora" class="btn-primary" groups="base.group_system" invisible="is_confirmed_printer"/>
 
-                        <button
-                            name="action_confirm_printer"
-                            type="object"
-                            string="Confirmar Impresora"
-                            class="btn-primary"
-                            groups="base.group_system"
-                            invisible="is_confirmed_printer"
-                        />
+                        <button name="action_ignore_device" type="object" string="Ignorar" groups="base.group_system" invisible="is_ignored"/>
 
-                        <button
-                            name="action_ignore_device"
-                            type="object"
-                            string="Ignorar"
-                            groups="base.group_system"
-                            invisible="is_ignored"
-                        />
-
-                        <field
-                            name="discovery_state"
-                            widget="statusbar"
-                            statusbar_visible="new,identified,profiled,monitoring,unsupported,ignored"
-                        />
+                        <field name="discovery_state" widget="statusbar" statusbar_visible="new,identified,profiled,monitoring,unsupported,ignored"/>
 
                     </header>
 
@@ -636,92 +379,23 @@
 
                         
 
-                        <div class="oe_button_box" name="button_box">
+                        <widget name="web_ribbon" title="OFFLINE" bg_color="text-bg-danger" invisible="online"/>
 
-                            <button
-                                type="object"
-                                name="action_view_snapshots"
-                                class="oe_stat_button"
-                                icon="fa-history"
-                            >
-                                <field
-                                    name="snapshot_count"
-                                    widget="statinfo"
-                                    string="Snapshots"
-                                />
-                            </button>
-
-                            <button
-                                type="object"
-                                name="action_view_readings"
-                                class="oe_stat_button"
-                                icon="fa-bar-chart"
-                            >
-                                <field
-                                    name="reading_count"
-                                    widget="statinfo"
-                                    string="Lecturas"
-                                />
-                            </button>
-
-                            <button
-                                type="object"
-                                name="action_view_alerts"
-                                class="oe_stat_button"
-                                icon="fa-exclamation-triangle"
-                            >
-                                <field
-                                    name="active_alert_count"
-                                    widget="statinfo"
-                                    string="Alertas"
-                                />
-                            </button>
-
-                        </div>
-
-                        
-
-                        <widget
-                            name="web_ribbon"
-                            title="OFFLINE"
-                            bg_color="text-bg-danger"
-                            invisible="online"
-                        />
-
-                        <widget
-                            name="web_ribbon"
-                            title="IGNORADO"
-                            bg_color="text-bg-secondary"
-                            invisible="not is_ignored"
-                        />
+                        <widget name="web_ribbon" title="IGNORADO" bg_color="text-bg-secondary" invisible="not is_ignored"/>
 
                         <div class="oe_title">
 
                             <label for="name"/>
 
                             <h1>
-                                <field
-                                    name="name"
-                                    placeholder="Equipo monitoreado..."
-                                />
+                                <field name="name" placeholder="Equipo monitoreado..."/>
                             </h1>
 
                             <div class="d-flex gap-2">
 
-                                <field
-                                    name="online"
-                                    widget="boolean_toggle"
-                                    readonly="1"
-                                />
+                                <field name="online" widget="boolean_toggle" readonly="1"/>
 
-                                <field
-                                    name="status"
-                                    widget="badge"
-                                    readonly="1"
-                                    decoration-success="status == 'online'"
-                                    decoration-warning="status == 'warning'"
-                                    decoration-danger="status == 'offline'"
-                                />
+                                <field name="status" widget="badge" readonly="1" decoration-success="status == 'online'" decoration-warning="status == 'warning'" decoration-danger="status == 'offline'"/>
 
                             </div>
 
@@ -739,10 +413,7 @@
 
                                 <field name="location_description"/>
 
-                                <field
-                                    name="maquina_id"
-                                    readonly="1"
-                                />
+                                <field name="maquina_id" readonly="1"/>
 
                             </group>
 
@@ -770,86 +441,39 @@
 
                             
 
-                            <page
-                                string="Resumen"
-                                name="summary"
-                            >
+                            <page string="Resumen" name="summary">
 
                                 <group>
 
                                     <group string="Conectividad">
 
-                                        <field
-                                            name="ip_address"
-                                            readonly="1"
-                                        />
+                                        <field name="ip_address" readonly="1"/>
 
-                                        <field
-                                            name="hostname"
-                                            readonly="1"
-                                        />
+                                        <field name="hostname" readonly="1"/>
 
-                                        <field
-                                            name="mac_address"
-                                            readonly="1"
-                                        />
+                                        <field name="mac_address" readonly="1"/>
 
-                                        <field
-                                            name="snmp_available"
-                                            readonly="1"
-                                        />
+                                        <field name="snmp_available" readonly="1"/>
 
-                                        <field
-                                            name="snmp_version"
-                                        />
+                                        <field name="snmp_version"/>
 
-                                        <field
-                                            name="snmp_port"
-                                        />
+                                        <field name="snmp_port"/>
 
-                                        <field
-                                            name="last_snmp_version_used"
-                                            readonly="1"
-                                        />
+                                        <field name="last_snmp_version_used" readonly="1"/>
 
                                     </group>
 
                                     <group string="Última comunicación">
 
-                                        <field
-                                            name="first_seen"
-                                            readonly="1"
-                                        />
+                                        <field name="first_seen" readonly="1"/>
 
-                                        <field
-                                            name="last_seen"
-                                            readonly="1"
-                                        />
+                                        <field name="last_seen" readonly="1"/>
 
-                                        <field
-                                            name="last_poll_date"
-                                            readonly="1"
-                                        />
+                                        <field name="last_poll_date" readonly="1"/>
 
-                                        <field
-                                            name="last_response_ms"
-                                            readonly="1"
-                                        />
+                                        <field name="last_response_ms" readonly="1"/>
 
-                                        <field
-                                            name="poll_success_count"
-                                            readonly="1"
-                                        />
-
-                                        <field
-                                            name="poll_failure_count"
-                                            readonly="1"
-                                        />
-
-                                        <field
-                                            name="consecutive_failures"
-                                            readonly="1"
-                                        />
+                                        <field name="consecutive_failures" readonly="1"/>
 
                                     </group>
 
@@ -857,133 +481,63 @@
 
                                 <group string="Último error">
 
-                                    <field
-                                        name="last_error"
-                                        nolabel="1"
-                                        readonly="1"
-                                        placeholder="Sin errores registrados."
-                                    />
-
-                                </group>
+                                    </group>
 
                             </page>
 
                             
 
-                            <page
-                                string="Contadores"
-                                name="counters"
-                            >
+                            <page string="Contadores" name="counters">
 
                                 <group>
 
                                     <group string="Total Equipo">
 
-                                        <field
-                                            name="counter_machine_total"
-                                            string="Total máquina"
-                                            readonly="1"
-                                        />
+                                        <field name="counter_machine_total" string="Total máquina" readonly="1"/>
 
-                                        <field
-                                            name="counter_total_bw"
-                                            string="Total B/N"
-                                            readonly="1"
-                                        />
+                                        <field name="counter_total_bw" string="Total B/N" readonly="1"/>
 
-                                        <field
-                                            name="counter_total_color"
-                                            string="Total Color"
-                                            readonly="1"
-                                        />
+                                        <field name="counter_total_color" string="Total Color" readonly="1"/>
 
                                     </group>
 
                                     <group string="Copia">
 
-                                        <field
-                                            name="counter_copy_total"
-                                            string="Total Copias"
-                                            readonly="1"
-                                        />
+                                        <field name="counter_copy_total" string="Total Copias" readonly="1"/>
 
-                                        <field
-                                            name="counter_copy_bw"
-                                            string="Copias B/N"
-                                            readonly="1"
-                                        />
+                                        <field name="counter_copy_bw" string="Copias B/N" readonly="1"/>
 
-                                        <field
-                                            name="counter_copy_color"
-                                            string="Copias Color"
-                                            readonly="1"
-                                        />
+                                        <field name="counter_copy_color" string="Copias Color" readonly="1"/>
 
                                     </group>
 
                                     <group string="Impresión">
 
-                                        <field
-                                            name="counter_print_total"
-                                            string="Total Impresión"
-                                            readonly="1"
-                                        />
+                                        <field name="counter_print_total" string="Total Impresión" readonly="1"/>
 
-                                        <field
-                                            name="counter_print_bw"
-                                            string="Impresión B/N"
-                                            readonly="1"
-                                        />
+                                        <field name="counter_print_bw" string="Impresión B/N" readonly="1"/>
 
-                                        <field
-                                            name="counter_print_color"
-                                            string="Impresión Color"
-                                            readonly="1"
-                                        />
+                                        <field name="counter_print_color" string="Impresión Color" readonly="1"/>
 
                                     </group>
 
                                     <group string="Escáner / Fax">
 
-                                        <field
-                                            name="counter_scan_total"
-                                            string="Total Escáner"
-                                            readonly="1"
-                                        />
+                                        <field name="counter_scan_total" string="Total Escáner" readonly="1"/>
 
-                                        <field
-                                            name="counter_scan_bw"
-                                            string="Escáner B/N"
-                                            readonly="1"
-                                        />
+                                        <field name="counter_scan_bw" string="Escáner B/N" readonly="1"/>
 
-                                        <field
-                                            name="counter_scan_color"
-                                            string="Escáner Color"
-                                            readonly="1"
-                                        />
+                                        <field name="counter_scan_color" string="Escáner Color" readonly="1"/>
 
-                                        <field
-                                            name="counter_fax_total"
-                                            string="Fax"
-                                            readonly="1"
-                                        />
+                                        <field name="counter_fax_total" string="Fax" readonly="1"/>
 
                                     </group>
 
                                     <group string="Otros">
 
-                                        <field
-                                            name="counter_duplex"
-                                            string="Dúplex"
-                                            readonly="1"
-                                        />
+                                        <field name="counter_duplex" string="Dúplex" readonly="1"/>
 
-                                        <field
-                                            name="counter_large_paper"
-                                            string="Formato grande"
-                                            readonly="1"
-                                        />
+                                        <field name="counter_large_paper" string="Formato grande" readonly="1"/>
 
                                     </group>
 
@@ -993,78 +547,39 @@
 
                             
 
-                            <page
-                                string="Tóner"
-                                name="toner"
-                            >
+                            <page string="Tóner" name="toner">
 
                                 <group>
 
                                     <group string="Negro">
 
-                                        <field
-                                            name="toner_black_available"
-                                            string="Disponible"
-                                            readonly="1"
-                                        />
+                                        <field name="toner_black_available" string="Disponible" readonly="1"/>
 
-                                        <field
-                                            name="toner_black"
-                                            string="Nivel"
-                                            readonly="1"
-                                            invisible="not toner_black_available"
-                                        />
+                                        <field name="toner_black" string="Nivel" readonly="1" invisible="not toner_black_available"/>
 
                                     </group>
 
                                     <group string="Cyan">
 
-                                        <field
-                                            name="toner_cyan_available"
-                                            string="Disponible"
-                                            readonly="1"
-                                        />
+                                        <field name="toner_cyan_available" string="Disponible" readonly="1"/>
 
-                                        <field
-                                            name="toner_cyan"
-                                            string="Nivel"
-                                            readonly="1"
-                                            invisible="not toner_cyan_available"
-                                        />
+                                        <field name="toner_cyan" string="Nivel" readonly="1" invisible="not toner_cyan_available"/>
 
                                     </group>
 
                                     <group string="Magenta">
 
-                                        <field
-                                            name="toner_magenta_available"
-                                            string="Disponible"
-                                            readonly="1"
-                                        />
+                                        <field name="toner_magenta_available" string="Disponible" readonly="1"/>
 
-                                        <field
-                                            name="toner_magenta"
-                                            string="Nivel"
-                                            readonly="1"
-                                            invisible="not toner_magenta_available"
-                                        />
+                                        <field name="toner_magenta" string="Nivel" readonly="1" invisible="not toner_magenta_available"/>
 
                                     </group>
 
                                     <group string="Amarillo">
 
-                                        <field
-                                            name="toner_yellow_available"
-                                            string="Disponible"
-                                            readonly="1"
-                                        />
+                                        <field name="toner_yellow_available" string="Disponible" readonly="1"/>
 
-                                        <field
-                                            name="toner_yellow"
-                                            string="Nivel"
-                                            readonly="1"
-                                            invisible="not toner_yellow_available"
-                                        />
+                                        <field name="toner_yellow" string="Nivel" readonly="1" invisible="not toner_yellow_available"/>
 
                                     </group>
 
@@ -1081,160 +596,73 @@
 
                             
 
-                            <page
-                                string="Capacidades"
-                                name="capabilities"
-                            >
+                            <page string="Capacidades" name="capabilities">
 
                                 <group>
 
                                     <group string="Funciones principales">
 
-                                        <field
-                                            name="capability_print"
-                                            string="Impresión"
-                                            readonly="1"
-                                        />
+                                        <field name="capability_print" string="Impresión" readonly="1"/>
 
-                                        <field
-                                            name="capability_copy"
-                                            string="Copia"
-                                            readonly="1"
-                                        />
+                                        <field name="capability_copy" string="Copia" readonly="1"/>
 
-                                        <field
-                                            name="capability_scan"
-                                            string="Escáner"
-                                            readonly="1"
-                                        />
+                                        <field name="capability_scan" string="Escáner" readonly="1"/>
 
-                                        <field
-                                            name="capability_fax"
-                                            string="Fax"
-                                            readonly="1"
-                                        />
+                                        <field name="capability_fax" string="Fax" readonly="1"/>
 
-                                        <field
-                                            name="capability_color"
-                                            string="Color"
-                                            readonly="1"
-                                        />
+                                        <field name="capability_color" string="Color" readonly="1"/>
 
-                                        <field
-                                            name="capability_duplex"
-                                            string="Dúplex"
-                                            readonly="1"
-                                        />
+                                        <field name="capability_duplex" string="Dúplex" readonly="1"/>
 
                                     </group>
 
                                     <group string="Alimentador">
 
-                                        <field
-                                            name="capability_adf"
-                                            string="ADF"
-                                            readonly="1"
-                                        />
+                                        <field name="capability_adf" string="ADF" readonly="1"/>
 
-                                        <field
-                                            name="capability_radf"
-                                            string="RADF"
-                                            readonly="1"
-                                        />
+                                        <field name="capability_radf" string="RADF" readonly="1"/>
 
-                                        <field
-                                            name="capability_spdf"
-                                            string="SPDF"
-                                            readonly="1"
-                                        />
+                                        <field name="capability_spdf" string="SPDF" readonly="1"/>
 
                                     </group>
 
                                     <group string="Documentos">
 
-                                        <field
-                                            name="capability_ocr"
-                                            string="OCR"
-                                            readonly="1"
-                                        />
+                                        <field name="capability_ocr" string="OCR" readonly="1"/>
 
-                                        <field
-                                            name="capability_searchable_pdf"
-                                            string="PDF buscable"
-                                            readonly="1"
-                                        />
+                                        <field name="capability_searchable_pdf" string="PDF buscable" readonly="1"/>
 
-                                        <field
-                                            name="capability_pdfa"
-                                            string="PDF/A"
-                                            readonly="1"
-                                        />
+                                        <field name="capability_pdfa" string="PDF/A" readonly="1"/>
 
                                     </group>
 
                                     <group string="Almacenamiento">
 
-                                        <field
-                                            name="capability_hdd"
-                                            string="HDD"
-                                            readonly="1"
-                                        />
+                                        <field name="capability_hdd" string="HDD" readonly="1"/>
 
-                                        <field
-                                            name="capability_ssd"
-                                            string="SSD"
-                                            readonly="1"
-                                        />
+                                        <field name="capability_ssd" string="SSD" readonly="1"/>
 
                                     </group>
 
                                     <group string="Conectividad">
 
-                                        <field
-                                            name="capability_wifi"
-                                            string="Wi-Fi"
-                                            readonly="1"
-                                        />
+                                        <field name="capability_wifi" string="Wi-Fi" readonly="1"/>
 
-                                        <field
-                                            name="capability_nfc"
-                                            string="NFC"
-                                            readonly="1"
-                                        />
+                                        <field name="capability_nfc" string="NFC" readonly="1"/>
 
-                                        <field
-                                            name="capability_card_reader"
-                                            string="Lector de tarjetas"
-                                            readonly="1"
-                                        />
+                                        <field name="capability_card_reader" string="Lector de tarjetas" readonly="1"/>
 
                                     </group>
 
                                     <group string="Acabado">
 
-                                        <field
-                                            name="capability_finisher"
-                                            string="Finisher"
-                                            readonly="1"
-                                        />
+                                        <field name="capability_finisher" string="Finisher" readonly="1"/>
 
-                                        <field
-                                            name="capability_stapler"
-                                            string="Engrapador"
-                                            readonly="1"
-                                        />
+                                        <field name="capability_stapler" string="Engrapador" readonly="1"/>
 
-                                        <field
-                                            name="capability_punch"
-                                            string="Perforador"
-                                            readonly="1"
-                                        />
+                                        <field name="capability_punch" string="Perforador" readonly="1"/>
 
-                                        <field
-                                            name="capability_booklet"
-                                            string="Booklet"
-                                            readonly="1"
-                                        />
+                                        <field name="capability_booklet" string="Booklet" readonly="1"/>
 
                                     </group>
 
@@ -1244,54 +672,25 @@
 
                             
 
-                            <page
-                                string="Hardware"
-                                name="hardware"
-                            >
+                            <page string="Hardware" name="hardware">
 
                                 <group>
 
                                     <group string="Memoria / Almacenamiento">
 
-                                        <field
-                                            name="memory_mb"
-                                            string="Memoria RAM (MB)"
-                                            readonly="1"
-                                        />
+                                        <field name="storage_total_mb" string="Almacenamiento total (MB)" readonly="1"/>
 
-                                        <field
-                                            name="storage_total_mb"
-                                            string="Almacenamiento total (MB)"
-                                            readonly="1"
-                                        />
-
-                                        <field
-                                            name="storage_free_mb"
-                                            string="Almacenamiento libre (MB)"
-                                            readonly="1"
-                                        />
+                                        <field name="storage_free_mb" string="Almacenamiento libre (MB)" readonly="1"/>
 
                                     </group>
 
                                     <group string="Inventario detectado">
 
-                                        <field
-                                            name="tray_count"
-                                            string="Bandejas"
-                                            readonly="1"
-                                        />
+                                        <field name="tray_count" string="Bandejas" readonly="1"/>
 
-                                        <field
-                                            name="accessory_count"
-                                            string="Accesorios"
-                                            readonly="1"
-                                        />
+                                        <field name="accessory_count" string="Accesorios" readonly="1"/>
 
-                                        <field
-                                            name="component_count"
-                                            string="Componentes"
-                                            readonly="1"
-                                        />
+                                        <field name="component_count" string="Componentes" readonly="1"/>
 
                                     </group>
 
@@ -1301,63 +700,33 @@
 
                             
 
-                            <page
-                                string="Identidad SNMP"
-                                name="identity"
-                            >
+                            <page string="Identidad SNMP" name="identity">
 
                                 <group>
 
                                     <group string="Identidad">
 
-                                        <field
-                                            name="manufacturer_raw"
-                                            readonly="1"
-                                        />
+                                        <field name="manufacturer_raw" readonly="1"/>
 
-                                        <field
-                                            name="model_raw"
-                                            readonly="1"
-                                        />
+                                        <field name="model_raw" readonly="1"/>
 
-                                        <field
-                                            name="serial"
-                                            readonly="1"
-                                        />
+                                        <field name="serial" readonly="1"/>
 
-                                        <field
-                                            name="firmware"
-                                            readonly="1"
-                                        />
+                                        <field name="firmware" readonly="1"/>
 
-                                        <field
-                                            name="enterprise_id"
-                                            readonly="1"
-                                        />
+                                        <field name="enterprise_id" readonly="1"/>
 
                                     </group>
 
                                     <group string="Sistema">
 
-                                        <field
-                                            name="system_name"
-                                            readonly="1"
-                                        />
+                                        <field name="system_name" readonly="1"/>
 
-                                        <field
-                                            name="system_location"
-                                            readonly="1"
-                                        />
+                                        <field name="system_location" readonly="1"/>
 
-                                        <field
-                                            name="system_contact"
-                                            readonly="1"
-                                        />
+                                        <field name="system_contact" readonly="1"/>
 
-                                        <field
-                                            name="engine_id"
-                                            readonly="1"
-                                        />
+                                        <field name="engine_id" readonly="1"/>
 
                                     </group>
 
@@ -1365,11 +734,7 @@
 
                                 <group string="sysDescr">
 
-                                    <field
-                                        name="sysdescr"
-                                        nolabel="1"
-                                        readonly="1"
-                                    />
+                                    <field name="sysdescr" nolabel="1" readonly="1"/>
 
                                 </group>
 
@@ -1377,10 +742,7 @@
 
                             
 
-                            <page
-                                string="Agente y Red"
-                                name="network"
-                            >
+                            <page string="Agente y Red" name="network">
 
                                 <group>
 
@@ -1388,12 +750,7 @@
 
                                         <field name="agent_id"/>
 
-                                        <field
-                                            name="effective_credential_id"
-                                            string="Credencial efectiva"
-                                            readonly="1"
-                                            groups="base.group_system"
-                                        />
+                                        <field name="effective_credential_id" string="Credencial efectiva" readonly="1" groups="base.group_system"/>
 
                                     </group>
 
@@ -1401,13 +758,9 @@
 
                                         <field name="network_id"/>
 
-                                        <field
-                                            name="network_cidr"
-                                            readonly="1"
-                                        />
+                                        <field name="network_cidr" readonly="1"/>
 
-                                        <field name="credential_id"
-                                               groups="base.group_system"/>
+                                        <field name="credential_id" groups="base.group_system"/>
 
                                     </group>
 
@@ -1441,10 +794,7 @@
 
                             
 
-                            <page
-                                string="Perfil SNMP"
-                                name="profile"
-                            >
+                            <page string="Perfil SNMP" name="profile">
 
                                 <group>
 
@@ -1452,20 +802,11 @@
 
                                         <field name="profile_id"/>
 
-                                        <field
-                                            name="profile_code"
-                                            readonly="1"
-                                        />
+                                        <field name="profile_code" readonly="1"/>
 
-                                        <field
-                                            name="profile_version"
-                                            readonly="1"
-                                        />
+                                        <field name="profile_version" readonly="1"/>
 
-                                        <field
-                                            name="profile_revision"
-                                            readonly="1"
-                                        />
+                                        <field name="profile_revision" readonly="1"/>
 
                                         <field name="profile_manual"/>
 
@@ -1473,25 +814,13 @@
 
                                     <group string="Detección">
 
-                                        <field
-                                            name="profile_match_score"
-                                            readonly="1"
-                                        />
+                                        <field name="profile_match_score" readonly="1"/>
 
-                                        <field
-                                            name="profile_match_date"
-                                            readonly="1"
-                                        />
+                                        <field name="profile_match_date" readonly="1"/>
 
-                                        <field
-                                            name="needs_discovery"
-                                            readonly="1"
-                                        />
+                                        <field name="needs_discovery" readonly="1"/>
 
-                                        <field
-                                            name="discovery_reason"
-                                            readonly="1"
-                                        />
+                                        <field name="discovery_reason" readonly="1"/>
 
                                     </group>
 
@@ -1499,11 +828,7 @@
 
                                 <group string="Detalles del Match">
 
-                                    <field
-                                        name="profile_match_details"
-                                        nolabel="1"
-                                        readonly="1"
-                                    />
+                                    <field name="profile_match_details" nolabel="1" readonly="1"/>
 
                                 </group>
 
@@ -1511,60 +836,31 @@
 
                             
 
-                            <page
-                                string="Discovery"
-                                name="discovery"
-                            >
+                            <page string="Discovery" name="discovery">
 
                                 <group>
 
                                     <group string="Estado">
 
-                                        <field
-                                            name="discovery_state"
-                                            readonly="1"
-                                        />
+                                        <field name="discovery_state" readonly="1"/>
 
-                                        <field
-                                            name="is_confirmed_printer"
-                                            readonly="1"
-                                        />
+                                        <field name="is_confirmed_printer" readonly="1"/>
 
-                                        <field
-                                            name="is_ignored"
-                                            readonly="1"
-                                        />
+                                        <field name="is_ignored" readonly="1"/>
 
-                                        <field
-                                            name="needs_discovery"
-                                            readonly="1"
-                                        />
+                                        <field name="needs_discovery" readonly="1"/>
 
                                     </group>
 
                                     <group string="Fechas">
 
-                                        <field
-                                            name="first_discovery_date"
-                                            readonly="1"
-                                        />
-
-                                        <field
-                                            name="last_discovery_date"
-                                            readonly="1"
-                                        />
-
-                                    </group>
+                                        </group>
 
                                 </group>
 
                                 <group string="Motivo">
 
-                                    <field
-                                        name="discovery_reason"
-                                        nolabel="1"
-                                        readonly="1"
-                                    />
+                                    <field name="discovery_reason" nolabel="1" readonly="1"/>
 
                                 </group>
 
@@ -1572,29 +868,15 @@
 
                             
 
-                            <page
-                                string="Diagnóstico RAW"
-                                name="raw"
-                                groups="base.group_system"
-                            >
+                            <page string="Diagnóstico RAW" name="raw" groups="base.group_system">
 
                                 <group string="Resumen">
 
-                                    <field
-                                        name="last_raw_summary"
-                                        nolabel="1"
-                                        readonly="1"
-                                    />
-
-                                </group>
+                                    </group>
 
                                 <group string="Último Payload">
 
-                                    <field
-                                        name="last_raw_payload"
-                                        nolabel="1"
-                                        readonly="1"
-                                    />
+                                    <field name="last_raw_payload" nolabel="1" readonly="1"/>
 
                                 </group>
 
@@ -1602,16 +884,9 @@
 
                             
 
-                            <page
-                                string="Notas"
-                                name="notes"
-                            >
+                            <page string="Notas" name="notes">
 
-                                <field
-                                    name="notes"
-                                    nolabel="1"
-                                    placeholder="Notas internas del equipo..."
-                                />
+                                <field name="notes" nolabel="1" placeholder="Notas internas del equipo..."/>
 
                             </page>
 
@@ -1636,10 +911,7 @@
                 list,kanban,form
             </field>
 
-            <field
-                name="search_view_id"
-                ref="view_sat_monitoring_device_search"
-            />
+            <field name="search_view_id" ref="view_sat_monitoring_device_search"/>
 
             <field name="context">
                 {
@@ -1664,76 +936,40 @@
 
         
 
-        <record
-            id="action_monitoring_device_list_view"
-            model="ir.actions.act_window.view"
-        >
-            <field
-                name="sequence"
-                eval="1"
-            />
+        <record id="action_monitoring_device_list_view" model="ir.actions.act_window.view">
+            <field name="sequence" eval="1"/>
 
             <field name="view_mode">
                 list
             </field>
 
-            <field
-                name="view_id"
-                ref="view_sat_monitoring_device_list"
-            />
+            <field name="view_id" ref="view_sat_monitoring_device_list"/>
 
-            <field
-                name="act_window_id"
-                ref="action_monitoring_device"
-            />
+            <field name="act_window_id" ref="action_monitoring_device"/>
         </record>
 
-        <record
-            id="action_monitoring_device_kanban_view"
-            model="ir.actions.act_window.view"
-        >
-            <field
-                name="sequence"
-                eval="2"
-            />
+        <record id="action_monitoring_device_kanban_view" model="ir.actions.act_window.view">
+            <field name="sequence" eval="2"/>
 
             <field name="view_mode">
                 kanban
             </field>
 
-            <field
-                name="view_id"
-                ref="view_sat_monitoring_device_kanban"
-            />
+            <field name="view_id" ref="view_sat_monitoring_device_kanban"/>
 
-            <field
-                name="act_window_id"
-                ref="action_monitoring_device"
-            />
+            <field name="act_window_id" ref="action_monitoring_device"/>
         </record>
 
-        <record
-            id="action_monitoring_device_form_view"
-            model="ir.actions.act_window.view"
-        >
-            <field
-                name="sequence"
-                eval="3"
-            />
+        <record id="action_monitoring_device_form_view" model="ir.actions.act_window.view">
+            <field name="sequence" eval="3"/>
 
             <field name="view_mode">
                 form
             </field>
 
-            <field
-                name="view_id"
-                ref="view_sat_monitoring_device_form"
-            />
+            <field name="view_id" ref="view_sat_monitoring_device_form"/>
 
-            <field
-                name="act_window_id"
-                ref="action_monitoring_device"
-            />
+            <field name="act_window_id" ref="action_monitoring_device"/>
         </record>
 
     </data>
