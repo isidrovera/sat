@@ -2,15 +2,9 @@
 <odoo>
     <data>
 
-        <!-- ============================================================= -->
-        <!-- SAT MONITORING DEVICE                                         -->
-        <!-- Equipos monitoreados por SNMP                                 -->
-        <!-- ============================================================= -->
+        
 
-
-        <!-- ============================================================= -->
-        <!-- SEARCH                                                        -->
-        <!-- ============================================================= -->
+        
 
         <record id="view_sat_monitoring_device_search" model="ir.ui.view">
             <field name="name">sat.monitoring.device.search</field>
@@ -19,9 +13,7 @@
 
                 <search string="Buscar Equipos Monitoreados">
 
-                    <!-- ------------------------------------------------- -->
-                    <!-- BÚSQUEDA DIRECTA                                 -->
-                    <!-- ------------------------------------------------- -->
+                    
 
                     <field name="name"/>
 
@@ -47,10 +39,7 @@
 
                     <field name="profile_id"/>
 
-
-                    <!-- ================================================= -->
-                    <!-- ESTADO                                            -->
-                    <!-- ================================================= -->
+                    
 
                     <separator string="Estado"/>
 
@@ -78,10 +67,7 @@
                         domain="[('has_active_alert', '=', False)]"
                     />
 
-
-                    <!-- ================================================= -->
-                    <!-- MONITOREO                                         -->
-                    <!-- ================================================= -->
+                    
 
                     <separator string="Monitoreo"/>
 
@@ -115,10 +101,7 @@
                         domain="[('profile_id', '!=', False)]"
                     />
 
-
-                    <!-- ================================================= -->
-                    <!-- DISCOVERY                                         -->
-                    <!-- ================================================= -->
+                    
 
                     <separator string="Discovery"/>
 
@@ -158,10 +141,7 @@
                         domain="[('discovery_state', '=', 'ignored')]"
                     />
 
-
-                    <!-- ================================================= -->
-                    <!-- TECNOLOGÍA                                        -->
-                    <!-- ================================================= -->
+                    
 
                     <separator string="Tecnología"/>
 
@@ -177,10 +157,7 @@
                         domain="[('technology', '=', 'mono')]"
                     />
 
-
-                    <!-- ================================================= -->
-                    <!-- AGRUPAR                                           -->
-                    <!-- ================================================= -->
+                    
 
                     <group expand="0" string="Agrupar por">
 
@@ -239,10 +216,7 @@
             </field>
         </record>
 
-
-        <!-- ============================================================= -->
-        <!-- LIST                                                          -->
-        <!-- ============================================================= -->
+        
 
         <record id="view_sat_monitoring_device_list" model="ir.ui.view">
             <field name="name">sat.monitoring.device.list</field>
@@ -257,8 +231,6 @@
                     decoration-muted="not monitoring_enabled"
                 >
 
-                    <!-- ESTADO -->
-
                     <field
                         name="online"
                         widget="boolean_toggle"
@@ -271,8 +243,6 @@
                         optional="show"
                     />
 
-                    <!-- CLIENTE -->
-
                     <field
                         name="partner_id"
                         optional="show"
@@ -282,8 +252,6 @@
                         name="branch_name"
                         optional="hide"
                     />
-
-                    <!-- EQUIPO -->
 
                     <field
                         name="marca_id"
@@ -302,8 +270,6 @@
                         optional="show"
                     />
 
-                    <!-- RED -->
-
                     <field
                         name="ip_address"
                         string="IP"
@@ -314,8 +280,6 @@
                         name="hostname"
                         optional="hide"
                     />
-
-                    <!-- MONITOREO -->
 
                     <field
                         name="status"
@@ -340,8 +304,6 @@
                         optional="show"
                     />
 
-                    <!-- PERFIL -->
-
                     <field
                         name="profile_id"
                         string="Perfil"
@@ -354,8 +316,6 @@
                         optional="hide"
                     />
 
-                    <!-- AGENTE -->
-
                     <field
                         name="agent_id"
                         optional="hide"
@@ -365,8 +325,6 @@
                         name="network_id"
                         optional="hide"
                     />
-
-                    <!-- ÚLTIMA LECTURA -->
 
                     <field
                         name="last_seen"
@@ -385,8 +343,6 @@
                         optional="hide"
                     />
 
-                    <!-- DISCOVERY -->
-
                     <field
                         name="discovery_state"
                         string="Discovery"
@@ -404,10 +360,7 @@
             </field>
         </record>
 
-
-        <!-- ============================================================= -->
-        <!-- KANBAN                                                        -->
-        <!-- ============================================================= -->
+        
 
         <record id="view_sat_monitoring_device_kanban" model="ir.ui.view">
             <field name="name">sat.monitoring.device.kanban</field>
@@ -447,9 +400,7 @@
 
                             <div class="d-flex flex-column gap-2">
 
-                                <!-- ===================================== -->
-                                <!-- CABECERA                             -->
-                                <!-- ===================================== -->
+                                
 
                                 <div class="d-flex justify-content-between align-items-start">
 
@@ -488,10 +439,7 @@
 
                                 </div>
 
-
-                                <!-- ===================================== -->
-                                <!-- DATOS EQUIPO                          -->
-                                <!-- ===================================== -->
+                                
 
                                 <div class="border-top pt-2">
 
@@ -519,10 +467,7 @@
 
                                 </div>
 
-
-                                <!-- ===================================== -->
-                                <!-- ALERTAS                               -->
-                                <!-- ===================================== -->
+                                
 
                                 <div
                                     t-if="record.active_alert_count.raw_value"
@@ -542,10 +487,7 @@
                                     </span>
                                 </div>
 
-
-                                <!-- ===================================== -->
-                                <!-- TÓNER                                 -->
-                                <!-- ===================================== -->
+                                
 
                                 <div class="border-top pt-2">
 
@@ -595,10 +537,7 @@
 
                                 </div>
 
-
-                                <!-- ===================================== -->
-                                <!-- PIE                                   -->
-                                <!-- ===================================== -->
+                                
 
                                 <div class="border-top pt-2 text-muted">
 
@@ -627,10 +566,7 @@
             </field>
         </record>
 
-
-        <!-- ============================================================= -->
-        <!-- FORM                                                          -->
-        <!-- ============================================================= -->
+        
 
         <record id="view_sat_monitoring_device_form" model="ir.ui.view">
             <field name="name">sat.monitoring.device.form</field>
@@ -640,9 +576,7 @@
 
                 <form string="Equipo Monitoreado">
 
-                    <!-- ================================================= -->
-                    <!-- HEADER                                            -->
-                    <!-- ================================================= -->
+                    
 
                     <header>
 
@@ -698,12 +632,9 @@
 
                     </header>
 
-
                     <sheet>
 
-                        <!-- ================================================= -->
-                        <!-- BOTONES ESTADÍSTICOS                              -->
-                        <!-- ================================================= -->
+                        
 
                         <div class="oe_button_box" name="button_box">
 
@@ -748,10 +679,7 @@
 
                         </div>
 
-
-                        <!-- ================================================= -->
-                        <!-- TÍTULO                                             -->
-                        <!-- ================================================= -->
+                        
 
                         <widget
                             name="web_ribbon"
@@ -799,10 +727,7 @@
 
                         </div>
 
-
-                        <!-- ================================================= -->
-                        <!-- INFORMACIÓN GENERAL                               -->
-                        <!-- ================================================= -->
+                        
 
                         <group>
 
@@ -820,7 +745,6 @@
                                 />
 
                             </group>
-
 
                             <group string="Equipo">
 
@@ -840,17 +764,11 @@
 
                         </group>
 
-
-                        <!-- ================================================= -->
-                        <!-- NOTEBOOK                                           -->
-                        <!-- ================================================= -->
+                        
 
                         <notebook>
 
-
-                            <!-- ============================================= -->
-                            <!-- RESUMEN                                       -->
-                            <!-- ============================================= -->
+                            
 
                             <page
                                 string="Resumen"
@@ -896,7 +814,6 @@
 
                                     </group>
 
-
                                     <group string="Última comunicación">
 
                                         <field
@@ -938,7 +855,6 @@
 
                                 </group>
 
-
                                 <group string="Último error">
 
                                     <field
@@ -952,10 +868,7 @@
 
                             </page>
 
-
-                            <!-- ============================================= -->
-                            <!-- CONTADORES                                    -->
-                            <!-- ============================================= -->
+                            
 
                             <page
                                 string="Contadores"
@@ -986,7 +899,6 @@
 
                                     </group>
 
-
                                     <group string="Copia">
 
                                         <field
@@ -1009,7 +921,6 @@
 
                                     </group>
 
-
                                     <group string="Impresión">
 
                                         <field
@@ -1031,7 +942,6 @@
                                         />
 
                                     </group>
-
 
                                     <group string="Escáner / Fax">
 
@@ -1061,7 +971,6 @@
 
                                     </group>
 
-
                                     <group string="Otros">
 
                                         <field
@@ -1082,10 +991,7 @@
 
                             </page>
 
-
-                            <!-- ============================================= -->
-                            <!-- TÓNER                                         -->
-                            <!-- ============================================= -->
+                            
 
                             <page
                                 string="Tóner"
@@ -1111,7 +1017,6 @@
 
                                     </group>
 
-
                                     <group string="Cyan">
 
                                         <field
@@ -1129,7 +1034,6 @@
 
                                     </group>
 
-
                                     <group string="Magenta">
 
                                         <field
@@ -1146,7 +1050,6 @@
                                         />
 
                                     </group>
-
 
                                     <group string="Amarillo">
 
@@ -1176,10 +1079,7 @@
 
                             </page>
 
-
-                            <!-- ============================================= -->
-                            <!-- CAPACIDADES                                   -->
-                            <!-- ============================================= -->
+                            
 
                             <page
                                 string="Capacidades"
@@ -1228,7 +1128,6 @@
 
                                     </group>
 
-
                                     <group string="Alimentador">
 
                                         <field
@@ -1250,7 +1149,6 @@
                                         />
 
                                     </group>
-
 
                                     <group string="Documentos">
 
@@ -1274,7 +1172,6 @@
 
                                     </group>
 
-
                                     <group string="Almacenamiento">
 
                                         <field
@@ -1290,7 +1187,6 @@
                                         />
 
                                     </group>
-
 
                                     <group string="Conectividad">
 
@@ -1313,7 +1209,6 @@
                                         />
 
                                     </group>
-
 
                                     <group string="Acabado">
 
@@ -1347,10 +1242,7 @@
 
                             </page>
 
-
-                            <!-- ============================================= -->
-                            <!-- HARDWARE                                      -->
-                            <!-- ============================================= -->
+                            
 
                             <page
                                 string="Hardware"
@@ -1381,7 +1273,6 @@
 
                                     </group>
 
-
                                     <group string="Inventario detectado">
 
                                         <field
@@ -1408,10 +1299,7 @@
 
                             </page>
 
-
-                            <!-- ============================================= -->
-                            <!-- IDENTIDAD SNMP                                -->
-                            <!-- ============================================= -->
+                            
 
                             <page
                                 string="Identidad SNMP"
@@ -1448,7 +1336,6 @@
                                         />
 
                                     </group>
-
 
                                     <group string="Sistema">
 
@@ -1488,10 +1375,7 @@
 
                             </page>
 
-
-                            <!-- ============================================= -->
-                            <!-- RED / AGENTE                                  -->
-                            <!-- ============================================= -->
+                            
 
                             <page
                                 string="Agente y Red"
@@ -1513,7 +1397,6 @@
 
                                     </group>
 
-
                                     <group string="Red">
 
                                         <field name="network_id"/>
@@ -1529,7 +1412,6 @@
                                     </group>
 
                                 </group>
-
 
                                 <group string="Configuración IP">
 
@@ -1557,10 +1439,7 @@
 
                             </page>
 
-
-                            <!-- ============================================= -->
-                            <!-- PERFIL SNMP                                   -->
-                            <!-- ============================================= -->
+                            
 
                             <page
                                 string="Perfil SNMP"
@@ -1591,7 +1470,6 @@
                                         <field name="profile_manual"/>
 
                                     </group>
-
 
                                     <group string="Detección">
 
@@ -1631,10 +1509,7 @@
 
                             </page>
 
-
-                            <!-- ============================================= -->
-                            <!-- DISCOVERY                                     -->
-                            <!-- ============================================= -->
+                            
 
                             <page
                                 string="Discovery"
@@ -1667,7 +1542,6 @@
 
                                     </group>
 
-
                                     <group string="Fechas">
 
                                         <field
@@ -1696,10 +1570,7 @@
 
                             </page>
 
-
-                            <!-- ============================================= -->
-                            <!-- RAW                                           -->
-                            <!-- ============================================= -->
+                            
 
                             <page
                                 string="Diagnóstico RAW"
@@ -1729,10 +1600,7 @@
 
                             </page>
 
-
-                            <!-- ============================================= -->
-                            <!-- NOTAS                                         -->
-                            <!-- ============================================= -->
+                            
 
                             <page
                                 string="Notas"
@@ -1756,11 +1624,9 @@
             </field>
         </record>
 
+        
 
-        <!-- ============================================================= -->
-        <!-- ACTION                                                         -->
-        <!-- Reemplaza / completa la acción creada en monitoring_menu.xml  -->
-        <!-- ============================================================= -->
+        
 
         <record id="action_monitoring_device" model="ir.actions.act_window">
             <field name="name">Equipos Monitoreados</field>
@@ -1796,10 +1662,7 @@
 
         </record>
 
-
-        <!-- ============================================================= -->
-        <!-- ORDEN DE VISTAS DE LA ACCIÓN                                  -->
-        <!-- ============================================================= -->
+        
 
         <record
             id="action_monitoring_device_list_view"
@@ -1825,7 +1688,6 @@
             />
         </record>
 
-
         <record
             id="action_monitoring_device_kanban_view"
             model="ir.actions.act_window.view"
@@ -1849,7 +1711,6 @@
                 ref="action_monitoring_device"
             />
         </record>
-
 
         <record
             id="action_monitoring_device_form_view"
