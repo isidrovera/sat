@@ -2,15 +2,10 @@
 <odoo>
     <data>
 
-        <!-- ============================================================= -->
-        <!-- SEARCH                                                        -->
-        <!-- ============================================================= -->
-
         <record id="view_monitoring_network_search" model="ir.ui.view">
             <field name="name">sat.monitoring.network.search</field>
             <field name="model">sat.monitoring.network</field>
             <field name="arch" type="xml">
-
                 <search string="Redes de Monitoreo">
 
                     <field name="name"/>
@@ -32,6 +27,10 @@
                             string="Polling activo"
                             domain="[('polling_enabled','=',True)]"/>
 
+                    <filter name="with_errors"
+                            string="Con errores"
+                            domain="[('last_error_message','!=',False)]"/>
+
                     <group expand="0" string="Agrupar por">
 
                         <filter name="group_agent"
@@ -42,17 +41,16 @@
                                 string="Cliente"
                                 context="{'group_by':'partner_id'}"/>
 
+                        <filter name="group_ip_version"
+                                string="Versión IP"
+                                context="{'group_by':'ip_version'}"/>
+
                     </group>
 
                 </search>
-
             </field>
         </record>
 
-
-        <!-- ============================================================= -->
-        <!-- LIST                                                          -->
-        <!-- ============================================================= -->
 
         <record id="view_monitoring_network_list" model="ir.ui.view">
             <field name="name">sat.monitoring.network.list</field>
@@ -69,23 +67,30 @@
                     <field name="code"/>
                     <field name="agent_id"/>
                     <field name="partner_id"/>
+
                     <field name="branch_name"
                            optional="hide"/>
 
                     <field name="cidr"/>
-
                     <field name="gateway"
                            optional="hide"/>
 
                     <field name="discovery_enabled"/>
-
                     <field name="polling_enabled"/>
 
                     <field name="device_count"
                            string="Equipos"/>
 
-                    <field name="last_discovery_date"
+                    <field name="online_device_count"
+                           string="Online"
+                           optional="hide"/>
+
+                    <field name="last_discovery_at"
                            optional="show"/>
+
+                    <field name="last_printer_count"
+                           string="Impresoras"
+                           optional="hide"/>
 
                     <field name="active"/>
 
@@ -94,10 +99,6 @@
             </field>
         </record>
 
-
-        <!-- ============================================================= -->
-        <!-- FORM                                                          -->
-        <!-- ============================================================= -->
 
         <record id="view_monitoring_network_form" model="ir.ui.view">
             <field name="name">sat.monitoring.network.form</field>
@@ -109,13 +110,10 @@
                     <sheet>
 
                         <div class="oe_title">
-
                             <label for="name"/>
-
                             <h1>
                                 <field name="name"/>
                             </h1>
-
                         </div>
 
 
@@ -150,7 +148,10 @@
                                 <field name="ip_version"
                                        readonly="1"/>
 
-                                <field name="host_count"
+                                <field name="total_addresses"
+                                       readonly="1"/>
+
+                                <field name="usable_host_count"
                                        readonly="1"/>
 
                             </group>
@@ -160,33 +161,29 @@
 
                         <notebook>
 
-                            <!-- ========================================= -->
-                            <!-- CONFIGURACIÓN DE RED                     -->
-                            <!-- ========================================= -->
-
                             <page string="Red">
 
                                 <group>
 
                                     <group>
+
                                         <field name="gateway"/>
                                         <field name="vlan_id"/>
-                                        <field name="dns_servers"/>
+                                        <field name="dns_name"/>
+
                                     </group>
 
                                     <group>
-                                        <field name="max_hosts"/>
-                                        <field name="parallel_limit"/>
+
+                                        <field name="max_hosts_per_cycle"/>
+                                        <field name="max_parallel_hosts"/>
+
                                     </group>
 
                                 </group>
 
                             </page>
 
-
-                            <!-- ========================================= -->
-                            <!-- EXCLUSIONES                              -->
-                            <!-- ========================================= -->
 
                             <page string="Rangos e IP">
 
@@ -214,10 +211,6 @@
                             </page>
 
 
-                            <!-- ========================================= -->
-                            <!-- DISCOVERY                                -->
-                            <!-- ========================================= -->
-
                             <page string="Discovery">
 
                                 <group>
@@ -229,7 +222,7 @@
                                         <field name="discovery_interval"/>
                                         <field name="discovery_timeout"/>
                                         <field name="discovery_retries"/>
-                                        <field name="snmp_first"/>
+                                        <field name="discovery_snmp_first"/>
 
                                     </group>
 
@@ -247,29 +240,36 @@
                                 <group string="Última ejecución">
 
                                     <group>
-                                        <field name="last_discovery_date"
+
+                                        <field name="last_discovery_at"
                                                readonly="1"/>
 
-                                        <field name="last_discovery_host_count"
+                                        <field name="last_discovery_success"
                                                readonly="1"/>
 
-                                        <field name="last_discovery_device_count"
+                                        <field name="last_discovery_duration_ms"
                                                readonly="1"/>
+
                                     </group>
 
                                     <group>
-                                        <field name="last_discovery_success_count"
+
+                                        <field name="last_discovered_host_count"
                                                readonly="1"/>
 
-                                        <field name="last_discovery_failure_count"
+                                        <field name="last_printer_count"
                                                readonly="1"/>
+
                                     </group>
 
                                 </group>
 
                                 <group string="Último error">
 
-                                    <field name="last_discovery_error"
+                                    <field name="last_error_date"
+                                           readonly="1"/>
+
+                                    <field name="last_error_message"
                                            nolabel="1"
                                            readonly="1"/>
 
@@ -278,27 +278,19 @@
                             </page>
 
 
-                            <!-- ========================================= -->
-                            <!-- POLLING                                  -->
-                            <!-- ========================================= -->
-
                             <page string="Polling">
 
                                 <group>
 
                                     <field name="polling_enabled"/>
-                                    <field name="polling_interval"/>
-                                    <field name="polling_timeout"/>
-                                    <field name="polling_retries"/>
+                                    <field name="poll_interval"/>
+                                    <field name="poll_timeout"/>
+                                    <field name="poll_retries"/>
 
                                 </group>
 
                             </page>
 
-
-                            <!-- ========================================= -->
-                            <!-- CREDENCIAL                               -->
-                            <!-- ========================================= -->
 
                             <page string="Credencial"
                                   groups="base.group_system">
@@ -306,7 +298,6 @@
                                 <group>
 
                                     <field name="credential_id"/>
-
                                     <field name="allow_credential_fallback"/>
 
                                 </group>
@@ -314,11 +305,17 @@
                             </page>
 
 
-                            <!-- ========================================= -->
-                            <!-- EQUIPOS                                  -->
-                            <!-- ========================================= -->
-
                             <page string="Equipos">
+
+                                <group>
+
+                                    <field name="device_count"
+                                           readonly="1"/>
+
+                                    <field name="online_device_count"
+                                           readonly="1"/>
+
+                                </group>
 
                                 <field name="device_ids"
                                        readonly="1">
@@ -334,12 +331,10 @@
                                         <field name="marca_id"/>
                                         <field name="model"/>
                                         <field name="serial"/>
-
                                         <field name="status"
                                                widget="badge"/>
 
                                         <field name="profile_id"/>
-
                                         <field name="last_seen"/>
 
                                     </list>
@@ -367,10 +362,6 @@
             </field>
         </record>
 
-
-        <!-- ============================================================= -->
-        <!-- ACTION                                                        -->
-        <!-- ============================================================= -->
 
         <record id="action_monitoring_network"
                 model="ir.actions.act_window">
