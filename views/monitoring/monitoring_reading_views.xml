@@ -6,7 +6,6 @@
             <field name="name">sat.monitoring.reading.search</field>
             <field name="model">sat.monitoring.reading</field>
             <field name="arch" type="xml">
-
                 <search string="Lecturas SNMP">
 
                     <field name="device_id"/>
@@ -31,11 +30,19 @@
                             string="Revisión"
                             domain="[('requires_review','=',True)]"/>
 
+                    <filter name="sentinel"
+                            string="Valores especiales"
+                            domain="[('is_sentinel','=',True)]"/>
+
                     <group expand="0" string="Agrupar por">
 
                         <filter name="group_device"
                                 string="Equipo"
                                 context="{'group_by':'device_id'}"/>
+
+                        <filter name="group_partner"
+                                string="Cliente"
+                                context="{'group_by':'partner_id'}"/>
 
                         <filter name="group_category"
                                 string="Categoría"
@@ -45,6 +52,10 @@
                                 string="Métrica"
                                 context="{'group_by':'metric_code'}"/>
 
+                        <filter name="group_status"
+                                string="Estado"
+                                context="{'group_by':'status'}"/>
+
                         <filter name="group_date"
                                 string="Fecha"
                                 context="{'group_by':'date:day'}"/>
@@ -52,7 +63,6 @@
                     </group>
 
                 </search>
-
             </field>
         </record>
 
@@ -69,6 +79,7 @@
 
                     <field name="date"/>
                     <field name="device_id"/>
+                    <field name="partner_id" optional="hide"/>
                     <field name="metric_code"/>
                     <field name="metric_name"/>
                     <field name="category"/>
@@ -91,7 +102,22 @@
                     <field name="unit"
                            optional="show"/>
 
-                    <field name="delta"
+                    <field name="previous_numeric_value"
+                           string="Anterior"
+                           optional="hide"/>
+
+                    <field name="delta_numeric"
+                           string="Delta"
+                           optional="hide"/>
+
+                    <field name="changed"
+                           optional="hide"/>
+
+                    <field name="anomaly"
+                           optional="hide"/>
+
+                    <field name="is_sentinel"
+                           string="Especial"
                            optional="hide"/>
 
                     <field name="oid"
@@ -123,25 +149,24 @@
 
                         <group>
 
-                            <group>
+                            <group string="Lectura">
                                 <field name="device_id" readonly="1"/>
+                                <field name="partner_id" readonly="1"/>
                                 <field name="snapshot_id" readonly="1"/>
                                 <field name="date" readonly="1"/>
                                 <field name="metric_code" readonly="1"/>
-                                <field name="category" readonly="1"/>
-                                <field name="subgroup" readonly="1"/>
+                                <field name="metric_id" readonly="1"/>
+                                <field name="profile_id" readonly="1"/>
                             </group>
 
-                            <group>
-                                <field name="status"
-                                       widget="badge"
-                                       readonly="1"/>
-
-                                <field name="success" readonly="1"/>
-                                <field name="required" readonly="1"/>
+                            <group string="Clasificación">
+                                <field name="category" readonly="1"/>
+                                <field name="subgroup" readonly="1"/>
                                 <field name="logical_type" readonly="1"/>
+                                <field name="snmp_type" readonly="1"/>
                                 <field name="unit" readonly="1"/>
-                                <field name="confidence" readonly="1"/>
+                                <field name="required" readonly="1"/>
+                                <field name="sequence" readonly="1"/>
                             </group>
 
                         </group>
@@ -152,14 +177,88 @@
                             <page string="Valor">
 
                                 <group>
-                                    <field name="value_text" readonly="1"/>
-                                    <field name="value_integer" readonly="1"/>
-                                    <field name="value_numeric" readonly="1"/>
-                                    <field name="value_boolean" readonly="1"/>
 
-                                    <field name="previous_numeric" readonly="1"/>
-                                    <field name="delta" readonly="1"/>
-                                    <field name="changed" readonly="1"/>
+                                    <group string="Resultado">
+                                        <field name="status"
+                                               widget="badge"
+                                               readonly="1"/>
+
+                                        <field name="success"
+                                               readonly="1"/>
+
+                                        <field name="confidence"
+                                               readonly="1"/>
+                                    </group>
+
+                                    <group string="Valor normalizado">
+                                        <field name="value_numeric"
+                                               readonly="1"
+                                               invisible="not has_numeric_value"/>
+
+                                        <field name="value_integer"
+                                               readonly="1"
+                                               invisible="not has_integer_value"/>
+
+                                        <field name="value_text"
+                                               readonly="1"
+                                               invisible="not has_text_value"/>
+
+                                        <field name="value_boolean"
+                                               readonly="1"
+                                               invisible="not has_boolean_value"/>
+                                    </group>
+
+                                </group>
+
+                                <group string="Disponibilidad del valor">
+                                    <field name="has_numeric_value" readonly="1"/>
+                                    <field name="has_integer_value" readonly="1"/>
+                                    <field name="has_text_value" readonly="1"/>
+                                    <field name="has_boolean_value" readonly="1"/>
+                                </group>
+
+                            </page>
+
+
+                            <page string="Cambio">
+
+                                <group>
+
+                                    <group>
+                                        <field name="previous_reading_id"
+                                               readonly="1"/>
+
+                                        <field name="previous_numeric_value"
+                                               readonly="1"/>
+
+                                        <field name="delta_numeric"
+                                               readonly="1"/>
+
+                                        <field name="changed"
+                                               readonly="1"/>
+                                    </group>
+
+                                    <group>
+                                        <field name="history_mode"
+                                               readonly="1"/>
+
+                                        <field name="anomaly"
+                                               readonly="1"/>
+
+                                        <field name="requires_review"
+                                               readonly="1"/>
+                                    </group>
+
+                                </group>
+
+                                <group string="Anomalía">
+                                    <field name="anomaly_reason"
+                                           readonly="1"/>
+                                </group>
+
+                                <group string="Revisión">
+                                    <field name="review_reason"
+                                           readonly="1"/>
                                 </group>
 
                             </page>
@@ -168,27 +267,61 @@
                             <page string="Origen SNMP">
 
                                 <group>
-                                    <field name="oid" readonly="1"/>
-                                    <field name="oid_name" readonly="1"/>
-                                    <field name="oid_index" readonly="1"/>
-                                    <field name="source_label" readonly="1"/>
-                                    <field name="source_method" readonly="1"/>
-                                    <field name="discovered_dynamically" readonly="1"/>
+
+                                    <group>
+                                        <field name="oid"
+                                               readonly="1"/>
+
+                                        <field name="oid_name"
+                                               readonly="1"/>
+
+                                        <field name="oid_index"
+                                               readonly="1"/>
+
+                                        <field name="source_label"
+                                               readonly="1"/>
+                                    </group>
+
+                                    <group>
+                                        <field name="source_method"
+                                               readonly="1"/>
+
+                                        <field name="fallback_used"
+                                               readonly="1"/>
+
+                                        <field name="discovered_dynamically"
+                                               readonly="1"/>
+                                    </group>
+
                                 </group>
 
                             </page>
 
 
-                            <page string="Diagnóstico">
+                            <page string="Sentinel">
 
                                 <group>
-                                    <field name="anomaly" readonly="1"/>
-                                    <field name="requires_review" readonly="1"/>
-                                    <field name="error_message" readonly="1"/>
+                                    <field name="is_sentinel"
+                                           readonly="1"/>
 
-                                    <field name="sentinel_detected" readonly="1"/>
-                                    <field name="sentinel_value" readonly="1"/>
-                                    <field name="sentinel_interpretation" readonly="1"/>
+                                    <field name="sentinel_value"
+                                           readonly="1"/>
+
+                                    <field name="sentinel_interpretation"
+                                           readonly="1"/>
+                                </group>
+
+                            </page>
+
+
+                            <page string="Error">
+
+                                <group>
+                                    <field name="error_code"
+                                           readonly="1"/>
+
+                                    <field name="error_message"
+                                           readonly="1"/>
                                 </group>
 
                             </page>
@@ -197,13 +330,13 @@
                             <page string="RAW"
                                   groups="base.group_system">
 
-                                <group>
+                                <group string="Valor RAW">
                                     <field name="raw_value_text"
                                            nolabel="1"
                                            readonly="1"/>
                                 </group>
 
-                                <group>
+                                <group string="JSON RAW">
                                     <field name="raw_value_json"
                                            nolabel="1"
                                            readonly="1"/>
@@ -226,7 +359,7 @@
 
             <field name="name">Lecturas SNMP</field>
             <field name="res_model">sat.monitoring.reading</field>
-            <field name="view_mode">list,form,graph,pivot</field>
+            <field name="view_mode">list,form</field>
 
             <field name="search_view_id"
                    ref="view_monitoring_reading_search"/>
