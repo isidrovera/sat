@@ -907,9 +907,7 @@
             <field name="name">Equipos Monitoreados</field>
             <field name="res_model">sat.monitoring.device</field>
 
-            <field name="view_mode">
-                list,kanban,form
-            </field>
+            <field name="view_mode">list,kanban,form</field>
 
             <field name="search_view_id" ref="view_sat_monitoring_device_search"/>
 
@@ -939,9 +937,7 @@
         <record id="action_monitoring_device_list_view" model="ir.actions.act_window.view">
             <field name="sequence" eval="1"/>
 
-            <field name="view_mode">
-                list
-            </field>
+            <field name="view_mode">list</field>
 
             <field name="view_id" ref="view_sat_monitoring_device_list"/>
 
@@ -951,9 +947,7 @@
         <record id="action_monitoring_device_kanban_view" model="ir.actions.act_window.view">
             <field name="sequence" eval="2"/>
 
-            <field name="view_mode">
-                kanban
-            </field>
+            <field name="view_mode">kanban</field>
 
             <field name="view_id" ref="view_sat_monitoring_device_kanban"/>
 
@@ -963,9 +957,7 @@
         <record id="action_monitoring_device_form_view" model="ir.actions.act_window.view">
             <field name="sequence" eval="3"/>
 
-            <field name="view_mode">
-                form
-            </field>
+            <field name="view_mode">form</field>
 
             <field name="view_id" ref="view_sat_monitoring_device_form"/>
 
