@@ -6,4 +6,4 @@ from . import monitoring_device
 from . import monitoring_snapshot
 from . import monitoring_reading
 from . import monitoring_alert
-#from . import inventory
+from . import inventory
