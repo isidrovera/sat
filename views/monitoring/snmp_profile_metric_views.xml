@@ -6,28 +6,40 @@
             <field name="name">sat.snmp.profile.metric.search</field>
             <field name="model">sat.snmp.profile.metric</field>
             <field name="arch" type="xml">
-
                 <search string="Métricas SNMP">
 
-                    <field name="profile_id"/>
-                    <field name="code"/>
                     <field name="name"/>
+                    <field name="code"/>
+                    <field name="profile_id"/>
+                    <field name="marca_id"/>
+                    <field name="category"/>
                     <field name="oid"/>
-                    <field name="subgroup"/>
+
+                    <filter name="active"
+                            string="Activas"
+                            domain="[('active','=',True)]"/>
 
                     <filter name="required"
                             string="Obligatorias"
                             domain="[('required','=',True)]"/>
 
-                    <filter name="active"
-                            string="Activas"
-                            domain="[('active','=',True)]"/>
+                    <filter name="alerts"
+                            string="Con alerta"
+                            domain="[('alert_enabled','=',True)]"/>
+
+                    <filter name="store_history"
+                            string="Con histórico"
+                            domain="[('store_history','=',True)]"/>
 
                     <group expand="0" string="Agrupar por">
 
                         <filter name="group_profile"
                                 string="Perfil"
                                 context="{'group_by':'profile_id'}"/>
+
+                        <filter name="group_brand"
+                                string="Marca"
+                                context="{'group_by':'marca_id'}"/>
 
                         <filter name="group_category"
                                 string="Categoría"
@@ -37,10 +49,13 @@
                                 string="Método"
                                 context="{'group_by':'method'}"/>
 
+                        <filter name="group_confidence"
+                                string="Confianza"
+                                context="{'group_by':'confidence'}"/>
+
                     </group>
 
                 </search>
-
             </field>
         </record>
 
@@ -50,15 +65,15 @@
             <field name="model">sat.snmp.profile.metric</field>
             <field name="arch" type="xml">
 
-                <list string="Métricas / OIDs"
-                      default_order="profile_id, sequence, priority desc">
+                <list string="Métricas SNMP"
+                      default_order="profile_id, category, sequence, name">
 
                     <field name="sequence"
                            widget="handle"/>
 
                     <field name="profile_id"/>
-                    <field name="code"/>
                     <field name="name"/>
+                    <field name="code"/>
                     <field name="category"/>
                     <field name="subgroup"
                            optional="hide"/>
@@ -70,8 +85,19 @@
                            optional="show"/>
 
                     <field name="required"/>
+                    <field name="store_history"
+                           optional="hide"/>
+
+                    <field name="alert_enabled"
+                           optional="hide"/>
 
                     <field name="confidence"
+                           optional="show"/>
+
+                    <field name="success_count"
+                           optional="hide"/>
+
+                    <field name="failure_count"
                            optional="hide"/>
 
                     <field name="active"/>
@@ -92,21 +118,21 @@
                     <sheet>
 
                         <div class="oe_title">
-
                             <label for="name"/>
-
                             <h1>
                                 <field name="name"/>
                             </h1>
-
                         </div>
 
 
                         <group>
 
-                            <group string="Métrica">
+                            <group string="Identificación">
 
                                 <field name="profile_id"/>
+                                <field name="marca_id"
+                                       readonly="1"/>
+
                                 <field name="code"/>
                                 <field name="category"/>
                                 <field name="subgroup"/>
@@ -118,11 +144,11 @@
                             <group string="Configuración">
 
                                 <field name="method"/>
-                                <field name="required"/>
-                                <field name="priority"/>
                                 <field name="sequence"/>
-                                <field name="confidence"/>
+                                <field name="priority"/>
+                                <field name="required"/>
                                 <field name="active"/>
+                                <field name="confidence"/>
 
                             </group>
 
@@ -131,35 +157,34 @@
 
                         <notebook>
 
-                            <page string="OID Directo">
+                            <page string="Descripción">
 
-                                <group>
-                                    <field name="oid"/>
-                                    <field name="oid_fallback"/>
-                                    <field name="fixed_index"/>
-                                    <field name="dynamic_index"/>
-                                </group>
+                                <field name="description"
+                                       nolabel="1"/>
 
                             </page>
 
 
-                            <page string="Tabla SNMP">
+                            <page string="OID">
 
                                 <group>
 
-                                    <group>
-                                        <field name="table_base_oid"/>
-                                        <field name="label_column_oid"/>
-                                        <field name="value_column_oid"/>
-                                        <field name="secondary_value_column_oid"/>
+                                    <group string="OID principal">
+
+                                        <field name="oid"/>
+
+                                        <field name="oid_fallback"/>
+
+                                    </group>
+
+                                    <group string="Índice">
+
                                         <field name="index_oid"/>
-                                    </group>
 
-                                    <group>
-                                        <field name="label_exact"/>
-                                        <field name="label_regex"/>
-                                        <field name="label_contains"/>
-                                        <field name="label_case_sensitive"/>
+                                        <field name="fixed_index"/>
+
+                                        <field name="dynamic_index"/>
+
                                     </group>
 
                                 </group>
@@ -167,13 +192,43 @@
                             </page>
 
 
-                            <page string="Filtros">
+                            <page string="Tabla">
 
                                 <group>
 
-                                    <field name="row_filter_column_oid"/>
-                                    <field name="row_filter_exact"/>
-                                    <field name="row_filter_regex"/>
+                                    <group string="Tabla">
+
+                                        <field name="table_base_oid"/>
+
+                                        <field name="label_column_oid"/>
+
+                                        <field name="value_column_oid"/>
+
+                                        <field name="secondary_value_column_oid"/>
+
+                                    </group>
+
+                                    <group string="Etiqueta">
+
+                                        <field name="label_exact"/>
+
+                                        <field name="label_regex"/>
+
+                                        <field name="label_contains"/>
+
+                                        <field name="label_case_sensitive"/>
+
+                                    </group>
+
+                                </group>
+
+                                <group string="Filtro de fila">
+
+                                    <field name="row_filter_oid"/>
+
+                                    <field name="row_filter_operator"/>
+
+                                    <field name="row_filter_value"/>
 
                                 </group>
 
@@ -185,33 +240,38 @@
                                 <group>
 
                                     <field name="presence_mode"/>
+
                                     <field name="presence_expected_value"/>
-                                    <field name="presence_regex"/>
+
+                                    <field name="presence_expected_regex"/>
 
                                 </group>
 
                             </page>
 
 
-                            <page string="Enumerados">
+                            <page string="Enumerados y Bits">
 
                                 <group>
 
-                                    <field name="enum_map_json"/>
-                                    <field name="unknown_enum_value"/>
+                                    <group string="Enumerados">
 
-                                </group>
+                                        <field name="enum_map_json"
+                                               nolabel="1"/>
 
-                            </page>
+                                        <field name="unknown_enum_value"/>
 
+                                    </group>
 
-                            <page string="Bits">
+                                    <group string="Bits">
 
-                                <group>
+                                        <field name="bit_position"/>
 
-                                    <field name="bit_position"/>
-                                    <field name="bit_mask"/>
-                                    <field name="bit_expected"/>
+                                        <field name="bit_mask"/>
+
+                                        <field name="bit_expected"/>
+
+                                    </group>
 
                                 </group>
 
@@ -222,20 +282,55 @@
 
                                 <group>
 
-                                    <group>
+                                    <group string="Numérico">
+
                                         <field name="multiplier"/>
+
                                         <field name="divisor"/>
+
                                         <field name="offset"/>
+
                                         <field name="round_digits"/>
-                                        <field name="text_case"/>
+
                                     </group>
 
-                                    <group>
-                                        <field name="minimum_value"/>
-                                        <field name="maximum_value"/>
-                                        <field name="sentinel_values"/>
-                                        <field name="sentinel_behavior"/>
+                                    <group string="Texto">
+
+                                        <field name="strip_text"/>
+
+                                        <field name="uppercase_text"/>
+
+                                        <field name="lowercase_text"/>
+
                                     </group>
+
+                                </group>
+
+                                <group string="Límites">
+
+                                    <field name="use_minimum_value"/>
+
+                                    <field name="minimum_value"
+                                           invisible="not use_minimum_value"/>
+
+                                    <field name="use_maximum_value"/>
+
+                                    <field name="maximum_value"
+                                           invisible="not use_maximum_value"/>
+
+                                </group>
+
+                            </page>
+
+
+                            <page string="Sentinelas">
+
+                                <group>
+
+                                    <field name="sentinel_values"
+                                           nolabel="1"/>
+
+                                    <field name="sentinel_behavior"/>
 
                                 </group>
 
@@ -245,8 +340,13 @@
                             <page string="Derivada">
 
                                 <group>
-                                    <field name="derived_formula"/>
-                                    <field name="derived_dependencies"/>
+
+                                    <field name="derived_formula"
+                                           nolabel="1"/>
+
+                                    <field name="dependency_codes"
+                                           nolabel="1"/>
+
                                 </group>
 
                             </page>
@@ -256,17 +356,30 @@
 
                                 <group>
 
-                                    <group>
+                                    <group string="Frecuencia">
+
                                         <field name="polling_group"/>
+
                                         <field name="polling_interval"/>
-                                        <field name="timeout"/>
+
+                                        <field name="timeout_seconds"/>
+
                                         <field name="retries"/>
+
                                     </group>
 
-                                    <group>
+                                    <group string="Almacenamiento">
+
+                                        <field name="store_current"/>
+
                                         <field name="store_history"/>
+
+                                        <field name="store_raw"/>
+
                                         <field name="history_mode"/>
-                                        <field name="history_threshold"/>
+
+                                        <field name="change_threshold"/>
+
                                     </group>
 
                                 </group>
@@ -277,48 +390,62 @@
                             <page string="Alertas">
 
                                 <group>
-                                    <field name="alert_condition"/>
-                                    <field name="alert_severity"/>
+
+                                    <field name="alert_enabled"/>
+
+                                    <field name="alert_condition"
+                                           invisible="not alert_enabled"/>
+
+                                    <field name="alert_value"
+                                           invisible="not alert_enabled"/>
+
+                                    <field name="alert_severity"
+                                           invisible="not alert_enabled"/>
+
                                 </group>
 
                             </page>
 
 
-                            <page string="Pruebas">
+                            <page string="Validación">
 
                                 <group>
-                                    <field name="test_count"
-                                           readonly="1"/>
 
-                                    <field name="test_success_count"
-                                           readonly="1"/>
+                                    <group string="Pruebas">
 
-                                    <field name="test_failure_count"
-                                           readonly="1"/>
+                                        <field name="tested_count"
+                                               readonly="1"/>
 
-                                    <field name="last_test_date"
-                                           readonly="1"/>
+                                        <field name="success_count"
+                                               readonly="1"/>
+
+                                        <field name="failure_count"
+                                               readonly="1"/>
+
+                                    </group>
+
+                                    <group string="Fechas">
+
+                                        <field name="last_success_date"
+                                               readonly="1"/>
+
+                                        <field name="last_failure_date"
+                                               readonly="1"/>
+
+                                        <field name="discovery_source"
+                                               readonly="1"/>
+
+                                    </group>
+
                                 </group>
 
                             </page>
 
 
-                            <page string="Notas">
+                            <page string="Notas técnicas">
 
-                                <group string="Descripción">
-                                    <field name="description"
-                                           nolabel="1"/>
-                                </group>
-
-                                <group string="Notas técnicas">
-                                    <field name="technical_notes"
-                                           nolabel="1"/>
-                                </group>
-
-                                <group string="Origen discovery">
-                                    <field name="discovery_source"
-                                           nolabel="1"/>
-                                </group>
+                                <field name="technical_notes"
+                                       nolabel="1"/>
 
                             </page>
 
