@@ -240,21 +240,21 @@ class SatSnmpCredential(models.Model):
 
     community_encrypted = fields.Text(
         string='Community cifrada',
-        readonly=False,
+        readonly=True,
         copy=False,
         groups='base.group_system',
     )
 
     community_hash = fields.Char(
         string='Hash community',
-        readonly=False,
+        readonly=True,
         copy=False,
         groups='base.group_system',
     )
 
     community_preview = fields.Char(
         string='Community',
-        readonly=False,
+        readonly=True,
         copy=False,
     )
 
@@ -267,9 +267,10 @@ class SatSnmpCredential(models.Model):
     community_input = fields.Char(
         string='Nueva community',
         copy=False,
+        store=False,
         help=(
             'Escriba aquí la community SNMP v1/v2c. '
-            'El valor se cifra antes de guardarse y este campo queda vacío.'
+            'El valor se cifra antes de guardarse.'
         ),
     )
 
@@ -351,9 +352,10 @@ class SatSnmpCredential(models.Model):
     v3_auth_key_input = fields.Char(
         string='Nueva clave autenticación',
         copy=False,
+        store=False,
         help=(
             'Clave temporal para SNMP v3. '
-            'Se cifra antes de guardarse y este campo queda vacío.'
+            'El valor se cifra antes de guardarse.'
         ),
     )
 
@@ -404,9 +406,10 @@ class SatSnmpCredential(models.Model):
     v3_priv_key_input = fields.Char(
         string='Nueva clave privacidad',
         copy=False,
+        store=False,
         help=(
             'Clave temporal de privacidad SNMP v3. '
-            'Se cifra antes de guardarse y este campo queda vacío.'
+            'El valor se cifra antes de guardarse.'
         ),
     )
 
@@ -840,6 +843,7 @@ class SatSnmpCredential(models.Model):
                 )
 
     @api.constrains(
+        'state',
         'snmp_version',
         'v3_username',
         'v3_security_level',
@@ -849,8 +853,25 @@ class SatSnmpCredential(models.Model):
         'v3_auth_key_encrypted',
         'v3_priv_key_encrypted',
     )
-    def _check_snmp_configuration(self):
+    def _check_snmp_configuration(self, force=False):
+        """
+        En borrador se permite guardar la credencial incompleta.
+
+        La configuración completa se exige:
+            - al pasar a "En pruebas"
+            - al pasar a "Validada"
+            - si un registro que ya está en esos estados se modifica
+        """
         for record in self:
+
+            if (
+                not force
+                and record.state not in (
+                    'testing',
+                    'validated',
+                )
+            ):
+                continue
 
             # -----------------------------------------------
             # V1 / V2C
@@ -935,9 +956,10 @@ class SatSnmpCredential(models.Model):
 
     def _prepare_secret_input_vals(self, vals):
         """
-        Convierte los campos editables temporales en valores cifrados.
+        Convierte los campos temporales del formulario en secretos cifrados.
 
-        Los campos *_input nunca conservan el secreto después de guardar.
+        Los campos community_input, v3_auth_key_input y v3_priv_key_input
+        nunca se escriben en la base de datos.
         """
         vals = dict(vals or {})
         secret_changed = False
@@ -1061,14 +1083,27 @@ class SatSnmpCredential(models.Model):
                 prepared_vals
             )
 
-        return super().create(
+        records = super().create(
             prepared_vals_list
         )
 
+        # Si algún registro se crea directamente como testing/validated,
+        # se valida después de haber cifrado los secretos.
+        records.filtered(
+            lambda r: r.state in (
+                'testing',
+                'validated',
+            )
+        )._check_snmp_configuration(
+            force=True
+        )
+
+        return records
+
     def write(self, vals):
         """
-        Permite escribir Community/Auth/Privacy directamente en el formulario
-        sin guardar el secreto en texto plano.
+        Permite introducir Community/Auth/Privacy directamente
+        desde el mismo formulario sin guardar texto plano.
         """
         prepared_vals, secret_changed = (
             self._prepare_secret_input_vals(
@@ -1082,6 +1117,16 @@ class SatSnmpCredential(models.Model):
 
         if secret_changed:
             self._touch_secret_revision()
+
+        # Si ya está en pruebas/validada, no permitir que quede inválida.
+        self.filtered(
+            lambda r: r.state in (
+                'testing',
+                'validated',
+            )
+        )._check_snmp_configuration(
+            force=True
+        )
 
         return result
 
@@ -1709,7 +1754,9 @@ class SatSnmpCredential(models.Model):
         return True
 
     def action_set_testing(self):
-        self._check_snmp_configuration()
+        self._check_snmp_configuration(
+            force=True
+        )
 
         self.write({
             'state':
@@ -1719,7 +1766,9 @@ class SatSnmpCredential(models.Model):
         return True
 
     def action_validate(self):
-        self._check_snmp_configuration()
+        self._check_snmp_configuration(
+            force=True
+        )
 
         self.write({
             'state':
