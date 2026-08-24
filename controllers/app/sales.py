@@ -371,6 +371,9 @@ class AppSalesController(AppBaseController):
         if not repairs:
             return False
 
+        # Ventas debe mostrar la reparación más reciente que realmente
+        # contenga checklist técnico. Una reparación recién creada puede
+        # existir todavía sin componentes/accesorios evaluados.
         for repair in repairs:
             has_components = (
                 "componente_eval_ids" in repair._fields
@@ -609,33 +612,133 @@ class AppSalesController(AppBaseController):
     def _serialize_component(self, item):
         state = self._field(item, "estado_id", False)
         component_type = self._field(item, "componente_tipo_id", False)
+        repair = self._field(item, "reparacion_id", False)
 
+        # ------------------------------------------------------------
+        # SUBPARTES SELECCIONADAS EN LA EVALUACIÓN
+        # ------------------------------------------------------------
+        selected_records = (
+            item.subpartes_ids
+            if "subpartes_ids" in item._fields
+            else request.env["componente.subparte"].browse()
+        )
+
+        # ------------------------------------------------------------
+        # FALLBACK:
+        # En algunas reparaciones las subpartes cambiadas se registran
+        # en reparacion.intervencion.detalle y no quedan reflejadas en
+        # reparacion.componente.evaluacion.subpartes_ids.
+        #
+        # Solo recuperamos las que realmente tienen accion_sub=cambiado
+        # y pertenecen al mismo tipo de componente.
+        # ------------------------------------------------------------
+        if (
+            not selected_records
+            and repair
+            and component_type
+            and self._model_exists("reparacion.intervencion.detalle")
+        ):
+            Detail = request.env[
+                "reparacion.intervencion.detalle"
+            ].sudo()
+
+            domain = [
+                ("line_id.reparacion_id", "=", repair.id),
+                ("accion_sub", "=", "cambiado"),
+                ("subparte_id", "!=", False),
+            ]
+
+            # componente.subparte tiene tipo_id según el modelo del checklist.
+            if (
+                "componente.subparte" in request.env.registry
+                and "tipo_id"
+                in request.env["componente.subparte"]._fields
+            ):
+                domain.append(
+                    (
+                        "subparte_id.tipo_id",
+                        "=",
+                        component_type.id,
+                    )
+                )
+
+            details = Detail.search(
+                domain,
+                order="id asc",
+            )
+
+            selected_records = details.mapped(
+                "subparte_id"
+            )
+
+        # Eliminar duplicados conservando el orden.
+        seen_ids = set()
         selected = []
-        if "subpartes_ids" in item._fields:
-            selected = [
-                self._serialize_subpart(subpart)
-                for subpart in item.subpartes_ids
-                if subpart
-            ]
 
+        for subpart in selected_records:
+            if not subpart or subpart.id in seen_ids:
+                continue
+
+            seen_ids.add(subpart.id)
+            selected.append(
+                self._serialize_subpart(
+                    subpart
+                )
+            )
+
+        # ------------------------------------------------------------
+        # CATÁLOGO DISPONIBLE
+        # Se conserva para compatibilidad, aunque Ventas actualmente
+        # muestra únicamente selected_subparts.
+        # ------------------------------------------------------------
         available = []
-        if component_type and self._model_exists("componente.subparte"):
-            Subpart = request.env["componente.subparte"].sudo()
-            domain = [("tipo_id", "=", component_type.id)]
-            if "active" in Subpart._fields:
-                domain.append(("active", "=", True))
-            available = [
-                self._serialize_subpart(subpart)
-                for subpart in Subpart.search(domain, order="name asc, id asc")
-                if subpart
+
+        if (
+            component_type
+            and self._model_exists(
+                "componente.subparte"
+            )
+        ):
+            Subpart = request.env[
+                "componente.subparte"
+            ].sudo()
+
+            domain = [
+                (
+                    "tipo_id",
+                    "=",
+                    component_type.id,
+                ),
             ]
 
-        if not available and selected:
-            available = list(selected)
+            if "active" in Subpart._fields:
+                domain.append(
+                    (
+                        "active",
+                        "=",
+                        True,
+                    )
+                )
+
+            available_records = Subpart.search(
+                domain,
+                order="name asc, id asc",
+            )
+
+            available = [
+                self._serialize_subpart(
+                    subpart
+                )
+                for subpart
+                in available_records
+                if subpart
+            ]
 
         _logger.info(
-            "[SALES CHECKLIST] componente eval_id=%s tipo_id=%s estado=%s selected=%s available=%s",
+            "[SALES CHECKLIST] componente eval_id=%s repair_id=%s "
+            "tipo_id=%s estado=%s selected=%s available=%s",
             item.id,
+            repair.id if repair else False,
             component_type.id if component_type else False,
             self._record_code(state),
             len(selected),
@@ -643,15 +746,50 @@ class AppSalesController(AppBaseController):
         )
 
         return {
-            "id": item.id,
-            "component": self._m2o(item, "componente_tipo_id"),
-            "color": self._m2o(item, "color_id"),
-            "state": self._m2o(item, "estado_id"),
-            "state_code": self._record_code(state),
-            "requires_change": self._record_code(state) == "requiere_cambio",
-            "observations": self._field(item, "observaciones", "") or "",
-            "selected_subparts": selected,
-            "available_subparts": available,
+            "id":
+                item.id,
+
+            "component":
+                self._m2o(
+                    item,
+                    "componente_tipo_id",
+                ),
+
+            "color":
+                self._m2o(
+                    item,
+                    "color_id",
+                ),
+
+            "state":
+                self._m2o(
+                    item,
+                    "estado_id",
+                ),
+
+            "state_code":
+                self._record_code(
+                    state
+                ),
+
+            "requires_change":
+                self._record_code(
+                    state
+                ) == "requiere_cambio",
+
+            "observations":
+                self._field(
+                    item,
+                    "observaciones",
+                    "",
+                )
+                or "",
+
+            "selected_subparts":
+                selected,
+
+            "available_subparts":
+                available,
         }
 
     def _serialize_accessory(self, item):
@@ -660,11 +798,7 @@ class AppSalesController(AppBaseController):
 
         selected = []
         if "subparte_ids" in item._fields:
-            selected = [
-                self._serialize_subpart(subpart)
-                for subpart in item.subparte_ids
-                if subpart
-            ]
+            selected = [self._serialize_subpart(x) for x in item.subparte_ids]
 
         available = []
         if accessory_type and self._model_exists("accesorio.subparte"):
@@ -673,22 +807,9 @@ class AppSalesController(AppBaseController):
             if "active" in Subpart._fields:
                 domain.append(("active", "=", True))
             available = [
-                self._serialize_subpart(subpart)
-                for subpart in Subpart.search(domain, order="name asc, id asc")
-                if subpart
+                self._serialize_subpart(x)
+                for x in Subpart.search(domain, order="name asc, id asc")
             ]
-
-        if not available and selected:
-            available = list(selected)
-
-        _logger.info(
-            "[SALES CHECKLIST] accesorio eval_id=%s tipo_id=%s estado=%s selected=%s available=%s",
-            item.id,
-            accessory_type.id if accessory_type else False,
-            self._record_code(state),
-            len(selected),
-            len(available),
-        )
 
         return {
             "id": item.id,
@@ -2205,57 +2326,45 @@ class AppSalesController(AppBaseController):
         user, error = self._require_sales_user()
         if error:
             return error
+
         try:
             machine, repair = self._machine_and_repair(machine_id)
             if not machine:
                 return self._machine_not_found()
 
-            if not repair:
-                return self._json_response(
-                    {
-                        "success": True,
-                        "repair_id": False,
-                        "components": [],
-                        "accessories": [],
-                        "summary": {
-                            "components_total": 0,
-                            "components_completed": 0,
-                            "accessories_total": 0,
-                            "accessories_completed": 0,
-                        },
-                        "readonly": True,
-                    }
-                )
-
             components = (
                 [self._serialize_component(x) for x in repair.componente_eval_ids]
-                if "componente_eval_ids" in repair._fields
+                if repair and "componente_eval_ids" in repair._fields
                 else []
             )
             accessories = (
                 [self._serialize_accessory(x) for x in repair.accesorio_eval_ids]
-                if "accesorio_eval_ids" in repair._fields
+                if repair and "accesorio_eval_ids" in repair._fields
                 else []
             )
 
             return self._json_response(
                 {
                     "success": True,
-                    "repair_id": repair.id,
+                    "repair_id": repair.id if repair else False,
                     "components": components,
                     "accessories": accessories,
                     "summary": {
                         "components_total": len(components),
-                        "components_completed": sum(1 for x in components if x.get("state")),
+                        "components_completed": sum(
+                            1 for item in components if item.get("state")
+                        ),
                         "accessories_total": len(accessories),
-                        "accessories_completed": sum(1 for x in accessories if x.get("state")),
+                        "accessories_completed": sum(
+                            1 for item in accessories if item.get("state")
+                        ),
                     },
                     "readonly": True,
                 }
             )
         except Exception as exc:
             _logger.exception(
-                "[SALES CHECKLIST] Error para machine_id=%s",
+                "Error cargando checklist de ventas para máquina %s",
                 machine_id,
             )
             return self._error_response(exc)
