@@ -264,6 +264,15 @@ class SatSnmpCredential(models.Model):
         store=True,
     )
 
+    community_input = fields.Char(
+        string='Nueva community',
+        copy=False,
+        help=(
+            'Escriba aquí la community SNMP v1/v2c. '
+            'El valor se cifra antes de guardarse y este campo queda vacío.'
+        ),
+    )
+
     # ========================================================
     # SNMP V3
     # ========================================================
@@ -339,6 +348,15 @@ class SatSnmpCredential(models.Model):
         store=True,
     )
 
+    v3_auth_key_input = fields.Char(
+        string='Nueva clave autenticación',
+        copy=False,
+        help=(
+            'Clave temporal para SNMP v3. '
+            'Se cifra antes de guardarse y este campo queda vacío.'
+        ),
+    )
+
     # ========================================================
     # SNMP V3 PRIVACY
     # ========================================================
@@ -381,6 +399,15 @@ class SatSnmpCredential(models.Model):
         string='Clave privacidad configurada',
         compute='_compute_secret_states',
         store=True,
+    )
+
+    v3_priv_key_input = fields.Char(
+        string='Nueva clave privacidad',
+        copy=False,
+        help=(
+            'Clave temporal de privacidad SNMP v3. '
+            'Se cifra antes de guardarse y este campo queda vacío.'
+        ),
     )
 
     # ========================================================
@@ -906,9 +933,114 @@ class SatSnmpCredential(models.Model):
     # CREACIÓN
     # ========================================================
 
+    def _prepare_secret_input_vals(self, vals):
+        """
+        Convierte los campos editables temporales en valores cifrados.
+
+        Los campos *_input nunca conservan el secreto después de guardar.
+        """
+        vals = dict(vals or {})
+        secret_changed = False
+
+        community = _clean_text(
+            vals.pop(
+                'community_input',
+                False,
+            )
+        )
+
+        if community:
+            vals.update({
+                'community_encrypted':
+                    self._encrypt_secret(
+                        community
+                    ),
+
+                'community_hash':
+                    _hash_secret(
+                        community
+                    ),
+
+                'community_preview':
+                    _secret_preview(
+                        community
+                    ),
+            })
+
+            secret_changed = True
+
+        auth_key = _clean_text(
+            vals.pop(
+                'v3_auth_key_input',
+                False,
+            )
+        )
+
+        if auth_key:
+            vals.update({
+                'v3_auth_key_encrypted':
+                    self._encrypt_secret(
+                        auth_key
+                    ),
+
+                'v3_auth_key_hash':
+                    _hash_secret(
+                        auth_key
+                    ),
+
+                'v3_auth_key_preview':
+                    _secret_preview(
+                        auth_key
+                    ),
+            })
+
+            secret_changed = True
+
+        priv_key = _clean_text(
+            vals.pop(
+                'v3_priv_key_input',
+                False,
+            )
+        )
+
+        if priv_key:
+            vals.update({
+                'v3_priv_key_encrypted':
+                    self._encrypt_secret(
+                        priv_key
+                    ),
+
+                'v3_priv_key_hash':
+                    _hash_secret(
+                        priv_key
+                    ),
+
+                'v3_priv_key_preview':
+                    _secret_preview(
+                        priv_key
+                    ),
+            })
+
+            secret_changed = True
+
+        if secret_changed:
+            vals.update({
+                'secret_updated_at':
+                    fields.Datetime.now(),
+
+                'secret_updated_by':
+                    self.env.user.id,
+            })
+
+        return vals, secret_changed
+
     @api.model_create_multi
     def create(self, vals_list):
+        prepared_vals_list = []
+
         for vals in vals_list:
+            vals = dict(vals)
+
             if (
                 vals.get('name')
                 and not vals.get('code')
@@ -919,9 +1051,39 @@ class SatSnmpCredential(models.Model):
                     )
                 )
 
+            prepared_vals, secret_changed = (
+                self._prepare_secret_input_vals(
+                    vals
+                )
+            )
+
+            prepared_vals_list.append(
+                prepared_vals
+            )
+
         return super().create(
-            vals_list
+            prepared_vals_list
         )
+
+    def write(self, vals):
+        """
+        Permite escribir Community/Auth/Privacy directamente en el formulario
+        sin guardar el secreto en texto plano.
+        """
+        prepared_vals, secret_changed = (
+            self._prepare_secret_input_vals(
+                vals
+            )
+        )
+
+        result = super().write(
+            prepared_vals
+        )
+
+        if secret_changed:
+            self._touch_secret_revision()
+
+        return result
 
     # ========================================================
     # ACTUALIZAR REVISIONES
