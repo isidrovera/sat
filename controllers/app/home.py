@@ -147,11 +147,57 @@ class AppHomeController(AppBaseController):
             )
 
             # ====================================================
+            # APP AREAS / GROUP PERMISSIONS
+            # ====================================================
+
+            is_system = user.has_group(
+                "base.group_system"
+            )
+
+            is_sales = user.has_group(
+                "sat.Sat_ventas_group_user"
+            )
+
+            is_logistics = user.has_group(
+                "sat.sat_logistica_group_user"
+            )
+
+            is_technical = user.has_group(
+                "sat.sat_tecnica_group_user"
+            )
+
+            is_head = user.has_group(
+                "sat.sat_jefes_group_user"
+            )
+
+            is_commercial_authorizer = user.has_group(
+                "sat.group_reserva_comercial_autorizado"
+            )
+
+            sales_visible = bool(
+                is_sales
+                or is_head
+                or is_commercial_authorizer
+                or is_system
+            )
+
+            logistics_visible = bool(
+                is_logistics
+                or is_head
+                or is_system
+            )
+
+            # ====================================================
             # SERVICES
             # ====================================================
 
-            service_visible = (
-                self._can_read_model(
+            service_visible = bool(
+                (
+                    is_technical
+                    or is_head
+                    or is_system
+                )
+                and self._can_read_model(
                     "ticket.alquiler"
                 )
             )
@@ -288,8 +334,13 @@ class AppHomeController(AppBaseController):
             # REPAIRS
             # ====================================================
 
-            repair_visible = (
-                self._can_read_model(
+            repair_visible = bool(
+                (
+                    is_technical
+                    or is_head
+                    or is_system
+                )
+                and self._can_read_model(
                     "reparaciones.reparaciones"
                 )
             )
@@ -325,8 +376,13 @@ class AppHomeController(AppBaseController):
             # PERMISSIONS
             # ====================================================
 
-            permission_visible = (
-                self._can_read_model(
+            permission_visible = bool(
+                (
+                    is_technical
+                    or is_head
+                    or is_system
+                )
+                and self._can_read_model(
                     "mantenimiento.tecnico.ausencia"
                 )
             )
@@ -381,6 +437,16 @@ class AppHomeController(AppBaseController):
                     ),
 
                     "modules": {
+                        "sales": {
+                            "visible":
+                                sales_visible,
+                        },
+
+                        "logistics": {
+                            "visible":
+                                logistics_visible,
+                        },
+
                         "services": {
                             "visible":
                                 service_visible,

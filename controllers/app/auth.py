@@ -277,19 +277,21 @@ class AppAuthController(http.Controller):
         user,
     ):
         """
-        Determina el tipo de usuario y el rol principal
-        que utilizará la app móvil.
+        Devuelve el rol principal por compatibilidad y, además,
+        permisos independientes para cada área de la app.
 
-        Prioridad:
-        - Portal
-        - Gerencia / autorizados de reservas comerciales
-        - Jefes de área
+        Un usuario puede pertenecer a varios grupos al mismo tiempo.
+        Por eso Flutter no debe utilizar app_role como permiso único.
+
+        Grupos SAT:
         - Ventas
         - Técnica
-        - Usuario interno genérico
+        - Logística
+        - Jefes de Área
+        - Autorizados Reservas Comerciales
 
-        La respuesta es aditiva y no modifica la autenticación,
-        la sesión ni el flujo de 2FA.
+        Gerencia/autorizados comerciales NO reciben Logística
+        automáticamente. Logística conserva su permiso independiente.
         """
 
         user.ensure_one()
@@ -306,35 +308,73 @@ class AppAuthController(http.Controller):
             )
         )
 
+        is_system = bool(
+            user.has_group(
+                "base.group_system"
+            )
+        )
+
+        is_sales = bool(
+            user.has_group(
+                "sat.Sat_ventas_group_user"
+            )
+        )
+
+        is_technical = bool(
+            user.has_group(
+                "sat.sat_tecnica_group_user"
+            )
+        )
+
+        is_logistics = bool(
+            user.has_group(
+                "sat.sat_logistica_group_user"
+            )
+        )
+
+        is_head = bool(
+            user.has_group(
+                "sat.sat_jefes_group_user"
+            )
+        )
+
+        is_commercial_authorizer = bool(
+            user.has_group(
+                "sat.group_reserva_comercial_autorizado"
+            )
+        )
+
         if is_portal:
             return {
                 "user_type": "portal",
                 "app_role": "customer",
                 "is_internal": False,
                 "is_portal": True,
+                "access": {
+                    "sales": False,
+                    "logistics": False,
+                    "technical": False,
+                    "head": False,
+                    "commercial_authorizer": False,
+                    "system": False,
+                },
             }
 
         if is_internal:
-            if user.has_group(
-                "sat.group_reserva_comercial_autorizado"
-            ):
+            # app_role se conserva para compatibilidad con clientes
+            # anteriores. Los permisos reales son los flags de access.
+            if is_system:
                 app_role = "manager"
-
-            elif user.has_group(
-                "sat.sat_jefes_group_user"
-            ):
+            elif is_head:
                 app_role = "manager"
-
-            elif user.has_group(
-                "sat.Sat_ventas_group_user"
-            ):
+            elif is_commercial_authorizer:
+                app_role = "manager"
+            elif is_sales:
                 app_role = "sales"
-
-            elif user.has_group(
-                "sat.sat_tecnica_group_user"
-            ):
+            elif is_logistics:
+                app_role = "logistics"
+            elif is_technical:
                 app_role = "technician"
-
             else:
                 app_role = "internal"
 
@@ -343,6 +383,28 @@ class AppAuthController(http.Controller):
                 "app_role": app_role,
                 "is_internal": True,
                 "is_portal": False,
+                "access": {
+                    "sales": bool(
+                        is_sales
+                        or is_head
+                        or is_commercial_authorizer
+                        or is_system
+                    ),
+                    "logistics": bool(
+                        is_logistics
+                        or is_head
+                        or is_system
+                    ),
+                    "technical": bool(
+                        is_technical
+                        or is_head
+                        or is_system
+                    ),
+                    "head": is_head,
+                    "commercial_authorizer":
+                        is_commercial_authorizer,
+                    "system": is_system,
+                },
             }
 
         return {
@@ -350,6 +412,14 @@ class AppAuthController(http.Controller):
             "app_role": "unknown",
             "is_internal": False,
             "is_portal": False,
+            "access": {
+                "sales": False,
+                "logistics": False,
+                "technical": False,
+                "head": False,
+                "commercial_authorizer": False,
+                "system": False,
+            },
         }
 
     def _serialize_user(
@@ -446,6 +516,9 @@ class AppAuthController(http.Controller):
             ],
             "is_portal": access[
                 "is_portal"
+            ],
+            "access": access[
+                "access"
             ],
             "company": {
                 "id": company.id,
