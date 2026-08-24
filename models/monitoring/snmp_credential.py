@@ -240,21 +240,21 @@ class SatSnmpCredential(models.Model):
 
     community_encrypted = fields.Text(
         string='Community cifrada',
-        readonly=True,
+        readonly=False,
         copy=False,
         groups='base.group_system',
     )
 
     community_hash = fields.Char(
         string='Hash community',
-        readonly=True,
+        readonly=False,
         copy=False,
         groups='base.group_system',
     )
 
     community_preview = fields.Char(
         string='Community',
-        readonly=True,
+        readonly=False,
         copy=False,
     )
 
