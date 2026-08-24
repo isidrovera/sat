@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 
 import base64
+import io
 import logging
+
+from openpyxl import Workbook
 
 from odoo import fields, http
 from odoo.exceptions import AccessError, ValidationError
@@ -30,10 +33,13 @@ class AppSalesController(AppBaseController):
     TEST_MODEL = "sat.prueba.maquina"
     PART_MODEL = "solicitud.parte.tecnico.linea"
     INTERVENTION_MODEL = "reparacion.intervencion"
+    CLAIM_MODEL = "taller.incidencia"
+    MOVEMENT_MODEL = "sat.machine.movement"
 
     SALES_GROUP = "sat.Sat_ventas_group_user"
     MANAGER_GROUP = "sat.group_reserva_comercial_autorizado"
     HEAD_GROUP = "sat.sat_jefes_group_user"
+    LOGISTICS_GROUP = "sat.sat_logistica_group_user"
 
     ACTIVE_RESERVATION_STATES = ("separada", "especial", "confirmada")
     PROBLEM_STATES = ("con_problemas", "de_partes")
@@ -66,6 +72,16 @@ class AppSalesController(AppBaseController):
             "/api/app/sales/machines/<int:machine_id>/repair/tests",
             "/api/app/sales/machines/<int:machine_id>/repair/report",
             "/api/app/sales/photos/<int:photo_id>/image",
+            "/api/app/sales/claims",
+            "/api/app/sales/claims/<int:claim_id>",
+            "/api/app/sales/machines/<int:machine_id>/claims",
+            "/api/app/sales/machines/<int:machine_id>/movements",
+            "/api/app/sales/machines/<int:machine_id>/logistics/download",
+            "/api/app/sales/machines/<int:machine_id>/logistics/location",
+            "/api/app/sales/machines/<int:machine_id>/logistics/delivery",
+            "/api/app/sales/machines/<int:machine_id>/logistics/delivery/return",
+            "/api/app/sales/logistics/options",
+            "/api/app/sales/export/xlsx",
         ],
         type="http",
         auth="none",
@@ -218,6 +234,48 @@ class AppSalesController(AppBaseController):
             or self._has_group(user, self.SALES_GROUP)
             or self._has_group(user, self.HEAD_GROUP)
         )
+
+    def _is_logistics_user(self, user):
+        if request.env.is_superuser():
+            return True
+        return (
+            self._has_group(user, "base.group_system")
+            or self._has_group(user, self.LOGISTICS_GROUP)
+            or self._has_group(user, self.HEAD_GROUP)
+        )
+
+    def _is_sales_or_logistics_user(self, user):
+        return self._is_sales_user(user) or self._is_logistics_user(user)
+
+    def _require_sales_or_logistics_user(self):
+        user, error = self._require_user()
+        if error:
+            return user, error
+        if not self._is_sales_or_logistics_user(user):
+            return user, self._json_response(
+                {
+                    "success": False,
+                    "code": "SALES_LOGISTICS_ACCESS_DENIED",
+                    "message": "El usuario no tiene acceso a Ventas ni Logística.",
+                },
+                status=403,
+            )
+        return user, False
+
+    def _require_logistics_user(self):
+        user, error = self._require_user()
+        if error:
+            return user, error
+        if not self._is_logistics_user(user):
+            return user, self._json_response(
+                {
+                    "success": False,
+                    "code": "LOGISTICS_ACCESS_DENIED",
+                    "message": "El usuario no tiene permisos de Logística.",
+                },
+                status=403,
+            )
+        return user, False
 
     def _require_sales_user(self):
         user, error = self._require_user()
@@ -842,21 +900,19 @@ class AppSalesController(AppBaseController):
         RequestModel = request.env[self.REQUEST_MODEL].sudo()
         own = self._own_active_machines(user)
 
-        expiring = expired = in_repair = problems = test_alerts = 0
+        expiring = expired = in_repair = test_alerts = 0
         for machine in own:
             days = self._safe_int(self._field(machine, "reserva_dias_restantes", 0))
             is_expired = bool(self._field(machine, "reserva_vencida", False))
             deadline = self._field(machine, "reserva_fecha_limite", False)
+
             if is_expired:
                 expired += 1
             elif deadline and 0 <= days <= 2:
                 expiring += 1
 
-            tech_state = self._field(machine, "estado_ventas_id", False)
-            if tech_state == "en_revision":
+            if self._field(machine, "estado_ventas_id", False) == "en_revision":
                 in_repair += 1
-            if tech_state in self.PROBLEM_STATES:
-                problems += 1
 
             if "prueba_ids" in machine._fields and machine.prueba_ids:
                 latest = machine.prueba_ids.sorted(
@@ -874,29 +930,40 @@ class AppSalesController(AppBaseController):
                 ("state", "in", ["draft", "pending", "partial"]),
             ]
         )
+
+        active_domain = [("estado_ventas_id", "!=", self.DELIVERED_STATE)]
+
+        total = Machine.search_count(active_domain)
         available = Machine.search_count(
-            [
-                ("estado_ventas_id", "!=", self.DELIVERED_STATE),
-                ("reserva_estado", "=", "libre"),
-            ]
+            active_domain + [("disponibilidad_id", "=", "disponible")]
+        )
+        separated = Machine.search_count(
+            active_domain + [("disponibilidad_id", "=", "separada")]
+        )
+        problems = Machine.search_count(
+            active_domain + [("estado_ventas_id", "=", "con_problemas")]
+        )
+        parts = Machine.search_count(
+            active_domain + [("estado_ventas_id", "=", "de_partes")]
         )
         delivered = Machine.search_count(
-            [
-                ("estado_ventas_id", "=", self.DELIVERED_STATE),
-                ("reserva_asesora_id", "=", user.id),
-            ]
+            [("estado_ventas_id", "=", self.DELIVERED_STATE)]
         )
+
         return {
+            "total": total,
             "my_reservations": len(own),
             "available": available,
+            "separated": separated,
             "expiring": expiring,
             "expired": expired,
             "in_repair": in_repair,
             "technical_problems": problems,
+            "parts": parts,
             "tests_with_alerts": test_alerts,
             "pending_requests": pending,
             "delivered": delivered,
-            "attention_count": expiring + expired + problems + test_alerts + pending,
+            "attention_count": expiring + expired + test_alerts + pending,
         }
 
     @http.route(
@@ -1101,34 +1168,45 @@ class AppSalesController(AppBaseController):
 
     def _machine_domain(self, user, scope, search, tech, reservation, availability):
         domain = []
+
+        # "all" significa inventario activo. Las entregadas se consultan
+        # explícitamente con scope=delivered.
         if scope != "delivered":
             domain.append(("estado_ventas_id", "!=", self.DELIVERED_STATE))
 
         if scope == "mine":
             domain.append(("reserva_asesora_id", "=", user.id))
+
         elif scope == "available":
-            domain.append(("reserva_estado", "=", "libre"))
+            # Debe coincidir con el dashboard Odoo: la fuente de verdad es
+            # disponibilidad_id, no reserva_estado.
             domain.append(("disponibilidad_id", "=", "disponible"))
-            domain.append(("estado_ventas_id", "not in", list(self.PROBLEM_STATES)))
+
+        elif scope == "separated":
+            domain.append(("disponibilidad_id", "=", "separada"))
+
         elif scope in ("reserved", "expiring"):
             if not self._is_manager(user):
                 domain.append(("reserva_asesora_id", "=", user.id))
-            domain.append(("reserva_estado", "in", list(self.ACTIVE_RESERVATION_STATES)))
+            domain.append(
+                ("reserva_estado", "in", list(self.ACTIVE_RESERVATION_STATES))
+            )
             if scope == "expiring":
                 domain.append(("reserva_fecha_limite", "!=", False))
+
         elif scope == "problems":
-            if not self._is_manager(user):
-                domain.append(("reserva_asesora_id", "=", user.id))
             domain.append(("estado_ventas_id", "=", "con_problemas"))
+
         elif scope == "parts":
-            if not self._is_manager(user):
-                domain.append(("reserva_asesora_id", "=", user.id))
             domain.append(("estado_ventas_id", "=", "de_partes"))
+
         elif scope == "delivered":
             domain.append(("estado_ventas_id", "=", self.DELIVERED_STATE))
-            if not self._is_manager(user):
-                domain.append(("reserva_asesora_id", "=", user.id))
-        elif scope != "all":
+
+        elif scope == "all":
+            pass
+
+        else:
             domain.append(("reserva_asesora_id", "=", user.id))
 
         if tech:
@@ -1137,8 +1215,10 @@ class AppSalesController(AppBaseController):
             domain.append(("reserva_estado", "=", reservation))
         if availability:
             domain.append(("disponibilidad_id", "=", availability))
+
         if search:
             domain += [
+                "|",
                 "|",
                 "|",
                 "|",
@@ -1146,7 +1226,9 @@ class AppSalesController(AppBaseController):
                 ("importacion", "ilike", search),
                 ("cliente_id.name", "ilike", search),
                 ("name.name", "ilike", search),
+                ("factura_venta", "ilike", search),
             ]
+
         return domain
 
     @http.route(
@@ -2366,4 +2448,1075 @@ class AppSalesController(AppBaseController):
                 "Error generando reporte de reparación para Ventas. machine_id=%s",
                 machine_id,
             )
+            return self._error_response(exc)
+
+    # ============================================================
+    # CLAIMS / INCIDENCIAS
+    # ============================================================
+
+    def _serialize_claim(self, claim, detail=False):
+        state = self._selection(claim, "estado")
+        priority = self._selection(claim, "prioridad")
+        claim_type = self._selection(claim, "tipo_reclamo")
+        result = {
+            "id": claim.id,
+            "name": self._field(claim, "name", "") or "",
+            "machine": self._m2o(claim, "equipo_id"),
+            "serial": self._field(claim, "serie", "") or "",
+            "model": self._field(claim, "modelo_equipo", "") or "",
+            "customer": self._m2o(claim, "cliente_id"),
+            "sales_invoice": self._field(claim, "factura_venta", "") or "",
+            "delivery_date": self._date(self._field(claim, "fecha_entrega", False)),
+            "reported_at": self._datetime(self._field(claim, "fecha_hora", False)),
+            "priority": priority["value"],
+            "priority_label": priority["label"],
+            "claim_type": claim_type["value"],
+            "claim_type_label": claim_type["label"],
+            "state": state["value"],
+            "state_label": state["label"],
+            "days_since_delivery": self._safe_int(
+                self._field(claim, "dias_desde_entrega", 0)
+            ),
+            "within_deadline": bool(self._field(claim, "dentro_plazo", False)),
+            "deadline": self._date(
+                self._field(claim, "fecha_limite_reclamo", False)
+            ),
+            "summary_state": self._field(claim, "resumen_estado", "") or "",
+            "traffic_light": self._field(claim, "semaforo", "") or "",
+        }
+
+        if detail:
+            result.update(
+                {
+                    "description": self._field(claim, "descripcion", "") or "",
+                    "customer_comments": self._field(
+                        claim, "comentarios_cliente", ""
+                    ) or "",
+                    "repair": self._m2o(claim, "reparacion_id"),
+                    "technician": self._field(claim, "tecnico_nombre", "") or "",
+                    "repair_state": self._field(claim, "estado_reparacion", "") or "",
+                    "repair_quality": self._field(
+                        claim, "calidad_reparacion", ""
+                    ) or "",
+                    "technical_report": self._field(
+                        claim, "informe_tecnico", ""
+                    ) or "",
+                    "repair_observations": self._field(
+                        claim, "observaciones_reparacion", ""
+                    ) or "",
+                    "alert_title": self._field(claim, "alerta_titulo", "") or "",
+                    "alert_summary": self._field(
+                        claim, "alerta_resumen", ""
+                    ) or "",
+                }
+            )
+        return result
+
+    @http.route(
+        "/api/app/sales/claims",
+        type="http",
+        auth="public",
+        methods=["GET", "POST"],
+        csrf=False,
+        save_session=True,
+    )
+    def sales_claims(self, **kwargs):
+        user, error = self._require_sales_user()
+        if error:
+            return error
+
+        try:
+            Claim = request.env[self.CLAIM_MODEL]
+
+            if request.httprequest.method == "POST":
+                data = self._get_json_body()
+                machine_id = self._safe_int(data.get("machine_id"), 0)
+                if not machine_id:
+                    return self._json_response(
+                        {
+                            "success": False,
+                            "code": "MACHINE_REQUIRED",
+                            "message": "Debe indicar la máquina del reclamo.",
+                        },
+                        status=400,
+                    )
+
+                machine = self._get_machine(machine_id, sudo_read=True)
+                if not machine:
+                    return self._machine_not_found()
+
+                vals = {
+                    "tipo": "reclamo",
+                    "equipo_id": machine.id,
+                    "prioridad": data.get("priority") or "baja",
+                    "descripcion": data.get("description") or False,
+                    "comentarios_cliente": data.get("customer_comments") or False,
+                    "tipo_reclamo": data.get("claim_type") or False,
+                }
+
+                claim = Claim.create(vals)
+                return self._json_response(
+                    {
+                        "success": True,
+                        "claim": self._serialize_claim(
+                            claim.sudo(), detail=True
+                        ),
+                    },
+                    status=201,
+                )
+
+            args = request.httprequest.args
+            machine_id = self._safe_int(args.get("machine_id"), 0)
+            state = (args.get("state", "") or "").strip()
+            search = (args.get("search", "") or "").strip()
+            limit = self._limit(args.get("limit"))
+            offset = self._offset(args.get("offset"))
+
+            domain = [("tipo", "=", "reclamo")]
+            if machine_id:
+                domain.append(("equipo_id", "=", machine_id))
+            if state:
+                domain.append(("estado", "=", state))
+            if search:
+                domain += [
+                    "|",
+                    "|",
+                    ("name", "ilike", search),
+                    ("serie", "ilike", search),
+                    ("cliente_id.name", "ilike", search),
+                ]
+
+            ClaimRead = Claim.sudo()
+            total = ClaimRead.search_count(domain)
+            records = ClaimRead.search(
+                domain,
+                order="fecha_hora desc, id desc",
+                limit=limit,
+                offset=offset,
+            )
+
+            return self._json_response(
+                {
+                    "success": True,
+                    "total": total,
+                    "limit": limit,
+                    "offset": offset,
+                    "items": [
+                        self._serialize_claim(x, detail=False)
+                        for x in records
+                    ],
+                }
+            )
+        except Exception as exc:
+            return self._error_response(exc)
+
+    @http.route(
+        "/api/app/sales/claims/<int:claim_id>",
+        type="http",
+        auth="public",
+        methods=["GET"],
+        csrf=False,
+        readonly=True,
+        save_session=True,
+    )
+    def sales_claim_detail(self, claim_id, **kwargs):
+        user, error = self._require_sales_user()
+        if error:
+            return error
+        try:
+            claim = request.env[self.CLAIM_MODEL].sudo().search(
+                [("id", "=", claim_id), ("tipo", "=", "reclamo")],
+                limit=1,
+            )
+            if not claim:
+                return self._json_response(
+                    {
+                        "success": False,
+                        "code": "CLAIM_NOT_FOUND",
+                        "message": "El reclamo solicitado no existe.",
+                    },
+                    status=404,
+                )
+            return self._json_response(
+                {
+                    "success": True,
+                    "claim": self._serialize_claim(claim, detail=True),
+                }
+            )
+        except Exception as exc:
+            return self._error_response(exc)
+
+    @http.route(
+        "/api/app/sales/machines/<int:machine_id>/claims",
+        type="http",
+        auth="public",
+        methods=["GET"],
+        csrf=False,
+        readonly=True,
+        save_session=True,
+    )
+    def sales_machine_claims(self, machine_id, **kwargs):
+        user, error = self._require_sales_user()
+        if error:
+            return error
+        try:
+            machine = self._get_machine(machine_id, sudo_read=True)
+            if not machine:
+                return self._machine_not_found()
+
+            claims = request.env[self.CLAIM_MODEL].sudo().search(
+                [
+                    ("equipo_id", "=", machine.id),
+                    ("tipo", "=", "reclamo"),
+                ],
+                order="fecha_hora desc, id desc",
+            )
+
+            return self._json_response(
+                {
+                    "success": True,
+                    "machine_id": machine.id,
+                    "items": [
+                        self._serialize_claim(x, detail=False)
+                        for x in claims
+                    ],
+                }
+            )
+        except Exception as exc:
+            return self._error_response(exc)
+
+    # ============================================================
+    # LOGISTICS / MOVEMENTS
+    # ============================================================
+
+    def _movement_selection_label(self, movement, field_name):
+        selection = self._selection(movement, field_name)
+        return selection["label"]
+
+    def _serialize_movement(self, movement):
+        movement_type = self._selection(movement, "movement_type")
+        return {
+            "id": movement.id,
+            "type": movement_type["value"],
+            "type_label": movement_type["label"],
+            "event_date": self._datetime(
+                self._field(movement, "event_date", False)
+            ),
+            "user": self._m2o(movement, "user_id"),
+            "customer": self._m2o(movement, "customer_id"),
+            "invoice": self._field(movement, "invoice_number", "") or "",
+            "delivery_date": self._date(
+                self._field(movement, "delivery_date", False)
+            ),
+            "previous_technical_state": self._field(
+                movement, "previous_technical_state", ""
+            ) or "",
+            "previous_technical_state_label": self._field(
+                movement, "previous_technical_state_label", ""
+            ) or "",
+            "new_technical_state": self._field(
+                movement, "new_technical_state", ""
+            ) or "",
+            "new_technical_state_label": self._field(
+                movement, "new_technical_state_label", ""
+            ) or "",
+            "previous_availability": self._field(
+                movement, "previous_availability", ""
+            ) or "",
+            "previous_availability_label": self._field(
+                movement, "previous_availability_label", ""
+            ) or "",
+            "new_availability": self._field(
+                movement, "new_availability", ""
+            ) or "",
+            "new_availability_label": self._field(
+                movement, "new_availability_label", ""
+            ) or "",
+            "previous_location": self._field(
+                movement, "previous_location", ""
+            ) or "",
+            "previous_location_label": self._field(
+                movement, "previous_location_label", ""
+            ) or "",
+            "new_location": self._field(
+                movement, "new_location", ""
+            ) or "",
+            "new_location_label": self._field(
+                movement, "new_location_label", ""
+            ) or "",
+            "ingress_state": self._field(
+                movement, "ingress_state", ""
+            ) or "",
+            "ingress_source": self._field(
+                movement, "ingress_source", ""
+            ) or "",
+            "observation": self._field(movement, "observation", "") or "",
+            "reference": self._field(movement, "reference", "") or "",
+        }
+
+    def _selection_values(self, model, field_name):
+        field = model._fields.get(field_name)
+        if not field:
+            return []
+        try:
+            selection = field._description_selection(model.env)
+        except Exception:
+            selection = field.selection or []
+            if callable(selection):
+                selection = selection(model)
+        return [
+            {"value": value, "label": label}
+            for value, label in (selection or [])
+        ]
+
+    def _validate_selection_value(self, model, field_name, value):
+        allowed = {
+            item["value"]
+            for item in self._selection_values(model, field_name)
+        }
+        return value in allowed
+
+    def _movement_create_after_change(
+        self,
+        machine,
+        movement_type,
+        user,
+        previous,
+        *,
+        event_date=None,
+        observation=None,
+        reference=None,
+        invoice_number=None,
+        delivery_date=None,
+    ):
+        Movement = request.env[self.MOVEMENT_MODEL].sudo()
+
+        vals = {
+            "machine_id": machine.id,
+            "movement_type": movement_type,
+            "event_date": event_date or fields.Datetime.now(),
+            "user_id": user.id,
+            "customer_id": (
+                machine.cliente_id.id
+                if "cliente_id" in machine._fields and machine.cliente_id
+                else False
+            ),
+            "invoice_number": (
+                invoice_number
+                if invoice_number is not None
+                else self._field(machine, "factura_venta", False)
+            ),
+            "delivery_date": (
+                delivery_date
+                if delivery_date is not None
+                else self._field(machine, "fecha_entrega", False)
+            ),
+            "previous_technical_state": previous.get("technical_state") or False,
+            "new_technical_state": self._field(
+                machine, "estado_ventas_id", False
+            ) or False,
+            "previous_availability": previous.get("availability") or False,
+            "new_availability": self._field(
+                machine, "disponibilidad_id", False
+            ) or False,
+            "previous_location": previous.get("location") or False,
+            "new_location": self._field(machine, "ubicacion_id", False) or False,
+            "previous_technical_state_label": previous.get(
+                "technical_state_label"
+            ) or "",
+            "new_technical_state_label": self._selection(
+                machine, "estado_ventas_id"
+            )["label"],
+            "previous_availability_label": previous.get(
+                "availability_label"
+            ) or "",
+            "new_availability_label": self._selection(
+                machine, "disponibilidad_id"
+            )["label"],
+            "previous_location_label": previous.get("location_label") or "",
+            "new_location_label": self._selection(
+                machine, "ubicacion_id"
+            )["label"],
+            "ingress_state": self._field(
+                machine, "ingreso_estado", False
+            ) or False,
+            "ingress_source": self._field(
+                machine, "ingreso_fuente", False
+            ) or False,
+            "observation": observation or False,
+            "reference": reference or False,
+        }
+
+        return Movement.create(vals)
+
+    def _machine_snapshot(self, machine):
+        return {
+            "technical_state": self._field(
+                machine, "estado_ventas_id", False
+            ),
+            "technical_state_label": self._selection(
+                machine, "estado_ventas_id"
+            )["label"],
+            "availability": self._field(
+                machine, "disponibilidad_id", False
+            ),
+            "availability_label": self._selection(
+                machine, "disponibilidad_id"
+            )["label"],
+            "location": self._field(machine, "ubicacion_id", False),
+            "location_label": self._selection(
+                machine, "ubicacion_id"
+            )["label"],
+        }
+
+    @http.route(
+        "/api/app/sales/logistics/options",
+        type="http",
+        auth="public",
+        methods=["GET"],
+        csrf=False,
+        readonly=True,
+        save_session=True,
+    )
+    def sales_logistics_options(self, **kwargs):
+        user, error = self._require_sales_or_logistics_user()
+        if error:
+            return error
+        try:
+            Machine = request.env[self.MACHINE_MODEL]
+            return self._json_response(
+                {
+                    "success": True,
+                    "locations": self._selection_values(
+                        Machine, "ubicacion_id"
+                    ),
+                    "ingress_states": self._selection_values(
+                        Machine, "ingreso_estado"
+                    ),
+                    "ingress_sources": self._selection_values(
+                        Machine, "ingreso_fuente"
+                    ),
+                    "technical_states": self._selection_values(
+                        Machine, "estado_ventas_id"
+                    ),
+                }
+            )
+        except Exception as exc:
+            return self._error_response(exc)
+
+    @http.route(
+        "/api/app/sales/machines/<int:machine_id>/movements",
+        type="http",
+        auth="public",
+        methods=["GET"],
+        csrf=False,
+        readonly=True,
+        save_session=True,
+    )
+    def sales_machine_movements(self, machine_id, **kwargs):
+        user, error = self._require_sales_or_logistics_user()
+        if error:
+            return error
+        try:
+            machine = self._get_machine(machine_id, sudo_read=True)
+            if not machine:
+                return self._machine_not_found()
+
+            Movement = request.env[self.MOVEMENT_MODEL].sudo()
+            records = Movement.search(
+                [("machine_id", "=", machine.id)],
+                order="event_date desc, id desc",
+            )
+            return self._json_response(
+                {
+                    "success": True,
+                    "machine_id": machine.id,
+                    "items": [
+                        self._serialize_movement(x)
+                        for x in records
+                    ],
+                }
+            )
+        except Exception as exc:
+            return self._error_response(exc)
+
+    @http.route(
+        "/api/app/sales/machines/<int:machine_id>/logistics/download",
+        type="http",
+        auth="public",
+        methods=["POST"],
+        csrf=False,
+        save_session=True,
+    )
+    def sales_logistics_download(self, machine_id, **kwargs):
+        user, error = self._require_logistics_user()
+        if error:
+            return error
+        try:
+            machine = self._get_machine(machine_id, sudo_read=False)
+            if not machine:
+                return self._machine_not_found()
+
+            data = self._get_json_body()
+            ingress_state = data.get("ingress_state") or "ok_no_obs"
+            ingress_source = data.get("ingress_source") or "manual"
+            location = data.get("location") or False
+
+            Machine = request.env[self.MACHINE_MODEL]
+            if not self._validate_selection_value(
+                Machine, "ingreso_estado", ingress_state
+            ):
+                return self._json_response(
+                    {
+                        "success": False,
+                        "code": "INVALID_INGRESS_STATE",
+                        "message": "El estado de ingreso no es válido.",
+                    },
+                    status=400,
+                )
+            if not self._validate_selection_value(
+                Machine, "ingreso_fuente", ingress_source
+            ):
+                return self._json_response(
+                    {
+                        "success": False,
+                        "code": "INVALID_INGRESS_SOURCE",
+                        "message": "La fuente de ingreso no es válida.",
+                    },
+                    status=400,
+                )
+            if location and not self._validate_selection_value(
+                Machine, "ubicacion_id", location
+            ):
+                return self._json_response(
+                    {
+                        "success": False,
+                        "code": "INVALID_LOCATION",
+                        "message": "La ubicación indicada no es válida.",
+                    },
+                    status=400,
+                )
+
+            previous = self._machine_snapshot(machine)
+
+            vals = {
+                "check_ingreso": True,
+                "ingreso_estado": ingress_state,
+                "ingreso_fecha": fields.Datetime.now(),
+                "ingreso_fuente": ingress_source,
+            }
+            if location:
+                vals["ubicacion_id"] = location
+
+            machine.write(vals)
+
+            movement = self._movement_create_after_change(
+                machine,
+                "download",
+                user,
+                previous,
+                observation=data.get("observation"),
+                reference=data.get("reference"),
+            )
+
+            return self._json_response(
+                {
+                    "success": True,
+                    "machine": self._serialize_machine(
+                        machine.sudo(), user, detail=True
+                    ),
+                    "movement": self._serialize_movement(movement),
+                }
+            )
+        except Exception as exc:
+            return self._error_response(exc)
+
+    @http.route(
+        "/api/app/sales/machines/<int:machine_id>/logistics/location",
+        type="http",
+        auth="public",
+        methods=["POST"],
+        csrf=False,
+        save_session=True,
+    )
+    def sales_logistics_location(self, machine_id, **kwargs):
+        user, error = self._require_logistics_user()
+        if error:
+            return error
+        try:
+            machine = self._get_machine(machine_id, sudo_read=False)
+            if not machine:
+                return self._machine_not_found()
+
+            data = self._get_json_body()
+            new_location = data.get("location")
+            Machine = request.env[self.MACHINE_MODEL]
+
+            if not new_location or not self._validate_selection_value(
+                Machine, "ubicacion_id", new_location
+            ):
+                return self._json_response(
+                    {
+                        "success": False,
+                        "code": "INVALID_LOCATION",
+                        "message": "Debe indicar una ubicación válida.",
+                    },
+                    status=400,
+                )
+
+            if self._field(machine, "ubicacion_id", False) == new_location:
+                return self._json_response(
+                    {
+                        "success": False,
+                        "code": "SAME_LOCATION",
+                        "message": "La máquina ya se encuentra en esa ubicación.",
+                    },
+                    status=400,
+                )
+
+            previous = self._machine_snapshot(machine)
+            machine.write({"ubicacion_id": new_location})
+
+            movement = self._movement_create_after_change(
+                machine,
+                "location",
+                user,
+                previous,
+                observation=data.get("observation"),
+                reference=data.get("reference"),
+            )
+
+            return self._json_response(
+                {
+                    "success": True,
+                    "machine": self._serialize_machine(
+                        machine.sudo(), user, detail=True
+                    ),
+                    "movement": self._serialize_movement(movement),
+                }
+            )
+        except Exception as exc:
+            return self._error_response(exc)
+
+    @http.route(
+        "/api/app/sales/machines/<int:machine_id>/logistics/delivery",
+        type="http",
+        auth="public",
+        methods=["POST"],
+        csrf=False,
+        save_session=True,
+    )
+    def sales_logistics_delivery(self, machine_id, **kwargs):
+        user, error = self._require_logistics_user()
+        if error:
+            return error
+        try:
+            machine = self._get_machine(machine_id, sudo_read=False)
+            if not machine:
+                return self._machine_not_found()
+
+            if self._field(machine, "estado_ventas_id", False) == self.DELIVERED_STATE:
+                return self._json_response(
+                    {
+                        "success": False,
+                        "code": "ALREADY_DELIVERED",
+                        "message": "La máquina ya figura como entregada.",
+                    },
+                    status=400,
+                )
+
+            data = self._get_json_body()
+            invoice = (data.get("invoice") or "").strip()
+            delivery_date_raw = data.get("delivery_date")
+
+            if not invoice:
+                return self._json_response(
+                    {
+                        "success": False,
+                        "code": "INVOICE_REQUIRED",
+                        "message": "Debe registrar el número de factura.",
+                    },
+                    status=400,
+                )
+            if not delivery_date_raw:
+                return self._json_response(
+                    {
+                        "success": False,
+                        "code": "DELIVERY_DATE_REQUIRED",
+                        "message": "Debe registrar la fecha de entrega.",
+                    },
+                    status=400,
+                )
+
+            try:
+                delivery_date = fields.Date.to_date(delivery_date_raw)
+            except Exception:
+                delivery_date = False
+
+            if not delivery_date:
+                return self._json_response(
+                    {
+                        "success": False,
+                        "code": "INVALID_DELIVERY_DATE",
+                        "message": "La fecha de entrega no es válida.",
+                    },
+                    status=400,
+                )
+
+            previous = self._machine_snapshot(machine)
+
+            vals = {
+                "factura_venta": invoice,
+                "fecha_entrega": delivery_date,
+                "estado_ventas_id": self.DELIVERED_STATE,
+            }
+
+            customer_id = self._safe_int(data.get("customer_id"), 0)
+            if customer_id:
+                customer = request.env["res.partner"].browse(customer_id)
+                if customer.exists():
+                    vals["cliente_id"] = customer.id
+
+            machine.write(vals)
+
+            movement = self._movement_create_after_change(
+                machine,
+                "delivery",
+                user,
+                previous,
+                observation=data.get("observation"),
+                reference=data.get("reference"),
+                invoice_number=invoice,
+                delivery_date=delivery_date,
+            )
+
+            machine.message_post(
+                body=(
+                    "<p><strong>Entrega registrada desde la app</strong></p>"
+                    "<p>Factura: %s<br/>Fecha: %s<br/>Usuario: %s</p>"
+                    % (
+                        invoice,
+                        fields.Date.to_string(delivery_date),
+                        user.display_name,
+                    )
+                )
+            )
+
+            return self._json_response(
+                {
+                    "success": True,
+                    "machine": self._serialize_machine(
+                        machine.sudo(), user, detail=True
+                    ),
+                    "movement": self._serialize_movement(movement),
+                }
+            )
+        except Exception as exc:
+            return self._error_response(exc)
+
+    @http.route(
+        "/api/app/sales/machines/<int:machine_id>/logistics/delivery/return",
+        type="http",
+        auth="public",
+        methods=["POST"],
+        csrf=False,
+        save_session=True,
+    )
+    def sales_logistics_delivery_return(self, machine_id, **kwargs):
+        user, error = self._require_logistics_user()
+        if error:
+            return error
+        try:
+            machine = self._get_machine(machine_id, sudo_read=False)
+            if not machine:
+                return self._machine_not_found()
+
+            if self._field(machine, "estado_ventas_id", False) != self.DELIVERED_STATE:
+                return self._json_response(
+                    {
+                        "success": False,
+                        "code": "NOT_DELIVERED",
+                        "message": "Solo se puede regresar una máquina que figura como entregada.",
+                    },
+                    status=400,
+                )
+
+            data = self._get_json_body()
+            observation = (data.get("observation") or "").strip()
+            if not observation:
+                return self._json_response(
+                    {
+                        "success": False,
+                        "code": "RETURN_REASON_REQUIRED",
+                        "message": "Debe indicar el motivo del regreso.",
+                    },
+                    status=400,
+                )
+
+            Movement = request.env[self.MOVEMENT_MODEL].sudo()
+            last_delivery = Movement.search(
+                [
+                    ("machine_id", "=", machine.id),
+                    ("movement_type", "=", "delivery"),
+                ],
+                order="event_date desc, id desc",
+                limit=1,
+            )
+
+            restore_state = (
+                self._field(last_delivery, "previous_technical_state", False)
+                if last_delivery
+                else False
+            )
+
+            # Para entregas históricas anteriores al nuevo control de movimientos,
+            # la app debe indicar explícitamente qué estado restaurar.
+            if not restore_state:
+                restore_state = data.get("restore_technical_state") or False
+
+            Machine = request.env[self.MACHINE_MODEL]
+            if not restore_state or not self._validate_selection_value(
+                Machine, "estado_ventas_id", restore_state
+            ) or restore_state == self.DELIVERED_STATE:
+                return self._json_response(
+                    {
+                        "success": False,
+                        "code": "RESTORE_STATE_REQUIRED",
+                        "message": (
+                            "No se pudo determinar el estado anterior de la máquina. "
+                            "Debe indicar el estado técnico que se debe restaurar."
+                        ),
+                    },
+                    status=400,
+                )
+
+            new_location = data.get("location") or False
+            if new_location and not self._validate_selection_value(
+                Machine, "ubicacion_id", new_location
+            ):
+                return self._json_response(
+                    {
+                        "success": False,
+                        "code": "INVALID_LOCATION",
+                        "message": "La ubicación indicada no es válida.",
+                    },
+                    status=400,
+                )
+
+            previous = self._machine_snapshot(machine)
+            previous_invoice = self._field(machine, "factura_venta", False)
+            previous_delivery_date = self._field(
+                machine, "fecha_entrega", False
+            )
+
+            vals = {
+                "estado_ventas_id": restore_state,
+                "factura_venta": False,
+                "fecha_entrega": False,
+            }
+            if new_location:
+                vals["ubicacion_id"] = new_location
+
+            machine.write(vals)
+
+            movement = self._movement_create_after_change(
+                machine,
+                "delivery_return",
+                user,
+                previous,
+                observation=observation,
+                reference=data.get("reference"),
+                invoice_number=previous_invoice,
+                delivery_date=previous_delivery_date,
+            )
+
+            machine.message_post(
+                body=(
+                    "<p><strong>Entrega revertida desde la app</strong></p>"
+                    "<p>Motivo: %s<br/>Usuario: %s</p>"
+                    % (observation, user.display_name)
+                )
+            )
+
+            return self._json_response(
+                {
+                    "success": True,
+                    "machine": self._serialize_machine(
+                        machine.sudo(), user, detail=True
+                    ),
+                    "movement": self._serialize_movement(movement),
+                }
+            )
+        except Exception as exc:
+            return self._error_response(exc)
+
+    # ============================================================
+    # EXCEL EXPORT
+    # ============================================================
+
+    def _latest_test_for_machine(self, machine):
+        if not self._model_exists(self.TEST_MODEL):
+            return False
+        return request.env[self.TEST_MODEL].sudo().search(
+            [("maquina_id", "=", machine.id)],
+            order="fecha_ultima_actualizacion desc, id desc",
+            limit=1,
+        )
+
+    @http.route(
+        "/api/app/sales/export/xlsx",
+        type="http",
+        auth="public",
+        methods=["GET"],
+        csrf=False,
+        readonly=True,
+        save_session=True,
+    )
+    def sales_export_xlsx(self, **kwargs):
+        user, error = self._require_sales_user()
+        if error:
+            return error
+
+        try:
+            args = request.httprequest.args
+            scope = (args.get("scope", "all") or "all").strip()
+            search = (args.get("search", "") or "").strip()
+            tech = (args.get("technical_state", "") or "").strip()
+            reservation = (args.get("reservation_state", "") or "").strip()
+            availability = (args.get("availability", "") or "").strip()
+
+            domain = self._machine_domain(
+                user,
+                scope,
+                search,
+                tech,
+                reservation,
+                availability,
+            )
+
+            machines = request.env[self.MACHINE_MODEL].sudo().search(
+                domain,
+                order="importacion desc, serie_id asc, id asc",
+            )
+
+            workbook = Workbook()
+            worksheet = workbook.active
+            worksheet.title = "Máquinas"
+
+            headers = [
+                "Serie",
+                "Modelo",
+                "Marca",
+                "Importación",
+                "Contómetro",
+                "Estado técnico",
+                "Disponibilidad",
+                "Ubicación",
+                "Cliente",
+                "Asesora",
+                "Factura venta",
+                "Fecha entrega",
+                "Estado reserva",
+                "Fecha límite reserva",
+                "Estado prueba",
+                "Tóner Negro %",
+                "Tóner Cyan %",
+                "Tóner Magenta %",
+                "Tóner Amarillo %",
+            ]
+            worksheet.append(headers)
+
+            for machine in machines:
+                latest_test = self._latest_test_for_machine(machine)
+                customer = self._field(machine, "cliente_id", False)
+                advisor = self._field(machine, "reserva_asesora_id", False)
+
+                worksheet.append(
+                    [
+                        self._field(machine, "serie_id", "") or "",
+                        (
+                            machine.name.display_name
+                            if self._field(machine, "name", False)
+                            else ""
+                        ),
+                        self._field(machine, "marca", "") or "",
+                        self._field(machine, "importacion", "") or "",
+                        self._field(machine, "contometro", "") or "",
+                        self._selection(machine, "estado_ventas_id")["label"],
+                        self._selection(machine, "disponibilidad_id")["label"],
+                        self._selection(machine, "ubicacion_id")["label"],
+                        customer.display_name if customer else "",
+                        advisor.display_name if advisor else "",
+                        self._field(machine, "factura_venta", "") or "",
+                        self._date(
+                            self._field(machine, "fecha_entrega", False)
+                        ) or "",
+                        self._selection(machine, "reserva_estado")["label"],
+                        self._date(
+                            self._field(
+                                machine, "reserva_fecha_limite", False
+                            )
+                        ) or "",
+                        (
+                            self._selection(latest_test, "estado_prueba")["label"]
+                            if latest_test
+                            else ""
+                        ),
+                        (
+                            self._field(latest_test, "toner_negro", "")
+                            if latest_test
+                            else ""
+                        ),
+                        (
+                            self._field(latest_test, "toner_cyan", "")
+                            if latest_test
+                            else ""
+                        ),
+                        (
+                            self._field(latest_test, "toner_magenta", "")
+                            if latest_test
+                            else ""
+                        ),
+                        (
+                            self._field(latest_test, "toner_amarillo", "")
+                            if latest_test
+                            else ""
+                        ),
+                    ]
+                )
+
+            for column_cells in worksheet.columns:
+                max_length = 0
+                column_letter = column_cells[0].column_letter
+                for cell in column_cells:
+                    value = "" if cell.value is None else str(cell.value)
+                    max_length = max(max_length, len(value))
+                worksheet.column_dimensions[column_letter].width = min(
+                    max(max_length + 2, 10),
+                    45,
+                )
+
+            output = io.BytesIO()
+            workbook.save(output)
+            content = output.getvalue()
+
+            filename = "maquinas_ventas_%s.xlsx" % (
+                fields.Date.context_today(request.env.user).strftime("%Y%m%d")
+            )
+
+            return request.make_response(
+                content,
+                headers=[
+                    (
+                        "Content-Type",
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    ),
+                    (
+                        "Content-Disposition",
+                        'attachment; filename="%s"' % filename,
+                    ),
+                    ("Content-Length", str(len(content))),
+                ],
+            )
+        except Exception as exc:
             return self._error_response(exc)

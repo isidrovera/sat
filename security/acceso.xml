@@ -59,6 +59,14 @@
     <field name="category_id" ref="module_sat_category"/>
     <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
 </record>
-
+<record id="sat_logistica_group_user" model="res.groups">
+    <field name="name">Área logística taller</field>
+    <field name="category_id" ref="module_sat_category"/>
+    <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
+    <field name="comment">
+        Usuarios autorizados para registrar descargas,
+        cambios de ubicación, entregas y regresos de máquinas.
+    </field>
+</record>
     </data>
 </odoo>

@@ -340,3 +340,9 @@ access_sat_monitoring_alert_user,sat.monitoring.alert user,model_sat_monitoring_
 access_sat_monitoring_alert_system,sat.monitoring.alert system,model_sat_monitoring_alert,base.group_system,1,1,1,1
 access_sat_monitoring_device_feature_user,sat.monitoring.device.feature user,model_sat_monitoring_device_feature,base.group_user,1,0,0,0
 access_sat_monitoring_device_feature_system,sat.monitoring.device.feature system,model_sat_monitoring_device_feature,base.group_system,1,1,1,1
+access_sat_machine_movement_system,sat.machine.movement system,model_sat_machine_movement,base.group_system,1,1,1,1
+access_sat_machine_movement_logistica,sat.machine.movement logistica,model_sat_machine_movement,sat.sat_logistica_group_user,1,0,1,0
+access_sat_machine_movement_jefes,sat.machine.movement jefes,model_sat_machine_movement,sat.sat_jefes_group_user,1,1,1,0
+access_sat_machine_movement_ventas,sat.machine.movement ventas,model_sat_machine_movement,sat.Sat_ventas_group_user,1,0,0,0
+access_sat_machine_movement_tecnica,sat.machine.movement tecnica,model_sat_machine_movement,sat.sat_tecnica_group_user,1,0,0,0
+access_sat_machine_movement_autorizado,sat.machine.movement autorizado,model_sat_machine_movement,sat.group_reserva_comercial_autorizado,1,0,0,0
