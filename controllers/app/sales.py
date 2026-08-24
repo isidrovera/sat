@@ -1108,6 +1108,8 @@ class AppSalesController(AppBaseController):
             domain.append(("reserva_asesora_id", "=", user.id))
         elif scope == "available":
             domain.append(("reserva_estado", "=", "libre"))
+            domain.append(("disponibilidad_id", "=", "disponible"))
+            domain.append(("estado_ventas_id", "not in", list(self.PROBLEM_STATES)))
         elif scope in ("reserved", "expiring"):
             if not self._is_manager(user):
                 domain.append(("reserva_asesora_id", "=", user.id))
@@ -1117,7 +1119,11 @@ class AppSalesController(AppBaseController):
         elif scope == "problems":
             if not self._is_manager(user):
                 domain.append(("reserva_asesora_id", "=", user.id))
-            domain.append(("estado_ventas_id", "in", list(self.PROBLEM_STATES)))
+            domain.append(("estado_ventas_id", "=", "con_problemas"))
+        elif scope == "parts":
+            if not self._is_manager(user):
+                domain.append(("reserva_asesora_id", "=", user.id))
+            domain.append(("estado_ventas_id", "=", "de_partes"))
         elif scope == "delivered":
             domain.append(("estado_ventas_id", "=", self.DELIVERED_STATE))
             if not self._is_manager(user):
