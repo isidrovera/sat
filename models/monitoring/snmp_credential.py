@@ -657,75 +657,33 @@ class SatSnmpCredential(models.Model):
     @api.model
     def _get_master_key(self):
         """
-        Obtiene la clave maestra desde una variable de entorno.
+        Modo temporal SIN CIFRADO.
 
-        NUNCA se guarda la clave maestra dentro de esta tabla.
-
-        Variable requerida:
-
-            SAT_SNMP_MASTER_KEY
+        Se conserva el método por compatibilidad con el resto del modelo,
+        pero no se utiliza ninguna clave maestra.
         """
-        if Fernet is None:
-            raise UserError(
-                _(
-                    'No está instalada la librería Python '
-                    '"cryptography".\n\n'
-                    'Es necesaria para proteger las credenciales SNMP.'
-                )
-            )
-
-        master_key = os.environ.get(
-            MASTER_KEY_ENV
-        )
-
-        master_key = _clean_text(
-            master_key
-        )
-
-        if not master_key:
-            raise UserError(
-                _(
-                    'No está configurada la variable de entorno '
-                    '%s.\n\n'
-                    'Las credenciales SNMP no pueden cifrarse '
-                    'ni descifrarse sin la clave maestra.'
-                )
-                % MASTER_KEY_ENV
-            )
-
-        try:
-            key_bytes = master_key.encode(
-                'ascii'
-            )
-
-            # Fernet valida el formato.
-            Fernet(
-                key_bytes
-            )
-
-            return key_bytes
-
-        except Exception:
-            raise UserError(
-                _(
-                    'La variable %s no contiene una clave '
-                    'Fernet válida.'
-                )
-                % MASTER_KEY_ENV
-            )
+        return False
 
     @api.model
     def _get_cipher(self):
-        return Fernet(
-            self._get_master_key()
-        )
+        """
+        Modo temporal SIN CIFRADO.
+        """
+        return False
 
     # ========================================================
-    # CIFRAR
+    # GUARDAR SECRETO SIN CIFRAR
     # ========================================================
 
     @api.model
     def _encrypt_secret(self, value):
+        """
+        Modo temporal SIN CIFRADO.
+
+        El valor se guarda directamente en la base de datos.
+        Más adelante puede volver a activarse Fernet sin cambiar
+        la estructura general del modelo.
+        """
         value = _clean_text(
             value
         )
@@ -733,68 +691,22 @@ class SatSnmpCredential(models.Model):
         if not value:
             return False
 
-        cipher = self._get_cipher()
-
-        encrypted = cipher.encrypt(
-            value.encode('utf-8')
-        )
-
-        return encrypted.decode(
-            'ascii'
-        )
+        return value
 
     # ========================================================
-    # DESCIFRAR
+    # RECUPERAR SECRETO SIN DESCIFRAR
     # ========================================================
 
     @api.model
     def _decrypt_secret(self, encrypted_value):
-        encrypted_value = _clean_text(
+        """
+        Modo temporal SIN CIFRADO.
+
+        Devuelve directamente el valor almacenado.
+        """
+        return _clean_text(
             encrypted_value
         )
-
-        if not encrypted_value:
-            return ''
-
-        cipher = self._get_cipher()
-
-        try:
-            decrypted = cipher.decrypt(
-                encrypted_value.encode(
-                    'ascii'
-                )
-            )
-
-            return decrypted.decode(
-                'utf-8'
-            )
-
-        except InvalidToken:
-            _logger.error(
-                '[SNMP CREDENTIAL] No se pudo descifrar un secreto. '
-                'Posible cambio de SAT_SNMP_MASTER_KEY.'
-            )
-
-            raise UserError(
-                _(
-                    'No se pudo descifrar la credencial SNMP.\n\n'
-                    'Compruebe que SAT_SNMP_MASTER_KEY sea la misma '
-                    'clave utilizada cuando se guardó el secreto.'
-                )
-            )
-
-        except Exception as error:
-            _logger.exception(
-                '[SNMP CREDENTIAL] Error descifrando secreto: %s',
-                error,
-            )
-
-            raise UserError(
-                _(
-                    'Ocurrió un error al descifrar '
-                    'la credencial SNMP.'
-                )
-            )
 
     # ========================================================
     # VALIDACIONES
