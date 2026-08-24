@@ -54,6 +54,7 @@ class AppSalesController(AppBaseController):
             "/api/app/sales/summary",
             "/api/app/sales/alerts",
             "/api/app/sales/customers",
+            "/api/app/sales/advisors",
             "/api/app/sales/machines",
             "/api/app/sales/machines/<int:machine_id>",
             "/api/app/sales/machines/<int:machine_id>/reserve",
@@ -360,11 +361,38 @@ class AppSalesController(AppBaseController):
     def _get_main_repair(self, machine):
         if not self._model_exists(self.REPAIR_MODEL):
             return False
-        return request.env[self.REPAIR_MODEL].sudo().search(
-            [("maquina_id", "=", machine.id)],
+
+        Repair = request.env[self.REPAIR_MODEL].sudo()
+
+        repairs = Repair.search(
+            [
+                ("maquina_id", "=", machine.id),
+            ],
             order="create_date desc, id desc",
-            limit=1,
         )
+
+        if not repairs:
+            return False
+
+        # Primero buscamos la reparación más reciente
+        # que realmente tenga checklist técnico.
+        for repair in repairs:
+            has_components = (
+                "componente_eval_ids" in repair._fields
+                and bool(repair.componente_eval_ids)
+            )
+
+            has_accessories = (
+                "accesorio_eval_ids" in repair._fields
+                and bool(repair.accesorio_eval_ids)
+            )
+
+            if has_components or has_accessories:
+                return repair
+
+        # Si ninguna tiene checklist todavía,
+        # devolvemos simplemente la reparación más reciente.
+        return repairs[0]
 
     # ============================================================
     # CUSTOMER
@@ -1161,6 +1189,113 @@ class AppSalesController(AppBaseController):
             )
         except Exception as exc:
             return self._error_response(exc)
+
+
+    # ============================================================
+    # SALES ADVISORS
+    # ============================================================
+
+    @http.route(
+        "/api/app/sales/advisors",
+        type="http",
+        auth="public",
+        methods=["GET"],
+        csrf=False,
+        readonly=True,
+        save_session=True,
+    )
+    def sales_advisors(self, **kwargs):
+        user, error = self._require_sales_user()
+        if error:
+            return error
+
+        try:
+            args = request.httprequest.args
+            search = (
+                args.get(
+                    "search",
+                    "",
+                )
+                or ""
+            ).strip()
+
+            SalesGroup = request.env.ref(
+                self.SALES_GROUP,
+                raise_if_not_found=False,
+            )
+
+            if not SalesGroup:
+                return self._json_response(
+                    {
+                        "success": True,
+                        "total": 0,
+                        "items": [],
+                    }
+                )
+
+            users = request.env[
+                "res.users"
+            ].sudo().browse()
+
+            if "user_ids" in SalesGroup._fields:
+                users = SalesGroup.user_ids
+            elif "users" in SalesGroup._fields:
+                users = SalesGroup.users
+
+            users = users.filtered(
+                lambda item:
+                    item.active
+                    and not item.share
+            )
+
+            if search:
+                normalized = search.lower()
+
+                users = users.filtered(
+                    lambda item:
+                        normalized
+                        in (
+                            item.display_name
+                            or item.name
+                            or ""
+                        ).lower()
+                        or normalized
+                        in (
+                            item.login
+                            or ""
+                        ).lower()
+                )
+
+            users = users.sorted(
+                key=lambda item:
+                    (
+                        item.display_name
+                        or item.name
+                        or ""
+                    ).lower()
+            )
+
+            return self._json_response(
+                {
+                    "success": True,
+                    "total": len(users),
+                    "items": [
+                        {
+                            "id": item.id,
+                            "name":
+                                item.display_name
+                                or item.name
+                                or "",
+                        }
+                        for item in users
+                    ],
+                }
+            )
+
+        except Exception as exc:
+            return self._error_response(
+                exc
+            )
 
     # ============================================================
     # MACHINES
@@ -2013,33 +2148,116 @@ class AppSalesController(AppBaseController):
     )
     def sales_repair_checklist(self, machine_id, **kwargs):
         user, error = self._require_sales_user()
+
         if error:
             return error
+
         try:
-            machine, repair = self._machine_and_repair(machine_id)
+            machine, repair = self._machine_and_repair(
+                machine_id
+            )
+
             if not machine:
                 return self._machine_not_found()
-            components = (
-                [self._serialize_component(x) for x in repair.componente_eval_ids]
-                if repair and "componente_eval_ids" in repair._fields
-                else []
+
+            if not repair:
+                return self._json_response(
+                    {
+                        "success": True,
+                        "repair_id": False,
+                        "components": [],
+                        "accessories": [],
+                        "summary": {
+                            "components_total": 0,
+                            "components_completed": 0,
+                            "accessories_total": 0,
+                            "accessories_completed": 0,
+                        },
+                        "readonly": True,
+                    }
+                )
+
+            components = []
+
+            if (
+                "componente_eval_ids"
+                in repair._fields
+            ):
+                components = [
+                    self._serialize_component(
+                        item
+                    )
+                    for item
+                    in repair.componente_eval_ids
+                ]
+
+            accessories = []
+
+            if (
+                "accesorio_eval_ids"
+                in repair._fields
+            ):
+                accessories = [
+                    self._serialize_accessory(
+                        item
+                    )
+                    for item
+                    in repair.accesorio_eval_ids
+                ]
+
+            components_completed = sum(
+                1
+                for item in components
+                if item.get("state")
             )
-            accessories = (
-                [self._serialize_accessory(x) for x in repair.accesorio_eval_ids]
-                if repair and "accesorio_eval_ids" in repair._fields
-                else []
+
+            accessories_completed = sum(
+                1
+                for item in accessories
+                if item.get("state")
             )
+
             return self._json_response(
                 {
                     "success": True,
-                    "repair_id": repair.id if repair else False,
-                    "components": components,
-                    "accessories": accessories,
+
+                    "repair_id":
+                        repair.id,
+
+                    "components":
+                        components,
+
+                    "accessories":
+                        accessories,
+
+                    "summary": {
+                        "components_total":
+                            len(components),
+
+                        "components_completed":
+                            components_completed,
+
+                        "accessories_total":
+                            len(accessories),
+
+                        "accessories_completed":
+                            accessories_completed,
+                    },
+
                     "readonly": True,
                 }
             )
+
         except Exception as exc:
-            return self._error_response(exc)
+            _logger.exception(
+                "Error cargando checklist de ventas "
+                "para máquina %s",
+                machine_id,
+            )
+
+            return self._error_response(
+                exc
+            )
 
     @http.route(
         "/api/app/sales/machines/<int:machine_id>/repair/photos",
