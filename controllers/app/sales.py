@@ -616,34 +616,228 @@ class AppSalesController(AppBaseController):
         return {"id": rec.id, "name": rec.display_name, "code": self._record_code(rec)}
 
     def _serialize_component(self, item):
-        state = self._field(item, "estado_id", False)
+        state = self._field(
+            item,
+            "estado_id",
+            False,
+        )
+
+        component_type = self._field(
+            item,
+            "componente_tipo_id",
+            False,
+        )
+
+        # ------------------------------------------------------------
+        # SUBPARTES SELECCIONADAS POR EL TÉCNICO
+        # ------------------------------------------------------------
+
         selected = []
+
         if "subpartes_ids" in item._fields:
-            selected = [self._serialize_subpart(x) for x in item.subpartes_ids]
+            selected = [
+                self._serialize_subpart(subpart)
+                for subpart in item.subpartes_ids
+            ]
+
+        # ------------------------------------------------------------
+        # TODAS LAS SUBPARTES DISPONIBLES PARA ESTE COMPONENTE
+        # ------------------------------------------------------------
+
+        available = []
+
+        if (
+            component_type
+            and self._model_exists(
+                "componente.subparte"
+            )
+        ):
+            Subpart = request.env[
+                "componente.subparte"
+            ].sudo()
+
+            domain = [
+                (
+                    "tipo_id",
+                    "=",
+                    component_type.id,
+                ),
+            ]
+
+            # Solo aplicamos active si el modelo realmente
+            # dispone del campo.
+            if "active" in Subpart._fields:
+                domain.append(
+                    (
+                        "active",
+                        "=",
+                        True,
+                    )
+                )
+
+            available_records = Subpart.search(
+                domain,
+                order="name asc, id asc",
+            )
+
+            available = [
+                self._serialize_subpart(subpart)
+                for subpart in available_records
+            ]
+
         return {
             "id": item.id,
-            "component": self._m2o(item, "componente_tipo_id"),
-            "color": self._m2o(item, "color_id"),
-            "state": self._m2o(item, "estado_id"),
-            "state_code": self._record_code(state),
-            "requires_change": self._record_code(state) == "requiere_cambio",
-            "observations": self._field(item, "observaciones", "") or "",
-            "selected_subparts": selected,
+
+            "component":
+                self._m2o(
+                    item,
+                    "componente_tipo_id",
+                ),
+
+            "color":
+                self._m2o(
+                    item,
+                    "color_id",
+                ),
+
+            "state":
+                self._m2o(
+                    item,
+                    "estado_id",
+                ),
+
+            "state_code":
+                self._record_code(
+                    state
+                ),
+
+            "requires_change":
+                self._record_code(
+                    state
+                ) == "requiere_cambio",
+
+            "observations":
+                self._field(
+                    item,
+                    "observaciones",
+                    "",
+                )
+                or "",
+
+            "selected_subparts":
+                selected,
+
+            "available_subparts":
+                available,
         }
 
     def _serialize_accessory(self, item):
-        state = self._field(item, "estado_id", False)
+        state = self._field(
+            item,
+            "estado_id",
+            False,
+        )
+
+        accessory_type = self._field(
+            item,
+            "tipo_id",
+            False,
+        )
+
+        # ------------------------------------------------------------
+        # SUBPARTES SELECCIONADAS
+        # ------------------------------------------------------------
+
         selected = []
+
         if "subparte_ids" in item._fields:
-            selected = [self._serialize_subpart(x) for x in item.subparte_ids]
+            selected = [
+                self._serialize_subpart(subpart)
+                for subpart in item.subparte_ids
+            ]
+
+        # ------------------------------------------------------------
+        # SUBPARTES DISPONIBLES DEL ACCESORIO
+        # ------------------------------------------------------------
+
+        available = []
+
+        if (
+            accessory_type
+            and self._model_exists(
+                "accesorio.subparte"
+            )
+        ):
+            Subpart = request.env[
+                "accesorio.subparte"
+            ].sudo()
+
+            domain = [
+                (
+                    "tipo_id",
+                    "=",
+                    accessory_type.id,
+                ),
+            ]
+
+            if "active" in Subpart._fields:
+                domain.append(
+                    (
+                        "active",
+                        "=",
+                        True,
+                    )
+                )
+
+            available_records = Subpart.search(
+                domain,
+                order="name asc, id asc",
+            )
+
+            available = [
+                self._serialize_subpart(subpart)
+                for subpart in available_records
+            ]
+
         return {
-            "id": item.id,
-            "accessory": self._m2o(item, "tipo_id"),
-            "state": self._m2o(item, "estado_id"),
-            "state_code": self._record_code(state),
-            "requires_change": self._record_code(state) == "requiere_cambio",
-            "observations": self._field(item, "observaciones", "") or "",
-            "selected_subparts": selected,
+            "id":
+                item.id,
+
+            "accessory":
+                self._m2o(
+                    item,
+                    "tipo_id",
+                ),
+
+            "state":
+                self._m2o(
+                    item,
+                    "estado_id",
+                ),
+
+            "state_code":
+                self._record_code(
+                    state
+                ),
+
+            "requires_change":
+                self._record_code(
+                    state
+                ) == "requiere_cambio",
+
+            "observations":
+                self._field(
+                    item,
+                    "observaciones",
+                    "",
+                )
+                or "",
+
+            "selected_subparts":
+                selected,
+
+            "available_subparts":
+                available,
         }
 
     def _serialize_photo(self, photo):
