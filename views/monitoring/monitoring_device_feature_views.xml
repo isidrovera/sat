@@ -2,6 +2,10 @@
 <odoo>
     <data>
 
+        <!-- ========================================================= -->
+        <!-- SEARCH VIEW                                               -->
+        <!-- ========================================================= -->
+
         <record id="view_monitoring_device_feature_search" model="ir.ui.view">
             <field name="name">sat.monitoring.device.feature.search</field>
             <field name="model">sat.monitoring.device.feature</field>
@@ -9,12 +13,17 @@
 
                 <search string="Inventario Detectado">
 
+                    <!-- CAMPOS DE BÚSQUEDA -->
                     <field name="device_id"/>
                     <field name="partner_id"/>
                     <field name="code"/>
                     <field name="name"/>
                     <field name="model"/>
+                    <field name="oid"/>
+                    <field name="source_method"/>
+                    <field name="confidence"/>
 
+                    <!-- ESTADO -->
                     <filter name="present"
                             string="Presentes"
                             domain="[('present','=',True)]"/>
@@ -31,6 +40,44 @@
                             string="Revisión"
                             domain="[('requires_review','=',True)]"/>
 
+                    <separator/>
+
+                    <!-- DISCOVERY -->
+                    <filter name="dynamic_discovery"
+                            string="Discovery dinámico"
+                            domain="[('discovered_dynamically','=',True)]"/>
+
+                    <filter name="candidate"
+                            string="Candidatos"
+                            domain="[('confidence','=','candidate')]"/>
+
+                    <filter name="provisional"
+                            string="Provisionales"
+                            domain="[('confidence','=','provisional')]"/>
+
+                    <filter name="high_confidence"
+                            string="Alta confianza"
+                            domain="[('confidence','in',('high','very_high'))]"/>
+
+                    <separator/>
+
+                    <!-- TIPOS DE VALOR -->
+                    <filter name="type_integer"
+                            string="Enteros"
+                            domain="[('feature_type','=','integer')]"/>
+
+                    <filter name="type_numeric"
+                            string="Numéricos"
+                            domain="[('feature_type','=','numeric')]"/>
+
+                    <filter name="type_boolean"
+                            string="Sí / No"
+                            domain="[('feature_type','=','boolean')]"/>
+
+                    <filter name="type_text"
+                            string="Texto"
+                            domain="[('feature_type','=','text')]"/>
+
                     <group expand="0" string="Agrupar por">
 
                         <filter name="group_device"
@@ -45,6 +92,18 @@
                                 string="Subgrupo"
                                 context="{'group_by':'subgroup'}"/>
 
+                        <filter name="group_feature_type"
+                                string="Tipo"
+                                context="{'group_by':'feature_type'}"/>
+
+                        <filter name="group_confidence"
+                                string="Confianza"
+                                context="{'group_by':'confidence'}"/>
+
+                        <filter name="group_source_method"
+                                string="Método"
+                                context="{'group_by':'source_method'}"/>
+
                     </group>
 
                 </search>
@@ -52,6 +111,10 @@
             </field>
         </record>
 
+
+        <!-- ========================================================= -->
+        <!-- LIST VIEW                                                 -->
+        <!-- ========================================================= -->
 
         <record id="view_monitoring_device_feature_list" model="ir.ui.view">
             <field name="name">sat.monitoring.device.feature.list</field>
@@ -70,13 +133,26 @@
 
                     <field name="category"/>
 
+                    <field name="subgroup"
+                           optional="hide"/>
+
                     <field name="name"/>
 
-                    <field name="present"
-                           widget="boolean_toggle"
-                           readonly="1"/>
+                    <!-- IDENTIFICACIÓN TÉCNICA -->
+                    <field name="code"
+                           optional="show"/>
 
+                    <field name="oid"
+                           optional="show"/>
+
+                    <field name="feature_type"
+                           optional="show"/>
+
+                    <!-- VALORES -->
                     <field name="value_text"
+                           optional="show"/>
+
+                    <field name="value_integer"
                            optional="show"/>
 
                     <field name="value_numeric"
@@ -85,13 +161,41 @@
                     <field name="unit"
                            optional="show"/>
 
+                    <!-- ORIGEN / CLASIFICACIÓN -->
+                    <field name="source_method"
+                           optional="show"/>
+
+                    <field name="discovered_dynamically"
+                           optional="show"/>
+
+                    <field name="confidence"
+                           optional="show"/>
+
+                    <field name="observation_count"
+                           optional="show"/>
+
+                    <!-- ESTADO -->
+                    <field name="present"
+                           widget="boolean_toggle"
+                           readonly="1"/>
+
+                    <field name="requires_review"
+                           optional="hide"/>
+
+                    <field name="changed"
+                           optional="hide"/>
+
+                    <!-- INFORMACIÓN EXTRA -->
                     <field name="model"
                            optional="hide"/>
 
                     <field name="life_percent"
                            optional="hide"/>
 
-                    <field name="confidence"
+                    <field name="raw_value"
+                           optional="hide"/>
+
+                    <field name="first_seen"
                            optional="hide"/>
 
                     <field name="last_seen"
@@ -102,6 +206,10 @@
             </field>
         </record>
 
+
+        <!-- ========================================================= -->
+        <!-- FORM VIEW                                                 -->
+        <!-- ========================================================= -->
 
         <record id="view_monitoring_device_feature_form" model="ir.ui.view">
             <field name="name">sat.monitoring.device.feature.form</field>
@@ -122,20 +230,38 @@
                         <group>
 
                             <group>
-                                <field name="device_id" readonly="1"/>
+                                <field name="device_id"
+                                       readonly="1"/>
+
                                 <field name="category"/>
+
                                 <field name="subgroup"/>
+
                                 <field name="code"/>
+
                                 <field name="feature_type"/>
                             </group>
 
                             <group>
                                 <field name="present"/>
+
                                 <field name="installed"/>
+
                                 <field name="supported"/>
+
                                 <field name="confidence"/>
-                                <field name="first_seen" readonly="1"/>
-                                <field name="last_seen" readonly="1"/>
+
+                                <field name="discovered_dynamically"
+                                       readonly="1"/>
+
+                                <field name="observation_count"
+                                       readonly="1"/>
+
+                                <field name="first_seen"
+                                       readonly="1"/>
+
+                                <field name="last_seen"
+                                       readonly="1"/>
                             </group>
 
                         </group>
@@ -143,67 +269,126 @@
 
                         <notebook>
 
+                            <!-- ================================================= -->
+                            <!-- VALOR                                             -->
+                            <!-- ================================================= -->
+
                             <page string="Valor">
 
                                 <group>
                                     <field name="value_boolean"/>
+
                                     <field name="value_integer"/>
+
                                     <field name="value_numeric"/>
+
                                     <field name="value_text"/>
+
                                     <field name="unit"/>
+
                                     <field name="capacity"/>
+
                                     <field name="capacity_unit"/>
+
                                     <field name="life_percent"/>
                                 </group>
 
                             </page>
 
 
+                            <!-- ================================================= -->
+                            <!-- HARDWARE                                          -->
+                            <!-- ================================================= -->
+
                             <page string="Hardware">
 
                                 <group>
                                     <field name="manufacturer"/>
+
                                     <field name="model"/>
+
                                     <field name="serial"/>
+
                                     <field name="version"/>
+
                                     <field name="component_index"/>
+
                                     <field name="component_color"/>
+
                                     <field name="component_status"/>
                                 </group>
 
                             </page>
 
 
+                            <!-- ================================================= -->
+                            <!-- BANDEJA                                           -->
+                            <!-- ================================================= -->
+
                             <page string="Bandeja">
 
                                 <group>
                                     <field name="tray_index"/>
+
                                     <field name="tray_name"/>
+
                                     <field name="paper_size"/>
+
                                     <field name="paper_type"/>
+
                                     <field name="paper_level"/>
+
                                     <field name="paper_level_unit"/>
+
                                     <field name="max_capacity"/>
                                 </group>
 
                             </page>
 
 
+                            <!-- ================================================= -->
+                            <!-- ORIGEN                                            -->
+                            <!-- ================================================= -->
+
                             <page string="Origen">
 
                                 <group>
-                                    <field name="profile_id" readonly="1"/>
-                                    <field name="metric_id" readonly="1"/>
-                                    <field name="snapshot_id" readonly="1"/>
-                                    <field name="reading_id" readonly="1"/>
-                                    <field name="oid" readonly="1"/>
-                                    <field name="oid_index" readonly="1"/>
-                                    <field name="source_label" readonly="1"/>
-                                    <field name="source_method" readonly="1"/>
+
+                                    <field name="profile_id"
+                                           readonly="1"/>
+
+                                    <field name="metric_id"
+                                           readonly="1"/>
+
+                                    <field name="snapshot_id"
+                                           readonly="1"/>
+
+                                    <field name="reading_id"
+                                           readonly="1"/>
+
+                                    <field name="oid"
+                                           readonly="1"/>
+
+                                    <field name="oid_index"
+                                           readonly="1"/>
+
+                                    <field name="source_label"
+                                           readonly="1"/>
+
+                                    <field name="source_method"
+                                           readonly="1"/>
+
+                                    <field name="discovered_dynamically"
+                                           readonly="1"/>
+
                                 </group>
 
                             </page>
 
+
+                            <!-- ================================================= -->
+                            <!-- RAW                                               -->
+                            <!-- ================================================= -->
 
                             <page string="RAW"
                                   groups="base.group_system">
@@ -219,7 +404,19 @@
                             </page>
 
 
+                            <!-- ================================================= -->
+                            <!-- NOTAS                                             -->
+                            <!-- ================================================= -->
+
                             <page string="Notas">
+
+                                <group>
+
+                                    <field name="requires_review"/>
+
+                                    <field name="review_reason"/>
+
+                                </group>
 
                                 <field name="notes"
                                        nolabel="1"/>
@@ -236,19 +433,22 @@
         </record>
 
 
+        <!-- ========================================================= -->
+        <!-- ACTION                                                    -->
+        <!-- ========================================================= -->
+
         <record id="action_monitoring_device_feature"
                 model="ir.actions.act_window">
 
-            <field name="name">Inventario Detectado</field>
+            <field name="name"> Inventario Detectado  </field>
+
             <field name="res_model">sat.monitoring.device.feature</field>
-            <field name="view_mode">list,form,pivot</field>
 
-            <field name="search_view_id"
-                   ref="view_monitoring_device_feature_search"/>
+            <field name="view_mode">list,form,pivot </field>
 
-            <field name="domain">
-                [('active','=',True)]
-            </field>
+            <field name="search_view_id" ref="view_monitoring_device_feature_search"/>
+
+            <field name="domain">[('active','=',True)] </field>
 
         </record>
 
