@@ -1,0 +1,1677 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="0">
+
+        <!--
+            Perfiles SNMP base.
+
+            IMPORTANTE:
+            - Este archivo usa las marcas ya creadas en data/marcas_data.xml.
+            - Debe cargarse DESPUÉS de marcas_data.xml en __manifest__.py.
+            - Solo se incluyen OIDs estándar MIB-II / Printer-MIB.
+            - Los OIDs propietarios se descubrirán/probarán posteriormente.
+        -->
+
+        <!-- ===================================================== -->
+        <!-- RICOH GENERAL -->
+        <!-- ===================================================== -->
+
+        <record id="snmp_profile_ricoh_general" model="sat.snmp.profile">
+            <field name="name">Ricoh General</field>
+            <field name="code">ricoh_general</field>
+            <field name="marca_id" ref="marca_ricoh"/>
+            <field name="description">Perfil SNMP general de Ricoh. Base estándar para identificación y aprendizaje de métricas propietarias.</field>
+            <field name="active" eval="True"/>
+            <field name="sequence">100</field>
+            <field name="priority">100</field>
+            <field name="version">1.0</field>
+            <field name="revision">1</field>
+            <field name="state">testing</field>
+            <field name="is_default_for_brand" eval="True"/>
+            <field name="technology">any</field>
+            <field name="supports_snmp_v1" eval="True"/>
+            <field name="supports_snmp_v2c" eval="True"/>
+            <field name="supports_snmp_v3" eval="True"/>
+            <field name="preferred_snmp_version">2c</field>
+            <field name="polling_strategy">hybrid</field>
+            <field name="allow_fallback_discovery" eval="True"/>
+            <field name="preserve_raw_data" eval="True"/>
+            <field name="enterprise_ids">367</field>
+            <field name="enterprise_strict" eval="False"/>
+            <field name="manufacturer_patterns">^(RICOH|SAVIN|LANIER)$</field>
+            <field name="minimum_match_score">100</field>
+        </record>
+
+        <record id="snmp_metric_ricoh_sys_descr" model="sat.snmp.profile.metric">
+            <field name="profile_id" ref="snmp_profile_ricoh_general"/>
+            <field name="name">Descripción del sistema</field>
+            <field name="code">sys_descr</field>
+            <field name="category">identity</field>
+            <field name="subgroup">system</field>
+            <field name="logical_type">string</field>
+            <field name="method">direct_oid</field>
+            <field name="oid">1.3.6.1.2.1.1.1.0</field>
+            <field name="required" eval="True"/>
+            <field name="sequence">10</field>
+            <field name="priority">100</field>
+            <field name="polling_group">slow</field>
+            <field name="polling_interval">3600</field>
+            <field name="store_current" eval="True"/>
+            <field name="store_history" eval="False"/>
+            <field name="history_mode">on_change</field>
+            <field name="discovery_source">SNMPv2-MIB</field>
+            <field name="confidence">high</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <record id="snmp_metric_ricoh_sys_object_id" model="sat.snmp.profile.metric">
+            <field name="profile_id" ref="snmp_profile_ricoh_general"/>
+            <field name="name">SysObjectID</field>
+            <field name="code">sys_object_id</field>
+            <field name="category">identity</field>
+            <field name="subgroup">system</field>
+            <field name="logical_type">oid</field>
+            <field name="method">direct_oid</field>
+            <field name="oid">1.3.6.1.2.1.1.2.0</field>
+            <field name="required" eval="False"/>
+            <field name="sequence">20</field>
+            <field name="priority">100</field>
+            <field name="polling_group">slow</field>
+            <field name="polling_interval">3600</field>
+            <field name="store_current" eval="True"/>
+            <field name="store_history" eval="False"/>
+            <field name="history_mode">on_change</field>
+            <field name="discovery_source">SNMPv2-MIB</field>
+            <field name="confidence">high</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <record id="snmp_metric_ricoh_sys_uptime" model="sat.snmp.profile.metric">
+            <field name="profile_id" ref="snmp_profile_ricoh_general"/>
+            <field name="name">Tiempo activo</field>
+            <field name="code">sys_uptime</field>
+            <field name="category">system</field>
+            <field name="subgroup">uptime</field>
+            <field name="logical_type">timeticks</field>
+            <field name="unit">timeticks</field>
+            <field name="method">direct_oid</field>
+            <field name="oid">1.3.6.1.2.1.1.3.0</field>
+            <field name="required" eval="False"/>
+            <field name="sequence">30</field>
+            <field name="priority">80</field>
+            <field name="polling_group">normal</field>
+            <field name="polling_interval">300</field>
+            <field name="store_current" eval="True"/>
+            <field name="store_history" eval="False"/>
+            <field name="history_mode">on_change</field>
+            <field name="discovery_source">SNMPv2-MIB</field>
+            <field name="confidence">high</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <record id="snmp_metric_ricoh_sys_contact" model="sat.snmp.profile.metric">
+            <field name="profile_id" ref="snmp_profile_ricoh_general"/>
+            <field name="name">Contacto del sistema</field>
+            <field name="code">sys_contact</field>
+            <field name="category">identity</field>
+            <field name="subgroup">system</field>
+            <field name="logical_type">string</field>
+            <field name="method">direct_oid</field>
+            <field name="oid">1.3.6.1.2.1.1.4.0</field>
+            <field name="required" eval="False"/>
+            <field name="sequence">40</field>
+            <field name="priority">70</field>
+            <field name="polling_group">slow</field>
+            <field name="polling_interval">3600</field>
+            <field name="store_current" eval="True"/>
+            <field name="store_history" eval="False"/>
+            <field name="history_mode">on_change</field>
+            <field name="discovery_source">SNMPv2-MIB</field>
+            <field name="confidence">high</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <record id="snmp_metric_ricoh_sys_name" model="sat.snmp.profile.metric">
+            <field name="profile_id" ref="snmp_profile_ricoh_general"/>
+            <field name="name">Nombre del sistema</field>
+            <field name="code">sys_name</field>
+            <field name="category">identity</field>
+            <field name="subgroup">system</field>
+            <field name="logical_type">string</field>
+            <field name="method">direct_oid</field>
+            <field name="oid">1.3.6.1.2.1.1.5.0</field>
+            <field name="required" eval="False"/>
+            <field name="sequence">50</field>
+            <field name="priority">90</field>
+            <field name="polling_group">slow</field>
+            <field name="polling_interval">3600</field>
+            <field name="store_current" eval="True"/>
+            <field name="store_history" eval="False"/>
+            <field name="history_mode">on_change</field>
+            <field name="discovery_source">SNMPv2-MIB</field>
+            <field name="confidence">high</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <record id="snmp_metric_ricoh_sys_location" model="sat.snmp.profile.metric">
+            <field name="profile_id" ref="snmp_profile_ricoh_general"/>
+            <field name="name">Ubicación del sistema</field>
+            <field name="code">sys_location</field>
+            <field name="category">identity</field>
+            <field name="subgroup">system</field>
+            <field name="logical_type">string</field>
+            <field name="method">direct_oid</field>
+            <field name="oid">1.3.6.1.2.1.1.6.0</field>
+            <field name="required" eval="False"/>
+            <field name="sequence">60</field>
+            <field name="priority">70</field>
+            <field name="polling_group">slow</field>
+            <field name="polling_interval">3600</field>
+            <field name="store_current" eval="True"/>
+            <field name="store_history" eval="False"/>
+            <field name="history_mode">on_change</field>
+            <field name="discovery_source">SNMPv2-MIB</field>
+            <field name="confidence">high</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <record id="snmp_metric_ricoh_printer_serial" model="sat.snmp.profile.metric">
+            <field name="profile_id" ref="snmp_profile_ricoh_general"/>
+            <field name="name">Número de serie Printer-MIB</field>
+            <field name="code">printer_serial</field>
+            <field name="category">identity</field>
+            <field name="subgroup">printer</field>
+            <field name="logical_type">string</field>
+            <field name="method">direct_oid</field>
+            <field name="oid">1.3.6.1.2.1.43.5.1.1.17.1</field>
+            <field name="required" eval="False"/>
+            <field name="sequence">70</field>
+            <field name="priority">70</field>
+            <field name="polling_group">slow</field>
+            <field name="polling_interval">3600</field>
+            <field name="store_current" eval="True"/>
+            <field name="store_history" eval="False"/>
+            <field name="history_mode">on_change</field>
+            <field name="discovery_source">Printer-MIB</field>
+            <field name="confidence">candidate</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <!-- ===================================================== -->
+        <!-- KONICA MINOLTA GENERAL -->
+        <!-- ===================================================== -->
+
+        <record id="snmp_profile_konica_minolta_general" model="sat.snmp.profile">
+            <field name="name">Konica Minolta General</field>
+            <field name="code">konica_minolta_general</field>
+            <field name="marca_id" ref="marca_konica_minolta"/>
+            <field name="description">Perfil SNMP general de Konica Minolta. Base estándar para identificación y aprendizaje de métricas propietarias.</field>
+            <field name="active" eval="True"/>
+            <field name="sequence">100</field>
+            <field name="priority">100</field>
+            <field name="version">1.0</field>
+            <field name="revision">1</field>
+            <field name="state">testing</field>
+            <field name="is_default_for_brand" eval="True"/>
+            <field name="technology">any</field>
+            <field name="supports_snmp_v1" eval="True"/>
+            <field name="supports_snmp_v2c" eval="True"/>
+            <field name="supports_snmp_v3" eval="True"/>
+            <field name="preferred_snmp_version">2c</field>
+            <field name="polling_strategy">hybrid</field>
+            <field name="allow_fallback_discovery" eval="True"/>
+            <field name="preserve_raw_data" eval="True"/>
+            <field name="enterprise_strict" eval="False"/>
+            <field name="manufacturer_patterns">^(KONICA MINOLTA|KONICA)$</field>
+            <field name="minimum_match_score">100</field>
+        </record>
+
+        <record id="snmp_metric_konica_minolta_sys_descr" model="sat.snmp.profile.metric">
+            <field name="profile_id" ref="snmp_profile_konica_minolta_general"/>
+            <field name="name">Descripción del sistema</field>
+            <field name="code">sys_descr</field>
+            <field name="category">identity</field>
+            <field name="subgroup">system</field>
+            <field name="logical_type">string</field>
+            <field name="method">direct_oid</field>
+            <field name="oid">1.3.6.1.2.1.1.1.0</field>
+            <field name="required" eval="True"/>
+            <field name="sequence">10</field>
+            <field name="priority">100</field>
+            <field name="polling_group">slow</field>
+            <field name="polling_interval">3600</field>
+            <field name="store_current" eval="True"/>
+            <field name="store_history" eval="False"/>
+            <field name="history_mode">on_change</field>
+            <field name="discovery_source">SNMPv2-MIB</field>
+            <field name="confidence">high</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <record id="snmp_metric_konica_minolta_sys_object_id" model="sat.snmp.profile.metric">
+            <field name="profile_id" ref="snmp_profile_konica_minolta_general"/>
+            <field name="name">SysObjectID</field>
+            <field name="code">sys_object_id</field>
+            <field name="category">identity</field>
+            <field name="subgroup">system</field>
+            <field name="logical_type">oid</field>
+            <field name="method">direct_oid</field>
+            <field name="oid">1.3.6.1.2.1.1.2.0</field>
+            <field name="required" eval="False"/>
+            <field name="sequence">20</field>
+            <field name="priority">100</field>
+            <field name="polling_group">slow</field>
+            <field name="polling_interval">3600</field>
+            <field name="store_current" eval="True"/>
+            <field name="store_history" eval="False"/>
+            <field name="history_mode">on_change</field>
+            <field name="discovery_source">SNMPv2-MIB</field>
+            <field name="confidence">high</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <record id="snmp_metric_konica_minolta_sys_uptime" model="sat.snmp.profile.metric">
+            <field name="profile_id" ref="snmp_profile_konica_minolta_general"/>
+            <field name="name">Tiempo activo</field>
+            <field name="code">sys_uptime</field>
+            <field name="category">system</field>
+            <field name="subgroup">uptime</field>
+            <field name="logical_type">timeticks</field>
+            <field name="unit">timeticks</field>
+            <field name="method">direct_oid</field>
+            <field name="oid">1.3.6.1.2.1.1.3.0</field>
+            <field name="required" eval="False"/>
+            <field name="sequence">30</field>
+            <field name="priority">80</field>
+            <field name="polling_group">normal</field>
+            <field name="polling_interval">300</field>
+            <field name="store_current" eval="True"/>
+            <field name="store_history" eval="False"/>
+            <field name="history_mode">on_change</field>
+            <field name="discovery_source">SNMPv2-MIB</field>
+            <field name="confidence">high</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <record id="snmp_metric_konica_minolta_sys_contact" model="sat.snmp.profile.metric">
+            <field name="profile_id" ref="snmp_profile_konica_minolta_general"/>
+            <field name="name">Contacto del sistema</field>
+            <field name="code">sys_contact</field>
+            <field name="category">identity</field>
+            <field name="subgroup">system</field>
+            <field name="logical_type">string</field>
+            <field name="method">direct_oid</field>
+            <field name="oid">1.3.6.1.2.1.1.4.0</field>
+            <field name="required" eval="False"/>
+            <field name="sequence">40</field>
+            <field name="priority">70</field>
+            <field name="polling_group">slow</field>
+            <field name="polling_interval">3600</field>
+            <field name="store_current" eval="True"/>
+            <field name="store_history" eval="False"/>
+            <field name="history_mode">on_change</field>
+            <field name="discovery_source">SNMPv2-MIB</field>
+            <field name="confidence">high</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <record id="snmp_metric_konica_minolta_sys_name" model="sat.snmp.profile.metric">
+            <field name="profile_id" ref="snmp_profile_konica_minolta_general"/>
+            <field name="name">Nombre del sistema</field>
+            <field name="code">sys_name</field>
+            <field name="category">identity</field>
+            <field name="subgroup">system</field>
+            <field name="logical_type">string</field>
+            <field name="method">direct_oid</field>
+            <field name="oid">1.3.6.1.2.1.1.5.0</field>
+            <field name="required" eval="False"/>
+            <field name="sequence">50</field>
+            <field name="priority">90</field>
+            <field name="polling_group">slow</field>
+            <field name="polling_interval">3600</field>
+            <field name="store_current" eval="True"/>
+            <field name="store_history" eval="False"/>
+            <field name="history_mode">on_change</field>
+            <field name="discovery_source">SNMPv2-MIB</field>
+            <field name="confidence">high</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <record id="snmp_metric_konica_minolta_sys_location" model="sat.snmp.profile.metric">
+            <field name="profile_id" ref="snmp_profile_konica_minolta_general"/>
+            <field name="name">Ubicación del sistema</field>
+            <field name="code">sys_location</field>
+            <field name="category">identity</field>
+            <field name="subgroup">system</field>
+            <field name="logical_type">string</field>
+            <field name="method">direct_oid</field>
+            <field name="oid">1.3.6.1.2.1.1.6.0</field>
+            <field name="required" eval="False"/>
+            <field name="sequence">60</field>
+            <field name="priority">70</field>
+            <field name="polling_group">slow</field>
+            <field name="polling_interval">3600</field>
+            <field name="store_current" eval="True"/>
+            <field name="store_history" eval="False"/>
+            <field name="history_mode">on_change</field>
+            <field name="discovery_source">SNMPv2-MIB</field>
+            <field name="confidence">high</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <record id="snmp_metric_konica_minolta_printer_serial" model="sat.snmp.profile.metric">
+            <field name="profile_id" ref="snmp_profile_konica_minolta_general"/>
+            <field name="name">Número de serie Printer-MIB</field>
+            <field name="code">printer_serial</field>
+            <field name="category">identity</field>
+            <field name="subgroup">printer</field>
+            <field name="logical_type">string</field>
+            <field name="method">direct_oid</field>
+            <field name="oid">1.3.6.1.2.1.43.5.1.1.17.1</field>
+            <field name="required" eval="False"/>
+            <field name="sequence">70</field>
+            <field name="priority">70</field>
+            <field name="polling_group">slow</field>
+            <field name="polling_interval">3600</field>
+            <field name="store_current" eval="True"/>
+            <field name="store_history" eval="False"/>
+            <field name="history_mode">on_change</field>
+            <field name="discovery_source">Printer-MIB</field>
+            <field name="confidence">candidate</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <!-- ===================================================== -->
+        <!-- CANON GENERAL -->
+        <!-- ===================================================== -->
+
+        <record id="snmp_profile_canon_general" model="sat.snmp.profile">
+            <field name="name">Canon General</field>
+            <field name="code">canon_general</field>
+            <field name="marca_id" ref="marca_canon"/>
+            <field name="description">Perfil SNMP general de Canon. Base estándar para identificación y aprendizaje de métricas propietarias.</field>
+            <field name="active" eval="True"/>
+            <field name="sequence">100</field>
+            <field name="priority">100</field>
+            <field name="version">1.0</field>
+            <field name="revision">1</field>
+            <field name="state">testing</field>
+            <field name="is_default_for_brand" eval="True"/>
+            <field name="technology">any</field>
+            <field name="supports_snmp_v1" eval="True"/>
+            <field name="supports_snmp_v2c" eval="True"/>
+            <field name="supports_snmp_v3" eval="True"/>
+            <field name="preferred_snmp_version">2c</field>
+            <field name="polling_strategy">hybrid</field>
+            <field name="allow_fallback_discovery" eval="True"/>
+            <field name="preserve_raw_data" eval="True"/>
+            <field name="enterprise_ids">1602</field>
+            <field name="enterprise_strict" eval="False"/>
+            <field name="manufacturer_patterns">^CANON$</field>
+            <field name="minimum_match_score">100</field>
+        </record>
+
+        <record id="snmp_metric_canon_sys_descr" model="sat.snmp.profile.metric">
+            <field name="profile_id" ref="snmp_profile_canon_general"/>
+            <field name="name">Descripción del sistema</field>
+            <field name="code">sys_descr</field>
+            <field name="category">identity</field>
+            <field name="subgroup">system</field>
+            <field name="logical_type">string</field>
+            <field name="method">direct_oid</field>
+            <field name="oid">1.3.6.1.2.1.1.1.0</field>
+            <field name="required" eval="True"/>
+            <field name="sequence">10</field>
+            <field name="priority">100</field>
+            <field name="polling_group">slow</field>
+            <field name="polling_interval">3600</field>
+            <field name="store_current" eval="True"/>
+            <field name="store_history" eval="False"/>
+            <field name="history_mode">on_change</field>
+            <field name="discovery_source">SNMPv2-MIB</field>
+            <field name="confidence">high</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <record id="snmp_metric_canon_sys_object_id" model="sat.snmp.profile.metric">
+            <field name="profile_id" ref="snmp_profile_canon_general"/>
+            <field name="name">SysObjectID</field>
+            <field name="code">sys_object_id</field>
+            <field name="category">identity</field>
+            <field name="subgroup">system</field>
+            <field name="logical_type">oid</field>
+            <field name="method">direct_oid</field>
+            <field name="oid">1.3.6.1.2.1.1.2.0</field>
+            <field name="required" eval="False"/>
+            <field name="sequence">20</field>
+            <field name="priority">100</field>
+            <field name="polling_group">slow</field>
+            <field name="polling_interval">3600</field>
+            <field name="store_current" eval="True"/>
+            <field name="store_history" eval="False"/>
+            <field name="history_mode">on_change</field>
+            <field name="discovery_source">SNMPv2-MIB</field>
+            <field name="confidence">high</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <record id="snmp_metric_canon_sys_uptime" model="sat.snmp.profile.metric">
+            <field name="profile_id" ref="snmp_profile_canon_general"/>
+            <field name="name">Tiempo activo</field>
+            <field name="code">sys_uptime</field>
+            <field name="category">system</field>
+            <field name="subgroup">uptime</field>
+            <field name="logical_type">timeticks</field>
+            <field name="unit">timeticks</field>
+            <field name="method">direct_oid</field>
+            <field name="oid">1.3.6.1.2.1.1.3.0</field>
+            <field name="required" eval="False"/>
+            <field name="sequence">30</field>
+            <field name="priority">80</field>
+            <field name="polling_group">normal</field>
+            <field name="polling_interval">300</field>
+            <field name="store_current" eval="True"/>
+            <field name="store_history" eval="False"/>
+            <field name="history_mode">on_change</field>
+            <field name="discovery_source">SNMPv2-MIB</field>
+            <field name="confidence">high</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <record id="snmp_metric_canon_sys_contact" model="sat.snmp.profile.metric">
+            <field name="profile_id" ref="snmp_profile_canon_general"/>
+            <field name="name">Contacto del sistema</field>
+            <field name="code">sys_contact</field>
+            <field name="category">identity</field>
+            <field name="subgroup">system</field>
+            <field name="logical_type">string</field>
+            <field name="method">direct_oid</field>
+            <field name="oid">1.3.6.1.2.1.1.4.0</field>
+            <field name="required" eval="False"/>
+            <field name="sequence">40</field>
+            <field name="priority">70</field>
+            <field name="polling_group">slow</field>
+            <field name="polling_interval">3600</field>
+            <field name="store_current" eval="True"/>
+            <field name="store_history" eval="False"/>
+            <field name="history_mode">on_change</field>
+            <field name="discovery_source">SNMPv2-MIB</field>
+            <field name="confidence">high</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <record id="snmp_metric_canon_sys_name" model="sat.snmp.profile.metric">
+            <field name="profile_id" ref="snmp_profile_canon_general"/>
+            <field name="name">Nombre del sistema</field>
+            <field name="code">sys_name</field>
+            <field name="category">identity</field>
+            <field name="subgroup">system</field>
+            <field name="logical_type">string</field>
+            <field name="method">direct_oid</field>
+            <field name="oid">1.3.6.1.2.1.1.5.0</field>
+            <field name="required" eval="False"/>
+            <field name="sequence">50</field>
+            <field name="priority">90</field>
+            <field name="polling_group">slow</field>
+            <field name="polling_interval">3600</field>
+            <field name="store_current" eval="True"/>
+            <field name="store_history" eval="False"/>
+            <field name="history_mode">on_change</field>
+            <field name="discovery_source">SNMPv2-MIB</field>
+            <field name="confidence">high</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <record id="snmp_metric_canon_sys_location" model="sat.snmp.profile.metric">
+            <field name="profile_id" ref="snmp_profile_canon_general"/>
+            <field name="name">Ubicación del sistema</field>
+            <field name="code">sys_location</field>
+            <field name="category">identity</field>
+            <field name="subgroup">system</field>
+            <field name="logical_type">string</field>
+            <field name="method">direct_oid</field>
+            <field name="oid">1.3.6.1.2.1.1.6.0</field>
+            <field name="required" eval="False"/>
+            <field name="sequence">60</field>
+            <field name="priority">70</field>
+            <field name="polling_group">slow</field>
+            <field name="polling_interval">3600</field>
+            <field name="store_current" eval="True"/>
+            <field name="store_history" eval="False"/>
+            <field name="history_mode">on_change</field>
+            <field name="discovery_source">SNMPv2-MIB</field>
+            <field name="confidence">high</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <record id="snmp_metric_canon_printer_serial" model="sat.snmp.profile.metric">
+            <field name="profile_id" ref="snmp_profile_canon_general"/>
+            <field name="name">Número de serie Printer-MIB</field>
+            <field name="code">printer_serial</field>
+            <field name="category">identity</field>
+            <field name="subgroup">printer</field>
+            <field name="logical_type">string</field>
+            <field name="method">direct_oid</field>
+            <field name="oid">1.3.6.1.2.1.43.5.1.1.17.1</field>
+            <field name="required" eval="False"/>
+            <field name="sequence">70</field>
+            <field name="priority">70</field>
+            <field name="polling_group">slow</field>
+            <field name="polling_interval">3600</field>
+            <field name="store_current" eval="True"/>
+            <field name="store_history" eval="False"/>
+            <field name="history_mode">on_change</field>
+            <field name="discovery_source">Printer-MIB</field>
+            <field name="confidence">candidate</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <!-- ===================================================== -->
+        <!-- HP GENERAL -->
+        <!-- ===================================================== -->
+
+        <record id="snmp_profile_hp_general" model="sat.snmp.profile">
+            <field name="name">HP General</field>
+            <field name="code">hp_general</field>
+            <field name="marca_id" ref="marca_hp"/>
+            <field name="description">Perfil SNMP general de HP. Base estándar para identificación y aprendizaje de métricas propietarias.</field>
+            <field name="active" eval="True"/>
+            <field name="sequence">100</field>
+            <field name="priority">100</field>
+            <field name="version">1.0</field>
+            <field name="revision">1</field>
+            <field name="state">testing</field>
+            <field name="is_default_for_brand" eval="True"/>
+            <field name="technology">any</field>
+            <field name="supports_snmp_v1" eval="True"/>
+            <field name="supports_snmp_v2c" eval="True"/>
+            <field name="supports_snmp_v3" eval="True"/>
+            <field name="preferred_snmp_version">2c</field>
+            <field name="polling_strategy">hybrid</field>
+            <field name="allow_fallback_discovery" eval="True"/>
+            <field name="preserve_raw_data" eval="True"/>
+            <field name="enterprise_ids">11</field>
+            <field name="enterprise_strict" eval="False"/>
+            <field name="manufacturer_patterns">^(HP|HEWLETT[- ]PACKARD)$</field>
+            <field name="minimum_match_score">100</field>
+        </record>
+
+        <record id="snmp_metric_hp_sys_descr" model="sat.snmp.profile.metric">
+            <field name="profile_id" ref="snmp_profile_hp_general"/>
+            <field name="name">Descripción del sistema</field>
+            <field name="code">sys_descr</field>
+            <field name="category">identity</field>
+            <field name="subgroup">system</field>
+            <field name="logical_type">string</field>
+            <field name="method">direct_oid</field>
+            <field name="oid">1.3.6.1.2.1.1.1.0</field>
+            <field name="required" eval="True"/>
+            <field name="sequence">10</field>
+            <field name="priority">100</field>
+            <field name="polling_group">slow</field>
+            <field name="polling_interval">3600</field>
+            <field name="store_current" eval="True"/>
+            <field name="store_history" eval="False"/>
+            <field name="history_mode">on_change</field>
+            <field name="discovery_source">SNMPv2-MIB</field>
+            <field name="confidence">high</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <record id="snmp_metric_hp_sys_object_id" model="sat.snmp.profile.metric">
+            <field name="profile_id" ref="snmp_profile_hp_general"/>
+            <field name="name">SysObjectID</field>
+            <field name="code">sys_object_id</field>
+            <field name="category">identity</field>
+            <field name="subgroup">system</field>
+            <field name="logical_type">oid</field>
+            <field name="method">direct_oid</field>
+            <field name="oid">1.3.6.1.2.1.1.2.0</field>
+            <field name="required" eval="False"/>
+            <field name="sequence">20</field>
+            <field name="priority">100</field>
+            <field name="polling_group">slow</field>
+            <field name="polling_interval">3600</field>
+            <field name="store_current" eval="True"/>
+            <field name="store_history" eval="False"/>
+            <field name="history_mode">on_change</field>
+            <field name="discovery_source">SNMPv2-MIB</field>
+            <field name="confidence">high</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <record id="snmp_metric_hp_sys_uptime" model="sat.snmp.profile.metric">
+            <field name="profile_id" ref="snmp_profile_hp_general"/>
+            <field name="name">Tiempo activo</field>
+            <field name="code">sys_uptime</field>
+            <field name="category">system</field>
+            <field name="subgroup">uptime</field>
+            <field name="logical_type">timeticks</field>
+            <field name="unit">timeticks</field>
+            <field name="method">direct_oid</field>
+            <field name="oid">1.3.6.1.2.1.1.3.0</field>
+            <field name="required" eval="False"/>
+            <field name="sequence">30</field>
+            <field name="priority">80</field>
+            <field name="polling_group">normal</field>
+            <field name="polling_interval">300</field>
+            <field name="store_current" eval="True"/>
+            <field name="store_history" eval="False"/>
+            <field name="history_mode">on_change</field>
+            <field name="discovery_source">SNMPv2-MIB</field>
+            <field name="confidence">high</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <record id="snmp_metric_hp_sys_contact" model="sat.snmp.profile.metric">
+            <field name="profile_id" ref="snmp_profile_hp_general"/>
+            <field name="name">Contacto del sistema</field>
+            <field name="code">sys_contact</field>
+            <field name="category">identity</field>
+            <field name="subgroup">system</field>
+            <field name="logical_type">string</field>
+            <field name="method">direct_oid</field>
+            <field name="oid">1.3.6.1.2.1.1.4.0</field>
+            <field name="required" eval="False"/>
+            <field name="sequence">40</field>
+            <field name="priority">70</field>
+            <field name="polling_group">slow</field>
+            <field name="polling_interval">3600</field>
+            <field name="store_current" eval="True"/>
+            <field name="store_history" eval="False"/>
+            <field name="history_mode">on_change</field>
+            <field name="discovery_source">SNMPv2-MIB</field>
+            <field name="confidence">high</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <record id="snmp_metric_hp_sys_name" model="sat.snmp.profile.metric">
+            <field name="profile_id" ref="snmp_profile_hp_general"/>
+            <field name="name">Nombre del sistema</field>
+            <field name="code">sys_name</field>
+            <field name="category">identity</field>
+            <field name="subgroup">system</field>
+            <field name="logical_type">string</field>
+            <field name="method">direct_oid</field>
+            <field name="oid">1.3.6.1.2.1.1.5.0</field>
+            <field name="required" eval="False"/>
+            <field name="sequence">50</field>
+            <field name="priority">90</field>
+            <field name="polling_group">slow</field>
+            <field name="polling_interval">3600</field>
+            <field name="store_current" eval="True"/>
+            <field name="store_history" eval="False"/>
+            <field name="history_mode">on_change</field>
+            <field name="discovery_source">SNMPv2-MIB</field>
+            <field name="confidence">high</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <record id="snmp_metric_hp_sys_location" model="sat.snmp.profile.metric">
+            <field name="profile_id" ref="snmp_profile_hp_general"/>
+            <field name="name">Ubicación del sistema</field>
+            <field name="code">sys_location</field>
+            <field name="category">identity</field>
+            <field name="subgroup">system</field>
+            <field name="logical_type">string</field>
+            <field name="method">direct_oid</field>
+            <field name="oid">1.3.6.1.2.1.1.6.0</field>
+            <field name="required" eval="False"/>
+            <field name="sequence">60</field>
+            <field name="priority">70</field>
+            <field name="polling_group">slow</field>
+            <field name="polling_interval">3600</field>
+            <field name="store_current" eval="True"/>
+            <field name="store_history" eval="False"/>
+            <field name="history_mode">on_change</field>
+            <field name="discovery_source">SNMPv2-MIB</field>
+            <field name="confidence">high</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <record id="snmp_metric_hp_printer_serial" model="sat.snmp.profile.metric">
+            <field name="profile_id" ref="snmp_profile_hp_general"/>
+            <field name="name">Número de serie Printer-MIB</field>
+            <field name="code">printer_serial</field>
+            <field name="category">identity</field>
+            <field name="subgroup">printer</field>
+            <field name="logical_type">string</field>
+            <field name="method">direct_oid</field>
+            <field name="oid">1.3.6.1.2.1.43.5.1.1.17.1</field>
+            <field name="required" eval="False"/>
+            <field name="sequence">70</field>
+            <field name="priority">70</field>
+            <field name="polling_group">slow</field>
+            <field name="polling_interval">3600</field>
+            <field name="store_current" eval="True"/>
+            <field name="store_history" eval="False"/>
+            <field name="history_mode">on_change</field>
+            <field name="discovery_source">Printer-MIB</field>
+            <field name="confidence">candidate</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <!-- ===================================================== -->
+        <!-- KYOCERA GENERAL -->
+        <!-- ===================================================== -->
+
+        <record id="snmp_profile_kyocera_general" model="sat.snmp.profile">
+            <field name="name">Kyocera General</field>
+            <field name="code">kyocera_general</field>
+            <field name="marca_id" ref="marca_kyocera"/>
+            <field name="description">Perfil SNMP general de Kyocera. Base estándar para identificación y aprendizaje de métricas propietarias.</field>
+            <field name="active" eval="True"/>
+            <field name="sequence">100</field>
+            <field name="priority">100</field>
+            <field name="version">1.0</field>
+            <field name="revision">1</field>
+            <field name="state">testing</field>
+            <field name="is_default_for_brand" eval="True"/>
+            <field name="technology">any</field>
+            <field name="supports_snmp_v1" eval="True"/>
+            <field name="supports_snmp_v2c" eval="True"/>
+            <field name="supports_snmp_v3" eval="True"/>
+            <field name="preferred_snmp_version">2c</field>
+            <field name="polling_strategy">hybrid</field>
+            <field name="allow_fallback_discovery" eval="True"/>
+            <field name="preserve_raw_data" eval="True"/>
+            <field name="enterprise_strict" eval="False"/>
+            <field name="manufacturer_patterns">^(KYOCERA|KYOCERA DOCUMENT SOLUTIONS)$</field>
+            <field name="minimum_match_score">100</field>
+        </record>
+
+        <record id="snmp_metric_kyocera_sys_descr" model="sat.snmp.profile.metric">
+            <field name="profile_id" ref="snmp_profile_kyocera_general"/>
+            <field name="name">Descripción del sistema</field>
+            <field name="code">sys_descr</field>
+            <field name="category">identity</field>
+            <field name="subgroup">system</field>
+            <field name="logical_type">string</field>
+            <field name="method">direct_oid</field>
+            <field name="oid">1.3.6.1.2.1.1.1.0</field>
+            <field name="required" eval="True"/>
+            <field name="sequence">10</field>
+            <field name="priority">100</field>
+            <field name="polling_group">slow</field>
+            <field name="polling_interval">3600</field>
+            <field name="store_current" eval="True"/>
+            <field name="store_history" eval="False"/>
+            <field name="history_mode">on_change</field>
+            <field name="discovery_source">SNMPv2-MIB</field>
+            <field name="confidence">high</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <record id="snmp_metric_kyocera_sys_object_id" model="sat.snmp.profile.metric">
+            <field name="profile_id" ref="snmp_profile_kyocera_general"/>
+            <field name="name">SysObjectID</field>
+            <field name="code">sys_object_id</field>
+            <field name="category">identity</field>
+            <field name="subgroup">system</field>
+            <field name="logical_type">oid</field>
+            <field name="method">direct_oid</field>
+            <field name="oid">1.3.6.1.2.1.1.2.0</field>
+            <field name="required" eval="False"/>
+            <field name="sequence">20</field>
+            <field name="priority">100</field>
+            <field name="polling_group">slow</field>
+            <field name="polling_interval">3600</field>
+            <field name="store_current" eval="True"/>
+            <field name="store_history" eval="False"/>
+            <field name="history_mode">on_change</field>
+            <field name="discovery_source">SNMPv2-MIB</field>
+            <field name="confidence">high</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <record id="snmp_metric_kyocera_sys_uptime" model="sat.snmp.profile.metric">
+            <field name="profile_id" ref="snmp_profile_kyocera_general"/>
+            <field name="name">Tiempo activo</field>
+            <field name="code">sys_uptime</field>
+            <field name="category">system</field>
+            <field name="subgroup">uptime</field>
+            <field name="logical_type">timeticks</field>
+            <field name="unit">timeticks</field>
+            <field name="method">direct_oid</field>
+            <field name="oid">1.3.6.1.2.1.1.3.0</field>
+            <field name="required" eval="False"/>
+            <field name="sequence">30</field>
+            <field name="priority">80</field>
+            <field name="polling_group">normal</field>
+            <field name="polling_interval">300</field>
+            <field name="store_current" eval="True"/>
+            <field name="store_history" eval="False"/>
+            <field name="history_mode">on_change</field>
+            <field name="discovery_source">SNMPv2-MIB</field>
+            <field name="confidence">high</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <record id="snmp_metric_kyocera_sys_contact" model="sat.snmp.profile.metric">
+            <field name="profile_id" ref="snmp_profile_kyocera_general"/>
+            <field name="name">Contacto del sistema</field>
+            <field name="code">sys_contact</field>
+            <field name="category">identity</field>
+            <field name="subgroup">system</field>
+            <field name="logical_type">string</field>
+            <field name="method">direct_oid</field>
+            <field name="oid">1.3.6.1.2.1.1.4.0</field>
+            <field name="required" eval="False"/>
+            <field name="sequence">40</field>
+            <field name="priority">70</field>
+            <field name="polling_group">slow</field>
+            <field name="polling_interval">3600</field>
+            <field name="store_current" eval="True"/>
+            <field name="store_history" eval="False"/>
+            <field name="history_mode">on_change</field>
+            <field name="discovery_source">SNMPv2-MIB</field>
+            <field name="confidence">high</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <record id="snmp_metric_kyocera_sys_name" model="sat.snmp.profile.metric">
+            <field name="profile_id" ref="snmp_profile_kyocera_general"/>
+            <field name="name">Nombre del sistema</field>
+            <field name="code">sys_name</field>
+            <field name="category">identity</field>
+            <field name="subgroup">system</field>
+            <field name="logical_type">string</field>
+            <field name="method">direct_oid</field>
+            <field name="oid">1.3.6.1.2.1.1.5.0</field>
+            <field name="required" eval="False"/>
+            <field name="sequence">50</field>
+            <field name="priority">90</field>
+            <field name="polling_group">slow</field>
+            <field name="polling_interval">3600</field>
+            <field name="store_current" eval="True"/>
+            <field name="store_history" eval="False"/>
+            <field name="history_mode">on_change</field>
+            <field name="discovery_source">SNMPv2-MIB</field>
+            <field name="confidence">high</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <record id="snmp_metric_kyocera_sys_location" model="sat.snmp.profile.metric">
+            <field name="profile_id" ref="snmp_profile_kyocera_general"/>
+            <field name="name">Ubicación del sistema</field>
+            <field name="code">sys_location</field>
+            <field name="category">identity</field>
+            <field name="subgroup">system</field>
+            <field name="logical_type">string</field>
+            <field name="method">direct_oid</field>
+            <field name="oid">1.3.6.1.2.1.1.6.0</field>
+            <field name="required" eval="False"/>
+            <field name="sequence">60</field>
+            <field name="priority">70</field>
+            <field name="polling_group">slow</field>
+            <field name="polling_interval">3600</field>
+            <field name="store_current" eval="True"/>
+            <field name="store_history" eval="False"/>
+            <field name="history_mode">on_change</field>
+            <field name="discovery_source">SNMPv2-MIB</field>
+            <field name="confidence">high</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <record id="snmp_metric_kyocera_printer_serial" model="sat.snmp.profile.metric">
+            <field name="profile_id" ref="snmp_profile_kyocera_general"/>
+            <field name="name">Número de serie Printer-MIB</field>
+            <field name="code">printer_serial</field>
+            <field name="category">identity</field>
+            <field name="subgroup">printer</field>
+            <field name="logical_type">string</field>
+            <field name="method">direct_oid</field>
+            <field name="oid">1.3.6.1.2.1.43.5.1.1.17.1</field>
+            <field name="required" eval="False"/>
+            <field name="sequence">70</field>
+            <field name="priority">70</field>
+            <field name="polling_group">slow</field>
+            <field name="polling_interval">3600</field>
+            <field name="store_current" eval="True"/>
+            <field name="store_history" eval="False"/>
+            <field name="history_mode">on_change</field>
+            <field name="discovery_source">Printer-MIB</field>
+            <field name="confidence">candidate</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <!-- ===================================================== -->
+        <!-- EPSON GENERAL -->
+        <!-- ===================================================== -->
+
+        <record id="snmp_profile_epson_general" model="sat.snmp.profile">
+            <field name="name">Epson General</field>
+            <field name="code">epson_general</field>
+            <field name="marca_id" ref="marca_epson"/>
+            <field name="description">Perfil SNMP general de Epson. Base estándar para identificación y aprendizaje de métricas propietarias.</field>
+            <field name="active" eval="True"/>
+            <field name="sequence">100</field>
+            <field name="priority">100</field>
+            <field name="version">1.0</field>
+            <field name="revision">1</field>
+            <field name="state">testing</field>
+            <field name="is_default_for_brand" eval="True"/>
+            <field name="technology">any</field>
+            <field name="supports_snmp_v1" eval="True"/>
+            <field name="supports_snmp_v2c" eval="True"/>
+            <field name="supports_snmp_v3" eval="True"/>
+            <field name="preferred_snmp_version">2c</field>
+            <field name="polling_strategy">hybrid</field>
+            <field name="allow_fallback_discovery" eval="True"/>
+            <field name="preserve_raw_data" eval="True"/>
+            <field name="enterprise_strict" eval="False"/>
+            <field name="manufacturer_patterns">^(EPSON|SEIKO EPSON)$</field>
+            <field name="minimum_match_score">100</field>
+        </record>
+
+        <record id="snmp_metric_epson_sys_descr" model="sat.snmp.profile.metric">
+            <field name="profile_id" ref="snmp_profile_epson_general"/>
+            <field name="name">Descripción del sistema</field>
+            <field name="code">sys_descr</field>
+            <field name="category">identity</field>
+            <field name="subgroup">system</field>
+            <field name="logical_type">string</field>
+            <field name="method">direct_oid</field>
+            <field name="oid">1.3.6.1.2.1.1.1.0</field>
+            <field name="required" eval="True"/>
+            <field name="sequence">10</field>
+            <field name="priority">100</field>
+            <field name="polling_group">slow</field>
+            <field name="polling_interval">3600</field>
+            <field name="store_current" eval="True"/>
+            <field name="store_history" eval="False"/>
+            <field name="history_mode">on_change</field>
+            <field name="discovery_source">SNMPv2-MIB</field>
+            <field name="confidence">high</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <record id="snmp_metric_epson_sys_object_id" model="sat.snmp.profile.metric">
+            <field name="profile_id" ref="snmp_profile_epson_general"/>
+            <field name="name">SysObjectID</field>
+            <field name="code">sys_object_id</field>
+            <field name="category">identity</field>
+            <field name="subgroup">system</field>
+            <field name="logical_type">oid</field>
+            <field name="method">direct_oid</field>
+            <field name="oid">1.3.6.1.2.1.1.2.0</field>
+            <field name="required" eval="False"/>
+            <field name="sequence">20</field>
+            <field name="priority">100</field>
+            <field name="polling_group">slow</field>
+            <field name="polling_interval">3600</field>
+            <field name="store_current" eval="True"/>
+            <field name="store_history" eval="False"/>
+            <field name="history_mode">on_change</field>
+            <field name="discovery_source">SNMPv2-MIB</field>
+            <field name="confidence">high</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <record id="snmp_metric_epson_sys_uptime" model="sat.snmp.profile.metric">
+            <field name="profile_id" ref="snmp_profile_epson_general"/>
+            <field name="name">Tiempo activo</field>
+            <field name="code">sys_uptime</field>
+            <field name="category">system</field>
+            <field name="subgroup">uptime</field>
+            <field name="logical_type">timeticks</field>
+            <field name="unit">timeticks</field>
+            <field name="method">direct_oid</field>
+            <field name="oid">1.3.6.1.2.1.1.3.0</field>
+            <field name="required" eval="False"/>
+            <field name="sequence">30</field>
+            <field name="priority">80</field>
+            <field name="polling_group">normal</field>
+            <field name="polling_interval">300</field>
+            <field name="store_current" eval="True"/>
+            <field name="store_history" eval="False"/>
+            <field name="history_mode">on_change</field>
+            <field name="discovery_source">SNMPv2-MIB</field>
+            <field name="confidence">high</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <record id="snmp_metric_epson_sys_contact" model="sat.snmp.profile.metric">
+            <field name="profile_id" ref="snmp_profile_epson_general"/>
+            <field name="name">Contacto del sistema</field>
+            <field name="code">sys_contact</field>
+            <field name="category">identity</field>
+            <field name="subgroup">system</field>
+            <field name="logical_type">string</field>
+            <field name="method">direct_oid</field>
+            <field name="oid">1.3.6.1.2.1.1.4.0</field>
+            <field name="required" eval="False"/>
+            <field name="sequence">40</field>
+            <field name="priority">70</field>
+            <field name="polling_group">slow</field>
+            <field name="polling_interval">3600</field>
+            <field name="store_current" eval="True"/>
+            <field name="store_history" eval="False"/>
+            <field name="history_mode">on_change</field>
+            <field name="discovery_source">SNMPv2-MIB</field>
+            <field name="confidence">high</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <record id="snmp_metric_epson_sys_name" model="sat.snmp.profile.metric">
+            <field name="profile_id" ref="snmp_profile_epson_general"/>
+            <field name="name">Nombre del sistema</field>
+            <field name="code">sys_name</field>
+            <field name="category">identity</field>
+            <field name="subgroup">system</field>
+            <field name="logical_type">string</field>
+            <field name="method">direct_oid</field>
+            <field name="oid">1.3.6.1.2.1.1.5.0</field>
+            <field name="required" eval="False"/>
+            <field name="sequence">50</field>
+            <field name="priority">90</field>
+            <field name="polling_group">slow</field>
+            <field name="polling_interval">3600</field>
+            <field name="store_current" eval="True"/>
+            <field name="store_history" eval="False"/>
+            <field name="history_mode">on_change</field>
+            <field name="discovery_source">SNMPv2-MIB</field>
+            <field name="confidence">high</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <record id="snmp_metric_epson_sys_location" model="sat.snmp.profile.metric">
+            <field name="profile_id" ref="snmp_profile_epson_general"/>
+            <field name="name">Ubicación del sistema</field>
+            <field name="code">sys_location</field>
+            <field name="category">identity</field>
+            <field name="subgroup">system</field>
+            <field name="logical_type">string</field>
+            <field name="method">direct_oid</field>
+            <field name="oid">1.3.6.1.2.1.1.6.0</field>
+            <field name="required" eval="False"/>
+            <field name="sequence">60</field>
+            <field name="priority">70</field>
+            <field name="polling_group">slow</field>
+            <field name="polling_interval">3600</field>
+            <field name="store_current" eval="True"/>
+            <field name="store_history" eval="False"/>
+            <field name="history_mode">on_change</field>
+            <field name="discovery_source">SNMPv2-MIB</field>
+            <field name="confidence">high</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <record id="snmp_metric_epson_printer_serial" model="sat.snmp.profile.metric">
+            <field name="profile_id" ref="snmp_profile_epson_general"/>
+            <field name="name">Número de serie Printer-MIB</field>
+            <field name="code">printer_serial</field>
+            <field name="category">identity</field>
+            <field name="subgroup">printer</field>
+            <field name="logical_type">string</field>
+            <field name="method">direct_oid</field>
+            <field name="oid">1.3.6.1.2.1.43.5.1.1.17.1</field>
+            <field name="required" eval="False"/>
+            <field name="sequence">70</field>
+            <field name="priority">70</field>
+            <field name="polling_group">slow</field>
+            <field name="polling_interval">3600</field>
+            <field name="store_current" eval="True"/>
+            <field name="store_history" eval="False"/>
+            <field name="history_mode">on_change</field>
+            <field name="discovery_source">Printer-MIB</field>
+            <field name="confidence">candidate</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <!-- ===================================================== -->
+        <!-- LANIER GENERAL -->
+        <!-- ===================================================== -->
+
+        <record id="snmp_profile_lanier_general" model="sat.snmp.profile">
+            <field name="name">Lanier General</field>
+            <field name="code">lanier_general</field>
+            <field name="marca_id" ref="marca_lanier"/>
+            <field name="description">Perfil SNMP general de Lanier. Base estándar para identificación y aprendizaje de métricas propietarias.</field>
+            <field name="active" eval="True"/>
+            <field name="sequence">100</field>
+            <field name="priority">100</field>
+            <field name="version">1.0</field>
+            <field name="revision">1</field>
+            <field name="state">testing</field>
+            <field name="is_default_for_brand" eval="True"/>
+            <field name="technology">any</field>
+            <field name="supports_snmp_v1" eval="True"/>
+            <field name="supports_snmp_v2c" eval="True"/>
+            <field name="supports_snmp_v3" eval="True"/>
+            <field name="preferred_snmp_version">2c</field>
+            <field name="polling_strategy">hybrid</field>
+            <field name="allow_fallback_discovery" eval="True"/>
+            <field name="preserve_raw_data" eval="True"/>
+            <field name="enterprise_ids">367</field>
+            <field name="enterprise_strict" eval="False"/>
+            <field name="manufacturer_patterns">^LANIER$</field>
+            <field name="minimum_match_score">100</field>
+        </record>
+
+        <record id="snmp_metric_lanier_sys_descr" model="sat.snmp.profile.metric">
+            <field name="profile_id" ref="snmp_profile_lanier_general"/>
+            <field name="name">Descripción del sistema</field>
+            <field name="code">sys_descr</field>
+            <field name="category">identity</field>
+            <field name="subgroup">system</field>
+            <field name="logical_type">string</field>
+            <field name="method">direct_oid</field>
+            <field name="oid">1.3.6.1.2.1.1.1.0</field>
+            <field name="required" eval="True"/>
+            <field name="sequence">10</field>
+            <field name="priority">100</field>
+            <field name="polling_group">slow</field>
+            <field name="polling_interval">3600</field>
+            <field name="store_current" eval="True"/>
+            <field name="store_history" eval="False"/>
+            <field name="history_mode">on_change</field>
+            <field name="discovery_source">SNMPv2-MIB</field>
+            <field name="confidence">high</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <record id="snmp_metric_lanier_sys_object_id" model="sat.snmp.profile.metric">
+            <field name="profile_id" ref="snmp_profile_lanier_general"/>
+            <field name="name">SysObjectID</field>
+            <field name="code">sys_object_id</field>
+            <field name="category">identity</field>
+            <field name="subgroup">system</field>
+            <field name="logical_type">oid</field>
+            <field name="method">direct_oid</field>
+            <field name="oid">1.3.6.1.2.1.1.2.0</field>
+            <field name="required" eval="False"/>
+            <field name="sequence">20</field>
+            <field name="priority">100</field>
+            <field name="polling_group">slow</field>
+            <field name="polling_interval">3600</field>
+            <field name="store_current" eval="True"/>
+            <field name="store_history" eval="False"/>
+            <field name="history_mode">on_change</field>
+            <field name="discovery_source">SNMPv2-MIB</field>
+            <field name="confidence">high</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <record id="snmp_metric_lanier_sys_uptime" model="sat.snmp.profile.metric">
+            <field name="profile_id" ref="snmp_profile_lanier_general"/>
+            <field name="name">Tiempo activo</field>
+            <field name="code">sys_uptime</field>
+            <field name="category">system</field>
+            <field name="subgroup">uptime</field>
+            <field name="logical_type">timeticks</field>
+            <field name="unit">timeticks</field>
+            <field name="method">direct_oid</field>
+            <field name="oid">1.3.6.1.2.1.1.3.0</field>
+            <field name="required" eval="False"/>
+            <field name="sequence">30</field>
+            <field name="priority">80</field>
+            <field name="polling_group">normal</field>
+            <field name="polling_interval">300</field>
+            <field name="store_current" eval="True"/>
+            <field name="store_history" eval="False"/>
+            <field name="history_mode">on_change</field>
+            <field name="discovery_source">SNMPv2-MIB</field>
+            <field name="confidence">high</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <record id="snmp_metric_lanier_sys_contact" model="sat.snmp.profile.metric">
+            <field name="profile_id" ref="snmp_profile_lanier_general"/>
+            <field name="name">Contacto del sistema</field>
+            <field name="code">sys_contact</field>
+            <field name="category">identity</field>
+            <field name="subgroup">system</field>
+            <field name="logical_type">string</field>
+            <field name="method">direct_oid</field>
+            <field name="oid">1.3.6.1.2.1.1.4.0</field>
+            <field name="required" eval="False"/>
+            <field name="sequence">40</field>
+            <field name="priority">70</field>
+            <field name="polling_group">slow</field>
+            <field name="polling_interval">3600</field>
+            <field name="store_current" eval="True"/>
+            <field name="store_history" eval="False"/>
+            <field name="history_mode">on_change</field>
+            <field name="discovery_source">SNMPv2-MIB</field>
+            <field name="confidence">high</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <record id="snmp_metric_lanier_sys_name" model="sat.snmp.profile.metric">
+            <field name="profile_id" ref="snmp_profile_lanier_general"/>
+            <field name="name">Nombre del sistema</field>
+            <field name="code">sys_name</field>
+            <field name="category">identity</field>
+            <field name="subgroup">system</field>
+            <field name="logical_type">string</field>
+            <field name="method">direct_oid</field>
+            <field name="oid">1.3.6.1.2.1.1.5.0</field>
+            <field name="required" eval="False"/>
+            <field name="sequence">50</field>
+            <field name="priority">90</field>
+            <field name="polling_group">slow</field>
+            <field name="polling_interval">3600</field>
+            <field name="store_current" eval="True"/>
+            <field name="store_history" eval="False"/>
+            <field name="history_mode">on_change</field>
+            <field name="discovery_source">SNMPv2-MIB</field>
+            <field name="confidence">high</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <record id="snmp_metric_lanier_sys_location" model="sat.snmp.profile.metric">
+            <field name="profile_id" ref="snmp_profile_lanier_general"/>
+            <field name="name">Ubicación del sistema</field>
+            <field name="code">sys_location</field>
+            <field name="category">identity</field>
+            <field name="subgroup">system</field>
+            <field name="logical_type">string</field>
+            <field name="method">direct_oid</field>
+            <field name="oid">1.3.6.1.2.1.1.6.0</field>
+            <field name="required" eval="False"/>
+            <field name="sequence">60</field>
+            <field name="priority">70</field>
+            <field name="polling_group">slow</field>
+            <field name="polling_interval">3600</field>
+            <field name="store_current" eval="True"/>
+            <field name="store_history" eval="False"/>
+            <field name="history_mode">on_change</field>
+            <field name="discovery_source">SNMPv2-MIB</field>
+            <field name="confidence">high</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <record id="snmp_metric_lanier_printer_serial" model="sat.snmp.profile.metric">
+            <field name="profile_id" ref="snmp_profile_lanier_general"/>
+            <field name="name">Número de serie Printer-MIB</field>
+            <field name="code">printer_serial</field>
+            <field name="category">identity</field>
+            <field name="subgroup">printer</field>
+            <field name="logical_type">string</field>
+            <field name="method">direct_oid</field>
+            <field name="oid">1.3.6.1.2.1.43.5.1.1.17.1</field>
+            <field name="required" eval="False"/>
+            <field name="sequence">70</field>
+            <field name="priority">70</field>
+            <field name="polling_group">slow</field>
+            <field name="polling_interval">3600</field>
+            <field name="store_current" eval="True"/>
+            <field name="store_history" eval="False"/>
+            <field name="history_mode">on_change</field>
+            <field name="discovery_source">Printer-MIB</field>
+            <field name="confidence">candidate</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <!-- ===================================================== -->
+        <!-- SAVIN GENERAL -->
+        <!-- ===================================================== -->
+
+        <record id="snmp_profile_savin_general" model="sat.snmp.profile">
+            <field name="name">Savin General</field>
+            <field name="code">savin_general</field>
+            <field name="marca_id" ref="marca_savin"/>
+            <field name="description">Perfil SNMP general de Savin. Base estándar para identificación y aprendizaje de métricas propietarias.</field>
+            <field name="active" eval="True"/>
+            <field name="sequence">100</field>
+            <field name="priority">100</field>
+            <field name="version">1.0</field>
+            <field name="revision">1</field>
+            <field name="state">testing</field>
+            <field name="is_default_for_brand" eval="True"/>
+            <field name="technology">any</field>
+            <field name="supports_snmp_v1" eval="True"/>
+            <field name="supports_snmp_v2c" eval="True"/>
+            <field name="supports_snmp_v3" eval="True"/>
+            <field name="preferred_snmp_version">2c</field>
+            <field name="polling_strategy">hybrid</field>
+            <field name="allow_fallback_discovery" eval="True"/>
+            <field name="preserve_raw_data" eval="True"/>
+            <field name="enterprise_ids">367</field>
+            <field name="enterprise_strict" eval="False"/>
+            <field name="manufacturer_patterns">^SAVIN$</field>
+            <field name="minimum_match_score">100</field>
+        </record>
+
+        <record id="snmp_metric_savin_sys_descr" model="sat.snmp.profile.metric">
+            <field name="profile_id" ref="snmp_profile_savin_general"/>
+            <field name="name">Descripción del sistema</field>
+            <field name="code">sys_descr</field>
+            <field name="category">identity</field>
+            <field name="subgroup">system</field>
+            <field name="logical_type">string</field>
+            <field name="method">direct_oid</field>
+            <field name="oid">1.3.6.1.2.1.1.1.0</field>
+            <field name="required" eval="True"/>
+            <field name="sequence">10</field>
+            <field name="priority">100</field>
+            <field name="polling_group">slow</field>
+            <field name="polling_interval">3600</field>
+            <field name="store_current" eval="True"/>
+            <field name="store_history" eval="False"/>
+            <field name="history_mode">on_change</field>
+            <field name="discovery_source">SNMPv2-MIB</field>
+            <field name="confidence">high</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <record id="snmp_metric_savin_sys_object_id" model="sat.snmp.profile.metric">
+            <field name="profile_id" ref="snmp_profile_savin_general"/>
+            <field name="name">SysObjectID</field>
+            <field name="code">sys_object_id</field>
+            <field name="category">identity</field>
+            <field name="subgroup">system</field>
+            <field name="logical_type">oid</field>
+            <field name="method">direct_oid</field>
+            <field name="oid">1.3.6.1.2.1.1.2.0</field>
+            <field name="required" eval="False"/>
+            <field name="sequence">20</field>
+            <field name="priority">100</field>
+            <field name="polling_group">slow</field>
+            <field name="polling_interval">3600</field>
+            <field name="store_current" eval="True"/>
+            <field name="store_history" eval="False"/>
+            <field name="history_mode">on_change</field>
+            <field name="discovery_source">SNMPv2-MIB</field>
+            <field name="confidence">high</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <record id="snmp_metric_savin_sys_uptime" model="sat.snmp.profile.metric">
+            <field name="profile_id" ref="snmp_profile_savin_general"/>
+            <field name="name">Tiempo activo</field>
+            <field name="code">sys_uptime</field>
+            <field name="category">system</field>
+            <field name="subgroup">uptime</field>
+            <field name="logical_type">timeticks</field>
+            <field name="unit">timeticks</field>
+            <field name="method">direct_oid</field>
+            <field name="oid">1.3.6.1.2.1.1.3.0</field>
+            <field name="required" eval="False"/>
+            <field name="sequence">30</field>
+            <field name="priority">80</field>
+            <field name="polling_group">normal</field>
+            <field name="polling_interval">300</field>
+            <field name="store_current" eval="True"/>
+            <field name="store_history" eval="False"/>
+            <field name="history_mode">on_change</field>
+            <field name="discovery_source">SNMPv2-MIB</field>
+            <field name="confidence">high</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <record id="snmp_metric_savin_sys_contact" model="sat.snmp.profile.metric">
+            <field name="profile_id" ref="snmp_profile_savin_general"/>
+            <field name="name">Contacto del sistema</field>
+            <field name="code">sys_contact</field>
+            <field name="category">identity</field>
+            <field name="subgroup">system</field>
+            <field name="logical_type">string</field>
+            <field name="method">direct_oid</field>
+            <field name="oid">1.3.6.1.2.1.1.4.0</field>
+            <field name="required" eval="False"/>
+            <field name="sequence">40</field>
+            <field name="priority">70</field>
+            <field name="polling_group">slow</field>
+            <field name="polling_interval">3600</field>
+            <field name="store_current" eval="True"/>
+            <field name="store_history" eval="False"/>
+            <field name="history_mode">on_change</field>
+            <field name="discovery_source">SNMPv2-MIB</field>
+            <field name="confidence">high</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <record id="snmp_metric_savin_sys_name" model="sat.snmp.profile.metric">
+            <field name="profile_id" ref="snmp_profile_savin_general"/>
+            <field name="name">Nombre del sistema</field>
+            <field name="code">sys_name</field>
+            <field name="category">identity</field>
+            <field name="subgroup">system</field>
+            <field name="logical_type">string</field>
+            <field name="method">direct_oid</field>
+            <field name="oid">1.3.6.1.2.1.1.5.0</field>
+            <field name="required" eval="False"/>
+            <field name="sequence">50</field>
+            <field name="priority">90</field>
+            <field name="polling_group">slow</field>
+            <field name="polling_interval">3600</field>
+            <field name="store_current" eval="True"/>
+            <field name="store_history" eval="False"/>
+            <field name="history_mode">on_change</field>
+            <field name="discovery_source">SNMPv2-MIB</field>
+            <field name="confidence">high</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <record id="snmp_metric_savin_sys_location" model="sat.snmp.profile.metric">
+            <field name="profile_id" ref="snmp_profile_savin_general"/>
+            <field name="name">Ubicación del sistema</field>
+            <field name="code">sys_location</field>
+            <field name="category">identity</field>
+            <field name="subgroup">system</field>
+            <field name="logical_type">string</field>
+            <field name="method">direct_oid</field>
+            <field name="oid">1.3.6.1.2.1.1.6.0</field>
+            <field name="required" eval="False"/>
+            <field name="sequence">60</field>
+            <field name="priority">70</field>
+            <field name="polling_group">slow</field>
+            <field name="polling_interval">3600</field>
+            <field name="store_current" eval="True"/>
+            <field name="store_history" eval="False"/>
+            <field name="history_mode">on_change</field>
+            <field name="discovery_source">SNMPv2-MIB</field>
+            <field name="confidence">high</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <record id="snmp_metric_savin_printer_serial" model="sat.snmp.profile.metric">
+            <field name="profile_id" ref="snmp_profile_savin_general"/>
+            <field name="name">Número de serie Printer-MIB</field>
+            <field name="code">printer_serial</field>
+            <field name="category">identity</field>
+            <field name="subgroup">printer</field>
+            <field name="logical_type">string</field>
+            <field name="method">direct_oid</field>
+            <field name="oid">1.3.6.1.2.1.43.5.1.1.17.1</field>
+            <field name="required" eval="False"/>
+            <field name="sequence">70</field>
+            <field name="priority">70</field>
+            <field name="polling_group">slow</field>
+            <field name="polling_interval">3600</field>
+            <field name="store_current" eval="True"/>
+            <field name="store_history" eval="False"/>
+            <field name="history_mode">on_change</field>
+            <field name="discovery_source">Printer-MIB</field>
+            <field name="confidence">candidate</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <!-- ===================================================== -->
+        <!-- RISO GENERAL -->
+        <!-- ===================================================== -->
+
+        <record id="snmp_profile_riso_general" model="sat.snmp.profile">
+            <field name="name">Riso General</field>
+            <field name="code">riso_general</field>
+            <field name="marca_id" ref="marca_riso"/>
+            <field name="description">Perfil SNMP general de Riso. Base estándar para identificación y aprendizaje de métricas propietarias.</field>
+            <field name="active" eval="True"/>
+            <field name="sequence">100</field>
+            <field name="priority">100</field>
+            <field name="version">1.0</field>
+            <field name="revision">1</field>
+            <field name="state">testing</field>
+            <field name="is_default_for_brand" eval="True"/>
+            <field name="technology">any</field>
+            <field name="supports_snmp_v1" eval="True"/>
+            <field name="supports_snmp_v2c" eval="True"/>
+            <field name="supports_snmp_v3" eval="True"/>
+            <field name="preferred_snmp_version">2c</field>
+            <field name="polling_strategy">hybrid</field>
+            <field name="allow_fallback_discovery" eval="True"/>
+            <field name="preserve_raw_data" eval="True"/>
+            <field name="enterprise_strict" eval="False"/>
+            <field name="manufacturer_patterns">^RISO$</field>
+            <field name="minimum_match_score">100</field>
+        </record>
+
+        <record id="snmp_metric_riso_sys_descr" model="sat.snmp.profile.metric">
+            <field name="profile_id" ref="snmp_profile_riso_general"/>
+            <field name="name">Descripción del sistema</field>
+            <field name="code">sys_descr</field>
+            <field name="category">identity</field>
+            <field name="subgroup">system</field>
+            <field name="logical_type">string</field>
+            <field name="method">direct_oid</field>
+            <field name="oid">1.3.6.1.2.1.1.1.0</field>
+            <field name="required" eval="True"/>
+            <field name="sequence">10</field>
+            <field name="priority">100</field>
+            <field name="polling_group">slow</field>
+            <field name="polling_interval">3600</field>
+            <field name="store_current" eval="True"/>
+            <field name="store_history" eval="False"/>
+            <field name="history_mode">on_change</field>
+            <field name="discovery_source">SNMPv2-MIB</field>
+            <field name="confidence">high</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <record id="snmp_metric_riso_sys_object_id" model="sat.snmp.profile.metric">
+            <field name="profile_id" ref="snmp_profile_riso_general"/>
+            <field name="name">SysObjectID</field>
+            <field name="code">sys_object_id</field>
+            <field name="category">identity</field>
+            <field name="subgroup">system</field>
+            <field name="logical_type">oid</field>
+            <field name="method">direct_oid</field>
+            <field name="oid">1.3.6.1.2.1.1.2.0</field>
+            <field name="required" eval="False"/>
+            <field name="sequence">20</field>
+            <field name="priority">100</field>
+            <field name="polling_group">slow</field>
+            <field name="polling_interval">3600</field>
+            <field name="store_current" eval="True"/>
+            <field name="store_history" eval="False"/>
+            <field name="history_mode">on_change</field>
+            <field name="discovery_source">SNMPv2-MIB</field>
+            <field name="confidence">high</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <record id="snmp_metric_riso_sys_uptime" model="sat.snmp.profile.metric">
+            <field name="profile_id" ref="snmp_profile_riso_general"/>
+            <field name="name">Tiempo activo</field>
+            <field name="code">sys_uptime</field>
+            <field name="category">system</field>
+            <field name="subgroup">uptime</field>
+            <field name="logical_type">timeticks</field>
+            <field name="unit">timeticks</field>
+            <field name="method">direct_oid</field>
+            <field name="oid">1.3.6.1.2.1.1.3.0</field>
+            <field name="required" eval="False"/>
+            <field name="sequence">30</field>
+            <field name="priority">80</field>
+            <field name="polling_group">normal</field>
+            <field name="polling_interval">300</field>
+            <field name="store_current" eval="True"/>
+            <field name="store_history" eval="False"/>
+            <field name="history_mode">on_change</field>
+            <field name="discovery_source">SNMPv2-MIB</field>
+            <field name="confidence">high</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <record id="snmp_metric_riso_sys_contact" model="sat.snmp.profile.metric">
+            <field name="profile_id" ref="snmp_profile_riso_general"/>
+            <field name="name">Contacto del sistema</field>
+            <field name="code">sys_contact</field>
+            <field name="category">identity</field>
+            <field name="subgroup">system</field>
+            <field name="logical_type">string</field>
+            <field name="method">direct_oid</field>
+            <field name="oid">1.3.6.1.2.1.1.4.0</field>
+            <field name="required" eval="False"/>
+            <field name="sequence">40</field>
+            <field name="priority">70</field>
+            <field name="polling_group">slow</field>
+            <field name="polling_interval">3600</field>
+            <field name="store_current" eval="True"/>
+            <field name="store_history" eval="False"/>
+            <field name="history_mode">on_change</field>
+            <field name="discovery_source">SNMPv2-MIB</field>
+            <field name="confidence">high</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <record id="snmp_metric_riso_sys_name" model="sat.snmp.profile.metric">
+            <field name="profile_id" ref="snmp_profile_riso_general"/>
+            <field name="name">Nombre del sistema</field>
+            <field name="code">sys_name</field>
+            <field name="category">identity</field>
+            <field name="subgroup">system</field>
+            <field name="logical_type">string</field>
+            <field name="method">direct_oid</field>
+            <field name="oid">1.3.6.1.2.1.1.5.0</field>
+            <field name="required" eval="False"/>
+            <field name="sequence">50</field>
+            <field name="priority">90</field>
+            <field name="polling_group">slow</field>
+            <field name="polling_interval">3600</field>
+            <field name="store_current" eval="True"/>
+            <field name="store_history" eval="False"/>
+            <field name="history_mode">on_change</field>
+            <field name="discovery_source">SNMPv2-MIB</field>
+            <field name="confidence">high</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <record id="snmp_metric_riso_sys_location" model="sat.snmp.profile.metric">
+            <field name="profile_id" ref="snmp_profile_riso_general"/>
+            <field name="name">Ubicación del sistema</field>
+            <field name="code">sys_location</field>
+            <field name="category">identity</field>
+            <field name="subgroup">system</field>
+            <field name="logical_type">string</field>
+            <field name="method">direct_oid</field>
+            <field name="oid">1.3.6.1.2.1.1.6.0</field>
+            <field name="required" eval="False"/>
+            <field name="sequence">60</field>
+            <field name="priority">70</field>
+            <field name="polling_group">slow</field>
+            <field name="polling_interval">3600</field>
+            <field name="store_current" eval="True"/>
+            <field name="store_history" eval="False"/>
+            <field name="history_mode">on_change</field>
+            <field name="discovery_source">SNMPv2-MIB</field>
+            <field name="confidence">high</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <record id="snmp_metric_riso_printer_serial" model="sat.snmp.profile.metric">
+            <field name="profile_id" ref="snmp_profile_riso_general"/>
+            <field name="name">Número de serie Printer-MIB</field>
+            <field name="code">printer_serial</field>
+            <field name="category">identity</field>
+            <field name="subgroup">printer</field>
+            <field name="logical_type">string</field>
+            <field name="method">direct_oid</field>
+            <field name="oid">1.3.6.1.2.1.43.5.1.1.17.1</field>
+            <field name="required" eval="False"/>
+            <field name="sequence">70</field>
+            <field name="priority">70</field>
+            <field name="polling_group">slow</field>
+            <field name="polling_interval">3600</field>
+            <field name="store_current" eval="True"/>
+            <field name="store_history" eval="False"/>
+            <field name="history_mode">on_change</field>
+            <field name="discovery_source">Printer-MIB</field>
+            <field name="confidence">candidate</field>
+            <field name="active" eval="True"/>
+        </record>
+
+    </data>
+</odoo>
