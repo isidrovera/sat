@@ -21,6 +21,53 @@ def _clean_text(value):
     return str(value).strip()
 
 
+def _normalize_brand_code(value):
+    """Normaliza códigos de marca para comparación interna."""
+    value = _clean_text(value).lower()
+    value = re.sub(r'[^a-z0-9]+', '_', value)
+    value = re.sub(r'_+', '_', value)
+    return value.strip('_')
+
+
+def _normalize_enterprise_id(value):
+    """
+    Normaliza sysObjectID/Enterprise ID.
+
+    Acepta, entre otros:
+        367
+        1.3.6.1.4.1.367
+        1.3.6.1.4.1.367.1.1
+        SNMPv2-SMI::enterprises.367.1.1
+
+    Retorna preferentemente el número enterprise: 367.
+    """
+    value = _clean_text(value)
+
+    if not value:
+        return ''
+
+    symbolic = re.search(
+        r'(?i)enterprises\.(\d+)',
+        value,
+    )
+    if symbolic:
+        return symbolic.group(1)
+
+    numeric = value.strip('.')
+
+    enterprise_oid = re.search(
+        r'(?:^|\.)1\.3\.6\.1\.4\.1\.(\d+)(?:\.|$)',
+        numeric,
+    )
+    if enterprise_oid:
+        return enterprise_oid.group(1)
+
+    if re.fullmatch(r'\d+', numeric):
+        return numeric
+
+    return numeric
+
+
 def _json_dumps_safe(value):
     try:
         return json.dumps(
@@ -1482,9 +1529,107 @@ class SatMonitoringDevice(models.Model):
     # ASIGNACIÓN AUTOMÁTICA DE PERFIL
     # ========================================================
 
+    def _find_marca_from_identity(
+        self,
+        brand_code=None,
+        manufacturer=None,
+    ):
+        """
+        Busca la marca sin depender de mayúsculas/minúsculas.
+
+        Orden:
+            1. codigo_tecnico exacto
+            2. codigo_tecnico =ilike
+            3. nombre =ilike fabricante
+            4. nombre =ilike código de marca
+        """
+        self.ensure_one()
+
+        Marca = self.env['marca.marca']
+
+        brand_code = _clean_text(
+            brand_code
+        )
+        manufacturer = _clean_text(
+            manufacturer
+        )
+
+        if brand_code:
+            marca = Marca.search(
+                [
+                    (
+                        'codigo_tecnico',
+                        '=',
+                        brand_code,
+                    ),
+                ],
+                limit=1,
+            )
+
+            if marca:
+                return marca
+
+            marca = Marca.search(
+                [
+                    (
+                        'codigo_tecnico',
+                        '=ilike',
+                        brand_code,
+                    ),
+                ],
+                limit=1,
+            )
+
+            if marca:
+                return marca
+
+        if manufacturer:
+            marca = Marca.search(
+                [
+                    (
+                        'name',
+                        '=ilike',
+                        manufacturer,
+                    ),
+                ],
+                limit=1,
+            )
+
+            if marca:
+                return marca
+
+        if brand_code:
+            readable_brand = (
+                brand_code
+                .replace('_', ' ')
+                .strip()
+            )
+
+            if readable_brand:
+                marca = Marca.search(
+                    [
+                        (
+                            'name',
+                            '=ilike',
+                            readable_brand,
+                        ),
+                    ],
+                    limit=1,
+                )
+
+                if marca:
+                    return marca
+
+        return Marca.browse()
+
+
     def action_find_snmp_profile(self):
         """
         Selecciona automáticamente el mejor perfil SNMP.
+
+        La selección se limita por marca_id cuando la marca ya fue
+        identificada. Esto evita depender de que codigo_tecnico tenga
+        exactamente las mismas mayúsculas/minúsculas que brand_code.
         """
         Profile = self.env[
             'sat.snmp.profile'
@@ -1497,34 +1642,224 @@ class SatMonitoringDevice(models.Model):
             ):
                 continue
 
-            result = Profile.find_best_profile(
-                brand_code=record.marca_codigo,
-                manufacturer=record.manufacturer_raw,
-                model=(
-                    record.model
-                    or record.model_raw
+            # --------------------------------------------------
+            # ASEGURAR MARCA
+            # --------------------------------------------------
+
+            if not record.marca_id:
+                marca = record._find_marca_from_identity(
+                    brand_code=record.marca_codigo,
+                    manufacturer=record.manufacturer_raw,
+                )
+
+                if marca:
+                    record.sudo().write({
+                        'marca_id':
+                            marca.id,
+                    })
+
+            # Sin marca conocida no hacemos matching global,
+            # para evitar seleccionar un perfil de otra marca.
+            if not record.marca_id:
+                details = {
+                    'matched':
+                        False,
+
+                    'reason':
+                        'brand_not_found',
+
+                    'inputs': {
+                        'brand_code':
+                            record.marca_codigo or '',
+
+                        'manufacturer':
+                            record.manufacturer_raw or '',
+
+                        'model':
+                            record.model
+                            or record.model_raw
+                            or '',
+
+                        'enterprise_id':
+                            record.enterprise_id or '',
+
+                        'technology':
+                            record.technology or '',
+                    },
+                }
+
+                record.sudo().write({
+                    'profile_id':
+                        False,
+
+                    'profile_match_score':
+                        0,
+
+                    'profile_match_date':
+                        fields.Datetime.now(),
+
+                    'profile_match_details':
+                        _json_dumps_safe(
+                            details
+                        ),
+
+                    'needs_discovery':
+                        True,
+
+                    'discovery_reason':
+                        'brand_not_found',
+                })
+
+                _logger.warning(
+                    '[SNMP PROFILE] Sin marca | '
+                    'device_id=%s | manufacturer=%s | model=%s',
+                    record.id,
+                    record.manufacturer_raw or '-',
+                    record.model or record.model_raw or '-',
+                )
+
+                continue
+
+            # --------------------------------------------------
+            # CANDIDATOS DE LA MISMA MARCA
+            # --------------------------------------------------
+
+            profiles = Profile.search(
+                [
+                    (
+                        'active',
+                        '=',
+                        True,
+                    ),
+                    (
+                        'state',
+                        'in',
+                        [
+                            'testing',
+                            'validated',
+                        ],
+                    ),
+                    (
+                        'marca_id',
+                        '=',
+                        record.marca_id.id,
+                    ),
+                ],
+                order=(
+                    'priority desc, '
+                    'is_default_for_brand asc, '
+                    'sequence asc, id asc'
                 ),
-                sysdescr=record.sysdescr,
-                enterprise_id=record.enterprise_id,
-                firmware=record.firmware,
-                technology=(
-                    record.technology
-                    if record.technology
-                    in ('mono', 'color')
-                    else None
-                ),
-                include_testing=True,
             )
 
-            profile = result.get(
-                'profile'
+            brand_code = (
+                record.marca_codigo
+                or record.marca_id.codigo_tecnico
+                or record.marca_id.name
+                or ''
             )
 
-            match = result.get(
-                'match'
+            enterprise_id = (
+                _normalize_enterprise_id(
+                    record.enterprise_id
+                )
             )
 
-            if profile and match:
+            technology = (
+                record.technology
+                if record.technology
+                in (
+                    'mono',
+                    'color',
+                )
+                else None
+            )
+
+            evaluated = []
+
+            for profile in profiles:
+                match = (
+                    profile.get_device_match_result(
+                        brand_code=brand_code,
+                        manufacturer=record.manufacturer_raw,
+                        model=(
+                            record.model
+                            or record.model_raw
+                        ),
+                        sysdescr=record.sysdescr,
+                        enterprise_id=enterprise_id,
+                        firmware=record.firmware,
+                        technology=technology,
+                    )
+                )
+
+                if match.get('matched'):
+                    evaluated.append(
+                        (
+                            match.get(
+                                'score',
+                                0,
+                            ),
+                            profile.priority,
+                            profile.id,
+                            profile,
+                            match,
+                        )
+                    )
+
+            if evaluated:
+                evaluated.sort(
+                    key=lambda item: (
+                        item[0],
+                        item[1],
+                        item[2],
+                    ),
+                    reverse=True,
+                )
+
+                best = evaluated[0]
+                profile = best[3]
+                match = best[4]
+
+                details = {
+                    'matched':
+                        True,
+
+                    'evaluated_count':
+                        len(profiles),
+
+                    'matched_count':
+                        len(evaluated),
+
+                    'inputs': {
+                        'brand_code':
+                            brand_code,
+
+                        'manufacturer':
+                            record.manufacturer_raw or '',
+
+                        'model':
+                            record.model
+                            or record.model_raw
+                            or '',
+
+                        'sysdescr':
+                            record.sysdescr or '',
+
+                        'enterprise_id':
+                            enterprise_id,
+
+                        'firmware':
+                            record.firmware or '',
+
+                        'technology':
+                            technology or '',
+                    },
+
+                    'match':
+                        match,
+                }
+
                 record.sudo().write({
                     'profile_id':
                         profile.id,
@@ -1540,7 +1875,7 @@ class SatMonitoringDevice(models.Model):
 
                     'profile_match_details':
                         _json_dumps_safe(
-                            match
+                            details
                         ),
 
                     'discovery_state':
@@ -1553,7 +1888,59 @@ class SatMonitoringDevice(models.Model):
                         False,
                 })
 
+                _logger.info(
+                    '[SNMP PROFILE] Asignado | '
+                    'device_id=%s | profile=%s | score=%s',
+                    record.id,
+                    profile.code,
+                    match.get(
+                        'score',
+                        0,
+                    ),
+                )
+
             else:
+                details = {
+                    'matched':
+                        False,
+
+                    'reason':
+                        'profile_not_found',
+
+                    'evaluated_count':
+                        len(profiles),
+
+                    'inputs': {
+                        'brand_code':
+                            brand_code,
+
+                        'manufacturer':
+                            record.manufacturer_raw or '',
+
+                        'model':
+                            record.model
+                            or record.model_raw
+                            or '',
+
+                        'sysdescr':
+                            record.sysdescr or '',
+
+                        'enterprise_id':
+                            enterprise_id,
+
+                        'firmware':
+                            record.firmware or '',
+
+                        'technology':
+                            technology or '',
+                    },
+
+                    'profiles': [
+                        profile.get_profile_summary()
+                        for profile in profiles
+                    ],
+                }
+
                 record.sudo().write({
                     'profile_id':
                         False,
@@ -1566,17 +1953,34 @@ class SatMonitoringDevice(models.Model):
 
                     'profile_match_details':
                         _json_dumps_safe(
-                            match or {}
+                            details
                         ),
 
                     'needs_discovery':
                         True,
 
                     'discovery_reason':
-                        'profile_not_found',
+                        (
+                            'profile_not_found'
+                            if profiles
+                            else 'no_active_profiles_for_brand'
+                        ),
                 })
 
+                _logger.warning(
+                    '[SNMP PROFILE] No encontrado | '
+                    'device_id=%s | marca=%s | '
+                    'model=%s | candidatos=%s',
+                    record.id,
+                    record.marca_id.display_name,
+                    record.model
+                    or record.model_raw
+                    or '-',
+                    len(profiles),
+                )
+
         return True
+
 
     # ========================================================
     # PERFIL MANUAL
@@ -1744,30 +2148,11 @@ class SatMonitoringDevice(models.Model):
         """
         Actualiza identidad descubierta.
 
-        Payload conceptual:
+        No borra datos previamente conocidos cuando un ciclo de discovery
+        devuelve una propiedad vacía.
 
-        {
-            "ip": "192.168.1.10",
-            "mac": "...",
-            "hostname": "...",
-
-            "manufacturer": "RICOH",
-            "brand_code": "ricoh",
-
-            "model": "MP C307",
-            "serial": "...",
-            "firmware": "1.13",
-
-            "enterprise_id": "367",
-            "sysdescr": "...",
-
-            "technology": "color",
-
-            "system_name": "...",
-            "system_location": "...",
-            "system_contact": "...",
-            "engine_id": "..."
-        }
+        Normaliza Enterprise ID y resuelve la marca de forma tolerante a
+        diferencias de mayúsculas/minúsculas.
         """
         self.ensure_one()
 
@@ -1776,132 +2161,222 @@ class SatMonitoringDevice(models.Model):
         vals = {
             'last_discovery':
                 fields.Datetime.now(),
-
-            'manufacturer_raw':
-                _clean_text(
-                    payload.get(
-                        'manufacturer'
-                    )
-                ),
-
-            'model_raw':
-                _clean_text(
-                    payload.get(
-                        'model_raw'
-                    )
-                    or payload.get(
-                        'model'
-                    )
-                ),
-
-            'sysdescr':
-                _clean_text(
-                    payload.get(
-                        'sysdescr'
-                    )
-                    or payload.get(
-                        'description'
-                    )
-                ),
-
-            'enterprise_id':
-                _clean_text(
-                    payload.get(
-                        'enterprise_id'
-                    )
-                ),
-
-            'firmware':
-                _clean_text(
-                    payload.get(
-                        'firmware'
-                    )
-                ),
-
-            'hostname':
-                _clean_text(
-                    payload.get(
-                        'hostname'
-                    )
-                ),
-
-            'system_name':
-                _clean_text(
-                    payload.get(
-                        'system_name'
-                    )
-                ),
-
-            'system_location':
-                _clean_text(
-                    payload.get(
-                        'system_location'
-                    )
-                ),
-
-            'system_contact':
-                _clean_text(
-                    payload.get(
-                        'system_contact'
-                    )
-                ),
-
-            'engine_id':
-                _clean_text(
-                    payload.get(
-                        'engine_id'
-                    )
-                ),
         }
 
-        if payload.get('model'):
+        # -----------------------------------------------------
+        # IDENTIDAD RAW
+        # -----------------------------------------------------
+
+        manufacturer = _clean_text(
+            payload.get(
+                'manufacturer'
+            )
+        )
+
+        if manufacturer:
+            vals['manufacturer_raw'] = (
+                manufacturer
+            )
+
+        model_raw = _clean_text(
+            payload.get(
+                'model_raw'
+            )
+            or payload.get(
+                'model'
+            )
+        )
+
+        if model_raw:
+            vals['model_raw'] = (
+                model_raw
+            )
+
+        sysdescr = _clean_text(
+            payload.get(
+                'sysdescr'
+            )
+            or payload.get(
+                'description'
+            )
+        )
+
+        if sysdescr:
+            vals['sysdescr'] = (
+                sysdescr
+            )
+
+        enterprise_id = (
+            _normalize_enterprise_id(
+                payload.get(
+                    'enterprise_id'
+                )
+                or payload.get(
+                    'sys_object_id'
+                )
+            )
+        )
+
+        if enterprise_id:
+            vals['enterprise_id'] = (
+                enterprise_id
+            )
+
+        firmware = _clean_text(
+            payload.get(
+                'firmware'
+            )
+        )
+
+        if firmware:
+            vals['firmware'] = (
+                firmware
+            )
+
+        hostname = _clean_text(
+            payload.get(
+                'hostname'
+            )
+        )
+
+        if hostname:
+            vals['hostname'] = (
+                hostname
+            )
+
+        system_name = _clean_text(
+            payload.get(
+                'system_name'
+            )
+        )
+
+        if system_name:
+            vals['system_name'] = (
+                system_name
+            )
+
+        system_location = _clean_text(
+            payload.get(
+                'system_location'
+            )
+        )
+
+        if system_location:
+            vals['system_location'] = (
+                system_location
+            )
+
+        system_contact = _clean_text(
+            payload.get(
+                'system_contact'
+            )
+        )
+
+        if system_contact:
+            vals['system_contact'] = (
+                system_contact
+            )
+
+        engine_id = _clean_text(
+            payload.get(
+                'engine_id'
+            )
+        )
+
+        if engine_id:
+            vals['engine_id'] = (
+                engine_id
+            )
+
+        # -----------------------------------------------------
+        # IDENTIDAD PRINCIPAL
+        # -----------------------------------------------------
+
+        model = _clean_text(
+            payload.get(
+                'model'
+            )
+        )
+
+        if model:
             vals['model'] = (
-                _clean_text(
-                    payload['model']
-                )
+                model
             )
 
-        if payload.get('serial'):
+        serial = _clean_text(
+            payload.get(
+                'serial'
+            )
+        )
+
+        if serial:
             vals['serial'] = (
-                _clean_text(
-                    payload['serial']
-                )
+                serial
             )
 
-        if payload.get('ip'):
+        ip = _clean_text(
+            payload.get(
+                'ip'
+            )
+            or payload.get(
+                'ip_address'
+            )
+        )
+
+        if ip:
             vals['ip_address'] = (
-                _clean_text(
-                    payload['ip']
-                )
+                ip
             )
 
-        if payload.get('mac'):
+        mac = _clean_text(
+            payload.get(
+                'mac'
+            )
+        )
+
+        if mac:
             vals['mac_address'] = (
                 _normalize_mac(
-                    payload['mac']
+                    mac
                 )
             )
 
-        if payload.get('gateway'):
+        gateway = _clean_text(
+            payload.get(
+                'gateway'
+            )
+        )
+
+        if gateway:
             vals['gateway'] = (
-                _clean_text(
-                    payload['gateway']
-                )
+                gateway
             )
 
-        if payload.get('subnet_mask'):
+        subnet_mask = _clean_text(
+            payload.get(
+                'subnet_mask'
+            )
+        )
+
+        if subnet_mask:
             vals['subnet_mask'] = (
-                _clean_text(
-                    payload['subnet_mask']
-                )
+                subnet_mask
             )
 
-        if payload.get('ipv6'):
-            vals['ipv6_address'] = (
-                _clean_text(
-                    payload['ipv6']
-                )
+        ipv6 = _clean_text(
+            payload.get(
+                'ipv6'
             )
+        )
+
+        if ipv6:
+            vals['ipv6_address'] = (
+                ipv6
+            )
+
+        # -----------------------------------------------------
+        # TECNOLOGÍA
+        # -----------------------------------------------------
 
         technology = _clean_text(
             payload.get(
@@ -1923,41 +2398,48 @@ class SatMonitoringDevice(models.Model):
                 technology == 'color'
             )
 
+        # -----------------------------------------------------
+        # MARCA
+        # -----------------------------------------------------
+
         brand_code = _clean_text(
             payload.get(
                 'brand_code'
             )
         )
 
-        if brand_code:
-            marca = self.env[
-                'marca.marca'
-            ].search(
-                [
-                    (
-                        'codigo_tecnico',
-                        '=',
-                        brand_code,
-                    ),
-                ],
-                limit=1,
+        marca = self._find_marca_from_identity(
+            brand_code=brand_code,
+            manufacturer=manufacturer,
+        )
+
+        if marca:
+            vals['marca_id'] = (
+                marca.id
             )
 
-            if marca:
-                vals['marca_id'] = (
-                    marca.id
-                )
+        elif brand_code or manufacturer:
+            _logger.warning(
+                '[SNMP IDENTITY] Marca no encontrada | '
+                'device_id=%s | brand_code=%s | manufacturer=%s',
+                self.id,
+                brand_code or '-',
+                manufacturer or '-',
+            )
 
         vals['discovery_state'] = (
             'identified'
         )
 
-        self.sudo().write(vals)
+        self.sudo().write(
+            vals
+        )
 
         if not self.profile_manual:
             self.action_find_snmp_profile()
 
         return True
+
 
     # ========================================================
     # APLICAR MÉTRICAS ACTUALES
@@ -2474,6 +2956,22 @@ class SatMonitoringDevice(models.Model):
                 self.network_id.cidr
                 if self.network_id
                 else '',
+
+            'network_id':
+                self.network_id.id
+                if self.network_id
+                else False,
+
+            'monitoring_enabled':
+                self.monitoring_enabled,
+
+            'inventory_enabled':
+                self.inventory_enabled,
+
+            'credential_id':
+                self.effective_credential_id.id
+                if self.effective_credential_id
+                else False,
 
             'ip':
                 self.ip_address or '',
