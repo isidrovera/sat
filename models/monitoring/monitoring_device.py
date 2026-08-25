@@ -1860,7 +1860,12 @@ class SatMonitoringDevice(models.Model):
                         match,
                 }
 
-                record.sudo().write({
+                previous_discovery_reason = (
+                    record.discovery_reason
+                    or ''
+                )
+
+                profile_vals = {
                     'profile_id':
                         profile.id,
 
@@ -1886,7 +1891,35 @@ class SatMonitoringDevice(models.Model):
 
                     'discovery_reason':
                         False,
-                })
+                }
+
+                # Si el monitoreo fue desactivado automáticamente
+                # porque antes no existía un perfil válido, se
+                # reactiva al encontrar uno.
+                #
+                # No se reactiva un equipo ignorado ni uno cuya
+                # red tenga el polling deshabilitado.
+                auto_disabled_reasons = {
+                    'profile_not_found',
+                    'no_active_profiles_for_brand',
+                    'brand_not_found',
+                }
+
+                if (
+                    not record.monitoring_enabled
+                    and not record.is_ignored
+                    and record.network_id
+                    and record.network_id.polling_enabled
+                    and previous_discovery_reason
+                    in auto_disabled_reasons
+                ):
+                    profile_vals[
+                        'monitoring_enabled'
+                    ] = True
+
+                record.sudo().write(
+                    profile_vals
+                )
 
                 _logger.info(
                     '[SNMP PROFILE] Asignado | '
