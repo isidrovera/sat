@@ -1860,11 +1860,6 @@ class SatMonitoringDevice(models.Model):
                         match,
                 }
 
-                previous_discovery_reason = (
-                    record.discovery_reason
-                    or ''
-                )
-
                 profile_vals = {
                     'profile_id':
                         profile.id,
@@ -1893,25 +1888,17 @@ class SatMonitoringDevice(models.Model):
                         False,
                 }
 
-                # Si el monitoreo fue desactivado automáticamente
-                # porque antes no existía un perfil válido, se
-                # reactiva al encontrar uno.
+                # Un equipo con perfil válido puede volver al polling
+                # siempre que:
+                # - no esté marcado como ignorado manualmente;
+                # - tenga una red asignada;
+                # - la red tenga polling habilitado.
                 #
-                # No se reactiva un equipo ignorado ni uno cuya
-                # red tenga el polling deshabilitado.
-                auto_disabled_reasons = {
-                    'profile_not_found',
-                    'no_active_profiles_for_brand',
-                    'brand_not_found',
-                }
-
+                # La exclusión manual se respeta mediante is_ignored=True.
                 if (
-                    not record.monitoring_enabled
-                    and not record.is_ignored
+                    not record.is_ignored
                     and record.network_id
                     and record.network_id.polling_enabled
-                    and previous_discovery_reason
-                    in auto_disabled_reasons
                 ):
                     profile_vals[
                         'monitoring_enabled'
