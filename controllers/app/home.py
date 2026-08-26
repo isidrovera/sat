@@ -162,6 +162,10 @@ class AppHomeController(AppBaseController):
                 "sat.sat_logistica_group_user"
             )
 
+            is_rental = user.has_group(
+                "sat.sat_alquiler_group_user"
+            )
+
             is_technical = user.has_group(
                 "sat.sat_tecnica_group_user"
             )
@@ -186,6 +190,99 @@ class AppHomeController(AppBaseController):
                 or is_head
                 or is_system
             )
+
+            rental_visible = bool(
+                (
+                    is_rental
+                    or is_system
+                )
+                and self._can_read_model(
+                    "alquiler"
+                )
+            )
+
+            # ====================================================
+            # RENTAL
+            # ====================================================
+
+            rentals_total = 0
+            rentals_rented = 0
+            rentals_ready = 0
+            rentals_problems = 0
+            rentals_parts = 0
+            rentals_pending_installation = 0
+
+            if rental_visible:
+                Rental = request.env[
+                    "alquiler"
+                ]
+
+                rentals_total = (
+                    Rental.search_count(
+                        []
+                    )
+                )
+
+                if "estado_alquiler_id" in Rental._fields:
+                    rentals_rented = (
+                        Rental.search_count(
+                            [
+                                (
+                                    "estado_alquiler_id",
+                                    "=",
+                                    "alquilada",
+                                ),
+                            ]
+                        )
+                    )
+
+                    rentals_ready = (
+                        Rental.search_count(
+                            [
+                                (
+                                    "estado_alquiler_id",
+                                    "=",
+                                    "lista",
+                                ),
+                            ]
+                        )
+                    )
+
+                    rentals_problems = (
+                        Rental.search_count(
+                            [
+                                (
+                                    "estado_alquiler_id",
+                                    "=",
+                                    "con_problemas",
+                                ),
+                            ]
+                        )
+                    )
+
+                    rentals_parts = (
+                        Rental.search_count(
+                            [
+                                (
+                                    "estado_alquiler_id",
+                                    "=",
+                                    "partes",
+                                ),
+                            ]
+                        )
+                    )
+
+                    rentals_pending_installation = (
+                        Rental.search_count(
+                            [
+                                (
+                                    "estado_alquiler_id",
+                                    "=",
+                                    "por_instalar",
+                                ),
+                            ]
+                        )
+                    )
 
             # ====================================================
             # SERVICES
@@ -445,6 +542,32 @@ class AppHomeController(AppBaseController):
                         "logistics": {
                             "visible":
                                 logistics_visible,
+                        },
+
+                        "rental": {
+                            "visible":
+                                rental_visible,
+
+                            "count":
+                                rentals_total,
+
+                            "total":
+                                rentals_total,
+
+                            "rented":
+                                rentals_rented,
+
+                            "ready":
+                                rentals_ready,
+
+                            "problems":
+                                rentals_problems,
+
+                            "parts":
+                                rentals_parts,
+
+                            "pending_installation":
+                                rentals_pending_installation,
                         },
 
                         "services": {

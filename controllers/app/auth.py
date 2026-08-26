@@ -287,6 +287,7 @@ class AppAuthController(http.Controller):
         - Ventas
         - Técnica
         - Logística
+        - Alquiler
         - Jefes de Área
         - Autorizados Reservas Comerciales
 
@@ -332,6 +333,12 @@ class AppAuthController(http.Controller):
             )
         )
 
+        is_rental = bool(
+            user.has_group(
+                "sat.sat_alquiler_group_user"
+            )
+        )
+
         is_head = bool(
             user.has_group(
                 "sat.sat_jefes_group_user"
@@ -353,6 +360,7 @@ class AppAuthController(http.Controller):
                 "access": {
                     "sales": False,
                     "logistics": False,
+                    "rental": False,
                     "technical": False,
                     "head": False,
                     "commercial_authorizer": False,
@@ -395,6 +403,10 @@ class AppAuthController(http.Controller):
                         or is_head
                         or is_system
                     ),
+                    "rental": bool(
+                        is_rental
+                        or is_system
+                    ),
                     "technical": bool(
                         is_technical
                         or is_head
@@ -415,6 +427,7 @@ class AppAuthController(http.Controller):
             "access": {
                 "sales": False,
                 "logistics": False,
+                "rental": False,
                 "technical": False,
                 "head": False,
                 "commercial_authorizer": False,
