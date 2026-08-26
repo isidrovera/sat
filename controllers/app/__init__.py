@@ -10,3 +10,4 @@ from . import profile
 from . import push
 from . import portal_app
 from . import sales
+from . import rental
