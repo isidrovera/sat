@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# RENTAL_BASE_COMPAT_SAFE_INT_V2_20260826
 
 """
 Base común para la API Flutter del módulo de Alquiler.
@@ -395,6 +396,7 @@ class RentalBaseController(AppBaseController):
         return bool(
             record
             and field_name
+            and hasattr(record, "_fields")
             and field_name in record._fields
         )
 
@@ -446,22 +448,64 @@ class RentalBaseController(AppBaseController):
 
     def _safe_int(
         self,
-        record,
-        field_name,
-        default=0,
+        value_or_record,
+        field_name_or_default=0,
+        default=None,
     ):
-        value = self._field(
-            record,
-            field_name,
-            default,
+        """
+        Conversión segura compatible con toda la API móvil.
+
+        Soporta ambos usos:
+
+        - Alquiler:
+              _safe_int(record, "nombre_campo", default)
+
+        - Helpers generales / Ventas:
+              _safe_int(value, default)
+              _safe_int(value)
+        """
+        is_record_field_call = bool(
+            hasattr(
+                value_or_record,
+                "_fields",
+            )
+            and isinstance(
+                field_name_or_default,
+                str,
+            )
         )
+
+        if is_record_field_call:
+            fallback = (
+                0
+                if default is None
+                else default
+            )
+
+            value = self._field(
+                value_or_record,
+                field_name_or_default,
+                fallback,
+            )
+        else:
+            value = value_or_record
+            fallback = (
+                field_name_or_default
+                if default is None
+                else default
+            )
 
         try:
             return int(
                 value or 0
             )
         except Exception:
-            return default
+            try:
+                return int(
+                    fallback or 0
+                )
+            except Exception:
+                return 0
 
     def _safe_float(
         self,
