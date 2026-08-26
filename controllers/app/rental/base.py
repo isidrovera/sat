@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# RENTAL_BASE_COMPAT_SAFE_INT_V2_20260826
+# RENTAL_BASE_COMPAT_V4_20260826
 
 """
 Base común para la API Flutter del módulo de Alquiler.
@@ -396,7 +396,10 @@ class RentalBaseController(AppBaseController):
         return bool(
             record
             and field_name
-            and hasattr(record, "_fields")
+            and hasattr(
+                record,
+                "_fields",
+            )
             and field_name in record._fields
         )
 
@@ -434,16 +437,38 @@ class RentalBaseController(AppBaseController):
 
     def _safe_bool(
         self,
-        record,
-        field_name,
-        default=False,
+        value_or_record,
+        field_name_or_default=False,
+        default=None,
     ):
-        return bool(
-            self._field(
-                record,
-                field_name,
-                default,
+        is_record_field_call = bool(
+            hasattr(
+                value_or_record,
+                "_fields",
             )
+            and isinstance(
+                field_name_or_default,
+                str,
+            )
+        )
+
+        if is_record_field_call:
+            fallback = (
+                False
+                if default is None
+                else default
+            )
+
+            value = self._field(
+                value_or_record,
+                field_name_or_default,
+                fallback,
+            )
+        else:
+            value = value_or_record
+
+        return bool(
+            value
         )
 
     def _safe_int(
@@ -452,18 +477,6 @@ class RentalBaseController(AppBaseController):
         field_name_or_default=0,
         default=None,
     ):
-        """
-        Conversión segura compatible con toda la API móvil.
-
-        Soporta ambos usos:
-
-        - Alquiler:
-              _safe_int(record, "nombre_campo", default)
-
-        - Helpers generales / Ventas:
-              _safe_int(value, default)
-              _safe_int(value)
-        """
         is_record_field_call = bool(
             hasattr(
                 value_or_record,
@@ -509,53 +522,108 @@ class RentalBaseController(AppBaseController):
 
     def _safe_float(
         self,
-        record,
-        field_name,
-        default=0.0,
+        value_or_record,
+        field_name_or_default=0.0,
+        default=None,
     ):
-        value = self._field(
-            record,
-            field_name,
-            default,
+        is_record_field_call = bool(
+            hasattr(
+                value_or_record,
+                "_fields",
+            )
+            and isinstance(
+                field_name_or_default,
+                str,
+            )
         )
+
+        if is_record_field_call:
+            fallback = (
+                0.0
+                if default is None
+                else default
+            )
+
+            value = self._field(
+                value_or_record,
+                field_name_or_default,
+                fallback,
+            )
+        else:
+            value = value_or_record
+            fallback = (
+                field_name_or_default
+                if default is None
+                else default
+            )
 
         try:
             return float(
                 value or 0.0
             )
         except Exception:
-            return default
+            try:
+                return float(
+                    fallback or 0.0
+                )
+            except Exception:
+                return 0.0
 
     def _safe_string(
         self,
-        record,
-        field_name,
-        default=False,
+        value_or_record,
+        field_name_or_default=False,
+        default=None,
     ):
-        value = self._field(
-            record,
-            field_name,
-            default,
+        is_record_field_call = bool(
+            hasattr(
+                value_or_record,
+                "_fields",
+            )
+            and isinstance(
+                field_name_or_default,
+                str,
+            )
         )
+
+        if is_record_field_call:
+            fallback = (
+                False
+                if default is None
+                else default
+            )
+
+            value = self._field(
+                value_or_record,
+                field_name_or_default,
+                fallback,
+            )
+        else:
+            value = value_or_record
+            fallback = (
+                field_name_or_default
+                if default is None
+                else default
+            )
 
         if value in (
             None,
             False,
         ):
-            return default
+            return fallback
 
         try:
-            text = str(
+            result = str(
                 value
             ).strip()
 
             return (
-                text
-                if text
-                else default
+                result
+                if result
+                else fallback
             )
         except Exception:
-            return default
+            return fallback
 
     def _safe_date_value(self, value):
         """Normaliza Date/Datetime a valor serializable por JSON."""
