@@ -284,7 +284,7 @@ class ReparacionesInforme(models.Model):
         ok_codes = {'correcto', 'revisado', 'nuevo', 'bueno', 'operativo'}
         desgaste_codes = {'regular', 'gastada_pero_puede_trabajar'}
         mantenimiento_codes = {'mantenimiento'}
-        cambio_codes = {'requiere_cambio', 'cambio_de_repuestos'}
+        cambio_codes = {'requiere_cambio'}
         falla_codes = {'falla'}
         pendiente_codes = {'sin_revisar', 'sin_probar'}
         toner_relevante = {
@@ -649,7 +649,7 @@ class ReparacionesInforme(models.Model):
         """Devuelve etiqueta y colores del estado para tarjetas HTML."""
         code = self._rep__safe_code(estado_code)
         mapping = {
-            'requiere_cambio': ('Cambio recomendado', '#c62828', '#ffebee'),
+            'requiere_cambio': ('Requiere cambio', '#c62828', '#ffebee'),
             'cambio_de_repuestos': ('Cambio recomendado', '#c62828', '#ffebee'),
             'falla': ('Falla detectada', '#b71c1c', '#fce4ec'),
             'gastada_pero_puede_trabajar': ('Presenta desgaste, pero puede trabajar', '#ef6c00', '#fff3e0'),
@@ -874,117 +874,51 @@ class ReparacionesInforme(models.Model):
         )
 
     def _rep__build_informe_html_from_data(self, data, calidad, resumen=None, conclusion=None):
-        """Construye todo el HTML. La IA solo puede aportar resumen y conclusión."""
+        """
+        Construye el informe comercial para ventas.
+
+        IMPORTANTE:
+        - Solo muestra evaluaciones cuyo estado exacto sea ``requiere_cambio``.
+        - No muestra desgaste, mantenimiento, fallas, tóner, estado físico,
+          accesorios, pruebas pendientes ni información SNMP.
+        - Las subpartes se muestran únicamente dentro del componente que
+          requiere cambio.
+        - ``resumen`` y ``conclusion`` se conservan en la firma por
+          compatibilidad, pero no se imprimen para evitar información extra.
+        """
+        self.ensure_one()
+
+        requiere_cambio = data.get('requiere_cambio') or []
+
         parts = [
             '<div data-autogen="1" style="font-family:Arial;line-height:1.55;color:#222;">',
-            f'<p style="margin:0 0 12px 0;">{self._rep__escape(resumen or self._rep__general_status_text(data))}</p>',
+            '<h4 style="margin:0 0 12px 0;font-size:16px;color:#c62828;">'
+            'Componentes que requieren cambio'
+            '</h4>',
         ]
-        cards = []
 
-        for item in data['requiere_cambio']:
-            cards.append(self._rep__build_component_card(
-                item,
-                'Esta unidad presenta subpartes con cambio recomendado. El equipo puede ofrecerse '
-                'en su condición evaluada o con los repuestos indicados, según el acuerdo de venta.'
-            ))
-        for item in data['desgaste']:
-            cards.append(self._rep__build_component_card(
-                item,
-                'La unidad presenta desgaste, pero puede continuar trabajando según la evaluación realizada.'
-            ))
-        for item in data['mantenimiento']:
-            cards.append(self._rep__build_component_card(
-                item,
-                'Se recomienda considerar mantenimiento preventivo, de acuerdo con la condición de venta.'
-            ))
-        for item in data['fallas_componentes']:
-            cards.append(self._rep__build_component_card(
-                item,
-                'Durante la revisión se detectó una falla en esta unidad.'
-            ))
-        for item in data['funciones_falla']:
-            cards.append(self._rep__build_simple_card(
-                item['nombre'], item['estado_code'],
-                'La función presentó una incidencia durante las pruebas.',
-                item.get('observaciones', '')
-            ))
-        for item in data['toners_relevantes']:
-            code = item['estado_code']
-            if code in {'toner_vacio', 'vacio'}:
-                texto = 'El consumible se encuentra vacío.'
-            elif code in {'toner_sin_contenedor', 'sin_botella'}:
-                texto = 'El equipo no cuenta con este consumible instalado.'
-            else:
-                texto = f'El nivel registrado es bajo: {self._rep__escape(item["estado_nombre"])}.'
-            cards.append(self._rep__build_simple_card(
-                item['nombre'], code, texto, item.get('observaciones', '')
-            ))
-        for item in data['estado_fisico']:
-            code = item['estado_code']
-            if code == 'carcasa_rota':
-                texto = 'Se observan roturas en la carcasa o tapas. Revisar las fotografías adjuntas.'
-            elif code == 'carcasa_faltante':
-                texto = 'La carcasa presenta piezas o tapas faltantes. Revisar las fotografías adjuntas.'
-            elif code == 'carcasa_amarilla':
-                texto = 'La carcasa presenta decoloración amarillenta por uso; este estado no determina por sí solo una falla funcional.'
-            elif code == 'panel_amarillo':
-                texto = 'El panel de control presenta decoloración por uso.'
-            else:
-                texto = self._rep__escape(item['estado_nombre'])
-            cards.append(self._rep__build_simple_card(
-                item['nombre'], code, texto, item.get('observaciones', '')
-            ))
-        for item in data['accesorios_relevantes']:
-            code = item['estado_code']
-            if code == 'instalado_con_falla':
-                texto = 'El accesorio está instalado, pero presenta una falla.'
-            elif code == 'wifi_sin_senal':
-                texto = 'El accesorio está instalado, pero no se detectó señal durante la evaluación.'
-            else:
-                texto = 'El accesorio no se encuentra instalado.'
-            cards.append(self._rep__build_simple_card(
-                item['nombre'], code, texto, item.get('observaciones', '')
-            ))
-        for item in data['funciones_pendientes']:
-            cards.append(self._rep__build_simple_card(
-                item['nombre'], item['estado_code'] or 'sin_probar',
-                'Esta prueba quedó pendiente.', item.get('observaciones', '')
-            ))
-        for item in data['pendientes_componentes']:
-            cards.append(self._rep__build_simple_card(
-                item['nombre'], item['estado_code'] or 'sin_revisar',
-                'La revisión de esta unidad quedó pendiente.', item.get('observaciones', '')
-            ))
-
-        if cards:
-            parts.extend(cards)
-
-        # Las alertas SNMP se muestran como referencia de lo observado durante
-        # las pruebas, sin convertirlas en diagnóstico ni condición obligatoria.
-        alertas_html = self._rep__build_snmp_alerts_block(data.get('snmp') or {})
-        if alertas_html:
-            parts.append(alertas_html)
-
-        observacion_general = self._rep__html_to_text(self.observaciones_tecnico)
-        if observacion_general:
+        if not requiere_cambio:
             parts.append(
-                '<div style="margin:12px 0;padding:10px 13px;background:#eef3f8;border-left:5px solid #607d8b;'
-                'border-radius:6px;color:#37474f;">'
-                f'<strong>Observación general del técnico:</strong><br/>{self._rep__escape(observacion_general)}</div>'
+                '<div style="margin:8px 0;padding:11px 14px;'
+                'background:#f5f5f5;border-left:5px solid #757575;'
+                'border-radius:6px;color:#424242;">'
+                'No se registraron componentes con estado <strong>Requiere cambio</strong>.'
+                '</div>'
             )
+            parts.append('</div>')
+            return ''.join(parts)
 
-        if calidad == 'buena':
-            bg, fg = '#e8f5e9', '#2e7d32'
-        elif calidad == 'regular':
-            bg, fg = '#fff8e1', '#ef6c00'
-        else:
-            bg, fg = '#ffebee', '#c62828'
-        parts.append('<h5 style="margin:14px 0 7px;font-size:15px;">Conclusión</h5>')
-        parts.append(
-            f'<div style="padding:11px 14px;border-radius:6px;background:{bg};color:{fg};">'
-            f'<strong style="text-transform:capitalize;">{self._rep__escape(calidad)}</strong>: '
-            f'{self._rep__escape(conclusion or self._rep__default_conclusion(calidad))}</div>'
-        )
+        for item in requiere_cambio:
+            # Defensa adicional: aunque data venga alterado desde otro método,
+            # el informe solo acepta el código exacto requiere_cambio.
+            if self._rep__safe_code(item.get('estado_code')) != 'requiere_cambio':
+                continue
+
+            parts.append(self._rep__build_component_card(
+                item,
+                'Este componente está registrado con estado Requiere cambio.'
+            ))
+
         parts.append('</div>')
         return ''.join(parts)
 
@@ -1199,49 +1133,22 @@ class ReparacionesInforme(models.Model):
     # GENERACIÓN CON IA
     # ========================================
     def _generar_informe_con_ia(self):
-        """Genera informe con IA y devuelve si realmente se utilizó la API."""
+        """
+        Genera el informe comercial filtrado.
+
+        Aunque el registro tenga seleccionado el modo IA, este informe no envía
+        información a Gemini porque ventas debe recibir exclusivamente los
+        componentes marcados como ``requiere_cambio`` y sus subpartes. De esta
+        manera se evita que una redacción automática vuelva a introducir
+        desgaste, mantenimiento, tóner, SNMP u otros estados del checklist.
+        """
         self.ensure_one()
-        if not GEMINI_AVAILABLE:
-            html, calidad = self._rep__build_informe_html()
-            return html, calidad, 'Generado automáticamente: google-genai no está instalado.', False
-
-        try:
-            config_gemini = self.env['gemini.configuracion'].get_config_activa()
-            gemini_setup = self._init_gemini_model(config_gemini)
-            datos = self._preparar_datos_para_ia()
-            prompt = self._construir_prompt_ia(datos)
-
-            response = gemini_setup['client'].models.generate_content(
-                model=gemini_setup['modelo'],
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    temperature=gemini_setup['temperature'],
-                    max_output_tokens=gemini_setup['max_tokens'],
-                    response_mime_type='application/json',
-                )
-            )
-            resultado = self._parsear_respuesta_ia(response.text)
-            calidad = datos['calidad_actual']
-
-            if self._rep__safe_code(resultado.get('calidad')) != self._rep__safe_code(calidad):
-                raise ValueError('La IA devolvió una calidad distinta a la definida en el checklist.')
-
-            # La IA redacta únicamente el resumen y la conclusión. Python construye
-            # las tarjetas para conservar nombres, agrupación y colores exactos.
-            data = self._rep__collect_relevant_data()
-            informe_html = self._rep__build_informe_html_from_data(
-                data,
-                calidad,
-                resumen=resultado.get('resumen_general'),
-                conclusion=resultado.get('conclusion'),
-            )
-
-            config_gemini.incrementar_contador()
-            return informe_html, calidad, resultado.get('justificacion_calidad', ''), True
-        except Exception as e:
-            _logger.exception('Error generando informe con IA: %s', e)
-            html, calidad = self._rep__build_informe_html()
-            return html, calidad, f'Generado automáticamente por error en IA: {e}', False
+        html, calidad = self._rep__build_informe_html()
+        justificacion = (
+            'Informe comercial filtrado: solo se muestran componentes con estado '
+            'Requiere cambio y sus subpartes seleccionadas.'
+        )
+        return html, calidad, justificacion, False
 
     def _init_gemini_model(self, config):
         """Inicializa cliente de Gemini (NUEVA SINTAXIS)"""
@@ -1257,7 +1164,10 @@ class ReparacionesInforme(models.Model):
         }
     
     def _preparar_datos_para_ia(self):
-        """Prepara únicamente hechos relevantes; no envía el checklist completo."""
+        """
+        Prepara únicamente la información comercial permitida para el informe:
+        componentes con estado ``requiere_cambio`` y sus subpartes.
+        """
         self.ensure_one()
         data = self._rep__collect_relevant_data()
         findings = self._rep__collect_findings()
@@ -1274,91 +1184,54 @@ class ReparacionesInforme(models.Model):
             elif hasattr(self.contometrok_id, 'name'):
                 contador_val = str(self.contometrok_id.name or '0')
 
+        requiere_cambio = [
+            item for item in (data.get('requiere_cambio') or [])
+            if self._rep__safe_code(item.get('estado_code')) == 'requiere_cambio'
+        ]
+
         return {
             'maquina': f"{self.marca or ''} {self.nombre_maquina or ''}".strip(),
             'serie': str(self.serie_id or 'N/A'),
             'contador': contador_val,
             'calidad_actual': calidad or 'regular',
-            'resultado_general': self._rep__general_status_text(data),
-            'requiere_cambio': data['requiere_cambio'],
-            'desgaste': data['desgaste'],
-            'mantenimiento': data['mantenimiento'],
-            'fallas_componentes': data['fallas_componentes'],
-            'funciones_falla': data['funciones_falla'],
-            'funciones_pendientes': data['funciones_pendientes'],
-            'toners_relevantes': data['toners_relevantes'],
-            'estado_fisico': data['estado_fisico'],
-            'accesorios_relevantes': data['accesorios_relevantes'],
-            'prueba_snmp': data.get('snmp') or {},
-            'observaciones_tecnico': self._rep__html_to_text(self.observaciones_tecnico),
+            'requiere_cambio': requiere_cambio,
         }
 
     def _construir_prompt_ia(self, datos):
         """
-        La IA solo redacta el resumen y la conclusión. La sección técnica HTML
-        se construye en Python para no alterar nombres ni mezclar subpartes.
+        Prompt de compatibilidad limitado exclusivamente a ``requiere_cambio``.
+        Actualmente el informe comercial no invoca Gemini, pero este helper se
+        conserva seguro por si se reutiliza desde otra extensión.
         """
         hechos = {
-            'resultado_general': datos['resultado_general'],
-            'componentes_que_requieren_cambio': datos['requiere_cambio'],
-            'componentes_con_desgaste': datos['desgaste'],
-            'componentes_que_requieren_mantenimiento': datos['mantenimiento'],
-            'fallas_de_componentes': datos['fallas_componentes'],
-            'funciones_con_falla': datos['funciones_falla'],
-            'funciones_pendientes': datos['funciones_pendientes'],
-            'consumibles_relevantes': datos['toners_relevantes'],
-            'estado_fisico_relevante': datos['estado_fisico'],
-            'accesorios_relevantes': datos['accesorios_relevantes'],
-            'prueba_snmp_secundaria': {
-                'disponible': bool((datos.get('prueba_snmp') or {}).get('disponible')),
-                'actividades_registradas': (datos.get('prueba_snmp') or {}).get('actividades') or [],
-                'cantidad_alertas': (datos.get('prueba_snmp') or {}).get('cantidad_alertas') or 0,
-                'alertas_mostradas_durante_revision': (datos.get('prueba_snmp') or {}).get('alertas') or [],
-            },
-            'observaciones_generales': datos['observaciones_tecnico'],
+            'componentes_que_requieren_cambio': datos.get('requiere_cambio') or [],
         }
         hechos_json = json.dumps(hechos, ensure_ascii=False, indent=2)
-        calidad = datos['calidad_actual']
+        calidad = datos.get('calidad_actual') or 'regular'
 
         return f"""
-Eres un técnico especialista que redacta informes de evaluación para ventas mayoristas.
-Usa exclusivamente los hechos entregados. No inventes causas, piezas, pruebas, daños,
-ubicaciones ni trabajos realizados.
+Eres un asistente que redacta información técnica breve para ventas.
+Usa exclusivamente los componentes entregados con estado "requiere_cambio".
 
 REGLAS OBLIGATORIAS:
-1. La calidad ya está definida como "{calidad}". No la cambies.
-2. "Requiere cambio" significa una recomendación comercial pendiente; nunca indiques que una pieza fue cambiada.
-3. La evaluación informa a técnicos y asesoras de ventas. No conviertas una recomendación en una reparación obligatoria.
-4. El equipo puede ofrecerse en su condición evaluada, con repuestos adicionales o con intervención de taller, según el acuerdo de venta.
-5. No uses frases como "debe repararse antes de la entrega", "no puede entregarse", "requiere atención obligatoria" o "requiere inversión inmediata", salvo que un hecho explícito lo indique.
-6. No enumeres componentes normales ni repitas todas las subpartes.
-7. No cambies nombres técnicos ni colores de componentes.
-8. No afirmes que el equipo está inoperativo salvo que exista una falla funcional registrada.
-9. Si hay daño físico, menciona revisar las fotografías sin inventar la tapa afectada.
-10. La información SNMP es secundaria: solo confirma actividad registrada durante las pruebas.
-11. No uses niveles SNMP de tóner o unidades para afirmar condición, desgaste, vida útil, vacío o buen estado.
-12. Que SNMP registre impresión, copia u otra actividad no significa que el resultado haya sido correcto; el resultado lo determina el checklist del técnico.
-13. Si SNMP y checklist pudieran contradecirse, utiliza siempre el checklist y omite la contradicción del informe comercial.
-14. Las alertas SNMP corresponden únicamente a mensajes mostrados por el equipo durante la revisión; no las conviertas en diagnóstico definitivo ni en obligación de informar al cliente.
-15. Python mostrará las alertas en un bloque referencial separado. No las enumeres nuevamente en el resumen ni en la conclusión, salvo que sean indispensables para explicar una prueba incompleta.
-16. Redacta un resumen general de máximo 55 palabras y una conclusión de máximo 70 palabras.
-17. La conclusión debe ser coherente con la calidad y presentar las alternativas comerciales sin imponer una reparación.
+1. No menciones ningún estado diferente de "requiere_cambio".
+2. No menciones desgaste, mantenimiento, fallas, tóner, accesorios, SNMP,
+   estado físico, componentes correctos ni pruebas pendientes.
+3. No inventes componentes ni subpartes.
+4. No afirmes que una pieza ya fue reemplazada.
+5. No conviertas la recomendación en una reparación obligatoria.
+6. Conserva exactamente los nombres técnicos recibidos.
+7. La calidad registrada es "{calidad}" y no debe modificarse.
 
-DATOS DEL EQUIPO:
-Marca/modelo: {datos['maquina']}
-Serie: {datos['serie']}
-Contador: {datos['contador']}
-Calidad definida: {calidad}
-
-HECHOS RELEVANTES:
+DATOS PERMITIDOS:
 {hechos_json}
 
 Devuelve JSON estricto:
 {{
   "calidad": "{calidad}",
-  "justificacion_calidad": "Una oración breve basada únicamente en los hechos",
-  "resumen_general": "Resumen humano y profesional",
-  "conclusion": "Conclusión humana y profesional"
+  "justificacion_calidad": "Informe limitado a componentes que requieren cambio",
+  "resumen_general": "Resumen breve únicamente de los componentes que requieren cambio",
+  "conclusion": "Conclusión breve únicamente sobre los componentes que requieren cambio"
 }}
 
 Responde únicamente con JSON válido.
