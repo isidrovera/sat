@@ -11,3 +11,4 @@ from . import push
 from . import portal_app
 from . import sales
 from . import rental
+from . import repair_admin
