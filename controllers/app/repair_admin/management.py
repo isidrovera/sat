@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# REPAIR_ADMIN_MANAGEMENT_V2_405_FIX_20260827
 
 import logging
 
@@ -15,36 +16,18 @@ _logger = logging.getLogger(__name__)
 class RepairAdminManagementController(RepairAdminBaseController):
 
     @http.route(
-        [
-            "/api/app/repairs/admin/repairs",
-            "/api/app/repairs/admin/repairs/<int:repair_id>",
-            "/api/app/repairs/admin/repairs/<int:repair_id>/reassign",
-            "/api/app/repairs/admin/repairs/<int:repair_id>/state",
-            "/api/app/repairs/admin/repairs/<int:repair_id>/finalize",
-        ],
-        type="http",
-        auth="none",
-        methods=["OPTIONS"],
-        csrf=False,
-        save_session=False,
-    )
-    def repair_admin_management_options(
-        self,
-        repair_id=None,
-        **kwargs,
-    ):
-        return self._options_response()
-
-    @http.route(
         "/api/app/repairs/admin/repairs",
         type="http",
         auth="public",
-        methods=["GET"],
+        methods=["GET", "OPTIONS"],
         csrf=False,
         readonly=True,
         save_session=True,
     )
     def repair_admin_repairs(self, **kwargs):
+        if request.httprequest.method == "OPTIONS":
+            return self._options_response()
+
         user, error = self._ra_require_admin()
         if error:
             return error
@@ -175,7 +158,7 @@ class RepairAdminManagementController(RepairAdminBaseController):
         "/api/app/repairs/admin/repairs/<int:repair_id>",
         type="http",
         auth="public",
-        methods=["GET"],
+        methods=["GET", "OPTIONS"],
         csrf=False,
         readonly=True,
         save_session=True,
@@ -185,6 +168,9 @@ class RepairAdminManagementController(RepairAdminBaseController):
         repair_id,
         **kwargs,
     ):
+        if request.httprequest.method == "OPTIONS":
+            return self._options_response()
+
         user, error = self._ra_require_admin()
         if error:
             return error
@@ -212,7 +198,7 @@ class RepairAdminManagementController(RepairAdminBaseController):
         "/api/app/repairs/admin/repairs/<int:repair_id>/reassign",
         type="http",
         auth="public",
-        methods=["POST"],
+        methods=["POST", "OPTIONS"],
         csrf=False,
         save_session=True,
     )
@@ -221,6 +207,9 @@ class RepairAdminManagementController(RepairAdminBaseController):
         repair_id,
         **kwargs,
     ):
+        if request.httprequest.method == "OPTIONS":
+            return self._options_response()
+
         user, error = self._ra_require_admin()
         if error:
             return error
@@ -356,7 +345,7 @@ class RepairAdminManagementController(RepairAdminBaseController):
         "/api/app/repairs/admin/repairs/<int:repair_id>/state",
         type="http",
         auth="public",
-        methods=["POST"],
+        methods=["POST", "OPTIONS"],
         csrf=False,
         save_session=True,
     )
@@ -365,6 +354,9 @@ class RepairAdminManagementController(RepairAdminBaseController):
         repair_id,
         **kwargs,
     ):
+        if request.httprequest.method == "OPTIONS":
+            return self._options_response()
+
         user, error = self._ra_require_admin()
         if error:
             return error
@@ -472,7 +464,7 @@ class RepairAdminManagementController(RepairAdminBaseController):
         "/api/app/repairs/admin/repairs/<int:repair_id>/finalize",
         type="http",
         auth="public",
-        methods=["POST"],
+        methods=["POST", "OPTIONS"],
         csrf=False,
         save_session=True,
     )
@@ -481,6 +473,9 @@ class RepairAdminManagementController(RepairAdminBaseController):
         repair_id,
         **kwargs,
     ):
+        if request.httprequest.method == "OPTIONS":
+            return self._options_response()
+
         """
         Usa action_finalizar_reparacion() del modelo real.
         No fuerza estado_id='finalizado', para no saltarse

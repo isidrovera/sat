@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# REPAIR_ADMIN_CREATE_V2_405_FIX_20260827
 
 import logging
 
@@ -14,30 +15,20 @@ _logger = logging.getLogger(__name__)
 
 class RepairAdminCreateController(RepairAdminBaseController):
 
-    @http.route(
-        [
-            "/api/app/repairs/admin/technicians",
-            "/api/app/repairs/admin/create",
-        ],
-        type="http",
-        auth="none",
-        methods=["OPTIONS"],
-        csrf=False,
-        save_session=False,
-    )
-    def repair_admin_create_options(self, **kwargs):
-        return self._options_response()
 
     @http.route(
         "/api/app/repairs/admin/technicians",
         type="http",
         auth="public",
-        methods=["GET"],
+        methods=["GET", "OPTIONS"],
         csrf=False,
         readonly=True,
         save_session=True,
     )
     def repair_admin_technicians(self, **kwargs):
+        if request.httprequest.method == "OPTIONS":
+            return self._options_response()
+
         user, error = self._ra_require_admin()
         if error:
             return error
@@ -115,11 +106,14 @@ class RepairAdminCreateController(RepairAdminBaseController):
         "/api/app/repairs/admin/create",
         type="http",
         auth="public",
-        methods=["POST"],
+        methods=["POST", "OPTIONS"],
         csrf=False,
         save_session=True,
     )
     def repair_admin_create(self, **kwargs):
+        if request.httprequest.method == "OPTIONS":
+            return self._options_response()
+
         user, error = self._ra_require_admin()
         if error:
             return error
