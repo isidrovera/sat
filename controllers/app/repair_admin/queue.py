@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# REPAIR_ADMIN_QUEUE_V2_INCLUDE_ALL_REVIEW_20260827
 
 import logging
 
@@ -104,11 +105,6 @@ class RepairAdminQueueController(RepairAdminBaseController):
                 ("estado_ventas_id", "=", "para_revision"),
             ]
 
-            if "fecha_para_revision" in Machine._fields:
-                domain.append(
-                    ("fecha_para_revision", "!=", False)
-                )
-
             if search_term:
                 domain += [
                     "|",
@@ -133,7 +129,6 @@ class RepairAdminQueueController(RepairAdminBaseController):
             all_queue_ids = Machine.search(
                 [
                     ("estado_ventas_id", "=", "para_revision"),
-                    ("fecha_para_revision", "!=", False),
                 ],
                 order="fecha_para_revision asc, id asc",
             ).ids
