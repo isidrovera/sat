@@ -27,6 +27,7 @@ class UnidadAlquiler(models.Model):
         ('alto', 'Alto')
     ], string='Estado Stock Tóner', default='normal',
        compute='_compute_estado_stock_toner',
+       store=True,
        help='Estado general del stock de tóner')
 
     # Stock físico que tiene el cliente guardado
@@ -245,24 +246,28 @@ class UnidadAlquiler(models.Model):
     stock_total_toner_black = fields.Integer(
         string='Stock Total Tóner Negro',
         compute='_compute_stock_total_toner',
+        store=True,
         help='Total de tóner negro disponible (instalado + en stock)'
     )
 
     stock_total_toner_cyan = fields.Integer(
         string='Stock Total Tóner Cian',
         compute='_compute_stock_total_toner',
+        store=True,
         help='Total de tóner cian disponible (instalado + en stock)'
     )
 
     stock_total_toner_magenta = fields.Integer(
         string='Stock Total Tóner Magenta',
         compute='_compute_stock_total_toner',
+        store=True,
         help='Total de tóner magenta disponible (instalado + en stock)'
     )
 
     stock_total_toner_yellow = fields.Integer(
         string='Stock Total Tóner Amarillo',
         compute='_compute_stock_total_toner',
+        store=True,
         help='Total de tóner amarillo disponible (instalado + en stock)'
     )
 
@@ -383,6 +388,7 @@ class UnidadAlquiler(models.Model):
 
     @api.depends('stock_total_toner_black', 'stock_total_toner_cyan',
                 'stock_total_toner_magenta', 'stock_total_toner_yellow',
+                'tipo_maquina_id',
                 'name.stock_minimo_black', 'name.stock_minimo_cyan',
                 'name.stock_minimo_magenta', 'name.stock_minimo_yellow')
     def _compute_estado_stock_toner(self):
