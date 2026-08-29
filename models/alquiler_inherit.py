@@ -70,14 +70,14 @@ class AlquilerMantenimientoPlanificador(models.Model):
     planificador_linea_count = fields.Integer(
         string='Planificaciones',
         compute='_compute_planificador_linea_count',
-        store=False
+        store=True
     )
 
     ultima_linea_planificador_id = fields.Many2one(
         'mantenimiento.planificador.linea',
         string='Última planificación',
         compute='_compute_ultima_linea_planificador',
-        store=False
+        store=True
     )
 
     estado_planificacion_mantenimiento = fields.Selection([
@@ -90,7 +90,7 @@ class AlquilerMantenimientoPlanificador(models.Model):
         ('ticket_creado', 'Ticket creado'),
     ], string='Estado planificación',
         compute='_compute_estado_planificacion_mantenimiento',
-        store=False
+        store=True
     )
 
     dias_disponibles_mantenimiento = fields.Html(
