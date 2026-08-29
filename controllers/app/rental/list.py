@@ -310,6 +310,69 @@ class RentalListController(RentalBaseController):
         )
 
     # ============================================================
+    # CAPACIDADES DE CAMPOS
+    # ============================================================
+
+    def _field_supports_domain(
+        self,
+        model,
+        field_name,
+    ):
+        """
+        Indica si un campo puede usarse directamente en un dominio SQL.
+
+        - Los campos almacenados siempre son buscables.
+        - Un campo compute no almacenado también puede ser buscable si
+          declara un método ``search=...``.
+        """
+        field = model._fields.get(
+            field_name
+        )
+
+        if not field:
+            return False
+
+        if getattr(
+            field,
+            "store",
+            False,
+        ):
+            return True
+
+        return bool(
+            getattr(
+                field,
+                "search",
+                False,
+            )
+        )
+
+    def _pending_orders_filter_value(
+        self,
+    ):
+        return self._bool_query(
+            "has_pending_orders",
+            None,
+        )
+
+    def _filter_nonstored_pending_orders(
+        self,
+        records,
+        expected,
+    ):
+        if expected is None:
+            return records
+
+        return records.filtered(
+            lambda rental: (
+                bool(
+                    rental.has_pending_orders
+                )
+                == expected
+            )
+        )
+
+    # ============================================================
     # FILTER DOMAIN
     # ============================================================
 
@@ -548,15 +611,18 @@ class RentalListController(RentalBaseController):
                 )
             )
 
-        has_pending_orders = self._bool_query(
-            "has_pending_orders",
-            None,
+        has_pending_orders = (
+            self._pending_orders_filter_value()
         )
 
         if (
             has_pending_orders is not None
             and "has_pending_orders"
             in Rental._fields
+            and self._field_supports_domain(
+                Rental,
+                "has_pending_orders",
+            )
         ):
             domain.append(
                 (
@@ -995,16 +1061,28 @@ class RentalListController(RentalBaseController):
         pending_orders = 0
 
         if "has_pending_orders" in Rental._fields:
-            pending_orders = Rental.search_count(
-                base_domain
-                + [
-                    (
-                        "has_pending_orders",
-                        "=",
-                        True,
+            if self._field_supports_domain(
+                Rental,
+                "has_pending_orders",
+            ):
+                pending_orders = Rental.search_count(
+                    base_domain
+                    + [
+                        (
+                            "has_pending_orders",
+                            "=",
+                            True,
+                        )
+                    ]
+                )
+            else:
+                pending_orders = sum(
+                    1
+                    for rental in Rental.search(
+                        base_domain
                     )
-                ]
-            )
+                    if rental.has_pending_orders
+                )
 
         with_coordinates = 0
 
@@ -1256,16 +1334,51 @@ class RentalListController(RentalBaseController):
                 )
             )
 
-            total = Rental.search_count(
-                domain
+            pending_orders_filter = (
+                self._pending_orders_filter_value()
             )
 
-            records = Rental.search(
-                domain,
-                order=self._sort_order(),
-                limit=limit,
-                offset=offset,
+            pending_orders_python_filter = bool(
+                pending_orders_filter is not None
+                and "has_pending_orders"
+                in Rental._fields
+                and not self._field_supports_domain(
+                    Rental,
+                    "has_pending_orders",
+                )
             )
+
+            if pending_orders_python_filter:
+                all_records = Rental.search(
+                    domain,
+                    order=self._sort_order(),
+                )
+
+                filtered_records = (
+                    self._filter_nonstored_pending_orders(
+                        all_records,
+                        pending_orders_filter,
+                    )
+                )
+
+                total = len(
+                    filtered_records
+                )
+
+                records = filtered_records[
+                    offset:offset + limit
+                ]
+            else:
+                total = Rental.search_count(
+                    domain
+                )
+
+                records = Rental.search(
+                    domain,
+                    order=self._sort_order(),
+                    limit=limit,
+                    offset=offset,
+                )
 
             items = [
                 self._serialize_rental_short(
