@@ -64,6 +64,7 @@
                                 <field name="capacidad_diaria"/>
                                 <field name="capacidad_sabado"/>
                                 <field name="duracion_servicio_horas"/>
+                                <field name="meta_base_taller"/>
                             </group>
                         </group>
 

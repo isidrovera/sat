@@ -934,8 +934,10 @@ class EvaluacionCierreMensual(models.Model):
             )
             factor_individual = max(0.0, min(1.0, factor_individual))
 
+            meta_base_tecnico = perfil.meta_base_taller or 60.0
+
             meta = (
-                (self.meta_base_taller or 60.0) * factor_individual
+                meta_base_tecnico * factor_individual
                 if participa
                 else 0.0
             )

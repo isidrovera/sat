@@ -107,7 +107,13 @@ class MantenimientoTecnicoPerfil(models.Model):
         'perfil_id',
         string='Disponibilidades / excepciones'
     )
-
+    meta_base_taller = fields.Float(
+        string='Meta base de reparaciones',
+        default=60.0,
+        required=True,
+        tracking=True,
+        help='Meta mensual del técnico con disponibilidad completa.'
+    )
     name = fields.Char(
         string='Nombre',
         compute='_compute_name',

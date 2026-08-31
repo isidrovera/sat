@@ -862,9 +862,9 @@
                                                decoration-success="tipo_operativo == 'servicios'"
                                                decoration-warning="tipo_operativo == 'mixto'"/>
                                         <field name="meta_base_taller"
-                                               readonly="1"/>
+                                               />
                                         <field name="meta_base_servicios"
-                                               readonly="1"/>
+                                               />
                                     </group>
 
                                     <group string="Escala y monto">
