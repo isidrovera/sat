@@ -153,11 +153,34 @@ class ClientServiceEvaluation(models.Model):
 
     # ==================== AUDITORÍA ====================
     completed_by = fields.Many2one('res.users', string='Completado Por', tracking=True)
+
+    # Contacto autenticado que realmente respondió la evaluación.
+    # Se mantiene separado de evaluator_contact_id porque la persona que dio
+    # conformidad al servicio puede no ser quien responda luego desde la app.
+    response_contact_id = fields.Many2one(
+        'res.partner',
+        string='Respondido por contacto',
+        tracking=True,
+        index=True,
+        copy=False,
+    )
+    response_contact_name = fields.Char(
+        string='Nombre de quien respondió',
+        tracking=True,
+        copy=False,
+    )
+    response_contact_email = fields.Char(
+        string='Correo de quien respondió',
+        tracking=True,
+        copy=False,
+    )
+
     ip_address = fields.Char('Dirección IP')
     user_agent = fields.Char('Navegador/Dispositivo')
 
     completion_source = fields.Selection([
         ('portal', 'Portal Web'),
+        ('app', 'App móvil'),
         ('email', 'Desde Correo'),
         ('manual', 'Manual'),
         ('system', 'Sistema')
@@ -1156,6 +1179,45 @@ ACCIONES URGENTES:
 
         self.write(vals)
 
+        return True
+
+    def action_complete_from_app(self, vals=None, request=None, contact=None):
+        """
+        Completa una evaluación desde la app móvil.
+
+        El cliente/empresa no se recibe desde Flutter: el controlador valida
+        previamente que la evaluación pertenezca al commercial_partner_id del
+        usuario portal autenticado. Aquí solo se guarda la auditoría de quién
+        respondió y las respuestas de la encuesta.
+        """
+        self.ensure_one()
+
+        vals = dict(vals or {})
+        now = fields.Datetime.now()
+
+        vals.update({
+            'state': 'completed',
+            'response_date': now,
+            'completion_source': 'app',
+        })
+
+        if self.env.user and not self.env.user._is_public():
+            vals['completed_by'] = self.env.user.id
+
+        if contact:
+            vals.update({
+                'response_contact_id': contact.id,
+                'response_contact_name': contact.name or '',
+                'response_contact_email': contact.email or '',
+            })
+
+        if request:
+            forwarded_for = request.httprequest.headers.get('X-Forwarded-For', '')
+            remote_addr = request.httprequest.environ.get('REMOTE_ADDR') or ''
+            vals['ip_address'] = (forwarded_for.split(',')[0].strip() if forwarded_for else remote_addr)
+            vals['user_agent'] = request.httprequest.environ.get('HTTP_USER_AGENT') or ''
+
+        self.write(vals)
         return True
 
     def action_reset_to_draft(self):

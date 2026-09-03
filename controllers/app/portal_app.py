@@ -4,6 +4,7 @@ import base64
 import json
 import logging
 import re
+from datetime import timedelta
 
 from odoo import fields, http
 from odoo.http import request
@@ -210,6 +211,44 @@ class AppPortalController(http.Controller):
             return False
 
         return ticket
+
+    def _get_evaluation_for_company(
+        self,
+        evaluation_id,
+        company,
+    ):
+        try:
+            evaluation_id = int(
+                evaluation_id
+            )
+        except (
+            TypeError,
+            ValueError,
+        ):
+            return False
+
+        evaluation = (
+            request.env[
+                "client.service.evaluation"
+            ]
+            .sudo()
+            .browse(
+                evaluation_id
+            )
+            .exists()
+        )
+
+        if not evaluation:
+            return False
+
+        if (
+            not evaluation.partner_id
+            or evaluation.partner_id.id
+            != company.id
+        ):
+            return False
+
+        return evaluation
 
     def _selection_label(
         self,
@@ -1880,6 +1919,216 @@ class AppPortalController(http.Controller):
             "utf-8"
         )
 
+    def _serialize_portal_evaluation(
+        self,
+        evaluation,
+        include_questions=False,
+    ):
+        now = fields.Datetime.now()
+        expiration = (
+            evaluation.expiration_date
+            or False
+        )
+
+        seconds_remaining = False
+        hours_remaining = False
+        days_remaining = False
+        expires_soon = False
+
+        if expiration:
+            seconds_remaining = max(
+                0,
+                int(
+                    (
+                        expiration
+                        - now
+                    ).total_seconds()
+                ),
+            )
+            hours_remaining = int(
+                seconds_remaining // 3600
+            )
+            days_remaining = int(
+                seconds_remaining // 86400
+            )
+            expires_soon = (
+                0
+                < seconds_remaining
+                <= (48 * 3600)
+            )
+
+        tickets = []
+
+        for ticket in evaluation.ticket_ids:
+            equipment = (
+                ticket.product_alquiler
+                if (
+                    "product_alquiler"
+                    in ticket._fields
+                    and ticket.product_alquiler
+                )
+                else False
+            )
+
+            tickets.append({
+                "id": ticket.id,
+                "number": (
+                    ticket.name
+                    or ""
+                ),
+                "equipment": {
+                    "id": (
+                        equipment.id
+                        if equipment
+                        else False
+                    ),
+                    "model": (
+                        (
+                            equipment.name.name
+                            if hasattr(equipment.name, "name")
+                            else str(equipment.name)
+                        )
+                        if (
+                            equipment
+                            and equipment.name
+                        )
+                        else ""
+                    ),
+                    "serial": (
+                        equipment.serie
+                        if equipment
+                        else ""
+                    ),
+                },
+            })
+
+        result = {
+            "id": evaluation.id,
+            "reference": (
+                evaluation.name
+                or ""
+            ),
+            "state": (
+                evaluation.state
+                or ""
+            ),
+            "state_label": (
+                self._selection_label(
+                    evaluation,
+                    "state",
+                )
+            ),
+            "evaluation_date": (
+                evaluation.evaluation_date
+                or False
+            ),
+            "expiration_date": (
+                expiration
+            ),
+            "visit_date": (
+                evaluation.visit_date
+                or False
+            ),
+            "technician": {
+                "id": (
+                    evaluation.technician_id.id
+                    if evaluation.technician_id
+                    else False
+                ),
+                "name": (
+                    evaluation.technician_id.name
+                    if evaluation.technician_id
+                    else ""
+                ),
+            },
+            "tickets": tickets,
+            "pending": (
+                evaluation.state
+                in ("draft", "sent")
+            ),
+            "hours_remaining": (
+                hours_remaining
+            ),
+            "days_remaining": (
+                days_remaining
+            ),
+            "expires_soon": (
+                expires_soon
+            ),
+        }
+
+        if include_questions:
+            result["questions"] = [
+                {
+                    "key": "solucion_problema",
+                    "type": "rating",
+                    "required": True,
+                    "label": (
+                        evaluation._fields[
+                            "solucion_problema"
+                        ].string
+                    ),
+                    "options": [
+                        {"value": "1", "label": "Malo"},
+                        {"value": "2", "label": "Regular"},
+                        {"value": "3", "label": "Bueno"},
+                        {"value": "4", "label": "Muy Bueno"},
+                        {"value": "5", "label": "Excelente"},
+                    ],
+                },
+                {
+                    "key": "explicacion_trabajo",
+                    "type": "rating",
+                    "required": True,
+                    "label": (
+                        evaluation._fields[
+                            "explicacion_trabajo"
+                        ].string
+                    ),
+                    "options": [
+                        {"value": "1", "label": "Malo"},
+                        {"value": "2", "label": "Regular"},
+                        {"value": "3", "label": "Bueno"},
+                        {"value": "4", "label": "Muy Bueno"},
+                        {"value": "5", "label": "Excelente"},
+                    ],
+                },
+                {
+                    "key": "realizo_pruebas",
+                    "type": "boolean",
+                    "required": True,
+                    "label": (
+                        evaluation._fields[
+                            "realizo_pruebas"
+                        ].string
+                    ),
+                    "options": [
+                        {"value": "si", "label": "Sí"},
+                        {"value": "no", "label": "No"},
+                    ],
+                },
+                {
+                    "key": "consulto_suministros",
+                    "type": "boolean",
+                    "required": True,
+                    "label": (
+                        evaluation._fields[
+                            "consulto_suministros"
+                        ].string
+                    ),
+                    "options": [
+                        {"value": "si", "label": "Sí"},
+                        {"value": "no", "label": "No"},
+                    ],
+                },
+            ]
+            result["comments"] = (
+                evaluation.comentarios
+                or ""
+            )
+
+        return result
+
     # ============================================================
     # HOME PORTAL
     # ============================================================
@@ -1918,6 +2167,10 @@ class AppPortalController(http.Controller):
 
         Toner = request.env[
             "toner.counter.submission"
+        ].sudo()
+
+        Evaluation = request.env[
+            "client.service.evaluation"
         ].sudo()
 
         equipment_domain = [
@@ -1959,6 +2212,35 @@ class AppPortalController(http.Controller):
                 company.id,
             ),
         ]
+
+        evaluation_domain = [
+            (
+                "partner_id",
+                "=",
+                company.id,
+            ),
+            (
+                "state",
+                "in",
+                ["draft", "sent"],
+            ),
+            (
+                "expiration_date",
+                ">=",
+                fields.Datetime.now(),
+            ),
+        ]
+
+        expiring_evaluation_domain = (
+            evaluation_domain
+            + [
+                (
+                    "expiration_date",
+                    "<=",
+                    (fields.Datetime.now() + timedelta(hours=48)),
+                ),
+            ]
+        )
 
         open_toner_domain = list(
             toner_domain
@@ -2011,6 +2293,26 @@ class AppPortalController(http.Controller):
             )
             if open_states
             else 0
+        )
+
+        pending_evaluation_count = (
+            Evaluation.search_count(
+                evaluation_domain
+            )
+        )
+
+        expiring_evaluation_count = (
+            Evaluation.search_count(
+                expiring_evaluation_domain
+            )
+        )
+
+        pending_evaluations = (
+            Evaluation.search(
+                evaluation_domain,
+                order="expiration_date asc, id asc",
+                limit=3,
+            )
         )
 
         recent_tickets = (
@@ -2081,7 +2383,20 @@ class AppPortalController(http.Controller):
                     "open_toner_requests": (
                         open_toner_count
                     ),
+                    "pending_evaluations": (
+                        pending_evaluation_count
+                    ),
+                    "expiring_evaluations": (
+                        expiring_evaluation_count
+                    ),
                 },
+                "pending_evaluations": [
+                    self._serialize_portal_evaluation(
+                        item
+                    )
+                    for item
+                    in pending_evaluations
+                ],
                 "recent_tickets": [
                     self._serialize_ticket_summary(
                         item
@@ -3481,6 +3796,335 @@ class AppPortalController(http.Controller):
                 ),
             },
             status=201,
+        )
+
+    # ============================================================
+    # EVALUACIONES DEL CLIENTE
+    # ============================================================
+
+    @http.route(
+        "/api/app/portal/evaluations",
+        type="http",
+        auth="user",
+        methods=["GET"],
+        csrf=False,
+        readonly=True,
+        save_session=True,
+    )
+    def portal_evaluation_list(
+        self,
+        **kwargs,
+    ):
+        context, error = (
+            self._portal_required()
+        )
+
+        if error:
+            return error
+
+        company = context[
+            "company"
+        ]
+        now = fields.Datetime.now()
+
+        evaluations = (
+            request.env[
+                "client.service.evaluation"
+            ]
+            .sudo()
+            .search(
+                [
+                    (
+                        "partner_id",
+                        "=",
+                        company.id,
+                    ),
+                    (
+                        "state",
+                        "in",
+                        ["draft", "sent"],
+                    ),
+                    (
+                        "expiration_date",
+                        ">=",
+                        now,
+                    ),
+                ],
+                order="expiration_date asc, id asc",
+            )
+        )
+
+        return self._json_response(
+            {
+                "success": True,
+                "count": len(
+                    evaluations
+                ),
+                "evaluations": [
+                    self._serialize_portal_evaluation(
+                        evaluation
+                    )
+                    for evaluation
+                    in evaluations
+                ],
+            }
+        )
+
+    @http.route(
+        "/api/app/portal/evaluations/<int:evaluation_id>",
+        type="http",
+        auth="user",
+        methods=["GET"],
+        csrf=False,
+        readonly=True,
+        save_session=True,
+    )
+    def portal_evaluation_detail(
+        self,
+        evaluation_id,
+        **kwargs,
+    ):
+        context, error = (
+            self._portal_required()
+        )
+
+        if error:
+            return error
+
+        evaluation = (
+            self._get_evaluation_for_company(
+                evaluation_id,
+                context["company"],
+            )
+        )
+
+        if not evaluation:
+            return self._json_response(
+                {
+                    "success": False,
+                    "code": "EVALUATION_NOT_FOUND",
+                    "message": (
+                        "La evaluación no existe o "
+                        "no pertenece a tu empresa."
+                    ),
+                },
+                status=404,
+            )
+
+        if evaluation.state == "completed":
+            return self._json_response(
+                {
+                    "success": False,
+                    "code": "EVALUATION_ALREADY_COMPLETED",
+                    "message": (
+                        "Esta evaluación ya fue respondida."
+                    ),
+                },
+                status=409,
+            )
+
+        now = fields.Datetime.now()
+        if (
+            evaluation.state == "expired"
+            or (
+                evaluation.expiration_date
+                and evaluation.expiration_date < now
+            )
+        ):
+            return self._json_response(
+                {
+                    "success": False,
+                    "code": "EVALUATION_EXPIRED",
+                    "message": (
+                        "El plazo para responder esta evaluación terminó."
+                    ),
+                },
+                status=410,
+            )
+
+        return self._json_response(
+            {
+                "success": True,
+                "evaluation": (
+                    self._serialize_portal_evaluation(
+                        evaluation,
+                        include_questions=True,
+                    )
+                ),
+            }
+        )
+
+    @http.route(
+        "/api/app/portal/evaluations/<int:evaluation_id>/submit",
+        type="http",
+        auth="user",
+        methods=["POST"],
+        csrf=False,
+        save_session=True,
+    )
+    def portal_evaluation_submit(
+        self,
+        evaluation_id,
+        **kwargs,
+    ):
+        context, error = (
+            self._portal_required()
+        )
+
+        if error:
+            return error
+
+        evaluation = (
+            self._get_evaluation_for_company(
+                evaluation_id,
+                context["company"],
+            )
+        )
+
+        if not evaluation:
+            return self._json_response(
+                {
+                    "success": False,
+                    "code": "EVALUATION_NOT_FOUND",
+                    "message": (
+                        "La evaluación no existe o "
+                        "no pertenece a tu empresa."
+                    ),
+                },
+                status=404,
+            )
+
+        if evaluation.state == "completed":
+            return self._json_response(
+                {
+                    "success": False,
+                    "code": "EVALUATION_ALREADY_COMPLETED",
+                    "message": (
+                        "Esta evaluación ya fue respondida."
+                    ),
+                },
+                status=409,
+            )
+
+        now = fields.Datetime.now()
+        if (
+            evaluation.state == "expired"
+            or (
+                evaluation.expiration_date
+                and evaluation.expiration_date < now
+            )
+        ):
+            if evaluation.state != "expired":
+                evaluation.sudo().write({
+                    "state": "expired",
+                })
+
+            return self._json_response(
+                {
+                    "success": False,
+                    "code": "EVALUATION_EXPIRED",
+                    "message": (
+                        "El plazo para responder esta evaluación terminó."
+                    ),
+                },
+                status=410,
+            )
+
+        data = self._get_json_body()
+
+        rating_values = {"1", "2", "3", "4", "5"}
+        boolean_values = {"si", "no"}
+
+        answers = {
+            "solucion_problema": str(
+                data.get("solucion_problema")
+                or ""
+            ).strip(),
+            "explicacion_trabajo": str(
+                data.get("explicacion_trabajo")
+                or ""
+            ).strip(),
+            "realizo_pruebas": str(
+                data.get("realizo_pruebas")
+                or ""
+            ).strip().lower(),
+            "consulto_suministros": str(
+                data.get("consulto_suministros")
+                or ""
+            ).strip().lower(),
+        }
+
+        if (
+            answers["solucion_problema"]
+            not in rating_values
+            or answers["explicacion_trabajo"]
+            not in rating_values
+            or answers["realizo_pruebas"]
+            not in boolean_values
+            or answers["consulto_suministros"]
+            not in boolean_values
+        ):
+            return self._json_response(
+                {
+                    "success": False,
+                    "code": "INVALID_EVALUATION_ANSWERS",
+                    "message": (
+                        "Completa todas las preguntas antes de enviar la evaluación."
+                    ),
+                },
+                status=400,
+            )
+
+        comments = str(
+            data.get("comentarios")
+            or ""
+        ).strip()
+
+        vals = dict(
+            answers
+        )
+        vals["comentarios"] = comments
+
+        try:
+            evaluation.action_complete_from_app(
+                vals=vals,
+                request=request,
+                contact=context["contact"],
+            )
+        except Exception:
+            _logger.exception(
+                "[APP PORTAL] Error completando evaluación=%s company=%s contact=%s",
+                evaluation.id,
+                context["company"].id,
+                context["contact"].id,
+            )
+            return self._json_response(
+                {
+                    "success": False,
+                    "code": "EVALUATION_SAVE_ERROR",
+                    "message": (
+                        "No fue posible guardar la evaluación."
+                    ),
+                },
+                status=500,
+            )
+
+        _logger.info(
+            "[APP PORTAL] Evaluación completada desde app evaluation=%s company=%s contact=%s user=%s",
+            evaluation.id,
+            context["company"].id,
+            context["contact"].id,
+            context["user"].id,
+        )
+
+        return self._json_response(
+            {
+                "success": True,
+                "message": (
+                    "Gracias. Tu evaluación fue registrada correctamente."
+                ),
+                "evaluation_id": evaluation.id,
+            }
         )
 
     # ============================================================
