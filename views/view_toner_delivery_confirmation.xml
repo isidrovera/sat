@@ -38,16 +38,11 @@
         <field name="arch" type="xml">
             <form string="Confirmación de Entrega de Tóner">
                 <header>
-                    <button name="action_confirm" 
-                            type="object" 
-                            string="Confirmar Entrega" 
-                            class="btn-primary"
-                            invisible="state != 'draft'"/>
-                    <button name="action_process" 
-                            type="object" 
-                            string="Procesar y Actualizar Stock" 
+                    <button name="action_confirm_complete"
+                            type="object"
+                            string="Confirmar entrega"
                             class="btn-success"
-                            invisible="state != 'confirmed'"/>
+                            invisible="state == 'processed'"/>
                     <button name="action_validate" 
                             type="object" 
                             string="Validar" 

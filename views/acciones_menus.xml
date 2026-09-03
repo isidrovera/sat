@@ -255,7 +255,7 @@
 
     <!-- ── Tóner ──────────────────────────────────────────────────────── -->
     <record id="action_toner_counter_submission" model="ir.actions.act_window">
-      <field name="name">Reportes de Contadores y Tóner</field>
+      <field name="name">Gestión de Tóner</field>
       <field name="res_model">toner.counter.submission</field>
       <field name="view_mode">kanban,list,form</field>
       <field name="search_view_id" ref="view_toner_counter_submission_search"/>
@@ -279,7 +279,7 @@
       <field name="res_model">toner.delivery.confirmation</field>
       <field name="view_mode">kanban,list,form,graph,pivot</field>
       <field name="search_view_id" ref="view_toner_delivery_confirmation_search"/>
-      <field name="context">{'search_default_draft': 1, 'search_default_confirmed': 1}</field>
+      <field name="context">{}</field>
     </record>
 
     <record id="action_toner_delivery_validation_pending" model="ir.actions.act_window">
@@ -917,7 +917,7 @@ action = env["sat.import.line"].browse(env.context.get("active_ids", [])).action
     <!-- TÓNER — seq interno de 10 en 10                                    -->
     <!-- ================================================================== -->
     <menuitem id="menu_toner_counter_submission"
-              name="Reportes de Tóner"
+              name="Gestión de Tóner"
               parent="menu_toner_root"
               action="action_toner_counter_submission"
               sequence="10"/>
@@ -929,22 +929,30 @@ action = env["sat.import.line"].browse(env.context.get("active_ids", [])).action
               sequence="20"/>
 
     <menuitem id="menu_toner_delivery_dashboard"
-              name="Dashboard de Entregas"
+              name="Dashboard"
               parent="menu_toner_root"
               action="action_toner_delivery_dashboard"
-              sequence="30"/>
+              sequence="20"/>
 
     <menuitem id="menu_toner_delivery_confirmation"
-              name="Confirmaciones de Entrega"
+              name="Reportes"
               parent="menu_toner_root"
               action="action_toner_delivery_confirmation"
-              sequence="40"/>
+              sequence="30"/>
 
     <menuitem id="menu_toner_delivery_validation"
               name="Validaciones Pendientes"
               parent="menu_toner_root"
               action="action_toner_delivery_validation_pending"
               sequence="50"/>
+
+    <!-- Menús técnicos: se conservan las acciones y modelos, pero no se muestran al usuario operativo. -->
+    <record id="menu_toner_delivery_schedule" model="ir.ui.menu">
+      <field name="active" eval="False"/>
+    </record>
+    <record id="menu_toner_delivery_validation" model="ir.ui.menu">
+      <field name="active" eval="False"/>
+    </record>
 
     <!-- seq 60-200: libres para futuras adiciones en Tóner -->
 

@@ -1501,9 +1501,17 @@
         <tr><td style="padding:8px;background:#f8fafc;">Solicitante</td><td style="padding:8px;"><t t-out="object.client_name"/> - <t t-out="object.client_phone"/></td></tr>
       </table>
 
-      <div style="font-size:18px;font-weight:700;margin:18px 0 10px;">📦 Cantidades</div>
+      <div style="font-size:18px;font-weight:700;margin:18px 0 10px;">📦 Evaluación comercial por tóner</div>
       <table style="width:100%;border-collapse:collapse;font-size:13px;">
-        <thead><tr style="background:#0f172a;color:#fff;"><th style="padding:10px;text-align:left;">Tóner</th><th style="padding:10px;">Solicitado</th><th style="padding:10px;">Sugerido por comercial</th></tr></thead>
+        <thead>
+          <tr style="background:#0f172a;color:#fff;">
+            <th style="padding:10px;text-align:left;">Tóner</th>
+            <th style="padding:10px;">Solicitado</th>
+            <th style="padding:10px;">Decisión comercial</th>
+            <th style="padding:10px;">Cantidad propuesta</th>
+            <th style="padding:10px;text-align:left;">Motivo</th>
+          </tr>
+        </thead>
         <tbody>
           <t t-foreach="object.get_requested_toner_email_lines()" t-as="line">
             <tr>
@@ -1514,7 +1522,13 @@
                 <t t-out="line['requested_qty']"/>
               </td>
               <td style="padding:9px;text-align:center;border:1px solid #e2e8f0;">
+                <strong><t t-out="line['decision_label']"/></strong>
+              </td>
+              <td style="padding:9px;text-align:center;border:1px solid #e2e8f0;">
                 <strong><t t-out="line['suggested_qty']"/></strong>
+              </td>
+              <td style="padding:9px;border:1px solid #e2e8f0;">
+                <t t-out="line['reason'] or '-'"/>
               </td>
             </tr>
           </t>

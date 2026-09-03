@@ -133,27 +133,27 @@
                         />
 
                         <button
-                            name="action_sales_confirm"
+                            name="action_confirm_stock_and_prepare"
                             type="object"
-                            string="Confirmar Stock"
+                            string="Confirmar stock y preparar"
                             class="btn-success"
-                            invisible="state != 'confirmacion_ventas'"
+                            invisible="state not in ['confirmacion_ventas', 'lista_despacho']"
                         />
 
                         <button
-                            name="action_create_dispatch"
+                            name="action_send_dispatch"
                             type="object"
-                            string="Crear Despacho"
+                            string="Marcar como enviado"
                             class="btn-primary"
-                            invisible="state != 'lista_despacho'"
+                            invisible="delivery_state != 'preparando'"
                         />
 
                         <button
-                            name="action_mark_delivered"
+                            name="action_register_delivery"
                             type="object"
-                            string="Cerrar como Entregada"
+                            string="Registrar entrega"
                             class="btn-success"
-                            invisible="state != 'en_despacho'"
+                            invisible="state != 'en_despacho' or delivery_state not in ['preparando', 'enviado']"
                         />
 
                         <button
@@ -177,6 +177,8 @@
                         <!-- Campos técnicos usados por visibilidad y edición -->
                         <field name="tipo_maquina_id" invisible="1"/>
                         <field name="source" invisible="1"/>
+                        <field name="delivery_state" invisible="1"/>
+                        <field name="delivery_confirmation_id" invisible="1"/>
 
                         <div class="oe_button_box" name="button_box">
                             <button
@@ -293,7 +295,24 @@
                                             invisible="not requiere_toner_black and cantidad_solicitada_black == 0"
                                         />
                                         <field
+                                            name="decision_black"
+                                            string="Decisión comercial"
+                                            widget="badge"
+                                            readonly="state not in ['evaluacion', 'devuelta']"
+                                            decoration-success="decision_black == 'procede'"
+                                            decoration-danger="decision_black == 'no_procede'"
+                                            decoration-warning="decision_black == 'pending'"
+                                        />
+                                        <field
                                             name="cantidad_sugerida_black"
+                                            string="Cantidad propuesta"
+                                            readonly="state not in ['evaluacion', 'devuelta'] or decision_black == 'no_procede'"
+                                        />
+                                        <field
+                                            name="motivo_no_procede_black"
+                                            string="Motivo no procede"
+                                            placeholder="Indique por qué no corresponde enviar este tóner..."
+                                            invisible="decision_black != 'no_procede'"
                                             readonly="state not in ['evaluacion', 'devuelta']"
                                         />
                                         <field
@@ -316,7 +335,24 @@
                                             invisible="not requiere_toner_cyan and cantidad_solicitada_cyan == 0"
                                         />
                                         <field
+                                            name="decision_cyan"
+                                            string="Decisión comercial"
+                                            widget="badge"
+                                            readonly="state not in ['evaluacion', 'devuelta']"
+                                            decoration-success="decision_cyan == 'procede'"
+                                            decoration-danger="decision_cyan == 'no_procede'"
+                                            decoration-warning="decision_cyan == 'pending'"
+                                        />
+                                        <field
                                             name="cantidad_sugerida_cyan"
+                                            string="Cantidad propuesta"
+                                            readonly="state not in ['evaluacion', 'devuelta'] or decision_cyan == 'no_procede'"
+                                        />
+                                        <field
+                                            name="motivo_no_procede_cyan"
+                                            string="Motivo no procede"
+                                            placeholder="Indique por qué no corresponde enviar este tóner..."
+                                            invisible="decision_cyan != 'no_procede'"
                                             readonly="state not in ['evaluacion', 'devuelta']"
                                         />
                                         <field
@@ -339,7 +375,24 @@
                                             invisible="not requiere_toner_magenta and cantidad_solicitada_magenta == 0"
                                         />
                                         <field
+                                            name="decision_magenta"
+                                            string="Decisión comercial"
+                                            widget="badge"
+                                            readonly="state not in ['evaluacion', 'devuelta']"
+                                            decoration-success="decision_magenta == 'procede'"
+                                            decoration-danger="decision_magenta == 'no_procede'"
+                                            decoration-warning="decision_magenta == 'pending'"
+                                        />
+                                        <field
                                             name="cantidad_sugerida_magenta"
+                                            string="Cantidad propuesta"
+                                            readonly="state not in ['evaluacion', 'devuelta'] or decision_magenta == 'no_procede'"
+                                        />
+                                        <field
+                                            name="motivo_no_procede_magenta"
+                                            string="Motivo no procede"
+                                            placeholder="Indique por qué no corresponde enviar este tóner..."
+                                            invisible="decision_magenta != 'no_procede'"
                                             readonly="state not in ['evaluacion', 'devuelta']"
                                         />
                                         <field
@@ -362,7 +415,24 @@
                                             invisible="not requiere_toner_yellow and cantidad_solicitada_yellow == 0"
                                         />
                                         <field
+                                            name="decision_yellow"
+                                            string="Decisión comercial"
+                                            widget="badge"
+                                            readonly="state not in ['evaluacion', 'devuelta']"
+                                            decoration-success="decision_yellow == 'procede'"
+                                            decoration-danger="decision_yellow == 'no_procede'"
+                                            decoration-warning="decision_yellow == 'pending'"
+                                        />
+                                        <field
                                             name="cantidad_sugerida_yellow"
+                                            string="Cantidad propuesta"
+                                            readonly="state not in ['evaluacion', 'devuelta'] or decision_yellow == 'no_procede'"
+                                        />
+                                        <field
+                                            name="motivo_no_procede_yellow"
+                                            string="Motivo no procede"
+                                            placeholder="Indique por qué no corresponde enviar este tóner..."
+                                            invisible="decision_yellow != 'no_procede'"
                                             readonly="state not in ['evaluacion', 'devuelta']"
                                         />
                                         <field
@@ -390,8 +460,8 @@
                                         solicite explicación, foto del tóner o foto del contador.
                                     </p>
                                     <p>
-                                        <strong>4. Defina la cantidad sugerida:</strong>
-                                        esta cantidad será la recomendación que recibirá gerencia.
+                                        <strong>4. Evalúe cada color:</strong>
+                                        marque Procede o No procede. Si procede, defina la cantidad propuesta; si no procede, indique el motivo.
                                     </p>
                                     <p class="mb-0">
                                         <strong>5. No confirme despacho:</strong>
@@ -522,8 +592,19 @@
 
                                     <group string="Despacho">
                                         <field name="delivery_scheduled_id" readonly="1"/>
-                                        <field name="state" readonly="1"/>
+                                        <field name="delivery_state" widget="badge" readonly="1"/>
+                                        <field name="delivery_date_planned_ui" invisible="not delivery_scheduled_id"/>
+                                        <field name="delivery_assigned_user_id" invisible="not delivery_scheduled_id"/>
+                                        <field name="delivery_method_ui" invisible="not delivery_scheduled_id"/>
+                                        <field name="delivery_tracking_number_ui" invisible="not delivery_scheduled_id"/>
                                     </group>
+                                </group>
+
+                                <group string="Datos de Entrega" invisible="not delivery_scheduled_id">
+                                    <field name="delivery_address_ui" readonly="1"/>
+                                    <field name="delivery_contact_person_ui" readonly="1"/>
+                                    <field name="delivery_contact_phone_ui" readonly="1"/>
+                                    <field name="delivery_confirmation_id" readonly="1" invisible="not delivery_confirmation_id"/>
                                 </group>
 
                                 <div class="alert alert-info" role="alert">

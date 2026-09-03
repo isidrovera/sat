@@ -276,6 +276,34 @@ class TonerCounterSubmission(models.Model):
         tracking=True,
     )
 
+    # -------------------------------------------------------------------------
+    # Evaluación comercial por color
+    # -------------------------------------------------------------------------
+
+    COMMERCIAL_COLOR_DECISIONS = [
+        ("pending", "Pendiente"),
+        ("procede", "Procede"),
+        ("no_procede", "No procede"),
+    ]
+
+    decision_black = fields.Selection(
+        COMMERCIAL_COLOR_DECISIONS, string="Evaluación negro", default="pending", tracking=True
+    )
+    decision_cyan = fields.Selection(
+        COMMERCIAL_COLOR_DECISIONS, string="Evaluación cian", default="pending", tracking=True
+    )
+    decision_magenta = fields.Selection(
+        COMMERCIAL_COLOR_DECISIONS, string="Evaluación magenta", default="pending", tracking=True
+    )
+    decision_yellow = fields.Selection(
+        COMMERCIAL_COLOR_DECISIONS, string="Evaluación amarillo", default="pending", tracking=True
+    )
+
+    motivo_no_procede_black = fields.Char(string="Motivo negro", tracking=True)
+    motivo_no_procede_cyan = fields.Char(string="Motivo cian", tracking=True)
+    motivo_no_procede_magenta = fields.Char(string="Motivo magenta", tracking=True)
+    motivo_no_procede_yellow = fields.Char(string="Motivo amarillo", tracking=True)
+
     cantidad_aprobada_black = fields.Integer(
         string="Cantidad aprobada negro",
         default=0,
@@ -523,6 +551,51 @@ class TonerCounterSubmission(models.Model):
         string="Entrega programada",
         readonly=True,
         tracking=True,
+    )
+
+    # Campos puente para operar el despacho desde la solicitud principal.
+    delivery_state = fields.Selection(
+        related="delivery_scheduled_id.state", string="Estado del despacho", readonly=True
+    )
+    delivery_confirmation_id = fields.Many2one(
+        related="delivery_scheduled_id.confirmation_id",
+        string="Confirmación de entrega",
+        readonly=True,
+    )
+    delivery_date_planned_ui = fields.Date(
+        related="delivery_scheduled_id.delivery_date_planned",
+        string="Fecha programada",
+        readonly=False,
+    )
+    delivery_assigned_user_id = fields.Many2one(
+        related="delivery_scheduled_id.assigned_user",
+        string="Responsable de entrega",
+        readonly=False,
+    )
+    delivery_method_ui = fields.Selection(
+        related="delivery_scheduled_id.delivery_method",
+        string="Método de entrega",
+        readonly=False,
+    )
+    delivery_tracking_number_ui = fields.Char(
+        related="delivery_scheduled_id.tracking_number",
+        string="Número de seguimiento",
+        readonly=False,
+    )
+    delivery_address_ui = fields.Text(
+        related="delivery_scheduled_id.delivery_address",
+        string="Dirección de entrega",
+        readonly=True,
+    )
+    delivery_contact_person_ui = fields.Char(
+        related="delivery_scheduled_id.contact_person",
+        string="Contacto de entrega",
+        readonly=True,
+    )
+    delivery_contact_phone_ui = fields.Char(
+        related="delivery_scheduled_id.contact_phone",
+        string="Teléfono de entrega",
+        readonly=True,
     )
 
     notes = fields.Text(string="Observaciones del cliente")
@@ -1922,6 +1995,47 @@ class TonerCounterSubmission(models.Model):
             )
         )
 
+    def _commercial_decision_field(self, color):
+        return "decision_%s" % color
+
+    def _commercial_reason_field(self, color):
+        return "motivo_no_procede_%s" % color
+
+    def _validate_commercial_color_decisions(self):
+        """Valida únicamente los colores realmente solicitados."""
+        self.ensure_one()
+        errors = []
+        for color, label in self.COLOR_LABELS.items():
+            requested_qty = int(getattr(self, self._requested_quantity_field(color), 0) or 0)
+            selected = bool(getattr(self, self._color_boolean_field(color), False) or requested_qty > 0)
+            if not selected:
+                continue
+
+            decision_field = self._commercial_decision_field(color)
+            reason_field = self._commercial_reason_field(color)
+            suggested_field = self._suggested_quantity_field(color)
+            decision = getattr(self, decision_field, False) or "pending"
+            suggested_qty = int(getattr(self, suggested_field, 0) or 0)
+            reason = (getattr(self, reason_field, False) or "").strip()
+
+            if decision == "pending":
+                errors.append(_("%(color)s: indique si procede o no procede.") % {"color": label})
+            elif decision == "procede" and suggested_qty <= 0:
+                errors.append(_("%(color)s: si procede, la cantidad propuesta debe ser mayor a cero.") % {"color": label})
+            elif decision == "no_procede":
+                if suggested_qty != 0:
+                    setattr(self, suggested_field, 0)
+                if not reason:
+                    errors.append(_("%(color)s: indique el motivo de 'No procede'.") % {"color": label})
+
+        if errors:
+            raise UserError(_("Complete la evaluación comercial antes de enviar a gerencia:\n\n%s") % "\n".join("• %s" % e for e in errors))
+
+    def _commercial_decision_label(self, color):
+        self.ensure_one()
+        value = getattr(self, self._commercial_decision_field(color), False) or "pending"
+        return dict(self.COMMERCIAL_COLOR_DECISIONS).get(value, value)
+
     def get_requested_toner_email_lines(self):
         """
         Devuelve una línea por cada tóner solicitado.
@@ -1955,6 +2069,13 @@ class TonerCounterSubmission(models.Model):
                     "suggested_qty": int(
                         getattr(self, suggested_field, 0) or 0
                     ),
+                    "decision": getattr(
+                        self, self._commercial_decision_field(color), "pending"
+                    ) or "pending",
+                    "decision_label": self._commercial_decision_label(color),
+                    "reason": getattr(
+                        self, self._commercial_reason_field(color), False
+                    ) or "",
                     "approved_qty": int(
                         getattr(self, approved_field, 0) or 0
                     ),
@@ -2422,6 +2543,10 @@ class TonerCounterSubmission(models.Model):
                         "El consumo es anticipado. Registre el motivo o adjunte evidencia antes de enviarlo a gerencia."
                     )
                 )
+
+            # Comercial debe resolver cada color solicitado antes de que Gerencia vea la solicitud.
+            record._validate_commercial_color_decisions()
+
             record.write({"state": "pendiente_gerencia"})
             record.message_post(
                 body=_("Solicitud enviada a gerencia por %s.") % self.env.user.name
@@ -2622,6 +2747,68 @@ class TonerCounterSubmission(models.Model):
             body=_("Proceso de despacho creado: %s.") % delivery.display_name
         )
         return self.action_view_delivery()
+
+    def action_confirm_stock_and_prepare(self):
+        """Un solo paso visible: confirma stock, crea el despacho y lo deja preparando.
+
+        Reutiliza los métodos existentes para conservar chatter, correos y WhatsApp.
+        """
+        self.ensure_one()
+
+        if self.state == "confirmacion_ventas":
+            self.action_sales_confirm()
+
+        if self.state == "lista_despacho":
+            self.action_create_dispatch()
+
+        delivery = self.delivery_scheduled_id
+        if not delivery:
+            raise UserError(_("No se pudo crear el despacho."))
+
+        if delivery.state == "programado":
+            delivery.action_confirm()
+        if delivery.state == "confirmado":
+            delivery.action_prepare()
+
+        self.message_post(body=_("Stock confirmado y despacho enviado a preparación."))
+        return {"type": "ir.actions.client", "tag": "reload"}
+
+    def action_prepare_dispatch(self):
+        self.ensure_one()
+        delivery = self.delivery_scheduled_id
+        if not delivery:
+            raise UserError(_("Primero debe existir un despacho."))
+        if delivery.state == "programado":
+            delivery.action_confirm()
+        if delivery.state == "confirmado":
+            delivery.action_prepare()
+        return {"type": "ir.actions.client", "tag": "reload"}
+
+    def action_send_dispatch(self):
+        self.ensure_one()
+        delivery = self.delivery_scheduled_id
+        if not delivery:
+            raise UserError(_("Primero debe existir un despacho."))
+        if delivery.state != "preparando":
+            raise UserError(_("El despacho debe estar en preparación antes de enviarlo."))
+        # action_send conserva la notificación WhatsApp existente al cliente.
+        delivery.action_send()
+        return {"type": "ir.actions.client", "tag": "reload"}
+
+    def action_register_delivery(self):
+        """Abre la confirmación existente o crea la confirmación mediante la lógica actual."""
+        self.ensure_one()
+        delivery = self.delivery_scheduled_id
+        if not delivery:
+            raise UserError(_("Primero debe existir un despacho."))
+
+        if delivery.confirmation_id:
+            return delivery.action_view_confirmation()
+
+        if delivery.state not in ("enviado", "preparando"):
+            raise UserError(_("El despacho debe estar en preparación o enviado."))
+
+        return delivery.action_deliver()
 
     def action_mark_delivered(self):
         for record in self:

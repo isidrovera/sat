@@ -539,6 +539,25 @@ class TonerDeliveryConfirmation(models.Model):
         
         return True
 
+    def action_confirm_complete(self):
+        """Confirma y procesa la entrega en un solo paso visible.
+
+        Conserva action_confirm() y action_process() para que se ejecuten las
+        validaciones y actualización de stock ya existentes.
+        """
+        self.ensure_one()
+
+        if self.state == "draft":
+            self.action_confirm()
+        if self.state == "confirmed":
+            self.action_process()
+
+        submission = self.schedule_id.submission_id if self.schedule_id else False
+        if submission and submission.state != "entregada":
+            submission.action_mark_delivered()
+
+        return {"type": "ir.actions.act_window_close"}
+
     def action_validate(self):
         """Valida la entrega"""
         self.ensure_one()
