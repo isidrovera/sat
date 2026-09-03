@@ -297,11 +297,7 @@
                                         <field
                                             name="decision_black"
                                             string="Decisión comercial"
-                                            widget="badge"
                                             readonly="state not in ['evaluacion', 'devuelta']"
-                                            decoration-success="decision_black == 'procede'"
-                                            decoration-danger="decision_black == 'no_procede'"
-                                            decoration-warning="decision_black == 'pending'"
                                         />
                                         <field
                                             name="cantidad_sugerida_black"
@@ -335,14 +331,10 @@
                                             invisible="not requiere_toner_cyan and cantidad_solicitada_cyan == 0"
                                         />
                                         <field
-                                            name="decision_cyan"
-                                            string="Decisión comercial"
-                                            widget="badge"
-                                            readonly="state not in ['evaluacion', 'devuelta']"
-                                            decoration-success="decision_cyan == 'procede'"
-                                            decoration-danger="decision_cyan == 'no_procede'"
-                                            decoration-warning="decision_cyan == 'pending'"
-                                        />
+    name="decision_cyan"
+    string="Decisión comercial"
+    readonly="state not in ['evaluacion', 'devuelta']"
+/>
                                         <field
                                             name="cantidad_sugerida_cyan"
                                             string="Cantidad propuesta"
@@ -375,14 +367,10 @@
                                             invisible="not requiere_toner_magenta and cantidad_solicitada_magenta == 0"
                                         />
                                         <field
-                                            name="decision_magenta"
-                                            string="Decisión comercial"
-                                            widget="badge"
-                                            readonly="state not in ['evaluacion', 'devuelta']"
-                                            decoration-success="decision_magenta == 'procede'"
-                                            decoration-danger="decision_magenta == 'no_procede'"
-                                            decoration-warning="decision_magenta == 'pending'"
-                                        />
+    name="decision_magenta"
+    string="Decisión comercial"
+    readonly="state not in ['evaluacion', 'devuelta']"
+/>
                                         <field
                                             name="cantidad_sugerida_magenta"
                                             string="Cantidad propuesta"
@@ -415,14 +403,10 @@
                                             invisible="not requiere_toner_yellow and cantidad_solicitada_yellow == 0"
                                         />
                                         <field
-                                            name="decision_yellow"
-                                            string="Decisión comercial"
-                                            widget="badge"
-                                            readonly="state not in ['evaluacion', 'devuelta']"
-                                            decoration-success="decision_yellow == 'procede'"
-                                            decoration-danger="decision_yellow == 'no_procede'"
-                                            decoration-warning="decision_yellow == 'pending'"
-                                        />
+    name="decision_yellow"
+    string="Decisión comercial"
+    readonly="state not in ['evaluacion', 'devuelta']"
+/>
                                         <field
                                             name="cantidad_sugerida_yellow"
                                             string="Cantidad propuesta"
