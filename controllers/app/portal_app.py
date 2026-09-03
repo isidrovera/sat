@@ -68,52 +68,91 @@ class AppPortalController(http.Controller):
         self,
     ):
         """
-        Devuelve usuario, contacto y empresa comercial.
+        Devuelve el usuario portal, su contacto y todas las empresas
+        que está autorizado a administrar.
 
-        Esta API está destinada únicamente a usuarios Portal.
-        Nunca acepta partner_id enviado desde Flutter para decidir
-        qué empresa puede consultar.
+        Empresas permitidas:
+        1) commercial_partner_id del contacto.
+        2) whatsapp_company_ids, cuando el campo existe.
+
+        Flutter nunca puede ampliar este conjunto enviando partner_id
+        o company_id. Cualquier company_id recibido se valida contra
+        company_ids antes de utilizarse.
         """
 
         user = request.env.user
 
-        if not user:
-            return False
-
-        if user._is_public():
+        if not user or user._is_public():
             return False
 
         is_portal = user.has_group(
             "base.group_portal"
         )
-
         is_internal = user.has_group(
             "base.group_user"
         )
 
-        if (
-            not is_portal
-            or is_internal
-        ):
+        if not is_portal or is_internal:
             return False
 
         contact = user.partner_id
-
         if not contact:
             return False
 
-        company = (
+        main_company = (
             contact.commercial_partner_id
             or contact
         )
 
-        if not company:
+        company_ids = []
+
+        if main_company:
+            company_ids.append(
+                main_company.id
+            )
+
+        if (
+            "whatsapp_company_ids"
+            in contact._fields
+        ):
+            company_ids += (
+                contact.whatsapp_company_ids.ids
+            )
+
+        company_ids = list(
+            dict.fromkeys(company_ids)
+        )
+
+        if not company_ids:
             return False
+
+        companies = (
+            request.env["res.partner"]
+            .sudo()
+            .browse(company_ids)
+            .exists()
+        )
+
+        # Conservar únicamente empresas que realmente existen.
+        company_ids = companies.ids
+
+        if not company_ids:
+            return False
+
+        if (
+            not main_company
+            or main_company.id
+            not in company_ids
+        ):
+            main_company = companies[0]
 
         return {
             "user": user,
             "contact": contact,
-            "company": company,
+            "company": main_company,
+            "main_company": main_company,
+            "companies": companies,
+            "company_ids": company_ids,
         }
 
     def _portal_required(
@@ -136,29 +175,142 @@ class AppPortalController(http.Controller):
             status=403,
         )
 
-    def _get_equipment_for_company(
+    def _serialize_company(
+        self,
+        company,
+    ):
+        if not company:
+            return False
+
+        return {
+            "id": company.id,
+            "name": company.name or "",
+        }
+
+    def _get_company_scope(
+        self,
+        context,
+        allow_all=True,
+    ):
+        """
+        Obtiene la empresa seleccionada desde ?company_id=.
+
+        - Sin company_id: usa la empresa principal.
+        - company_id=<id>: valida que el ID esté autorizado.
+        - company_id=all: usa todas las empresas autorizadas.
+
+        Devuelve (scope, error_response).
+        """
+
+        raw_company_id = (
+            request.httprequest.args.get(
+                "company_id"
+            )
+            or ""
+        ).strip()
+
+        authorized_ids = list(
+            context["company_ids"]
+        )
+
+        if (
+            allow_all
+            and raw_company_id.lower()
+            == "all"
+        ):
+            return {
+                "company": False,
+                "company_ids": authorized_ids,
+                "is_all": True,
+                "key": "all",
+            }, False
+
+        if not raw_company_id:
+            selected_company = (
+                context["main_company"]
+            )
+        else:
+            try:
+                selected_id = int(
+                    raw_company_id
+                )
+            except (TypeError, ValueError):
+                return False, self._json_response(
+                    {
+                        "success": False,
+                        "code": "INVALID_COMPANY_ID",
+                        "message": (
+                            "La empresa seleccionada no es válida."
+                        ),
+                    },
+                    status=400,
+                )
+
+            if selected_id not in authorized_ids:
+                return False, self._json_response(
+                    {
+                        "success": False,
+                        "code": "COMPANY_ACCESS_DENIED",
+                        "message": (
+                            "No tienes acceso a la empresa seleccionada."
+                        ),
+                    },
+                    status=403,
+                )
+
+            selected_company = (
+                context["companies"]
+                .filtered(
+                    lambda partner: (
+                        partner.id == selected_id
+                    )
+                )
+            )
+            selected_company = (
+                selected_company[0]
+                if selected_company
+                else False
+            )
+
+        if not selected_company:
+            return False, self._json_response(
+                {
+                    "success": False,
+                    "code": "COMPANY_NOT_FOUND",
+                    "message": (
+                        "La empresa seleccionada ya no está disponible."
+                    ),
+                },
+                status=404,
+            )
+
+        return {
+            "company": selected_company,
+            "company_ids": [
+                selected_company.id
+            ],
+            "is_all": False,
+            "key": str(
+                selected_company.id
+            ),
+        }, False
+
+    def _get_equipment_for_company_ids(
         self,
         equipment_id,
-        company,
+        company_ids,
     ):
         try:
             equipment_id = int(
                 equipment_id
             )
-        except (
-            TypeError,
-            ValueError,
-        ):
+        except (TypeError, ValueError):
             return False
 
         equipment = (
-            request.env[
-                "alquiler"
-            ]
+            request.env["alquiler"]
             .sudo()
-            .browse(
-                equipment_id
-            )
+            .browse(equipment_id)
             .exists()
         )
 
@@ -168,35 +320,26 @@ class AppPortalController(http.Controller):
         if (
             not equipment.cliente_id
             or equipment.cliente_id.id
-            != company.id
+            not in company_ids
         ):
             return False
 
         return equipment
 
-    def _get_ticket_for_company(
+    def _get_ticket_for_company_ids(
         self,
         ticket_id,
-        company,
+        company_ids,
     ):
         try:
-            ticket_id = int(
-                ticket_id
-            )
-        except (
-            TypeError,
-            ValueError,
-        ):
+            ticket_id = int(ticket_id)
+        except (TypeError, ValueError):
             return False
 
         ticket = (
-            request.env[
-                "ticket.alquiler"
-            ]
+            request.env["ticket.alquiler"]
             .sudo()
-            .browse(
-                ticket_id
-            )
+            .browse(ticket_id)
             .exists()
         )
 
@@ -206,35 +349,28 @@ class AppPortalController(http.Controller):
         if (
             not ticket.partner_id
             or ticket.partner_id.id
-            != company.id
+            not in company_ids
         ):
             return False
 
         return ticket
 
-    def _get_evaluation_for_company(
+    def _get_evaluation_for_company_ids(
         self,
         evaluation_id,
-        company,
+        company_ids,
     ):
         try:
             evaluation_id = int(
                 evaluation_id
             )
-        except (
-            TypeError,
-            ValueError,
-        ):
+        except (TypeError, ValueError):
             return False
 
         evaluation = (
-            request.env[
-                "client.service.evaluation"
-            ]
+            request.env["client.service.evaluation"]
             .sudo()
-            .browse(
-                evaluation_id
-            )
+            .browse(evaluation_id)
             .exists()
         )
 
@@ -244,7 +380,7 @@ class AppPortalController(http.Controller):
         if (
             not evaluation.partner_id
             or evaluation.partner_id.id
-            != company.id
+            not in company_ids
         ):
             return False
 
@@ -1346,6 +1482,18 @@ class AppPortalController(http.Controller):
 
         return {
             "id": submission.id,
+            "company": {
+                "id": (
+                    submission.partner_id.id
+                    if submission.partner_id
+                    else False
+                ),
+                "name": (
+                    submission.partner_id.name
+                    if submission.partner_id
+                    else ""
+                ),
+            },
             "number": (
                 self._field_value(
                     submission,
@@ -1502,6 +1650,18 @@ class AppPortalController(http.Controller):
 
         return {
             "id": equipment.id,
+            "company": {
+                "id": (
+                    equipment.cliente_id.id
+                    if equipment.cliente_id
+                    else False
+                ),
+                "name": (
+                    equipment.cliente_id.name
+                    if equipment.cliente_id
+                    else ""
+                ),
+            },
             "brand": (
                 equipment.marca
                 or ""
@@ -1678,6 +1838,18 @@ class AppPortalController(http.Controller):
 
         return {
             "id": ticket.id,
+            "company": {
+                "id": (
+                    ticket.partner_id.id
+                    if ticket.partner_id
+                    else False
+                ),
+                "name": (
+                    ticket.partner_id.name
+                    if ticket.partner_id
+                    else ""
+                ),
+            },
             "number": (
                 ticket.name
                 or ""
@@ -2004,6 +2176,18 @@ class AppPortalController(http.Controller):
 
         result = {
             "id": evaluation.id,
+            "company": {
+                "id": (
+                    evaluation.partner_id.id
+                    if evaluation.partner_id
+                    else False
+                ),
+                "name": (
+                    evaluation.partner_id.name
+                    if evaluation.partner_id
+                    else ""
+                ),
+            },
             "reference": (
                 evaluation.name
                 or ""
@@ -2130,6 +2314,41 @@ class AppPortalController(http.Controller):
         return result
 
     # ============================================================
+    # EMPRESAS DEL PORTAL
+    # ============================================================
+
+    @http.route(
+        "/api/app/portal/companies",
+        type="http",
+        auth="user",
+        methods=["GET"],
+        csrf=False,
+        readonly=True,
+        save_session=True,
+    )
+    def portal_companies(
+        self,
+        **kwargs,
+    ):
+        context, error = self._portal_required()
+        if error:
+            return error
+
+        return self._json_response({
+            "success": True,
+            "main_company": self._serialize_company(
+                context["main_company"]
+            ),
+            "can_select_company": (
+                len(context["company_ids"]) > 1
+            ),
+            "companies": [
+                self._serialize_company(company)
+                for company in context["companies"]
+            ],
+        })
+
+    # ============================================================
     # HOME PORTAL
     # ============================================================
 
@@ -2146,273 +2365,147 @@ class AppPortalController(http.Controller):
         self,
         **kwargs,
     ):
-        context, error = (
-            self._portal_required()
-        )
-
+        context, error = self._portal_required()
         if error:
             return error
 
-        company = context[
-            "company"
-        ]
+        scope, error = self._get_company_scope(
+            context,
+            allow_all=True,
+        )
+        if error:
+            return error
 
-        Equipment = request.env[
-            "alquiler"
-        ].sudo()
+        company_ids = scope["company_ids"]
+        selected_company = scope["company"]
 
-        Ticket = request.env[
-            "ticket.alquiler"
-        ].sudo()
-
-        Toner = request.env[
-            "toner.counter.submission"
-        ].sudo()
-
-        Evaluation = request.env[
-            "client.service.evaluation"
-        ].sudo()
+        Equipment = request.env["alquiler"].sudo()
+        Ticket = request.env["ticket.alquiler"].sudo()
+        Toner = request.env["toner.counter.submission"].sudo()
+        Evaluation = request.env["client.service.evaluation"].sudo()
 
         equipment_domain = [
-            (
-                "cliente_id",
-                "=",
-                company.id,
-            ),
-            (
-                "estado_alquiler_id",
-                "=",
-                "alquilada",
-            ),
+            ("cliente_id", "in", company_ids),
+            ("estado_alquiler_id", "=", "alquilada"),
         ]
-
         ticket_domain = [
-            (
-                "partner_id",
-                "=",
-                company.id,
-            ),
+            ("partner_id", "in", company_ids),
         ]
-
-        open_ticket_domain = (
-            ticket_domain
-            + [
-                (
-                    "estado",
-                    "!=",
-                    "finalizado",
-                ),
-            ]
-        )
-
+        open_ticket_domain = ticket_domain + [
+            ("estado", "!=", "finalizado"),
+        ]
         toner_domain = [
-            (
-                "partner_id",
-                "=",
-                company.id,
-            ),
+            ("partner_id", "in", company_ids),
         ]
-
+        now = fields.Datetime.now()
         evaluation_domain = [
-            (
-                "partner_id",
-                "=",
-                company.id,
-            ),
-            (
-                "state",
-                "in",
-                ["draft", "sent"],
-            ),
+            ("partner_id", "in", company_ids),
+            ("state", "in", ["draft", "sent"]),
+            ("expiration_date", ">=", now),
+        ]
+        expiring_evaluation_domain = evaluation_domain + [
             (
                 "expiration_date",
-                ">=",
-                fields.Datetime.now(),
+                "<=",
+                now + timedelta(hours=48),
             ),
         ]
 
-        expiring_evaluation_domain = (
-            evaluation_domain
-            + [
-                (
-                    "expiration_date",
-                    "<=",
-                    (fields.Datetime.now() + timedelta(hours=48)),
-                ),
-            ]
-        )
-
-        open_toner_domain = list(
-            toner_domain
-        )
-
-        open_states = getattr(
-            Toner,
-            "OPEN_STATES",
-            False,
-        )
-
+        open_toner_domain = list(toner_domain)
+        open_states = getattr(Toner, "OPEN_STATES", False)
         if open_states:
             open_toner_domain.append(
-                (
-                    "state",
-                    "in",
-                    list(
-                        open_states
-                    ),
-                )
+                ("state", "in", list(open_states))
             )
 
-        equipment_count = (
-            Equipment.search_count(
-                equipment_domain
-            )
-        )
-
-        ticket_count = (
-            Ticket.search_count(
-                ticket_domain
-            )
-        )
-
-        open_ticket_count = (
-            Ticket.search_count(
-                open_ticket_domain
-            )
-        )
-
-        toner_count = (
-            Toner.search_count(
-                toner_domain
-            )
-        )
-
+        equipment_count = Equipment.search_count(equipment_domain)
+        ticket_count = Ticket.search_count(ticket_domain)
+        open_ticket_count = Ticket.search_count(open_ticket_domain)
+        toner_count = Toner.search_count(toner_domain)
         open_toner_count = (
-            Toner.search_count(
-                open_toner_domain
-            )
+            Toner.search_count(open_toner_domain)
             if open_states
             else 0
         )
-
-        pending_evaluation_count = (
-            Evaluation.search_count(
-                evaluation_domain
-            )
+        pending_evaluation_count = Evaluation.search_count(
+            evaluation_domain
+        )
+        expiring_evaluation_count = Evaluation.search_count(
+            expiring_evaluation_domain
         )
 
-        expiring_evaluation_count = (
-            Evaluation.search_count(
-                expiring_evaluation_domain
-            )
+        pending_evaluations = Evaluation.search(
+            evaluation_domain,
+            order="expiration_date asc, id asc",
+            limit=3,
+        )
+        recent_tickets = Ticket.search(
+            ticket_domain,
+            order="create_date desc",
+            limit=5,
+        )
+        recent_toner = Toner.search(
+            toner_domain,
+            order="submission_date desc, id desc",
+            limit=5,
         )
 
-        pending_evaluations = (
-            Evaluation.search(
-                evaluation_domain,
-                order="expiration_date asc, id asc",
-                limit=3,
-            )
+        legacy_company = (
+            selected_company
+            or context["main_company"]
         )
 
-        recent_tickets = (
-            Ticket.search(
-                ticket_domain,
-                order="create_date desc",
-                limit=5,
-            )
-        )
-
-        recent_toner = (
-            Toner.search(
-                toner_domain,
-                order="submission_date desc, id desc",
-                limit=5,
-            )
-        )
-
-        return self._json_response(
-            {
-                "success": True,
-                "user": {
-                    "id": (
-                        context[
-                            "user"
-                        ].id
-                    ),
-                    "name": (
-                        context[
-                            "user"
-                        ].name
-                        or ""
-                    ),
-                },
-                "contact": {
-                    "id": (
-                        context[
-                            "contact"
-                        ].id
-                    ),
-                    "name": (
-                        context[
-                            "contact"
-                        ].name
-                        or ""
-                    ),
-                },
-                "company": {
-                    "id": company.id,
-                    "name": (
-                        company.name
-                        or ""
-                    ),
-                },
-                "summary": {
-                    "equipment": (
-                        equipment_count
-                    ),
-                    "tickets": (
-                        ticket_count
-                    ),
-                    "open_tickets": (
-                        open_ticket_count
-                    ),
-                    "toner_requests": (
-                        toner_count
-                    ),
-                    "open_toner_requests": (
-                        open_toner_count
-                    ),
-                    "pending_evaluations": (
-                        pending_evaluation_count
-                    ),
-                    "expiring_evaluations": (
-                        expiring_evaluation_count
-                    ),
-                },
-                "pending_evaluations": [
-                    self._serialize_portal_evaluation(
-                        item
-                    )
-                    for item
-                    in pending_evaluations
-                ],
-                "recent_tickets": [
-                    self._serialize_ticket_summary(
-                        item
-                    )
-                    for item
-                    in recent_tickets
-                ],
-                "recent_toner_requests": [
-                    self._serialize_toner_request(
-                        item
-                    )
-                    for item
-                    in recent_toner
-                ],
-            }
-        )
+        return self._json_response({
+            "success": True,
+            "user": {
+                "id": context["user"].id,
+                "name": context["user"].name or "",
+            },
+            "contact": {
+                "id": context["contact"].id,
+                "name": context["contact"].name or "",
+            },
+            # Compatibilidad con Flutter actual.
+            "company": self._serialize_company(legacy_company),
+            # Nuevos datos para el selector multiempresa.
+            "companies": [
+                self._serialize_company(company)
+                for company in context["companies"]
+            ],
+            "selected_company": (
+                self._serialize_company(selected_company)
+                if selected_company
+                else False
+            ),
+            "company_scope": (
+                "all" if scope["is_all"] else "company"
+            ),
+            "selected_company_key": scope["key"],
+            "can_select_company": (
+                len(context["company_ids"]) > 1
+            ),
+            "summary": {
+                "equipment": equipment_count,
+                "tickets": ticket_count,
+                "open_tickets": open_ticket_count,
+                "toner_requests": toner_count,
+                "open_toner_requests": open_toner_count,
+                "pending_evaluations": pending_evaluation_count,
+                "expiring_evaluations": expiring_evaluation_count,
+            },
+            "pending_evaluations": [
+                self._serialize_portal_evaluation(item)
+                for item in pending_evaluations
+            ],
+            "recent_tickets": [
+                self._serialize_ticket_summary(item)
+                for item in recent_tickets
+            ],
+            "recent_toner_requests": [
+                self._serialize_toner_request(item)
+                for item in recent_toner
+            ],
+        })
 
     # ============================================================
     # EQUIPOS
@@ -2431,63 +2524,42 @@ class AppPortalController(http.Controller):
         self,
         **kwargs,
     ):
-        context, error = (
-            self._portal_required()
-        )
-
+        context, error = self._portal_required()
         if error:
             return error
 
-        company = context[
-            "company"
-        ]
+        scope, error = self._get_company_scope(context, allow_all=True)
+        if error:
+            return error
 
         equipment = (
-            request.env[
-                "alquiler"
-            ]
+            request.env["alquiler"]
             .sudo()
             .search(
                 [
-                    (
-                        "cliente_id",
-                        "=",
-                        company.id,
-                    ),
-                    (
-                        "estado_alquiler_id",
-                        "=",
-                        "alquilada",
-                    ),
+                    ("cliente_id", "in", scope["company_ids"]),
+                    ("estado_alquiler_id", "=", "alquilada"),
                 ],
-                order=(
-                    "ubicacion_instalacion asc, "
-                    "serie asc"
-                ),
+                order="ubicacion_instalacion asc, serie asc",
             )
         )
 
-        return self._json_response(
-            {
-                "success": True,
-                "company": {
-                    "id": company.id,
-                    "name": (
-                        company.name
-                        or ""
-                    ),
-                },
-                "count": len(
-                    equipment
-                ),
-                "equipment": [
-                    self._serialize_equipment(
-                        item
-                    )
-                    for item in equipment
-                ],
-            }
-        )
+        return self._json_response({
+            "success": True,
+            "company": (
+                self._serialize_company(scope["company"])
+                if scope["company"]
+                else False
+            ),
+            "company_scope": (
+                "all" if scope["is_all"] else "company"
+            ),
+            "count": len(equipment),
+            "equipment": [
+                self._serialize_equipment(item)
+                for item in equipment
+            ],
+        })
 
     @http.route(
         "/api/app/portal/equipment/<int:equipment_id>",
@@ -2503,22 +2575,13 @@ class AppPortalController(http.Controller):
         equipment_id,
         **kwargs,
     ):
-        context, error = (
-            self._portal_required()
-        )
-
+        context, error = self._portal_required()
         if error:
             return error
 
-        company = context[
-            "company"
-        ]
-
-        equipment = (
-            self._get_equipment_for_company(
-                equipment_id,
-                company,
-            )
+        equipment = self._get_equipment_for_company_ids(
+            equipment_id,
+            context["company_ids"],
         )
 
         if not equipment:
@@ -2527,52 +2590,36 @@ class AppPortalController(http.Controller):
                     "success": False,
                     "code": "EQUIPMENT_NOT_FOUND",
                     "message": (
-                        "El equipo no existe o "
-                        "no pertenece a tu empresa."
+                        "El equipo no existe o no pertenece a una "
+                        "empresa que administras."
                     ),
                 },
                 status=404,
             )
 
+        company = equipment.cliente_id
         recent_tickets = (
-            request.env[
-                "ticket.alquiler"
-            ]
+            request.env["ticket.alquiler"]
             .sudo()
             .search(
                 [
-                    (
-                        "partner_id",
-                        "=",
-                        company.id,
-                    ),
-                    (
-                        "product_alquiler",
-                        "=",
-                        equipment.id,
-                    ),
+                    ("partner_id", "=", company.id),
+                    ("product_alquiler", "=", equipment.id),
                 ],
                 order="create_date desc",
                 limit=10,
             )
         )
 
-        return self._json_response(
-            {
-                "success": True,
-                "equipment": (
-                    self._serialize_equipment(
-                        equipment
-                    )
-                ),
-                "recent_tickets": [
-                    self._serialize_ticket_summary(
-                        ticket
-                    )
-                    for ticket in recent_tickets
-                ],
-            }
-        )
+        return self._json_response({
+            "success": True,
+            "company": self._serialize_company(company),
+            "equipment": self._serialize_equipment(equipment),
+            "recent_tickets": [
+                self._serialize_ticket_summary(ticket)
+                for ticket in recent_tickets
+            ],
+        })
 
     # ============================================================
     # TICKETS / HISTORIAL
@@ -2591,117 +2638,70 @@ class AppPortalController(http.Controller):
         self,
         **kwargs,
     ):
-        context, error = (
-            self._portal_required()
-        )
-
+        context, error = self._portal_required()
         if error:
             return error
 
-        company = context[
-            "company"
-        ]
+        scope, error = self._get_company_scope(context, allow_all=True)
+        if error:
+            return error
 
-        status = (
-            request.httprequest.args.get(
-                "status"
-            )
-            or ""
-        ).strip()
-
+        status = (request.httprequest.args.get("status") or "").strip()
         equipment_id = (
-            request.httprequest.args.get(
-                "equipment_id"
-            )
-            or ""
+            request.httprequest.args.get("equipment_id") or ""
         ).strip()
 
         domain = [
-            (
-                "partner_id",
-                "=",
-                company.id,
-            ),
+            ("partner_id", "in", scope["company_ids"]),
         ]
 
         if status:
             allowed_statuses = {
                 key
-                for key, _label
-                in (
-                    request.env[
-                        "ticket.alquiler"
-                    ]
-                    ._fields[
-                        "estado"
-                    ]
-                    .selection
+                for key, _label in (
+                    request.env["ticket.alquiler"]
+                    ._fields["estado"].selection
                 )
             }
-
             if status in allowed_statuses:
-                domain.append(
-                    (
-                        "estado",
-                        "=",
-                        status,
-                    )
-                )
+                domain.append(("estado", "=", status))
 
         if equipment_id:
-            equipment = (
-                self._get_equipment_for_company(
-                    equipment_id,
-                    company,
-                )
+            equipment = self._get_equipment_for_company_ids(
+                equipment_id,
+                scope["company_ids"],
             )
-
             if not equipment:
                 return self._json_response(
                     {
                         "success": False,
                         "code": "EQUIPMENT_NOT_FOUND",
                         "message": (
-                            "El equipo indicado "
-                            "no pertenece a tu empresa."
+                            "El equipo indicado no pertenece al alcance "
+                            "de empresa seleccionado."
                         ),
                     },
                     status=404,
                 )
-
-            domain.append(
-                (
-                    "product_alquiler",
-                    "=",
-                    equipment.id,
-                )
-            )
+            domain.append(("product_alquiler", "=", equipment.id))
 
         tickets = (
-            request.env[
-                "ticket.alquiler"
-            ]
+            request.env["ticket.alquiler"]
             .sudo()
-            .search(
-                domain,
-                order="create_date desc",
-            )
+            .search(domain, order="create_date desc")
         )
 
-        return self._json_response(
-            {
-                "success": True,
-                "count": len(
-                    tickets
-                ),
-                "tickets": [
-                    self._serialize_ticket_summary(
-                        ticket
-                    )
-                    for ticket in tickets
-                ],
-            }
-        )
+        return self._json_response({
+            "success": True,
+            "company_scope": (
+                "all" if scope["is_all"] else "company"
+            ),
+            "count": len(tickets),
+            "tickets": [
+                self._serialize_ticket_summary(ticket)
+                for ticket in tickets
+            ],
+        })
 
     @http.route(
         "/api/app/portal/tickets/<int:ticket_id>",
@@ -2717,20 +2717,13 @@ class AppPortalController(http.Controller):
         ticket_id,
         **kwargs,
     ):
-        context, error = (
-            self._portal_required()
-        )
-
+        context, error = self._portal_required()
         if error:
             return error
 
-        ticket = (
-            self._get_ticket_for_company(
-                ticket_id,
-                context[
-                    "company"
-                ],
-            )
+        ticket = self._get_ticket_for_company_ids(
+            ticket_id,
+            context["company_ids"],
         )
 
         if not ticket:
@@ -2739,23 +2732,18 @@ class AppPortalController(http.Controller):
                     "success": False,
                     "code": "TICKET_NOT_FOUND",
                     "message": (
-                        "El ticket no existe o "
-                        "no pertenece a tu empresa."
+                        "El ticket no existe o no pertenece a una "
+                        "empresa que administras."
                     ),
                 },
                 status=404,
             )
 
-        return self._json_response(
-            {
-                "success": True,
-                "ticket": (
-                    self._serialize_ticket_detail(
-                        ticket
-                    )
-                ),
-            }
-        )
+        return self._json_response({
+            "success": True,
+            "company": self._serialize_company(ticket.partner_id),
+            "ticket": self._serialize_ticket_detail(ticket),
+        })
 
     # ============================================================
     # CREAR SOLICITUD DE SERVICIO
@@ -2781,19 +2769,17 @@ class AppPortalController(http.Controller):
         if error:
             return error
 
-        company = context[
-            "company"
-        ]
+        contact = context["contact"]
 
-        contact = context[
-            "contact"
-        ]
+        equipment = self._get_equipment_for_company_ids(
+            equipment_id,
+            context["company_ids"],
+        )
 
-        equipment = (
-            self._get_equipment_for_company(
-                equipment_id,
-                company,
-            )
+        company = (
+            equipment.cliente_id
+            if equipment
+            else False
         )
 
         if not equipment:
@@ -2973,135 +2959,73 @@ class AppPortalController(http.Controller):
         self,
         **kwargs,
     ):
-        context, error = (
-            self._portal_required()
-        )
-
+        context, error = self._portal_required()
         if error:
             return error
 
-        company = context[
-            "company"
-        ]
+        scope, error = self._get_company_scope(context, allow_all=True)
+        if error:
+            return error
 
         equipment_id = (
-            request.httprequest.args.get(
-                "equipment_id"
-            )
-            or ""
+            request.httprequest.args.get("equipment_id") or ""
         ).strip()
-
-        state = (
-            request.httprequest.args.get(
-                "state"
-            )
-            or ""
-        ).strip()
+        state = (request.httprequest.args.get("state") or "").strip()
 
         domain = [
-            (
-                "partner_id",
-                "=",
-                company.id,
-            ),
+            ("partner_id", "in", scope["company_ids"]),
         ]
 
         if equipment_id:
-            equipment = (
-                self._get_equipment_for_company(
-                    equipment_id,
-                    company,
-                )
+            equipment = self._get_equipment_for_company_ids(
+                equipment_id,
+                scope["company_ids"],
             )
-
             if not equipment:
                 return self._json_response(
                     {
                         "success": False,
                         "code": "EQUIPMENT_NOT_FOUND",
                         "message": (
-                            "El equipo indicado no "
-                            "pertenece a tu empresa."
+                            "El equipo indicado no pertenece al alcance "
+                            "de empresa seleccionado."
                         ),
                     },
                     status=404,
                 )
-
-            domain.append(
-                (
-                    "equipment_id",
-                    "=",
-                    equipment.id,
-                )
-            )
+            domain.append(("equipment_id", "=", equipment.id))
 
         if state:
-            TonerModel = request.env[
-                "toner.counter.submission"
-            ]
-
-            field = (
-                TonerModel._fields.get(
-                    "state"
-                )
-            )
-
+            TonerModel = request.env["toner.counter.submission"]
+            field = TonerModel._fields.get("state")
             allowed = set()
-
-            if field:
-                selection = field.selection
-
-                if isinstance(
-                    selection,
-                    list,
-                ):
-                    allowed = {
-                        key
-                        for key, _label
-                        in selection
-                    }
-
-            if (
-                not allowed
-                or state in allowed
-            ):
-                domain.append(
-                    (
-                        "state",
-                        "=",
-                        state,
-                    )
-                )
+            if field and isinstance(field.selection, list):
+                allowed = {
+                    key for key, _label in field.selection
+                }
+            if not allowed or state in allowed:
+                domain.append(("state", "=", state))
 
         submissions = (
-            request.env[
-                "toner.counter.submission"
-            ]
+            request.env["toner.counter.submission"]
             .sudo()
             .search(
                 domain,
-                order=(
-                    "submission_date desc, "
-                    "id desc"
-                ),
+                order="submission_date desc, id desc",
             )
         )
 
-        return self._json_response(
-            {
-                "success": True,
-                "count": len(
-                    submissions
-                ),
-                "requests": [
-                    self._serialize_toner_request(
-                        item
-                    )
-                    for item
-                    in submissions
-                ],
-            }
-        )
+        return self._json_response({
+            "success": True,
+            "company_scope": (
+                "all" if scope["is_all"] else "company"
+            ),
+            "count": len(submissions),
+            "requests": [
+                self._serialize_toner_request(item)
+                for item in submissions
+            ],
+        })
 
     @http.route(
         "/api/app/portal/toner-requests/<int:submission_id>",
@@ -3117,25 +3041,14 @@ class AppPortalController(http.Controller):
         submission_id,
         **kwargs,
     ):
-        context, error = (
-            self._portal_required()
-        )
-
+        context, error = self._portal_required()
         if error:
             return error
 
-        company = context[
-            "company"
-        ]
-
         submission = (
-            request.env[
-                "toner.counter.submission"
-            ]
+            request.env["toner.counter.submission"]
             .sudo()
-            .browse(
-                submission_id
-            )
+            .browse(submission_id)
             .exists()
         )
 
@@ -3143,31 +3056,25 @@ class AppPortalController(http.Controller):
             not submission
             or not submission.partner_id
             or submission.partner_id.id
-            != company.id
+            not in context["company_ids"]
         ):
             return self._json_response(
                 {
                     "success": False,
                     "code": "TONER_REQUEST_NOT_FOUND",
                     "message": (
-                        "La solicitud de tóner no "
-                        "existe o no pertenece a "
-                        "tu empresa."
+                        "La solicitud de tóner no existe o no pertenece "
+                        "a una empresa que administras."
                     ),
                 },
                 status=404,
             )
 
-        return self._json_response(
-            {
-                "success": True,
-                "request": (
-                    self._serialize_toner_request(
-                        submission
-                    )
-                ),
-            }
-        )
+        return self._json_response({
+            "success": True,
+            "company": self._serialize_company(submission.partner_id),
+            "request": self._serialize_toner_request(submission),
+        })
 
     @http.route(
         "/api/app/portal/equipment/<int:equipment_id>/toner",
@@ -3183,106 +3090,60 @@ class AppPortalController(http.Controller):
         equipment_id,
         **kwargs,
     ):
-        context, error = (
-            self._portal_required()
-        )
-
+        context, error = self._portal_required()
         if error:
             return error
 
-        company = context[
-            "company"
-        ]
-
-        equipment = (
-            self._get_equipment_for_company(
-                equipment_id,
-                company,
-            )
+        equipment = self._get_equipment_for_company_ids(
+            equipment_id,
+            context["company_ids"],
         )
-
         if not equipment:
             return self._json_response(
                 {
                     "success": False,
                     "code": "EQUIPMENT_NOT_FOUND",
                     "message": (
-                        "El equipo no existe o "
-                        "no pertenece a tu empresa."
+                        "El equipo no existe o no pertenece a una "
+                        "empresa que administras."
                     ),
                 },
                 status=404,
             )
 
-        Toner = request.env[
-            "toner.counter.submission"
-        ].sudo()
-
-        open_states = getattr(
-            Toner,
-            "OPEN_STATES",
-            False,
-        )
-
+        company = equipment.cliente_id
+        Toner = request.env["toner.counter.submission"].sudo()
+        open_states = getattr(Toner, "OPEN_STATES", False)
         active_domain = [
-            (
-                "equipment_id",
-                "=",
-                equipment.id,
-            ),
-            (
-                "partner_id",
-                "=",
-                company.id,
-            ),
+            ("equipment_id", "=", equipment.id),
+            ("partner_id", "=", company.id),
         ]
-
         if open_states:
             active_domain.append(
-                (
-                    "state",
-                    "in",
-                    list(
-                        open_states
-                    ),
-                )
+                ("state", "in", list(open_states))
             )
 
         active_request = (
             Toner.search(
                 active_domain,
-                order=(
-                    "submission_date desc, "
-                    "id desc"
-                ),
+                order="submission_date desc, id desc",
                 limit=1,
             )
             if open_states
             else False
         )
 
-        return self._json_response(
-            {
-                "success": True,
-                "equipment": (
-                    self._serialize_equipment(
-                        equipment
-                    )
-                ),
-                "toner": (
-                    self._get_toner_stock_info(
-                        equipment
-                    )
-                ),
-                "active_request": (
-                    self._serialize_toner_request(
-                        active_request
-                    )
-                    if active_request
-                    else False
-                ),
-            }
-        )
+        return self._json_response({
+            "success": True,
+            "company": self._serialize_company(company),
+            "equipment": self._serialize_equipment(equipment),
+            "toner": self._get_toner_stock_info(equipment),
+            "active_request": (
+                self._serialize_toner_request(active_request)
+                if active_request
+                else False
+            ),
+        })
 
     @http.route(
         "/api/app/portal/equipment/<int:equipment_id>/toner-request",
@@ -3304,19 +3165,17 @@ class AppPortalController(http.Controller):
         if error:
             return error
 
-        company = context[
-            "company"
-        ]
+        contact = context["contact"]
 
-        contact = context[
-            "contact"
-        ]
+        equipment = self._get_equipment_for_company_ids(
+            equipment_id,
+            context["company_ids"],
+        )
 
-        equipment = (
-            self._get_equipment_for_company(
-                equipment_id,
-                company,
-            )
+        company = (
+            equipment.cliente_id
+            if equipment
+            else False
         )
 
         if not equipment:
@@ -3815,60 +3674,39 @@ class AppPortalController(http.Controller):
         self,
         **kwargs,
     ):
-        context, error = (
-            self._portal_required()
-        )
-
+        context, error = self._portal_required()
         if error:
             return error
 
-        company = context[
-            "company"
-        ]
-        now = fields.Datetime.now()
+        scope, error = self._get_company_scope(context, allow_all=True)
+        if error:
+            return error
 
+        now = fields.Datetime.now()
         evaluations = (
-            request.env[
-                "client.service.evaluation"
-            ]
+            request.env["client.service.evaluation"]
             .sudo()
             .search(
                 [
-                    (
-                        "partner_id",
-                        "=",
-                        company.id,
-                    ),
-                    (
-                        "state",
-                        "in",
-                        ["draft", "sent"],
-                    ),
-                    (
-                        "expiration_date",
-                        ">=",
-                        now,
-                    ),
+                    ("partner_id", "in", scope["company_ids"]),
+                    ("state", "in", ["draft", "sent"]),
+                    ("expiration_date", ">=", now),
                 ],
                 order="expiration_date asc, id asc",
             )
         )
 
-        return self._json_response(
-            {
-                "success": True,
-                "count": len(
-                    evaluations
-                ),
-                "evaluations": [
-                    self._serialize_portal_evaluation(
-                        evaluation
-                    )
-                    for evaluation
-                    in evaluations
-                ],
-            }
-        )
+        return self._json_response({
+            "success": True,
+            "company_scope": (
+                "all" if scope["is_all"] else "company"
+            ),
+            "count": len(evaluations),
+            "evaluations": [
+                self._serialize_portal_evaluation(evaluation)
+                for evaluation in evaluations
+            ],
+        })
 
     @http.route(
         "/api/app/portal/evaluations/<int:evaluation_id>",
@@ -3892,9 +3730,9 @@ class AppPortalController(http.Controller):
             return error
 
         evaluation = (
-            self._get_evaluation_for_company(
+            self._get_evaluation_for_company_ids(
                 evaluation_id,
-                context["company"],
+                context["company_ids"],
             )
         )
 
@@ -3975,9 +3813,9 @@ class AppPortalController(http.Controller):
             return error
 
         evaluation = (
-            self._get_evaluation_for_company(
+            self._get_evaluation_for_company_ids(
                 evaluation_id,
-                context["company"],
+                context["company_ids"],
             )
         )
 
@@ -4095,7 +3933,7 @@ class AppPortalController(http.Controller):
             _logger.exception(
                 "[APP PORTAL] Error completando evaluación=%s company=%s contact=%s",
                 evaluation.id,
-                context["company"].id,
+                evaluation.partner_id.id,
                 context["contact"].id,
             )
             return self._json_response(
@@ -4112,7 +3950,7 @@ class AppPortalController(http.Controller):
         _logger.info(
             "[APP PORTAL] Evaluación completada desde app evaluation=%s company=%s contact=%s user=%s",
             evaluation.id,
-            context["company"].id,
+            evaluation.partner_id.id,
             context["contact"].id,
             context["user"].id,
         )
@@ -4152,11 +3990,9 @@ class AppPortalController(http.Controller):
             return error
 
         ticket = (
-            self._get_ticket_for_company(
+            self._get_ticket_for_company_ids(
                 ticket_id,
-                context[
-                    "company"
-                ],
+                context["company_ids"],
             )
         )
 
