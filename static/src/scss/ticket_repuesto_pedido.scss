@@ -1,0 +1,475 @@
+/* ============================================================
+   SAT — PEDIDO DE REPUESTOS
+   Vista formulario > pestaña "Repuestos solicitados"
+
+   Archivo:
+   static/src/scss/ticket_repuesto_pedido.scss
+   ============================================================ */
+
+
+.sat_repuesto_page {
+
+    /* ========================================================
+       CONTENEDOR
+       ======================================================== */
+
+    padding-top: 4px;
+
+
+    /* ========================================================
+       ENCABEZADO
+       ======================================================== */
+
+    .sat_repuesto_page_header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+
+        margin: 0 0 10px 0;
+        padding: 10px 12px;
+
+        background: var(--o-view-background-color, #fff);
+        border: 1px solid #e6e9ed;
+        border-radius: 8px;
+    }
+
+
+    .sat_repuesto_page_title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+    }
+
+
+    .sat_repuesto_title_icon {
+        width: 34px;
+        height: 34px;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        flex: 0 0 auto;
+
+        background: rgba(49, 90, 145, 0.10);
+        border-radius: 8px;
+
+        font-size: 16px;
+        color: #315a91;
+    }
+
+
+    .sat_repuesto_title_text {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+
+        strong {
+            font-size: 14px;
+            font-weight: 650;
+            color: #263238;
+            line-height: 1.25;
+        }
+
+        span {
+            margin-top: 2px;
+
+            font-size: 11px;
+            color: #7b8794;
+            line-height: 1.25;
+        }
+    }
+
+
+    .sat_repuesto_page_hint {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+
+        flex: 0 0 auto;
+
+        font-size: 11px;
+        color: #77818d;
+
+        padding: 5px 8px;
+
+        background: #f7f8fa;
+        border-radius: 6px;
+
+        i {
+            font-size: 12px;
+            color: #52687f;
+        }
+    }
+
+
+    /* ========================================================
+       LEYENDA
+       ======================================================== */
+
+    .sat_repuesto_legend {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+
+        gap: 7px 18px;
+
+        margin: 0 0 10px 0;
+        padding: 8px 12px;
+
+        background: #fafbfc;
+        border: 1px solid #edf0f2;
+        border-radius: 7px;
+    }
+
+
+    .sat_repuesto_legend_item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+
+        font-size: 10.5px;
+        color: #7a838e;
+
+        white-space: nowrap;
+
+        strong {
+            margin-right: 3px;
+            color: #4c5661;
+            font-weight: 650;
+        }
+    }
+
+
+    .sat_legend_dot {
+        width: 7px;
+        height: 7px;
+
+        display: inline-block;
+        flex: 0 0 auto;
+
+        border-radius: 50%;
+    }
+
+
+    .sat_legend_stock {
+        background: #28a76f;
+    }
+
+    .sat_legend_counter {
+        background: #3876b9;
+    }
+
+    .sat_legend_duration {
+        background: #d59729;
+    }
+
+    .sat_legend_report {
+        background: #8268ad;
+    }
+
+
+    /* ========================================================
+       TABLA ONE2MANY
+       ======================================================== */
+
+    .sat_repuesto_lines {
+
+        .o_list_renderer {
+            border: 1px solid #e4e8ec;
+            border-radius: 8px;
+            overflow: hidden;
+
+            background: #fff;
+        }
+
+
+        .o_list_table {
+            margin-bottom: 0;
+
+            border-collapse: separate;
+            border-spacing: 0;
+
+
+            /* ================================================
+               CABECERA
+               ================================================ */
+
+            thead {
+
+                tr {
+                    background: #f4f6f8;
+                }
+
+                th {
+                    padding-top: 7px !important;
+                    padding-bottom: 7px !important;
+
+                    border-bottom: 1px solid #dfe4e8;
+
+                    font-size: 10.5px;
+                    font-weight: 650;
+                    color: #53606d;
+
+                    text-transform: none;
+                    white-space: nowrap;
+                }
+            }
+
+
+            /* ================================================
+               FILAS
+               ================================================ */
+
+            tbody {
+
+                tr {
+                    transition:
+                        background-color 0.12s ease,
+                        box-shadow 0.12s ease;
+
+                    td {
+                        padding-top: 6px !important;
+                        padding-bottom: 6px !important;
+
+                        border-bottom-color: #edf0f2;
+
+                        font-size: 11.5px;
+                        vertical-align: middle;
+                    }
+
+
+                    &:hover {
+                        background: #f8fafc !important;
+                    }
+                }
+
+
+                tr:last-child td {
+                    border-bottom: 0;
+                }
+            }
+        }
+
+
+        /* ====================================================
+           COMPONENTE
+           ==================================================== */
+
+        .sat_col_component {
+            font-weight: 600;
+            color: #344250;
+        }
+
+
+        /* ====================================================
+           REPUESTO
+           ==================================================== */
+
+        .sat_col_part {
+            color: #313a43;
+        }
+
+
+        /* ====================================================
+           CANTIDAD
+           ==================================================== */
+
+        .sat_col_qty {
+            text-align: center;
+
+            .o_input {
+                text-align: center;
+            }
+        }
+
+
+        /* ====================================================
+           CONTADORES
+           ==================================================== */
+
+        .sat_col_counter {
+            font-variant-numeric: tabular-nums;
+
+            color: #485563;
+
+            .o_field_widget,
+            .o_input {
+                font-variant-numeric: tabular-nums;
+            }
+        }
+
+
+        /* ====================================================
+           COPIAS
+           ==================================================== */
+
+        .sat_col_copies {
+            font-variant-numeric: tabular-nums;
+            font-weight: 650;
+
+            color: #2f6f54;
+        }
+
+
+        /* ====================================================
+           MESES
+           ==================================================== */
+
+        .sat_col_months {
+            text-align: center;
+            font-variant-numeric: tabular-nums;
+            font-weight: 650;
+
+            color: #8a641e;
+        }
+
+
+        /* ====================================================
+           BADGES
+           ==================================================== */
+
+        .badge {
+            padding: 3px 7px;
+
+            font-size: 10px;
+            font-weight: 600;
+
+            border-radius: 10px;
+        }
+
+
+        /* ====================================================
+           CAMPOS VACÍOS
+           ==================================================== */
+
+        td:empty::after {
+            content: "—";
+            color: #bec5cc;
+        }
+
+
+        /* ====================================================
+           NUEVA LÍNEA
+           ==================================================== */
+
+        .o_field_x2many_list_row_add {
+
+            a {
+                display: inline-flex;
+                align-items: center;
+                gap: 5px;
+
+                padding: 5px 8px;
+
+                font-size: 11px;
+                font-weight: 600;
+
+                color: #315a91;
+
+                border-radius: 5px;
+
+                &:hover {
+                    background: rgba(49, 90, 145, 0.08);
+                    text-decoration: none;
+                }
+            }
+        }
+    }
+
+
+    /* ========================================================
+       PIE DE AYUDA
+       ======================================================== */
+
+    .sat_repuesto_page_footer {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+
+        gap: 8px;
+
+        margin-top: 10px;
+    }
+
+
+    .sat_repuesto_footer_item {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+
+        min-width: 0;
+
+        padding: 8px 10px;
+
+        background: #fafbfc;
+        border: 1px solid #edf0f2;
+        border-radius: 7px;
+
+        > i {
+            margin-top: 2px;
+
+            width: 16px;
+            flex: 0 0 16px;
+
+            text-align: center;
+
+            font-size: 12px;
+            color: #65798e;
+        }
+
+        > div {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+
+            strong {
+                font-size: 10.5px;
+                font-weight: 650;
+                color: #4b5661;
+            }
+
+            span {
+                margin-top: 1px;
+
+                font-size: 9.5px;
+                line-height: 1.25;
+
+                color: #88929c;
+            }
+        }
+    }
+
+
+    /* ========================================================
+       RESPONSIVE
+       ======================================================== */
+
+    @media (max-width: 1200px) {
+
+        .sat_repuesto_page_footer {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .sat_repuesto_page_hint {
+            display: none;
+        }
+    }
+
+
+    @media (max-width: 768px) {
+
+        .sat_repuesto_page_header {
+            align-items: flex-start;
+        }
+
+        .sat_repuesto_legend {
+            gap: 6px 12px;
+        }
+
+        .sat_repuesto_page_footer {
+            grid-template-columns: 1fr;
+        }
+    }
+}

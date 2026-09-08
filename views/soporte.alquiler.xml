@@ -775,39 +775,291 @@
                 </group>
 
                 <notebook class="sat_parts_order_notebook">
-                    <page string="Repuestos solicitados" class="sat_parts_order_page">
-                        <field name="linea_ids" readonly="estado in ('aprobado', 'instalado')">
-                            <list editable="bottom" decoration-success="meses_desde_ultimo_cambio &gt; 12" decoration-warning="meses_desde_ultimo_cambio &gt; 6 and meses_desde_ultimo_cambio &lt;= 12" decoration-danger="meses_desde_ultimo_cambio &lt;= 6 and meses_desde_ultimo_cambio &gt; 0">
-                                <field name="componente_display" readonly="1" string="Componente"/>
-                                <field name="color_id" readonly="1" optional="show" string="Color"/>
-                                <field name="subparte_id" string="Subparte / Repuesto"/>
-                                <field name="nombre_libre" placeholder="Ej: Tapa lateral, cable, fusible, etc." attrs="{'invisible': [('subparte_id','!=',False)]}"/>
-                                <field name="cantidad" string="Cant."/>
-                                <field name="observacion" optional="show"/>
+                    <!-- ========================================================= -->
+<!-- REPUESTOS SOLICITADOS                                    -->
+<!-- ========================================================= -->
+<page string="Repuestos solicitados"
+      name="repuestos_solicitados"
+      class="sat_repuesto_page">
 
-                                <!-- STOCK -->
-                                <field name="estado_stock" widget="badge" optional="show" string="Stock" decoration-success="estado_stock in ('disponible','recibido')" decoration-warning="estado_stock == 'sin_stock'" decoration-muted="estado_stock == 'pendiente'"/>
-                                <field name="fecha_disponible" optional="hide" string="Fecha est."/>
-                                <field name="observacion_stock" optional="hide" string="Nota stock"/>
+    <div class="sat_repuesto_page_header">
 
-                                <!-- INFORME COMERCIAL — editable en informe_solicitado -->
-                                <field name="contador_informe_anterior" optional="hide" string="Cont. Anterior (informe)"/>
-                                <field name="fecha_informe_cambio" optional="hide" string="Fecha Últ. Cambio (informe)"/>
-                                <field name="observacion_informe" optional="hide" string="Obs. Informe"/>
+        <div class="sat_repuesto_page_title">
+            <div class="sat_repuesto_title_icon">
+                <i class="fa fa-cogs"/>
+            </div>
 
-                                <!-- HISTORIAL -->
-                                <field name="ultimo_cambio_fecha" readonly="1" optional="show" string="Último Cambio"/>
-                                <field name="ultimo_cambio_contometro" readonly="1" optional="show" string="Cont. Anterior"/>
-                                <field name="meses_desde_ultimo_cambio" readonly="1" optional="show" string="Meses"/>
+            <div class="sat_repuesto_title_text">
+                <strong>Repuestos solicitados</strong>
+                <span>
+                    Detalle, stock y durabilidad registrada por componente
+                </span>
+            </div>
+        </div>
 
-                                <!-- SNAPSHOT -->
-                                <field name="contometro_actual_snapshot" readonly="1" optional="hide" string="Cont. Actual (aprobación)"/>
-                                <field name="contometro_anterior_snapshot" readonly="1" optional="hide" string="Cont. Anterior (aprobación)"/>
-                                <field name="copias_snapshot" readonly="1" optional="hide" string="Copias (aprobación)"/>
-                                <field name="meses_snapshot" readonly="1" optional="hide" string="Meses (aprobación)"/>
-                            </list>
-                        </field>
-                    </page>
+        <div class="sat_repuesto_page_hint">
+            <i class="fa fa-columns"/>
+            Use el selector de columnas para mostrar información adicional.
+        </div>
+
+    </div>
+
+
+    <!-- ===================================================== -->
+    <!-- LEYENDA / AYUDA RÁPIDA                                -->
+    <!-- ===================================================== -->
+
+    <div class="sat_repuesto_legend">
+
+        <div class="sat_repuesto_legend_item">
+            <span class="sat_legend_dot sat_legend_stock"/>
+            <span>
+                <strong>Stock</strong>
+                disponibilidad del repuesto
+            </span>
+        </div>
+
+        <div class="sat_repuesto_legend_item">
+            <span class="sat_legend_dot sat_legend_counter"/>
+            <span>
+                <strong>Contadores</strong>
+                último cambio vs. lectura actual
+            </span>
+        </div>
+
+        <div class="sat_repuesto_legend_item">
+            <span class="sat_legend_dot sat_legend_duration"/>
+            <span>
+                <strong>Duración</strong>
+                copias y meses trabajados
+            </span>
+        </div>
+
+        <div class="sat_repuesto_legend_item">
+            <span class="sat_legend_dot sat_legend_report"/>
+            <span>
+                <strong>Informe</strong>
+                información proporcionada por Comercial
+            </span>
+        </div>
+
+    </div>
+
+
+    <!-- ===================================================== -->
+    <!-- TABLA PRINCIPAL                                       -->
+    <!-- ===================================================== -->
+
+    <field name="linea_ids"
+           readonly="estado in ('aprobado', 'instalado')"
+           class="sat_repuesto_lines">
+
+        <list editable="bottom"
+              class="sat_repuesto_lines_list">
+
+
+            <!-- ================================================= -->
+            <!-- IDENTIFICACIÓN                                    -->
+            <!-- ================================================= -->
+
+            <field name="componente_display"
+                   readonly="1"
+                   string="Componente"
+                   class="sat_col_component"/>
+
+            <field name="color_id"
+                   readonly="1"
+                   optional="show"
+                   string="Color"
+                   class="sat_col_color"/>
+
+            <field name="subparte_id"
+                   string="Repuesto"
+                   class="sat_col_part"/>
+
+            <field name="nombre_libre"
+                   string="Descripción"
+                   placeholder="Ej: Tapa lateral, cable, fusible..."
+                   invisible="subparte_id"
+                   optional="show"/>
+
+            <field name="cantidad"
+                   string="Cant."
+                   class="sat_col_qty"/>
+
+
+            <!-- ================================================= -->
+            <!-- STOCK                                             -->
+            <!-- ================================================= -->
+
+            <field name="estado_stock"
+                   widget="badge"
+                   string="Stock"
+                   optional="show"
+                   class="sat_col_stock"
+                   decoration-success="estado_stock in ('disponible', 'recibido')"
+                   decoration-warning="estado_stock == 'sin_stock'"
+                   decoration-muted="estado_stock == 'pendiente'"/>
+
+
+            <!-- ================================================= -->
+            <!-- DURABILIDAD / HISTORIAL                           -->
+            <!-- ================================================= -->
+
+            <field name="ultimo_tipo_contometro"
+                   widget="badge"
+                   readonly="1"
+                   optional="show"
+                   string="Tipo"
+                   class="sat_col_counter_type"
+                   decoration-info="ultimo_tipo_contometro == 'bn'"
+                   decoration-primary="ultimo_tipo_contometro == 'color'"
+                   decoration-success="ultimo_tipo_contometro == 'total'"/>
+
+            <field name="ultimo_cambio_contometro"
+                   readonly="1"
+                   optional="show"
+                   string="Cont. anterior"
+                   class="sat_col_counter"/>
+
+            <field name="contometro_actual_linea"
+                   readonly="1"
+                   optional="show"
+                   string="Cont. actual"
+                   class="sat_col_counter"/>
+
+            <field name="copias_desde_ultimo_cambio"
+                   readonly="1"
+                   optional="show"
+                   string="Copias"
+                   class="sat_col_copies"/>
+
+            <field name="meses_desde_ultimo_cambio"
+                   readonly="1"
+                   optional="show"
+                   string="Meses"
+                   class="sat_col_months"/>
+
+
+            <!-- ================================================= -->
+            <!-- HISTORIAL DETALLADO — OCULTO POR DEFECTO         -->
+            <!-- ================================================= -->
+
+            <field name="ultimo_cambio_fecha"
+                   readonly="1"
+                   optional="hide"
+                   string="Fecha último cambio"/>
+
+
+            <!-- ================================================= -->
+            <!-- INFORME COMERCIAL — OCULTO POR DEFECTO           -->
+            <!-- ================================================= -->
+
+            <field name="contador_informe_anterior"
+                   optional="hide"
+                   string="Cont. informe"/>
+
+            <field name="duracion_informe"
+                   readonly="1"
+                   optional="hide"
+                   string="Duración informe"/>
+
+            <field name="fecha_informe_cambio"
+                   optional="hide"
+                   string="Fecha informe"/>
+
+            <field name="observacion_informe"
+                   optional="hide"
+                   string="Obs. informe"/>
+
+
+            <!-- ================================================= -->
+            <!-- SNAPSHOT DE APROBACIÓN — OCULTO POR DEFECTO      -->
+            <!-- ================================================= -->
+
+            <field name="contometro_anterior_snapshot"
+                   readonly="1"
+                   optional="hide"
+                   string="Cont. ant. aprobación"/>
+
+            <field name="contometro_actual_snapshot"
+                   readonly="1"
+                   optional="hide"
+                   string="Cont. act. aprobación"/>
+
+            <field name="copias_snapshot"
+                   readonly="1"
+                   optional="hide"
+                   string="Copias aprobación"/>
+
+            <field name="meses_snapshot"
+                   readonly="1"
+                   optional="hide"
+                   string="Meses aprobación"/>
+
+
+            <!-- ================================================= -->
+            <!-- INFORMACIÓN SECUNDARIA                            -->
+            <!-- ================================================= -->
+
+            <field name="fecha_disponible"
+                   optional="hide"
+                   string="Fecha stock"/>
+
+            <field name="observacion_stock"
+                   optional="hide"
+                   string="Nota stock"/>
+
+            <field name="observacion"
+                   optional="hide"
+                   string="Observación"/>
+
+        </list>
+
+    </field>
+
+
+    <!-- ===================================================== -->
+    <!-- PIE INFORMATIVO                                      -->
+    <!-- ===================================================== -->
+
+    <div class="sat_repuesto_page_footer">
+
+        <div class="sat_repuesto_footer_item">
+            <i class="fa fa-history"/>
+            <div>
+                <strong>Cont. anterior</strong>
+                <span>Lectura registrada cuando se realizó el cambio anterior.</span>
+            </div>
+        </div>
+
+        <div class="sat_repuesto_footer_item">
+            <i class="fa fa-tachometer"/>
+            <div>
+                <strong>Cont. actual</strong>
+                <span>Lectura actual según B/N, Color o Total.</span>
+            </div>
+        </div>
+
+        <div class="sat_repuesto_footer_item">
+            <i class="fa fa-copy"/>
+            <div>
+                <strong>Copias</strong>
+                <span>Diferencia entre el contador actual y el último cambio.</span>
+            </div>
+        </div>
+
+        <div class="sat_repuesto_footer_item">
+            <i class="fa fa-calendar"/>
+            <div>
+                <strong>Meses</strong>
+                <span>Tiempo transcurrido desde el cambio anterior.</span>
+            </div>
+        </div>
+
+    </div>
+
+</page>
 
                     <page string="Observaciones" class="sat_parts_order_page">
                         <group>

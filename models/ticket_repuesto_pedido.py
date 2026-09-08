@@ -917,7 +917,11 @@ class TicketRepuestoPedidoLinea(models.Model):
     fecha_informe_cambio = fields.Date(string='Fecha último cambio (informe)')
     observacion_informe = fields.Char(string='Observación (informe)')
     duracion_informe = fields.Integer(string='Duración (copias)', compute='_compute_duracion_informe', store=False)
-
+    copias_desde_ultimo_cambio = fields.Integer(
+        string='Copias desde último cambio',
+        compute='_compute_ultimo_cambio',
+        store=False,
+    )
     # SNAPSHOT
     contometro_actual_snapshot   = fields.Char(string='Contómetro actual (al aprobar)', readonly=True)
     contometro_anterior_snapshot = fields.Char(string='Contómetro anterior (al aprobar)', readonly=True)
@@ -968,39 +972,97 @@ class TicketRepuestoPedidoLinea(models.Model):
                 actual = 0
             record.duracion_informe = max(0, actual - anterior)
 
-    @api.depends('subparte_id', 'color_id', 'pedido_id.equipo_id', 'pedido_id.contometro_k', 'pedido_id.contometro_color')
+    @api.depends(
+        'subparte_id',
+        'color_id',
+        'pedido_id.equipo_id',
+        'pedido_id.contometro_k',
+        'pedido_id.contometro_color'
+    )
     def _compute_ultimo_cambio(self):
         for record in self:
-            equipo_id = record.pedido_id.equipo_id.id if record.pedido_id.equipo_id else False
+            record.ultimo_cambio_fecha = False
+            record.ultimo_cambio_contometro = False
+            record.ultimo_tipo_contometro = False
+            record.contometro_actual_linea = False
+            record.meses_desde_ultimo_cambio = 0
+            record.copias_desde_ultimo_cambio = 0
+
+            equipo_id = (
+                record.pedido_id.equipo_id.id
+                if record.pedido_id.equipo_id
+                else False
+            )
+
             if not equipo_id or not record.subparte_id:
-                record.ultimo_cambio_fecha = record.ultimo_cambio_contometro = record.ultimo_tipo_contometro = record.contometro_actual_linea = False
-                record.meses_desde_ultimo_cambio = 0
                 continue
-            domain = [('equipo_id', '=', equipo_id), ('subparte_id', '=', record.subparte_id.id), ('pedido_id', '!=', record.pedido_id.id)]
+
+            domain = [
+                ('equipo_id', '=', equipo_id),
+                ('subparte_id', '=', record.subparte_id.id),
+                ('pedido_id', '!=', record.pedido_id.id),
+            ]
+
             if record.color_id:
                 domain.append(('color_id', '=', record.color_id.id))
             else:
                 domain.append(('color_id', '=', False))
-            ultimo = self.env['ticket.repuesto.historial'].search(domain, order='fecha_cambio desc', limit=1)
-            _logger.debug("[_compute_ultimo_cambio] pedido=%s | subparte=%s | color=%s | ultimo_id=%s", record.pedido_id.name, record.subparte_id.name, record.color_id.name if record.color_id else 'B/N', ultimo.id if ultimo else 'ninguno')
 
-            # Contador actual según regla unificada del pedido
-            cont_actual_str, _tipo_regla = record.pedido_id._get_contometro_linea(record)
+            ultimo = self.env['ticket.repuesto.historial'].search(
+                domain,
+                order='fecha_cambio desc',
+                limit=1
+            )
+
+            _logger.debug(
+                "[_compute_ultimo_cambio] pedido=%s | subparte=%s | "
+                "color=%s | ultimo_id=%s",
+                record.pedido_id.name,
+                record.subparte_id.name,
+                record.color_id.name if record.color_id else 'B/N',
+                ultimo.id if ultimo else 'ninguno'
+            )
+
+            # MISMA regla central que correo, snapshot e informe
+            cont_actual_str, tipo_regla = (
+                record.pedido_id._get_contometro_linea(record)
+            )
+
             record.contometro_actual_linea = cont_actual_str
 
-            if ultimo:
-                record.ultimo_cambio_fecha = ultimo.fecha_cambio
-                record.ultimo_cambio_contometro = ultimo.contometro_cambio
-                record.ultimo_tipo_contometro = ultimo.tipo_contometro
-                if ultimo.fecha_cambio:
-                    diff = relativedelta(datetime.now(), ultimo.fecha_cambio)
-                    record.meses_desde_ultimo_cambio = diff.months + (diff.years * 12)
-                else:
-                    record.meses_desde_ultimo_cambio = 0
-            else:
-                record.ultimo_cambio_fecha = record.ultimo_cambio_contometro = record.ultimo_tipo_contometro = False
-                record.meses_desde_ultimo_cambio = 0
+            if not ultimo:
+                # Aunque sea primer cambio, sí sabemos qué tipo
+                # de contador está utilizando esta pieza.
+                record.ultimo_tipo_contometro = tipo_regla
+                continue
 
+            record.ultimo_cambio_fecha = ultimo.fecha_cambio
+            record.ultimo_cambio_contometro = ultimo.contometro_cambio
+
+            # Preferir tipo almacenado en historial;
+            # fallback a la regla actual
+            record.ultimo_tipo_contometro = (
+                ultimo.tipo_contometro or tipo_regla
+            )
+
+            if ultimo.contometro_cambio:
+                actual = _to_int(cont_actual_str)
+                anterior = _to_int(ultimo.contometro_cambio)
+
+                record.copias_desde_ultimo_cambio = max(
+                    0,
+                    actual - anterior
+                )
+
+            if ultimo.fecha_cambio:
+                diff = relativedelta(
+                    fields.Datetime.now(),
+                    ultimo.fecha_cambio
+                )
+
+                record.meses_desde_ultimo_cambio = (
+                    diff.years * 12 + diff.months
+                )
     @api.model
     def create(self, vals):
         _logger.info("[ticket.repuesto.pedido.linea] create() — pedido_id=%s | subparte_id=%s | color_id=%s | cantidad=%s", vals.get('pedido_id'), vals.get('subparte_id'), vals.get('color_id'), vals.get('cantidad'))
