@@ -382,7 +382,12 @@ class WhatsAppTonerMixin:
 
         lines.extend([
             "",
-            "Responde con el *número* de una opción.",
+            "Puedes elegir *uno o varios colores*.",
+            "Responde con los números separados por *coma*.",
+            "Ejemplos: *1* · *1,3* · *3,4,2* · *1, 3*",
+            "",
+            "Si eliges *5*, se tomará como kit completo CMYK.",
+            "La opción *6* no puede combinarse con otros colores.",
         ])
 
         return {
@@ -392,20 +397,133 @@ class WhatsAppTonerMixin:
         }
 
     def _toner_resolve_color_selection(self, text, options):
-        raw = (text or "").strip().lower()
-        digits = self._only_digits(raw)
+        """
+        Resuelve una o varias opciones de tóner.
 
-        if digits:
-            try:
-                position = int(digits)
-                for option in options:
-                    if option.get("position") == position:
-                        return {
-                            "valid": True,
-                            "option": option,
-                        }
-            except Exception:
-                pass
+        Para selección múltiple el separador oficial es la coma:
+        1,3 / 3,4,2 / 1, 3.
+        Conserva también la selección individual por número o sinónimo.
+        """
+        raw = (text or "").strip().lower()
+
+        def _result_from_options(selected_options):
+            selected_options = selected_options or []
+
+            # 5 = kit completo. Tiene prioridad porque ya incluye CMYK.
+            cmyk = next(
+                (item for item in selected_options if item.get("code") == "cmyk"),
+                False,
+            )
+            if cmyk:
+                colors = list(cmyk.get("colors") or [])
+                return {
+                    "valid": True,
+                    "option": cmyk,
+                    "options": [cmyk],
+                    "colors": colors,
+                    "code": "cmyk",
+                    "label": self._toner_colors_label(
+                        colors,
+                        fallback_label=cmyk.get("label"),
+                    ),
+                }
+
+            other = next(
+                (item for item in selected_options if item.get("code") == "other"),
+                False,
+            )
+            if other and len(selected_options) > 1:
+                return {
+                    "valid": False,
+                    "message": (
+                        "⚠️ *Selección no válida*\n\n"
+                        "La opción *Otro / no estoy seguro* no puede combinarse "
+                        "con colores específicos. Responde *6* solamente o "
+                        "elige los colores que necesitas."
+                    ),
+                }
+
+            colors = []
+            for item in selected_options:
+                for color in item.get("colors") or []:
+                    if color not in colors:
+                        colors.append(color)
+
+            if not selected_options:
+                return {"valid": False}
+
+            first = selected_options[0]
+            return {
+                "valid": True,
+                "option": first if len(selected_options) == 1 else False,
+                "options": selected_options,
+                "colors": colors,
+                "code": (
+                    first.get("code")
+                    if len(selected_options) == 1
+                    else "multiple"
+                ),
+                "label": self._toner_colors_label(
+                    colors,
+                    fallback_label=first.get("label") or raw,
+                ),
+            }
+
+        # ----------------------------------------------------------
+        # Selección numérica: una opción o varias separadas por coma
+        # ----------------------------------------------------------
+        if "," in raw:
+            parts = [part.strip() for part in raw.split(",")]
+            if not parts or any(not part or not part.isdigit() for part in parts):
+                return {
+                    "valid": False,
+                    "message": (
+                        "⚠️ *Selección no válida*\n\n"
+                        "Para elegir varios colores usa números separados por coma.\n"
+                        "Ejemplo: *1,3* o *3,4,2*."
+                    ),
+                }
+
+            positions = []
+            for part in parts:
+                value = int(part)
+                if value not in positions:
+                    positions.append(value)
+
+            selected_options = []
+            invalid = []
+            for position in positions:
+                option = next(
+                    (item for item in options if item.get("position") == position),
+                    False,
+                )
+                if option:
+                    selected_options.append(option)
+                else:
+                    invalid.append(position)
+
+            if invalid:
+                return {
+                    "valid": False,
+                    "message": (
+                        "⚠️ *Opción no válida*\n\n"
+                        "Las opciones *%s* no existen. Usa únicamente los números "
+                        "mostrados en el menú."
+                    ) % ", ".join(str(value) for value in invalid),
+                }
+
+            return _result_from_options(selected_options)
+
+        # Una sola opción numérica. No usamos _only_digits aquí para evitar
+        # que una entrada con caracteres extra se convierta silenciosamente.
+        if raw.isdigit():
+            position = int(raw)
+            option = next(
+                (item for item in options if item.get("position") == position),
+                False,
+            )
+            if option:
+                return _result_from_options([option])
 
         synonyms = {
             "negro": "black",
@@ -413,21 +531,17 @@ class WhatsAppTonerMixin:
             "k": "black",
             "bn": "black",
             "b/n": "black",
-
             "cyan": "cyan",
             "cian": "cyan",
             "c": "cyan",
             "celeste": "cyan",
-
             "magenta": "magenta",
             "m": "magenta",
             "rosa": "magenta",
             "rosado": "magenta",
-
             "yellow": "yellow",
             "amarillo": "yellow",
             "y": "yellow",
-
             "kit": "cmyk",
             "kit completo": "cmyk",
             "cmyk": "cmyk",
@@ -437,7 +551,6 @@ class WhatsAppTonerMixin:
             "todo": "cmyk",
             "4 colores": "cmyk",
             "cuatro colores": "cmyk",
-
             "otro": "other",
             "no se": "other",
             "no sé": "other",
@@ -452,30 +565,100 @@ class WhatsAppTonerMixin:
                     break
 
         if target:
-            for option in options:
-                if option.get("code") == target:
-                    return {
-                        "valid": True,
-                        "option": option,
-                    }
+            option = next(
+                (item for item in options if item.get("code") == target),
+                False,
+            )
+            if option:
+                return _result_from_options([option])
 
         for option in options:
             label = (option.get("label") or "").strip().lower()
             code = (option.get("code") or "").strip().lower()
             if raw == label or raw == code:
-                return {
-                    "valid": True,
-                    "option": option,
-                }
+                return _result_from_options([option])
 
         return {
             "valid": False,
             "message": (
                 "⚠️ *Opción no válida*\n\n"
                 "No pude relacionar tu respuesta con los colores disponibles. "
-                "Responde con el *número* de una opción."
+                "Responde con un número o con varios números separados por coma."
             ),
         }
+
+    def _toner_find_open_duplicates(self, machine, colors):
+        """Devuelve solicitudes activas encontradas por equipo y color."""
+        duplicates = {}
+        if not machine or not colors:
+            return duplicates
+
+        submission_model = request.env["toner.counter.submission"].sudo()
+        for color in colors:
+            try:
+                duplicate = submission_model._find_open_duplicate(
+                    machine.id,
+                    color,
+                )
+            except Exception:
+                _logger.exception(
+                    "[WA-TONER] Error validando duplicado machine=%s color=%s",
+                    machine.id,
+                    color,
+                )
+                duplicate = False
+
+            if duplicate:
+                duplicates[color] = duplicate
+
+        return duplicates
+
+    def _toner_duplicate_message(self, duplicates, available_colors=None):
+        labels = {
+            "black": "Negro",
+            "cyan": "Cyan",
+            "magenta": "Magenta",
+            "yellow": "Yellow",
+        }
+        available_colors = available_colors or []
+
+        lines = [
+            "⚠️ *Ya existe una solicitud en proceso*",
+            "",
+            "Para este equipo ya se encuentran solicitados:",
+        ]
+
+        for color, duplicate in duplicates.items():
+            sequence = (
+                getattr(duplicate, "secuencia", False)
+                or duplicate.display_name
+                or duplicate.id
+            )
+            lines.append(
+                "• *%s* — solicitud *%s*"
+                % (labels.get(color, color), sequence)
+            )
+
+        if available_colors:
+            lines.extend([
+                "",
+                "Los siguientes colores sí están disponibles:",
+            ])
+            for color in available_colors:
+                lines.append("• *%s*" % labels.get(color, color))
+            lines.extend([
+                "",
+                "¿Deseas continuar únicamente con esos colores?",
+                "Responde *SI* para continuar o *NO* para volver a elegir.",
+            ])
+        else:
+            lines.extend([
+                "",
+                "Todos los colores seleccionados ya tienen una solicitud activa.",
+                "Elige otro color o espera a que finalice la solicitud existente.",
+            ])
+
+        return "\n".join(lines)
 
     def _toner_colors_label(self, colors, fallback_label=False):
         labels = {
@@ -637,6 +820,17 @@ class WhatsAppTonerMixin:
             toner_colors = ["black"]
             toner_color_label = "Negro"
 
+        # Última barrera contra duplicados justo antes del create().
+        # Evita que otra solicitud creada durante la conversación genere
+        # un duplicado para el mismo equipo + color.
+        duplicates = self._toner_find_open_duplicates(machine, toner_colors)
+        if duplicates:
+            return False, {
+                "code": "duplicate_active",
+                "duplicates": duplicates,
+                "message": self._toner_duplicate_message(duplicates),
+            }
+
         counter_bn_raw = context.get("counter_bn")
         counter_color_raw = context.get("counter_color")
 
@@ -662,6 +856,7 @@ class WhatsAppTonerMixin:
 
         vals = {
             "equipment_id": machine.id,
+            "source": "api",
             "client_name": partner.name or "Cliente WhatsApp",
             "client_email": partner.email or "sin-correo@whatsapp.local",
             "client_phone": partner.whatsapp_number or partner.mobile or partner.phone or "",
@@ -669,34 +864,29 @@ class WhatsAppTonerMixin:
             "counter_color": counter_color if is_color else 0,
             "notes": context.get("observations") or "Solicitud generada desde WhatsApp",
             "urgente": True,
+            "requiere_toner_black": "black" in toner_colors,
+            "requiere_toner_cyan": is_color and "cyan" in toner_colors,
+            "requiere_toner_magenta": is_color and "magenta" in toner_colors,
+            "requiere_toner_yellow": is_color and "yellow" in toner_colors,
+            "cantidad_solicitada_black": quantity if "black" in toner_colors else 0,
+            "cantidad_solicitada_cyan": quantity if is_color and "cyan" in toner_colors else 0,
+            "cantidad_solicitada_magenta": quantity if is_color and "magenta" in toner_colors else 0,
+            "cantidad_solicitada_yellow": quantity if is_color and "yellow" in toner_colors else 0,
         }
 
         if "black" in toner_colors:
-            vals["requiere_toner_black"] = True
             vals["stock_reportado_black"] = 0
-
         if is_color and "cyan" in toner_colors:
-            vals["requiere_toner_cyan"] = True
             vals["stock_reportado_cyan"] = 0
-
         if is_color and "magenta" in toner_colors:
-            vals["requiere_toner_magenta"] = True
             vals["stock_reportado_magenta"] = 0
-
         if is_color and "yellow" in toner_colors:
-            vals["requiere_toner_yellow"] = True
             vals["stock_reportado_yellow"] = 0
 
         if not toner_colors:
             vals["notes"] = "%s\nColor solicitado: %s\nCantidad: %s" % (
                 vals["notes"],
                 toner_color_label or "Otro / no estoy seguro",
-                quantity,
-            )
-
-        if quantity and quantity > 1:
-            vals["notes"] = "%s\nCantidad solicitada: %s" % (
-                vals["notes"],
                 quantity,
             )
 
@@ -1041,37 +1231,158 @@ class WhatsAppTonerMixin:
                     or "⚠️ No pude identificar ese color."
                 ) + "\n\n" + self._toner_navigation_footer(include_back=True)
 
-            option = result.get("option") or {}
-            colors = option.get("colors") or []
-            color_label = self._toner_colors_label(
+            colors = result.get("colors") or []
+            color_label = result.get("label") or self._toner_colors_label(
                 colors,
-                fallback_label=option.get("label") or text_clean,
+                fallback_label=text_clean,
             )
+
+            # La opción Otro no contiene colores y continúa como antes.
+            if not colors:
+                session.advance_state(
+                    "awaiting_toner_quantity",
+                    {
+                        "toner_color": result.get("code") or text_clean,
+                        "toner_colors": [],
+                        "toner_color_label": color_label,
+                    },
+                )
+                return (
+                    "✅ Opción seleccionada: *%s*\n\n"
+                    "📦 *Solicitud de tóner · Cantidad*\n"
+                    "¿Cuántos tóner necesitas? Responde únicamente con un número.\n\n"
+                    "%s"
+                ) % (
+                    color_label,
+                    self._toner_navigation_footer(include_back=True),
+                )
+
+            machine = self._toner_get_selected_machine_from_context(context)
+            if not machine:
+                return (
+                    "⚠️ No pude recuperar el equipo seleccionado. "
+                    "Escribe *MENU* para iniciar nuevamente."
+                )
+
+            duplicates = self._toner_find_open_duplicates(machine, colors)
+            available_colors = [
+                color for color in colors if color not in duplicates
+            ]
+
+            if duplicates and not available_colors:
+                # No avanzamos de estado; el cliente puede elegir otro color.
+                return (
+                    self._toner_duplicate_message(duplicates)
+                    + "\n\n"
+                    + self._toner_navigation_footer(include_back=True)
+                )
+
+            if duplicates:
+                available_label = self._toner_colors_label(available_colors)
+                session.advance_state(
+                    "awaiting_toner_duplicate_confirmation",
+                    {
+                        "toner_pending_colors": available_colors,
+                        "toner_pending_color_label": available_label,
+                        "toner_duplicate_colors": list(duplicates.keys()),
+                    },
+                )
+                return (
+                    self._toner_duplicate_message(
+                        duplicates,
+                        available_colors=available_colors,
+                    )
+                    + "\n\n"
+                    + self._toner_navigation_footer(include_back=True)
+                )
 
             session.advance_state(
                 "awaiting_toner_quantity",
                 {
-                    "toner_color": option.get("code") or text_clean,
+                    "toner_color": result.get("code") or "multiple",
                     "toner_colors": colors,
                     "toner_color_label": color_label,
                 },
             )
 
             _logger.info(
-                "[WA-TONER] Color seleccionado session=%s option=%s colors=%s",
+                "[WA-TONER] Colores seleccionados session=%s colors=%s",
                 session.id,
-                option,
                 colors,
             )
 
             return (
                 "✅ Tóner seleccionado: *%s*\n\n"
                 "📦 *Solicitud de tóner · Cantidad*\n"
-                "¿Cuántos tóner necesitas? Responde únicamente con un número.\n\n"
+                "¿Cuántos tóner necesitas? Responde únicamente con un número.\n"
+                "La cantidad se aplicará a *cada color seleccionado*.\n\n"
                 "%s"
             ) % (
                 color_label,
                 self._toner_navigation_footer(include_back=True),
+            )
+
+        # ==========================================================
+        # 2.1) CONFIRMACIÓN DE COLORES DISPONIBLES
+        # ==========================================================
+        if state == "awaiting_toner_duplicate_confirmation":
+            if self._is_yes(text_clean):
+                colors = context.get("toner_pending_colors") or []
+                if not colors:
+                    session.advance_state("awaiting_toner_color")
+                    return (
+                        "⚠️ No quedan colores disponibles para continuar.\n\n"
+                        + self._toner_navigation_footer(include_back=True)
+                    )
+
+                color_label = (
+                    context.get("toner_pending_color_label")
+                    or self._toner_colors_label(colors)
+                )
+                session.advance_state(
+                    "awaiting_toner_quantity",
+                    {
+                        "toner_color": "multiple" if len(colors) > 1 else colors[0],
+                        "toner_colors": colors,
+                        "toner_color_label": color_label,
+                        "toner_pending_colors": [],
+                        "toner_pending_color_label": False,
+                    },
+                )
+                return (
+                    "✅ Continuaremos con: *%s*\n\n"
+                    "📦 *Solicitud de tóner · Cantidad*\n"
+                    "¿Cuántos tóner necesitas? Responde únicamente con un número.\n"
+                    "La cantidad se aplicará a *cada color seleccionado*.\n\n"
+                    "%s"
+                ) % (
+                    color_label,
+                    self._toner_navigation_footer(include_back=True),
+                )
+
+            if self._is_no(text_clean):
+                session.advance_state(
+                    "awaiting_toner_color",
+                    {
+                        "toner_pending_colors": [],
+                        "toner_pending_color_label": False,
+                        "toner_duplicate_colors": [],
+                    },
+                )
+                machine = self._toner_get_selected_machine_from_context(context)
+                color_menu = self._toner_build_color_menu(machine) if machine else {}
+                return (
+                    "🔄 *Selecciona nuevamente los colores*\n\n"
+                    "%s\n\n%s"
+                ) % (
+                    color_menu.get("menu_text") or "Selecciona otro color.",
+                    self._toner_navigation_footer(include_back=True),
+                )
+
+            return (
+                "Responde *SI* para continuar únicamente con los colores disponibles "
+                "o *NO* para volver a elegir.\n\n"
+                + self._toner_navigation_footer(include_back=True)
             )
 
         # ==========================================================
@@ -1310,6 +1621,30 @@ class WhatsAppTonerMixin:
 
             context = session.get_context()
             rec, error = self._create_toner_request(partner, session, context)
+
+            if not rec and isinstance(error, dict) and error.get("code") == "duplicate_active":
+                # Se creó otra solicitud mientras el cliente completaba el flujo.
+                # Volvemos a selección de color y no generamos un duplicado.
+                session.advance_state(
+                    "awaiting_toner_color",
+                    {
+                        "toner_colors": [],
+                        "toner_color": False,
+                        "toner_color_label": False,
+                    },
+                )
+                machine = self._toner_get_selected_machine_from_context(context)
+                color_menu = self._toner_build_color_menu(machine) if machine else {}
+                return (
+                    "%s\n\n"
+                    "Mientras completabas la solicitud se registró otra solicitud "
+                    "para uno de esos colores. No se creó ningún duplicado.\n\n"
+                    "%s\n\n%s"
+                ) % (
+                    error.get("message") or "Ya existe una solicitud activa.",
+                    color_menu.get("menu_text") or "Selecciona nuevamente los colores.",
+                    self._toner_navigation_footer(include_back=True),
+                )
 
             if rec:
                 session.complete_flow(close_reason="completed_toner")
