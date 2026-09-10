@@ -4,6 +4,8 @@ import base64
 import logging
 import re
 
+import requests
+
 from odoo import fields, http
 from odoo.http import request
 
@@ -304,6 +306,93 @@ class AppServiceApprovalController(AppBaseController):
                 return contact
 
         return False
+
+    def _find_any_contact_by_dni(
+        self,
+        dni,
+    ):
+        """
+        Busca un contacto existente fuera del alcance del ticket.
+        Se usa solamente para evitar duplicarlo y poder vincularlo
+        posteriormente mediante whatsapp_company_ids.
+        """
+        if not dni:
+            return False
+
+        Partner = request.env["res.partner"]
+
+        exact = Partner.search(
+            [("vat", "=", dni)],
+            order="id asc",
+            limit=1,
+        )
+
+        if exact:
+            return exact
+
+        candidates = Partner.search(
+            [("vat", "ilike", dni)],
+            order="id asc",
+            limit=100,
+        )
+
+        for contact in candidates:
+            if self._clean_dni(contact.vat) == dni:
+                return contact
+
+        return False
+
+    def _lookup_dni_reniec(
+        self,
+        dni,
+    ):
+        """
+        Replica la consulta DNI utilizada por el módulo
+        pc_l10n_pe_vat_sunat, pero sin impedir el flujo cuando
+        RENIEC no encuentra información o no está disponible.
+        """
+        try:
+            response = requests.get(
+                "https://api.apis.net.pe/v1/dni",
+                params={"numero": dni},
+                timeout=12,
+            )
+
+            if response.status_code != 200:
+                _logger.info(
+                    "[APP APPROVAL] RENIEC sin resultado "
+                    "dni=%s status=%s",
+                    dni,
+                    response.status_code,
+                )
+                return ""
+
+            data = response.json()
+
+            name = " ".join(
+                part
+                for part in [
+                    self._clean_text(data.get("nombres")),
+                    self._clean_text(
+                        data.get("apellidoPaterno")
+                    ),
+                    self._clean_text(
+                        data.get("apellidoMaterno")
+                    ),
+                ]
+                if part
+            ).strip()
+
+            return name
+
+        except Exception as exc:
+            _logger.warning(
+                "[APP APPROVAL] Consulta RENIEC no disponible "
+                "dni=%s error=%s",
+                dni,
+                exc,
+            )
+            return ""
 
     def _contact_belongs_to_company(
         self,
@@ -779,12 +868,58 @@ class AppServiceApprovalController(AppBaseController):
             )
 
             if not contact:
+                existing_contact = (
+                    self._find_any_contact_by_dni(
+                        dni
+                    )
+                )
+
+                if existing_contact:
+                    return self._json_response(
+                        {
+                            "success": True,
+                            "found": False,
+                            "dni": dni,
+                            "source": "res_partner",
+                            "prefill": {
+                                "name": (
+                                    existing_contact.name
+                                    or ""
+                                ),
+                                "mobile": (
+                                    existing_contact.mobile
+                                    or existing_contact.phone
+                                    or ""
+                                ),
+                                "email": (
+                                    existing_contact.email
+                                    or ""
+                                ),
+                            },
+                            "client": self._many2one(
+                                company
+                            ),
+                            "message": (
+                                "El DNI ya existe en Odoo. "
+                                "Completa los datos faltantes; "
+                                "al guardar se vinculará con "
+                                "este cliente para WhatsApp."
+                            ),
+                        }
+                    )
+
+                reniec_name = self._lookup_dni_reniec(
+                    dni
+                )
+
                 _logger.info(
                     "[APP APPROVAL] Contacto NO encontrado "
-                    "service_id=%s company_id=%s dni=%s",
+                    "service_id=%s company_id=%s dni=%s "
+                    "reniec_found=%s",
                     service_id,
                     company.id,
                     dni,
+                    bool(reniec_name),
                 )
 
                 return self._json_response(
@@ -792,13 +927,27 @@ class AppServiceApprovalController(AppBaseController):
                         "success": True,
                         "found": False,
                         "dni": dni,
+                        "source": (
+                            "reniec"
+                            if reniec_name
+                            else "manual"
+                        ),
+                        "prefill": {
+                            "name": reniec_name,
+                            "mobile": "",
+                            "email": "",
+                        },
                         "client": self._many2one(
                             company
                         ),
                         "message": (
-                            "El DNI no está asociado a este cliente "
-                            "como empresa, contacto de su estructura "
-                            "o contacto vinculado por WhatsApp."
+                            "Datos encontrados en RENIEC. "
+                            "Completa el celular y el correo."
+                            if reniec_name
+                            else
+                            "El DNI no fue encontrado en Odoo "
+                            "ni en RENIEC. Ingresa manualmente "
+                            "el nombre, celular y correo."
                         ),
                     }
                 )
@@ -964,6 +1113,59 @@ class AppServiceApprovalController(AppBaseController):
                     }
                 )
 
+            Partner = request.env[
+                "res.partner"
+            ]
+
+            existing_unlinked = (
+                self._find_any_contact_by_dni(
+                    values["dni"]
+                )
+            )
+
+            if (
+                existing_unlinked
+                and "whatsapp_company_ids"
+                in Partner._fields
+            ):
+                existing_unlinked.write(
+                    {
+                        "mobile": values["mobile"],
+                        "email": values["email"],
+                        "whatsapp_company_ids": [
+                            (4, company.id),
+                        ],
+                    }
+                )
+
+                ticket.message_post(
+                    body=(
+                        "Contacto existente vinculado para "
+                        "el visto bueno desde Copier OS App:<br/>"
+                        f"<b>{existing_unlinked.name}</b><br/>"
+                        f"DNI: {values['dni']}<br/>"
+                        f"Empresa vinculada: {company.name}"
+                    ),
+                    message_type="notification",
+                )
+
+                return self._json_response(
+                    {
+                        "success": True,
+                        "created": False,
+                        "already_exists": True,
+                        "linked_by_whatsapp": True,
+                        "message": (
+                            "El contacto existente fue vinculado "
+                            "correctamente con este cliente."
+                        ),
+                        "contact": self._serialize_contact(
+                            existing_unlinked,
+                            company,
+                        ),
+                    }
+                )
+
             partner_vals = {
                 "name": values[
                     "name"
@@ -982,14 +1184,20 @@ class AppServiceApprovalController(AppBaseController):
                 ],
             }
 
+            if (
+                "whatsapp_company_ids"
+                in Partner._fields
+            ):
+                partner_vals[
+                    "whatsapp_company_ids"
+                ] = [
+                    (4, company.id),
+                ]
+
             identification_type = (
                 self
                 ._find_dni_identification_type()
             )
-
-            Partner = request.env[
-                "res.partner"
-            ]
 
             if (
                 identification_type
