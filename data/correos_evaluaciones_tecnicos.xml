@@ -1,127 +1,146 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <odoo>
-    <data>
+    <data noupdate="0">
+
         <record id="email_template_service_evaluation" model="mail.template">
             <field name="name">Solicitud de Evaluación de Servicio</field>
-            <field name="model_id" ref="model_client_service_evaluation" />
-            <field name="subject">📋 Evaluación de Servicio Técnico</field>
+            <field name="model_id" ref="model_client_service_evaluation"/>
+            <field name="subject">📋 Ayúdanos a evaluar el servicio técnico</field>
             <field name="email_from">soporte@andescopiers.com.pe</field>
-            <field name="email_to">{{object.ticket_id.product_alquiler.correo_}}</field>
+            <field name="email_to">{{ object._get_recipient_email() or '' }}</field>
             <field name="email_cc"></field>
-            <field name="body_html"><![CDATA[
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-        </head>
-        <body bgcolor="#f5f5f5" style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; line-height: 1.6; color: #2d3748;">
-            <div style="max-width: 800px; margin: 0 auto; padding: 20px;">
-                <div style="background-color: #875A7B; padding: 20px; text-align: center;">
-                    <div style="color: #ffffff; font-size: 24px; font-weight: bold;">📋 Evaluación de Servicio Técnico</div>
-                </div>
-                <div style="background-color: #ffffff; padding: 25px; border: 1px solid #e2e8f0;">
-                    <div style="margin-bottom: 20px;">
-                        Estimado(a) <strong><t t-out="object.partner_id.name"/></strong>,
-                    </div>
-                    <div style="margin-bottom: 20px;">
-                        Gracias por confiar en nuestros servicios. Nos gustaría conocer su opinión sobre el servicio técnico realizado.
-                    </div>
-                    <div style="background-color: #f0fff4; padding: 15px; margin: 15px 0; text-align: center; border: 1px solid #c6f6d5;">
-                        <div style="font-size: 18px; font-weight: bold; margin-bottom: 10px;">Detalles del Servicio Técnico</div>
-                        <div>Técnico: <strong><t t-out="object.technician_id.name"/></strong></div>
-                        <div>Fecha: <strong><t t-out="object.evaluation_date"/></strong></div>
-                        
-                        <div style="margin-top: 15px;">
-                            <div style="font-weight: bold; margin-bottom: 10px;">Equipos Revisados:</div>
-                            <t t-foreach="object.ticket_ids" t-as="ticket">
-                                <div style="margin: 5px 0;">
-                                    • Ticket: <strong><t t-out="ticket.name"/></strong>
-                                    <t t-if="ticket.product_alquiler">
-                                        - Equipo: <strong><t t-out="ticket.product_alquiler.display_name"/></strong>
-                                    </t>
-                                </div>
-                            </t>
+            <field name="body_html" type="html">
+                <div style="margin:0; padding:24px; background:#f5f7fa; font-family:Arial,Helvetica,sans-serif; color:#2d3748;">
+                    <div style="max-width:760px; margin:0 auto; background:#ffffff; border:1px solid #e2e8f0; border-radius:10px; overflow:hidden;">
+                        <div style="padding:22px; text-align:center; background:#875A7B; color:#ffffff;">
+                            <div style="font-size:23px; font-weight:bold;">📋 Evaluación de Servicio Técnico</div>
                         </div>
-                    </div>
-                    <div style="text-align: center; margin: 30px 0;">
-                        <a t-att-href="'/evaluation/submit/%s' % object.token"
-                        style="display: inline-block; padding: 12px 25px; background-color: #875A7B; color: #ffffff; text-decoration: none; border-radius: 5px; font-weight: bold;">
-                            ✍️ Evaluar Servicio
-                        </a>
-                    </div>
-                    <div style="margin: 20px 0; padding: 15px; background-color: #fff5f7; border: 1px solid #fed7e2;">
-                        <strong>Importante:</strong> Su retroalimentación nos ayuda a seguir mejorando. Gracias por tomarse el tiempo para compartir su experiencia.
-                    </div>
-                    <div style="margin-top: 30px; text-align: center; padding-top: 20px; border-top: 1px solid #eee;">
-                        Atentamente,<br/>
-                        <strong>Isidro Vera Polo</strong><br/>
-                        <span style="color: #4a5568;">Soporte Técnico - Andes Copiers</span>
-                    </div>
-                    <div style="margin-top: 20px; text-align: center; font-size: 14px; color: #718096;">
-                        <div>📞 (51) 924 894 829 | 📧 soporte@andescopiers.com.pe</div>
-                        <div style="margin-top: 5px;">
-                            © 2024 Isidro Vera Polo. Todos los derechos reservados.
+                        <div style="padding:26px;">
+                            <p>Estimado(a) <strong><t t-out="object._get_recipient_name()"/></strong>,</p>
+                            <p>Gracias por confiar en nosotros. Su opinión sobre el servicio realizado nos ayuda a seguir mejorando.</p>
+
+                            <div style="margin:20px 0; padding:16px; background:#f0fff4; border:1px solid #c6f6d5; border-radius:8px;">
+                                <div style="font-size:17px; font-weight:bold; margin-bottom:8px;">Detalles del servicio</div>
+                                <div>Técnico: <strong><t t-out="object.technician_id.name or 'No registrado'"/></strong></div>
+                                <div>Fecha: <strong><t t-out="object.evaluation_date"/></strong></div>
+                                <div style="margin-top:10px; font-weight:bold;">Equipo evaluado:</div>
+                                <t t-foreach="object.ticket_ids" t-as="ticket">
+                                    <div style="margin-top:5px;">
+                                        • Ticket: <strong><t t-out="ticket.name"/></strong>
+                                        <t t-if="ticket.product_alquiler">
+                                            — Equipo: <strong><t t-out="ticket.product_alquiler.display_name"/></strong>
+                                        </t>
+                                    </div>
+                                </t>
+                            </div>
+
+                            <div style="text-align:center; margin:28px 0;">
+                                <a t-att-href="object.evaluation_url"
+                                   style="display:inline-block; padding:13px 26px; background:#875A7B; color:#ffffff; text-decoration:none; border-radius:6px; font-weight:bold;">
+                                    ✍️ Evaluar servicio
+                                </a>
+                            </div>
+
+                            <div style="padding:14px; background:#fff5f7; border:1px solid #fed7e2; border-radius:8px;">
+                                Responder toma menos de un minuto. Su retroalimentación nos permite mejorar nuestra atención y soporte técnico.
+                            </div>
+
+                            <div style="margin-top:28px; text-align:center; padding-top:18px; border-top:1px solid #eeeeee;">
+                                Atentamente,<br/>
+                                <strong>Isidro Vera Polo</strong><br/>
+                                <span style="color:#4a5568;">Soporte Técnico - Andes Copiers</span>
+                            </div>
+                            <div style="margin-top:14px; text-align:center; font-size:13px; color:#718096;">
+                                📞 (51) 924 894 829 | 📧 soporte@andescopiers.com.pe
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        </body>
-        </html>
-            ]]></field>
-        </record>
-        <record id="email_template_evaluation_completed" model="mail.template">
-            <field name="name">Evaluación de Servicio Completada</field>
-            <field name="model_id" ref="model_client_service_evaluation" />
-            <field name="subject">✅ Evaluación de Servicio Completada</field>
-            <field name="email_from">soporte@andescopiers.com.pe</field>
-            <field name="email_to">{{object.ticket_id.product_alquiler.correo_}}</field>
-            <field name="email_cc"></field>
-            
-            <field name="body_html"><![CDATA[
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-        </head>
-        <body bgcolor="#f5f5f5" style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; line-height: 1.6; color: #2d3748;">
-            <div style="max-width: 800px; margin: 0 auto; padding: 20px;">
-                <div style="background-color: #38a169; padding: 20px; text-align: center;">
-                    <div style="color: #ffffff; font-size: 24px; font-weight: bold;">✅ Evaluación Completada</div>
-                </div>
-                <div style="background-color: #ffffff; padding: 25px; border: 1px solid #e2e8f0;">
-                    <div style="margin-bottom: 20px;">
-                        Estimado(a) <strong><t t-out="object.partner_id.name"/></strong>,
-                    </div>
-                    <div style="margin-bottom: 20px;">
-                        Hemos recibido su evaluación de servicio. Gracias por tomarse el tiempo para proporcionarnos su retroalimentación.
-                    </div>
-                    <div style="background-color: #f0fff4; padding: 15px; margin: 15px 0; text-align: center; border: 1px solid #c6f6d5;">
-                        <div style="font-size: 18px; font-weight: bold; margin-bottom: 10px;">Puntaje del Servicio</div>
-                        <div style="font-size: 16px;">Puntaje General: <strong><t t-out="object.puntaje_servicio"/>%</strong></div>
-                        <div>Nivel de Atención: <strong><t t-out="object.nivel_atencion"/></strong></div>
-                    </div>
-                    <div style="margin: 20px 0; padding: 15px; background-color: #fff5f7; border: 1px solid #fed7e2;">
-                        <strong>Análisis Detallado:</strong>
-                        <pre><t t-out="object.analisis_detallado"/></pre>
-                    </div>
-                    <div style="margin-top: 30px; text-align: center; padding-top: 20px; border-top: 1px solid #eee;">
-                        Atentamente,<br/>
-                        <strong>Isidro Vera Polo</strong><br/>
-                        <span style="color: #4a5568;">Soporte Técnico - Andes Copiers</span>
-                    </div>
-                    <div style="margin-top: 20px; text-align: center; font-size: 14px; color: #718096;">
-                        <div>📞 (51) 924 894 829 | 📧 soporte@andescopiers.com.pe</div>
-                        <div style="margin-top: 5px;">
-                            © 2024 Isidro Vera Polo. Todos los derechos reservados.
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </body>
-        </html>
-            ]]></field>
+            </field>
         </record>
 
+        <record id="email_template_service_evaluation_reminder" model="mail.template">
+            <field name="name">Recordatorio de Evaluación de Servicio</field>
+            <field name="model_id" ref="model_client_service_evaluation"/>
+            <field name="subject">⏰ Su evaluación del servicio está por vencer</field>
+            <field name="email_from">soporte@andescopiers.com.pe</field>
+            <field name="email_to">{{ object._get_recipient_email() or '' }}</field>
+            <field name="email_cc"></field>
+            <field name="body_html" type="html">
+                <div style="margin:0; padding:24px; background:#f5f7fa; font-family:Arial,Helvetica,sans-serif; color:#2d3748;">
+                    <div style="max-width:700px; margin:0 auto; background:#ffffff; border:1px solid #e2e8f0; border-radius:10px; overflow:hidden;">
+                        <div style="padding:20px; text-align:center; background:#b54708; color:#ffffff;">
+                            <div style="font-size:22px; font-weight:bold;">⏰ Evaluación próxima a vencer</div>
+                        </div>
+                        <div style="padding:26px;">
+                            <p>Estimado(a) <strong><t t-out="object._get_recipient_name()"/></strong>,</p>
+                            <p>Aún está a tiempo de evaluar el servicio técnico recibido. Su respuesta toma menos de un minuto y nos ayuda a seguir mejorando.</p>
+
+                            <div style="margin:18px 0; padding:14px; background:#fff7ed; border:1px solid #fed7aa; border-radius:8px; text-align:center;">
+                                Disponible hasta:<br/>
+                                <strong><t t-out="object._format_expiration_lima()"/></strong>
+                            </div>
+
+                            <div style="text-align:center; margin:26px 0;">
+                                <a t-att-href="object.evaluation_url"
+                                   style="display:inline-block; padding:13px 26px; background:#875A7B; color:#ffffff; text-decoration:none; border-radius:6px; font-weight:bold;">
+                                    Responder evaluación
+                                </a>
+                            </div>
+
+                            <div style="margin-top:26px; text-align:center; padding-top:17px; border-top:1px solid #eeeeee; color:#4a5568;">
+                                Soporte Técnico - Andes Copiers<br/>
+                                📞 (51) 924 894 829
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </field>
+        </record>
+
+        <record id="email_template_evaluation_completed" model="mail.template">
+            <field name="name">Evaluación de Servicio Completada</field>
+            <field name="model_id" ref="model_client_service_evaluation"/>
+            <field name="subject">✅ Evaluación de Servicio Completada</field>
+            <field name="email_from">soporte@andescopiers.com.pe</field>
+            <field name="email_to">{{ object._get_recipient_email() or '' }}</field>
+            <field name="email_cc"></field>
+            <field name="body_html" type="html">
+                <div style="margin:0; padding:24px; background:#f5f7fa; font-family:Arial,Helvetica,sans-serif; color:#2d3748;">
+                    <div style="max-width:700px; margin:0 auto; background:#ffffff; border:1px solid #e2e8f0; border-radius:10px; overflow:hidden;">
+                        <div style="padding:20px; text-align:center; background:#38a169; color:#ffffff;">
+                            <div style="font-size:23px; font-weight:bold;">✅ Evaluación completada</div>
+                        </div>
+                        <div style="padding:26px;">
+                            <p>Estimado(a) <strong><t t-out="object.response_contact_name or object._get_recipient_name()"/></strong>,</p>
+                            <p>Hemos recibido su evaluación. Gracias por ayudarnos a mejorar nuestro servicio.</p>
+
+                            <div style="margin:20px 0; padding:16px; background:#f0fff4; border:1px solid #c6f6d5; border-radius:8px; text-align:center;">
+                                <div style="font-size:17px; font-weight:bold; margin-bottom:8px;">Resultado</div>
+                                <div>Puntaje general: <strong><t t-out="object.puntaje_servicio"/>%</strong></div>
+                                <div>Nivel de atención: <strong><t t-out="object.nivel_atencion"/></strong></div>
+                            </div>
+
+                            <div style="margin-top:26px; text-align:center; padding-top:17px; border-top:1px solid #eeeeee;">
+                                Atentamente,<br/>
+                                <strong>Isidro Vera Polo</strong><br/>
+                                <span style="color:#4a5568;">Soporte Técnico - Andes Copiers</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </field>
+        </record>
+
+        <record id="ir_cron_service_evaluation_reminders" model="ir.cron">
+            <field name="name">Evaluaciones: enviar recordatorios pendientes</field>
+            <field name="model_id" ref="model_client_service_evaluation"/>
+            <field name="state">code</field>
+            <field name="code">model._cron_send_pending_reminders()</field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">hours</field>
+            <field name="active">True</field>
+        </record>
 
     </data>
 </odoo>

@@ -1,8 +1,15 @@
 from odoo import models, fields, api
 from datetime import datetime, timedelta, time
+import json
 import pytz
 import logging
+import re
+import requests
 import uuid
+import json
+import re
+
+import requests
 
 _logger = logging.getLogger(__name__)
 
@@ -137,6 +144,23 @@ class ClientServiceEvaluation(models.Model):
     email_error_message = fields.Text('Mensaje de Error')
     reminder_count = fields.Integer('Recordatorios Enviados', default=0, tracking=True)
     last_reminder_date = fields.Datetime('Último Recordatorio')
+
+    whatsapp_sent = fields.Boolean('WhatsApp Enviado', default=False, tracking=True)
+    whatsapp_sent_date = fields.Datetime('Fecha de WhatsApp', tracking=True)
+    whatsapp_delivery_status = fields.Selection([
+        ('pending', 'Pendiente'),
+        ('sent', 'Enviado'),
+        ('failed', 'Fallido'),
+    ], string='Estado de WhatsApp', default='pending', tracking=True)
+    whatsapp_error_message = fields.Text('Error de WhatsApp')
+    whatsapp_reminder_count = fields.Integer(
+        'Recordatorios WhatsApp',
+        default=0,
+        tracking=True,
+    )
+    last_whatsapp_reminder_date = fields.Datetime(
+        'Último recordatorio WhatsApp',
+    )
 
     # ==================== RESPUESTA DEL CLIENTE ====================
     response_date = fields.Datetime('Fecha de Respuesta', tracking=True)
@@ -446,6 +470,38 @@ class ClientServiceEvaluation(models.Model):
 
                 if not record.completion_source:
                     fill_vals['completion_source'] = 'portal'
+
+                if not record.response_contact_name:
+                    if record.evaluator_contact_id or record.evaluator_name:
+                        fill_vals.update({
+                            'response_contact_id': (
+                                record.evaluator_contact_id.id
+                                if record.evaluator_contact_id
+                                else False
+                            ),
+                            'response_contact_name': (
+                                record.evaluator_name
+                                or (
+                                    record.evaluator_contact_id.name
+                                    if record.evaluator_contact_id
+                                    else ''
+                                )
+                            ),
+                            'response_contact_email': (
+                                record.evaluator_email
+                                or (
+                                    record.evaluator_contact_id.email
+                                    if record.evaluator_contact_id
+                                    else ''
+                                )
+                            ),
+                        })
+                    elif record.partner_id:
+                        fill_vals.update({
+                            'response_contact_id': record.partner_id.id,
+                            'response_contact_name': record.partner_id.name or '',
+                            'response_contact_email': record._get_recipient_email() or '',
+                        })
 
                 if fill_vals:
                     super(ClientServiceEvaluation, record).write(fill_vals)
@@ -873,7 +929,8 @@ ACCIONES URGENTES:
         Prioridad:
         1. Correo snapshot de quien firmó el ticket.
         2. Correo actual del contacto de conformidad.
-        3. Correo de partner_id, para tickets antiguos o sin visto bueno.
+        3. Correo histórico del equipo, que era el flujo anterior.
+        4. Correo de partner_id, para tickets antiguos o sin visto bueno.
         """
         self.ensure_one()
 
@@ -882,6 +939,16 @@ ACCIONES URGENTES:
 
         if self.evaluator_contact_id and self.evaluator_contact_id.email:
             return self.evaluator_contact_id.email.strip()
+
+        ticket = self.ticket_id or self.ticket_ids[:1]
+        equipment = ticket.product_alquiler if ticket and ticket.product_alquiler else False
+
+        if (
+            equipment
+            and 'correo_' in equipment._fields
+            and equipment.correo_
+        ):
+            return equipment.correo_.strip()
 
         if self.partner_id and self.partner_id.email:
             return self.partner_id.email.strip()
@@ -892,6 +959,219 @@ ACCIONES URGENTES:
         self.ensure_one()
         recipient = self._get_recipient_email()
         return {'email_to': recipient} if recipient else {}
+
+    def _get_recipient_name(self):
+        """Nombre usado en correo y WhatsApp."""
+        self.ensure_one()
+
+        if self.evaluator_name:
+            return self.evaluator_name.strip()
+
+        if self.evaluator_contact_id and self.evaluator_contact_id.name:
+            return self.evaluator_contact_id.name.strip()
+
+        if self.partner_id and self.partner_id.name:
+            return self.partner_id.name.strip()
+
+        return 'cliente'
+
+    def _clean_whatsapp_phone(self, phone):
+        """Normaliza celulares peruanos al formato 51XXXXXXXXX."""
+        digits = re.sub(r'\D', '', str(phone or ''))
+
+        if digits.startswith('00'):
+            digits = digits[2:]
+
+        if len(digits) == 9 and digits.startswith('9'):
+            digits = '51' + digits
+
+        if len(digits) != 11 or not digits.startswith('519'):
+            return False
+
+        return digits
+
+    def _get_recipient_mobile(self):
+        """
+        Prioriza el celular de quien dio el visto bueno. Para tickets antiguos
+        conserva como respaldo el celular registrado en el ticket o cliente.
+        """
+        self.ensure_one()
+
+        candidates = []
+
+        if self.evaluator_mobile:
+            candidates.append(self.evaluator_mobile)
+
+        if self.evaluator_contact_id:
+            candidates.extend([
+                self.evaluator_contact_id.mobile,
+                self.evaluator_contact_id.phone,
+            ])
+
+        ticket = self.ticket_id or self.ticket_ids[:1]
+
+        if ticket:
+            if 'celular_id_r' in ticket._fields:
+                candidates.append(ticket.celular_id_r)
+            if 'reporter_phone' in ticket._fields:
+                candidates.append(ticket.reporter_phone)
+
+        if self.partner_id:
+            candidates.extend([
+                self.partner_id.mobile,
+                self.partner_id.phone,
+            ])
+
+        for candidate in candidates:
+            clean_phone = self._clean_whatsapp_phone(candidate)
+            if clean_phone:
+                return clean_phone
+
+        return False
+
+    def _format_expiration_lima(self):
+        self.ensure_one()
+
+        if not self.expiration_date:
+            return ''
+
+        expiration = fields.Datetime.context_timestamp(
+            self.with_context(tz='America/Lima'),
+            self.expiration_date,
+        )
+        return expiration.strftime('%d/%m/%Y a las %H:%M')
+
+    def _build_whatsapp_evaluation_message(self, reminder=False):
+        self.ensure_one()
+
+        recipient_name = self._get_recipient_name()
+        expiration = self._format_expiration_lima()
+
+        if reminder:
+            return (
+                f"Hola, {recipient_name}. Tu evaluación del servicio vence "
+                f"pronto. Responder toma menos de un minuto y nos ayuda a "
+                f"seguir mejorando:\n{self.evaluation_url}"
+            )
+
+        expiration_text = (
+            f" Disponible hasta el {expiration}."
+            if expiration
+            else ''
+        )
+
+        return (
+            f"Hola, {recipient_name}. Queremos conocer tu opinión sobre el "
+            f"servicio técnico recibido. Tu respuesta nos ayuda a mejorar: "
+            f"\n{self.evaluation_url}{expiration_text}"
+        )
+
+    def _send_whatsapp_message(self, phone, message):
+        """Envía texto usando el mismo gateway WhatsApp del módulo SAT."""
+        ICP = self.env['ir.config_parameter'].sudo()
+        base_url = (ICP.get_param('sat.whatsapp_gateway_base_url') or '').rstrip('/')
+        api_key = ICP.get_param('sat.whatsapp_gateway_api_key') or ''
+
+        if not base_url:
+            return {'success': False, 'error': 'Falta configurar sat.whatsapp_gateway_base_url'}
+
+        if not api_key:
+            return {'success': False, 'error': 'Falta configurar sat.whatsapp_gateway_api_key'}
+
+        try:
+            response = requests.post(
+                f"{base_url}/api/send-message",
+                headers={
+                    'Content-Type': 'application/json',
+                    'x-api-key': api_key,
+                },
+                json={
+                    'to': phone,
+                    'message': message,
+                },
+                timeout=30,
+            )
+
+            try:
+                response_data = response.json()
+            except json.JSONDecodeError:
+                response_data = {}
+
+            if 200 <= response.status_code < 300 and response_data.get('success'):
+                return {'success': True, 'response': response_data}
+
+            return {
+                'success': False,
+                'error': response_data.get('error') or f'HTTP {response.status_code}',
+            }
+
+        except requests.exceptions.Timeout:
+            return {'success': False, 'error': 'Tiempo de espera agotado al enviar WhatsApp'}
+        except requests.exceptions.RequestException as exc:
+            return {'success': False, 'error': f'Error de red: {exc}'}
+        except Exception as exc:
+            _logger.exception(
+                "Error inesperado enviando WhatsApp de evaluación %s",
+                self.name,
+            )
+            return {'success': False, 'error': str(exc)}
+
+    def _send_whatsapp_evaluation(self, reminder=False):
+        self.ensure_one()
+
+        phone = self._get_recipient_mobile()
+
+        if not phone:
+            return {
+                'success': False,
+                'skipped': True,
+                'error': 'No existe un celular válido para el destinatario',
+            }
+
+        result = self._send_whatsapp_message(
+            phone,
+            self._build_whatsapp_evaluation_message(reminder=reminder),
+        )
+        now = fields.Datetime.now()
+
+        if result.get('success'):
+            values = {
+                'whatsapp_delivery_status': 'sent',
+                'whatsapp_error_message': False,
+            }
+
+            if reminder:
+                values.update({
+                    'whatsapp_reminder_count': self.whatsapp_reminder_count + 1,
+                    'last_whatsapp_reminder_date': now,
+                })
+            else:
+                values.update({
+                    'whatsapp_sent': True,
+                    'whatsapp_sent_date': now,
+                })
+
+            self.write(values)
+        else:
+            self.write({
+                'whatsapp_delivery_status': 'failed',
+                'whatsapp_error_message': result.get('error') or 'Error desconocido',
+            })
+
+        result['phone'] = phone
+        return result
+
+    def _set_notification_channel_from_results(self, email_ok, whatsapp_ok):
+        self.ensure_one()
+
+        if email_ok and whatsapp_ok:
+            channel = 'multiple'
+        elif whatsapp_ok:
+            channel = 'whatsapp'
+        else:
+            channel = 'email'
+
+        self.write({'notification_channel': channel})
 
     def _get_visit_date_from_ticket_commands(self, commands):
         """
@@ -1017,6 +1297,7 @@ ACCIONES URGENTES:
 
         message = f"""<p>✅ <strong>Evaluación Completada</strong></p>
                      <ul>
+                         <li><strong>Respondió:</strong> {self.response_contact_name or self._get_recipient_name()}</li>
                          <li><strong>Puntaje:</strong> {self.puntaje_servicio:.1f}%</li>
                          <li><strong>Nivel:</strong> 
                              <span class="badge badge-{nivel_colors.get(self.nivel_atencion, 'secondary')}">
@@ -1024,7 +1305,7 @@ ACCIONES URGENTES:
                              </span>
                          </li>
                          <li><strong>Tiempo de respuesta:</strong> {self.response_time:.1f} horas</li>
-                         <li><strong>Respondió:</strong> {'✓ A tiempo' if self.is_on_time else '✗ Fuera de tiempo'}</li>
+                         <li><strong>Plazo:</strong> {'✓ A tiempo' if self.is_on_time else '✗ Fuera de tiempo'}</li>
                      </ul>"""
 
         if self.comentarios:
@@ -1041,7 +1322,7 @@ ACCIONES URGENTES:
                 'mail.mail_activity_data_todo',
                 user_id=self.technician_id.id,
                 summary=f'Tu evaluación de servicio ha sido completada - {self.puntaje_servicio:.1f}%',
-                note=f"""El cliente {self.partner_id.name or 'Sin cliente'} ha completado tu evaluación de servicio.
+                note=f"""{self.response_contact_name or self._get_recipient_name()} completó la evaluación de servicio del cliente {self.partner_id.name or 'Sin cliente'}.
                         Puntaje obtenido: {self.puntaje_servicio:.1f}%
                         Nivel: {nivel_label or ''}"""
             )
@@ -1170,6 +1451,43 @@ ACCIONES URGENTES:
             'completion_source': 'portal',
         })
 
+        # El enlace público es personal y se envía al destinatario elegido.
+        # Si proviene del visto bueno, se registra a esa persona como quien
+        # respondió. En tickets antiguos se conserva el cliente como respaldo.
+        if not vals.get('response_contact_name'):
+            if self.evaluator_contact_id or self.evaluator_name:
+                vals.update({
+                    'response_contact_id': (
+                        self.evaluator_contact_id.id
+                        if self.evaluator_contact_id
+                        else False
+                    ),
+                    'response_contact_name': (
+                        self.evaluator_name
+                        or (
+                            self.evaluator_contact_id.name
+                            if self.evaluator_contact_id
+                            else ''
+                        )
+                        or ''
+                    ),
+                    'response_contact_email': (
+                        self.evaluator_email
+                        or (
+                            self.evaluator_contact_id.email
+                            if self.evaluator_contact_id
+                            else ''
+                        )
+                        or ''
+                    ),
+                })
+            elif self.partner_id:
+                vals.update({
+                    'response_contact_id': self.partner_id.id,
+                    'response_contact_name': self.partner_id.name or '',
+                    'response_contact_email': self._get_recipient_email() or '',
+                })
+
         if not self.completed_by and self.env.user and not self.env.user._is_public():
             vals['completed_by'] = self.env.user.id
 
@@ -1236,104 +1554,160 @@ ACCIONES URGENTES:
     def action_send_reminder(self):
         self.ensure_one()
 
-        # Guard: solo tiene sentido recordar evaluaciones enviadas y vigentes
-        if self.state != 'sent':
+        now = fields.Datetime.now()
+
+        if self.state != 'sent' or (
+            self.expiration_date
+            and self.expiration_date <= now
+        ):
             _logger.warning(
-                f"Recordatorio omitido para {self.name}: estado '{self.state}' no es 'sent'"
+                "Recordatorio omitido para %s: estado=%s vencimiento=%s",
+                self.name,
+                self.state,
+                self.expiration_date,
             )
             return False
 
+        recipient_email = self._get_recipient_email()
         template = self.env.ref('sat.email_template_service_evaluation_reminder', False)
-        if template:
+
+        email_ok = False
+        whatsapp_ok = False
+        errors = []
+
+        if template and recipient_email:
             try:
                 template.send_mail(
                     self.id,
                     force_send=True,
                     email_values=self._get_mail_email_values()
                 )
-
-                old_count = self.reminder_count
-
-                self.write({
-                    'reminder_count': old_count + 1,
-                    'last_reminder_date': fields.Datetime.now()
-                })
-
-                self.message_post(
-                    body=f"""<p>🔔 <strong>Recordatorio Enviado</strong></p>
-                            <ul>
-                                <li><strong>Recordatorio #{old_count + 1}</strong></li>
-                                <li><strong>Enviado a:</strong> {self._get_recipient_email() or 'Sin correo'}</li>
-                                <li><strong>Fecha:</strong> {fields.Datetime.context_timestamp(self, fields.Datetime.now()).strftime('%d/%m/%Y %H:%M')}</li>
-                            </ul>""",
-                    message_type='notification',
-                    subtype_xmlid='mail.mt_note'
+                email_ok = True
+            except Exception as exc:
+                errors.append(f'Correo: {exc}')
+                _logger.exception(
+                    "Error enviando recordatorio por correo para %s",
+                    self.name,
                 )
+        elif not recipient_email:
+            errors.append('Correo: destinatario no disponible')
+        else:
+            errors.append('Correo: plantilla de recordatorio no encontrada')
 
-                return True
+        whatsapp_result = self._send_whatsapp_evaluation(reminder=True)
+        whatsapp_ok = bool(whatsapp_result.get('success'))
 
-            except Exception as e:
-                _logger.error(f"Error al enviar recordatorio para evaluación {self.name}: {str(e)}")
+        if not whatsapp_ok and not whatsapp_result.get('skipped'):
+            errors.append(
+                f"WhatsApp: {whatsapp_result.get('error') or 'error desconocido'}"
+            )
 
-                self.message_post(
-                    body=f"""<p>❌ <strong>Error al Enviar Recordatorio</strong></p>
-                            <p>Error: {str(e)}</p>""",
-                    message_type='notification',
-                    subtype_xmlid='mail.mt_note'
-                )
+        if not (email_ok or whatsapp_ok):
+            self.message_post(
+                body=(
+                    "<p>❌ <strong>No se pudo enviar el recordatorio</strong></p>"
+                    f"<p>{'<br/>'.join(errors)}</p>"
+                ),
+                message_type='notification',
+                subtype_xmlid='mail.mt_note',
+            )
+            return False
 
-                return False
+        old_count = self.reminder_count
+        self.write({
+            'reminder_count': old_count + 1,
+            'last_reminder_date': now,
+        })
+        self._set_notification_channel_from_results(email_ok, whatsapp_ok)
 
-        return False
+        channels = []
+        if email_ok:
+            channels.append(f'correo ({recipient_email})')
+        if whatsapp_ok:
+            channels.append(f"WhatsApp ({whatsapp_result.get('phone')})")
+
+        self.message_post(
+            body=f"""<p>🔔 <strong>Recordatorio enviado</strong></p>
+                    <ul>
+                        <li><strong>Recordatorio:</strong> #{old_count + 1}</li>
+                        <li><strong>Canales:</strong> {', '.join(channels)}</li>
+                        <li><strong>Fecha:</strong> {fields.Datetime.context_timestamp(self, now).strftime('%d/%m/%Y %H:%M')}</li>
+                    </ul>""",
+            message_type='notification',
+            subtype_xmlid='mail.mt_note',
+        )
+
+        return True
 
     def action_resend_evaluation(self):
         self.ensure_one()
 
+        recipient_email = self._get_recipient_email()
         template = self.env.ref('sat.email_template_service_evaluation', False)
-        if template:
+
+        email_ok = False
+        whatsapp_ok = False
+        errors = []
+
+        if template and recipient_email:
             try:
                 template.send_mail(
                     self.id,
                     force_send=True,
                     email_values=self._get_mail_email_values()
                 )
-
+                email_ok = True
                 self.write({
                     'email_sent': True,
                     'email_sent_date': fields.Datetime.now(),
                     'email_delivery_status': 'sent',
-                    'state': 'sent'
+                    'email_error_message': False,
                 })
-
-                self.message_post(
-                    body=f"""<p>📧 <strong>Evaluación Reenviada</strong></p>
-                            <ul>
-                                <li><strong>Enviado a:</strong> {self._get_recipient_email() or 'Sin correo'}</li>
-                                <li><strong>Fecha:</strong> {fields.Datetime.context_timestamp(self, fields.Datetime.now()).strftime('%d/%m/%Y %H:%M')}</li>
-                            </ul>""",
-                    message_type='notification',
-                    subtype_xmlid='mail.mt_note'
-                )
-
-                return True
-
-            except Exception as e:
-                _logger.error(f"Error al reenviar evaluación {self.name}: {str(e)}")
-
+            except Exception as exc:
+                errors.append(f'Correo: {exc}')
                 self.write({
                     'email_delivery_status': 'failed',
-                    'email_error_message': str(e)
+                    'email_error_message': str(exc),
                 })
-
-                self.message_post(
-                    body=f"""<p>❌ <strong>Error al Reenviar Evaluación</strong></p>
-                            <p>Error: {str(e)}</p>""",
-                    message_type='notification',
-                    subtype_xmlid='mail.mt_note'
+                _logger.exception(
+                    "Error reenviando evaluación por correo %s",
+                    self.name,
                 )
 
-                return False
+        whatsapp_result = self._send_whatsapp_evaluation(reminder=False)
+        whatsapp_ok = bool(whatsapp_result.get('success'))
 
+        if not whatsapp_ok and not whatsapp_result.get('skipped'):
+            errors.append(
+                f"WhatsApp: {whatsapp_result.get('error') or 'error desconocido'}"
+            )
+
+        if email_ok or whatsapp_ok:
+            self.write({'state': 'sent'})
+            self._set_notification_channel_from_results(email_ok, whatsapp_ok)
+
+            channels = []
+            if email_ok:
+                channels.append(f'correo ({recipient_email})')
+            if whatsapp_ok:
+                channels.append(f"WhatsApp ({whatsapp_result.get('phone')})")
+
+            self.message_post(
+                body=f"""<p>📨 <strong>Evaluación reenviada</strong></p>
+                        <p><strong>Canales:</strong> {', '.join(channels)}</p>""",
+                message_type='notification',
+                subtype_xmlid='mail.mt_note',
+            )
+            return True
+
+        self.message_post(
+            body=(
+                "<p>❌ <strong>No se pudo reenviar la evaluación</strong></p>"
+                f"<p>{'<br/>'.join(errors) or 'No hay correo ni celular disponible.'}</p>"
+            ),
+            message_type='notification',
+            subtype_xmlid='mail.mt_note',
+        )
         return False
 
     # ==================== CRON JOBS ====================
@@ -1485,20 +1859,13 @@ ACCIONES URGENTES:
                         subtype_xmlid='mail.mt_note'
                     )
 
-                    if not recipient:
-                        evaluation.write({
-                            'email_delivery_status': 'failed',
-                            'email_error_message': (
-                                'No existe correo del firmante ni correo del cliente para enviar la evaluación.'
-                            )
-                        })
-                        skipped_no_email_count += 1
-                        self.env.cr.commit()
-                        continue
-
                     template = self.env.ref('sat.email_template_service_evaluation', False)
 
-                    if template:
+                    email_ok = False
+                    whatsapp_ok = False
+                    channel_errors = []
+
+                    if template and recipient:
                         try:
                             template.send_mail(
                                 evaluation.id,
@@ -1513,58 +1880,84 @@ ACCIONES URGENTES:
                                 'email_delivery_status': 'sent',
                                 'email_error_message': False
                             })
-
-                            evaluation.message_post(
-                                body=f"""<p>✅ <strong>Correo Enviado Exitosamente</strong></p>
-                                        <ul>
-                                            <li><strong>Ticket:</strong> {ticket.name}</li>
-                                            <li><strong>Destinatario:</strong> {recipient}</li>
-                                            <li><strong>Fecha de envío:</strong> {fields.Datetime.context_timestamp(evaluation, fields.Datetime.now()).strftime('%d/%m/%Y %H:%M')}</li>
-                                            <li><strong>Estado:</strong> Enviado</li>
-                                        </ul>""",
-                                message_type='notification',
-                                subtype_xmlid='mail.mt_note'
-                            )
-
-                            _logger.info(
-                                f"✅ Correo enviado exitosamente para evaluación: "
-                                f"{evaluation.name} / ticket {ticket.name}"
-                            )
-                            sent_count += 1
+                            email_ok = True
 
                         except Exception as email_error:
                             error_msg = str(email_error)
-                            _logger.error(
-                                f"❌ Error al enviar correo para {evaluation.name}: "
-                                f"{error_msg}"
+                            channel_errors.append(f'Correo: {error_msg}')
+                            _logger.exception(
+                                "Error al enviar correo para %s",
+                                evaluation.name,
                             )
 
                             evaluation.write({
                                 'email_delivery_status': 'failed',
                                 'email_error_message': error_msg
                             })
-
-                            evaluation.message_post(
-                                body=f"""<p>❌ <strong>Error al Enviar Correo</strong></p>
-                                        <ul>
-                                            <li><strong>Ticket:</strong> {ticket.name}</li>
-                                            <li><strong>Destinatario:</strong> {recipient}</li>
-                                            <li><strong>Error:</strong> {error_msg}</li>
-                                            <li><strong>Fecha:</strong> {fields.Datetime.context_timestamp(evaluation, fields.Datetime.now()).strftime('%d/%m/%Y %H:%M')}</li>
-                                        </ul>""",
-                                message_type='notification',
-                                subtype_xmlid='mail.mt_note'
-                            )
-
-                            error_count += 1
+                    elif not recipient:
+                        skipped_no_email_count += 1
+                        evaluation.write({
+                            'email_delivery_status': 'failed',
+                            'email_error_message': 'No existe correo para el destinatario.',
+                        })
                     else:
-                        _logger.warning("⚠️ No se encontró la plantilla de correo para evaluación")
-
+                        channel_errors.append('Correo: plantilla no encontrada')
                         evaluation.write({
                             'email_delivery_status': 'failed',
                             'email_error_message': 'Plantilla de correo no encontrada'
                         })
 
+                    whatsapp_result = evaluation._send_whatsapp_evaluation(
+                        reminder=False
+                    )
+                    whatsapp_ok = bool(whatsapp_result.get('success'))
+
+                    if (
+                        not whatsapp_ok
+                        and not whatsapp_result.get('skipped')
+                    ):
+                        channel_errors.append(
+                            'WhatsApp: %s' % (
+                                whatsapp_result.get('error')
+                                or 'error desconocido'
+                            )
+                        )
+
+                    if email_ok or whatsapp_ok:
+                        evaluation.write({'state': 'sent'})
+                        evaluation._set_notification_channel_from_results(
+                            email_ok,
+                            whatsapp_ok,
+                        )
+
+                        channels = []
+                        if email_ok:
+                            channels.append(f'correo ({recipient})')
+                        if whatsapp_ok:
+                            channels.append(
+                                f"WhatsApp ({whatsapp_result.get('phone')})"
+                            )
+
+                        evaluation.message_post(
+                            body=f"""<p>✅ <strong>Evaluación enviada</strong></p>
+                                    <ul>
+                                        <li><strong>Ticket:</strong> {ticket.name}</li>
+                                        <li><strong>Destinatario:</strong> {evaluation._get_recipient_name()}</li>
+                                        <li><strong>Canales:</strong> {', '.join(channels)}</li>
+                                    </ul>""",
+                            message_type='notification',
+                            subtype_xmlid='mail.mt_note',
+                        )
+                        sent_count += 1
+                    else:
+                        evaluation.message_post(
+                            body=(
+                                "<p>❌ <strong>No se pudo enviar la evaluación</strong></p>"
+                                f"<p>{'<br/>'.join(channel_errors) or 'No hay correo ni celular disponible.'}</p>"
+                            ),
+                            message_type='notification',
+                            subtype_xmlid='mail.mt_note',
+                        )
                         error_count += 1
 
                     self.env.cr.commit()
@@ -1603,15 +1996,28 @@ ACCIONES URGENTES:
             now = fields.Datetime.now()
             yesterday = now - timedelta(hours=24)
             reminder_gap = now - timedelta(hours=20)
+            reminder_window_hours = max(
+                int(
+                    self.env['ir.config_parameter'].sudo().get_param(
+                        'sat.service_evaluation_reminder_window_hours',
+                        default='24',
+                    )
+                ),
+                1,
+            )
+            reminder_window_end = now + timedelta(
+                hours=reminder_window_hours
+            )
 
             # Guard adicional: no repetir recordatorio si ya se envió uno en
             # las últimas 20 horas (evita ráfagas si el cron corre varias veces
             # al día o se ejecuta manualmente).
             domain = [
                 ('state', '=', 'sent'),
-                ('email_sent_date', '<=', yesterday),
+                ('evaluation_date', '<=', yesterday),
                 ('reminder_count', '<', 2),
                 ('expiration_date', '>', now),
+                ('expiration_date', '<=', reminder_window_end),
                 '|',
                 ('last_reminder_date', '=', False),
                 ('last_reminder_date', '<=', reminder_gap),
