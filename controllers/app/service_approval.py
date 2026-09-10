@@ -394,6 +394,125 @@ class AppServiceApprovalController(AppBaseController):
             )
             return ""
 
+    def _find_legacy_contact_by_name(
+        self,
+        company,
+        name,
+    ):
+        """
+        Localiza de forma conservadora un único contacto antiguo
+        que heredó el RUC de la empresa en lugar de conservar su DNI.
+        """
+        name = self._clean_text(name)
+
+        if not company or not name:
+            return False
+
+        candidates = request.env[
+            "res.partner"
+        ].search(
+            [
+                ("id", "!=", company.id),
+                (
+                    "commercial_partner_id",
+                    "=",
+                    company.id,
+                ),
+                ("name", "=ilike", name),
+            ],
+            order="id asc",
+            limit=2,
+        )
+
+        if len(candidates) != 1:
+            return False
+
+        contact = candidates[0]
+        contact_document = self._clean_dni(
+            contact.vat
+        )
+        company_document = self._clean_dni(
+            company.vat
+        )
+
+        inherited_company_document = bool(
+            company_document
+            and contact_document == company_document
+        )
+
+        invalid_person_document = (
+            not contact_document
+            or len(contact_document) != 8
+        )
+
+        if not (
+            inherited_company_document
+            or invalid_person_document
+        ):
+            return False
+
+        return contact
+
+    def _repair_legacy_contact(
+        self,
+        contact,
+        company,
+        values,
+    ):
+        """
+        Separa el contacto de la jerarquía comercial para evitar
+        que herede nuevamente el RUC, conserva el vínculo mediante
+        whatsapp_company_ids y guarda su DNI personal.
+        """
+        Partner = request.env["res.partner"]
+
+        if (
+            not contact
+            or not company
+            or "whatsapp_company_ids"
+            not in Partner._fields
+        ):
+            return False
+
+        contact.write(
+            {
+                "parent_id": False,
+                "company_type": "person",
+                "type": "contact",
+                "whatsapp_company_ids": [
+                    (4, company.id),
+                ],
+            }
+        )
+
+        update_values = {
+            "name": values["name"],
+            "vat": values["dni"],
+            "mobile": values["mobile"],
+            "email": values["email"],
+        }
+
+        identification_type = (
+            self._find_dni_identification_type()
+        )
+
+        if (
+            identification_type
+            and
+            "l10n_latam_identification_type_id"
+            in Partner._fields
+        ):
+            update_values[
+                "l10n_latam_identification_type_id"
+            ] = identification_type.id
+
+        contact.write(update_values)
+
+        if self._clean_dni(contact.vat) != values["dni"]:
+            return False
+
+        return contact
+
     def _contact_belongs_to_company(
         self,
         contact,
@@ -912,6 +1031,51 @@ class AppServiceApprovalController(AppBaseController):
                     dni
                 )
 
+                legacy_contact = False
+
+                if reniec_name:
+                    legacy_contact = (
+                        self._find_legacy_contact_by_name(
+                            company,
+                            reniec_name,
+                        )
+                    )
+
+                if legacy_contact:
+                    return self._json_response(
+                        {
+                            "success": True,
+                            "found": False,
+                            "dni": dni,
+                            "source": "legacy_contact",
+                            "prefill": {
+                                "name": (
+                                    legacy_contact.name
+                                    or reniec_name
+                                ),
+                                "mobile": (
+                                    legacy_contact.mobile
+                                    or legacy_contact.phone
+                                    or ""
+                                ),
+                                "email": (
+                                    legacy_contact.email
+                                    or ""
+                                ),
+                            },
+                            "client": self._many2one(
+                                company
+                            ),
+                            "message": (
+                                "Encontramos un contacto antiguo "
+                                "con el RUC heredado del cliente. "
+                                "Completa los datos faltantes; "
+                                "se corregirá automáticamente "
+                                "al guardar."
+                            ),
+                        }
+                    )
+
                 _logger.info(
                     "[APP APPROVAL] Contacto NO encontrado "
                     "service_id=%s company_id=%s dni=%s "
@@ -1165,6 +1329,51 @@ class AppServiceApprovalController(AppBaseController):
                         ),
                     }
                 )
+
+            legacy_contact = (
+                self._find_legacy_contact_by_name(
+                    company,
+                    values["name"],
+                )
+            )
+
+            if legacy_contact:
+                repaired_contact = (
+                    self._repair_legacy_contact(
+                        legacy_contact,
+                        company,
+                        values,
+                    )
+                )
+
+                if repaired_contact:
+                    ticket.message_post(
+                        body=(
+                            "Contacto antiguo corregido para "
+                            "el visto bueno desde Copier OS App:<br/>"
+                            f"<b>{repaired_contact.name}</b><br/>"
+                            f"DNI: {values['dni']}<br/>"
+                            f"Empresa vinculada: {company.name}"
+                        ),
+                        message_type="notification",
+                    )
+
+                    return self._json_response(
+                        {
+                            "success": True,
+                            "created": False,
+                            "already_exists": True,
+                            "legacy_repaired": True,
+                            "message": (
+                                "El contacto existente fue corregido "
+                                "y vinculado correctamente."
+                            ),
+                            "contact": self._serialize_contact(
+                                repaired_contact,
+                                company,
+                            ),
+                        }
+                    )
 
             partner_vals = {
                 "name": values[
@@ -1521,6 +1730,49 @@ class AppServiceApprovalController(AppBaseController):
                 contact_dni
                 and contact_dni != values["dni"]
             ):
+                company_document = self._clean_dni(
+                    company.vat
+                )
+                same_name = (
+                    self._clean_text(contact.name).casefold()
+                    == values["name"].casefold()
+                )
+                inherited_or_invalid_document = (
+                    contact_dni == company_document
+                    or len(contact_dni) != 8
+                )
+
+                if (
+                    same_name
+                    and inherited_or_invalid_document
+                ):
+                    repaired_contact = (
+                        self._repair_legacy_contact(
+                            contact,
+                            company,
+                            values,
+                        )
+                    )
+
+                    if repaired_contact:
+                        contact = repaired_contact
+                        contact_dni = self._clean_dni(
+                            contact.vat
+                        )
+
+            if (
+                contact_dni
+                and contact_dni != values["dni"]
+            ):
+                _logger.warning(
+                    "[APP APPROVAL] DNI no coincide "
+                    "service_id=%s contact_id=%s "
+                    "dni_enviado=%s documento_contacto=%s",
+                    service_id,
+                    contact.id,
+                    values["dni"],
+                    contact_dni,
+                )
                 return self._json_response(
                     {
                         "success": False,
