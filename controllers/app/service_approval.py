@@ -35,6 +35,10 @@ class AppServiceApprovalController(AppBaseController):
             ),
             (
                 "/api/app/services/<int:service_id>"
+                "/approval/contacts"
+            ),
+            (
+                "/api/app/services/<int:service_id>"
                 "/approval"
             ),
         ],
@@ -306,6 +310,73 @@ class AppServiceApprovalController(AppBaseController):
                 return contact
 
         return False
+
+    def _get_company_contacts(
+        self,
+        company,
+    ):
+        """
+        Devuelve las personas vinculadas con la empresa del ticket.
+
+        Un contacto puede estar relacionado con varias empresas. Por eso
+        se consideran tanto los contactos de la jerarquía comercial como
+        los vinculados mediante whatsapp_company_ids. La búsqueda devuelve
+        cada res.partner una sola vez y no modifica ninguna relación.
+        """
+        if not company:
+            return request.env["res.partner"]
+
+        Partner = request.env["res.partner"]
+
+        relation_domain = [
+            (
+                "commercial_partner_id",
+                "=",
+                company.id,
+            ),
+        ]
+
+        if "whatsapp_company_ids" in Partner._fields:
+            relation_domain = [
+                "|",
+                (
+                    "commercial_partner_id",
+                    "=",
+                    company.id,
+                ),
+                (
+                    "whatsapp_company_ids",
+                    "in",
+                    [company.id],
+                ),
+            ]
+
+        domain = [
+            (
+                "id",
+                "!=",
+                company.id,
+            ),
+            (
+                "is_company",
+                "=",
+                False,
+            ),
+        ]
+
+        if "active" in Partner._fields:
+            domain.append(
+                (
+                    "active",
+                    "=",
+                    True,
+                )
+            )
+
+        return Partner.search(
+            domain + relation_domain,
+            order="name asc, id asc",
+        )
 
     def _find_any_contact_by_dni(
         self,
@@ -896,6 +967,94 @@ class AppServiceApprovalController(AppBaseController):
         }
 
     # ============================================================
+    # LISTAR CONTACTOS VINCULADOS A LA EMPRESA DEL TICKET
+    # GET /api/app/services/<id>/approval/contacts
+    # ============================================================
+
+    @http.route(
+        (
+            "/api/app/services/<int:service_id>"
+            "/approval/contacts"
+        ),
+        type="http",
+        auth="public",
+        methods=["GET"],
+        csrf=False,
+        save_session=True,
+    )
+    def service_approval_contacts(
+        self,
+        service_id,
+        **kwargs,
+    ):
+        _logger.info(
+            "[APP APPROVAL] GET /approval/contacts iniciado "
+            "service_id=%s",
+            service_id,
+        )
+
+        user, error = self._require_user()
+
+        if error:
+            return error
+
+        try:
+            ticket = self._approval_get_service(
+                service_id,
+                user,
+            )
+
+            if not ticket:
+                return self._approval_service_not_found_response()
+
+            company = self._get_ticket_company(ticket)
+
+            if not company:
+                return self._json_response(
+                    {
+                        "success": False,
+                        "code": "SERVICE_WITHOUT_CLIENT",
+                        "message": (
+                            "El ticket no tiene una empresa "
+                            "cliente asociada."
+                        ),
+                    },
+                    status=400,
+                )
+
+            contacts = self._get_company_contacts(company)
+            serialized_contacts = [
+                self._serialize_contact(contact, company)
+                for contact in contacts
+            ]
+
+            _logger.info(
+                "[APP APPROVAL] Contactos vinculados encontrados "
+                "service_id=%s company_id=%s cantidad=%s",
+                service_id,
+                company.id,
+                len(serialized_contacts),
+            )
+
+            return self._json_response(
+                {
+                    "success": True,
+                    "client": self._many2one(company),
+                    "count": len(serialized_contacts),
+                    "contacts": serialized_contacts,
+                }
+            )
+
+        except Exception as exc:
+            _logger.exception(
+                "[APP APPROVAL] ERROR GET /approval/contacts "
+                "service_id=%s error=%s",
+                service_id,
+                exc,
+            )
+            return self._error_response(exc)
+
+    # ============================================================
     # BUSCAR CONTACTO POR DNI
     # GET /api/app/services/<id>/approval/contact?dni=12345678
     # ============================================================
@@ -1292,15 +1451,19 @@ class AppServiceApprovalController(AppBaseController):
                 and "whatsapp_company_ids"
                 in Partner._fields
             ):
-                existing_unlinked.write(
-                    {
-                        "mobile": values["mobile"],
-                        "email": values["email"],
-                        "whatsapp_company_ids": [
-                            (4, company.id),
-                        ],
-                    }
-                )
+                link_values = {
+                    "whatsapp_company_ids": [
+                        (4, company.id),
+                    ],
+                }
+
+                if values["mobile"]:
+                    link_values["mobile"] = values["mobile"]
+
+                if values["email"]:
+                    link_values["email"] = values["email"]
+
+                existing_unlinked.write(link_values)
 
                 ticket.message_post(
                     body=(
@@ -1831,6 +1994,22 @@ class AppServiceApprovalController(AppBaseController):
                 )
                 filename = (
                     f"firma_{ticket.name or ticket.id}.{extension}"
+                )
+
+            if data.get("update_contact") is True:
+                contact.write(
+                    {
+                        "name": values["name"],
+                        "mobile": values["mobile"] or False,
+                        "email": values["email"] or False,
+                    }
+                )
+
+                _logger.info(
+                    "[APP APPROVAL] Datos del contacto actualizados "
+                    "service_id=%s contact_id=%s",
+                    service_id,
+                    contact.id,
                 )
 
             _logger.info(
