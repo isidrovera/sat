@@ -235,8 +235,13 @@ class AppServiceApprovalController(AppBaseController):
         dni,
     ):
         """
-        Busca primero solamente entre los contactos hijos
-        de la empresa del ticket.
+        Busca el DNI dentro del alcance autorizado de la empresa
+        del ticket.
+
+        Se consideran válidos:
+        1) El propio registro de la empresa.
+        2) Cualquier contacto de su jerarquía comercial.
+        3) Un contacto vinculado mediante whatsapp_company_ids.
 
         Se normaliza el VAT en Python para evitar perder
         coincidencias por espacios o signos.
@@ -252,20 +257,42 @@ class AppServiceApprovalController(AppBaseController):
             "res.partner"
         ]
 
+        relation_domain = [
+            "|",
+            (
+                "id",
+                "=",
+                company.id,
+            ),
+            (
+                "commercial_partner_id",
+                "=",
+                company.id,
+            ),
+        ]
+
+        if (
+            "whatsapp_company_ids"
+            in Partner._fields
+        ):
+            relation_domain = [
+                "|",
+                (
+                    "whatsapp_company_ids",
+                    "in",
+                    [company.id],
+                ),
+            ] + relation_domain
+
         candidates = Partner.search(
             [
-                (
-                    "parent_id",
-                    "=",
-                    company.id,
-                ),
                 (
                     "vat",
                     "!=",
                     False,
                 ),
-            ],
-            limit=500,
+            ] + relation_domain,
+            order="id asc",
         )
 
         for contact in candidates:
@@ -275,6 +302,43 @@ class AppServiceApprovalController(AppBaseController):
 
             if contact_dni == dni:
                 return contact
+
+        return False
+
+    def _contact_belongs_to_company(
+        self,
+        contact,
+        company,
+    ):
+        """
+        Aplica el mismo alcance usado para mostrar los equipos
+        a clientes vinculados por WhatsApp.
+        """
+        if not contact or not company:
+            return False
+
+        if contact.id == company.id:
+            return True
+
+        commercial = getattr(
+            contact,
+            "commercial_partner_id",
+            False,
+        )
+
+        if (
+            commercial
+            and commercial.id == company.id
+        ):
+            return True
+
+        if (
+            "whatsapp_company_ids"
+            in contact._fields
+            and company.id
+            in contact.whatsapp_company_ids.ids
+        ):
+            return True
 
         return False
 
@@ -401,13 +465,20 @@ class AppServiceApprovalController(AppBaseController):
         if not company or not contact_id:
             return False
 
-        return request.env["res.partner"].search(
+        contact = request.env["res.partner"].search(
             [
                 ("id", "=", contact_id),
-                ("parent_id", "=", company.id),
             ],
             limit=1,
         )
+
+        if not self._contact_belongs_to_company(
+            contact,
+            company,
+        ):
+            return False
+
+        return contact
 
     def _safe_signature_base64(
         self,
@@ -662,8 +733,9 @@ class AppServiceApprovalController(AppBaseController):
                             company
                         ),
                         "message": (
-                            "El DNI no está registrado "
-                            "como contacto de este cliente."
+                            "El DNI no está asociado a este cliente "
+                            "como empresa, contacto de su estructura "
+                            "o contacto vinculado por WhatsApp."
                         ),
                     }
                 )
