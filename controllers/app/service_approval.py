@@ -552,6 +552,59 @@ class AppServiceApprovalController(AppBaseController):
 
         return missing_fields
 
+    def _approval_signature_text(self, ticket):
+        signature = (
+            ticket.conformidad_firma
+            if (
+                "conformidad_firma" in ticket._fields
+                and ticket.conformidad_firma
+            )
+            else False
+        )
+
+        if not signature:
+            return ""
+
+        if isinstance(signature, bytes):
+            try:
+                return signature.decode("ascii")
+            except Exception:
+                return ""
+
+        return str(signature)
+
+    def _approval_datetime_peru(self, ticket):
+        signed_at = (
+            ticket.conformidad_fecha
+            if (
+                "conformidad_fecha" in ticket._fields
+                and ticket.conformidad_fecha
+            )
+            else False
+        )
+
+        if not signed_at:
+            return ""
+
+        try:
+            peru_ticket = ticket.with_context(
+                tz="America/Lima"
+            )
+            peru_datetime = fields.Datetime.context_timestamp(
+                peru_ticket,
+                fields.Datetime.to_datetime(signed_at),
+            )
+            return peru_datetime.strftime(
+                "%d/%m/%Y %H:%M"
+            )
+        except Exception:
+            _logger.exception(
+                "[APP APPROVAL] No se pudo convertir la fecha "
+                "del visto bueno a America/Lima ticket_id=%s",
+                ticket.id,
+            )
+            return self._clean_text(signed_at)
+
     def _serialize_approval(self, ticket):
         _logger.info(
             "[APP APPROVAL] Serializando conformidad ticket_id=%s",
@@ -607,11 +660,10 @@ class AppServiceApprovalController(AppBaseController):
                 if "conformidad_correo" in ticket._fields
                 else False
             ),
-            "signed_at": (
-                ticket.conformidad_fecha
-                if "conformidad_fecha" in ticket._fields
-                else False
+            "signed_at": self._approval_datetime_peru(
+                ticket
             ),
+            "signed_at_timezone": "America/Lima",
             "technician": (
                 self._many2one(technician)
                 if technician
@@ -620,6 +672,17 @@ class AppServiceApprovalController(AppBaseController):
             "has_signature": bool(
                 ticket.conformidad_firma
                 if "conformidad_firma" in ticket._fields
+                else False
+            ),
+            "signature": self._approval_signature_text(
+                ticket
+            ),
+            "signature_filename": (
+                ticket.conformidad_firma_filename
+                if (
+                    "conformidad_firma_filename"
+                    in ticket._fields
+                )
                 else False
             ),
         }
@@ -1385,4 +1448,3 @@ class AppServiceApprovalController(AppBaseController):
                 exc,
             )
             return self._error_response(exc)
-
