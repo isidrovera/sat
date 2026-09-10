@@ -1170,7 +1170,6 @@ class AppServiceApprovalController(AppBaseController):
                 "name": values[
                     "name"
                 ],
-                "parent_id": company.id,
                 "company_type": "person",
                 "type": "contact",
                 "vat": values[
@@ -1193,6 +1192,12 @@ class AppServiceApprovalController(AppBaseController):
                 ] = [
                     (4, company.id),
                 ]
+            else:
+                # Compatibilidad para instalaciones que aún no
+                # tengan el vínculo múltiple de WhatsApp.
+                partner_vals[
+                    "parent_id"
+                ] = company.id
 
             identification_type = (
                 self
