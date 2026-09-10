@@ -992,10 +992,22 @@ ACCIONES URGENTES:
 
     def _get_recipient_mobile(self):
         """
-        Prioriza el celular de quien dio el visto bueno. Para tickets antiguos
-        conserva como respaldo el celular registrado en el ticket o cliente.
+        Devuelve exclusivamente el celular de quien dio el visto bueno.
+
+        WhatsApp no usa el celular general del ticket, del equipo ni del
+        cliente. Si no existe una conformidad registrada, el flujo histórico
+        continúa únicamente por correo.
         """
         self.ensure_one()
+
+        ticket = self.ticket_id or self.ticket_ids[:1]
+
+        if (
+            not ticket
+            or 'conformidad_registrada' not in ticket._fields
+            or not ticket.conformidad_registrada
+        ):
+            return False
 
         candidates = []
 
@@ -1008,18 +1020,18 @@ ACCIONES URGENTES:
                 self.evaluator_contact_id.phone,
             ])
 
-        ticket = self.ticket_id or self.ticket_ids[:1]
+        # Compatibilidad con evaluaciones creadas antes de guardar el snapshot:
+        # solo se leen datos del propio visto bueno ya validado arriba.
+        if 'conformidad_celular' in ticket._fields:
+            candidates.append(ticket.conformidad_celular)
 
-        if ticket:
-            if 'celular_id_r' in ticket._fields:
-                candidates.append(ticket.celular_id_r)
-            if 'reporter_phone' in ticket._fields:
-                candidates.append(ticket.reporter_phone)
-
-        if self.partner_id:
+        if (
+            'conformidad_contacto_id' in ticket._fields
+            and ticket.conformidad_contacto_id
+        ):
             candidates.extend([
-                self.partner_id.mobile,
-                self.partner_id.phone,
+                ticket.conformidad_contacto_id.mobile,
+                ticket.conformidad_contacto_id.phone,
             ])
 
         for candidate in candidates:
@@ -1125,7 +1137,10 @@ ACCIONES URGENTES:
             return {
                 'success': False,
                 'skipped': True,
-                'error': 'No existe un celular válido para el destinatario',
+                'error': (
+                    'WhatsApp omitido: el ticket no tiene visto bueno o la '
+                    'persona que dio la conformidad no tiene un celular válido'
+                ),
             }
 
         result = self._send_whatsapp_message(
