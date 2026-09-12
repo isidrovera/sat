@@ -7,6 +7,7 @@ from datetime import datetime, date, timedelta, time
 import calendar
 import babel
 import base64
+import math
 import pytz
 import traceback
 
@@ -613,7 +614,11 @@ class EvaluacionPersonal(models.Model):
         string='Evaluaciones mínimas requeridas',
         compute='_compute_calidad_bono',
         store=True,
-        help='Cantidad mínima de encuestas requeridas según servicios realizados.'
+        help=(
+            'Para técnicos de servicios y mixtos se requiere el 30% de los '
+            'servicios finalizados, redondeado hacia arriba. No aplica a '
+            'técnicos exclusivos de taller.'
+        )
     )
 
     evaluaciones_servicio_faltantes = fields.Integer(
@@ -1015,9 +1020,12 @@ class EvaluacionPersonal(models.Model):
         Calcula la calidad usando reclamos escalonados y encuestas respondidas.
 
         Cobertura de encuestas:
-        - Se exige un ticket cubierto por cada ticket finalizado, hasta 5.
-        - Una evaluación puede cubrir varios tickets mediante ticket_ids.
-        - Una evaluación roja sí cubre el ticket, pero penaliza su puntaje.
+        - Solo aplica a técnicos de servicios/alquiler y técnicos mixtos.
+        - Se exige el 30% de los servicios finalizados, redondeado hacia arriba.
+        - Cada evaluación nueva corresponde a un ticket/servicio de una máquina.
+        - Taller no requiere evaluaciones, pero sus reclamos sí afectan calidad.
+        - Toda evaluación menor a 100% reduce el promedio del cliente.
+        - Una evaluación menor a 70% además aplica una penalidad crítica.
         """
         for record in self:
             record.incidencia_ids = [(5, 0, 0)]
@@ -1038,28 +1046,31 @@ class EvaluacionPersonal(models.Model):
             inicio_mes, fin_mes = record._get_rango_mes_bono()
             reclamos = record._get_reclamos_que_afectan(inicio_mes, fin_mes)
             tickets_periodo = record._get_tickets_bono(inicio_mes, fin_mes)
-            evaluaciones = record._get_evaluaciones_servicio(inicio_mes, fin_mes)
+            aplica_evaluaciones = record.tipo_operativo in ('servicios', 'mixto')
+            evaluaciones = (
+                record._get_evaluaciones_servicio(inicio_mes, fin_mes)
+                if aplica_evaluaciones
+                else self.env['client.service.evaluation'].browse()
+            )
 
             record.incidencia_ids = [(6, 0, reclamos.ids)]
             record.reclamos_procedentes_count = len(reclamos)
             record.evaluacion_servicio_ids = [(6, 0, evaluaciones.ids)]
             record.evaluaciones_servicio_count = len(evaluaciones)
 
-            tickets_validos_ids = set(tickets_periodo.ids)
-            tickets_cubiertos_ids = set()
-            for evaluacion in evaluaciones:
-                tickets_cubiertos_ids.update(
-                    ticket.id
-                    for ticket in evaluacion.ticket_ids
-                    if ticket.id in tickets_validos_ids
-                )
-
-            tickets_servicio = len(tickets_periodo)
-            minimo_evaluaciones = min(tickets_servicio, 5)
-            cobertura_respondida = min(len(tickets_cubiertos_ids), 5)
+            # El cron de encuestas crea una evaluación por cada ticket finalizado.
+            # Para servicios y mixtos se exige el 30% del total mensual. Se usa
+            # ceil para que 1, 2 o 3 servicios requieran al menos una respuesta.
+            tickets_servicio = len(tickets_periodo) if aplica_evaluaciones else 0
+            minimo_evaluaciones = (
+                math.ceil(tickets_servicio * 0.30)
+                if tickets_servicio > 0
+                else 0
+            )
+            evaluaciones_respondidas = len(evaluaciones)
             evaluaciones_faltantes = max(
                 0,
-                minimo_evaluaciones - cobertura_respondida
+                minimo_evaluaciones - evaluaciones_respondidas
             )
 
             record.evaluaciones_servicio_minimas = minimo_evaluaciones
@@ -1102,9 +1113,10 @@ class EvaluacionPersonal(models.Model):
                 100.0 - penalidad_reclamos - penalidad_evaluaciones
             )
 
-            # El promedio del cliente solo interviene cuando existe una
-            # evaluación respondida. Si no hubo tickets, encuestas no aplican.
-            if tickets_servicio > 0 and evaluaciones:
+            # Cualquier puntaje inferior a 100% reduce el promedio y, por tanto,
+            # la calidad. Las evaluaciones críticas (<70%) ya redujeron además
+            # la calidad interna mediante penalidad_rojas. Taller queda excluido.
+            if aplica_evaluaciones and tickets_servicio > 0 and evaluaciones:
                 calidad = (calidad_interna * 0.60) + (promedio_servicio * 0.40)
             else:
                 calidad = calidad_interna
@@ -1180,6 +1192,7 @@ class EvaluacionPersonal(models.Model):
             resultado = record.puntaje_total_bono or 0.0
 
             requiere_evaluaciones = (
+                record.tipo_operativo in ('servicios', 'mixto') and
                 (record.tickets_validos_bono or 0) > 0 and
                 (record.evaluaciones_servicio_minimas or 0) > 0
             )
@@ -1242,6 +1255,21 @@ class EvaluacionPersonal(models.Model):
                 penalidad_reclamos = 30
             else:
                 penalidad_reclamos = 50
+
+            if record.tipo_operativo in ('servicios', 'mixto'):
+                detalle_evaluaciones = [
+                    '- Servicios finalizados considerados: %s.' % record.tickets_validos_bono,
+                    '- Evaluaciones respondidas requeridas: %s (30%% de los servicios, redondeado hacia arriba).' % record.evaluaciones_servicio_minimas,
+                    '- Evaluaciones respondidas registradas: %s.' % record.evaluaciones_servicio_count,
+                    '- Evaluaciones aún faltantes: %s.' % record.evaluaciones_servicio_faltantes,
+                    '- Evaluaciones críticas menores a 70%%: %s.' % record.evaluaciones_criticas_count,
+                    '- Promedio de evaluaciones respondidas: %.2f%%. Todo resultado menor a 100%% reduce la calidad.' % record.promedio_evaluacion_servicio,
+                ]
+            else:
+                detalle_evaluaciones = [
+                    '- Evaluaciones de servicio: no aplican para el técnico exclusivo de taller.',
+                    '- Los reclamos procedentes sí afectan su puntaje de calidad.',
+                ]
 
             resumen = [
                 'RESUMEN PARA GERENCIA',
@@ -1311,11 +1339,7 @@ class EvaluacionPersonal(models.Model):
                     reclamos,
                     penalidad_reclamos,
                 ),
-                '- Tickets que requieren respuesta de cliente: %s (máximo 5).' % record.evaluaciones_servicio_minimas,
-                '- Evaluaciones respondidas registradas: %s.' % record.evaluaciones_servicio_count,
-                '- Tickets aún sin evaluación respondida: %s.' % record.evaluaciones_servicio_faltantes,
-                '- Evaluaciones críticas menores a 70%%: %s.' % record.evaluaciones_criticas_count,
-                '- Promedio de evaluaciones respondidas: %.2f%%.' % record.promedio_evaluacion_servicio,
+            ] + detalle_evaluaciones + [
                 '- Puntaje final de calidad: %.2f%%. Aporta %.2f puntos de 25.' % (
                     record.puntaje_calidad_real,
                     record.puntaje_calidad_bono,
