@@ -1279,6 +1279,16 @@ class TicketAlquiler(models.Model):
     def action_finalizar(self):
         _logger.info("=== Iniciando action_finalizar para tickets %s ===", self.ids)
         tickets = self.sudo()
+
+        # ---- VALIDAR VISTO BUENO ANTES DE INICIAR EL CIERRE ----
+        for ticket in tickets:
+            if not ticket.conformidad_registrada:
+                raise ValidationError(
+                    "No se puede finalizar el servicio %s.\n\n"
+                    "Debe registrar primero el visto bueno del cliente "
+                    "con sus datos completos y su firma de conformidad."
+                    % ticket.display_name
+                )
     
         for ticket in tickets:
             _logger.info(
