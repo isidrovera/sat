@@ -1713,12 +1713,39 @@ class SatSatReservaComercial(models.Model):
 
         return cursor
 
+    def _reserva_tiene_separacion_liberada_anterior(self):
+        self.ensure_one()
+        Historial = self.env['sat.reserva.historial']
+        base = [('maquina_id', '=', self.id)]
+        separacion = Historial.search(
+            base + [('tipo_evento', 'in', ('asignacion_asesora', 'separacion'))],
+            limit=1,
+        )
+        liberacion = Historial.search(
+            base + [('tipo_evento', 'in', ('liberacion_manual', 'liberacion_automatica'))],
+            limit=1,
+        )
+        return bool(separacion and liberacion)
+
     def _reserva_calcular_plazo(self, cliente=False):
         self.ensure_one()
 
         base = self._reserva_obtener_fecha_base()
         rule = self._reserva_buscar_regla(cliente=cliente, fecha=base)
         days = rule.dias_separacion if rule else 6
+
+        # Solo se reduce el plazo general de separaciones posteriores.
+        # Una regla especial de cliente/importación o gerencia mantiene su plazo.
+        if (
+            (not rule or rule.tipo_aplicacion == 'general')
+            and days == 6
+            and (
+                self.reserva_reparacion_finalizada_antes
+                or self.estado_ventas_id == 'finalizado'
+            )
+            and self._reserva_tiene_separacion_liberada_anterior()
+        ):
+            days = 3
 
         return {
             'fecha_base': base,

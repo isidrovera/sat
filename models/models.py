@@ -44,6 +44,8 @@ class SatSat(models.Model):
         al campo contometro_proveedor (valor inicial del proveedor).
         """
         # Si viene contómetro pero no contometro_proveedor, copiar automáticamente
+        if vals.get('estado_ventas_id') == 'finalizado':
+            vals['reserva_reparacion_finalizada_antes'] = True
         if vals.get('contometro') and not vals.get('contometro_proveedor'):
             vals['contometro_proveedor'] = vals['contometro']
             _logger.info(
@@ -235,6 +237,12 @@ class SatSat(models.Model):
                                         string='Estado de revisión',
                                         default='sin_revisar', tracking=True
                                         )
+    reserva_reparacion_finalizada_antes = fields.Boolean(
+        string='Tuvo reparación finalizada',
+        default=False,
+        copy=False,
+        readonly=True,
+    )
     #_sql_constraints = [("unique_serie_id", "unique (serie_id)",
                         # "El numero de serie que intenta agregar ya existe")]
 
@@ -918,6 +926,10 @@ class SatSat(models.Model):
           para que NO mande correo de disponibilidad.
         - No requiere modificar otros archivos.
         """
+
+        vals = dict(vals or {})
+        if vals.get('estado_ventas_id') == 'finalizado':
+            vals['reserva_reparacion_finalizada_antes'] = True
 
         # ---------------------------
         # 0) ANTI-RECURSIÓN / ANTI-SPAM
