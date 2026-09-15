@@ -349,4 +349,3 @@ access_sat_machine_movement_autorizado,sat.machine.movement autorizado,model_sat
 access_sat_reserva_liberacion_forzada_tecnica,sat.reserva.liberacion.forzada tecnica,model_sat_reserva_liberacion_forzada,sat.sat_tecnica_group_user,1,0,0,0
 access_sat_reserva_liberacion_forzada_autorizado,sat.reserva.liberacion.forzada autorizado,model_sat_reserva_liberacion_forzada,sat.group_reserva_comercial_autorizado,1,1,1,1
 access_sat_reserva_liberacion_forzada_admin,sat.reserva.liberacion.forzada admin,model_sat_reserva_liberacion_forzada,base.group_system,1,1,1,1
-access_sat_sms_prueba_wizard_admin,sat.sms.prueba.wizard admin,model_sat_sms_prueba_wizard,base.group_system,1,1,1,1
