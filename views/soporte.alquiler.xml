@@ -23,6 +23,32 @@
                         <button string="Proceso" name="action_proceso" type="object" class="oe_highlight" groups="base.group_system"/>
                         <button string="Nuevo" name="action_nuevo" type="object" class="oe_highlight" groups="base.group_system" options="{'no_required_fields_validation': true}"/>
                         <button name="action_enviar_informe_administracion" type="object" string="📤 Enviar Informe a Administración" class="btn-primary" confirm="¿Enviar el informe técnico al área de administración para decisión?"/>
+                        <button name="action_verificar_configuracion_sms"
+        string="Revisar SMS"
+        type="object"
+        icon="fa-cog"
+        groups="base.group_system"/>
+
+<button name="action_probar_sms"
+        string="SMS al técnico"
+        type="object"
+        icon="fa-comment"
+        groups="base.group_system"
+        confirm="Se enviará un SMS real al técnico responsable. ¿Continuar?"/>
+
+<button name="action_probar_sms_conformidad"
+        string="SMS al visto bueno"
+        type="object"
+        icon="fa-check-circle"
+        groups="base.group_system"
+        confirm="Se enviará un SMS real a la persona que dio el visto bueno. ¿Continuar?"/>
+
+<button name="action_probar_sms_usuario"
+        string="SMS a usuario"
+        type="object"
+        icon="fa-user"
+        groups="base.group_system"
+        confirm="Se enviará un SMS real al usuario seleccionado para pruebas. ¿Continuar?"/>
 
 
                         <button name="action_crear_pedido_manual" type="object" string="Crear Pedido Manual" class="btn-primary"/>
@@ -163,6 +189,7 @@
                             </group>
                         </group>
                         <notebook class="sat_ticket_notebook">
+                           
                             <page string="Problema reportado" class="sat_ticket_page">
                                 <group>
                                     <group>
@@ -173,6 +200,17 @@
                                         <field name="reporter_phone" widget="phone" readonly="estado == 'proceso' or estado == 'finalizado'"/>
                                         <field name="problem_photo" widget="image" readonly="estado == 'proceso' or estado == 'finalizado'"/>
                                     </group>
+                                </group>
+                                 <group string="Pruebas SMS"
+                                    groups="base.group_system">
+
+                                    <field name="sms_prueba_usuario_id"
+                                        options="{'no_create': True}"
+                                        placeholder="Seleccione un usuario para la prueba"/>
+
+                                    <field name="sms_prueba_mensaje"
+                                        placeholder="Opcional: escriba el texto del SMS. Si está vacío, se enviará un mensaje de prueba con el número del ticket."/>
+
                                 </group>
                             </page>
                             <page string="Informe técnico" class="sat_ticket_page">
