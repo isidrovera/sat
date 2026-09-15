@@ -178,6 +178,86 @@
                             <page string="Informe técnico" class="sat_ticket_page">
                                 <field name="informe_id" widget="html"/>
                             </page>
+                            <page string="Visto bueno"
+      name="conformidad_servicio"
+      class="sat_ticket_page">
+
+    <field name="conformidad_registrada" invisible="1"/>
+
+    <div class="alert alert-success"
+         role="alert"
+         invisible="not conformidad_registrada">
+        <i class="fa fa-check-circle me-2"/>
+        <strong>Visto bueno registrado.</strong>
+        El servicio cuenta con los datos de conformidad y la firma.
+    </div>
+
+    <div class="alert alert-warning"
+         role="alert"
+         invisible="conformidad_registrada">
+        <i class="fa fa-info-circle me-2"/>
+        <strong>Visto bueno pendiente o incompleto.</strong>
+        Aún no se han registrado todos los datos requeridos.
+    </div>
+
+    <group>
+        <group string="Persona que dio el visto bueno">
+            <field name="conformidad_contacto_id"
+                   string="Contacto"
+                   readonly="1"
+                   options="{'no_create': True, 'no_create_edit': True}"/>
+
+            <field name="conformidad_nombre"
+                   string="Nombre registrado"
+                   readonly="1"/>
+
+            <field name="conformidad_dni"
+                   string="DNI"
+                   readonly="1"/>
+
+            <field name="conformidad_celular"
+                   string="Celular"
+                   widget="phone"
+                   readonly="1"/>
+
+            <field name="conformidad_correo"
+                   string="Correo"
+                   widget="email"
+                   readonly="1"/>
+        </group>
+
+        <group string="Registro de conformidad">
+            <field name="conformidad_fecha"
+                   string="Fecha y hora"
+                   readonly="1"/>
+
+            <field name="conformidad_tecnico_id"
+                   string="Técnico que obtuvo el visto bueno"
+                   readonly="1"
+                   options="{'no_create': True, 'no_create_edit': True}"/>
+        </group>
+    </group>
+
+    <group string="Firma de conformidad" col="1">
+        <field name="conformidad_firma_filename" invisible="1"/>
+
+        <div class="text-muted py-3"
+             invisible="conformidad_firma">
+            <i class="fa fa-pencil-square-o me-2"/>
+            No hay una firma registrada para este servicio.
+        </div>
+
+        <field name="conformidad_firma"
+               widget="image"
+               filename="conformidad_firma_filename"
+               readonly="1"
+               nolabel="1"
+               invisible="not conformidad_firma"
+               options="{'size': [420, 200]}"
+               class="border rounded p-3 bg-white"/>
+    </group>
+
+</page>
 <page string="Componentes" name="componentes_dinamicos" class="sat_ticket_page">
     <div class="sat_ticket_eval_intro"><i class="fa fa-cogs"/><div><strong>Evaluación de componentes</strong><span>Registre el estado y las observaciones de cada componente revisado.</span></div></div>
     <field name="ticket_componente_eval_ids" readonly="estado == 'finalizado'" context="{'default_ticket_id': id}" mode="kanban">
