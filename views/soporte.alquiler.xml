@@ -399,9 +399,17 @@
                                         <field name="fecha_finalizacion"/>
                                     </group>
                                     <group string="Métricas de atención">
-                                        <field name="tiempo_traslado_minutos" widget="float_time" string="Tiempo traslado"/>
-                                        <field name="tiempo_en_sitio_minutos" widget="float_time" string="Tiempo en sitio"/>
-                                        <field name="tiempo_total_atencion_minutos" widget="float_time" string="Tiempo total"/>
+                                        <field name="tiempo_traslado_minutos"
+       string="Tiempo traslado (min)"
+       readonly="1"/>
+
+<field name="tiempo_en_sitio_minutos"
+       string="Tiempo en sitio (min)"
+       readonly="1"/>
+
+<field name="tiempo_total_atencion_minutos"
+       string="Tiempo total (min)"
+       readonly="1"/>
                                         <field name="diferencia_puntualidad_minutos" string="Puntualidad (min)"/>
                                         <field name="es_puntual" widget="boolean_toggle"/>
                                     </group>

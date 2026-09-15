@@ -1,31 +1,23 @@
 # -*- coding: utf-8 -*-
 """
-Tracking GPS de técnicos en campo — v7
-========================================
-Archivo: models/ticket_tracking.py
-
-Cambios v7:
-  • Nueva lógica de salida de geocerca — antes de registrar salida
-    se evalúan dos condiciones:
-      1. Tiempo en sitio >= 60 min Y distancia >= 2 km → finalizado automático
-      2. Cualquier otro caso → crear token, enviar link WhatsApp al técnico
-         preguntando el motivo del retiro
-  • Si técnico regresa a geocerca con token pendiente → cancelar token
-  • Todo lo demás de v6 permanece intacto
+Tracking GPS de técnicos en campo.
+Corrección: fechas por transición real de estado, diagnóstico persistente,
+fecha local de Lima y salida GPS separada del cierre del servicio.
+La salida física no reemplaza las validaciones de action_finalizar.
 """
 import math
 import logging
 import requests
-from datetime import date, timedelta
+from datetime import timedelta
 
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError
 
 _logger = logging.getLogger(__name__)
 
-# Umbrales para asumir finalización automática sin preguntar
+# Umbrales para confirmar salida física sin preguntar
 UMBRAL_MINUTOS_SITIO = 60   # minutos mínimos en sitio
-UMBRAL_METROS_SALIDA = 2000  # 2 km de distancia para asumir cierre
+UMBRAL_METROS_SALIDA = 2000  # 2 km de distancia para confirmar salida
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -301,16 +293,39 @@ class TicketAlquilerTracking(models.Model):
         return records
 
     def write(self, vals):
-        tecnico_anterior = {rec.id: rec.responsable.id for rec in self}
-        resultado = super().write(vals)
+        # Completar solo la fecha del estado que realmente se está registrando.
+        # No reconstruir horarios anteriores con la hora actual.
         ahora = fields.Datetime.now()
+        campos_estado = {
+            'en_ruta': 'fecha_en_ruta',
+            'en_sitio': 'fecha_llegada',
+            'en_revision': 'fecha_inicio_revision',
+            'finalizado': 'fecha_finalizacion',
+        }
+        resultado = True
         for rec in self:
+            anterior = rec.estado
+            tecnico_anterior = rec.responsable.id
+            valores = dict(vals)
+            nuevo_estado = valores.get('estado')
+            cambio_estado = 'estado' in valores and nuevo_estado != anterior
+            campo = campos_estado.get(nuevo_estado) if cambio_estado else None
+            if campo and not valores.get(campo) and not rec[campo]:
+                valores[campo] = ahora
+            if (valores.get('responsable') and not rec.fecha_asignacion
+                    and not valores.get('fecha_asignacion')):
+                valores['fecha_asignacion'] = ahora
+            resultado = super(TicketAlquilerTracking, rec).write(valores) and resultado
+            if cambio_estado:
+                rec._registrar_evento(
+                    f"Estado: {anterior} → {rec.estado}. "
+                    f"Registrado por: {self.env.user.name}"
+                )
             if 'responsable' in vals:
-                tecnico_cambio = tecnico_anterior[rec.id] != rec.responsable.id
-                if rec.responsable and not rec.fecha_asignacion:
-                    rec.sudo().write({'fecha_asignacion': ahora})
+                tecnico_cambio = tecnico_anterior != rec.responsable.id
+                if tecnico_cambio:
                     rec._registrar_evento(
-                        f"Ticket asignado a {rec.responsable.name}"
+                        f"Responsable actualizado: {rec.responsable.name or 'Sin asignar'}"
                     )
                 if tecnico_cambio and rec.responsable and rec.equipo_tiene_coordenadas:
                     if rec.traccar_geofence_id:
@@ -325,14 +340,19 @@ class TicketAlquilerTracking(models.Model):
     def _geocerca_crear(self):
         self.ensure_one()
         if not self.equipo_latitud or not self.equipo_longitud:
+            self._registrar_evento('Geocerca pendiente: faltan coordenadas del equipo')
             return False
         if not self.responsable:
+            self._registrar_evento('Geocerca pendiente: falta asignar responsable')
             return False
         vinculo = self.env['tecnico.dispositivo.gps'].sudo().search([
             ('user_id', '=', self.responsable.id),
             ('activo', '=', True),
         ], limit=1)
         if not vinculo:
+            self._registrar_evento(
+                f"Geocerca pendiente: {self.responsable.name} no tiene dispositivo GPS activo vinculado"
+            )
             _logger.warning("[GEO-AUTO] Tecnico %s sin dispositivo GPS", self.responsable.name)
             return False
         cliente = self.partner_id.name or 'Cliente'
@@ -470,6 +490,12 @@ class TicketAlquilerTracking(models.Model):
         nueva_linea = f"[{ts}] {mensaje}"
         self.tracking_log = f"{log_actual}\n{nueva_linea}" if log_actual else nueva_linea
 
+    def _registrar_impedimento_tracking(self, mensaje):
+        for ticket in self:
+            ultima = (ticket.tracking_log or '').splitlines()
+            if not ultima or not ultima[-1].endswith(mensaje):
+                ticket._registrar_evento(mensaje)
+
     def _registrar_evento(self, mensaje):
         self._append_tracking_log(mensaje)
         self._chatter_tracking(mensaje)
@@ -498,7 +524,7 @@ class TicketAlquilerTracking(models.Model):
     #
     #  Reglas:
     #   1. Ya tiene token pendiente → no hacer nada, ya se preguntó
-    #   2. Tiempo >= 60 min Y distancia >= 2 km → finalizar directo
+    #   2. Tiempo >= 60 min Y distancia >= 2 km → registrar salida física
     #   3. Cualquier otro caso → crear token y enviar link al técnico
     # ═══════════════════════════════════════════════════════════════
 
@@ -508,7 +534,7 @@ class TicketAlquilerTracking(models.Model):
 
         Retorna:
           'ya_preguntado'  → ya hay un token pendiente, no hacer nada
-          'finalizado'     → se finalizó automáticamente (60min + 2km)
+          'salida_registrada' → salida física confirmada (60min + 2km)
           'token_enviado'  → se creó token y se envió link al técnico
           'sin_datos'      → no había fecha de llegada, se registra salida directo
         """
@@ -553,21 +579,21 @@ class TicketAlquilerTracking(models.Model):
             f"{distancia_metros:.0f}" if distancia_metros is not None else "N/A",
         )
 
-        # ── Regla: >= 60 min en sitio Y >= 2 km → finalizar directo ──
+        # ── Regla: >= 60 min en sitio Y >= 2 km → registrar salida física ──
         if (minutos_en_sitio >= UMBRAL_MINUTOS_SITIO
                 and distancia_metros is not None
                 and distancia_metros >= UMBRAL_METROS_SALIDA):
             _logger.info(
-                "[RETIRO] Ticket %s → finalizado automático "
+                "[RETIRO] Ticket %s → salida física confirmada "
                 "(%.1fmin en sitio, %.0fm de distancia)",
                 self.name, minutos_en_sitio, distancia_metros,
             )
             self._registrar_evento(
                 f"Salida detectada: {minutos_en_sitio:.0f}min en sitio, "
-                f"{distancia_metros:.0f}m → asumido finalizado"
+                f"{distancia_metros:.0f}m → salida física confirmada; cierre del servicio pendiente"
             )
-            self.sudo()._registrar_finalizacion_tracking()
-            return 'finalizado'
+            self.sudo().action_registrar_salida_sitio(notificar=True)
+            return 'salida_registrada'
 
         # ── Todos los demás casos → crear token y preguntar ──
         token_rec = self.env['ticket.retiro.token'].sudo().crear_token_retiro(
@@ -635,8 +661,6 @@ class TicketAlquilerTracking(models.Model):
                     "Estado actual: %s"
                 ) % ticket.estado)
             vals = {'estado': 'en_ruta'}
-            if not ticket.fecha_en_ruta:
-                vals['fecha_en_ruta'] = ahora
             ticket.write(vals)
             ticket._registrar_evento(
                 f"Tecnico {ticket.responsable.name or 'N/A'} en ruta"
@@ -658,8 +682,6 @@ class TicketAlquilerTracking(models.Model):
             vals = {'estado': 'en_sitio'}
             if not ticket.fecha_llegada:
                 vals['fecha_llegada'] = ahora
-            if not ticket.fecha_en_ruta:
-                vals['fecha_en_ruta'] = ahora
             ticket.write(vals)
             ticket._registrar_evento(
                 f"Tecnico {ticket.responsable.name or 'N/A'} llego al sitio"
@@ -717,15 +739,12 @@ class TicketAlquilerTracking(models.Model):
         return super().action_proceso()
 
     def _registrar_finalizacion_tracking(self):
+        self = self.filtered(lambda ticket: ticket.estado == 'finalizado')
         ahora = fields.Datetime.now()
         for ticket in self:
             vals = {}
             if not ticket.fecha_finalizacion:
                 vals['fecha_finalizacion'] = ahora
-            if not ticket.fecha_salida_sitio:
-                vals['fecha_salida_sitio'] = ahora
-            if not ticket.fecha_inicio_revision and ticket.fecha_llegada:
-                vals['fecha_inicio_revision'] = ticket.fecha_llegada
             if vals:
                 ticket.write(vals)
             ticket._registrar_evento("Ticket finalizado")
@@ -769,10 +788,12 @@ class TicketAlquilerTracking(models.Model):
             ('activo', '=', True),
         ])
         if not vinculos:
+            tickets._registrar_impedimento_tracking('GPS pendiente: ningún responsable tiene dispositivo activo vinculado')
             return
 
         posiciones = self.env['traccar.api.service'].get_all_positions()
         if not posiciones:
+            tickets._registrar_impedimento_tracking('GPS pendiente: Traccar no devolvió posiciones; revisar conexión y acceso')
             _logger.warning("[CRON-MOVIMIENTO] No se obtuvieron posiciones de Traccar")
             return
 
@@ -790,10 +811,12 @@ class TicketAlquilerTracking(models.Model):
             try:
                 device_id = mapa_tecnico_device.get(tecnico_id)
                 if not device_id:
+                    tickets_tecnico._registrar_impedimento_tracking('GPS pendiente: técnico sin dispositivo activo vinculado')
                     continue
 
                 pos = posiciones.get(device_id)
                 if not pos:
+                    tickets_tecnico._registrar_impedimento_tracking('GPS pendiente: no hay posición disponible del dispositivo')
                     continue
 
                 attrs  = pos.get('attributes', {})
@@ -876,10 +899,12 @@ class TicketAlquilerTracking(models.Model):
             ('activo', '=', True),
         ])
         if not vinculos:
+            tickets._registrar_impedimento_tracking('GPS pendiente: ningún responsable tiene dispositivo activo vinculado')
             return
 
         posiciones = self.env['traccar.api.service'].get_all_positions()
         if not posiciones:
+            tickets._registrar_impedimento_tracking('GPS pendiente: Traccar no devolvió posiciones; revisar conexión y acceso')
             _logger.warning("[CRON-LLEGADA] No se obtuvieron posiciones de Traccar")
             return
 
@@ -896,10 +921,12 @@ class TicketAlquilerTracking(models.Model):
             try:
                 device_id = mapa_tecnico_device.get(tecnico_id)
                 if not device_id:
+                    tickets_tecnico._registrar_impedimento_tracking('GPS pendiente: técnico sin dispositivo activo vinculado')
                     continue
 
                 pos = posiciones.get(device_id)
                 if not pos:
+                    tickets_tecnico._registrar_impedimento_tracking('GPS pendiente: no hay posición disponible del dispositivo')
                     continue
 
                 geofence_ids_activos = pos.get('geofenceIds') or []
@@ -982,10 +1009,12 @@ class TicketAlquilerTracking(models.Model):
             ('activo', '=', True),
         ])
         if not vinculos:
+            tickets._registrar_impedimento_tracking('GPS pendiente: ningún responsable tiene dispositivo activo vinculado')
             return
 
         posiciones = self.env['traccar.api.service'].get_all_positions()
         if not posiciones:
+            tickets._registrar_impedimento_tracking('GPS pendiente: Traccar no devolvió posiciones; revisar conexión y acceso')
             _logger.warning("[CRON-SALIDA] No se obtuvieron posiciones de Traccar")
             return
 
@@ -1001,10 +1030,12 @@ class TicketAlquilerTracking(models.Model):
             try:
                 device_id = mapa_tecnico_device.get(tecnico_id)
                 if not device_id:
+                    tickets_tecnico._registrar_impedimento_tracking('GPS pendiente: técnico sin dispositivo activo vinculado')
                     continue
 
                 pos = posiciones.get(device_id)
                 if not pos:
+                    tickets_tecnico._registrar_impedimento_tracking('GPS pendiente: no hay posición disponible del dispositivo')
                     continue
 
                 geofence_ids_activos = pos.get('geofenceIds') or []
@@ -1190,6 +1221,17 @@ class TicketAlquilerTracking(models.Model):
             'longitude': lon_tec,
         }
 
+        for ticket in tickets_hoy.filtered(
+                lambda t: t.estado in ('en_sitio', 'en_revision')):
+            coincide = bool(geofence_id and ticket.traccar_geofence_id == geofence_id)
+            if (not coincide and lat_tec is not None and lon_tec is not None
+                    and ticket.equipo_latitud and ticket.equipo_longitud):
+                coincide = self._haversine_metros(
+                    lat_tec, lon_tec, ticket.equipo_latitud, ticket.equipo_longitud
+                ) <= 200
+            if coincide:
+                ticket._cancelar_tokens_retiro_pendientes()
+
         candidatos = tickets_hoy.filtered(lambda t: t.estado in ('proceso', 'en_ruta'))
         if not candidatos:
             estados = ', '.join(set(tickets_hoy.mapped('estado')))
@@ -1223,12 +1265,11 @@ class TicketAlquilerTracking(models.Model):
                         )
 
         if not ticket_match:
-            ticket_match = candidatos[0]
-            metodo_match = "fallback — sin geocerca ni coordenadas"
-            _logger.warning(
-                "[GPS-LLEGADA] Fallback para ticket %s | geofence=%s lat=%s lon=%s",
-                ticket_match.name, geofence_id, lat_tec, lon_tec,
-            )
+            for ticket in candidatos:
+                ticket._registrar_evento(
+                    "Llegada GPS ignorada: sin coincidencia de geocerca ni proximidad al equipo"
+                )
+            return actualizados
 
         tickets_visita = ticket_match._get_tickets_misma_visita(candidatos)
 
@@ -1364,7 +1405,7 @@ class TicketAlquilerTracking(models.Model):
     def _get_rango_hoy():
         from pytz import timezone as pytz_tz, UTC as pytz_UTC
         lima     = pytz_tz('America/Lima')
-        hoy_lima = date.today()
+        hoy_lima = fields.Datetime.now().replace(tzinfo=pytz_UTC).astimezone(lima).date()
         inicio_lima = lima.localize(fields.Datetime.from_string(f"{hoy_lima} 00:00:00"))
         fin_lima    = lima.localize(fields.Datetime.from_string(f"{hoy_lima} 23:59:59"))
         return (
