@@ -2090,6 +2090,24 @@ class SatSatReservaComercial(models.Model):
     # Liberación
     # -------------------------------------------------------------------------
 
+    def action_abrir_liberacion_forzada(self):
+        self._reserva_exigir_gerencia()
+        if not self or len(self) != 1:
+            raise ValidationError(_('Seleccione una sola máquina para liberarla.'))
+        self.ensure_one()
+        if self.estado_ventas_id == 'entregada':
+            raise ValidationError(_('Una máquina entregada no puede liberarse.'))
+        if self.reserva_estado not in ('separada', 'especial', 'confirmada'):
+            raise ValidationError(_('La máquina no tiene una reserva activa.'))
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Liberar reserva antes del vencimiento'),
+            'res_model': 'sat.reserva.liberacion.forzada',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {'default_maquina_id': self.id},
+        }
+
     def _reserva_liberar(
         self,
         tipo='automatica',
@@ -2657,3 +2675,26 @@ class SatSatReservaComercial(models.Model):
                     processed += 1
 
         return processed
+
+
+class SatReservaLiberacionForzada(models.TransientModel):
+    _name = 'sat.reserva.liberacion.forzada'
+    _description = 'Liberación anticipada de reserva comercial'
+
+    maquina_id = fields.Many2one('sat.sat', string='Máquina', required=True, readonly=True)
+    motivo = fields.Text(string='Motivo de liberación', required=True)
+
+    def action_confirmar(self):
+        self.ensure_one()
+        maquina = self.maquina_id.exists()
+        if not maquina:
+            raise ValidationError(_('La máquina ya no existe.'))
+        maquina._reserva_exigir_gerencia()
+        if not (self.motivo or '').strip():
+            raise ValidationError(_('Indique el motivo de la liberación.'))
+        if maquina.estado_ventas_id == 'entregada':
+            raise ValidationError(_('Una máquina entregada no puede liberarse.'))
+        if maquina.reserva_estado not in ('separada', 'especial', 'confirmada'):
+            raise ValidationError(_('La máquina ya no tiene una reserva activa.'))
+        maquina._reserva_liberar(tipo='manual', motivo=self.motivo.strip())
+        return {'type': 'ir.actions.act_window_close'}

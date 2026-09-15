@@ -346,3 +346,6 @@ access_sat_machine_movement_jefes,sat.machine.movement jefes,model_sat_machine_m
 access_sat_machine_movement_ventas,sat.machine.movement ventas,model_sat_machine_movement,sat.Sat_ventas_group_user,1,0,0,0
 access_sat_machine_movement_tecnica,sat.machine.movement tecnica,model_sat_machine_movement,sat.sat_tecnica_group_user,1,0,0,0
 access_sat_machine_movement_autorizado,sat.machine.movement autorizado,model_sat_machine_movement,sat.group_reserva_comercial_autorizado,1,0,0,0
+access_sat_reserva_liberacion_forzada_tecnica,sat.reserva.liberacion.forzada tecnica,model_sat_reserva_liberacion_forzada,sat.sat_tecnica_group_user,1,0,0,0
+access_sat_reserva_liberacion_forzada_autorizado,sat.reserva.liberacion.forzada autorizado,model_sat_reserva_liberacion_forzada,sat.group_reserva_comercial_autorizado,1,1,1,1
+access_sat_reserva_liberacion_forzada_admin,sat.reserva.liberacion.forzada admin,model_sat_reserva_liberacion_forzada,base.group_system,1,1,1,1
