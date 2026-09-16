@@ -920,10 +920,6 @@
             <search string="Marcas de tóner"><field name="name"/><filter name="archived" string="Archivadas" domain="[('active', '=', False)]"/></search>
         </field>
     </record>
-    <record id="action_toner_brand" model="ir.actions.act_window">
-        <field name="name">Marcas de tóner</field>
-        <field name="res_model">toner.brand</field>
-        <field name="view_mode">list,form</field>
-    </record>
+    
     </data>
 </odoo>
