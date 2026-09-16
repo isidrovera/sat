@@ -1,0 +1,316 @@
+// Odoo 18 · Solicitudes de tóner. Estilos limitados a estas vistas.
+.o_toner_modern_form {
+    --toner-ink: #243247;
+    --toner-muted: #64748b;
+    --toner-border: #dce3ec;
+    --toner-accent: #714b67;
+    color: var(--toner-ink);
+
+    .o_form_sheet_bg { background: #f3f5f9; }
+    .o_form_sheet {
+        border: 1px solid var(--toner-border);
+        border-radius: 14px;
+        box-shadow: 0 4px 20px rgba(30, 41, 59, .05);
+        padding: 24px;
+        container-type: inline-size;
+        container-name: toner-sheet;
+    }
+    .o_form_statusbar {
+        padding: 8px 12px;
+        border-bottom: 1px solid var(--toner-border);
+        .o_statusbar_buttons { gap: 6px; flex-wrap: wrap; }
+        .o_statusbar_buttons .btn {
+            border-radius: 8px;
+            white-space: normal;
+            font-weight: 600;
+        }
+    }
+    .o_toner_title {
+        margin-bottom: 20px;
+        h1 { font-size: 28px; font-weight: 700; letter-spacing: -.5px; }
+        > label { color: var(--toner-muted); }
+        .o_toner_section_heading { font-size: 11px; letter-spacing: 1px; }
+    }
+    .o_toner_section_heading {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        margin: 6px 0 18px;
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--toner-accent);
+        > .fa { font-size: 17px; }
+    }
+    .o_toner_panel {
+        background: #f8fafc;
+        border: 1px solid var(--toner-border);
+        border-radius: 10px;
+        padding: 16px;
+        margin-bottom: 18px;
+        min-width: 0;
+    }
+    .o_toner_identity { gap: 18px; }
+    .o_toner_inner_group { min-width: 0; }
+    .o_horizontal_separator {
+        color: var(--toner-ink);
+        font-size: 13px;
+        font-weight: 700;
+        margin-bottom: 14px;
+    }
+    .o_notebook {
+        .nav-tabs { gap: 4px; border-bottom: 1px solid var(--toner-border); }
+        .nav-link {
+            padding: 11px 12px;
+            border: 0;
+            border-bottom: 3px solid transparent;
+            border-radius: 6px 6px 0 0;
+            color: var(--toner-muted);
+            font-weight: 600;
+            white-space: normal;
+            &.active {
+                color: var(--toner-accent);
+                border-bottom-color: var(--toner-accent);
+                background: #f6f1f5;
+            }
+            &:hover { background: #f3f5f9; color: var(--toner-ink); }
+        }
+        .tab-pane { padding-top: 18px; }
+    }
+    .o_toner_color_grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+        gap: 14px;
+        align-items: start;
+        margin: 0 0 24px;
+    }
+    .o_toner_color_card {
+        --toner-color: #273444;
+        --toner-tint: #eef1f5;
+        --toner-text: #243247;
+        min-width: 0;
+        overflow: hidden;
+        background: #fff;
+        border: 1px solid var(--toner-border);
+        border-top: 4px solid var(--toner-color);
+        border-radius: 10px;
+        box-shadow: 0 2px 5px rgba(30, 41, 59, .03);
+    }
+    .o_toner_color_cyan {
+        --toner-color: #00b9e5;
+        --toner-tint: #e8faff;
+        --toner-text: #006b87;
+    }
+    .o_toner_color_magenta {
+        --toner-color: #e0008b;
+        --toner-tint: #fff0f8;
+        --toner-text: #a00064;
+    }
+    .o_toner_color_yellow {
+        --toner-color: #f2c500;
+        --toner-tint: #fff9df;
+        --toner-text: #725a00;
+    }
+    .o_toner_color_header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 15px;
+        min-height: 66px;
+        background: var(--toner-tint);
+        color: var(--toner-text);
+        > strong { font-size: 17px; }
+        > .fa { font-size: 24px; }
+    }
+    .o_toner_color_icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 34px;
+        height: 34px;
+        border-radius: 9px;
+        background: #fff;
+        font-size: 23px;
+    }
+    .o_toner_color_letter {
+        margin-left: auto;
+        border: 1px solid currentColor;
+        border-radius: 6px;
+        min-width: 24px;
+        text-align: center;
+        font-size: 12px;
+        font-weight: 700;
+        padding: 2px 5px;
+    }
+    .o_toner_color_body { padding: 14px; }
+    .o_toner_field_row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(92px, 1fr);
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 12px;
+        &:last-child { margin-bottom: 0; }
+        > label {
+            margin: 0;
+            font-size: 12px;
+            color: var(--toner-muted);
+            white-space: normal;
+            overflow-wrap: anywhere;
+            font-weight: 500;
+        }
+        > .o_field_widget { width: 100%; min-width: 0; margin-bottom: 0; }
+        .o_input {
+            width: 100%;
+            min-width: 0;
+            background: #fff;
+            color: var(--toner-ink);
+            border: 1px solid #cdd7e4;
+            border-radius: 6px;
+            min-height: 32px;
+            padding: 5px 7px;
+            &:focus {
+                border-color: var(--toner-color);
+                outline: 2px solid var(--toner-tint);
+                outline-offset: 1px;
+            }
+        }
+        .o_readonly_modifier:not(.o_field_boolean) {
+            padding: 6px 8px;
+            background: #f4f6f9;
+            border-radius: 6px;
+            overflow-wrap: anywhere;
+        }
+        &:has(.o_field_text) {
+            grid-template-columns: minmax(0, 1fr);
+            textarea { min-height: 76px; resize: vertical; }
+        }
+    }
+    .o_toner_notice {
+        border-radius: 9px;
+        font-size: 13px;
+        padding: 13px 16px;
+        line-height: 1.6;
+        p { margin-bottom: 8px; }
+    }
+    .o_toner_evidence_image {
+        display: block;
+        width: 100%;
+        max-width: 440px;
+        img {
+            max-width: 100%;
+            max-height: 320px;
+            object-fit: contain;
+            border: 1px solid var(--toner-border);
+            border-radius: 8px;
+            background: #fff;
+        }
+    }
+    .o_field_widget[name="analysis_json"] {
+        font-family: monospace;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        max-height: 360px;
+        overflow: auto;
+    }
+    @container toner-sheet (min-width: 1100px) {
+        .o_toner_color_grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    }
+    @container toner-sheet (max-width: 490px) {
+        .o_toner_color_grid { grid-template-columns: minmax(0, 1fr); }
+    }
+    @media (max-width: 575px) {
+        .o_toner_color_grid { grid-template-columns: minmax(0, 1fr); }
+    }
+    @media (max-width: 767px) {
+        .o_form_sheet { padding: 14px; border-radius: 8px; }
+        .o_toner_panel { padding: 12px; }
+        .o_toner_title h1 { font-size: 24px; }
+        .o_notebook .nav-link { font-size: 12px; padding: 9px; }
+    }
+}
+
+.o_toner_modern_list {
+    .o_list_table {
+        thead th { background: #f3f5f9; font-size: 12px; }
+        tbody td { padding-top: 11px; padding-bottom: 11px; vertical-align: middle; }
+        .o_data_row:hover { background-color: #f7f4f8; }
+        td[name="secuencia"] { font-weight: 700; }
+        .badge { border-radius: 6px; padding: 5px 8px; }
+    }
+}
+
+.o_toner_modern_kanban {
+    background: #f3f5f9;
+    .o_kanban_record {
+        border-radius: 12px;
+        border: 1px solid #dce3ec;
+        box-shadow: 0 3px 10px rgba(30, 41, 59, .04);
+    }
+    .o_toner_submission_card {
+        color: #243247;
+        padding: 8px;
+        --toner-progress: #658a76;
+        &.o_toner_consumption_warning { --toner-progress: #c88d22; }
+        &.o_toner_consumption_danger { --toner-progress: #c56060; }
+    }
+    .o_toner_card_header, .o_toner_card_reference,
+    .o_toner_state_row, .o_toner_information_row,
+    .o_toner_metric, .o_toner_progress_header,
+    .o_toner_card_footer, .o_toner_evidence_alert {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+    }
+    .o_toner_card_header { align-items: flex-start; flex-wrap: wrap; margin-bottom: 12px; }
+    .o_toner_card_reference { flex: 1; min-width: 0; }
+    .o_toner_card_title { min-width: 0; overflow-wrap: anywhere; > strong { font-size: 16px; } }
+    .o_toner_card_icon, .o_toner_information_icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        width: 34px;
+        height: 34px;
+        border-radius: 9px;
+        background: #f1eaf2;
+        color: #714b67;
+        font-size: 17px;
+    }
+    .o_toner_card_date { color: #64748b; font-size: 11px; margin-top: 3px; }
+    .o_toner_state_row { justify-content: space-between; border-block: 1px solid #edf0f5; padding: 9px 0; }
+    .o_toner_state_label { font-size: 11px; color: #64748b; }
+    .o_toner_information { padding: 12px 0; }
+    .o_toner_information_row + .o_toner_information_row { margin-top: 10px; }
+    .o_toner_icon_equipment { background: #e8f6fb; color: #087b9c; }
+    .o_toner_information_content { min-width: 0; }
+    .o_toner_information_label { display: block; color: #64748b; font-size: 10px; }
+    .o_toner_information_value { display: block; font-size: 12px; overflow-wrap: anywhere; }
+    .o_toner_metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .o_toner_metric { padding: 9px; border-radius: 8px; background: #f6f8fb; min-width: 0; }
+    .o_toner_metric_icon { color: #8b7392; font-size: 15px; }
+    .o_toner_metric_content {
+        min-width: 0;
+        > span { display: block; color: #64748b; font-size: 10px; }
+        > strong { font-size: 14px; overflow-wrap: anywhere; }
+    }
+    .o_toner_metric_suffix { font-size: 10px; color: #64748b; }
+    .o_toner_progress_section { margin: 14px 0; }
+    .o_toner_progress_header { justify-content: space-between; font-size: 11px; margin-bottom: 6px; }
+    .o_toner_progress { height: 6px; background: #e8edf3; border-radius: 6px; overflow: hidden; }
+    .o_toner_progress_value { height: 100%; max-width: 100%; border-radius: inherit; background: var(--toner-progress); }
+    .o_toner_evidence_alert {
+        background: #fff7e8;
+        color: #8b5b13;
+        border: 1px solid #f4dfb3;
+        border-radius: 8px;
+        padding: 10px;
+        margin-bottom: 12px;
+        font-size: 11px;
+        strong, span { display: block; }
+        span { margin-top: 3px; }
+    }
+    .o_toner_evidence_alert_icon { font-size: 18px; }
+    .o_toner_card_footer { justify-content: space-between; border-top: 1px solid #edf0f5; padding-top: 10px; font-size: 10px; }
+    .o_toner_status_danger { color: #ad4545; }
+    .o_toner_status_warning { color: #91630d; }
+    .o_toner_status_normal { color: #397454; }
+}

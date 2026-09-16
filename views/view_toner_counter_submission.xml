@@ -1,435 +1,276 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='UTF-8'?>
 <odoo>
     <data>
-
         <!-- =========================================================
              VISTA LISTA
              No incluye acciones ni menús.
         ========================================================== -->
-
         <record id="view_toner_counter_submission_list" model="ir.ui.view">
             <field name="name">toner.counter.submission.list</field>
             <field name="model">toner.counter.submission</field>
             <field name="arch" type="xml">
-                <list
-                    string="Solicitudes de Tóner"
-                    default_order="submission_date desc, id desc"
-                    sample="1"
-                    decoration-muted="state in ['rechazada_gerencia', 'cancelada']"
-                    decoration-success="state == 'entregada'"
-                    decoration-warning="requires_evidence"
-                    decoration-info="state in ['pendiente_gerencia', 'confirmacion_ventas', 'lista_despacho', 'en_despacho']"
-                >
+                <list string="Solicitudes de Tóner" default_order="submission_date desc, id desc" sample="1" decoration-muted="state in ['rechazada_gerencia', 'cancelada']" decoration-success="state == 'entregada'" decoration-warning="requires_evidence" decoration-info="state in ['pendiente_gerencia', 'confirmacion_ventas', 'lista_despacho', 'en_despacho']" class="o_toner_modern_list">
                     <field name="secuencia" string="Solicitud"/>
                     <field name="submission_date" string="Fecha"/>
                     <field name="partner_id" string="Cliente"/>
                     <field name="equipment_id" string="Equipo"/>
                     <field name="client_name" string="Solicitante"/>
-
                     <field name="counter_bn" string="Contador B/N"/>
                     <field name="counter_color" string="Contador Color" optional="show"/>
-
                     <field name="previous_counter_bn" string="Base B/N" optional="hide"/>
                     <field name="previous_counter_color" string="Base Color" optional="hide"/>
-
                     <field name="consumed_copies" string="Copias Consumidas"/>
                     <field name="expected_yield" string="Rendimiento"/>
                     <field name="consumption_percent" string="% Consumido"/>
-
                     <field name="days_since_last_delivery" string="Días"/>
                     <field name="last_delivery_date" string="Última Entrega" optional="hide"/>
-
-                    <field
-                        name="analysis_result"
-                        string="Análisis"
-                        widget="badge"
-                        decoration-success="analysis_result == 'normal'"
-                        decoration-warning="analysis_result == 'early_consumption'"
-                        decoration-info="analysis_result == 'no_history'"
-                        decoration-danger="analysis_result == 'duplicate'"
-                    />
-
-                    <field
-                        name="requires_evidence"
-                        string="Evidencia"
-                        widget="boolean_toggle"
-                        optional="show"
-                    />
-
-                    <field
-                        name="state"
-                        string="Estado"
-                        widget="badge"
-                        decoration-info="state in ['recibida', 'evaluacion', 'pendiente_gerencia', 'confirmacion_ventas']"
-                        decoration-success="state in ['aprobada_gerencia', 'lista_despacho', 'entregada']"
-                        decoration-warning="state in ['devuelta', 'en_despacho']"
-                        decoration-danger="state in ['rechazada_gerencia', 'cancelada']"
-                    />
+                    <field name="analysis_result" string="Análisis" widget="badge" decoration-success="analysis_result == 'normal'" decoration-warning="analysis_result == 'early_consumption'" decoration-info="analysis_result == 'no_history'" decoration-danger="analysis_result == 'duplicate'"/>
+                    <field name="requires_evidence" string="Evidencia" widget="boolean_toggle" optional="show"/>
+                    <field name="state" string="Estado" widget="badge" decoration-info="state in ['recibida', 'evaluacion', 'pendiente_gerencia', 'confirmacion_ventas']" decoration-success="state in ['aprobada_gerencia', 'lista_despacho', 'entregada']" decoration-warning="state in ['devuelta', 'en_despacho']" decoration-danger="state in ['rechazada_gerencia', 'cancelada']"/>
                 </list>
             </field>
         </record>
-
-
         <!-- =========================================================
              VISTA FORMULARIO
              Organizada como pedido/factura:
              cabecera, cliente/equipo, líneas de tóner, análisis y flujo.
         ========================================================== -->
-
         <record id="view_toner_counter_submission_form" model="ir.ui.view">
             <field name="name">toner.counter.submission.form</field>
             <field name="model">toner.counter.submission</field>
             <field name="arch" type="xml">
-                <form string="Solicitud de Tóner">
-
+                <form string="Solicitud de Tóner" class="o_toner_modern_form">
                     <header>
-
-                        <button
-                            name="action_start_review"
-                            type="object"
-                            string="Iniciar Evaluación"
-                            class="btn-primary"
-                            invisible="state not in ['recibida', 'devuelta']"
-                        />
-
-                        <button
-                            name="action_send_to_management"
-                            type="object"
-                            string="Enviar a Gerencia"
-                            class="btn-primary"
-                            invisible="state != 'evaluacion'"
-                        />
-
-                        <button
-                            name="action_management_approve"
-                            type="object"
-                            string="Aprobar"
-                            class="btn-success"
-                            invisible="state != 'pendiente_gerencia'"
-                        />
-
-                        <button
-                            name="action_return_for_correction"
-                            type="object"
-                            string="Devolver"
-                            class="btn-secondary"
-                            invisible="state != 'pendiente_gerencia'"
-                        />
-
-                        <button
-                            name="action_management_reject"
-                            type="object"
-                            string="Rechazar"
-                            class="btn-danger"
-                            invisible="state != 'pendiente_gerencia'"
-                        />
-
-                        <button
-                            name="action_send_to_sales_confirmation"
-                            type="object"
-                            string="Enviar a Confirmación de Stock"
-                            class="btn-primary"
-                            invisible="state != 'aprobada_gerencia'"
-                        />
-
-                        <button
-                            name="action_confirm_stock_and_prepare"
-                            type="object"
-                            string="Confirmar stock y preparar"
-                            class="btn-success"
-                            invisible="state not in ['confirmacion_ventas', 'lista_despacho']"
-                        />
-
-                        <button
-                            name="action_send_dispatch"
-                            type="object"
-                            string="Marcar como enviado"
-                            class="btn-primary"
-                            invisible="delivery_state != 'preparando'"
-                        />
-
-                        <button
-                            name="action_register_delivery"
-                            type="object"
-                            string="Registrar entrega"
-                            class="btn-success"
-                            invisible="state != 'en_despacho' or delivery_state not in ['preparando', 'enviado']"
-                        />
-
-                        <button
-                            name="action_cancel"
-                            type="object"
-                            string="Cancelar"
-                            class="btn-secondary"
-                            invisible="state in ['entregada', 'cancelada']"
-                        />
-
-                        <field
-                            name="state"
-                            widget="statusbar"
-                            statusbar_visible="recibida,evaluacion,pendiente_gerencia,aprobada_gerencia,confirmacion_ventas,lista_despacho,en_despacho,entregada"
-                        />
-
+                        <button name="action_start_review" type="object" string="Iniciar Evaluación" class="btn-primary" invisible="state not in ['recibida', 'devuelta']" icon="fa-search"/>
+                        <button name="action_send_to_management" type="object" string="Enviar a Gerencia" class="btn-primary" invisible="state != 'evaluacion'" icon="fa-paper-plane"/>
+                        <button name="action_management_approve" type="object" string="Aprobar" class="btn-success" invisible="state != 'pendiente_gerencia'" icon="fa-check"/>
+                        <button name="action_return_for_correction" type="object" string="Devolver" class="btn-secondary" invisible="state != 'pendiente_gerencia'" icon="fa-reply"/>
+                        <button name="action_management_reject" type="object" string="Rechazar" class="btn-danger" invisible="state != 'pendiente_gerencia'" icon="fa-times"/>
+                        <button name="action_send_to_sales_confirmation" type="object" string="Enviar a Confirmación de Stock" class="btn-primary" invisible="state != 'aprobada_gerencia'" icon="fa-cubes"/>
+                        <button name="action_confirm_stock_and_prepare" type="object" string="Confirmar stock y preparar" class="btn-success" invisible="state not in ['confirmacion_ventas', 'lista_despacho']" icon="fa-check-square-o"/>
+                        <button name="action_send_dispatch" type="object" string="Marcar como enviado" class="btn-primary" invisible="delivery_state != 'preparando'" icon="fa-truck"/>
+                        <button name="action_register_delivery" type="object" string="Registrar entrega" class="btn-success" invisible="state != 'en_despacho' or delivery_state not in ['preparando', 'enviado']" icon="fa-check-circle"/>
+                        <button name="action_cancel" type="object" string="Cancelar" class="btn-secondary" invisible="state in ['entregada', 'cancelada']" icon="fa-ban"/>
+                        <field name="state" widget="statusbar" statusbar_visible="recibida,evaluacion,pendiente_gerencia,aprobada_gerencia,confirmacion_ventas,lista_despacho,en_despacho,entregada"/>
                     </header>
-
                     <sheet>
-
                         <!-- Campos técnicos usados por visibilidad y edición -->
                         <field name="tipo_maquina_id" invisible="1"/>
                         <field name="source" invisible="1"/>
                         <field name="delivery_state" invisible="1"/>
                         <field name="delivery_confirmation_id" invisible="1"/>
-
                         <div class="oe_button_box" name="button_box">
-                            <button
-                                name="action_view_delivery"
-                                type="object"
-                                class="oe_stat_button"
-                                icon="fa-truck"
-                                invisible="not delivery_scheduled_id"
-                            >
+                            <button name="action_view_delivery" type="object" class="oe_stat_button" icon="fa-truck" invisible="not delivery_scheduled_id">
                                 <div class="o_field_widget o_stat_info">
                                     <span class="o_stat_text">Ver</span>
                                     <span class="o_stat_text">Despacho</span>
                                 </div>
                             </button>
                         </div>
-
-                        <div class="oe_title">
+                        <div class="oe_title o_toner_title">
+                            <div class="o_toner_section_heading">
+                                <i aria-hidden="true" class="fa fa-tint"/>
+                                <span>SOLICITUD DE TÓNER</span>
+                            </div>
                             <label for="secuencia" string="Solicitud"/>
                             <h1>
                                 <field name="secuencia" readonly="1"/>
                             </h1>
                         </div>
-
                         <!-- Cabecera tipo pedido -->
-                        <group>
-                            <group string="Cliente y Equipo">
+                        <group class="o_toner_identity">
+                            <group string="Cliente y Equipo" class="o_toner_panel">
                                 <field name="partner_id" readonly="1"/>
                                 <field name="equipment_id" readonly="state != 'recibida'"/>
                                 <field name="submission_date" readonly="1"/>
                                 <field name="delivery_scheduled_id" readonly="1" invisible="not delivery_scheduled_id"/>
                             </group>
-
-                            <group string="Solicitante">
+                            <group string="Solicitante" class="o_toner_panel">
                                 <field name="client_name" readonly="state != 'recibida'"/>
                                 <field name="client_phone" readonly="state != 'recibida'"/>
                                 <field name="client_email" readonly="state != 'recibida'"/>
                                 <field name="client_phone_clean" readonly="1"/>
                             </group>
                         </group>
-
                         <!-- Avisos para comercial -->
-                        <div
-                            class="alert alert-warning"
-                            role="alert"
-                            invisible="not requires_evidence"
-                        >
+                        <div class="alert alert-warning o_toner_notice" role="alert" invisible="not requires_evidence">
                             <strong>Revisión obligatoria:</strong>
                             el consumo detectado es menor al esperado.
                             Antes de enviarlo a gerencia, registre el motivo o adjunte evidencia.
                         </div>
-
-                        <div
-                            class="alert alert-info"
-                            role="alert"
-                            invisible="analysis_result != 'no_history'"
-                        >
+                        <div class="alert alert-info o_toner_notice" role="alert" invisible="analysis_result != 'no_history'">
                             <strong>Sin historial suficiente:</strong>
                             no existe una entrega anterior confirmada del mismo tóner.
                             Comercial debe revisar manualmente la primera referencia.
                         </div>
-
-                        <div
-                            class="alert alert-danger"
-                            role="alert"
-                            invisible="analysis_result != 'duplicate'"
-                        >
+                        <div class="alert alert-danger o_toner_notice" role="alert" invisible="analysis_result != 'duplicate'">
                             <strong>Solicitud duplicada:</strong>
                             ya existe otra solicitud activa para el mismo equipo y color.
                         </div>
-
                         <!-- Tabla principal tipo líneas de pedido -->
                         <notebook>
-
                             <page string="Pedido de Tóner" name="order_lines">
-
-                                <group string="Resumen de Contadores">
-                                    <group>
-                                        <field
-                                            name="counter_bn"
-                                            readonly="source != 'manual' or state not in ['recibida', 'devuelta']"
-                                        />
-                                        <field
-                                            name="previous_counter_bn"
-                                            readonly="source != 'manual' or state not in ['recibida', 'devuelta']"
-                                        />
+                                <div class="o_toner_section_heading">
+                                    <i aria-hidden="true" class="fa fa-tint"/>
+                                    <span>Pedido de Tóner</span>
+                                </div>
+                                <group string="Resumen de Contadores" class="o_toner_panel">
+                                    <group class="o_toner_inner_group">
+                                        <field name="counter_bn" readonly="source != 'manual' or state not in ['recibida', 'devuelta']"/>
+                                        <field name="previous_counter_bn" readonly="source != 'manual' or state not in ['recibida', 'devuelta']"/>
                                         <field name="copies_bn_period" readonly="1"/>
                                     </group>
-
-                                    <group invisible="tipo_maquina_id != 'color'">
-                                        <field
-                                            name="counter_color"
-                                            readonly="source != 'manual' or state not in ['recibida', 'devuelta']"
-                                        />
-                                        <field
-                                            name="previous_counter_color"
-                                            readonly="source != 'manual' or state not in ['recibida', 'devuelta']"
-                                        />
+                                    <group invisible="tipo_maquina_id != 'color'" class="o_toner_inner_group">
+                                        <field name="counter_color" readonly="source != 'manual' or state not in ['recibida', 'devuelta']"/>
+                                        <field name="previous_counter_color" readonly="source != 'manual' or state not in ['recibida', 'devuelta']"/>
                                         <field name="copies_color_period" readonly="1"/>
                                     </group>
                                 </group>
-
                                 <separator string="Detalle por Tóner"/>
-
-                                <group col="4">
-
-                                    <group string="Negro">
-                                        <field
-                                            name="requiere_toner_black"
-                                            readonly="source != 'manual' or state not in ['recibida', 'devuelta']"
-                                        />
-                                        <field
-                                            name="cantidad_solicitada_black"
-                                            readonly="source != 'manual' or state not in ['recibida', 'devuelta']"
-                                            invisible="not requiere_toner_black and cantidad_solicitada_black == 0"
-                                        />
-                                        <field
-                                            name="decision_black"
-                                            string="Decisión comercial"
-                                            readonly="state not in ['evaluacion', 'devuelta']"
-                                        />
-                                        <field
-                                            name="cantidad_sugerida_black"
-                                            string="Cantidad propuesta"
-                                            readonly="state not in ['evaluacion', 'devuelta'] or decision_black == 'no_procede'"
-                                        />
-                                        <field
-                                            name="motivo_no_procede_black"
-                                            string="Motivo no procede"
-                                            placeholder="Indique por qué no corresponde enviar este tóner..."
-                                            invisible="decision_black != 'no_procede'"
-                                            readonly="state not in ['evaluacion', 'devuelta']"
-                                        />
-                                        <field
-                                            name="cantidad_aprobada_black"
-                                            readonly="state != 'pendiente_gerencia'"
-                                        />
-                                    </group>
-
-                                    <group
-                                        string="Cian"
-                                        invisible="tipo_maquina_id != 'color'"
-                                    >
-                                        <field
-                                            name="requiere_toner_cyan"
-                                            readonly="source != 'manual' or state not in ['recibida', 'devuelta']"
-                                        />
-                                        <field
-                                            name="cantidad_solicitada_cyan"
-                                            readonly="source != 'manual' or state not in ['recibida', 'devuelta']"
-                                            invisible="not requiere_toner_cyan and cantidad_solicitada_cyan == 0"
-                                        />
-                                        <field
-    name="decision_cyan"
-    string="Decisión comercial"
-    readonly="state not in ['evaluacion', 'devuelta']"
-/>
-                                        <field
-                                            name="cantidad_sugerida_cyan"
-                                            string="Cantidad propuesta"
-                                            readonly="state not in ['evaluacion', 'devuelta'] or decision_cyan == 'no_procede'"
-                                        />
-                                        <field
-                                            name="motivo_no_procede_cyan"
-                                            string="Motivo no procede"
-                                            placeholder="Indique por qué no corresponde enviar este tóner..."
-                                            invisible="decision_cyan != 'no_procede'"
-                                            readonly="state not in ['evaluacion', 'devuelta']"
-                                        />
-                                        <field
-                                            name="cantidad_aprobada_cyan"
-                                            readonly="state != 'pendiente_gerencia'"
-                                        />
-                                    </group>
-
-                                    <group
-                                        string="Magenta"
-                                        invisible="tipo_maquina_id != 'color'"
-                                    >
-                                        <field
-                                            name="requiere_toner_magenta"
-                                            readonly="source != 'manual' or state not in ['recibida', 'devuelta']"
-                                        />
-                                        <field
-                                            name="cantidad_solicitada_magenta"
-                                            readonly="source != 'manual' or state not in ['recibida', 'devuelta']"
-                                            invisible="not requiere_toner_magenta and cantidad_solicitada_magenta == 0"
-                                        />
-                                        <field
-    name="decision_magenta"
-    string="Decisión comercial"
-    readonly="state not in ['evaluacion', 'devuelta']"
-/>
-                                        <field
-                                            name="cantidad_sugerida_magenta"
-                                            string="Cantidad propuesta"
-                                            readonly="state not in ['evaluacion', 'devuelta'] or decision_magenta == 'no_procede'"
-                                        />
-                                        <field
-                                            name="motivo_no_procede_magenta"
-                                            string="Motivo no procede"
-                                            placeholder="Indique por qué no corresponde enviar este tóner..."
-                                            invisible="decision_magenta != 'no_procede'"
-                                            readonly="state not in ['evaluacion', 'devuelta']"
-                                        />
-                                        <field
-                                            name="cantidad_aprobada_magenta"
-                                            readonly="state != 'pendiente_gerencia'"
-                                        />
-                                    </group>
-
-                                    <group
-                                        string="Amarillo"
-                                        invisible="tipo_maquina_id != 'color'"
-                                    >
-                                        <field
-                                            name="requiere_toner_yellow"
-                                            readonly="source != 'manual' or state not in ['recibida', 'devuelta']"
-                                        />
-                                        <field
-                                            name="cantidad_solicitada_yellow"
-                                            readonly="source != 'manual' or state not in ['recibida', 'devuelta']"
-                                            invisible="not requiere_toner_yellow and cantidad_solicitada_yellow == 0"
-                                        />
-                                        <field
-    name="decision_yellow"
-    string="Decisión comercial"
-    readonly="state not in ['evaluacion', 'devuelta']"
-/>
-                                        <field
-                                            name="cantidad_sugerida_yellow"
-                                            string="Cantidad propuesta"
-                                            readonly="state not in ['evaluacion', 'devuelta'] or decision_yellow == 'no_procede'"
-                                        />
-                                        <field
-                                            name="motivo_no_procede_yellow"
-                                            string="Motivo no procede"
-                                            placeholder="Indique por qué no corresponde enviar este tóner..."
-                                            invisible="decision_yellow != 'no_procede'"
-                                            readonly="state not in ['evaluacion', 'devuelta']"
-                                        />
-                                        <field
-                                            name="cantidad_aprobada_yellow"
-                                            readonly="state != 'pendiente_gerencia'"
-                                        />
-                                    </group>
-
-                                </group>
-
+                                <div class="o_toner_color_grid">
+                                    <div class="o_toner_color_card o_toner_color_black">
+                                        <div class="o_toner_color_header">
+                                            <span class="o_toner_color_icon">
+                                                <i aria-hidden="true" class="fa fa-tint"/>
+                                            </span>
+                                            <strong>Negro</strong>
+                                            <span class="o_toner_color_letter">K</span>
+                                        </div>
+                                        <div class="o_toner_color_body">
+                                            <div class="o_toner_field_row">
+                                                <label for="requiere_toner_black" string="Requiere tóner"/>
+                                                <field name="requiere_toner_black" readonly="source != 'manual' or state not in ['recibida', 'devuelta']"/>
+                                            </div>
+                                            <div class="o_toner_field_row" invisible="not requiere_toner_black and cantidad_solicitada_black == 0">
+                                                <label for="cantidad_solicitada_black" string="Cantidad solicitada"/>
+                                                <field name="cantidad_solicitada_black" readonly="source != 'manual' or state not in ['recibida', 'devuelta']" invisible="not requiere_toner_black and cantidad_solicitada_black == 0"/>
+                                            </div>
+                                            <div class="o_toner_field_row">
+                                                <label for="decision_black" string="Decisión comercial"/>
+                                                <field name="decision_black" string="Decisión comercial" readonly="state not in ['evaluacion', 'devuelta']"/>
+                                            </div>
+                                            <div class="o_toner_field_row">
+                                                <label for="cantidad_sugerida_black" string="Cantidad propuesta"/>
+                                                <field name="cantidad_sugerida_black" string="Cantidad propuesta" readonly="state not in ['evaluacion', 'devuelta'] or decision_black == 'no_procede'"/>
+                                            </div>
+                                            <div class="o_toner_field_row" invisible="decision_black != 'no_procede'">
+                                                <label for="motivo_no_procede_black" string="Motivo no procede"/>
+                                                <field name="motivo_no_procede_black" string="Motivo no procede" placeholder="Indique por qué no corresponde enviar este tóner..." invisible="decision_black != 'no_procede'" readonly="state not in ['evaluacion', 'devuelta']"/>
+                                            </div>
+                                            <div class="o_toner_field_row">
+                                                <label for="cantidad_aprobada_black" string="Cantidad aprobada"/>
+                                                <field name="cantidad_aprobada_black" readonly="state != 'pendiente_gerencia'"/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="o_toner_color_card o_toner_color_cyan" invisible="tipo_maquina_id != 'color'">
+                                        <div class="o_toner_color_header">
+                                            <span class="o_toner_color_icon">
+                                                <i aria-hidden="true" class="fa fa-tint"/>
+                                            </span>
+                                            <strong>Cyan</strong>
+                                            <span class="o_toner_color_letter">C</span>
+                                        </div>
+                                        <div class="o_toner_color_body">
+                                            <div class="o_toner_field_row">
+                                                <label for="requiere_toner_cyan" string="Requiere tóner"/>
+                                                <field name="requiere_toner_cyan" readonly="source != 'manual' or state not in ['recibida', 'devuelta']"/>
+                                            </div>
+                                            <div class="o_toner_field_row" invisible="not requiere_toner_cyan and cantidad_solicitada_cyan == 0">
+                                                <label for="cantidad_solicitada_cyan" string="Cantidad solicitada"/>
+                                                <field name="cantidad_solicitada_cyan" readonly="source != 'manual' or state not in ['recibida', 'devuelta']" invisible="not requiere_toner_cyan and cantidad_solicitada_cyan == 0"/>
+                                            </div>
+                                            <div class="o_toner_field_row">
+                                                <label for="decision_cyan" string="Decisión comercial"/>
+                                                <field name="decision_cyan" string="Decisión comercial" readonly="state not in ['evaluacion', 'devuelta']"/>
+                                            </div>
+                                            <div class="o_toner_field_row">
+                                                <label for="cantidad_sugerida_cyan" string="Cantidad propuesta"/>
+                                                <field name="cantidad_sugerida_cyan" string="Cantidad propuesta" readonly="state not in ['evaluacion', 'devuelta'] or decision_cyan == 'no_procede'"/>
+                                            </div>
+                                            <div class="o_toner_field_row" invisible="decision_cyan != 'no_procede'">
+                                                <label for="motivo_no_procede_cyan" string="Motivo no procede"/>
+                                                <field name="motivo_no_procede_cyan" string="Motivo no procede" placeholder="Indique por qué no corresponde enviar este tóner..." invisible="decision_cyan != 'no_procede'" readonly="state not in ['evaluacion', 'devuelta']"/>
+                                            </div>
+                                            <div class="o_toner_field_row">
+                                                <label for="cantidad_aprobada_cyan" string="Cantidad aprobada"/>
+                                                <field name="cantidad_aprobada_cyan" readonly="state != 'pendiente_gerencia'"/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="o_toner_color_card o_toner_color_magenta" invisible="tipo_maquina_id != 'color'">
+                                        <div class="o_toner_color_header">
+                                            <span class="o_toner_color_icon">
+                                                <i aria-hidden="true" class="fa fa-tint"/>
+                                            </span>
+                                            <strong>Magenta</strong>
+                                            <span class="o_toner_color_letter">M</span>
+                                        </div>
+                                        <div class="o_toner_color_body">
+                                            <div class="o_toner_field_row">
+                                                <label for="requiere_toner_magenta" string="Requiere tóner"/>
+                                                <field name="requiere_toner_magenta" readonly="source != 'manual' or state not in ['recibida', 'devuelta']"/>
+                                            </div>
+                                            <div class="o_toner_field_row" invisible="not requiere_toner_magenta and cantidad_solicitada_magenta == 0">
+                                                <label for="cantidad_solicitada_magenta" string="Cantidad solicitada"/>
+                                                <field name="cantidad_solicitada_magenta" readonly="source != 'manual' or state not in ['recibida', 'devuelta']" invisible="not requiere_toner_magenta and cantidad_solicitada_magenta == 0"/>
+                                            </div>
+                                            <div class="o_toner_field_row">
+                                                <label for="decision_magenta" string="Decisión comercial"/>
+                                                <field name="decision_magenta" string="Decisión comercial" readonly="state not in ['evaluacion', 'devuelta']"/>
+                                            </div>
+                                            <div class="o_toner_field_row">
+                                                <label for="cantidad_sugerida_magenta" string="Cantidad propuesta"/>
+                                                <field name="cantidad_sugerida_magenta" string="Cantidad propuesta" readonly="state not in ['evaluacion', 'devuelta'] or decision_magenta == 'no_procede'"/>
+                                            </div>
+                                            <div class="o_toner_field_row" invisible="decision_magenta != 'no_procede'">
+                                                <label for="motivo_no_procede_magenta" string="Motivo no procede"/>
+                                                <field name="motivo_no_procede_magenta" string="Motivo no procede" placeholder="Indique por qué no corresponde enviar este tóner..." invisible="decision_magenta != 'no_procede'" readonly="state not in ['evaluacion', 'devuelta']"/>
+                                            </div>
+                                            <div class="o_toner_field_row">
+                                                <label for="cantidad_aprobada_magenta" string="Cantidad aprobada"/>
+                                                <field name="cantidad_aprobada_magenta" readonly="state != 'pendiente_gerencia'"/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="o_toner_color_card o_toner_color_yellow" invisible="tipo_maquina_id != 'color'">
+                                        <div class="o_toner_color_header">
+                                            <span class="o_toner_color_icon">
+                                                <i aria-hidden="true" class="fa fa-tint"/>
+                                            </span>
+                                            <strong>Amarillo</strong>
+                                            <span class="o_toner_color_letter">Y</span>
+                                        </div>
+                                        <div class="o_toner_color_body">
+                                            <div class="o_toner_field_row">
+                                                <label for="requiere_toner_yellow" string="Requiere tóner"/>
+                                                <field name="requiere_toner_yellow" readonly="source != 'manual' or state not in ['recibida', 'devuelta']"/>
+                                            </div>
+                                            <div class="o_toner_field_row" invisible="not requiere_toner_yellow and cantidad_solicitada_yellow == 0">
+                                                <label for="cantidad_solicitada_yellow" string="Cantidad solicitada"/>
+                                                <field name="cantidad_solicitada_yellow" readonly="source != 'manual' or state not in ['recibida', 'devuelta']" invisible="not requiere_toner_yellow and cantidad_solicitada_yellow == 0"/>
+                                            </div>
+                                            <div class="o_toner_field_row">
+                                                <label for="decision_yellow" string="Decisión comercial"/>
+                                                <field name="decision_yellow" string="Decisión comercial" readonly="state not in ['evaluacion', 'devuelta']"/>
+                                            </div>
+                                            <div class="o_toner_field_row">
+                                                <label for="cantidad_sugerida_yellow" string="Cantidad propuesta"/>
+                                                <field name="cantidad_sugerida_yellow" string="Cantidad propuesta" readonly="state not in ['evaluacion', 'devuelta'] or decision_yellow == 'no_procede'"/>
+                                            </div>
+                                            <div class="o_toner_field_row" invisible="decision_yellow != 'no_procede'">
+                                                <label for="motivo_no_procede_yellow" string="Motivo no procede"/>
+                                                <field name="motivo_no_procede_yellow" string="Motivo no procede" placeholder="Indique por qué no corresponde enviar este tóner..." invisible="decision_yellow != 'no_procede'" readonly="state not in ['evaluacion', 'devuelta']"/>
+                                            </div>
+                                            <div class="o_toner_field_row">
+                                                <label for="cantidad_aprobada_yellow" string="Cantidad aprobada"/>
+                                                <field name="cantidad_aprobada_yellow" readonly="state != 'pendiente_gerencia'"/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                                 <separator string="Instrucciones para el Área Comercial"/>
-
-                                <div class="alert alert-light border" role="alert">
+                                <div class="alert alert-light border o_toner_notice" role="alert">
                                     <p>
                                         <strong>1. Verifique el contador actual:</strong>
                                         debe ser igual o mayor al contador base de la última entrega.
@@ -452,28 +293,19 @@
                                         comercial evalúa y recomienda; gerencia es quien aprueba.
                                     </p>
                                 </div>
-
                             </page>
-
-
                             <page string="Análisis de Consumo" name="consumption_analysis">
-
-                                <group>
-                                    <group string="Resultado Automático">
-                                        <field
-                                            name="analysis_result"
-                                            widget="badge"
-                                            readonly="1"
-                                            decoration-success="analysis_result == 'normal'"
-                                            decoration-warning="analysis_result == 'early_consumption'"
-                                            decoration-info="analysis_result == 'no_history'"
-                                            decoration-danger="analysis_result == 'duplicate'"
-                                        />
+                                <div class="o_toner_section_heading">
+                                    <i aria-hidden="true" class="fa fa-line-chart"/>
+                                    <span>Análisis de Consumo</span>
+                                </div>
+                                <group class="o_toner_panel">
+                                    <group string="Resultado Automático" class="o_toner_inner_group">
+                                        <field name="analysis_result" widget="badge" readonly="1" decoration-success="analysis_result == 'normal'" decoration-warning="analysis_result == 'early_consumption'" decoration-info="analysis_result == 'no_history'" decoration-danger="analysis_result == 'duplicate'"/>
                                         <field name="requires_evidence" readonly="1"/>
                                         <field name="duplicate_submission_id" readonly="1" invisible="not duplicate_submission_id"/>
                                     </group>
-
-                                    <group string="Rendimiento">
+                                    <group string="Rendimiento" class="o_toner_inner_group">
                                         <field name="last_delivery_date" readonly="1"/>
                                         <field name="days_since_last_delivery" readonly="1"/>
                                         <field name="expected_yield" readonly="1"/>
@@ -481,100 +313,72 @@
                                         <field name="consumption_percent" readonly="1"/>
                                     </group>
                                 </group>
-
-                                <group string="Resumen del Sistema">
-                                    <field
-                                        name="analysis_summary"
-                                        nolabel="1"
-                                        readonly="1"
-                                    />
+                                <group string="Resumen del Sistema" class="o_toner_panel">
+                                    <field name="analysis_summary" nolabel="1" readonly="1"/>
                                 </group>
-
-                                <group string="Detalle Técnico">
-                                    <field
-                                        name="analysis_json"
-                                        nolabel="1"
-                                        readonly="1"
-                                        widget="text"
-                                    />
+                                <group string="Detalle Técnico" class="o_toner_panel">
+                                    <field name="analysis_json" nolabel="1" readonly="1" widget="text"/>
                                 </group>
-
                             </page>
-
-
                             <page string="Evaluación Comercial" name="commercial_review">
-
-                                <group>
-                                    <group string="Responsable de Evaluación">
+                                <div class="o_toner_section_heading">
+                                    <i aria-hidden="true" class="fa fa-clipboard"/>
+                                    <span>Evaluación Comercial</span>
+                                </div>
+                                <group class="o_toner_panel">
+                                    <group string="Responsable de Evaluación" class="o_toner_inner_group">
                                         <field name="reviewer_id" readonly="1"/>
                                         <field name="review_date" readonly="1"/>
                                     </group>
-
-                                    <group string="Control">
+                                    <group string="Control" class="o_toner_inner_group">
                                         <field name="requires_evidence" readonly="1"/>
                                         <field name="early_request_reason"/>
                                     </group>
                                 </group>
-
-                                <group string="Evaluación y Recomendación">
-                                    <field
-                                        name="review_notes"
-                                        nolabel="1"
-                                        placeholder="Explique si el consumo es razonable, si existe una incidencia, qué cantidad recomienda y por qué..."
-                                        readonly="state not in ['evaluacion', 'devuelta']"
-                                    />
+                                <group string="Evaluación y Recomendación" class="o_toner_panel">
+                                    <field name="review_notes" nolabel="1" placeholder="Explique si el consumo es razonable, si existe una incidencia, qué cantidad recomienda y por qué..." readonly="state not in ['evaluacion', 'devuelta']"/>
                                 </group>
-
-                                <div class="alert alert-info" role="alert">
+                                <div class="alert alert-info o_toner_notice" role="alert">
                                     Comercial debe dejar una recomendación clara:
                                     aprobar, solicitar evidencia, tratar como incidencia
                                     o no recomendar el envío.
                                 </div>
-
                             </page>
-
-
                             <page string="Gerencia" name="management">
-
-                                <group>
-                                    <group string="Decisión">
+                                <div class="o_toner_section_heading">
+                                    <i aria-hidden="true" class="fa fa-check-square-o"/>
+                                    <span>Gerencia</span>
+                                </div>
+                                <group class="o_toner_panel">
+                                    <group string="Decisión" class="o_toner_inner_group">
                                         <field name="management_user_id" readonly="1"/>
                                         <field name="management_date" readonly="1"/>
                                     </group>
-
-                                    <group string="Estado">
+                                    <group string="Estado" class="o_toner_inner_group">
                                         <field name="state" readonly="1"/>
                                     </group>
                                 </group>
-
-                                <group string="Observación de Gerencia">
-                                    <field
-                                        name="management_notes"
-                                        nolabel="1"
-                                        placeholder="Indique motivo de aprobación, modificación, devolución o rechazo..."
-                                        readonly="state != 'pendiente_gerencia'"
-                                    />
+                                <group string="Observación de Gerencia" class="o_toner_panel">
+                                    <field name="management_notes" nolabel="1" placeholder="Indique motivo de aprobación, modificación, devolución o rechazo..." readonly="state != 'pendiente_gerencia'"/>
                                 </group>
-
-                                <div class="alert alert-light border" role="alert">
+                                <div class="alert alert-light border o_toner_notice" role="alert">
                                     Gerencia debe revisar la cantidad solicitada,
                                     la sugerencia comercial, los contadores,
                                     el rendimiento y la evidencia antes de decidir.
                                 </div>
-
                             </page>
-
-
                             <page string="Stock y Despacho" name="dispatch">
-
-                                <group>
-                                    <group string="Confirmación de Stock">
+                                <div class="o_toner_section_heading">
+                                    <i aria-hidden="true" class="fa fa-truck"/>
+                                    <span>Stock y Despacho</span>
+                                </div>
+                                <group class="o_toner_panel">
+                                    <group string="Confirmación de Stock" class="o_toner_inner_group">
                                         <field name="sales_user_id" readonly="1"/>
                                         <field name="sales_confirmation_date" readonly="1"/>
                                         <field name="sales_notes" readonly="state != 'confirmacion_ventas'"/>
                                     </group>
-
-                                    <group string="Despacho">
+                                    <group string="Despacho" class="o_toner_inner_group">
                                         <field name="delivery_scheduled_id" readonly="1"/>
                                         <field name="delivery_state" widget="badge" readonly="1"/>
                                         <field name="delivery_date_planned_ui" invisible="not delivery_scheduled_id"/>
@@ -583,565 +387,369 @@
                                         <field name="delivery_tracking_number_ui" invisible="not delivery_scheduled_id"/>
                                     </group>
                                 </group>
-
-                                <group string="Datos de Entrega" invisible="not delivery_scheduled_id">
+                                <group string="Datos de Entrega" invisible="not delivery_scheduled_id" class="o_toner_panel">
                                     <field name="delivery_address_ui" readonly="1"/>
                                     <field name="delivery_contact_person_ui" readonly="1"/>
                                     <field name="delivery_contact_phone_ui" readonly="1"/>
                                     <field name="delivery_confirmation_id" readonly="1" invisible="not delivery_confirmation_id"/>
                                 </group>
-
-                                <div class="alert alert-info" role="alert">
+                                <div class="alert alert-info o_toner_notice" role="alert">
                                     Comercial debe confirmar contacto, dirección,
                                     disponibilidad del cliente y fecha tentativa
                                     antes de liberar el pedido para despacho.
                                 </div>
-
                             </page>
-
-
                             <page string="Stock y Nivel Reportado" name="stock">
-
-                                <group string="Stock del Cliente">
-                                    <group>
-                                        <field name="stock_reportado_black"/>
-                                        <field
-                                            name="stock_reportado_cyan"
-                                            invisible="tipo_maquina_id != 'color'"
-                                        />
-                                        <field
-                                            name="stock_reportado_magenta"
-                                            invisible="tipo_maquina_id != 'color'"
-                                        />
-                                        <field
-                                            name="stock_reportado_yellow"
-                                            invisible="tipo_maquina_id != 'color'"
-                                        />
-                                    </group>
-
-                                    <group string="Nivel Instalado">
-                                        <field name="nivel_toner_black"/>
-                                        <field
-                                            name="nivel_toner_cyan"
-                                            invisible="tipo_maquina_id != 'color'"
-                                        />
-                                        <field
-                                            name="nivel_toner_magenta"
-                                            invisible="tipo_maquina_id != 'color'"
-                                        />
-                                        <field
-                                            name="nivel_toner_yellow"
-                                            invisible="tipo_maquina_id != 'color'"
-                                        />
-                                    </group>
-                                </group>
-
+                                <div class="o_toner_section_heading">
+                                    <i aria-hidden="true" class="fa fa-cubes"/>
+                                    <span>Stock y Nivel Reportado</span>
+                                </div>
+                                <div class="o_toner_color_grid">
+                                    <div class="o_toner_color_card o_toner_color_black">
+                                        <div class="o_toner_color_header">
+                                            <i aria-hidden="true" class="fa fa-tint"/>
+                                            <strong>Negro</strong>
+                                            <span class="o_toner_color_letter">K</span>
+                                        </div>
+                                        <div class="o_toner_color_body">
+                                            <div class="o_toner_field_row">
+                                                <label for="stock_reportado_black" string="Stock del cliente"/>
+                                                <field name="stock_reportado_black"/>
+                                            </div>
+                                            <div class="o_toner_field_row">
+                                                <label for="nivel_toner_black" string="Nivel instalado"/>
+                                                <field name="nivel_toner_black"/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="o_toner_color_card o_toner_color_cyan" invisible="tipo_maquina_id != 'color'">
+                                        <div class="o_toner_color_header">
+                                            <i aria-hidden="true" class="fa fa-tint"/>
+                                            <strong>Cyan</strong>
+                                            <span class="o_toner_color_letter">C</span>
+                                        </div>
+                                        <div class="o_toner_color_body">
+                                            <div class="o_toner_field_row">
+                                                <label for="stock_reportado_cyan" string="Stock del cliente"/>
+                                                <field name="stock_reportado_cyan" invisible="tipo_maquina_id != 'color'"/>
+                                            </div>
+                                            <div class="o_toner_field_row">
+                                                <label for="nivel_toner_cyan" string="Nivel instalado"/>
+                                                <field name="nivel_toner_cyan" invisible="tipo_maquina_id != 'color'"/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="o_toner_color_card o_toner_color_magenta" invisible="tipo_maquina_id != 'color'">
+                                        <div class="o_toner_color_header">
+                                            <i aria-hidden="true" class="fa fa-tint"/>
+                                            <strong>Magenta</strong>
+                                            <span class="o_toner_color_letter">M</span>
+                                        </div>
+                                        <div class="o_toner_color_body">
+                                            <div class="o_toner_field_row">
+                                                <label for="stock_reportado_magenta" string="Stock del cliente"/>
+                                                <field name="stock_reportado_magenta" invisible="tipo_maquina_id != 'color'"/>
+                                            </div>
+                                            <div class="o_toner_field_row">
+                                                <label for="nivel_toner_magenta" string="Nivel instalado"/>
+                                                <field name="nivel_toner_magenta" invisible="tipo_maquina_id != 'color'"/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="o_toner_color_card o_toner_color_yellow" invisible="tipo_maquina_id != 'color'">
+                                        <div class="o_toner_color_header">
+                                            <i aria-hidden="true" class="fa fa-tint"/>
+                                            <strong>Amarillo</strong>
+                                            <span class="o_toner_color_letter">Y</span>
+                                        </div>
+                                        <div class="o_toner_color_body">
+                                            <div class="o_toner_field_row">
+                                                <label for="stock_reportado_yellow" string="Stock del cliente"/>
+                                                <field name="stock_reportado_yellow" invisible="tipo_maquina_id != 'color'"/>
+                                            </div>
+                                            <div class="o_toner_field_row">
+                                                <label for="nivel_toner_yellow" string="Nivel instalado"/>
+                                                <field name="nivel_toner_yellow" invisible="tipo_maquina_id != 'color'"/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </page>
-
-
                             <page string="Evidencia y Observaciones" name="evidence">
-
-                                <group>
-                                    <group string="Foto del Contador">
-                                        <field
-                                            name="photo_counter"
-                                            widget="image"
-                                            class="oe_avatar"
-                                        />
+                                <div class="o_toner_section_heading">
+                                    <i aria-hidden="true" class="fa fa-camera"/>
+                                    <span>Evidencia y Observaciones</span>
+                                </div>
+                                <group class="o_toner_panel">
+                                    <group string="Foto del Contador" class="o_toner_inner_group">
+                                        <field name="photo_counter" widget="image" class="o_toner_evidence_image"/>
                                         <field name="photo_counter_filename" invisible="1"/>
                                     </group>
-
-                                    <group string="Foto del Tóner">
-                                        <field
-                                            name="photo_toner"
-                                            widget="image"
-                                            class="oe_avatar"
-                                        />
+                                    <group string="Foto del Tóner" class="o_toner_inner_group">
+                                        <field name="photo_toner" widget="image" class="o_toner_evidence_image"/>
                                         <field name="photo_toner_filename" invisible="1"/>
                                     </group>
                                 </group>
-
-                                <group string="Observaciones del Cliente">
-                                    <field
-                                        name="notes"
-                                        nolabel="1"
-                                        placeholder="Observaciones recibidas desde el portal..."
-                                    />
+                                <group string="Observaciones del Cliente" class="o_toner_panel">
+                                    <field name="notes" nolabel="1" placeholder="Observaciones recibidas desde el portal..."/>
                                 </group>
-
                             </page>
-
                         </notebook>
-
                     </sheet>
-
                     <chatter/>
-
                 </form>
             </field>
         </record>
-
-
         <!-- =========================================================
              VISTA KANBAN
              Compacta para seguimiento del flujo.
         ========================================================== -->
-
         <record id="view_toner_counter_submission_kanban" model="ir.ui.view">
-        <field name="name">toner.counter.submission.kanban</field>
-        <field name="model">toner.counter.submission</field>
-
-        <field name="arch" type="xml">
-            <kanban
-                default_group_by="state"
-                class="o_kanban_small_column o_toner_counter_kanban"
-                quick_create="false"
-                sample="1"
-            >
-
-                <!-- Campos disponibles para QWeb -->
-                <field name="secuencia"/>
-                <field name="submission_date"/>
-                <field name="partner_id"/>
-                <field name="equipment_id"/>
-                <field name="client_name"/>
-                <field name="state"/>
-                <field name="analysis_result"/>
-                <field name="requires_evidence"/>
-                <field name="consumed_copies"/>
-                <field name="expected_yield"/>
-                <field name="consumption_percent"/>
-                <field name="days_since_last_delivery"/>
-                <field name="activity_ids"/>
-
-                <templates>
-
-                    <!-- Tarjeta principal -->
-                    <t t-name="card">
-
-                        <div
-                            t-attf-class="
-                                o_toner_submission_card
-                                #{record.requires_evidence.raw_value ? 'o_toner_requires_evidence' : ''}
-                                #{record.consumption_percent.raw_value &gt;= 100
-                                    ? 'o_toner_consumption_danger'
-                                    : record.consumption_percent.raw_value &gt;= 80
-                                        ? 'o_toner_consumption_warning'
-                                        : 'o_toner_consumption_normal'}
-                            "
-                        >
-
-                            <!-- Cabecera -->
-                            <div class="o_toner_card_header">
-
-                                <div class="o_toner_card_reference">
-                                    <div class="o_toner_card_icon">
-                                        <i class="fa fa-tint" aria-label="Solicitud de tóner"/>
+            <field name="name">toner.counter.submission.kanban</field>
+            <field name="model">toner.counter.submission</field>
+            <field name="arch" type="xml">
+                <kanban default_group_by="state" class="o_kanban_small_column o_toner_counter_kanban o_toner_modern_kanban" quick_create="false" sample="1">
+                    <!-- Campos disponibles para QWeb -->
+                    <field name="secuencia"/>
+                    <field name="submission_date"/>
+                    <field name="partner_id"/>
+                    <field name="equipment_id"/>
+                    <field name="client_name"/>
+                    <field name="state"/>
+                    <field name="analysis_result"/>
+                    <field name="requires_evidence"/>
+                    <field name="consumed_copies"/>
+                    <field name="expected_yield"/>
+                    <field name="consumption_percent"/>
+                    <field name="days_since_last_delivery"/>
+                    <field name="activity_ids"/>
+                    <templates>
+                        <!-- Tarjeta principal -->
+                        <t t-name="card">
+                            <div t-attf-class="                                 o_toner_submission_card                                 #{record.requires_evidence.raw_value ? 'o_toner_requires_evidence' : ''}                                 #{record.consumption_percent.raw_value &gt;= 100                                     ? 'o_toner_consumption_danger'                                     : record.consumption_percent.raw_value &gt;= 80                                         ? 'o_toner_consumption_warning'                                         : 'o_toner_consumption_normal'}                             ">
+                                <!-- Cabecera -->
+                                <div class="o_toner_card_header">
+                                    <div class="o_toner_card_reference">
+                                        <div class="o_toner_card_icon">
+                                            <i class="fa fa-tint" aria-label="Solicitud de tóner"/>
+                                        </div>
+                                        <div class="o_toner_card_title">
+                                            <strong>
+                                                <field name="secuencia"/>
+                                            </strong>
+                                            <div class="o_toner_card_date">
+                                                <i class="fa fa-calendar-o me-1" aria-hidden="true"/>
+                                                <field name="submission_date"/>
+                                            </div>
+                                        </div>
                                     </div>
-
-                                    <div class="o_toner_card_title">
-                                        <strong>
-                                            <field name="secuencia"/>
-                                        </strong>
-
-                                        <div class="o_toner_card_date">
-                                            <i class="fa fa-calendar-o me-1"/>
-                                            <field name="submission_date"/>
+                                    <div class="o_toner_card_result">
+                                        <field name="analysis_result" widget="label_selection"/>
+                                    </div>
+                                </div>
+                                <!-- Estado -->
+                                <div class="o_toner_state_row">
+                                    <span class="o_toner_state_label">
+                                        <i class="fa fa-circle-o-notch me-1" aria-hidden="true"/>
+                                    Estado
+                                </span>
+                                    <field name="state" widget="badge"/>
+                                </div>
+                                <!-- Cliente y equipo -->
+                                <div class="o_toner_information">
+                                    <div class="o_toner_information_row">
+                                        <div class="o_toner_information_icon o_toner_icon_client">
+                                            <i class="fa fa-building-o" aria-hidden="true"/>
+                                        </div>
+                                        <div class="o_toner_information_content">
+                                            <span class="o_toner_information_label">
+                                            Cliente
+                                        </span>
+                                            <strong class="o_toner_information_value">
+                                                <field name="partner_id"/>
+                                            </strong>
+                                        </div>
+                                    </div>
+                                    <div class="o_toner_information_row">
+                                        <div class="o_toner_information_icon o_toner_icon_equipment">
+                                            <i class="fa fa-print" aria-hidden="true"/>
+                                        </div>
+                                        <div class="o_toner_information_content">
+                                            <span class="o_toner_information_label">
+                                            Equipo
+                                        </span>
+                                            <strong class="o_toner_information_value">
+                                                <field name="equipment_id"/>
+                                            </strong>
                                         </div>
                                     </div>
                                 </div>
-
-                                <div class="o_toner_card_result">
-                                    <field
-                                        name="analysis_result"
-                                        widget="label_selection"
-                                    />
-                                </div>
-
-                            </div>
-
-                            <!-- Estado -->
-                            <div class="o_toner_state_row">
-                                <span class="o_toner_state_label">
-                                    <i class="fa fa-circle-o-notch me-1"/>
-                                    Estado
-                                </span>
-
-                                <field
-                                    name="state"
-                                    widget="badge"
-                                />
-                            </div>
-
-                            <!-- Cliente y equipo -->
-                            <div class="o_toner_information">
-
-                                <div class="o_toner_information_row">
-                                    <div class="o_toner_information_icon o_toner_icon_client">
-                                        <i class="fa fa-building-o"/>
+                                <!-- Métricas -->
+                                <div class="o_toner_metrics">
+                                    <div class="o_toner_metric">
+                                        <div class="o_toner_metric_icon">
+                                            <i class="fa fa-files-o" aria-hidden="true"/>
+                                        </div>
+                                        <div class="o_toner_metric_content">
+                                            <span>Copias consumidas</span>
+                                            <strong>
+                                                <field name="consumed_copies"/>
+                                            </strong>
+                                        </div>
                                     </div>
-
-                                    <div class="o_toner_information_content">
-                                        <span class="o_toner_information_label">
-                                            Cliente
-                                        </span>
-
-                                        <strong class="o_toner_information_value">
-                                            <field name="partner_id"/>
-                                        </strong>
+                                    <div class="o_toner_metric">
+                                        <div class="o_toner_metric_icon">
+                                            <i class="fa fa-line-chart" aria-hidden="true"/>
+                                        </div>
+                                        <div class="o_toner_metric_content">
+                                            <span>Rendimiento esperado</span>
+                                            <strong>
+                                                <field name="expected_yield"/>
+                                            </strong>
+                                        </div>
                                     </div>
-                                </div>
-
-                                <div class="o_toner_information_row">
-                                    <div class="o_toner_information_icon o_toner_icon_equipment">
-                                        <i class="fa fa-print"/>
+                                    <div class="o_toner_metric">
+                                        <div class="o_toner_metric_icon">
+                                            <i class="fa fa-percent" aria-hidden="true"/>
+                                        </div>
+                                        <div class="o_toner_metric_content">
+                                            <span>Consumo</span>
+                                            <strong>
+                                                <field name="consumption_percent"/>
+                                            </strong>
+                                        </div>
                                     </div>
-
-                                    <div class="o_toner_information_content">
-                                        <span class="o_toner_information_label">
-                                            Equipo
-                                        </span>
-
-                                        <strong class="o_toner_information_value">
-                                            <field name="equipment_id"/>
-                                        </strong>
+                                    <div class="o_toner_metric">
+                                        <div class="o_toner_metric_icon">
+                                            <i class="fa fa-clock-o" aria-hidden="true"/>
+                                        </div>
+                                        <div class="o_toner_metric_content">
+                                            <span>Desde entrega</span>
+                                            <strong>
+                                                <field name="days_since_last_delivery"/>
+                                                <span class="o_toner_metric_suffix">
+                                                días
+                                            </span>
+                                            </strong>
+                                        </div>
                                     </div>
                                 </div>
-
-                            </div>
-
-                            <!-- Métricas -->
-                            <div class="o_toner_metrics">
-
-                                <div class="o_toner_metric">
-                                    <div class="o_toner_metric_icon">
-                                        <i class="fa fa-files-o"/>
-                                    </div>
-
-                                    <div class="o_toner_metric_content">
-                                        <span>Copias consumidas</span>
-
-                                        <strong>
-                                            <field name="consumed_copies"/>
-                                        </strong>
-                                    </div>
-                                </div>
-
-                                <div class="o_toner_metric">
-                                    <div class="o_toner_metric_icon">
-                                        <i class="fa fa-line-chart"/>
-                                    </div>
-
-                                    <div class="o_toner_metric_content">
-                                        <span>Rendimiento esperado</span>
-
-                                        <strong>
-                                            <field name="expected_yield"/>
-                                        </strong>
-                                    </div>
-                                </div>
-
-                                <div class="o_toner_metric">
-                                    <div class="o_toner_metric_icon">
-                                        <i class="fa fa-percent"/>
-                                    </div>
-
-                                    <div class="o_toner_metric_content">
-                                        <span>Consumo</span>
-
+                                <!-- Barra de consumo -->
+                                <div class="o_toner_progress_section">
+                                    <div class="o_toner_progress_header">
+                                        <span>
+                                        Nivel de consumo
+                                    </span>
                                         <strong>
                                             <field name="consumption_percent"/>
                                         </strong>
                                     </div>
-                                </div>
-
-                                <div class="o_toner_metric">
-                                    <div class="o_toner_metric_icon">
-                                        <i class="fa fa-clock-o"/>
-                                    </div>
-
-                                    <div class="o_toner_metric_content">
-                                        <span>Desde entrega</span>
-
-                                        <strong>
-                                            <field name="days_since_last_delivery"/>
-                                            <span class="o_toner_metric_suffix">
-                                                días
-                                            </span>
-                                        </strong>
+                                    <div class="o_toner_progress">
+                                        <div class="o_toner_progress_value" t-att-style="                                             'width: ' +                                             (                                                 record.consumption_percent.raw_value &gt; 100                                                 ? 100                                                 : record.consumption_percent.raw_value                                             ) +                                             '%;'                                         "/>
                                     </div>
                                 </div>
-
-                            </div>
-
-                            <!-- Barra de consumo -->
-                            <div class="o_toner_progress_section">
-
-                                <div class="o_toner_progress_header">
-                                    <span>
-                                        Nivel de consumo
-                                    </span>
-
-                                    <strong>
-                                        <field name="consumption_percent"/>
-                                    </strong>
-                                </div>
-
-                                <div class="o_toner_progress">
-                                    <div
-                                        class="o_toner_progress_value"
-                                        t-att-style="
-                                            'width: ' +
-                                            (
-                                                record.consumption_percent.raw_value &gt; 100
-                                                ? 100
-                                                : record.consumption_percent.raw_value
-                                            ) +
-                                            '%;'
-                                        "
-                                    />
-                                </div>
-
-                            </div>
-
-                            <!-- Advertencia -->
-                            <t t-if="record.requires_evidence.raw_value">
-                                <div class="o_toner_evidence_alert">
-                                    <div class="o_toner_evidence_alert_icon">
-                                        <i class="fa fa-camera"/>
-                                    </div>
-
-                                    <div>
-                                        <strong>Evidencia requerida</strong>
-
-                                        <span>
+                                <!-- Advertencia -->
+                                <t t-if="record.requires_evidence.raw_value">
+                                    <div class="o_toner_evidence_alert">
+                                        <div class="o_toner_evidence_alert_icon">
+                                            <i class="fa fa-camera" aria-hidden="true"/>
+                                        </div>
+                                        <div>
+                                            <strong>Evidencia requerida</strong>
+                                            <span>
                                             Se deben adjuntar fotografías o
                                             documentos de validación.
                                         </span>
+                                        </div>
                                     </div>
-                                </div>
-                            </t>
-
-                            <!-- Pie -->
-                            <footer class="o_toner_card_footer">
-
-                                <div class="o_toner_footer_status">
-                                    <t t-if="record.consumption_percent.raw_value &gt;= 100">
-                                        <span class="o_toner_status_indicator o_toner_status_danger">
-                                            <i class="fa fa-exclamation-circle me-1"/>
+                                </t>
+                                <!-- Pie -->
+                                <footer class="o_toner_card_footer">
+                                    <div class="o_toner_footer_status">
+                                        <t t-if="record.consumption_percent.raw_value &gt;= 100">
+                                            <span class="o_toner_status_indicator o_toner_status_danger">
+                                                <i class="fa fa-exclamation-circle me-1" aria-hidden="true"/>
                                             Rendimiento superado
                                         </span>
-                                    </t>
-
-                                    <t t-elif="record.consumption_percent.raw_value &gt;= 80">
-                                        <span class="o_toner_status_indicator o_toner_status_warning">
-                                            <i class="fa fa-exclamation-triangle me-1"/>
+                                        </t>
+                                        <t t-elif="record.consumption_percent.raw_value &gt;= 80">
+                                            <span class="o_toner_status_indicator o_toner_status_warning">
+                                                <i class="fa fa-exclamation-triangle me-1" aria-hidden="true"/>
                                             Consumo elevado
                                         </span>
-                                    </t>
-
-                                    <t t-else="">
-                                        <span class="o_toner_status_indicator o_toner_status_normal">
-                                            <i class="fa fa-check-circle me-1"/>
+                                        </t>
+                                        <t t-else="">
+                                            <span class="o_toner_status_indicator o_toner_status_normal">
+                                                <i class="fa fa-check-circle me-1" aria-hidden="true"/>
                                             Consumo normal
                                         </span>
-                                    </t>
-                                </div>
-
-                                <div class="o_toner_footer_activity">
-                                    <field
-                                        name="activity_ids"
-                                        widget="kanban_activity"
-                                    />
-                                </div>
-
-                            </footer>
-
-                        </div>
-
-                    </t>
-
-                    <!-- Menú de tres puntos -->
-                    <t t-name="menu">
-
-                        <a
-                            type="open"
-                            role="menuitem"
-                            class="dropdown-item"
-                        >
-                            <i class="fa fa-external-link me-2"/>
+                                        </t>
+                                    </div>
+                                    <div class="o_toner_footer_activity">
+                                        <field name="activity_ids" widget="kanban_activity"/>
+                                    </div>
+                                </footer>
+                            </div>
+                        </t>
+                        <!-- Menú de tres puntos -->
+                        <t t-name="menu">
+                            <a type="open" role="menuitem" class="dropdown-item">
+                                <i class="fa fa-external-link me-2" aria-hidden="true"/>
                             Abrir solicitud
                         </a>
-
-                        <a
-                            t-if="widget.editable"
-                            type="edit"
-                            role="menuitem"
-                            class="dropdown-item"
-                        >
-                            <i class="fa fa-pencil me-2"/>
+                            <a t-if="widget.editable" type="edit" role="menuitem" class="dropdown-item">
+                                <i class="fa fa-pencil me-2" aria-hidden="true"/>
                             Editar
                         </a>
-
-                        <div class="dropdown-divider"/>
-
-                        <a
-                            t-if="widget.deletable"
-                            type="delete"
-                            role="menuitem"
-                            class="dropdown-item text-danger"
-                        >
-                            <i class="fa fa-trash me-2"/>
+                            <div class="dropdown-divider"/>
+                            <a t-if="widget.deletable" type="delete" role="menuitem" class="dropdown-item text-danger">
+                                <i class="fa fa-trash me-2" aria-hidden="true"/>
                             Eliminar
                         </a>
-
-                    </t>
-
-                </templates>
-
-            </kanban>
-        </field>
-    </record>
-
-
+                        </t>
+                    </templates>
+                </kanban>
+            </field>
+        </record>
         <!-- =========================================================
              VISTA DE BÚSQUEDA
         ========================================================== -->
-
         <record id="view_toner_counter_submission_search" model="ir.ui.view">
             <field name="name">toner.counter.submission.search</field>
             <field name="model">toner.counter.submission</field>
             <field name="arch" type="xml">
                 <search string="Buscar Solicitudes de Tóner">
-
                     <field name="secuencia"/>
                     <field name="partner_id"/>
                     <field name="equipment_id"/>
                     <field name="client_name"/>
                     <field name="client_phone"/>
                     <field name="analysis_result"/>
-
                     <separator/>
-
-                    <filter
-                        string="Recibidas"
-                        name="received"
-                        domain="[('state', '=', 'recibida')]"
-                    />
-
-                    <filter
-                        string="En evaluación"
-                        name="review"
-                        domain="[('state', '=', 'evaluacion')]"
-                    />
-
-                    <filter
-                        string="Pendientes de gerencia"
-                        name="management"
-                        domain="[('state', '=', 'pendiente_gerencia')]"
-                    />
-
-                    <filter
-                        string="Pendientes de stock"
-                        name="sales"
-                        domain="[('state', '=', 'confirmacion_ventas')]"
-                    />
-
-                    <filter
-                        string="Listas para despacho"
-                        name="ready_dispatch"
-                        domain="[('state', '=', 'lista_despacho')]"
-                    />
-
-                    <filter
-                        string="En despacho"
-                        name="dispatch"
-                        domain="[('state', '=', 'en_despacho')]"
-                    />
-
+                    <filter string="Recibidas" name="received" domain="[('state', '=', 'recibida')]"/>
+                    <filter string="En evaluación" name="review" domain="[('state', '=', 'evaluacion')]"/>
+                    <filter string="Pendientes de gerencia" name="management" domain="[('state', '=', 'pendiente_gerencia')]"/>
+                    <filter string="Pendientes de stock" name="sales" domain="[('state', '=', 'confirmacion_ventas')]"/>
+                    <filter string="Listas para despacho" name="ready_dispatch" domain="[('state', '=', 'lista_despacho')]"/>
+                    <filter string="En despacho" name="dispatch" domain="[('state', '=', 'en_despacho')]"/>
                     <separator/>
-
-                    <filter
-                        string="Consumo anticipado"
-                        name="early"
-                        domain="[('analysis_result', '=', 'early_consumption')]"
-                    />
-
-                    <filter
-                        string="Requiere evidencia"
-                        name="evidence"
-                        domain="[('requires_evidence', '=', True)]"
-                    />
-
-                    <filter
-                        string="Sin historial"
-                        name="no_history"
-                        domain="[('analysis_result', '=', 'no_history')]"
-                    />
-
-                    <filter
-                        string="Duplicadas"
-                        name="duplicates"
-                        domain="[('analysis_result', '=', 'duplicate')]"
-                    />
-
+                    <filter string="Consumo anticipado" name="early" domain="[('analysis_result', '=', 'early_consumption')]"/>
+                    <filter string="Requiere evidencia" name="evidence" domain="[('requires_evidence', '=', True)]"/>
+                    <filter string="Sin historial" name="no_history" domain="[('analysis_result', '=', 'no_history')]"/>
+                    <filter string="Duplicadas" name="duplicates" domain="[('analysis_result', '=', 'duplicate')]"/>
                     <separator/>
-
-                    <filter
-                        string="Hoy"
-                        name="today"
-                        domain="[('submission_date', '&gt;=', context_today())]"
-                    />
-
-                    <filter
-                        string="Últimos 7 días"
-                        name="last_7_days"
-                        domain="[('submission_date', '&gt;=', (context_today() - datetime.timedelta(days=7)).strftime('%Y-%m-%d'))]"
-                    />
-
-                    <filter
-                        string="Este mes"
-                        name="month"
-                        domain="[('submission_date', '&gt;=', context_today().replace(day=1).strftime('%Y-%m-%d'))]"
-                    />
-
+                    <filter string="Hoy" name="today" domain="[('submission_date', '&gt;=', context_today())]"/>
+                    <filter string="Últimos 7 días" name="last_7_days" domain="[('submission_date', '&gt;=', (context_today() - datetime.timedelta(days=7)).strftime('%Y-%m-%d'))]"/>
+                    <filter string="Este mes" name="month" domain="[('submission_date', '&gt;=', context_today().replace(day=1).strftime('%Y-%m-%d'))]"/>
                     <group expand="0" string="Agrupar por">
-
-                        <filter
-                            string="Estado"
-                            name="group_state"
-                            context="{'group_by': 'state'}"
-                        />
-
-                        <filter
-                            string="Resultado"
-                            name="group_analysis"
-                            context="{'group_by': 'analysis_result'}"
-                        />
-
-                        <filter
-                            string="Cliente"
-                            name="group_partner"
-                            context="{'group_by': 'partner_id'}"
-                        />
-
-                        <filter
-                            string="Equipo"
-                            name="group_equipment"
-                            context="{'group_by': 'equipment_id'}"
-                        />
-
-                        <filter
-                            string="Fecha"
-                            name="group_date"
-                            context="{'group_by': 'submission_date:day'}"
-                        />
-
+                        <filter string="Estado" name="group_state" context="{'group_by': 'state'}"/>
+                        <filter string="Resultado" name="group_analysis" context="{'group_by': 'analysis_result'}"/>
+                        <filter string="Cliente" name="group_partner" context="{'group_by': 'partner_id'}"/>
+                        <filter string="Equipo" name="group_equipment" context="{'group_by': 'equipment_id'}"/>
+                        <filter string="Fecha" name="group_date" context="{'group_by': 'submission_date:day'}"/>
                     </group>
-
                 </search>
             </field>
         </record>
-
     </data>
 </odoo>
