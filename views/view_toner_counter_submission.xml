@@ -78,20 +78,24 @@
                             </h1>
                         </div>
                         <!-- Cabecera tipo pedido -->
-                        <group class="o_toner_identity">
-                            <group string="Cliente y Equipo" class="o_toner_panel">
-                                <field name="partner_id" readonly="1"/>
-                                <field name="equipment_id" readonly="state != 'recibida'"/>
-                                <field name="submission_date" readonly="1"/>
-                                <field name="delivery_scheduled_id" readonly="1" invisible="not delivery_scheduled_id"/>
-                            </group>
-                            <group string="Solicitante" class="o_toner_panel">
-                                <field name="client_name" readonly="state != 'recibida'"/>
-                                <field name="client_phone" readonly="state != 'recibida'"/>
-                                <field name="client_email" readonly="state != 'recibida'"/>
-                                <field name="client_phone_clean" readonly="1"/>
-                            </group>
-                        </group>
+                        <div class="o_toner_identity">
+                            <div class="o_toner_panel">
+                                <group string="Cliente y Equipo" class="o_toner_identity_fields">
+                                    <field name="partner_id" readonly="1"/>
+                                    <field name="equipment_id" readonly="state != 'recibida'"/>
+                                    <field name="submission_date" readonly="1"/>
+                                    <field name="delivery_scheduled_id" readonly="1" invisible="not delivery_scheduled_id"/>
+                                </group>
+                            </div>
+                            <div class="o_toner_panel">
+                                <group string="Solicitante" class="o_toner_identity_fields">
+                                    <field name="client_name" readonly="state != 'recibida'"/>
+                                    <field name="client_phone" readonly="state != 'recibida'"/>
+                                    <field name="client_email" readonly="state != 'recibida'"/>
+                                    <field name="client_phone_clean" readonly="1"/>
+                                </group>
+                            </div>
+                        </div>
                         <!-- Avisos para comercial -->
                         <div class="alert alert-warning o_toner_notice" role="alert" invisible="not requires_evidence">
                             <strong>Revisión obligatoria:</strong>
