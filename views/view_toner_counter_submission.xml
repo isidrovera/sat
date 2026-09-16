@@ -13,6 +13,7 @@
                     <field name="secuencia" string="Solicitud"/>
                     <field name="submission_date" string="Fecha"/>
                     <field name="partner_id" string="Cliente"/>
+                    <field name="equipment_serie" string="Serie"/>
                     <field name="equipment_id" string="Equipo"/>
                     <field name="client_name" string="Solicitante"/>
                     <field name="counter_bn" string="Contador B/N"/>
@@ -66,6 +67,7 @@
                                     <span class="o_stat_text">Despacho</span>
                                 </div>
                             </button>
+                            <button name="%(action_toner_brand)d" type="action" string="Marcas de tóner" icon="fa-tags" groups="base.group_system" class="oe_stat_button"/>
                         </div>
                         <div class="oe_title o_toner_title">
                             <div class="o_toner_section_heading">
@@ -83,6 +85,8 @@
                                 <group string="Cliente y Equipo" class="o_toner_identity_fields">
                                     <field name="partner_id" readonly="1"/>
                                     <field name="equipment_id" readonly="state != 'recibida'"/>
+                                    <field name="equipment_serie" readonly="1"/>
+                                    <field name="tipo_maquina_id" readonly="1"/>
                                     <field name="submission_date" readonly="1"/>
                                     <field name="delivery_scheduled_id" readonly="1" invisible="not delivery_scheduled_id"/>
                                 </group>
@@ -121,13 +125,13 @@
                                 <group string="Resumen de Contadores" class="o_toner_panel">
                                     <group class="o_toner_inner_group">
                                         <field name="counter_bn" readonly="source != 'manual' or state not in ['recibida', 'devuelta']"/>
-                                        <field name="previous_counter_bn" readonly="source != 'manual' or state not in ['recibida', 'devuelta']"/>
+                                        <field name="previous_counter_bn" readonly="1" force_save="1"/>
                                         <field name="copies_bn_period" readonly="1"/>
                                     </group>
                                     <group invisible="tipo_maquina_id != 'color'" class="o_toner_inner_group">
                                         <field name="counter_color" readonly="source != 'manual' or state not in ['recibida', 'devuelta']"/>
-                                        <field name="previous_counter_color" readonly="source != 'manual' or state not in ['recibida', 'devuelta']"/>
-                                        <field name="copies_color_period" readonly="1"/>
+                                        <field name="previous_counter_color" readonly="1" force_save="1" string="Base color de referencia (ver tarjetas)"/>
+                                        <field name="copies_color_period" readonly="1" string="Copias color de referencia"/>
                                     </group>
                                 </group>
                                 <separator string="Detalle por Tóner"/>
@@ -165,6 +169,39 @@
                                                 <label for="cantidad_aprobada_black" string="Cantidad aprobada"/>
                                                 <field name="cantidad_aprobada_black" readonly="state != 'pendiente_gerencia'"/>
                                             </div>
+                                            <div class="o_toner_field_row">
+                                                <label for="toner_brand_black_id" string="Marca a enviar"/>
+                                                <field name="toner_brand_black_id" options="{'no_create': True}" readonly="state not in ['recibida', 'devuelta', 'evaluacion', 'pendiente_gerencia', 'aprobada_gerencia', 'confirmacion_ventas', 'lista_despacho']"/>
+                                            </div>
+                                            <field name="history_available_black" invisible="1"/>
+                                            <div class="alert alert-info mt-3 mb-0" invisible="history_available_black">Sin historial verificable para este color.</div>
+                                            <div class="o_toner_history mt-3" invisible="not history_available_black">
+                                                <div class="o_toner_section_heading">Consumo desde la última entrega</div>
+                                                <div class="o_toner_field_row">
+                                                    <label for="last_delivery_date_black" string="Última entrega"/>
+                                                    <field name="last_delivery_date_black" readonly="1"/>
+                                                </div>
+                                                <div class="o_toner_field_row">
+                                                    <label for="base_counter_black" string="Contador anterior"/>
+                                                    <field name="base_counter_black" readonly="1"/>
+                                                </div>
+                                                <div class="o_toner_field_row">
+                                                    <label for="consumed_copies_black" string="Copias consumidas"/>
+                                                    <field name="consumed_copies_black" readonly="1"/>
+                                                </div>
+                                                <div class="o_toner_field_row">
+                                                    <label for="expected_yield_black" string="Rendimiento"/>
+                                                    <field name="expected_yield_black" readonly="1"/>
+                                                </div>
+                                                <div class="o_toner_field_row">
+                                                    <label for="consumption_percent_black" string="Consumido (%)"/>
+                                                    <field name="consumption_percent_black" readonly="1"/>
+                                                </div>
+                                                <div class="o_toner_field_row">
+                                                    <label for="days_since_delivery_black" string="Días transcurridos"/>
+                                                    <field name="days_since_delivery_black" readonly="1"/>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                     <div class="o_toner_color_card o_toner_color_cyan" invisible="tipo_maquina_id != 'color'">
@@ -199,6 +236,39 @@
                                             <div class="o_toner_field_row">
                                                 <label for="cantidad_aprobada_cyan" string="Cantidad aprobada"/>
                                                 <field name="cantidad_aprobada_cyan" readonly="state != 'pendiente_gerencia'"/>
+                                            </div>
+                                            <div class="o_toner_field_row">
+                                                <label for="toner_brand_cyan_id" string="Marca a enviar"/>
+                                                <field name="toner_brand_cyan_id" options="{'no_create': True}" readonly="state not in ['recibida', 'devuelta', 'evaluacion', 'pendiente_gerencia', 'aprobada_gerencia', 'confirmacion_ventas', 'lista_despacho']"/>
+                                            </div>
+                                            <field name="history_available_cyan" invisible="1"/>
+                                            <div class="alert alert-info mt-3 mb-0" invisible="history_available_cyan">Sin historial verificable para este color.</div>
+                                            <div class="o_toner_history mt-3" invisible="not history_available_cyan">
+                                                <div class="o_toner_section_heading">Consumo desde la última entrega</div>
+                                                <div class="o_toner_field_row">
+                                                    <label for="last_delivery_date_cyan" string="Última entrega"/>
+                                                    <field name="last_delivery_date_cyan" readonly="1"/>
+                                                </div>
+                                                <div class="o_toner_field_row">
+                                                    <label for="base_counter_cyan" string="Contador anterior"/>
+                                                    <field name="base_counter_cyan" readonly="1"/>
+                                                </div>
+                                                <div class="o_toner_field_row">
+                                                    <label for="consumed_copies_cyan" string="Copias consumidas"/>
+                                                    <field name="consumed_copies_cyan" readonly="1"/>
+                                                </div>
+                                                <div class="o_toner_field_row">
+                                                    <label for="expected_yield_cyan" string="Rendimiento"/>
+                                                    <field name="expected_yield_cyan" readonly="1"/>
+                                                </div>
+                                                <div class="o_toner_field_row">
+                                                    <label for="consumption_percent_cyan" string="Consumido (%)"/>
+                                                    <field name="consumption_percent_cyan" readonly="1"/>
+                                                </div>
+                                                <div class="o_toner_field_row">
+                                                    <label for="days_since_delivery_cyan" string="Días transcurridos"/>
+                                                    <field name="days_since_delivery_cyan" readonly="1"/>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -235,6 +305,39 @@
                                                 <label for="cantidad_aprobada_magenta" string="Cantidad aprobada"/>
                                                 <field name="cantidad_aprobada_magenta" readonly="state != 'pendiente_gerencia'"/>
                                             </div>
+                                            <div class="o_toner_field_row">
+                                                <label for="toner_brand_magenta_id" string="Marca a enviar"/>
+                                                <field name="toner_brand_magenta_id" options="{'no_create': True}" readonly="state not in ['recibida', 'devuelta', 'evaluacion', 'pendiente_gerencia', 'aprobada_gerencia', 'confirmacion_ventas', 'lista_despacho']"/>
+                                            </div>
+                                            <field name="history_available_magenta" invisible="1"/>
+                                            <div class="alert alert-info mt-3 mb-0" invisible="history_available_magenta">Sin historial verificable para este color.</div>
+                                            <div class="o_toner_history mt-3" invisible="not history_available_magenta">
+                                                <div class="o_toner_section_heading">Consumo desde la última entrega</div>
+                                                <div class="o_toner_field_row">
+                                                    <label for="last_delivery_date_magenta" string="Última entrega"/>
+                                                    <field name="last_delivery_date_magenta" readonly="1"/>
+                                                </div>
+                                                <div class="o_toner_field_row">
+                                                    <label for="base_counter_magenta" string="Contador anterior"/>
+                                                    <field name="base_counter_magenta" readonly="1"/>
+                                                </div>
+                                                <div class="o_toner_field_row">
+                                                    <label for="consumed_copies_magenta" string="Copias consumidas"/>
+                                                    <field name="consumed_copies_magenta" readonly="1"/>
+                                                </div>
+                                                <div class="o_toner_field_row">
+                                                    <label for="expected_yield_magenta" string="Rendimiento"/>
+                                                    <field name="expected_yield_magenta" readonly="1"/>
+                                                </div>
+                                                <div class="o_toner_field_row">
+                                                    <label for="consumption_percent_magenta" string="Consumido (%)"/>
+                                                    <field name="consumption_percent_magenta" readonly="1"/>
+                                                </div>
+                                                <div class="o_toner_field_row">
+                                                    <label for="days_since_delivery_magenta" string="Días transcurridos"/>
+                                                    <field name="days_since_delivery_magenta" readonly="1"/>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                     <div class="o_toner_color_card o_toner_color_yellow" invisible="tipo_maquina_id != 'color'">
@@ -269,6 +372,39 @@
                                             <div class="o_toner_field_row">
                                                 <label for="cantidad_aprobada_yellow" string="Cantidad aprobada"/>
                                                 <field name="cantidad_aprobada_yellow" readonly="state != 'pendiente_gerencia'"/>
+                                            </div>
+                                            <div class="o_toner_field_row">
+                                                <label for="toner_brand_yellow_id" string="Marca a enviar"/>
+                                                <field name="toner_brand_yellow_id" options="{'no_create': True}" readonly="state not in ['recibida', 'devuelta', 'evaluacion', 'pendiente_gerencia', 'aprobada_gerencia', 'confirmacion_ventas', 'lista_despacho']"/>
+                                            </div>
+                                            <field name="history_available_yellow" invisible="1"/>
+                                            <div class="alert alert-info mt-3 mb-0" invisible="history_available_yellow">Sin historial verificable para este color.</div>
+                                            <div class="o_toner_history mt-3" invisible="not history_available_yellow">
+                                                <div class="o_toner_section_heading">Consumo desde la última entrega</div>
+                                                <div class="o_toner_field_row">
+                                                    <label for="last_delivery_date_yellow" string="Última entrega"/>
+                                                    <field name="last_delivery_date_yellow" readonly="1"/>
+                                                </div>
+                                                <div class="o_toner_field_row">
+                                                    <label for="base_counter_yellow" string="Contador anterior"/>
+                                                    <field name="base_counter_yellow" readonly="1"/>
+                                                </div>
+                                                <div class="o_toner_field_row">
+                                                    <label for="consumed_copies_yellow" string="Copias consumidas"/>
+                                                    <field name="consumed_copies_yellow" readonly="1"/>
+                                                </div>
+                                                <div class="o_toner_field_row">
+                                                    <label for="expected_yield_yellow" string="Rendimiento"/>
+                                                    <field name="expected_yield_yellow" readonly="1"/>
+                                                </div>
+                                                <div class="o_toner_field_row">
+                                                    <label for="consumption_percent_yellow" string="Consumido (%)"/>
+                                                    <field name="consumption_percent_yellow" readonly="1"/>
+                                                </div>
+                                                <div class="o_toner_field_row">
+                                                    <label for="days_since_delivery_yellow" string="Días transcurridos"/>
+                                                    <field name="days_since_delivery_yellow" readonly="1"/>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -514,6 +650,7 @@
             <field name="arch" type="xml">
                 <kanban default_group_by="state" class="o_kanban_small_column o_toner_counter_kanban o_toner_modern_kanban" quick_create="false" sample="1">
                     <!-- Campos disponibles para QWeb -->
+                    <field name="equipment_serie"/>
                     <field name="secuencia"/>
                     <field name="submission_date"/>
                     <field name="partner_id"/>
@@ -586,6 +723,10 @@
                                                 <field name="equipment_id"/>
                                             </strong>
                                         </div>
+                                    </div>
+                                    <div class="o_toner_information_row">
+                                        <i class="fa fa-barcode" aria-hidden="true"/>
+                                        <field name="equipment_serie" string="Serie"/>
                                     </div>
                                 </div>
                                 <!-- Métricas -->
@@ -726,6 +867,7 @@
                     <field name="secuencia"/>
                     <field name="partner_id"/>
                     <field name="equipment_id"/>
+                    <field name="equipment_serie" string="Serie"/>
                     <field name="client_name"/>
                     <field name="client_phone"/>
                     <field name="analysis_result"/>
