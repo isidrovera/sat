@@ -98,6 +98,8 @@ class TonerMonitoringEvent(models.Model):
         ("empty", "Tóner vacío"),
         ("replaced", "Tóner reemplazado"),
         ("normal", "Nivel normal"),
+        ("estimated_depletion", "Agotamiento estimado"),
+        ("supply_event", "Evento de suministro"),
         ("unknown", "Evento no identificado"),
     ]
 
@@ -251,6 +253,27 @@ class TonerMonitoringEvent(models.Model):
         help="Valor máximo utilizado por el sistema origen.",
     )
 
+    level_available = fields.Boolean(
+        string="Nivel disponible",
+        default=False,
+        index=True,
+        tracking=True,
+        help=(
+            "Indica que el nivel fue informado realmente por la fuente. "
+            "Permite distinguir un 0% real de un dato ausente."
+        ),
+    )
+
+    estimated_depletion_date = fields.Date(
+        string="Agotamiento estimado",
+        index=True,
+        tracking=True,
+        help=(
+            "Fecha estimada de agotamiento informada por el sistema externo. "
+            "No equivale a un nivel 0% ni a un evento EMPTY."
+        ),
+    )
+
     # ============================================================
     # CONTADORES
     # ============================================================
@@ -265,6 +288,26 @@ class TonerMonitoringEvent(models.Model):
         string="Contador color",
         tracking=True,
         help="Contador color informado al momento del evento.",
+    )
+
+    counter_bn_available = fields.Boolean(
+        string="Contador B/N disponible",
+        default=False,
+        index=True,
+        help=(
+            "Indica que counter_bn proviene de una lectura válida. "
+            "Un valor 0 con este campo desmarcado significa dato ausente."
+        ),
+    )
+
+    counter_color_available = fields.Boolean(
+        string="Contador color disponible",
+        default=False,
+        index=True,
+        help=(
+            "Indica que counter_color proviene de una lectura válida. "
+            "Un valor 0 con este campo desmarcado significa dato ausente."
+        ),
     )
 
     counter_is_estimated = fields.Boolean(
@@ -666,6 +709,8 @@ class TonerMonitoringEvent(models.Model):
                 "replaced",
                 "normal",
                 "level",
+                "estimated_depletion",
+                "supply_event",
             )
             and self.color == "unknown"
         ):
@@ -713,6 +758,46 @@ class TonerMonitoringEvent(models.Model):
             "level",
         ):
             return self._process_level_event()
+
+        # --------------------------------------------------------
+        # AGOTAMIENTO ESTIMADO
+        # --------------------------------------------------------
+
+        if self.event_type == "estimated_depletion":
+            if self.estimated_depletion_date:
+                self._mark_processed(
+                    _(
+                        "Predicción de agotamiento registrada para %(date)s. "
+                        "No se modificó stock, no se cerró el ciclo y no se "
+                        "interpretó como nivel 0%%."
+                    )
+                    % {
+                        "date": fields.Date.to_string(
+                            self.estimated_depletion_date
+                        )
+                    }
+                )
+            else:
+                self._mark_processed(
+                    _(
+                        "Evento de agotamiento estimado registrado sin fecha "
+                        "interpretable. No se modificó stock ni historial."
+                    )
+                )
+            return True
+
+        # --------------------------------------------------------
+        # EVENTO DE SUMINISTRO GENÉRICO
+        # --------------------------------------------------------
+
+        if self.event_type == "supply_event":
+            self._mark_processed(
+                _(
+                    "Evento de suministro registrado para auditoría. "
+                    "No contiene una acción física confirmada."
+                )
+            )
+            return True
 
         return False
 
@@ -900,6 +985,15 @@ class TonerMonitoringEvent(models.Model):
         """
         self.ensure_one()
 
+        if not self.level_available:
+            self._mark_processed(
+                _(
+                    "Evento de nivel registrado sin lectura numérica válida. "
+                    "No se infirió reemplazo y no se modificó stock."
+                )
+            )
+            return True
+
         History = self.env[
             "toner.installation.history"
         ].sudo()
@@ -1037,7 +1131,10 @@ class TonerMonitoringEvent(models.Model):
         # Contador B/N obligatorio por el modelo actual
         # --------------------------------------------------------
 
-        if not self.counter_bn or self.counter_bn <= 0:
+        if (
+            not self.counter_bn_available
+            or self.counter_bn <= 0
+        ):
             prefix = (
                 (final_message_prefix + " ")
                 if final_message_prefix
@@ -1053,6 +1150,29 @@ class TonerMonitoringEvent(models.Model):
                 )
             )
 
+            return False
+
+        if (
+            self.color in ("cyan", "magenta", "yellow")
+            and (
+                not self.counter_color_available
+                or self.counter_color <= 0
+            )
+        ):
+            prefix = (
+                (final_message_prefix + " ")
+                if final_message_prefix
+                else ""
+            )
+
+            self._mark_pending(
+                prefix
+                + _(
+                    "El evento fue registrado, pero no tiene "
+                    "un contador color válido para crear "
+                    "automáticamente la solicitud."
+                )
+            )
             return False
 
         requested_toners = {
