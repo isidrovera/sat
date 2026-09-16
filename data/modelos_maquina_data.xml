@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <odoo>
-  <data noupdate="0">
+  <data>
     <!-- MARCA: Canon -->
     <record id="modelo_canon_canon_mg2510" model="modelo.maquina">
       <field name="name">canon mg2510</field>
