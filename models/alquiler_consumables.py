@@ -348,6 +348,44 @@ class UnidadAlquiler(models.Model):
     )
 
     # ============================================================
+    # RELACIONES PARA VISTAS DE TÓNER EN LA FICHA DEL EQUIPO
+    # ============================================================
+    #
+    # No duplican información ni crean tablas nuevas.
+    # Son relaciones One2many hacia los modelos históricos existentes,
+    # usando el campo equipment_id que ya existe en dichos modelos.
+    # ============================================================
+
+    toner_monitoring_event_ids = fields.One2many(
+        "toner.monitoring.event",
+        "equipment_id",
+        string="Eventos de Tóner",
+        readonly=True,
+    )
+
+    toner_installation_history_ids = fields.One2many(
+        "toner.installation.history",
+        "equipment_id",
+        string="Historial de Instalaciones de Tóner",
+        readonly=True,
+    )
+
+    toner_active_installation_ids = fields.One2many(
+        "toner.installation.history",
+        "equipment_id",
+        string="Tóner Instalado Actualmente",
+        readonly=True,
+        domain=[("state", "=", "active")],
+    )
+
+    toner_stock_movement_ids = fields.One2many(
+        "toner.stock.movement",
+        "equipment_id",
+        string="Kardex de Stock de Tóner",
+        readonly=True,
+    )
+
+    # ============================================================
     # HELPERS GENERALES
     # ============================================================
 

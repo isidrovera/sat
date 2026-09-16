@@ -728,6 +728,254 @@
                             <!-- TAB 3: TÓNER Y CONTADORES                         -->
                             <!-- ══════════════════════════════════════════════════ -->
                             
+
+                            <page string="Tóner" name="toner_page">
+
+                                <div class="sat_rental_panel sat_rental_panel_primary mb-3">
+                                    <div class="sat_rental_panel_header">
+                                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                            <h5 class="mb-0">
+                                                <i class="fa fa-tint me-2"/>
+                                                Gestión de Tóner
+                                            </h5>
+                                            <field name="estado_stock_toner"
+                                                   widget="badge"
+                                                   readonly="1"
+                                                   decoration-danger="estado_stock_toner == 'critico'"
+                                                   decoration-warning="estado_stock_toner == 'bajo'"
+                                                   decoration-success="estado_stock_toner == 'normal'"
+                                                   decoration-info="estado_stock_toner == 'alto'"/>
+                                        </div>
+                                    </div>
+
+                                    <div class="card-body">
+                                        <div class="row g-3">
+
+                                            <div class="col-12 col-lg-3">
+                                                <div class="border rounded p-3 h-100">
+                                                    <div class="text-muted small mb-2">
+                                                        <i class="fa fa-circle me-1"></i>
+                                                        Negro
+                                                    </div>
+                                                    <div class="d-flex justify-content-between mb-1">
+                                                        <span>Stock cliente</span>
+                                                        <strong><field name="stock_cliente_toner_black" readonly="1"/></strong>
+                                                    </div>
+                                                    <div class="d-flex justify-content-between mb-1">
+                                                        <span>Nivel</span>
+                                                        <strong><field name="nivel_toner_black" widget="percentage" readonly="1"/></strong>
+                                                    </div>
+                                                    <div class="d-flex justify-content-between">
+                                                        <span>Instalado</span>
+                                                        <field name="toner_black_instalado" widget="boolean_toggle" readonly="1"/>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="col-12 col-lg-3" invisible="tipo_maquina_id != 'color'">
+                                                <div class="border rounded p-3 h-100">
+                                                    <div class="text-muted small mb-2">
+                                                        <i class="fa fa-circle-o me-1"></i>
+                                                        Cian
+                                                    </div>
+                                                    <div class="d-flex justify-content-between mb-1">
+                                                        <span>Stock cliente</span>
+                                                        <strong><field name="stock_cliente_toner_cyan" readonly="1"/></strong>
+                                                    </div>
+                                                    <div class="d-flex justify-content-between mb-1">
+                                                        <span>Nivel</span>
+                                                        <strong><field name="nivel_toner_cyan" widget="percentage" readonly="1"/></strong>
+                                                    </div>
+                                                    <div class="d-flex justify-content-between">
+                                                        <span>Instalado</span>
+                                                        <field name="toner_cyan_instalado" widget="boolean_toggle" readonly="1"/>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="col-12 col-lg-3" invisible="tipo_maquina_id != 'color'">
+                                                <div class="border rounded p-3 h-100">
+                                                    <div class="text-muted small mb-2">
+                                                        <i class="fa fa-circle-o me-1"></i>
+                                                        Magenta
+                                                    </div>
+                                                    <div class="d-flex justify-content-between mb-1">
+                                                        <span>Stock cliente</span>
+                                                        <strong><field name="stock_cliente_toner_magenta" readonly="1"/></strong>
+                                                    </div>
+                                                    <div class="d-flex justify-content-between mb-1">
+                                                        <span>Nivel</span>
+                                                        <strong><field name="nivel_toner_magenta" widget="percentage" readonly="1"/></strong>
+                                                    </div>
+                                                    <div class="d-flex justify-content-between">
+                                                        <span>Instalado</span>
+                                                        <field name="toner_magenta_instalado" widget="boolean_toggle" readonly="1"/>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="col-12 col-lg-3" invisible="tipo_maquina_id != 'color'">
+                                                <div class="border rounded p-3 h-100">
+                                                    <div class="text-muted small mb-2">
+                                                        <i class="fa fa-circle-o me-1"></i>
+                                                        Amarillo
+                                                    </div>
+                                                    <div class="d-flex justify-content-between mb-1">
+                                                        <span>Stock cliente</span>
+                                                        <strong><field name="stock_cliente_toner_yellow" readonly="1"/></strong>
+                                                    </div>
+                                                    <div class="d-flex justify-content-between mb-1">
+                                                        <span>Nivel</span>
+                                                        <strong><field name="nivel_toner_yellow" widget="percentage" readonly="1"/></strong>
+                                                    </div>
+                                                    <div class="d-flex justify-content-between">
+                                                        <span>Instalado</span>
+                                                        <field name="toner_yellow_instalado" widget="boolean_toggle" readonly="1"/>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                        </div>
+
+                                        <div class="d-flex flex-wrap gap-2 mt-3">
+                                            <button name="action_create_manual_delivery"
+                                                    type="object"
+                                                    string="Nueva solicitud"
+                                                    class="btn btn-primary"
+                                                    icon="fa-plus"/>
+
+                                            <button name="action_view_toner_monitoring_events"
+                                                    type="object"
+                                                    string="Eventos"
+                                                    class="btn btn-secondary"
+                                                    icon="fa-bell"/>
+
+                                            <button name="action_view_toner_installation_history"
+                                                    type="object"
+                                                    string="Historial"
+                                                    class="btn btn-secondary"
+                                                    icon="fa-history"/>
+
+                                            <button name="action_view_toner_stock_movements"
+                                                    type="object"
+                                                    string="Kardex"
+                                                    class="btn btn-secondary"
+                                                    icon="fa-exchange"/>
+
+                                            <button name="action_view_toner_stock_discrepancies"
+                                                    type="object"
+                                                    string="Discrepancias"
+                                                    class="btn btn-warning"
+                                                    icon="fa-exclamation-triangle"
+                                                    invisible="toner_stock_discrepancy_count == 0"/>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <notebook class="sat_rental_toner_notebook">
+
+                                    <page string="Estado actual" name="toner_current_page">
+                                        <div class="alert alert-info mb-3" role="alert">
+                                            <i class="fa fa-info-circle me-2"></i>
+                                            Se muestran únicamente los cartuchos con ciclo activo.
+                                        </div>
+
+                                        <field name="toner_active_installation_ids" readonly="1" nolabel="1">
+                                            <list create="false"
+                                                  delete="false"
+                                                  edit="false"
+                                                  decoration-success="state == 'active'">
+                                                <field name="color"/>
+                                                <field name="toner_brand_id" optional="show"/>
+                                                <field name="part_number" optional="show"/>
+                                                <field name="start_date" string="Instalado"/>
+                                                <field name="start_counter" string="Contador inicial"/>
+                                                <field name="copies_produced" string="Páginas usadas"/>
+                                                <field name="expected_yield" string="Rendimiento esperado"/>
+                                                <field name="days_in_use" string="Días en uso"/>
+                                                <field name="start_source" string="Origen"/>
+                                                <field name="state" widget="badge"/>
+                                            </list>
+                                        </field>
+                                    </page>
+
+                                    <page string="Historial" name="toner_history_page">
+                                        <field name="toner_installation_history_ids" readonly="1" nolabel="1">
+                                            <list create="false"
+                                                  delete="false"
+                                                  edit="false"
+                                                  default_order="start_date desc"
+                                                  decoration-success="state == 'active'"
+                                                  decoration-muted="state == 'finished'"
+                                                  decoration-danger="state == 'cancelled'">
+                                                <field name="color"/>
+                                                <field name="toner_brand_id" optional="show"/>
+                                                <field name="part_number" optional="show"/>
+                                                <field name="start_date"/>
+                                                <field name="end_date"/>
+                                                <field name="start_counter"/>
+                                                <field name="end_counter"/>
+                                                <field name="copies_produced"/>
+                                                <field name="expected_yield" optional="show"/>
+                                                <field name="yield_percent"/>
+                                                <field name="days_in_use"/>
+                                                <field name="end_reason"/>
+                                                <field name="state" widget="badge"/>
+                                            </list>
+                                        </field>
+                                    </page>
+
+                                    <page string="Eventos" name="toner_events_page">
+                                        <field name="toner_monitoring_event_ids" readonly="1" nolabel="1">
+                                            <list create="false"
+                                                  delete="false"
+                                                  edit="false"
+                                                  default_order="event_date desc"
+                                                  decoration-danger="processing_state == 'error'"
+                                                  decoration-warning="processing_state == 'pending_data'"
+                                                  decoration-success="processing_state == 'processed'"
+                                                  decoration-muted="processing_state == 'ignored'">
+                                                <field name="event_date"/>
+                                                <field name="source"/>
+                                                <field name="event_type"/>
+                                                <field name="color"/>
+                                                <field name="level_percent"/>
+                                                <field name="counter_bn" optional="show"/>
+                                                <field name="counter_color" optional="show"/>
+                                                <field name="processing_state" widget="badge"/>
+                                                <field name="submission_id" optional="show"/>
+                                            </list>
+                                        </field>
+                                    </page>
+
+                                    <page string="Kardex" name="toner_stock_page">
+                                        <field name="toner_stock_movement_ids" readonly="1" nolabel="1">
+                                            <list create="false"
+                                                  delete="false"
+                                                  edit="false"
+                                                  default_order="movement_date desc"
+                                                  decoration-danger="stock_discrepancy"
+                                                  decoration-success="quantity &gt; 0"
+                                                  decoration-warning="quantity &lt; 0"
+                                                  decoration-muted="state == 'cancelled'">
+                                                <field name="movement_date"/>
+                                                <field name="color"/>
+                                                <field name="movement_type"/>
+                                                <field name="source"/>
+                                                <field name="quantity_requested" string="Solicitado"/>
+                                                <field name="quantity" string="Aplicado"/>
+                                                <field name="stock_before"/>
+                                                <field name="stock_after"/>
+                                                <field name="stock_discrepancy" widget="boolean_toggle"/>
+                                                <field name="state" widget="badge"/>
+                                            </list>
+                                        </field>
+                                    </page>
+
+                                </notebook>
+
+                            </page>
+
                             <!-- ══════════════════════════════════════════════════ -->
                             <!-- TAB 4: DATOS COMERCIALES (Compra + Venta)          -->
                             <!-- ══════════════════════════════════════════════════ -->
