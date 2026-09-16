@@ -351,3 +351,9 @@ access_sat_reserva_liberacion_forzada_autorizado,sat.reserva.liberacion.forzada 
 access_sat_reserva_liberacion_forzada_admin,sat.reserva.liberacion.forzada admin,model_sat_reserva_liberacion_forzada,base.group_system,1,1,1,1
 access_toner_brand_internal,toner.brand internal read,model_toner_brand,base.group_user,1,0,0,0
 access_toner_brand_admin,toner.brand administrator,model_toner_brand,base.group_system,1,1,1,1
+access_toner_monitoring_event_user,toner.monitoring.event user,model_toner_monitoring_event,base.group_user,1,0,0,0
+access_toner_monitoring_event_admin,toner.monitoring.event admin,model_toner_monitoring_event,base.group_system,1,1,1,1
+access_toner_installation_history_user,toner.installation.history user,model_toner_installation_history,base.group_user,1,0,0,0
+access_toner_installation_history_admin,toner.installation.history admin,model_toner_installation_history,base.group_system,1,1,1,1
+access_toner_stock_movement_user,toner.stock.movement user,model_toner_stock_movement,base.group_user,1,0,0,0
+access_toner_stock_movement_admin,toner.stock.movement admin,model_toner_stock_movement,base.group_system,1,1,1,1

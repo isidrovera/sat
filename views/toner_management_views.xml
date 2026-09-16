@@ -1,0 +1,993 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- ============================================================ -->
+        <!-- GESTIÓN CENTRAL DE TÓNER                                    -->
+        <!-- Vistas técnicas / operativas                                -->
+        <!-- ============================================================ -->
+
+
+        <!-- ============================================================ -->
+        <!-- 1. EVENTOS DE MONITOREO DE TÓNER                            -->
+        <!-- ============================================================ -->
+
+        <record id="view_toner_monitoring_event_list" model="ir.ui.view">
+            <field name="name">toner.monitoring.event.list</field>
+            <field name="model">toner.monitoring.event</field>
+            <field name="arch" type="xml">
+                <list
+                    string="Eventos de Tóner"
+                    create="false"
+                    delete="false"
+                    decoration-danger="processing_state == 'error'"
+                    decoration-warning="processing_state == 'pending_data'"
+                    decoration-success="processing_state == 'processed'"
+                    decoration-muted="processing_state == 'ignored'">
+
+                    <field name="event_date"/>
+                    <field name="equipment_id"/>
+                    <field name="equipment_serial"/>
+                    <field name="partner_id"/>
+                    <field name="source"/>
+                    <field name="event_type"/>
+                    <field name="color"/>
+                    <field name="level_percent"/>
+                    <field name="counter_bn"/>
+                    <field name="counter_color"/>
+                    <field name="processing_state"/>
+                    <field name="submission_id"/>
+                    <field name="installation_history_id"/>
+                    <field name="stock_movement_id"/>
+                </list>
+            </field>
+        </record>
+
+
+        <record id="view_toner_monitoring_event_form" model="ir.ui.view">
+            <field name="name">toner.monitoring.event.form</field>
+            <field name="model">toner.monitoring.event</field>
+            <field name="arch" type="xml">
+                <form string="Evento de Monitoreo de Tóner" create="false" delete="false">
+
+                    <header>
+                        <button
+                            name="action_retry_processing"
+                            type="object"
+                            string="Reprocesar"
+                            class="btn-primary"
+                            invisible="processing_state not in ['new', 'pending_data', 'error']"/>
+
+                        <button
+                            name="action_ignore"
+                            type="object"
+                            string="Ignorar"
+                            invisible="processing_state in ['processed', 'ignored']"/>
+
+                        <field
+                            name="processing_state"
+                            widget="statusbar"
+                            statusbar_visible="new,pending_data,processed,error,ignored"/>
+                    </header>
+
+                    <sheet>
+
+                        <div class="oe_button_box" name="button_box">
+
+                            <button
+                                name="action_view_equipment"
+                                type="object"
+                                class="oe_stat_button"
+                                icon="fa-print">
+                                <div class="o_stat_info">
+                                    <span class="o_stat_text">Equipo</span>
+                                </div>
+                            </button>
+
+                            <button
+                                name="action_view_submission"
+                                type="object"
+                                class="oe_stat_button"
+                                icon="fa-file-text-o"
+                                invisible="not submission_id">
+                                <div class="o_stat_info">
+                                    <span class="o_stat_text">Solicitud</span>
+                                </div>
+                            </button>
+
+                            <button
+                                name="action_view_installation_history"
+                                type="object"
+                                class="oe_stat_button"
+                                icon="fa-history"
+                                invisible="not installation_history_id">
+                                <div class="o_stat_info">
+                                    <span class="o_stat_text">Ciclo</span>
+                                </div>
+                            </button>
+
+                            <button
+                                name="action_view_stock_movement"
+                                type="object"
+                                class="oe_stat_button"
+                                icon="fa-exchange"
+                                invisible="not stock_movement_id">
+                                <div class="o_stat_info">
+                                    <span class="o_stat_text">Stock</span>
+                                </div>
+                            </button>
+
+                        </div>
+
+                        <widget
+                            name="web_ribbon"
+                            title="ERROR"
+                            bg_color="text-bg-danger"
+                            invisible="processing_state != 'error'"/>
+
+                        <widget
+                            name="web_ribbon"
+                            title="PENDIENTE"
+                            bg_color="text-bg-warning"
+                            invisible="processing_state != 'pending_data'"/>
+
+                        <widget
+                            name="web_ribbon"
+                            title="PROCESADO"
+                            bg_color="text-bg-success"
+                            invisible="processing_state != 'processed'"/>
+
+                        <div class="oe_title">
+                            <label for="display_name"/>
+                            <h1>
+                                <field name="display_name" readonly="1"/>
+                            </h1>
+                        </div>
+
+                        <group>
+                            <group string="Evento">
+                                <field name="equipment_id" readonly="1"/>
+                                <field name="equipment_serial" readonly="1"/>
+                                <field name="partner_id" readonly="1"/>
+                                <field name="event_date" readonly="1"/>
+                                <field name="source" readonly="1"/>
+                                <field name="external_event_id" readonly="1"/>
+                                <field name="source_reference" readonly="1"/>
+                            </group>
+
+                            <group string="Tóner">
+                                <field name="event_type" readonly="1"/>
+                                <field name="color" readonly="1"/>
+                                <field name="level_percent" readonly="1"/>
+                                <field name="level_value" readonly="1"/>
+                                <field name="level_max" readonly="1"/>
+                                <field name="supply_key" readonly="1"/>
+                                <field name="supply_type" readonly="1"/>
+                                <field name="supply_name" readonly="1"/>
+                                <field name="part_number" readonly="1"/>
+                                <field name="toner_brand_id" readonly="1"/>
+                            </group>
+                        </group>
+
+                        <notebook>
+
+                            <page string="Contadores">
+                                <group>
+                                    <group>
+                                        <field name="counter_bn" readonly="1"/>
+                                        <field name="counter_color" readonly="1"/>
+                                        <field name="counter_is_estimated" readonly="1"/>
+                                    </group>
+                                </group>
+                            </page>
+
+                            <page string="Procesamiento">
+                                <group>
+                                    <group>
+                                        <field name="processed" readonly="1"/>
+                                        <field name="processed_date" readonly="1"/>
+                                        <field name="submission_created" readonly="1"/>
+                                        <field name="submission_id" readonly="1"/>
+                                        <field name="duplicate_submission_id" readonly="1"/>
+                                    </group>
+
+                                    <group>
+                                        <field name="installation_history_id" readonly="1"/>
+                                        <field name="stock_movement_id" readonly="1"/>
+                                        <field name="printtracker_alert_id" readonly="1"/>
+                                        <field name="printtracker_supply_id" readonly="1"/>
+                                    </group>
+                                </group>
+
+                                <group>
+                                    <field name="processing_message" readonly="1"/>
+                                    <field name="processing_error" readonly="1"/>
+                                </group>
+                            </page>
+
+                            <page string="Datos originales">
+                                <group>
+                                    <field name="raw_subject" readonly="1"/>
+                                    <field name="raw_description" readonly="1"/>
+                                </group>
+
+                                <group>
+                                    <field
+                                        name="raw_payload"
+                                        readonly="1"
+                                        nolabel="1"
+                                        placeholder="Sin payload original"/>
+                                </group>
+                            </page>
+
+                        </notebook>
+
+                    </sheet>
+
+                    <chatter/>
+
+                </form>
+            </field>
+        </record>
+
+
+        <record id="view_toner_monitoring_event_search" model="ir.ui.view">
+            <field name="name">toner.monitoring.event.search</field>
+            <field name="model">toner.monitoring.event</field>
+            <field name="arch" type="xml">
+                <search string="Buscar Eventos de Tóner">
+
+                    <field name="equipment_id"/>
+                    <field name="equipment_serial"/>
+                    <field name="partner_id"/>
+                    <field name="external_event_id"/>
+                    <field name="supply_key"/>
+
+                    <separator/>
+
+                    <filter
+                        name="filter_pending"
+                        string="Pendientes"
+                        domain="[('processing_state', 'in', ['new', 'pending_data'])]"/>
+
+                    <filter
+                        name="filter_error"
+                        string="Con Error"
+                        domain="[('processing_state', '=', 'error')]"/>
+
+                    <filter
+                        name="filter_processed"
+                        string="Procesados"
+                        domain="[('processing_state', '=', 'processed')]"/>
+
+                    <separator/>
+
+                    <filter
+                        name="filter_low"
+                        string="Bajo"
+                        domain="[('event_type', '=', 'low')]"/>
+
+                    <filter
+                        name="filter_critical"
+                        string="Crítico"
+                        domain="[('event_type', '=', 'critical')]"/>
+
+                    <filter
+                        name="filter_empty"
+                        string="Vacío"
+                        domain="[('event_type', '=', 'empty')]"/>
+
+                    <filter
+                        name="filter_replaced"
+                        string="Reemplazado"
+                        domain="[('event_type', '=', 'replaced')]"/>
+
+                    <separator/>
+
+                    <filter
+                        name="filter_printtracker"
+                        string="PrintTracker"
+                        domain="[('source', '=', 'printtracker')]"/>
+
+                    <group expand="0" string="Agrupar por">
+                        <filter
+                            name="group_equipment"
+                            string="Equipo"
+                            context="{'group_by': 'equipment_id'}"/>
+
+                        <filter
+                            name="group_customer"
+                            string="Cliente"
+                            context="{'group_by': 'partner_id'}"/>
+
+                        <filter
+                            name="group_event_type"
+                            string="Tipo de evento"
+                            context="{'group_by': 'event_type'}"/>
+
+                        <filter
+                            name="group_color"
+                            string="Color"
+                            context="{'group_by': 'color'}"/>
+
+                        <filter
+                            name="group_source"
+                            string="Origen"
+                            context="{'group_by': 'source'}"/>
+
+                        <filter
+                            name="group_state"
+                            string="Estado"
+                            context="{'group_by': 'processing_state'}"/>
+
+                        <filter
+                            name="group_date"
+                            string="Fecha"
+                            context="{'group_by': 'event_date:day'}"/>
+                    </group>
+
+                </search>
+            </field>
+        </record>
+
+
+        <record id="action_toner_monitoring_event" model="ir.actions.act_window">
+            <field name="name">Eventos de Tóner</field>
+            <field name="res_model">toner.monitoring.event</field>
+            <field name="view_mode">list,form</field>
+            <field name="search_view_id" ref="view_toner_monitoring_event_search"/>
+            <field name="context">{'search_default_filter_pending': 1}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    No hay eventos de tóner registrados
+                </p>
+                <p>
+                    Los eventos llegan automáticamente desde PrintTracker
+                    y otras fuentes de monitoreo.
+                </p>
+            </field>
+        </record>
+
+
+        <!-- ============================================================ -->
+        <!-- 2. HISTORIAL DE INSTALACIÓN DE TÓNER                        -->
+        <!-- ============================================================ -->
+
+        <record id="view_toner_installation_history_list" model="ir.ui.view">
+            <field name="name">toner.installation.history.list</field>
+            <field name="model">toner.installation.history</field>
+            <field name="arch" type="xml">
+                <list
+                    string="Historial de Instalaciones"
+                    decoration-success="state == 'active'"
+                    decoration-muted="state == 'finished'"
+                    decoration-danger="state == 'cancelled'">
+
+                    <field name="start_date"/>
+                    <field name="equipment_id"/>
+                    <field name="equipment_serial"/>
+                    <field name="partner_id"/>
+                    <field name="color"/>
+                    <field name="state"/>
+                    <field name="start_counter"/>
+                    <field name="end_counter"/>
+                    <field name="copies_produced"/>
+                    <field name="expected_yield"/>
+                    <field name="yield_percent"/>
+                    <field name="days_in_use"/>
+                    <field name="start_source"/>
+                    <field name="end_reason"/>
+                    <field name="start_is_estimated"/>
+                </list>
+            </field>
+        </record>
+
+
+        <record id="view_toner_installation_history_form" model="ir.ui.view">
+            <field name="name">toner.installation.history.form</field>
+            <field name="model">toner.installation.history</field>
+            <field name="arch" type="xml">
+                <form string="Historial de Instalación de Tóner">
+
+                    <header>
+                        <button
+                            name="action_finish_manual"
+                            type="object"
+                            string="Finalizar Ciclo"
+                            class="btn-primary"
+                            invisible="state != 'active'"/>
+
+                        <button
+                            name="action_cancel_cycle"
+                            type="object"
+                            string="Cancelar"
+                            invisible="state != 'active'"/>
+
+                        <button
+                            name="action_reopen_cycle"
+                            type="object"
+                            string="Reabrir"
+                            invisible="state != 'finished'"/>
+
+                        <field
+                            name="state"
+                            widget="statusbar"
+                            statusbar_visible="active,finished,cancelled"/>
+                    </header>
+
+                    <sheet>
+
+                        <div class="oe_button_box" name="button_box">
+
+                            <button
+                                name="action_view_equipment"
+                                type="object"
+                                class="oe_stat_button"
+                                icon="fa-print">
+                                <div class="o_stat_info">
+                                    <span class="o_stat_text">Equipo</span>
+                                </div>
+                            </button>
+
+                            <button
+                                name="action_view_submission"
+                                type="object"
+                                class="oe_stat_button"
+                                icon="fa-file-text-o"
+                                invisible="not submission_id">
+                                <div class="o_stat_info">
+                                    <span class="o_stat_text">Solicitud</span>
+                                </div>
+                            </button>
+
+                            <button
+                                name="action_view_delivery"
+                                type="object"
+                                class="oe_stat_button"
+                                icon="fa-truck"
+                                invisible="not delivery_id">
+                                <div class="o_stat_info">
+                                    <span class="o_stat_text">Entrega</span>
+                                </div>
+                            </button>
+
+                        </div>
+
+                        <widget
+                            name="web_ribbon"
+                            title="ACTIVO"
+                            bg_color="text-bg-success"
+                            invisible="state != 'active'"/>
+
+                        <widget
+                            name="web_ribbon"
+                            title="FINALIZADO"
+                            bg_color="text-bg-secondary"
+                            invisible="state != 'finished'"/>
+
+                        <div class="oe_title">
+                            <h1>
+                                <field name="display_name" readonly="1"/>
+                            </h1>
+                        </div>
+
+                        <group>
+
+                            <group string="Equipo">
+                                <field name="equipment_id"/>
+                                <field name="equipment_serial" readonly="1"/>
+                                <field name="partner_id" readonly="1"/>
+                                <field name="color"/>
+                            </group>
+
+                            <group string="Cartucho">
+                                <field name="toner_brand_id"/>
+                                <field name="part_number"/>
+                                <field name="cartridge_serial"/>
+                                <field name="printtracker_supply_id" readonly="1"/>
+                                <field name="supply_key" readonly="1"/>
+                            </group>
+
+                        </group>
+
+                        <notebook>
+
+                            <page string="Inicio">
+                                <group>
+                                    <group>
+                                        <field name="start_date"/>
+                                        <field name="start_counter"/>
+                                        <field name="start_source"/>
+                                        <field name="start_is_estimated"/>
+                                    </group>
+
+                                    <group>
+                                        <field name="start_event_id" readonly="1"/>
+                                        <field name="opened_by_id" readonly="1"/>
+                                        <field name="expected_yield"/>
+                                    </group>
+                                </group>
+                            </page>
+
+                            <page string="Fin">
+                                <group>
+                                    <group>
+                                        <field name="end_date"/>
+                                        <field name="end_counter"/>
+                                        <field name="end_source"/>
+                                        <field name="end_reason"/>
+                                    </group>
+
+                                    <group>
+                                        <field name="end_is_estimated"/>
+                                        <field name="end_event_id" readonly="1"/>
+                                        <field name="closed_by_id" readonly="1"/>
+                                    </group>
+                                </group>
+                            </page>
+
+                            <page string="Rendimiento">
+                                <group>
+                                    <group>
+                                        <field name="copies_produced" readonly="1"/>
+                                        <field name="expected_yield" readonly="1"/>
+                                    </group>
+
+                                    <group>
+                                        <field name="yield_percent" readonly="1"/>
+                                        <field name="days_in_use" readonly="1"/>
+                                    </group>
+                                </group>
+                            </page>
+
+                            <page string="Relaciones">
+                                <group>
+                                    <field name="submission_id"/>
+                                    <field name="delivery_id"/>
+                                </group>
+                            </page>
+
+                            <page string="Observaciones">
+                                <field name="notes" nolabel="1"/>
+                            </page>
+
+                        </notebook>
+
+                    </sheet>
+
+                    <chatter/>
+
+                </form>
+            </field>
+        </record>
+
+
+        <record id="view_toner_installation_history_search" model="ir.ui.view">
+            <field name="name">toner.installation.history.search</field>
+            <field name="model">toner.installation.history</field>
+            <field name="arch" type="xml">
+                <search string="Buscar Historial de Tóner">
+
+                    <field name="equipment_id"/>
+                    <field name="equipment_serial"/>
+                    <field name="partner_id"/>
+                    <field name="part_number"/>
+                    <field name="cartridge_serial"/>
+
+                    <separator/>
+
+                    <filter
+                        name="filter_active"
+                        string="Activos"
+                        domain="[('state', '=', 'active')]"/>
+
+                    <filter
+                        name="filter_finished"
+                        string="Finalizados"
+                        domain="[('state', '=', 'finished')]"/>
+
+                    <filter
+                        name="filter_estimated"
+                        string="Inicios estimados"
+                        domain="[('start_is_estimated', '=', True)]"/>
+
+                    <separator/>
+
+                    <filter
+                        name="filter_black"
+                        string="Negro"
+                        domain="[('color', '=', 'black')]"/>
+
+                    <filter
+                        name="filter_cyan"
+                        string="Cian"
+                        domain="[('color', '=', 'cyan')]"/>
+
+                    <filter
+                        name="filter_magenta"
+                        string="Magenta"
+                        domain="[('color', '=', 'magenta')]"/>
+
+                    <filter
+                        name="filter_yellow"
+                        string="Amarillo"
+                        domain="[('color', '=', 'yellow')]"/>
+
+                    <group expand="0" string="Agrupar por">
+                        <filter
+                            name="group_equipment"
+                            string="Equipo"
+                            context="{'group_by': 'equipment_id'}"/>
+
+                        <filter
+                            name="group_customer"
+                            string="Cliente"
+                            context="{'group_by': 'partner_id'}"/>
+
+                        <filter
+                            name="group_color"
+                            string="Color"
+                            context="{'group_by': 'color'}"/>
+
+                        <filter
+                            name="group_state"
+                            string="Estado"
+                            context="{'group_by': 'state'}"/>
+
+                        <filter
+                            name="group_start_source"
+                            string="Origen"
+                            context="{'group_by': 'start_source'}"/>
+
+                        <filter
+                            name="group_start_date"
+                            string="Fecha de inicio"
+                            context="{'group_by': 'start_date:month'}"/>
+                    </group>
+
+                </search>
+            </field>
+        </record>
+
+
+        <record id="action_toner_installation_history" model="ir.actions.act_window">
+            <field name="name">Historial de Instalaciones</field>
+            <field name="res_model">toner.installation.history</field>
+            <field name="view_mode">list,form</field>
+            <field name="search_view_id" ref="view_toner_installation_history_search"/>
+            <field name="context">{'search_default_filter_active': 1}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    No hay ciclos de tóner registrados
+                </p>
+                <p>
+                    Cada registro representa un cartucho instalado y su ciclo
+                    de uso en una máquina.
+                </p>
+            </field>
+        </record>
+
+
+        <!-- ============================================================ -->
+        <!-- 3. KARDEX DE STOCK DE TÓNER                                 -->
+        <!-- ============================================================ -->
+
+        <record id="view_toner_stock_movement_list" model="ir.ui.view">
+            <field name="name">toner.stock.movement.list</field>
+            <field name="model">toner.stock.movement</field>
+            <field name="arch" type="xml">
+                <list
+                    string="Kardex de Stock de Tóner"
+                    create="false"
+                    delete="false"
+                    decoration-danger="stock_discrepancy"
+                    decoration-muted="state == 'cancelled'"
+                    decoration-success="quantity &gt; 0"
+                    decoration-warning="quantity &lt; 0">
+
+                    <field name="movement_date"/>
+                    <field name="equipment_id"/>
+                    <field name="equipment_serial"/>
+                    <field name="partner_id"/>
+                    <field name="color"/>
+                    <field name="movement_type"/>
+                    <field name="source"/>
+                    <field name="quantity_requested"/>
+                    <field name="quantity"/>
+                    <field name="stock_before"/>
+                    <field name="stock_after"/>
+                    <field name="stock_discrepancy"/>
+                    <field name="state"/>
+                    <field name="delivery_id"/>
+                    <field name="monitoring_event_id"/>
+                </list>
+            </field>
+        </record>
+
+
+        <record id="view_toner_stock_movement_form" model="ir.ui.view">
+            <field name="name">toner.stock.movement.form</field>
+            <field name="model">toner.stock.movement</field>
+            <field name="arch" type="xml">
+                <form
+                    string="Movimiento de Stock de Tóner"
+                    create="false"
+                    delete="false">
+
+                    <header>
+                        <button
+                            name="action_reverse"
+                            type="object"
+                            string="Revertir Movimiento"
+                            class="btn-secondary"
+                            invisible="state == 'cancelled'"/>
+
+                        <field
+                            name="state"
+                            widget="statusbar"
+                            statusbar_visible="posted,cancelled"/>
+                    </header>
+
+                    <sheet>
+
+                        <div class="oe_button_box" name="button_box">
+
+                            <button
+                                name="action_view_equipment"
+                                type="object"
+                                class="oe_stat_button"
+                                icon="fa-print">
+                                <div class="o_stat_info">
+                                    <span class="o_stat_text">Equipo</span>
+                                </div>
+                            </button>
+
+                            <button
+                                name="action_view_delivery"
+                                type="object"
+                                class="oe_stat_button"
+                                icon="fa-truck"
+                                invisible="not delivery_id">
+                                <div class="o_stat_info">
+                                    <span class="o_stat_text">Entrega</span>
+                                </div>
+                            </button>
+
+                            <button
+                                name="action_view_submission"
+                                type="object"
+                                class="oe_stat_button"
+                                icon="fa-file-text-o"
+                                invisible="not submission_id">
+                                <div class="o_stat_info">
+                                    <span class="o_stat_text">Solicitud</span>
+                                </div>
+                            </button>
+
+                            <button
+                                name="action_view_monitoring_event"
+                                type="object"
+                                class="oe_stat_button"
+                                icon="fa-bell"
+                                invisible="not monitoring_event_id">
+                                <div class="o_stat_info">
+                                    <span class="o_stat_text">Evento</span>
+                                </div>
+                            </button>
+
+                            <button
+                                name="action_view_installation_history"
+                                type="object"
+                                class="oe_stat_button"
+                                icon="fa-history"
+                                invisible="not installation_history_id">
+                                <div class="o_stat_info">
+                                    <span class="o_stat_text">Ciclo</span>
+                                </div>
+                            </button>
+
+                        </div>
+
+                        <widget
+                            name="web_ribbon"
+                            title="DISCREPANCIA"
+                            bg_color="text-bg-danger"
+                            invisible="not stock_discrepancy"/>
+
+                        <widget
+                            name="web_ribbon"
+                            title="ANULADO"
+                            bg_color="text-bg-secondary"
+                            invisible="state != 'cancelled'"/>
+
+                        <div class="oe_title">
+                            <h1>
+                                <field name="display_name" readonly="1"/>
+                            </h1>
+                        </div>
+
+                        <group>
+
+                            <group string="Movimiento">
+                                <field name="movement_date" readonly="1"/>
+                                <field name="movement_type" readonly="1"/>
+                                <field name="source" readonly="1"/>
+                                <field name="color" readonly="1"/>
+                                <field name="external_key" readonly="1"/>
+                            </group>
+
+                            <group string="Equipo">
+                                <field name="equipment_id" readonly="1"/>
+                                <field name="equipment_serial" readonly="1"/>
+                                <field name="partner_id" readonly="1"/>
+                                <field name="toner_brand_id" readonly="1"/>
+                                <field name="part_number" readonly="1"/>
+                            </group>
+
+                        </group>
+
+                        <group string="Saldos">
+
+                            <group>
+                                <field name="quantity_requested" readonly="1"/>
+                                <field name="quantity" readonly="1"/>
+                            </group>
+
+                            <group>
+                                <field name="stock_before" readonly="1"/>
+                                <field name="stock_after" readonly="1"/>
+                            </group>
+
+                        </group>
+
+                        <group
+                            string="Discrepancia de Stock"
+                            invisible="not stock_discrepancy">
+
+                            <field name="stock_discrepancy" readonly="1"/>
+                            <field name="discrepancy_reason" readonly="1"/>
+
+                        </group>
+
+                        <notebook>
+
+                            <page string="Relaciones">
+                                <group>
+                                    <group>
+                                        <field name="submission_id" readonly="1"/>
+                                        <field name="delivery_id" readonly="1"/>
+                                    </group>
+
+                                    <group>
+                                        <field name="monitoring_event_id" readonly="1"/>
+                                        <field name="installation_history_id" readonly="1"/>
+                                    </group>
+                                </group>
+                            </page>
+
+                            <page string="Auditoría">
+                                <group>
+                                    <field name="created_by_id" readonly="1"/>
+                                </group>
+
+                                <field name="notes" readonly="1" nolabel="1"/>
+                            </page>
+
+                        </notebook>
+
+                    </sheet>
+
+                    <chatter/>
+
+                </form>
+            </field>
+        </record>
+
+
+        <record id="view_toner_stock_movement_search" model="ir.ui.view">
+            <field name="name">toner.stock.movement.search</field>
+            <field name="model">toner.stock.movement</field>
+            <field name="arch" type="xml">
+                <search string="Buscar Movimientos de Stock">
+
+                    <field name="equipment_id"/>
+                    <field name="equipment_serial"/>
+                    <field name="partner_id"/>
+                    <field name="external_key"/>
+
+                    <separator/>
+
+                    <filter
+                        name="filter_discrepancies"
+                        string="Discrepancias"
+                        domain="[('stock_discrepancy', '=', True), ('state', '=', 'posted')]"/>
+
+                    <filter
+                        name="filter_entries"
+                        string="Entradas"
+                        domain="[('quantity', '&gt;', 0), ('state', '=', 'posted')]"/>
+
+                    <filter
+                        name="filter_outputs"
+                        string="Salidas"
+                        domain="[('quantity', '&lt;', 0), ('state', '=', 'posted')]"/>
+
+                    <filter
+                        name="filter_cancelled"
+                        string="Anulados"
+                        domain="[('state', '=', 'cancelled')]"/>
+
+                    <separator/>
+
+                    <filter
+                        name="filter_delivery"
+                        string="Entregas"
+                        domain="[('movement_type', '=', 'delivery')]"/>
+
+                    <filter
+                        name="filter_installation"
+                        string="Instalaciones"
+                        domain="[('movement_type', '=', 'installation')]"/>
+
+                    <filter
+                        name="filter_adjustment"
+                        string="Ajustes"
+                        domain="[('movement_type', 'in', ['adjustment_in', 'adjustment_out', 'correction'])]"/>
+
+                    <group expand="0" string="Agrupar por">
+                        <filter
+                            name="group_equipment"
+                            string="Equipo"
+                            context="{'group_by': 'equipment_id'}"/>
+
+                        <filter
+                            name="group_customer"
+                            string="Cliente"
+                            context="{'group_by': 'partner_id'}"/>
+
+                        <filter
+                            name="group_color"
+                            string="Color"
+                            context="{'group_by': 'color'}"/>
+
+                        <filter
+                            name="group_type"
+                            string="Tipo"
+                            context="{'group_by': 'movement_type'}"/>
+
+                        <filter
+                            name="group_source"
+                            string="Origen"
+                            context="{'group_by': 'source'}"/>
+
+                        <filter
+                            name="group_date"
+                            string="Fecha"
+                            context="{'group_by': 'movement_date:month'}"/>
+                    </group>
+
+                </search>
+            </field>
+        </record>
+
+
+        <record id="action_toner_stock_movement" model="ir.actions.act_window">
+            <field name="name">Kardex de Stock</field>
+            <field name="res_model">toner.stock.movement</field>
+            <field name="view_mode">list,form</field>
+            <field name="search_view_id" ref="view_toner_stock_movement_search"/>
+            <field name="context">{}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    No hay movimientos de stock registrados
+                </p>
+                <p>
+                    El kardex se alimenta con entregas confirmadas,
+                    reemplazos e inventarios de ajuste.
+                </p>
+            </field>
+        </record>
+
+
+    </data>
+</odoo>

@@ -920,47 +920,57 @@ action = env["sat.import.line"].browse(env.context.get("active_ids", [])).action
     <!-- seq 30-200: libres para futuras adiciones en Evaluaciones -->
 
     <!-- ================================================================== -->
-    <!-- TÓNER — seq interno de 10 en 10                                    -->
+    <!-- TÓNER — estructura simplificada                                   -->
     <!-- ================================================================== -->
+
+    <!-- Operación principal -->
     <menuitem id="menu_toner_counter_submission"
               name="Gestión de Tóner"
               parent="menu_toner_root"
               action="action_toner_counter_submission"
               sequence="10"/>
 
-    <menuitem id="menu_toner_delivery_schedule"
-              name="Entregas de Tóner"
+    <!-- Monitoreo -->
+    <menuitem id="menu_toner_monitoring_root"
+              name="Monitoreo"
               parent="menu_toner_root"
-              action="action_toner_delivery_schedule"
               sequence="20"/>
 
-    <menuitem id="menu_toner_delivery_dashboard"
-              name="Dashboard"
-              parent="menu_toner_root"
-              action="action_toner_delivery_dashboard"
+    <menuitem id="menu_toner_monitoring_event"
+              name="Eventos de Tóner"
+              parent="menu_toner_monitoring_root"
+              action="action_toner_monitoring_event"
+              sequence="10"/>
+
+    <menuitem id="menu_toner_installation_history"
+              name="Historial de Instalaciones"
+              parent="menu_toner_monitoring_root"
+              action="action_toner_installation_history"
               sequence="20"/>
 
-    <menuitem id="menu_toner_delivery_confirmation"
-              name="Reportes"
-              parent="menu_toner_root"
-              action="action_toner_delivery_confirmation"
+    <menuitem id="menu_toner_stock_movement"
+              name="Kardex de Stock"
+              parent="menu_toner_monitoring_root"
+              action="action_toner_stock_movement"
               sequence="30"/>
 
-    <menuitem id="menu_toner_delivery_validation"
-              name="Validaciones Pendientes"
+    <!-- Configuración -->
+    <menuitem id="menu_toner_config_root"
+              name="Configuración"
               parent="menu_toner_root"
-              action="action_toner_delivery_validation_pending"
-              sequence="50"/>
+              sequence="90"/>
 
-    <!-- Menús técnicos: se conservan las acciones y modelos, pero no se muestran al usuario operativo. -->
-    <record id="menu_toner_delivery_schedule" model="ir.ui.menu">
-      <field name="active" eval="False"/>
-    </record>
-    <record id="menu_toner_delivery_validation" model="ir.ui.menu">
-      <field name="active" eval="False"/>
-    </record>
+    <menuitem id="menu_toner_brand"
+              name="Marcas de Tóner"
+              parent="menu_toner_config_root"
+              action="action_toner_brand"
+              sequence="10"/>
 
-    <!-- seq 60-200: libres para futuras adiciones en Tóner -->
+    <!--
+        Los procesos de despacho/confirmación/validación siguen existiendo
+        mediante sus acciones y smart buttons, pero no se muestran como
+        menús principales para evitar duplicar el flujo de Gestión de Tóner.
+    -->
 
     <!-- ================================================================== -->
     <!-- CONTADORES — seq interno de 10 en 10                               -->

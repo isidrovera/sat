@@ -1,670 +1,1732 @@
-import calendar
-import requests
-import uuid
-from urllib.parse import urlencode
-from odoo.exceptions import UserError, ValidationError
-import io
-import qrcode
-import re
-import base64
-from io import BytesIO
-import xlwt
-from odoo import _, models, fields, api
-from dateutil.relativedelta import relativedelta
-from datetime import datetime
-from datetime import datetime, timedelta
-import xml.etree.ElementTree as ET
+# -*- coding: utf-8 -*-
+
 import logging
+from datetime import timedelta
+
+from odoo import _, api, fields, models
+from odoo.exceptions import UserError
+
+
 _logger = logging.getLogger(__name__)
 
-class UnidadAlquiler(models.Model):
-    _inherit = 'alquiler'
-    
-    estado_stock_toner = fields.Selection([
-        ('critico', 'Crítico'),
-        ('bajo', 'Bajo'),
-        ('normal', 'Normal'),
-        ('alto', 'Alto')
-    ], string='Estado Stock Tóner', default='normal',
-       compute='_compute_estado_stock_toner',
-       store=True,
-       help='Estado general del stock de tóner')
 
-    # Stock físico que tiene el cliente guardado
+class UnidadAlquiler(models.Model):
+    """
+    Integración de gestión de tóner sobre alquiler.
+
+    FUENTES DE VERDAD
+    =================
+
+    1. toner.monitoring.event
+       Eventos externos / monitoreo.
+
+    2. toner.installation.history
+       Ciclos físicos de cartuchos instalados.
+
+    3. toner.stock.movement
+       Kardex del stock de respaldo que permanece con el cliente.
+
+    4. toner.counter.submission
+       Solicitud / aprobación / despacho.
+
+    Los campos históricos antiguos de alquiler se conservan por
+    compatibilidad con vistas y código existente, pero ahora se calculan
+    a partir de los modelos históricos. Ya no son la fuente de verdad.
+    """
+
+    _inherit = "alquiler"
+
+    # ============================================================
+    # ESTADO GENERAL
+    # ============================================================
+
+    estado_stock_toner = fields.Selection(
+        [
+            ("critico", "Crítico"),
+            ("bajo", "Bajo"),
+            ("normal", "Normal"),
+            ("alto", "Alto"),
+        ],
+        string="Estado Stock Tóner",
+        compute="_compute_toner_dashboard_fields",
+        store=False,
+        help=(
+            "Estado calculado desde el stock histórico del cliente "
+            "registrado en toner.stock.movement."
+        ),
+    )
+
+    # ============================================================
+    # STOCK CLIENTE - COMPATIBILIDAD
+    # ============================================================
+    #
+    # Estos campos existían antes como enteros editables.
+    # Se mantienen con los mismos nombres para no romper vistas,
+    # pero ahora se derivan del kardex.
+    # ============================================================
+
     stock_cliente_toner_black = fields.Integer(
-        string='Stock Cliente - Tóner Negro',
-        default=0,
-        tracking=True,
-        help='Cantidad de tóner negro que tiene el cliente en stock (sin instalar)'
+        string="Stock Cliente - Tóner Negro",
+        compute="_compute_toner_dashboard_fields",
+        store=False,
+        help="Stock de respaldo negro calculado desde el kardex.",
     )
 
     stock_cliente_toner_cyan = fields.Integer(
-        string='Stock Cliente - Tóner Cian',
-        default=0,
-        tracking=True,
-        help='Cantidad de tóner cian que tiene el cliente en stock (sin instalar)'
+        string="Stock Cliente - Tóner Cian",
+        compute="_compute_toner_dashboard_fields",
+        store=False,
+        help="Stock de respaldo cian calculado desde el kardex.",
     )
 
     stock_cliente_toner_magenta = fields.Integer(
-        string='Stock Cliente - Tóner Magenta',
-        default=0,
-        tracking=True,
-        help='Cantidad de tóner magenta que tiene el cliente en stock (sin instalar)'
+        string="Stock Cliente - Tóner Magenta",
+        compute="_compute_toner_dashboard_fields",
+        store=False,
+        help="Stock de respaldo magenta calculado desde el kardex.",
     )
 
     stock_cliente_toner_yellow = fields.Integer(
-        string='Stock Cliente - Tóner Amarillo',
-        default=0,
-        tracking=True,
-        help='Cantidad de tóner amarillo que tiene el cliente en stock (sin instalar)'
+        string="Stock Cliente - Tóner Amarillo",
+        compute="_compute_toner_dashboard_fields",
+        store=False,
+        help="Stock de respaldo amarillo calculado desde el kardex.",
     )
 
-    # Tóner instalado actualmente en la máquina
+    # ============================================================
+    # CARTUCHO INSTALADO - COMPATIBILIDAD
+    # ============================================================
+
     toner_black_instalado = fields.Boolean(
-        string='Tóner Negro Instalado',
-        default=True,
-        tracking=True,
-        help='¿Hay tóner negro instalado en la máquina?'
+        string="Tóner Negro Instalado",
+        compute="_compute_toner_cycle_compatibility",
+        store=False,
     )
 
     toner_cyan_instalado = fields.Boolean(
-        string='Tóner Cian Instalado',
-        default=True,
-        tracking=True,
-        help='¿Hay tóner cian instalado en la máquina?'
+        string="Tóner Cian Instalado",
+        compute="_compute_toner_cycle_compatibility",
+        store=False,
     )
 
     toner_magenta_instalado = fields.Boolean(
-        string='Tóner Magenta Instalado',
-        default=True,
-        tracking=True,
-        help='¿Hay tóner magenta instalado en la máquina?'
+        string="Tóner Magenta Instalado",
+        compute="_compute_toner_cycle_compatibility",
+        store=False,
     )
 
     toner_yellow_instalado = fields.Boolean(
-        string='Tóner Amarillo Instalado',
-        default=True,
-        tracking=True,
-        help='¿Hay tóner amarillo instalado en la máquina?'
+        string="Tóner Amarillo Instalado",
+        compute="_compute_toner_cycle_compatibility",
+        store=False,
     )
 
-    # Fechas de instalación
+    # ============================================================
+    # FECHAS DE INSTALACIÓN - COMPATIBILIDAD
+    # ============================================================
+
     fecha_instalacion_toner_black = fields.Date(
-        string='Fecha Instalación Tóner Negro',
-        tracking=True,
-        help='Cuándo se instaló el tóner negro actual'
+        string="Fecha Instalación Tóner Negro",
+        compute="_compute_toner_cycle_compatibility",
+        store=False,
     )
 
     fecha_instalacion_toner_cyan = fields.Date(
-        string='Fecha Instalación Tóner Cian',
-        tracking=True,
-        help='Cuándo se instaló el tóner cian actual'
+        string="Fecha Instalación Tóner Cian",
+        compute="_compute_toner_cycle_compatibility",
+        store=False,
     )
 
     fecha_instalacion_toner_magenta = fields.Date(
-        string='Fecha Instalación Tóner Magenta',
-        tracking=True,
-        help='Cuándo se instaló el tóner magenta actual'
+        string="Fecha Instalación Tóner Magenta",
+        compute="_compute_toner_cycle_compatibility",
+        store=False,
     )
 
     fecha_instalacion_toner_yellow = fields.Date(
-        string='Fecha Instalación Tóner Amarillo',
-        tracking=True,
-        help='Cuándo se instaló el tóner amarillo actual'
+        string="Fecha Instalación Tóner Amarillo",
+        compute="_compute_toner_cycle_compatibility",
+        store=False,
     )
 
-    # Contadores al momento de instalación
+    # ============================================================
+    # CONTADORES DE INSTALACIÓN - COMPATIBILIDAD
+    # ============================================================
+
     contador_instalacion_toner_black = fields.Integer(
-        string='Contador al Instalar Tóner Negro',
-        default=0,
-        tracking=True,
-        help='Lectura del contador cuando se instaló el tóner negro'
+        string="Contador al Instalar Tóner Negro",
+        compute="_compute_toner_cycle_compatibility",
+        store=False,
     )
 
     contador_instalacion_toner_cyan = fields.Integer(
-        string='Contador al Instalar Tóner Cian',
-        default=0,
-        tracking=True,
-        help='Lectura del contador color cuando se instaló el tóner cian'
+        string="Contador al Instalar Tóner Cian",
+        compute="_compute_toner_cycle_compatibility",
+        store=False,
     )
 
     contador_instalacion_toner_magenta = fields.Integer(
-        string='Contador al Instalar Tóner Magenta',
-        default=0,
-        tracking=True,
-        help='Lectura del contador color cuando se instaló el tóner magenta'
+        string="Contador al Instalar Tóner Magenta",
+        compute="_compute_toner_cycle_compatibility",
+        store=False,
     )
 
     contador_instalacion_toner_yellow = fields.Integer(
-        string='Contador al Instalar Tóner Amarillo',
-        default=0,
-        tracking=True,
-        help='Lectura del contador color cuando se instaló el tóner amarillo'
+        string="Contador al Instalar Tóner Amarillo",
+        compute="_compute_toner_cycle_compatibility",
+        store=False,
     )
 
-    # Contadores actuales
+    # ============================================================
+    # CONTADORES ACTUALES - COMPATIBILIDAD
+    # ============================================================
+
     contador_actual_black = fields.Integer(
-        string='Contador Actual B/N',
-        default=0,
-        tracking=True,
-        help='Última lectura del contador blanco y negro'
+        string="Contador Actual B/N",
+        compute="_compute_current_counter_compatibility",
+        store=False,
     )
 
     contador_actual_color = fields.Integer(
-        string='Contador Actual Color',
-        default=0,
-        tracking=True,
-        help='Última lectura del contador color'
+        string="Contador Actual Color",
+        compute="_compute_current_counter_compatibility",
+        store=False,
     )
 
     fecha_ultima_lectura = fields.Datetime(
-        string='Fecha Última Lectura',
-        tracking=True,
-        help='Cuándo se tomó la última lectura de contadores'
+        string="Fecha Última Lectura",
+        compute="_compute_current_counter_compatibility",
+        store=False,
     )
 
-    # Campos calculados de páginas usadas
+    # ============================================================
+    # RENDIMIENTO DEL CICLO ACTUAL
+    # ============================================================
+
     paginas_usadas_toner_black = fields.Integer(
-        string='Páginas Usadas Tóner Negro',
-        compute='_compute_paginas_usadas_toner',
-        store=True,
-        help='Páginas que ha impreso el tóner negro instalado'
+        string="Páginas Usadas Tóner Negro",
+        compute="_compute_toner_usage",
+        store=False,
     )
 
     paginas_usadas_toner_cyan = fields.Integer(
-        string='Páginas Usadas Tóner Cian',
-        compute='_compute_paginas_usadas_toner',
-        store=True,
-        help='Páginas que ha impreso el tóner cian instalado'
+        string="Páginas Usadas Tóner Cian",
+        compute="_compute_toner_usage",
+        store=False,
     )
 
     paginas_usadas_toner_magenta = fields.Integer(
-        string='Páginas Usadas Tóner Magenta',
-        compute='_compute_paginas_usadas_toner',
-        store=True,
-        help='Páginas que ha impreso el tóner magenta instalado'
+        string="Páginas Usadas Tóner Magenta",
+        compute="_compute_toner_usage",
+        store=False,
     )
 
     paginas_usadas_toner_yellow = fields.Integer(
-        string='Páginas Usadas Tóner Amarillo',
-        compute='_compute_paginas_usadas_toner',
-        store=True,
-        help='Páginas que ha impreso el tóner amarillo instalado'
+        string="Páginas Usadas Tóner Amarillo",
+        compute="_compute_toner_usage",
+        store=False,
     )
 
-    # Páginas restantes
     paginas_restantes_toner_black = fields.Integer(
-        string='Páginas Restantes Tóner Negro',
-        compute='_compute_paginas_restantes_toner',
-        help='Páginas estimadas que le quedan al tóner negro instalado'
+        string="Páginas Restantes Tóner Negro",
+        compute="_compute_toner_usage",
+        store=False,
     )
 
     paginas_restantes_toner_cyan = fields.Integer(
-        string='Páginas Restantes Tóner Cian',
-        compute='_compute_paginas_restantes_toner',
-        help='Páginas estimadas que le quedan al tóner cian instalado'
+        string="Páginas Restantes Tóner Cian",
+        compute="_compute_toner_usage",
+        store=False,
     )
 
     paginas_restantes_toner_magenta = fields.Integer(
-        string='Páginas Restantes Tóner Magenta',
-        compute='_compute_paginas_restantes_toner',
-        help='Páginas estimadas que le quedan al tóner magenta instalado'
+        string="Páginas Restantes Tóner Magenta",
+        compute="_compute_toner_usage",
+        store=False,
     )
 
     paginas_restantes_toner_yellow = fields.Integer(
-        string='Páginas Restantes Tóner Amarillo',
-        compute='_compute_paginas_restantes_toner',
-        help='Páginas estimadas que le quedan al tóner amarillo instalado'
+        string="Páginas Restantes Tóner Amarillo",
+        compute="_compute_toner_usage",
+        store=False,
     )
 
-    # Nivel de tóner (porcentaje)
+    # ============================================================
+    # NIVEL DE TÓNER
+    # ============================================================
+
     nivel_toner_black = fields.Float(
-        string='Nivel Tóner Negro (%)',
-        compute='_compute_nivel_toner',
-        help='Porcentaje restante del tóner negro instalado'
+        string="Nivel Tóner Negro (%)",
+        compute="_compute_toner_levels",
+        store=False,
     )
 
     nivel_toner_cyan = fields.Float(
-        string='Nivel Tóner Cian (%)',
-        compute='_compute_nivel_toner',
-        help='Porcentaje restante del tóner cian instalado'
+        string="Nivel Tóner Cian (%)",
+        compute="_compute_toner_levels",
+        store=False,
     )
 
     nivel_toner_magenta = fields.Float(
-        string='Nivel Tóner Magenta (%)',
-        compute='_compute_nivel_toner',
-        help='Porcentaje restante del tóner magenta instalado'
+        string="Nivel Tóner Magenta (%)",
+        compute="_compute_toner_levels",
+        store=False,
     )
 
     nivel_toner_yellow = fields.Float(
-        string='Nivel Tóner Amarillo (%)',
-        compute='_compute_nivel_toner',
-        help='Porcentaje restante del tóner amarillo instalado'
+        string="Nivel Tóner Amarillo (%)",
+        compute="_compute_toner_levels",
+        store=False,
     )
 
-    # Stock total disponible (instalado + en stock)
+    # ============================================================
+    # TOTAL FÍSICO
+    # ============================================================
+    #
+    # TOTAL FÍSICO = cartucho instalado + repuestos en stock.
+    #
+    # El stock del cliente por sí solo sigue siendo únicamente el
+    # repuesto almacenado.
+    # ============================================================
+
     stock_total_toner_black = fields.Integer(
-        string='Stock Total Tóner Negro',
-        compute='_compute_stock_total_toner',
-        store=True,
-        help='Total de tóner negro disponible (instalado + en stock)'
+        string="Stock Total Tóner Negro",
+        compute="_compute_toner_dashboard_fields",
+        store=False,
     )
 
     stock_total_toner_cyan = fields.Integer(
-        string='Stock Total Tóner Cian',
-        compute='_compute_stock_total_toner',
-        store=True,
-        help='Total de tóner cian disponible (instalado + en stock)'
+        string="Stock Total Tóner Cian",
+        compute="_compute_toner_dashboard_fields",
+        store=False,
     )
 
     stock_total_toner_magenta = fields.Integer(
-        string='Stock Total Tóner Magenta',
-        compute='_compute_stock_total_toner',
-        store=True,
-        help='Total de tóner magenta disponible (instalado + en stock)'
+        string="Stock Total Tóner Magenta",
+        compute="_compute_toner_dashboard_fields",
+        store=False,
     )
 
     stock_total_toner_yellow = fields.Integer(
-        string='Stock Total Tóner Amarillo',
-        compute='_compute_stock_total_toner',
-        store=True,
-        help='Total de tóner amarillo disponible (instalado + en stock)'
+        string="Stock Total Tóner Amarillo",
+        compute="_compute_toner_dashboard_fields",
+        store=False,
     )
 
-    # Contadores para reportes y entregas de tóner
+    # ============================================================
+    # CONTADORES SMART BUTTON
+    # ============================================================
+
     toner_reports_count = fields.Integer(
-        string='Reportes de Tóner',
-        compute='_compute_toner_counts'
+        string="Solicitudes de Tóner",
+        compute="_compute_toner_counts",
     )
 
     toner_deliveries_count = fields.Integer(
-        string='Entregas de Tóner',
-        compute='_compute_toner_counts'
+        string="Entregas de Tóner",
+        compute="_compute_toner_counts",
     )
 
-    # ==========================================
-    # MÉTODOS COMPUTE PARA TÓNER
-    # ==========================================
+    toner_monitoring_events_count = fields.Integer(
+        string="Eventos de Tóner",
+        compute="_compute_toner_counts",
+    )
 
-    @api.depends('contador_actual_black', 'contador_actual_color', 
-                'contador_instalacion_toner_black', 'contador_instalacion_toner_cyan',
-                'contador_instalacion_toner_magenta', 'contador_instalacion_toner_yellow')
-    def _compute_paginas_usadas_toner(self):
-        """Calcula páginas usadas por cada tóner instalado"""
+    toner_installation_history_count = fields.Integer(
+        string="Historial de Tóner",
+        compute="_compute_toner_counts",
+    )
+
+    toner_stock_movements_count = fields.Integer(
+        string="Movimientos de Stock",
+        compute="_compute_toner_counts",
+    )
+
+    toner_stock_discrepancy_count = fields.Integer(
+        string="Discrepancias de Stock",
+        compute="_compute_toner_counts",
+    )
+
+    # ============================================================
+    # HELPERS GENERALES
+    # ============================================================
+
+    @api.model
+    def _toner_colors(self):
+        return (
+            "black",
+            "cyan",
+            "magenta",
+            "yellow",
+        )
+
+    def _get_current_counter(self, color):
+        """
+        Obtiene el contador actual del equipo sin depender de los campos
+        legacy de esta extensión.
+
+        Negro:
+            contador_bn si existe.
+
+        C/M/Y:
+            contador_color si existe.
+
+        Como respaldo usa la última observación toner.monitoring.event.
+        """
+        self.ensure_one()
+
+        field_name = (
+            "contador_bn"
+            if color == "black"
+            else "contador_color"
+        )
+
+        if field_name in self._fields:
+            value = int(
+                getattr(
+                    self,
+                    field_name,
+                    0,
+                )
+                or 0
+            )
+
+            if value > 0:
+                return value
+
+        event = self.env[
+            "toner.monitoring.event"
+        ].sudo().search(
+            [
+                ("equipment_id", "=", self.id),
+                ("color", "=", color),
+                (
+                    "counter_bn"
+                    if color == "black"
+                    else "counter_color",
+                    ">",
+                    0,
+                ),
+            ],
+            order="event_date desc, id desc",
+            limit=1,
+        )
+
+        if event:
+            return int(
+                event.counter_bn
+                if color == "black"
+                else event.counter_color
+            )
+
+        return 0
+
+    def _get_active_toner_cycle(self, color):
+        self.ensure_one()
+
+        return self.env[
+            "toner.installation.history"
+        ].sudo().get_active_cycle(
+            self,
+            color,
+        )
+
+    def _get_latest_toner_level_event(self, color):
+        self.ensure_one()
+
+        return self.env[
+            "toner.monitoring.event"
+        ].sudo().search(
+            [
+                ("equipment_id", "=", self.id),
+                ("color", "=", color),
+                ("level_percent", ">=", 0),
+                (
+                    "event_type",
+                    "in",
+                    [
+                        "level",
+                        "normal",
+                        "low",
+                        "critical",
+                        "empty",
+                        "replaced",
+                    ],
+                ),
+            ],
+            order="event_date desc, id desc",
+            limit=1,
+        )
+
+    def _get_toner_min_stock(self, color):
+        """
+        Stock mínimo se interpreta como stock de respaldo esperado
+        en el cliente, no como cartucho instalado.
+        """
+        self.ensure_one()
+
+        if not self.name:
+            return 1
+
+        field_name = "stock_minimo_%s" % color
+
+        if field_name in self.name._fields:
+            return max(
+                0,
+                int(
+                    getattr(
+                        self.name,
+                        field_name,
+                        0,
+                    )
+                    or 0
+                ),
+            )
+
+        return 1
+
+    # ============================================================
+    # COMPATIBILIDAD: CICLO ACTUAL
+    # ============================================================
+
+    def _compute_toner_cycle_compatibility(self):
         for record in self:
-            # Tóner Negro
-            if record.toner_black_instalado and record.contador_instalacion_toner_black:
-                record.paginas_usadas_toner_black = max(0, 
-                    record.contador_actual_black - record.contador_instalacion_toner_black)
+            cycles = {
+                color: record._get_active_toner_cycle(
+                    color
+                )
+                for color in record._toner_colors()
+            }
+
+            for color in record._toner_colors():
+                cycle = cycles[color]
+
+                setattr(
+                    record,
+                    "toner_%s_instalado" % color,
+                    bool(cycle),
+                )
+
+                setattr(
+                    record,
+                    "fecha_instalacion_toner_%s" % color,
+                    (
+                        fields.Date.to_date(
+                            cycle.start_date
+                        )
+                        if cycle
+                        and cycle.start_date
+                        else False
+                    ),
+                )
+
+                setattr(
+                    record,
+                    "contador_instalacion_toner_%s" % color,
+                    (
+                        int(
+                            cycle.start_counter
+                            or 0
+                        )
+                        if cycle
+                        else 0
+                    ),
+                )
+
+    # ============================================================
+    # COMPATIBILIDAD: CONTADORES
+    # ============================================================
+
+    def _compute_current_counter_compatibility(self):
+        Event = self.env[
+            "toner.monitoring.event"
+        ].sudo()
+
+        for record in self:
+            record.contador_actual_black = (
+                record._get_current_counter(
+                    "black"
+                )
+            )
+
+            color_values = [
+                record._get_current_counter(
+                    color
+                )
+                for color in (
+                    "cyan",
+                    "magenta",
+                    "yellow",
+                )
+            ]
+
+            record.contador_actual_color = max(
+                color_values
+                or [0]
+            )
+
+            last_event = Event.search(
+                [
+                    ("equipment_id", "=", record.id),
+                    "|",
+                    ("counter_bn", ">", 0),
+                    ("counter_color", ">", 0),
+                ],
+                order="event_date desc, id desc",
+                limit=1,
+            )
+
+            if last_event:
+                record.fecha_ultima_lectura = (
+                    last_event.event_date
+                )
+            elif (
+                "fecha_ultima_actualizacion"
+                in record._fields
+            ):
+                record.fecha_ultima_lectura = (
+                    record.fecha_ultima_actualizacion
+                )
             else:
-                record.paginas_usadas_toner_black = 0
-            
-            # Para tóners color, dividir el consumo color entre 3 (aprox)
-            consumo_color_total = max(0, record.contador_actual_color - 
-                                    min(record.contador_instalacion_toner_cyan or record.contador_actual_color,
-                                        record.contador_instalacion_toner_magenta or record.contador_actual_color,
-                                        record.contador_instalacion_toner_yellow or record.contador_actual_color))
-            
-            consumo_color_por_toner = consumo_color_total // 3 if consumo_color_total > 0 else 0
-            
-            record.paginas_usadas_toner_cyan = consumo_color_por_toner if record.toner_cyan_instalado else 0
-            record.paginas_usadas_toner_magenta = consumo_color_por_toner if record.toner_magenta_instalado else 0
-            record.paginas_usadas_toner_yellow = consumo_color_por_toner if record.toner_yellow_instalado else 0
+                record.fecha_ultima_lectura = False
 
-    @api.depends('paginas_usadas_toner_black', 'paginas_usadas_toner_cyan',
-                'paginas_usadas_toner_magenta', 'paginas_usadas_toner_yellow',
-                'name.durabilidad_toner_black', 'name.durabilidad_toner_cyan',
-                'name.durabilidad_toner_magenta', 'name.durabilidad_toner_yellow')
-    def _compute_paginas_restantes_toner(self):
-        """Calcula páginas restantes de cada tóner"""
-        for record in self:
-            if record.name:  # Si tiene modelo asociado
-                record.paginas_restantes_toner_black = max(0,
-                    (record.name.durabilidad_toner_black or 0) - record.paginas_usadas_toner_black)
-                record.paginas_restantes_toner_cyan = max(0,
-                    (record.name.durabilidad_toner_cyan or 0) - record.paginas_usadas_toner_cyan)
-                record.paginas_restantes_toner_magenta = max(0,
-                    (record.name.durabilidad_toner_magenta or 0) - record.paginas_usadas_toner_magenta)
-                record.paginas_restantes_toner_yellow = max(0,
-                    (record.name.durabilidad_toner_yellow or 0) - record.paginas_usadas_toner_yellow)
-            else:
-                record.paginas_restantes_toner_black = 0
-                record.paginas_restantes_toner_cyan = 0
-                record.paginas_restantes_toner_magenta = 0
-                record.paginas_restantes_toner_yellow = 0
+    # ============================================================
+    # RENDIMIENTO DEL CICLO ACTIVO
+    # ============================================================
 
-    @api.depends('paginas_restantes_toner_black', 'paginas_restantes_toner_cyan',
-                'paginas_restantes_toner_magenta', 'paginas_restantes_toner_yellow',
-                'name.durabilidad_toner_black', 'name.durabilidad_toner_cyan',
-                'name.durabilidad_toner_magenta', 'name.durabilidad_toner_yellow')
-    def _compute_nivel_toner(self):
-        """Calcula el porcentaje restante de cada tóner"""
+    def _compute_toner_usage(self):
         for record in self:
-            if record.name:  # Si tiene modelo asociado
-                # Tóner Negro
-                if record.name.durabilidad_toner_black and record.name.durabilidad_toner_black > 0:
-                    record.nivel_toner_black = (record.paginas_restantes_toner_black / 
-                                            record.name.durabilidad_toner_black) * 100
-                else:
-                    record.nivel_toner_black = 0
-                
-                # Tóner Cian
-                if record.name.durabilidad_toner_cyan and record.name.durabilidad_toner_cyan > 0:
-                    record.nivel_toner_cyan = (record.paginas_restantes_toner_cyan / 
-                                            record.name.durabilidad_toner_cyan) * 100
-                else:
-                    record.nivel_toner_cyan = 0
-                
-                # Tóner Magenta
-                if record.name.durabilidad_toner_magenta and record.name.durabilidad_toner_magenta > 0:
-                    record.nivel_toner_magenta = (record.paginas_restantes_toner_magenta / 
-                                                record.name.durabilidad_toner_magenta) * 100
-                else:
-                    record.nivel_toner_magenta = 0
-                
-                # Tóner Amarillo
-                if record.name.durabilidad_toner_yellow and record.name.durabilidad_toner_yellow > 0:
-                    record.nivel_toner_yellow = (record.paginas_restantes_toner_yellow / 
-                                            record.name.durabilidad_toner_yellow) * 100
-                else:
-                    record.nivel_toner_yellow = 0
-            else:
-                record.nivel_toner_black = 0
-                record.nivel_toner_cyan = 0
-                record.nivel_toner_magenta = 0
-                record.nivel_toner_yellow = 0
+            for color in record._toner_colors():
+                cycle = record._get_active_toner_cycle(
+                    color
+                )
 
-    @api.depends('stock_cliente_toner_black', 'stock_cliente_toner_cyan',
-                'stock_cliente_toner_magenta', 'stock_cliente_toner_yellow',
-                'toner_black_instalado', 'toner_cyan_instalado',
-                'toner_magenta_instalado', 'toner_yellow_instalado')
-    def _compute_stock_total_toner(self):
-        """Calcula stock total disponible (instalado + en stock del cliente)"""
-        for record in self:
-            record.stock_total_toner_black = record.stock_cliente_toner_black + (1 if record.toner_black_instalado else 0)
-            record.stock_total_toner_cyan = record.stock_cliente_toner_cyan + (1 if record.toner_cyan_instalado else 0)
-            record.stock_total_toner_magenta = record.stock_cliente_toner_magenta + (1 if record.toner_magenta_instalado else 0)
-            record.stock_total_toner_yellow = record.stock_cliente_toner_yellow + (1 if record.toner_yellow_instalado else 0)
+                used = 0
+                remaining = 0
 
-    @api.depends('stock_total_toner_black', 'stock_total_toner_cyan',
-                'stock_total_toner_magenta', 'stock_total_toner_yellow',
-                'tipo_maquina_id',
-                'name.stock_minimo_black', 'name.stock_minimo_cyan',
-                'name.stock_minimo_magenta', 'name.stock_minimo_yellow')
-    def _compute_estado_stock_toner(self):
-        """Calcula estado general del stock de tóner"""
+                if cycle:
+                    current = (
+                        record._get_current_counter(
+                            color
+                        )
+                    )
+
+                    start = int(
+                        cycle.start_counter
+                        or 0
+                    )
+
+                    if (
+                        current > 0
+                        and current >= start
+                    ):
+                        used = current - start
+
+                    expected = int(
+                        cycle.expected_yield
+                        or 0
+                    )
+
+                    if expected <= 0:
+                        expected = int(
+                            self.env[
+                                "toner.installation.history"
+                            ].sudo()._get_expected_yield_for_equipment(
+                                record,
+                                color,
+                            )
+                            or 0
+                        )
+
+                    remaining = max(
+                        0,
+                        expected - used,
+                    )
+
+                setattr(
+                    record,
+                    "paginas_usadas_toner_%s" % color,
+                    used,
+                )
+
+                setattr(
+                    record,
+                    "paginas_restantes_toner_%s" % color,
+                    remaining,
+                )
+
+    # ============================================================
+    # NIVEL DE TÓNER
+    # ============================================================
+
+    def _compute_toner_levels(self):
         for record in self:
-            if not record.name:
-                record.estado_stock_toner = 'normal'
-                continue
-            
-            estados = []
-            
-            # Evaluar cada tóner según el tipo de máquina
-            if record.tipo_maquina_id == 'monocromatica':
-                # Solo evaluar tóner negro
-                stock_min = record.name.stock_minimo_black or 1
-                if record.stock_total_toner_black == 0:
-                    estados.append('critico')
-                elif record.stock_total_toner_black < stock_min:
-                    estados.append('bajo')
-                elif record.stock_total_toner_black > stock_min * 2:
-                    estados.append('alto')
-                else:
-                    estados.append('normal')
-            
-            elif record.tipo_maquina_id == 'color':
-                # Evaluar todos los tóners
-                toners = [
-                    (record.stock_total_toner_black, record.name.stock_minimo_black or 1),
-                    (record.stock_total_toner_cyan, record.name.stock_minimo_cyan or 1),
-                    (record.stock_total_toner_magenta, record.name.stock_minimo_magenta or 1),
-                    (record.stock_total_toner_yellow, record.name.stock_minimo_yellow or 1),
+            for color in record._toner_colors():
+                event = (
+                    record._get_latest_toner_level_event(
+                        color
+                    )
+                )
+
+                level = False
+
+                if event:
+                    level = float(
+                        event.level_percent
+                        or 0.0
+                    )
+
+                # Si no hay lectura de nivel, estimar desde rendimiento
+                # del ciclo únicamente para visualización.
+                if not event:
+                    cycle = (
+                        record._get_active_toner_cycle(
+                            color
+                        )
+                    )
+
+                    if cycle:
+                        expected = int(
+                            cycle.expected_yield
+                            or 0
+                        )
+
+                        if expected > 0:
+                            current = (
+                                record._get_current_counter(
+                                    color
+                                )
+                            )
+
+                            used = max(
+                                0,
+                                current
+                                - int(
+                                    cycle.start_counter
+                                    or 0
+                                ),
+                            )
+
+                            level = max(
+                                0.0,
+                                min(
+                                    100.0,
+                                    (
+                                        (
+                                            expected
+                                            - used
+                                        )
+                                        / expected
+                                    )
+                                    * 100.0,
+                                ),
+                            )
+
+                setattr(
+                    record,
+                    "nivel_toner_%s" % color,
+                    float(
+                        level
+                        if level is not False
+                        else 0.0
+                    ),
+                )
+
+    # ============================================================
+    # STOCK Y ESTADO GENERAL
+    # ============================================================
+
+    def _compute_toner_dashboard_fields(self):
+        Stock = self.env[
+            "toner.stock.movement"
+        ].sudo()
+
+        History = self.env[
+            "toner.installation.history"
+        ].sudo()
+
+        for record in self:
+            stock = Stock.get_stock_summary(
+                record
+            )
+
+            active = {
+                color: bool(
+                    History.get_active_cycle(
+                        record,
+                        color,
+                    )
+                )
+                for color in record._toner_colors()
+            }
+
+            for color in record._toner_colors():
+                client_stock = int(
+                    stock.get(
+                        color,
+                        0,
+                    )
+                    or 0
+                )
+
+                setattr(
+                    record,
+                    "stock_cliente_toner_%s" % color,
+                    client_stock,
+                )
+
+                setattr(
+                    record,
+                    "stock_total_toner_%s" % color,
+                    client_stock
+                    + (
+                        1
+                        if active[color]
+                        else 0
+                    ),
+                )
+
+            colors_to_evaluate = ["black"]
+
+            if record.tipo_maquina_id == "color":
+                colors_to_evaluate = [
+                    "black",
+                    "cyan",
+                    "magenta",
+                    "yellow",
                 ]
-                
-                for stock_actual, stock_min in toners:
-                    if stock_actual == 0:
-                        estados.append('critico')
-                    elif stock_actual < stock_min:
-                        estados.append('bajo')
-                    elif stock_actual > stock_min * 2:
-                        estados.append('alto')
-                    else:
-                        estados.append('normal')
-            
-            # Determinar estado general (el más crítico)
-            if 'critico' in estados:
-                record.estado_stock_toner = 'critico'
-            elif 'bajo' in estados:
-                record.estado_stock_toner = 'bajo'
-            elif all(estado == 'alto' for estado in estados):
-                record.estado_stock_toner = 'alto'
+
+            states = []
+
+            for color in colors_to_evaluate:
+                client_stock = int(
+                    stock.get(
+                        color,
+                        0,
+                    )
+                    or 0
+                )
+
+                minimum = record._get_toner_min_stock(
+                    color
+                )
+
+                # El estado se calcula sobre REPUESTOS DEL CLIENTE.
+                # El cartucho instalado no cuenta como stock de respaldo.
+                if client_stock <= 0:
+                    states.append("critico")
+                elif client_stock < minimum:
+                    states.append("bajo")
+                elif (
+                    minimum > 0
+                    and client_stock > minimum * 2
+                ):
+                    states.append("alto")
+                else:
+                    states.append("normal")
+
+            if "critico" in states:
+                record.estado_stock_toner = "critico"
+            elif "bajo" in states:
+                record.estado_stock_toner = "bajo"
+            elif (
+                states
+                and all(
+                    state == "alto"
+                    for state in states
+                )
+            ):
+                record.estado_stock_toner = "alto"
             else:
-                record.estado_stock_toner = 'normal'
+                record.estado_stock_toner = "normal"
 
-    @api.depends()
+    # ============================================================
+    # SMART BUTTON COUNTS
+    # ============================================================
+
     def _compute_toner_counts(self):
-        """Calcula contadores de reportes y entregas de tóner"""
-        for record in self:
-            # Por ahora retornar 0, se actualizará cuando se creen los modelos
-            record.toner_reports_count = 0
-            record.toner_deliveries_count = 0
+        Submission = self.env[
+            "toner.counter.submission"
+        ].sudo()
 
-    # ==========================================
-    # MÉTODOS DE ACCIÓN PARA TÓNER (SIMPLIFICADOS)
-    # ==========================================
+        Delivery = self.env[
+            "toner.delivery.schedule"
+        ].sudo()
+
+        Event = self.env[
+            "toner.monitoring.event"
+        ].sudo()
+
+        History = self.env[
+            "toner.installation.history"
+        ].sudo()
+
+        Movement = self.env[
+            "toner.stock.movement"
+        ].sudo()
+
+        for record in self:
+            record.toner_reports_count = (
+                Submission.search_count(
+                    [
+                        (
+                            "equipment_id",
+                            "=",
+                            record.id,
+                        )
+                    ]
+                )
+            )
+
+            record.toner_deliveries_count = (
+                Delivery.search_count(
+                    [
+                        (
+                            "equipment_id",
+                            "=",
+                            record.id,
+                        )
+                    ]
+                )
+            )
+
+            record.toner_monitoring_events_count = (
+                Event.search_count(
+                    [
+                        (
+                            "equipment_id",
+                            "=",
+                            record.id,
+                        )
+                    ]
+                )
+            )
+
+            record.toner_installation_history_count = (
+                History.search_count(
+                    [
+                        (
+                            "equipment_id",
+                            "=",
+                            record.id,
+                        )
+                    ]
+                )
+            )
+
+            record.toner_stock_movements_count = (
+                Movement.search_count(
+                    [
+                        (
+                            "equipment_id",
+                            "=",
+                            record.id,
+                        )
+                    ]
+                )
+            )
+
+            record.toner_stock_discrepancy_count = (
+                Movement.search_count(
+                    [
+                        (
+                            "equipment_id",
+                            "=",
+                            record.id,
+                        ),
+                        (
+                            "stock_discrepancy",
+                            "=",
+                            True,
+                        ),
+                        (
+                            "state",
+                            "=",
+                            "posted",
+                        ),
+                    ]
+                )
+            )
+
+    # ============================================================
+    # ACCIONES SMART BUTTON
+    # ============================================================
 
     def action_view_toner_reports(self):
-        """Temporal - Mostrar mensaje hasta crear modelo"""
-        raise UserError("El sistema de reportes de tóner está en desarrollo.")
+        self.ensure_one()
+
+        return {
+            "name": _("Solicitudes de tóner"),
+            "type": "ir.actions.act_window",
+            "res_model": "toner.counter.submission",
+            "view_mode": "list,form",
+            "domain": [
+                (
+                    "equipment_id",
+                    "=",
+                    self.id,
+                )
+            ],
+            "context": {
+                "default_equipment_id": self.id,
+            },
+            "target": "current",
+        }
 
     def action_view_toner_deliveries(self):
-        """Temporal - Mostrar mensaje hasta crear modelo"""
-        raise UserError("El sistema de entregas de tóner está en desarrollo.")
+        self.ensure_one()
 
-    def action_create_manual_delivery(self):
-        """Temporal - Mostrar mensaje hasta crear modelo"""
-        raise UserError("La programación de entregas está en desarrollo.")
+        return {
+            "name": _("Entregas de tóner"),
+            "type": "ir.actions.act_window",
+            "res_model": "toner.delivery.schedule",
+            "view_mode": "list,form",
+            "domain": [
+                (
+                    "equipment_id",
+                    "=",
+                    self.id,
+                )
+            ],
+            "context": {
+                "default_equipment_id": self.id,
+            },
+            "target": "current",
+        }
+
+    def action_view_toner_monitoring_events(self):
+        self.ensure_one()
+
+        return {
+            "name": _("Eventos de monitoreo de tóner"),
+            "type": "ir.actions.act_window",
+            "res_model": "toner.monitoring.event",
+            "view_mode": "list,form",
+            "domain": [
+                (
+                    "equipment_id",
+                    "=",
+                    self.id,
+                )
+            ],
+            "context": {
+                "default_equipment_id": self.id,
+            },
+            "target": "current",
+        }
+
+    def action_view_toner_installation_history(self):
+        self.ensure_one()
+
+        return {
+            "name": _("Historial de instalación de tóner"),
+            "type": "ir.actions.act_window",
+            "res_model": "toner.installation.history",
+            "view_mode": "list,form",
+            "domain": [
+                (
+                    "equipment_id",
+                    "=",
+                    self.id,
+                )
+            ],
+            "context": {
+                "default_equipment_id": self.id,
+            },
+            "target": "current",
+        }
+
+    def action_view_toner_stock_movements(self):
+        self.ensure_one()
+
+        return {
+            "name": _("Kardex de stock de tóner"),
+            "type": "ir.actions.act_window",
+            "res_model": "toner.stock.movement",
+            "view_mode": "list,form",
+            "domain": [
+                (
+                    "equipment_id",
+                    "=",
+                    self.id,
+                )
+            ],
+            "context": {
+                "default_equipment_id": self.id,
+            },
+            "target": "current",
+        }
+
+    def action_view_toner_stock_discrepancies(self):
+        self.ensure_one()
+
+        return {
+            "name": _("Discrepancias de stock de tóner"),
+            "type": "ir.actions.act_window",
+            "res_model": "toner.stock.movement",
+            "view_mode": "list,form",
+            "domain": [
+                (
+                    "equipment_id",
+                    "=",
+                    self.id,
+                ),
+                (
+                    "stock_discrepancy",
+                    "=",
+                    True,
+                ),
+            ],
+            "target": "current",
+        }
+
+    # ============================================================
+    # CONFIGURACIÓN DEL MODELO
+    # ============================================================
 
     def action_view_model_toner_config(self):
-        """Abre la configuración de tóner del modelo"""
         self.ensure_one()
-        
+
         if not self.name:
-            raise UserError("Este equipo no tiene un modelo asignado.")
-        
+            raise UserError(
+                _("Este equipo no tiene un modelo asignado.")
+            )
+
         return {
-            'name': f'Configuración Tóner - {self.name.name}',
-            'type': 'ir.actions.act_window',
-            'res_model': 'modelo.maquina',
-            'res_id': self.name.id,
-            'view_mode': 'form',
-            'target': 'current',
+            "name": _(
+                "Configuración Tóner - %s"
+            )
+            % self.name.name,
+            "type": "ir.actions.act_window",
+            "res_model": "modelo.maquina",
+            "res_id": self.name.id,
+            "view_mode": "form",
+            "target": "current",
         }
+
+    # ============================================================
+    # CREACIÓN MANUAL DE SOLICITUD
+    # ============================================================
+
+    def action_create_manual_delivery(self):
+        """
+        Compatibilidad con el botón antiguo.
+
+        Ya NO crea toner.delivery.schedule.
+
+        Abre una nueva toner.counter.submission para que siga el flujo:
+            evaluación -> gerencia -> ventas -> despacho.
+        """
+        self.ensure_one()
+
+        return {
+            "name": _("Nueva solicitud de tóner"),
+            "type": "ir.actions.act_window",
+            "res_model": "toner.counter.submission",
+            "view_mode": "form",
+            "target": "current",
+            "context": {
+                "default_equipment_id": self.id,
+                "default_source": "manual",
+            },
+        }
+
+    # ============================================================
+    # AJUSTE DE STOCK
+    # ============================================================
 
     def action_update_toner_stock(self):
-        """Temporal - Mostrar mensaje hasta crear wizard"""
-        raise UserError("El wizard de actualización de stock está en desarrollo.")
+        """
+        Ya no se permite escribir stock_cliente_toner_* directamente.
+
+        Mientras no exista wizard dedicado, abre el kardex para que
+        los ajustes se registren mediante toner.stock.movement.
+        """
+        self.ensure_one()
+
+        return self.action_view_toner_stock_movements()
+
+    # ============================================================
+    # INSTALACIÓN MANUAL
+    # ============================================================
 
     def action_install_new_toner(self):
-        """Temporal - Mostrar mensaje hasta crear wizard"""
-        raise UserError("El wizard de instalación de tóner está en desarrollo.")
+        """
+        No escribimos fecha/contador en alquiler.
+
+        Abrimos el historial para registrar un nuevo ciclo físico.
+        """
+        self.ensure_one()
+
+        return {
+            "name": _("Registrar instalación de tóner"),
+            "type": "ir.actions.act_window",
+            "res_model": "toner.installation.history",
+            "view_mode": "form",
+            "target": "current",
+            "context": {
+                "default_equipment_id": self.id,
+                "default_state": "active",
+                "default_start_source": "manual",
+                "default_start_date": fields.Datetime.now(),
+            },
+        }
+
+    # ============================================================
+    # RECORDATORIO
+    # ============================================================
 
     def action_send_stock_reminder(self):
-        """Envía recordatorio de stock al cliente"""
+        """
+        Conserva el comportamiento anterior sin fingir que envió email.
+        Solo registra el recordatorio en chatter.
+        """
         self.ensure_one()
-        
+
         if not self.cliente_id:
-            raise UserError("No hay cliente asignado a este equipo.")
-        
-        if not self.correo_:
-            raise UserError("No hay email configurado para este equipo.")
-        
-        # Por ahora solo mostrar mensaje de confirmación
-        self.message_post(
-            body=f"📧 Recordatorio de stock programado para {self.correo_}",
-            message_type='notification'
+            raise UserError(
+                _("No hay cliente asignado a este equipo.")
+            )
+
+        email = (
+            self.correo_
+            if "correo_" in self._fields
+            else False
         )
-        
+
+        if not email:
+            raise UserError(
+                _("No hay email configurado para este equipo.")
+            )
+
+        self.message_post(
+            body=_(
+                "📧 Recordatorio de stock registrado para %s."
+            )
+            % email,
+            message_type="notification",
+        )
+
         return {
-            'type': 'ir.actions.client',
-            'tag': 'display_notification',
-            'params': {
-                'title': 'Recordatorio Programado',
-                'message': f'Recordatorio de stock programado para {self.correo_}',
-                'type': 'success',
-                'sticky': False,
-            }
+            "type": "ir.actions.client",
+            "tag": "display_notification",
+            "params": {
+                "title": _("Recordatorio registrado"),
+                "message": _(
+                    "Recordatorio de stock registrado para %s."
+                )
+                % email,
+                "type": "success",
+                "sticky": False,
+            },
         }
-   
 
-
-
-    # AGREGAR ESTOS MÉTODOS AL FINAL DE LA CLASE alquiler (UnidadAlquiler)
+    # ============================================================
+    # PREVENCIÓN
+    # ============================================================
 
     def _calcular_dias_restantes_toner(self):
         """
-        Calcula días estimados restantes para el tóner negro basado en consumo promedio
+        Estimación conservadora para el tóner negro activo.
+
+        Se utiliza solamente como apoyo preventivo. Nunca crea despacho.
+
+        Se calcula usando:
+            - ciclo activo;
+            - contador actual;
+            - rendimiento esperado;
+            - consumo promedio de solicitudes históricas cuando existe.
         """
         self.ensure_one()
-        
-        try:
-            # Buscar reportes recientes para calcular consumo promedio
-            reportes_recientes = self.env['toner.counter.submission'].search([
-                ('equipment_id', '=', self.id),
-                ('state', 'in', ['approved', 'processed'])
-            ], order='submission_date desc', limit=5)
-            
-            if len(reportes_recientes) < 2:
-                # No hay suficientes datos, usar valores por defecto conservadores
-                return self.name.tiempo_entrega_dias + self.name.margen_seguridad_dias if self.name else 7
-            
-            # Calcular consumo promedio por día
-            total_dias = 0
-            total_consumo_bn = 0
-            
-            for i in range(len(reportes_recientes) - 1):
-                reporte_actual = reportes_recientes[i]
-                reporte_anterior = reportes_recientes[i + 1]
-                
-                dias_entre_reportes = (reporte_actual.submission_date.date() - reporte_anterior.submission_date.date()).days
-                if dias_entre_reportes > 0:
-                    consumo_periodo = reporte_actual.copies_bn_period
-                    total_dias += dias_entre_reportes
-                    total_consumo_bn += consumo_periodo
-            
-            if total_dias == 0:
-                return 30  # Fallback: 30 días
-            
-            consumo_promedio_diario = total_consumo_bn / total_dias
-            
-            if consumo_promedio_diario <= 0:
-                return 30  # Si no hay consumo, asumir 30 días
-            
-            # Calcular días restantes basado en páginas restantes del tóner negro
-            if self.paginas_restantes_toner_black > 0:
-                dias_restantes = self.paginas_restantes_toner_black / consumo_promedio_diario
-                return max(1, int(dias_restantes))
-            
-            return 1  # Tóner agotado
-            
-        except Exception as e:
-            _logger.exception("Error calculando días restantes de tóner: %s", str(e))
-            return 7  # Fallback conservador
+
+        cycle = self._get_active_toner_cycle(
+            "black"
+        )
+
+        if not cycle:
+            return 0
+
+        current = self._get_current_counter(
+            "black"
+        )
+
+        start = int(
+            cycle.start_counter
+            or 0
+        )
+
+        expected = int(
+            cycle.expected_yield
+            or 0
+        )
+
+        if expected <= 0:
+            expected = int(
+                self.env[
+                    "toner.installation.history"
+                ].sudo()._get_expected_yield_for_equipment(
+                    self,
+                    "black",
+                )
+                or 0
+            )
+
+        if expected <= 0:
+            return 30
+
+        used = max(
+            0,
+            current - start,
+        )
+
+        remaining = max(
+            0,
+            expected - used,
+        )
+
+        if remaining <= 0:
+            return 0
+
+        submissions = self.env[
+            "toner.counter.submission"
+        ].sudo().search(
+            [
+                ("equipment_id", "=", self.id),
+                (
+                    "state",
+                    "in",
+                    [
+                        "entregada",
+                        "en_despacho",
+                        "lista_despacho",
+                        "confirmacion_ventas",
+                        "aprobada_gerencia",
+                    ],
+                ),
+                ("counter_bn", ">", 0),
+            ],
+            order="submission_date desc, id desc",
+            limit=5,
+        )
+
+        if len(submissions) < 2:
+            delivery_days = (
+                int(
+                    getattr(
+                        self.name,
+                        "tiempo_entrega_dias",
+                        0,
+                    )
+                    or 0
+                )
+                if self.name
+                else 0
+            )
+
+            safety_days = (
+                int(
+                    getattr(
+                        self.name,
+                        "margen_seguridad_dias",
+                        0,
+                    )
+                    or 0
+                )
+                if self.name
+                else 0
+            )
+
+            return max(
+                1,
+                delivery_days
+                + safety_days
+                or 7,
+            )
+
+        total_days = 0
+        total_copies = 0
+
+        ordered = submissions.sorted(
+            key=lambda record: (
+                record.submission_date
+                or fields.Datetime.now()
+            ),
+            reverse=True,
+        )
+
+        for index in range(
+            len(ordered) - 1
+        ):
+            newer = ordered[index]
+            older = ordered[index + 1]
+
+            if (
+                not newer.submission_date
+                or not older.submission_date
+            ):
+                continue
+
+            days = (
+                fields.Datetime.to_datetime(
+                    newer.submission_date
+                )
+                - fields.Datetime.to_datetime(
+                    older.submission_date
+                )
+            ).days
+
+            copies = (
+                int(
+                    newer.counter_bn
+                    or 0
+                )
+                - int(
+                    older.counter_bn
+                    or 0
+                )
+            )
+
+            if days > 0 and copies > 0:
+                total_days += days
+                total_copies += copies
+
+        if (
+            total_days <= 0
+            or total_copies <= 0
+        ):
+            return 30
+
+        daily_average = (
+            total_copies
+            / total_days
+        )
+
+        if daily_average <= 0:
+            return 30
+
+        return max(
+            0,
+            int(
+                remaining
+                / daily_average
+            ),
+        )
 
     def _crear_alerta_toner_preventiva(self):
         """
-        Crea alerta preventiva cuando el tóner se agotará pronto
+        La lógica antigua creaba toner.delivery.schedule directamente.
+
+        La nueva lógica genera un toner.monitoring.event LOW que, a su vez,
+        crea/enlaza toner.counter.submission y respeta aprobación de gerencia.
+
+        Devuelve True solamente si creó un nuevo evento preventivo.
         """
         self.ensure_one()
-        
-        try:
-            dias_restantes = self._calcular_dias_restantes_toner()
-            tiempo_critico = self.name.tiempo_total_prevencion if self.name else 7
-            
-            if dias_restantes <= tiempo_critico:
-                # Verificar si ya existe una entrega programada reciente
-                entrega_existente = self.env['toner.delivery.schedule'].search([
-                    ('equipment_id', '=', self.id),
-                    ('state', 'in', ['programado', 'confirmado', 'preparando', 'enviado']),
-                    ('toner_black_qty', '>', 0)
-                ], limit=1)
-                
-                if entrega_existente:
-                    _logger.info(f"Ya existe entrega programada para equipo {self.serie}")
-                    return False
-                
-                # Crear programación automática
-                delivery_vals = {
-                    'equipment_id': self.id,
-                    'delivery_date_planned': fields.Date.today() + timedelta(days=2),
-                    'toner_black_qty': max(1, (self.name.stock_minimo_black or 1) - self.stock_total_toner_black + 1),
-                    'toner_cyan_qty': 0,
-                    'toner_magenta_qty': 0,
-                    'toner_yellow_qty': 0,
-                    'calculation_basis': 'consumo_automatico',
-                    'priority': 'alta' if dias_restantes <= 3 else 'normal',
-                    'notes': f"Entrega preventiva automática - Se agotará en {dias_restantes} días"
-                }
-                
-                # Para máquinas color, evaluar también tóners color
-                if self.tipo_maquina_id == 'color':
-                    if self.stock_total_toner_cyan <= (self.name.stock_minimo_cyan or 1):
-                        delivery_vals['toner_cyan_qty'] = max(1, (self.name.stock_minimo_cyan or 1) - self.stock_total_toner_cyan + 1)
-                    if self.stock_total_toner_magenta <= (self.name.stock_minimo_magenta or 1):
-                        delivery_vals['toner_magenta_qty'] = max(1, (self.name.stock_minimo_magenta or 1) - self.stock_total_toner_magenta + 1)
-                    if self.stock_total_toner_yellow <= (self.name.stock_minimo_yellow or 1):
-                        delivery_vals['toner_yellow_qty'] = max(1, (self.name.stock_minimo_yellow or 1) - self.stock_total_toner_yellow + 1)
-                
-                delivery = self.env['toner.delivery.schedule'].create(delivery_vals)
-                
-                self.message_post(
-                    body=f"🔔 Alerta preventiva: Entrega automática programada ({delivery.secuencia}) - Tóner se agotará en {dias_restantes} días",
-                    message_type='notification'
-                )
-                
-                return True
-                
-        except Exception as e:
-            _logger.exception("Error creando alerta preventiva: %s", str(e))
+
+        if not self.name:
             return False
+
+        days_remaining = (
+            self._calcular_dias_restantes_toner()
+        )
+
+        critical_days = int(
+            getattr(
+                self.name,
+                "tiempo_total_prevencion",
+                0,
+            )
+            or 7
+        )
+
+        if days_remaining > critical_days:
+            return False
+
+        # Si ya existe solicitud negra abierta, no generar otro evento.
+        Submission = self.env[
+            "toner.counter.submission"
+        ].sudo()
+
+        open_states = getattr(
+            Submission,
+            "OPEN_STATES",
+            [
+                "recibida",
+                "evaluacion",
+                "pendiente_gerencia",
+                "aprobada_gerencia",
+                "confirmacion_ventas",
+                "lista_despacho",
+                "en_despacho",
+            ],
+        )
+
+        existing_submission = (
+            Submission.search(
+                [
+                    (
+                        "equipment_id",
+                        "=",
+                        self.id,
+                    ),
+                    (
+                        "state",
+                        "in",
+                        open_states,
+                    ),
+                    (
+                        "requiere_toner_black",
+                        "=",
+                        True,
+                    ),
+                ],
+                limit=1,
+            )
+        )
+
+        if existing_submission:
+            return False
+
+        today_key = fields.Date.to_string(
+            fields.Date.context_today(
+                self
+            )
+        )
+
+        external_event_id = (
+            "preventive:%s:black:%s"
+            % (
+                self.id,
+                today_key,
+            )
+        )
+
+        Event = self.env[
+            "toner.monitoring.event"
+        ].sudo()
+
+        existing_event = Event.search(
+            [
+                (
+                    "source",
+                    "=",
+                    "manual",
+                ),
+                (
+                    "external_event_id",
+                    "=",
+                    external_event_id,
+                ),
+            ],
+            limit=1,
+        )
+
+        if existing_event:
+            return False
+
+        counter_bn = (
+            self._get_current_counter(
+                "black"
+            )
+        )
+
+        event = (
+            Event.create_normalized_event(
+                {
+                    "equipment_id": self.id,
+                    "source": "manual",
+                    "external_event_id": external_event_id,
+                    "event_type": "low",
+                    "color": "black",
+                    "event_date": fields.Datetime.now(),
+                    "counter_bn": counter_bn,
+                    "raw_description": _(
+                        "Alerta preventiva: se estiman "
+                        "%s día(s) restantes."
+                    )
+                    % days_remaining,
+                }
+            )
+        )
+
+        self.message_post(
+            body=_(
+                "🔔 Alerta preventiva de tóner creada. "
+                "Estimación: %s día(s) restantes. "
+                "El evento fue enviado al flujo normal "
+                "de solicitud y aprobación."
+            )
+            % days_remaining,
+            message_type="notification",
+        )
+
+        return bool(event)
 
     @api.model
     def check_toner_alerts(self):
         """
-        Método cron para evaluar equipos que necesitan tóner preventivamente
+        Cron preventivo.
+
+        No crea entregas.
+        Genera eventos normalizados que respetan el workflow oficial.
         """
-        equipos = self.search([
-            ('estado_alquiler_id', '=', 'alquilada'),
-            ('name.gestionar_toner_automatico', '=', True)
-        ])
-        
-        alertas_creadas = 0
-        
-        for equipo in equipos:
+        domain = [
+            (
+                "estado_alquiler_id",
+                "=",
+                "alquilada",
+            )
+        ]
+
+        # Mantener compatibilidad si el modelo conserva el flag.
+        if (
+            "name" in self._fields
+            and self.env["modelo.maquina"]._fields.get(
+                "gestionar_toner_automatico"
+            )
+        ):
+            domain.append(
+                (
+                    "name.gestionar_toner_automatico",
+                    "=",
+                    True,
+                )
+            )
+
+        equipments = self.search(domain)
+
+        created = 0
+
+        for equipment in equipments:
             try:
-                if equipo._crear_alerta_toner_preventiva():
-                    alertas_creadas += 1
-            except Exception as e:
-                _logger.error(f"Error evaluando equipo {equipo.serie}: {str(e)}")
-        
-        _logger.info(f"Alertas preventivas creadas: {alertas_creadas} de {len(equipos)} equipos evaluados")
-        return alertas_creadas
+                if (
+                    equipment._crear_alerta_toner_preventiva()
+                ):
+                    created += 1
+            except Exception:
+                _logger.exception(
+                    "[TONER] Error preventivo equipo=%s",
+                    equipment.serie,
+                )
+
+        _logger.info(
+            "[TONER] Alertas preventivas creadas: %s/%s",
+            created,
+            len(equipments),
+        )
+
+        return created
+
+    # ============================================================
+    # DASHBOARD
+    # ============================================================
 
     @api.model
     def get_toner_dashboard_data(self):
-        """Dashboard centralizado de estado de tóner"""
-        base_domain = [('estado_alquiler_id', '=', 'alquilada')]
-        
+        base_domain = [
+            (
+                "estado_alquiler_id",
+                "=",
+                "alquilada",
+            )
+        ]
+
+        Submission = self.env[
+            "toner.counter.submission"
+        ].sudo()
+
+        open_states = getattr(
+            Submission,
+            "OPEN_STATES",
+            [
+                "recibida",
+                "evaluacion",
+                "pendiente_gerencia",
+                "aprobada_gerencia",
+                "confirmacion_ventas",
+                "lista_despacho",
+                "en_despacho",
+            ],
+        )
+
         return {
-            'equipos_criticos': self.search_count(base_domain + [('estado_stock_toner', '=', 'critico')]),
-            'equipos_bajo_stock': self.search_count(base_domain + [('estado_stock_toner', '=', 'bajo')]),
-            'entregas_pendientes': self.env['toner.delivery.schedule'].search_count([
-                ('state', 'in', ['programado', 'confirmado'])
-            ]),
-            'reportes_pendientes': self.env['toner.counter.submission'].search_count([
-                ('state', '=', 'pending')
-            ]),
-            'total_alquilados': self.search_count(base_domain),
-            'gestion_automatica_activa': self.search_count(base_domain + [('name.gestionar_toner_automatico', '=', True)])
+            "equipos_criticos": self.search_count(
+                base_domain
+                + [
+                    (
+                        "estado_stock_toner",
+                        "=",
+                        "critico",
+                    )
+                ]
+            ),
+            "equipos_bajo_stock": self.search_count(
+                base_domain
+                + [
+                    (
+                        "estado_stock_toner",
+                        "=",
+                        "bajo",
+                    )
+                ]
+            ),
+            "entregas_pendientes": self.env[
+                "toner.delivery.schedule"
+            ].sudo().search_count(
+                [
+                    (
+                        "state",
+                        "in",
+                        [
+                            "programado",
+                            "confirmado",
+                            "preparando",
+                            "enviado",
+                        ],
+                    )
+                ]
+            ),
+            "solicitudes_pendientes": Submission.search_count(
+                [
+                    (
+                        "state",
+                        "in",
+                        open_states,
+                    )
+                ]
+            ),
+            "eventos_pendientes": self.env[
+                "toner.monitoring.event"
+            ].sudo().search_count(
+                [
+                    (
+                        "processing_state",
+                        "in",
+                        [
+                            "new",
+                            "pending_data",
+                            "error",
+                        ],
+                    )
+                ]
+            ),
+            "discrepancias_stock": self.env[
+                "toner.stock.movement"
+            ].sudo().search_count(
+                [
+                    (
+                        "stock_discrepancy",
+                        "=",
+                        True,
+                    ),
+                    (
+                        "state",
+                        "=",
+                        "posted",
+                    ),
+                ]
+            ),
+            "total_alquilados": self.search_count(
+                base_domain
+            ),
         }

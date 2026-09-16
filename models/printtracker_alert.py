@@ -100,6 +100,483 @@ class PrintTrackerAlert(models.Model):
     diferencia_contador = fields.Integer('Diferencia Contador')
 
     # ==========================================
+    # INTEGRACIÓN NORMALIZADA DE TÓNER
+    # ==========================================
+
+    def _is_toner_event(self):
+        """
+        Indica si la alerta corresponde a un evento que debe ser enviado
+        al sistema central de gestión de tóner.
+        """
+        self.ensure_one()
+        return self.tipo_alerta in (
+            'suministro_bajo',
+            'suministro_critico',
+            'suministro_vacio',
+            'supply_replaced',
+            'supply_event',
+        )
+
+    def _map_toner_event_type(self):
+        """Convierte tipos PrintTracker al estándar toner.monitoring.event."""
+        self.ensure_one()
+        return {
+            'suministro_bajo': 'low',
+            'suministro_critico': 'critical',
+            'suministro_vacio': 'empty',
+            'supply_replaced': 'replaced',
+            'supply_event': 'level',
+        }.get(self.tipo_alerta, 'unknown')
+
+    def _get_printtracker_supply(self):
+        """
+        Obtiene el suministro relacionado sin adivinar por descripción.
+        Prioridad:
+        1. suministro_id;
+        2. api_supply_key.
+        """
+        self.ensure_one()
+
+        if self.suministro_id:
+            return self.suministro_id
+
+        if not self.api_supply_key:
+            return self.env['printtracker.supply']
+
+        return self.env['printtracker.supply'].sudo().search([
+            ('supply_key', '=', self.api_supply_key),
+        ], limit=1)
+
+    def _normalize_toner_color(self, supply=False):
+        """
+        Determina el color del tóner.
+        Para un equipo monocromático, si no llega color, se infiere negro.
+        En equipos color no se adivina el color.
+        """
+        self.ensure_one()
+        supply = supply or self._get_printtracker_supply()
+
+        valid_colors = ('black', 'cyan', 'magenta', 'yellow')
+        if supply and supply.supply_color in valid_colors:
+            return supply.supply_color
+
+        if self.equipo_id and self.equipo_id.tipo_maquina_id != 'color':
+            return 'black'
+
+        return 'unknown'
+
+    @staticmethod
+    def _extract_meter_value(raw_value):
+        """
+        Extrae un entero no negativo de un valor simple o estructura común.
+        No inventa ni convierte estructuras ambiguas en contadores.
+        """
+        if raw_value in (None, False, ''):
+            return 0
+
+        if isinstance(raw_value, bool):
+            return 0
+
+        if isinstance(raw_value, (int, float)):
+            return max(0, int(raw_value))
+
+        if isinstance(raw_value, dict):
+            for key in ('value', 'reading', 'meterRead', 'count', 'counter', 'total'):
+                value = raw_value.get(key)
+                if isinstance(value, (int, float)) and not isinstance(value, bool):
+                    return max(0, int(value))
+
+        try:
+            return max(0, int(float(str(raw_value).strip())))
+        except (TypeError, ValueError):
+            return 0
+
+    def _get_meter_counter_value(self, meter, color=False):
+        """
+        Busca un contador en printtracker.meter usando nombres de campo
+        compatibles con distintas versiones del conector.
+        """
+        self.ensure_one()
+        if not meter:
+            return 0
+
+        if color:
+            candidates = [
+                'color_pages',
+                'color_pages_life',
+                'total_color',
+                'total_color_pages',
+                'counter_color',
+                'color_counter',
+            ]
+        else:
+            candidates = [
+                'black_pages',
+                'mono_pages',
+                'bw_pages',
+                'black_pages_life',
+                'mono_pages_life',
+                'total_bw',
+                'total_black',
+                'counter_bn',
+                'mono_counter',
+            ]
+
+        for field_name in candidates:
+            if field_name not in meter._fields:
+                continue
+            try:
+                value = int(getattr(meter, field_name, 0) or 0)
+            except (TypeError, ValueError):
+                value = 0
+            if value > 0:
+                return value
+
+        # En equipos monocromáticos total_pages_life es una referencia válida
+        # si no existe un contador B/N más específico.
+        if (
+            not color
+            and self.equipo_id
+            and self.equipo_id.tipo_maquina_id != 'color'
+            and 'total_pages_life' in meter._fields
+        ):
+            try:
+                return max(0, int(meter.total_pages_life or 0))
+            except (TypeError, ValueError):
+                return 0
+
+        return 0
+
+    def _get_event_counters(self, event_data=None):
+        """
+        Obtiene contadores del evento o de la última lectura almacenada.
+
+        Para toner.counter.submission se necesita contador B/N válido.
+        En equipos color, el contador color puede ser cero pero debe venir
+        de una fuente conocida; aquí se conserva cero si no existe dato.
+
+        No se inventan contadores.
+        """
+        self.ensure_one()
+        event_data = event_data or {}
+
+        counter_bn = 0
+        counter_color = 0
+
+        raw_meter = event_data.get('meterRead')
+
+        if raw_meter not in (None, False, ''):
+            if isinstance(raw_meter, dict):
+                bn_candidates = (
+                    'black',
+                    'mono',
+                    'monochrome',
+                    'bw',
+                    'blackAndWhite',
+                    'totalBlack',
+                    'counterBn',
+                    'counter_bn',
+                )
+                color_candidates = (
+                    'color',
+                    'totalColor',
+                    'counterColor',
+                    'counter_color',
+                )
+
+                for key in bn_candidates:
+                    if key in raw_meter:
+                        counter_bn = self._extract_meter_value(raw_meter.get(key))
+                        if counter_bn:
+                            break
+
+                for key in color_candidates:
+                    if key in raw_meter:
+                        counter_color = self._extract_meter_value(raw_meter.get(key))
+                        if counter_color:
+                            break
+
+                if (
+                    not counter_bn
+                    and self.equipo_id
+                    and self.equipo_id.tipo_maquina_id != 'color'
+                ):
+                    counter_bn = self._extract_meter_value(raw_meter)
+
+            elif (
+                self.equipo_id
+                and self.equipo_id.tipo_maquina_id != 'color'
+            ):
+                counter_bn = self._extract_meter_value(raw_meter)
+
+        # Si el evento no trae contador suficiente, usar la última lectura
+        # de PrintTracker ya almacenada en Odoo.
+        if self.equipo_id and not counter_bn:
+            latest_meter = self.env['printtracker.meter'].sudo().search([
+                ('device_id', '=', self.equipo_id.id),
+            ], order='reading_date desc, id desc', limit=1)
+
+            if latest_meter:
+                counter_bn = self._get_meter_counter_value(
+                    latest_meter,
+                    color=False,
+                )
+
+                if self.equipo_id.tipo_maquina_id == 'color':
+                    counter_color = counter_color or self._get_meter_counter_value(
+                        latest_meter,
+                        color=True,
+                    )
+
+        return {
+            'bn': int(counter_bn or 0),
+            'color': int(counter_color or 0),
+        }
+
+    def _prepare_toner_monitoring_values(self, event_data=None):
+        """Prepara los valores del evento normalizado sin crear registros."""
+        self.ensure_one()
+        event_data = event_data or {}
+
+        supply = self._get_printtracker_supply()
+        color = self._normalize_toner_color(supply=supply)
+        counters = self._get_event_counters(event_data=event_data)
+
+        level_percent = False
+        level_value = 0
+        level_max = 0
+
+        if supply:
+            level_percent = supply.percent_remaining
+            level_value = int(supply.current_level or 0)
+            level_max = int(supply.max_level or 0)
+
+        # porcentaje_suministro = 0.0 también puede significar "no informado".
+        # Solo usarlo de forma explícita si es mayor a cero o si el evento
+        # representa un suministro vacío.
+        if self.porcentaje_suministro:
+            level_percent = float(self.porcentaje_suministro)
+        elif self.tipo_alerta == 'suministro_vacio':
+            level_percent = 0.0
+
+        raw_payload = self.api_raw_data
+        if not raw_payload and event_data:
+            raw_payload = json.dumps(
+                event_data,
+                ensure_ascii=False,
+                default=str,
+                indent=2,
+            )
+
+        external_event_id = self.api_event_id
+        if not external_event_id and self.id:
+            external_event_id = 'printtracker-alert-%s-%s-%s' % (
+                self.id,
+                self.contador_repeticiones or 1,
+                self.tipo_alerta or 'event',
+            )
+
+        return {
+            'equipment_id': self.equipo_id.id if self.equipo_id else False,
+            'source': 'printtracker',
+            'external_event_id': external_event_id,
+            'source_reference': (
+                self.api_supply_key
+                or (supply.supply_key if supply else False)
+            ),
+            'printtracker_alert_id': self.id,
+            'printtracker_supply_id': supply.id if supply else False,
+            'event_type': self._map_toner_event_type(),
+            'color': color,
+            'event_date': (
+                self.api_event_timestamp
+                or self.fecha_deteccion
+                or self.fecha_creacion
+                or fields.Datetime.now()
+            ),
+            'level_percent': level_percent,
+            'level_value': level_value,
+            'level_max': level_max,
+            'counter_bn': int(counters.get('bn', 0) or 0),
+            'counter_color': int(counters.get('color', 0) or 0),
+            'counter_is_estimated': False,
+            'supply_key': (
+                self.api_supply_key
+                or (supply.supply_key if supply else False)
+            ),
+            'supply_type': supply.supply_type if supply else False,
+            'supply_name': (
+                (
+                    supply.displayable_name
+                    or supply.description
+                    or supply.display_name
+                )
+                if supply
+                else False
+            ),
+            'part_number': supply.part_number if supply else False,
+            'raw_description': (
+                self.descripcion
+                or event_data.get('description')
+                or False
+            ),
+            'raw_subject': self.titulo or False,
+            'raw_payload': raw_payload,
+        }
+
+    def _create_toner_monitoring_event(self, event_data=None):
+        """
+        Crea o recupera toner.monitoring.event y enlaza ambas capas.
+
+        Es idempotente:
+        - si ya está enlazado, reutiliza el registro;
+        - si existe source + external_event_id, reutiliza el existente;
+        - el modelo normalizado controla su propio procesamiento.
+        """
+        self.ensure_one()
+
+        if not self._is_toner_event():
+            return self.env['toner.monitoring.event']
+
+        if not self.equipo_id:
+            self.write({
+                'toner_event_processed': False,
+                'toner_event_processing_error': (
+                    'No se pudo identificar el equipo para procesar '
+                    'el evento de tóner.'
+                ),
+            })
+            _logger.warning(
+                '[TONER/PT] Alerta %s sin equipo. Serie=%s',
+                self.id,
+                self.serie_equipo,
+            )
+            return self.env['toner.monitoring.event']
+
+        if self.toner_monitoring_event_id:
+            return self.toner_monitoring_event_id
+
+        MonitoringEvent = self.env['toner.monitoring.event'].sudo()
+        vals = self._prepare_toner_monitoring_values(event_data=event_data)
+
+        try:
+            event = MonitoringEvent.create_normalized_event(vals)
+
+            self.write({
+                'toner_monitoring_event_id': event.id,
+                'toner_event_processed': True,
+                'toner_event_processing_error': False,
+            })
+
+            _logger.info(
+                '[TONER/PT] Evento normalizado enlazado '
+                'alert=%s event=%s type=%s equipment=%s color=%s state=%s',
+                self.id,
+                event.id,
+                event.event_type,
+                self.equipo_id.id,
+                event.color,
+                event.processing_state,
+            )
+            return event
+
+        except Exception as error:
+            _logger.exception(
+                '[TONER/PT] Error normalizando alerta=%s serie=%s',
+                self.id,
+                self.serie_equipo,
+            )
+            self.write({
+                'toner_event_processed': False,
+                'toner_event_processing_error': str(error),
+            })
+            return self.env['toner.monitoring.event']
+
+    def action_retry_toner_processing(self):
+        """
+        Reintenta la integración después de corregir datos del equipo,
+        color, supplyKey o contadores.
+        """
+        for alert in self:
+            if not alert._is_toner_event():
+                continue
+
+            if not alert.toner_monitoring_event_id:
+                alert._create_toner_monitoring_event()
+                continue
+
+            event = alert.toner_monitoring_event_id
+            prepared = alert._prepare_toner_monitoring_values()
+
+            safe_fields = (
+                'equipment_id',
+                'printtracker_supply_id',
+                'color',
+                'level_percent',
+                'level_value',
+                'level_max',
+                'counter_bn',
+                'counter_color',
+                'supply_key',
+                'supply_type',
+                'supply_name',
+                'part_number',
+                'raw_description',
+                'raw_subject',
+                'raw_payload',
+            )
+            vals = {
+                field_name: prepared.get(field_name)
+                for field_name in safe_fields
+                if field_name in prepared
+            }
+
+            event.write(vals)
+            event.action_retry_processing()
+
+            alert.write({
+                'toner_event_processed': True,
+                'toner_event_processing_error': (
+                    event.processing_error or False
+                ),
+            })
+
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': 'Gestión de tóner',
+                'message': 'Procesamiento de tóner reintentado.',
+                'type': 'success',
+                'sticky': False,
+            },
+        }
+
+    def action_view_toner_monitoring_event(self):
+        """Abre el evento normalizado relacionado."""
+        self.ensure_one()
+
+        if not self.toner_monitoring_event_id:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'message': 'Esta alerta no tiene un evento de tóner relacionado.',
+                    'type': 'warning',
+                    'sticky': False,
+                },
+            }
+
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Evento de Tóner',
+            'res_model': 'toner.monitoring.event',
+            'res_id': self.toner_monitoring_event_id.id,
+            'view_mode': 'form',
+            'target': 'current',
+        }
+
+    # ==========================================
     # NOTIFICACIONES
     # ==========================================
     notificar_email = fields.Boolean('Notificar por Email', default=True)
@@ -134,6 +611,30 @@ class PrintTrackerAlert(models.Model):
     api_supply_key = fields.Char('Supply Key API')
     api_device_key = fields.Char('Device Key API')
     api_raw_data = fields.Text('Datos Crudos API')
+
+    # ==========================================
+    # INTEGRACIÓN CON GESTIÓN CENTRAL DE TÓNER
+    # ==========================================
+    toner_monitoring_event_id = fields.Many2one(
+        'toner.monitoring.event',
+        string='Evento de Tóner',
+        readonly=True,
+        copy=False,
+        index=True,
+        ondelete='set null',
+    )
+    toner_event_processed = fields.Boolean(
+        string='Evento de Tóner Procesado',
+        default=False,
+        readonly=True,
+        copy=False,
+        index=True,
+    )
+    toner_event_processing_error = fields.Text(
+        string='Error Procesamiento Tóner',
+        readonly=True,
+        copy=False,
+    )
 
     # ==========================================
     # INFO EQUIPO (cache)
@@ -310,10 +811,22 @@ class PrintTrackerAlert(models.Model):
                 'fecha_deteccion': fields.Datetime.now(),
                 'origen_datos': 'interno',
                 'max_repeticiones': 5,
-                'accion_automatica': 'crear_orden_compra' if percent < 5 else 'ninguna',
+                # La reposición de tóner se gestiona mediante
+                # toner.counter.submission; nunca crear una OC directa.
+                'accion_automatica': 'ninguna',
             })
 
             _logger.info(f"🆕 Alerta suministro: {serie} - {tipo_supply} {color_supply} ({percent:.1f}%)")
+
+            # Integrar con el flujo central de tóner.
+            try:
+                nueva._create_toner_monitoring_event()
+            except Exception:
+                _logger.exception(
+                    "[TONER/PT] Error integrando alerta interna de suministro id=%s",
+                    nueva.id,
+                )
+
             return nueva
 
         except Exception as e:
@@ -530,6 +1043,18 @@ class PrintTrackerAlert(models.Model):
             })
 
             _logger.info(f"🆕 Alerta API: {device_serial} - {clasificacion['tipo']} (event {event_id})")
+
+            # Los eventos de suministro se normalizan y se envían al
+            # flujo oficial de gestión de tóner.
+            try:
+                nueva._create_toner_monitoring_event(event_data=event_data)
+            except Exception:
+                _logger.exception(
+                    "[TONER/PT] Error integrando API event=%s alerta=%s",
+                    event_id,
+                    nueva.id,
+                )
+
             return nueva
 
         except Exception as e:
@@ -737,7 +1262,14 @@ class PrintTrackerAlert(models.Model):
         self.ensure_one()
         try:
             if self.accion_automatica == 'crear_orden_compra':
-                self._accion_crear_orden_compra()
+                if self._is_toner_event():
+                    self._create_toner_monitoring_event()
+                    self.accion_ejecutada = True
+                    self.resultado_accion = (
+                        'Evento enviado al flujo oficial de solicitud de tóner'
+                    )
+                else:
+                    self._accion_crear_orden_compra()
             elif self.accion_automatica == 'crear_tarea':
                 self._accion_crear_tarea()
             elif self.accion_automatica == 'notificar_tecnico':

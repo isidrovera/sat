@@ -140,3 +140,7 @@ from . import sat_reserva_comercial
 from . import monitoring
 from . import sat_machine_movement
 from . import notificaciones_sms
+from . import toner_monitoring_event
+from . import toner_installation_history
+from . import toner_stock_movement
+from . import toner_delivery_stock_integration
