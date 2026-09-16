@@ -120,139 +120,249 @@ class PrintTrackerAlert(models.Model):
 
     def _map_toner_event_type(self, event_data=None):
         """
-        Convierte tipos PrintTracker al estándar toner.monitoring.event.
+        Convierte el tipo de alerta PrintTracker al estándar
+        toner.monitoring.event.
 
-        Un supply_event genérico NO se interpreta automáticamente como
-        lectura de nivel. Si la descripción indica una predicción de
-        agotamiento se clasifica como estimated_depletion.
+        REGLA IMPORTANTE:
+        ------------------
+        alertType / tipo_alerta define el tipo principal del evento.
+
+        Una descripción como:
+            "The black toner estimated depletion September 16, 2026"
+
+        NO reemplaza un "Low supply" por otro tipo.
+        La fecha estimada se guarda adicionalmente en
+        estimated_depletion_date.
         """
         self.ensure_one()
         event_data = event_data or {}
 
-        if self.tipo_alerta == 'supply_event':
-            description = (
-                event_data.get('description')
-                or self.descripcion
-                or ''
-            ).lower()
-
-            estimated_phrases = (
-                'estimated depletion',
-                'estimated to deplete',
-                'estimated empty',
-                'depletion estimate',
-                'agotamiento estimado',
-                'se agotará',
-                'se agotara',
-            )
-
-            if any(phrase in description for phrase in estimated_phrases):
-                return 'estimated_depletion'
-
-            # Solo considerar lectura de nivel cuando realmente existe un
-            # valor explícito de nivel en el evento.
-            if self._event_has_explicit_level(event_data):
-                return 'level'
-
-            return 'supply_event'
-
-        return {
+        mapping = {
             'suministro_bajo': 'low',
             'suministro_critico': 'critical',
             'suministro_vacio': 'empty',
             'supply_replaced': 'replaced',
-        }.get(self.tipo_alerta, 'unknown')
+        }
 
-    @staticmethod
-    def _event_has_explicit_level(event_data):
-        """Devuelve True solo si el payload contiene un nivel explícito."""
+        if self.tipo_alerta in mapping:
+            return mapping[self.tipo_alerta]
+
+        # Evento genérico de suministro.
+        # Solo se considera lectura de nivel si el payload realmente
+        # contiene una lectura explícita para el supply relacionado.
+        if self.tipo_alerta == 'supply_event':
+            if self._event_has_explicit_level(event_data):
+                return 'level'
+            return 'supply_event'
+
+        return 'unknown'
+
+    def _get_event_supply_payload(self, event_data):
+        """
+        Devuelve el diccionario del suministro relacionado al evento.
+
+        PrintTracker envía suministros así:
+
+            supplies = {
+                "blackToner": {
+                    "currentLevel": {"value": "0"},
+                    "maxLevel": {"value": "100"},
+                    "pctRemaining": {"value": "0"},
+                    ...
+                }
+            }
+
+        Se prioriza:
+            1. api_supply_key;
+            2. source_reference equivalente;
+            3. coincidencia por tipo/color si existe una sola opción clara.
+        """
+        self.ensure_one()
         event_data = event_data or {}
 
-        direct_keys = (
-            'percentRemaining',
-            'percentageRemaining',
-            'supplyPercent',
-            'supplyPercentage',
-            'levelPercent',
-            'level_percentage',
-            'level',
-            'percent',
+        supplies = event_data.get('supplies')
+        if not isinstance(supplies, dict):
+            return False, False
+
+        supply_key = (
+            self.api_supply_key
+            or event_data.get('supplyKey')
+            or event_data.get('supply_key')
         )
 
-        for key in direct_keys:
-            if key in event_data and event_data.get(key) not in (None, ''):
-                return True
+        if supply_key and supply_key in supplies:
+            payload = supplies.get(supply_key)
+            if isinstance(payload, dict):
+                return supply_key, payload
 
-        for container_key in ('supply', 'supplyData', 'supplyReading'):
-            nested = event_data.get(container_key)
-            if not isinstance(nested, dict):
+        # Fallback conservador:
+        # solo aceptar una única entrada de tipo toner.
+        toner_candidates = []
+
+        for key, payload in supplies.items():
+            if not isinstance(payload, dict):
                 continue
-            for key in direct_keys:
-                if key in nested and nested.get(key) not in (None, ''):
-                    return True
+
+            raw_type = payload.get('type')
+            if isinstance(raw_type, dict):
+                raw_type = raw_type.get('value')
+
+            if str(raw_type or '').strip().lower() == 'toner':
+                toner_candidates.append((key, payload))
+
+        if len(toner_candidates) == 1:
+            return toner_candidates[0]
+
+        return False, False
+
+    @staticmethod
+    def _nested_value(container, key):
+        """
+        Extrae valores de estructuras PrintTracker del tipo:
+            {"displayName": "...", "value": "123"}
+        o devuelve directamente el valor simple.
+        """
+        if not isinstance(container, dict):
+            return False
+
+        value = container.get(key)
+
+        if isinstance(value, dict):
+            return value.get('value')
+
+        return value
+
+    def _event_has_explicit_level(self, event_data):
+        """
+        True únicamente cuando el supply relacionado contiene un nivel
+        explícito. Un nivel 0 es válido si PrintTracker lo envió.
+        """
+        self.ensure_one()
+
+        _key, supply_payload = self._get_event_supply_payload(
+            event_data or {}
+        )
+
+        if not supply_payload:
+            return False
+
+        for key in (
+            'pctRemaining',
+            'percentRemaining',
+            'percentageRemaining',
+            'currentLevel',
+        ):
+            raw = self._nested_value(supply_payload, key)
+            if raw not in (None, False, ''):
+                return True
 
         return False
 
-    @staticmethod
-    def _extract_explicit_level(event_data):
+    def _extract_explicit_level(self, event_data):
         """
-        Devuelve (porcentaje, valor_bruto, máximo, disponible).
+        Devuelve:
+            (
+                porcentaje,
+                valor_bruto,
+                máximo,
+                disponible,
+                supply_key,
+                supply_payload,
+            )
 
-        No convierte la ausencia de datos en 0%.
+        Lee la estructura REAL del payload PrintTracker:
+
+            supplies.blackToner.currentLevel.value
+            supplies.blackToner.maxLevel.value
+            supplies.blackToner.pctRemaining.value
+
+        La ausencia de datos nunca se convierte en 0%.
         """
+        self.ensure_one()
         event_data = event_data or {}
 
-        direct_percent_keys = (
-            'percentRemaining',
-            'percentageRemaining',
-            'supplyPercent',
-            'supplyPercentage',
-            'levelPercent',
-            'level_percentage',
-            'percent',
+        supply_key, supply_payload = self._get_event_supply_payload(
+            event_data
         )
 
-        candidates = [event_data]
-        for container_key in ('supply', 'supplyData', 'supplyReading'):
-            nested = event_data.get(container_key)
-            if isinstance(nested, dict):
-                candidates.append(nested)
+        if not supply_payload:
+            return False, 0, 0, False, supply_key, False
 
-        for container in candidates:
-            for key in direct_percent_keys:
-                if key not in container:
-                    continue
-                raw = container.get(key)
-                if raw in (None, '') or isinstance(raw, bool):
-                    continue
-                try:
-                    percent = float(raw)
-                except (TypeError, ValueError):
-                    continue
+        raw_current = self._nested_value(
+            supply_payload,
+            'currentLevel',
+        )
+        raw_max = self._nested_value(
+            supply_payload,
+            'maxLevel',
+        )
+
+        raw_percent = self._nested_value(
+            supply_payload,
+            'pctRemaining',
+        )
+
+        if raw_percent in (None, False, ''):
+            raw_percent = self._nested_value(
+                supply_payload,
+                'percentRemaining',
+            )
+
+        if raw_percent in (None, False, ''):
+            raw_percent = self._nested_value(
+                supply_payload,
+                'percentageRemaining',
+            )
+
+        level_value = 0
+        level_max = 0
+        percent = False
+        available = False
+
+        if raw_current not in (None, False, ''):
+            try:
+                level_value = int(float(raw_current))
+            except (TypeError, ValueError):
+                level_value = 0
+
+        if raw_max not in (None, False, ''):
+            try:
+                level_max = int(float(raw_max))
+            except (TypeError, ValueError):
+                level_max = 0
+
+        if raw_percent not in (None, False, ''):
+            try:
+                percent = float(raw_percent)
                 if 0.0 <= percent <= 100.0:
-                    return percent, 0, 0, True
+                    available = True
+                else:
+                    percent = False
+            except (TypeError, ValueError):
+                percent = False
 
-            if 'level' in container and container.get('level') not in (None, ''):
-                raw_level = container.get('level')
-                raw_max = (
-                    container.get('maxLevel')
-                    or container.get('levelMax')
-                    or container.get('max')
+        if not available and level_max > 0:
+            try:
+                percent = max(
+                    0.0,
+                    min(
+                        100.0,
+                        (float(level_value) / float(level_max)) * 100.0,
+                    ),
                 )
-                try:
-                    level_value = int(float(raw_level))
-                    level_max = int(float(raw_max)) if raw_max not in (None, '') else 0
-                except (TypeError, ValueError):
-                    continue
+                available = True
+            except (TypeError, ValueError, ZeroDivisionError):
+                percent = False
+                available = False
 
-                if level_max > 0:
-                    percent = max(
-                        0.0,
-                        min(100.0, (level_value / level_max) * 100.0),
-                    )
-                    return percent, level_value, level_max, True
-
-        return False, 0, 0, False
+        return (
+            percent if available else False,
+            level_value,
+            level_max,
+            available,
+            supply_key,
+            supply_payload,
+        )
 
     @staticmethod
     def _extract_estimated_depletion_date(event_data, description=''):
@@ -423,14 +533,25 @@ class PrintTrackerAlert(models.Model):
 
     def _get_event_counters(self, event_data=None):
         """
-        Obtiene contadores sin confundir ausencia con cero.
+        Obtiene los contadores del evento PrintTracker.
 
-        Prioridad:
-        1. meterRead incluido en el evento;
-        2. contadores consolidados del propio equipo únicamente cuando
-           has_auto_counters indica que son confiables.
+        Estructura real observada:
 
-        No se adivinan nombres de campos de printtracker.meter.
+            meterRead
+                pageCounts
+                    default
+                        totalBlack
+                            value = "529800"
+                        total
+                            value = "529800"
+
+        REGLAS:
+        -------
+        - Para B/N se prioriza totalBlack.
+        - Si no existe totalBlack y el equipo es monocromático, se puede usar
+          total como respaldo.
+        - Para color se aceptan únicamente claves explícitas de total color.
+        - Nunca se interpreta ausencia como contador 0 válido.
         """
         self.ensure_one()
         event_data = event_data or {}
@@ -441,94 +562,89 @@ class PrintTrackerAlert(models.Model):
         color_available = False
         indirect = False
 
-        raw_meter = event_data.get('meterRead')
+        meter_read = event_data.get('meterRead')
 
-        def parse_value(value):
-            if value in (None, '') or isinstance(value, bool):
+        def parse_counter(node):
+            if node in (None, False, ''):
                 return 0, False
 
-            if isinstance(value, (int, float)):
-                return max(0, int(value)), True
+            if isinstance(node, dict):
+                node = node.get('value')
 
-            if isinstance(value, dict):
-                for key in (
-                    'value',
-                    'reading',
-                    'count',
-                    'counter',
-                    'total',
-                ):
-                    if key not in value:
-                        continue
-                    nested = value.get(key)
-                    if nested in (None, '') or isinstance(nested, bool):
-                        continue
-                    try:
-                        return max(0, int(float(nested))), True
-                    except (TypeError, ValueError):
-                        continue
+            if node in (None, False, ''):
+                return 0, False
 
             try:
-                return max(0, int(float(str(value).strip()))), True
+                value = int(float(node))
             except (TypeError, ValueError):
                 return 0, False
 
-        if raw_meter not in (None, ''):
-            if isinstance(raw_meter, dict):
-                bn_candidates = (
-                    'black',
-                    'mono',
-                    'monochrome',
-                    'bw',
-                    'blackAndWhite',
-                    'totalBlack',
-                    'counterBn',
-                    'counter_bn',
-                )
-                color_candidates = (
-                    'color',
-                    'totalColor',
-                    'counterColor',
-                    'counter_color',
-                )
+            return max(0, value), True
 
-                for key in bn_candidates:
-                    if key not in raw_meter:
-                        continue
-                    counter_bn, bn_available = parse_value(raw_meter.get(key))
-                    if bn_available:
-                        break
+        if isinstance(meter_read, dict):
+            page_counts = meter_read.get('pageCounts')
 
-                for key in color_candidates:
-                    if key not in raw_meter:
-                        continue
-                    counter_color, color_available = parse_value(raw_meter.get(key))
-                    if color_available:
-                        break
+            if isinstance(page_counts, dict):
+                default_counts = page_counts.get('default')
 
-                if (
-                    not bn_available
-                    and self.equipo_id
-                    and self.equipo_id.tipo_maquina_id != 'color'
-                ):
-                    counter_bn, bn_available = parse_value(raw_meter)
-            elif (
-                self.equipo_id
-                and self.equipo_id.tipo_maquina_id != 'color'
-            ):
-                counter_bn, bn_available = parse_value(raw_meter)
+                if isinstance(default_counts, dict):
+                    # B/N
+                    counter_bn, bn_available = parse_counter(
+                        default_counts.get('totalBlack')
+                    )
 
-        # Respaldo confiable: los contadores consolidados del equipo.
+                    if (
+                        not bn_available
+                        and self.equipo_id
+                        and self.equipo_id.tipo_maquina_id != 'color'
+                    ):
+                        counter_bn, bn_available = parse_counter(
+                            default_counts.get('total')
+                        )
+
+                    # COLOR
+                    for key in (
+                        'totalColor',
+                        'totalColour',
+                        'totalFullColor',
+                        'totalFullColour',
+                    ):
+                        if key not in default_counts:
+                            continue
+
+                        (
+                            counter_color,
+                            color_available,
+                        ) = parse_counter(
+                            default_counts.get(key)
+                        )
+
+                        if color_available:
+                            break
+
+        # Respaldo: contadores consolidados confiables del equipo.
         if self.equipo_id:
             has_auto = bool(
-                getattr(self.equipo_id, 'has_auto_counters', False)
+                getattr(
+                    self.equipo_id,
+                    'has_auto_counters',
+                    False,
+                )
             )
 
             if has_auto and not bn_available:
-                value = getattr(self.equipo_id, 'contador_bn', None)
-                if value not in (None, False, ''):
+                raw_bn = getattr(
+                    self.equipo_id,
+                    'contador_bn',
+                    None,
+                )
+
+                if raw_bn not in (None, False, ''):
                     try:
-                        counter_bn = max(0, int(value))
+                        counter_bn = max(
+                            0,
+                            int(raw_bn),
+                        )
                         bn_available = True
                         indirect = True
                     except (TypeError, ValueError):
@@ -539,10 +655,18 @@ class PrintTrackerAlert(models.Model):
                 and self.equipo_id.tipo_maquina_id == 'color'
                 and not color_available
             ):
-                value = getattr(self.equipo_id, 'contador_color', None)
-                if value not in (None, False, ''):
+                raw_color = getattr(
+                    self.equipo_id,
+                    'contador_color',
+                    None,
+                )
+
+                if raw_color not in (None, False, ''):
                     try:
-                        counter_color = max(0, int(value))
+                        counter_color = max(
+                            0,
+                            int(raw_color),
+                        )
                         color_available = True
                         indirect = True
                     except (TypeError, ValueError):
@@ -557,26 +681,65 @@ class PrintTrackerAlert(models.Model):
         }
 
     def _prepare_toner_monitoring_values(self, event_data=None):
-        """Prepara los valores del evento normalizado sin inventar datos."""
+        """
+        Prepara toner.monitoring.event utilizando el payload real
+        PrintTracker sin inventar datos.
+        """
         self.ensure_one()
         event_data = event_data or {}
 
-        supply = self._get_printtracker_supply()
-        color = self._normalize_toner_color(supply=supply)
-        counters = self._get_event_counters(event_data=event_data)
-        event_type = self._map_toner_event_type(event_data=event_data)
-
-        level_percent = False
-        level_value = 0
-        level_max = 0
-        level_available = False
+        supply_record = self._get_printtracker_supply()
 
         (
             explicit_percent,
             explicit_value,
             explicit_max,
             explicit_available,
-        ) = self._extract_explicit_level(event_data)
+            payload_supply_key,
+            payload_supply,
+        ) = self._extract_explicit_level(
+            event_data
+        )
+
+        color = self._normalize_toner_color(
+            supply=supply_record
+        )
+
+        # Si no existe printtracker.supply relacionado, obtener color
+        # directamente del payload del suministro.
+        if payload_supply:
+            raw_color = self._nested_value(
+                payload_supply,
+                'color',
+            )
+
+            normalized_payload_color = (
+                str(raw_color or '')
+                .strip()
+                .lower()
+            )
+
+            if normalized_payload_color in (
+                'black',
+                'cyan',
+                'magenta',
+                'yellow',
+            ):
+                color = normalized_payload_color
+
+        counters = self._get_event_counters(
+            event_data=event_data
+        )
+
+        # El tipo principal lo define la alerta PrintTracker.
+        event_type = self._map_toner_event_type(
+            event_data=event_data
+        )
+
+        level_percent = False
+        level_value = 0
+        level_max = 0
+        level_available = False
 
         if explicit_available:
             level_percent = explicit_percent
@@ -584,61 +747,29 @@ class PrintTrackerAlert(models.Model):
             level_max = explicit_max
             level_available = True
 
-        # Las alertas internas generadas desde printtracker.supply sí tienen
-        # porcentaje explícito cuando es > 0.
-        if (
-            not level_available
-            and self.porcentaje_suministro
-            and self.porcentaje_suministro > 0
-        ):
-            level_percent = float(self.porcentaje_suministro)
-            level_available = True
-
-        # EMPTY es semánticamente 0% aunque el payload no envíe porcentaje.
-        if event_type == 'empty':
+        # Si el evento es EMPTY, semánticamente existe un 0%.
+        # No se usa esta regla para LOW.
+        if event_type == 'empty' and not level_available:
             level_percent = 0.0
             level_available = True
 
-        # Como apoyo visual, supply puede aportar nivel solo cuando contiene
-        # datos positivos. Un 0 por defecto nunca se considera lectura válida.
-        if not level_available and supply:
-            supply_percent = float(supply.percent_remaining or 0.0)
-            supply_value = int(supply.current_level or 0)
-            supply_max = int(supply.max_level or 0)
-
-            if supply_percent > 0:
-                level_percent = supply_percent
-                level_value = supply_value
-                level_max = supply_max
-                level_available = True
-            elif supply_max > 0 and supply_value > 0:
-                level_value = supply_value
-                level_max = supply_max
-                level_percent = max(
-                    0.0,
-                    min(
-                        100.0,
-                        (supply_value / supply_max) * 100.0,
-                    ),
-                )
-                level_available = True
-
         description = (
-            self.descripcion
-            or event_data.get('description')
+            event_data.get('description')
+            or self.descripcion
             or ''
         )
 
-        estimated_depletion_date = False
-        if event_type == 'estimated_depletion':
-            estimated_depletion_date = (
-                self._extract_estimated_depletion_date(
-                    event_data,
-                    description=description,
-                )
+        # La predicción de agotamiento es INFORMACIÓN ADICIONAL.
+        # No reemplaza el tipo LOW/CRITICAL.
+        estimated_depletion_date = (
+            self._extract_estimated_depletion_date(
+                event_data,
+                description=description,
             )
+        )
 
         raw_payload = self.api_raw_data
+
         if not raw_payload and event_data:
             raw_payload = json.dumps(
                 event_data,
@@ -647,32 +778,99 @@ class PrintTrackerAlert(models.Model):
                 indent=2,
             )
 
-        external_event_id = self.api_event_id
+        external_event_id = (
+            self.api_event_id
+            or event_data.get('id')
+        )
+
         if not external_event_id and self.id:
-            external_event_id = 'printtracker-alert-%s-%s-%s' % (
-                self.id,
-                self.contador_repeticiones or 1,
-                self.tipo_alerta or 'event',
+            external_event_id = (
+                'printtracker-alert-%s-%s-%s'
+                % (
+                    self.id,
+                    self.contador_repeticiones or 1,
+                    self.tipo_alerta or 'event',
+                )
             )
 
+        # --------------------------------------------------------
+        # Metadata del supply
+        # --------------------------------------------------------
+
+        supply_key = (
+            self.api_supply_key
+            or event_data.get('supplyKey')
+            or payload_supply_key
+            or (
+                supply_record.supply_key
+                if supply_record
+                else False
+            )
+        )
+
+        payload_supply_type = (
+            self._nested_value(
+                payload_supply,
+                'type',
+            )
+            if payload_supply
+            else False
+        )
+
+        payload_supply_name = (
+            self._nested_value(
+                payload_supply,
+                'displayableName',
+            )
+            if payload_supply
+            else False
+        )
+
+        payload_supply_description = (
+            self._nested_value(
+                payload_supply,
+                'description',
+            )
+            if payload_supply
+            else False
+        )
+
+        payload_part_number = (
+            self._nested_value(
+                payload_supply,
+                'partNumber',
+            )
+            if payload_supply
+            else False
+        )
+
         return {
-            'equipment_id': self.equipo_id.id if self.equipo_id else False,
+            'equipment_id': (
+                self.equipo_id.id
+                if self.equipo_id
+                else False
+            ),
             'source': 'printtracker',
             'external_event_id': external_event_id,
-            'source_reference': (
-                self.api_supply_key
-                or (supply.supply_key if supply else False)
-            ),
+            'source_reference': supply_key,
+
             'printtracker_alert_id': self.id,
-            'printtracker_supply_id': supply.id if supply else False,
+            'printtracker_supply_id': (
+                supply_record.id
+                if supply_record
+                else False
+            ),
+
             'event_type': event_type,
             'color': color,
+
             'event_date': (
                 self.api_event_timestamp
                 or self.fecha_deteccion
                 or self.fecha_creacion
                 or fields.Datetime.now()
             ),
+
             'level_percent': (
                 float(level_percent)
                 if level_available
@@ -681,9 +879,19 @@ class PrintTrackerAlert(models.Model):
             'level_value': int(level_value or 0),
             'level_max': int(level_max or 0),
             'level_available': bool(level_available),
-            'estimated_depletion_date': estimated_depletion_date,
-            'counter_bn': int(counters.get('bn', 0) or 0),
-            'counter_color': int(counters.get('color', 0) or 0),
+
+            'estimated_depletion_date': (
+                estimated_depletion_date
+            ),
+
+            'counter_bn': int(
+                counters.get('bn', 0)
+                or 0
+            ),
+            'counter_color': int(
+                counters.get('color', 0)
+                or 0
+            ),
             'counter_bn_available': bool(
                 counters.get('bn_available')
             ),
@@ -693,23 +901,48 @@ class PrintTrackerAlert(models.Model):
             'counter_is_estimated': bool(
                 counters.get('indirect')
             ),
-            'supply_key': (
-                self.api_supply_key
-                or (supply.supply_key if supply else False)
-            ),
-            'supply_type': supply.supply_type if supply else False,
-            'supply_name': (
-                (
-                    supply.displayable_name
-                    or supply.description
-                    or supply.display_name
+
+            'supply_key': supply_key,
+
+            'supply_type': (
+                str(payload_supply_type)
+                if payload_supply_type
+                else (
+                    supply_record.supply_type
+                    if supply_record
+                    else False
                 )
-                if supply
-                else False
             ),
-            'part_number': supply.part_number if supply else False,
-            'raw_description': description or False,
-            'raw_subject': self.titulo or False,
+
+            'supply_name': (
+                payload_supply_name
+                or payload_supply_description
+                or (
+                    supply_record.displayable_name
+                    or supply_record.description
+                    or supply_record.display_name
+                    if supply_record
+                    else False
+                )
+            ),
+
+            'part_number': (
+                payload_part_number
+                or (
+                    supply_record.part_number
+                    if supply_record
+                    else False
+                )
+            ),
+
+            'raw_description': (
+                description
+                or False
+            ),
+            'raw_subject': (
+                self.titulo
+                or False
+            ),
             'raw_payload': raw_payload,
         }
 
@@ -1363,25 +1596,6 @@ class PrintTrackerAlert(models.Model):
         # Suministro reemplazado
         if any(w in desc for w in ['replaced', 'reemplaz', 'installed', 'nuevo']):
             return {'tipo': 'supply_replaced', 'prioridad': 'media', 'titulo': 'Suministro Reemplazado'}
-
-        # Predicción de agotamiento. Es informativa: NO equivale a EMPTY.
-        if any(
-            phrase in desc
-            for phrase in [
-                'estimated depletion',
-                'estimated to deplete',
-                'estimated empty',
-                'depletion estimate',
-                'agotamiento estimado',
-                'se agotará',
-                'se agotara',
-            ]
-        ):
-            return {
-                'tipo': 'supply_event',
-                'prioridad': 'media',
-                'titulo': 'Agotamiento Estimado',
-            }
 
         # Suministro bajo (por supplyKey o descripción)
         if supply_key or any(w in desc for w in ['toner', 'ink', 'drum', 'supply', 'low']):

@@ -270,7 +270,8 @@ class TonerMonitoringEvent(models.Model):
         tracking=True,
         help=(
             "Fecha estimada de agotamiento informada por el sistema externo. "
-            "No equivale a un nivel 0% ni a un evento EMPTY."
+            "Es información adicional del evento y no reemplaza su tipo "
+            "principal (por ejemplo LOW o CRITICAL). Tampoco equivale a EMPTY."
         ),
     )
 
