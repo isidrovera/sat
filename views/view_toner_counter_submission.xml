@@ -67,7 +67,7 @@
                                     <span class="o_stat_text">Despacho</span>
                                 </div>
                             </button>
-                            <button name="%(action_toner_brand)d" type="action" string="Marcas de tóner" icon="fa-tags" groups="base.group_system" class="oe_stat_button"/>
+                       
                         </div>
                         <div class="oe_title o_toner_title">
                             <div class="o_toner_section_heading">
