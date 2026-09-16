@@ -47,5 +47,20 @@
             <field name="codigo_tecnico">savin</field>
             <field name="active" eval="True"/>
         </record>
+         <record id="toner_brand_cas" model="toner.brand">
+            <field name="name">CAS</field>
+        </record>
+        <record id="toner_brand_premium" model="toner.brand">
+            <field name="name">PREMIUM</field>
+        </record>
+        <record id="toner_brand_intercopy" model="toner.brand">
+            <field name="name">INTERCOPY</field>
+        </record>
+        <record id="toner_brand_compatible" model="toner.brand">
+            <field name="name">COMPATIBLE</field>
+        </record>
+        <record id="toner_brand_cet" model="toner.brand">
+            <field name="name">CET</field>
+        </record>
     </data>
 </odoo>
