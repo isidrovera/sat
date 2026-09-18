@@ -50,20 +50,56 @@ class UnidadAlquiler(models.Model):
 
     @api.depends('contador_bn', 'contador_color', 'fecha_ultima_actualizacion', 'pt_last_sync', 'tipo_maquina_id')
     def _compute_has_auto_counters(self):
-        """Determina si el equipo tiene contadores automáticos confiables."""
+        """Determina si el equipo tiene contadores automáticos confiables.
+
+        Para solicitudes de tóner una lectura automática solamente se considera
+        vigente durante 3 días. En equipos color se exige que ambos contadores,
+        B/N y color, sean mayores que cero.
+        """
+        max_age_days = 3
+        now = fields.Datetime.now()
+        cutoff = now - timedelta(days=max_age_days)
+
         for rec in self:
-            # Consideramos que hay contador si hay valor > 0
             has_bn = bool(rec.contador_bn and rec.contador_bn > 0)
-            # Para monocromática no exigimos color
+
             if rec.tipo_maquina_id == 'color':
                 has_color = bool(rec.contador_color and rec.contador_color > 0)
+                has_required_counters = has_bn and has_color
             else:
                 has_color = True
+                has_required_counters = has_bn
 
-            # Consideramos "reciente" si existe alguna de estas fechas
-            has_recent_date = bool(rec.fecha_ultima_actualizacion or rec.pt_last_sync)
+            candidate_dates = []
+            for value in (rec.fecha_ultima_actualizacion, rec.pt_last_sync):
+                if value:
+                    try:
+                        candidate_dates.append(fields.Datetime.to_datetime(value))
+                    except (TypeError, ValueError):
+                        _logger.warning(
+                            "[TONER] Fecha de contador inválida equipo=%s valor=%s",
+                            rec.id,
+                            value,
+                        )
 
-            rec.has_auto_counters = bool((has_bn or has_color) and has_recent_date)
+            reference_date = max(candidate_dates) if candidate_dates else False
+            has_recent_date = bool(reference_date and reference_date >= cutoff)
+
+            rec.has_auto_counters = bool(
+                has_required_counters and has_recent_date
+            )
+
+            _logger.debug(
+                "[TONER] Auto contador equipo=%s serie=%s bn=%s color=%s "
+                "fecha=%s limite_dias=%s valido=%s",
+                rec.id,
+                rec.serie,
+                rec.contador_bn,
+                rec.contador_color,
+                reference_date,
+                max_age_days,
+                rec.has_auto_counters,
+            )
     # En la clase UnidadAlquiler, agregar este método
     
     @api.model

@@ -850,6 +850,60 @@ class TonerCounterSubmission(models.Model):
 
 
     @api.model
+    def _get_known_counter_floor(self, equipment):
+        """Devuelve el mayor contador conocido y confiable del equipo.
+
+        La validación de una nueva solicitud nunca debe permitir que B/N o
+        color retrocedan respecto de un contador ya conocido. Se toman como
+        referencia los campos actuales del equipo y, cuando existen, los
+        eventos de monitoreo históricos con contador positivo.
+        """
+        known_bn = int(equipment.contador_bn or 0)
+        known_color = int(equipment.contador_color or 0)
+
+        try:
+            Event = self.env["toner.monitoring.event"].sudo()
+
+            max_bn_event = Event.search(
+                [
+                    ("equipment_id", "=", equipment.id),
+                    ("counter_bn", ">", 0),
+                ],
+                order="counter_bn desc, event_date desc, id desc",
+                limit=1,
+            )
+            if max_bn_event:
+                known_bn = max(known_bn, int(max_bn_event.counter_bn or 0))
+
+            if equipment.tipo_maquina_id == "color":
+                max_color_event = Event.search(
+                    [
+                        ("equipment_id", "=", equipment.id),
+                        ("counter_color", ">", 0),
+                    ],
+                    order="counter_color desc, event_date desc, id desc",
+                    limit=1,
+                )
+                if max_color_event:
+                    known_color = max(
+                        known_color,
+                        int(max_color_event.counter_color or 0),
+                    )
+        except Exception:
+            # La solicitud no debe fallar solo porque el modelo de monitoreo no
+            # esté disponible. Los contadores del equipo siguen siendo una base
+            # válida y la excepción queda registrada para diagnóstico.
+            _logger.exception(
+                "[TONER] No se pudo consultar historial de contadores equipo=%s",
+                equipment.id,
+            )
+
+        return {
+            "bn": known_bn,
+            "color": known_color if equipment.tipo_maquina_id == "color" else 0,
+        }
+
+    @api.model
     def _analyze_color(self, equipment, color, current_counters,
                        exclude_submission_id=False, base_counters=None):
         # Se conserva la firma pública; nunca se acepta una base manual.
@@ -976,6 +1030,68 @@ class TonerCounterSubmission(models.Model):
                 "colors": [],
             }
 
+        if equipment.tipo_maquina_id == "color" and counter_color <= 0:
+            return {
+                "valid": False,
+                "can_create": False,
+                "reason": "invalid_counter",
+                "message": _(
+                    "El contador color debe ser mayor que cero."
+                ),
+                "colors": [],
+            }
+
+        known_counters = self._get_known_counter_floor(equipment)
+        known_bn = int(known_counters.get("bn", 0) or 0)
+        known_color = int(known_counters.get("color", 0) or 0)
+
+        if known_bn > 0 and counter_bn < known_bn:
+            return {
+                "valid": False,
+                "can_create": False,
+                "reason": "counter_lower_than_known",
+                "message": _(
+                    "El contador B/N ingresado (%(current)s) no puede ser "
+                    "menor al último contador conocido del equipo (%(known)s)."
+                ) % {
+                    "current": counter_bn,
+                    "known": known_bn,
+                },
+                "colors": [],
+                "known_counters": known_counters,
+            }
+
+        if (
+            equipment.tipo_maquina_id == "color"
+            and known_color > 0
+            and counter_color < known_color
+        ):
+            return {
+                "valid": False,
+                "can_create": False,
+                "reason": "counter_lower_than_known",
+                "message": _(
+                    "El contador color ingresado (%(current)s) no puede ser "
+                    "menor al último contador conocido del equipo (%(known)s)."
+                ) % {
+                    "current": counter_color,
+                    "known": known_color,
+                },
+                "colors": [],
+                "known_counters": known_counters,
+            }
+
+        _logger.info(
+            "[TONER] Validación de contadores equipo=%s serie=%s "
+            "actual_bn=%s conocido_bn=%s actual_color=%s conocido_color=%s",
+            equipment.id,
+            equipment.serie,
+            counter_bn,
+            known_bn,
+            counter_color,
+            known_color,
+        )
+
         results = [
             self._analyze_color(
                 equipment,
@@ -1071,8 +1187,11 @@ class TonerCounterSubmission(models.Model):
             if not equipment:
                 return {"success": False, "error": _("Equipo no encontrado.")}
 
-            if equipment.tipo_maquina_id == "color" and "counter_color" not in web_data:
-                raise ValidationError(_("Debe enviar el contador color actual (puede ser cero)."))
+            if equipment.tipo_maquina_id == "color":
+                if "counter_color" not in web_data:
+                    raise ValidationError(_("Debe enviar el contador color actual."))
+                if int(web_data.get("counter_color", 0) or 0) <= 0:
+                    raise ValidationError(_("El contador color debe ser mayor que cero."))
             requested_toners = {
                 color: bool(web_data.get("requires_%s" % color))
                 for color in self.COLOR_LABELS
@@ -1606,8 +1725,11 @@ class TonerCounterSubmission(models.Model):
                 if "counter_bn" not in vals or int(vals.get("counter_bn") or 0) <= 0:
                     raise ValidationError(_("Debe enviar el contador B/N actual de esta solicitud."))
                 equipment = self.env["alquiler"].browse(vals.get("equipment_id")).exists()
-                if equipment and equipment.tipo_maquina_id == "color" and "counter_color" not in vals:
-                    raise ValidationError(_("Debe enviar el contador color actual de esta solicitud (puede ser cero)."))
+                if equipment and equipment.tipo_maquina_id == "color":
+                    if "counter_color" not in vals:
+                        raise ValidationError(_("Debe enviar el contador color actual de esta solicitud."))
+                    if int(vals.get("counter_color") or 0) <= 0:
+                        raise ValidationError(_("El contador color debe ser mayor que cero."))
                 vals["previous_counter_bn"] = 0
                 vals["previous_counter_color"] = 0
                 vals["history_snapshot_json"] = False
@@ -1671,9 +1793,20 @@ class TonerCounterSubmission(models.Model):
             if any(getattr(record, name) < 0 for name in
                    ("counter_bn", "counter_color", "previous_counter_bn", "previous_counter_color")):
                 raise ValidationError(_("Los contadores no pueden ser negativos."))
-            # La comparación con cada base se realiza en create/write y en el
-            # flujo mediante _validate_record_for_workflow. No comparar con
-            # una base resumen que todavía pertenezca al equipo anterior.
+
+            if record.counter_bn <= 0:
+                raise ValidationError(_("El contador B/N debe ser mayor que cero."))
+
+            if (
+                record.equipment_id
+                and record.equipment_id.tipo_maquina_id == "color"
+                and record.counter_color <= 0
+            ):
+                raise ValidationError(_("El contador color debe ser mayor que cero."))
+
+            # La comparación contra el mayor contador conocido se realiza en
+            # _validate_record_for_workflow para portal, formulario manual,
+            # API e importación.
 
     @api.constrains(
         "cantidad_solicitada_black",
@@ -2663,13 +2796,63 @@ class TonerCounterSubmission(models.Model):
         }
 
     def _update_equipment_counters(self):
+        """Actualiza el equipo sin retroceder contadores ni rejuvenecer lecturas.
+
+        El contador de la solicitud corresponde a ``submission_date``. Si entre
+        la solicitud y la entrega el equipo ya recibió una lectura mayor, esa
+        lectura más reciente se conserva y el cierre de la entrega no la pisa.
+        """
         for record in self:
-            record.equipment_id.write(
-                {
-                    "contador_bn": record.counter_bn,
-                    "contador_color": record.counter_color,
-                    "fecha_ultima_actualizacion": fields.Datetime.now(),
-                }
+            equipment = record.equipment_id
+            request_bn = int(record.counter_bn or 0)
+            request_color = int(record.counter_color or 0)
+
+            if request_bn <= 0:
+                raise ValidationError(_("El contador B/N debe ser mayor que cero."))
+            if equipment.tipo_maquina_id == "color" and request_color <= 0:
+                raise ValidationError(_("El contador color debe ser mayor que cero."))
+
+            stored_bn = int(equipment.contador_bn or 0)
+            stored_color = int(equipment.contador_color or 0)
+            request_date = fields.Datetime.to_datetime(
+                record.submission_date or fields.Datetime.now()
+            )
+            stored_date = fields.Datetime.to_datetime(
+                equipment.fecha_ultima_actualizacion
+            ) if equipment.fecha_ultima_actualizacion else False
+
+            vals = {}
+            counter_updated = False
+
+            if request_bn >= stored_bn:
+                vals["contador_bn"] = request_bn
+                counter_updated = request_bn > stored_bn
+
+            if equipment.tipo_maquina_id == "color" and request_color >= stored_color:
+                vals["contador_color"] = request_color
+                counter_updated = counter_updated or request_color > stored_color
+
+            # La fecha solo avanza hasta la fecha real de la lectura de la
+            # solicitud; nunca hasta la fecha posterior de entrega.
+            if not stored_date or request_date > stored_date:
+                vals["fecha_ultima_actualizacion"] = request_date
+
+            if vals:
+                equipment.write(vals)
+
+            _logger.info(
+                "[TONER] Cierre solicitud=%s equipo=%s request_bn=%s "
+                "stored_bn=%s request_color=%s stored_color=%s "
+                "fecha_solicitud=%s contador_actualizado=%s vals=%s",
+                record.secuencia,
+                equipment.id,
+                request_bn,
+                stored_bn,
+                request_color if equipment.tipo_maquina_id == "color" else 0,
+                stored_color if equipment.tipo_maquina_id == "color" else 0,
+                request_date,
+                counter_updated,
+                vals,
             )
 
     # -------------------------------------------------------------------------

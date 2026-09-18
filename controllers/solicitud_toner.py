@@ -51,23 +51,53 @@ class TonerRequestController(http.Controller):
             return False
 
     def _get_effective_counters(self, equipment, post):
+        """Obtiene los contadores efectivos de la solicitud.
+
+        Si el cliente envía un valor, se utiliza ese valor y posteriormente el
+        modelo valida que sea > 0 y que nunca sea menor al último contador
+        conocido. Si el formulario no envía contador, solamente se reutiliza el
+        contador almacenado cuando ``has_auto_counters`` confirma que su lectura
+        tiene como máximo 3 días de antigüedad.
+        """
         raw_bn = post.get("contometro_black")
         raw_color = post.get("contometro_color")
+        has_recent_auto = bool(equipment.has_auto_counters)
 
-        counter_bn = (
-            self._safe_int(raw_bn)
-            if raw_bn not in (None, "")
-            else int(equipment.contador_bn or 0)
-        )
+        if raw_bn not in (None, ""):
+            counter_bn = self._safe_int(raw_bn)
+            source_bn = "cliente"
+        elif has_recent_auto:
+            counter_bn = int(equipment.contador_bn or 0)
+            source_bn = "automatico"
+        else:
+            counter_bn = 0
+            source_bn = "sin_lectura_vigente"
 
         if equipment.tipo_maquina_id == "color":
-            counter_color = (
-                self._safe_int(raw_color)
-                if raw_color not in (None, "")
-                else int(equipment.contador_color or 0)
-            )
+            if raw_color not in (None, ""):
+                counter_color = self._safe_int(raw_color)
+                source_color = "cliente"
+            elif has_recent_auto:
+                counter_color = int(equipment.contador_color or 0)
+                source_color = "automatico"
+            else:
+                counter_color = 0
+                source_color = "sin_lectura_vigente"
         else:
             counter_color = 0
+            source_color = "no_aplica"
+
+        _logger.info(
+            "[TONER-PORTAL] Contadores efectivos equipo=%s serie=%s "
+            "bn=%s fuente_bn=%s color=%s fuente_color=%s auto_vigente=%s",
+            equipment.id,
+            equipment.serie,
+            counter_bn,
+            source_bn,
+            counter_color,
+            source_color,
+            has_recent_auto,
+        )
 
         return counter_bn, counter_color
 
@@ -156,8 +186,32 @@ class TonerRequestController(http.Controller):
                 "ubicacion_instalacion": equipment.ubicacion_instalacion or "",
                 "tipo_maquina_id": equipment.tipo_maquina_id,
                 "stock_info": stock_info,
-                "contador_actual_bn": equipment.contador_bn or 0,
-                "contador_actual_color": equipment.contador_color or 0,
+                # Solo precargar como "actual" un contador automático vigente.
+                # Si la lectura tiene más de 3 días se envía 0 para obligar a
+                # registrar una lectura actual en el formulario.
+                "contador_actual_bn": (
+                    equipment.contador_bn if equipment.has_auto_counters else 0
+                ),
+                "contador_actual_color": (
+                    equipment.contador_color
+                    if equipment.has_auto_counters
+                    and equipment.tipo_maquina_id == "color"
+                    else 0
+                ),
+                "ultimo_contador_conocido_bn": equipment.contador_bn or 0,
+                "ultimo_contador_conocido_color": equipment.contador_color or 0,
+                "fecha_ultimo_contador": max(
+                    [
+                        value
+                        for value in (
+                            equipment.pt_last_sync,
+                            equipment.fecha_ultima_actualizacion,
+                        )
+                        if value
+                    ],
+                    default=False,
+                ),
+                "counter_max_age_days": 3,
                 "gestion_automatica": stock_info.get(
                     "gestion_automatica",
                     True,
