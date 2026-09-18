@@ -200,17 +200,10 @@ class TonerRequestController(http.Controller):
                 ),
                 "ultimo_contador_conocido_bn": equipment.contador_bn or 0,
                 "ultimo_contador_conocido_color": equipment.contador_color or 0,
-                "fecha_ultimo_contador": max(
-                    [
-                        value
-                        for value in (
-                            equipment.pt_last_sync,
-                            equipment.fecha_ultima_actualizacion,
-                        )
-                        if value
-                    ],
-                    default=False,
-                ),
+                # La fecha mostrada debe corresponder al contador guardado.
+                # pt_last_sync no se usa porque una sincronización puede ser
+                # reciente aunque los contadores sean antiguos.
+                "fecha_ultimo_contador": equipment.fecha_ultima_actualizacion or False,
                 "counter_max_age_days": 3,
                 "gestion_automatica": stock_info.get(
                     "gestion_automatica",

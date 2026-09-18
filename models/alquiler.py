@@ -48,13 +48,15 @@ class UnidadAlquiler(models.Model):
         help='Indica si el equipo tiene contadores recientes provenientes de sistemas automáticos'
     )
 
-    @api.depends('contador_bn', 'contador_color', 'fecha_ultima_actualizacion', 'pt_last_sync', 'tipo_maquina_id')
+    @api.depends('contador_bn', 'contador_color', 'fecha_ultima_actualizacion', 'tipo_maquina_id')
     def _compute_has_auto_counters(self):
-        """Determina si el equipo tiene contadores automáticos confiables.
+        """Determina si los contadores guardados en ``alquiler`` son vigentes.
 
-        Para solicitudes de tóner una lectura automática solamente se considera
-        vigente durante 3 días. En equipos color se exige que ambos contadores,
-        B/N y color, sean mayores que cero.
+        IMPORTANTE: ``pt_last_sync`` NO sirve como fecha del contador. Una
+        sincronización de PrintTracker puede ocurrir sin que el contador haya
+        cambiado, por lo que para estos campos se usa únicamente
+        ``fecha_ultima_actualizacion``. Para solicitudes de tóner la lectura es
+        válida durante un máximo de 3 días.
         """
         max_age_days = 3
         now = fields.Datetime.now()
@@ -67,36 +69,38 @@ class UnidadAlquiler(models.Model):
                 has_color = bool(rec.contador_color and rec.contador_color > 0)
                 has_required_counters = has_bn and has_color
             else:
-                has_color = True
                 has_required_counters = has_bn
 
-            candidate_dates = []
-            for value in (rec.fecha_ultima_actualizacion, rec.pt_last_sync):
-                if value:
-                    try:
-                        candidate_dates.append(fields.Datetime.to_datetime(value))
-                    except (TypeError, ValueError):
-                        _logger.warning(
-                            "[TONER] Fecha de contador inválida equipo=%s valor=%s",
-                            rec.id,
-                            value,
-                        )
+            reference_date = False
+            if rec.fecha_ultima_actualizacion:
+                try:
+                    reference_date = fields.Datetime.to_datetime(
+                        rec.fecha_ultima_actualizacion
+                    )
+                except (TypeError, ValueError):
+                    _logger.warning(
+                        "[TONER] Fecha de contador inválida equipo=%s valor=%s",
+                        rec.id,
+                        rec.fecha_ultima_actualizacion,
+                    )
 
-            reference_date = max(candidate_dates) if candidate_dates else False
-            has_recent_date = bool(reference_date and reference_date >= cutoff)
+            has_recent_date = bool(
+                reference_date and reference_date >= cutoff
+            )
 
             rec.has_auto_counters = bool(
                 has_required_counters and has_recent_date
             )
 
-            _logger.debug(
-                "[TONER] Auto contador equipo=%s serie=%s bn=%s color=%s "
-                "fecha=%s limite_dias=%s valido=%s",
+            _logger.info(
+                "[TONER] Vigencia contador equipo=%s serie=%s bn=%s color=%s "
+                "fecha_contador=%s pt_last_sync=%s limite_dias=%s valido=%s",
                 rec.id,
                 rec.serie,
                 rec.contador_bn,
                 rec.contador_color,
                 reference_date,
+                rec.pt_last_sync,
                 max_age_days,
                 rec.has_auto_counters,
             )
