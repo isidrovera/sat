@@ -357,4 +357,3 @@ access_toner_installation_history_user,toner.installation.history user,model_ton
 access_toner_installation_history_admin,toner.installation.history admin,model_toner_installation_history,base.group_system,1,1,1,1
 access_toner_stock_movement_user,toner.stock.movement user,model_toner_stock_movement,base.group_user,1,0,0,0
 access_toner_stock_movement_admin,toner.stock.movement admin,model_toner_stock_movement,base.group_system,1,1,1,1
-access_printtracker_diagnostic_result_user,printtracker.diagnostic.result user,model_printtracker_diagnostic_result,base.group_user,1,1,1,1
