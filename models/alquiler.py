@@ -220,7 +220,7 @@ class UnidadAlquiler(models.Model):
         return {
             'type': 'ir.actions.act_window',
             'name': 'Tickets',
-            'view_mode': 'list,form',
+            'view_mode': 'list,form,graph',
             'res_model': 'ticket.alquiler',
             'domain': [('product_alquiler', '=', self.id)],
             'context': "{'create': True}"
