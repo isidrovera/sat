@@ -159,30 +159,25 @@ class PrintTrackerAlert(models.Model):
 
     def _get_event_supply_payload(self, event_data):
         """
-        Devuelve el diccionario del suministro relacionado al evento.
+        Devuelve el suministro exacto relacionado al event de PrintTracker.
 
-        PrintTracker envía suministros así:
+        PrintTracker puede entregar los datos del suministro en distintas
+        posiciones según el tipo de event / dispositivo:
 
-            supplies = {
-                "blackToner": {
-                    "currentLevel": {"value": "0"},
-                    "maxLevel": {"value": "100"},
-                    "pctRemaining": {"value": "0"},
-                    ...
-                }
-            }
+            1. event.supplies
+            2. event.meterRead.supplies   <- estructura observada en /events
+            3. event.attributes           <- atributos del supply del event
 
-        Se prioriza:
-            1. api_supply_key;
-            2. source_reference equivalente;
-            3. coincidencia por tipo/color si existe una sola opción clara.
+        REGLAS:
+        - supplyKey identifica el suministro exacto cuando está presente.
+        - nunca se toma un supply de otro equipo.
+        - si supplyKey no existe, solo se usa un fallback cuando hay una
+          única opción inequívoca.
+        - soporta toner, ink, drum, waste y otros supplies sin descartarlos;
+          únicamente los toner se envían al flujo especializado de tóner.
         """
         self.ensure_one()
         event_data = event_data or {}
-
-        supplies = event_data.get('supplies')
-        if not isinstance(supplies, dict):
-            return False, False
 
         supply_key = (
             self.api_supply_key
@@ -190,30 +185,57 @@ class PrintTrackerAlert(models.Model):
             or event_data.get('supply_key')
         )
 
-        if supply_key and supply_key in supplies:
-            payload = supplies.get(supply_key)
-            if isinstance(payload, dict):
-                return supply_key, payload
+        # --------------------------------------------------------
+        # 1. supplies directamente en el event
+        # --------------------------------------------------------
+        supplies = event_data.get('supplies')
 
-        # Fallback conservador:
-        # solo aceptar una única entrada de tipo toner.
-        toner_candidates = []
+        # --------------------------------------------------------
+        # 2. estructura real observada en GET /events:
+        #    event.meterRead.supplies
+        # --------------------------------------------------------
+        if not isinstance(supplies, dict):
+            meter_read = event_data.get('meterRead') or {}
+            if isinstance(meter_read, dict):
+                supplies = meter_read.get('supplies')
 
-        for key, payload in supplies.items():
-            if not isinstance(payload, dict):
-                continue
+        if isinstance(supplies, dict):
+            if supply_key and supply_key in supplies:
+                payload = supplies.get(supply_key)
+                if isinstance(payload, dict):
+                    return supply_key, payload
 
-            raw_type = payload.get('type')
-            if isinstance(raw_type, dict):
-                raw_type = raw_type.get('value')
+            # Sin supplyKey, solo aceptar una única opción claramente
+            # identificada. No adivinar entre varios consumibles.
+            candidates = [
+                (key, payload)
+                for key, payload in supplies.items()
+                if isinstance(payload, dict)
+            ]
 
-            if str(raw_type or '').strip().lower() == 'toner':
-                toner_candidates.append((key, payload))
+            if len(candidates) == 1:
+                return candidates[0]
 
-        if len(toner_candidates) == 1:
-            return toner_candidates[0]
+            # Compatibilidad histórica: si existe exactamente un toner,
+            # puede utilizarse para eventos antiguos sin supplyKey.
+            toner_candidates = []
+            for key, payload in candidates:
+                raw_type = self._nested_value(payload, 'type')
+                if str(raw_type or '').strip().lower() == 'toner':
+                    toner_candidates.append((key, payload))
 
-        return False, False
+            if len(toner_candidates) == 1:
+                return toner_candidates[0]
+
+        # --------------------------------------------------------
+        # 3. El event también puede traer attributes correspondientes
+        #    específicamente al supply indicado por supplyKey.
+        # --------------------------------------------------------
+        attributes = event_data.get('attributes')
+        if supply_key and isinstance(attributes, dict):
+            return supply_key, attributes
+
+        return supply_key or False, False
 
     @staticmethod
     def _nested_value(container, key):
@@ -414,22 +436,42 @@ class PrintTrackerAlert(models.Model):
 
     def _get_printtracker_supply(self):
         """
-        Obtiene el suministro relacionado sin adivinar por descripción.
+        Obtiene el suministro PrintTracker correspondiente al MISMO equipo.
+
+        supply_key (por ejemplo blackToner) se repite en cientos de equipos,
+        por lo que nunca debe buscarse únicamente por esa clave cuando ya
+        conocemos el equipo.
+
         Prioridad:
-        1. suministro_id;
-        2. api_supply_key.
+        1. suministro_id ya enlazado;
+        2. equipment + api_supply_key;
+        3. si no hay equipo, aceptar supply_key solo cuando la coincidencia
+           global sea única.
         """
         self.ensure_one()
+
+        Supply = self.env['printtracker.supply'].sudo()
 
         if self.suministro_id:
             return self.suministro_id
 
         if not self.api_supply_key:
-            return self.env['printtracker.supply']
+            return Supply.browse()
 
-        return self.env['printtracker.supply'].sudo().search([
+        if self.equipo_id:
+            return Supply.search([
+                ('device_id', '=', self.equipo_id.id),
+                ('supply_key', '=', self.api_supply_key),
+            ], limit=1)
+
+        matches = Supply.search([
             ('supply_key', '=', self.api_supply_key),
-        ], limit=1)
+        ], limit=2)
+
+        if len(matches) == 1:
+            return matches
+
+        return Supply.browse()
 
     def _normalize_toner_color(self, supply=False):
         """
@@ -687,6 +729,20 @@ class PrintTrackerAlert(models.Model):
         """
         self.ensure_one()
         event_data = event_data or {}
+
+        # Reprocesar debe funcionar también para alerts ya existentes.
+        # Cuando no se recibe event_data explícitamente, recuperar el JSON
+        # bruto que se guardó al crear la alerta desde PrintTracker.
+        if not event_data and self.api_raw_data:
+            try:
+                raw_event = json.loads(self.api_raw_data)
+                if isinstance(raw_event, dict):
+                    event_data = raw_event
+            except (TypeError, ValueError, json.JSONDecodeError):
+                _logger.warning(
+                    '[TONER/PT] No se pudo reconstruir api_raw_data alerta=%s',
+                    self.id,
+                )
 
         supply_record = self._get_printtracker_supply()
 
@@ -1037,8 +1093,13 @@ class PrintTrackerAlert(models.Model):
                 'level_percent',
                 'level_value',
                 'level_max',
+                'level_available',
+                'estimated_depletion_date',
                 'counter_bn',
                 'counter_color',
+                'counter_bn_available',
+                'counter_color_available',
+                'counter_is_estimated',
                 'supply_key',
                 'supply_type',
                 'supply_name',
