@@ -13,88 +13,215 @@
             <field name="name">printtracker.config.form</field>
             <field name="model">printtracker.config</field>
             <field name="arch" type="xml">
-                <form>
+                <form string="PrintTracker Pro">
                     <header>
-                        <button name="test_connection" 
-                            type="object" 
-                            string="Probar Conexión" 
-                            class="btn-primary"/>
-                        <button name="sync_all_data" 
-                            type="object" 
-                            string="Sincronizar Todo" 
-                            class="btn-success"
-                            invisible="connection_status != 'connected'"/>
+                        <button name="action_check_all_processes"
+                                type="object"
+                                string="Comprobar procesos"
+                                icon="fa-stethoscope"
+                                class="oe_highlight"
+                                help="Ejecuta un diagnóstico integral en modo solo lectura: API, entidades, equipos, medidores, consumibles, events, correo y cron."/>
+
+                        <button name="test_connection"
+                                type="object"
+                                string="Probar conexión"
+                                icon="fa-plug"
+                                class="btn-secondary"/>
+
+                        <button name="sync_all_data"
+                                type="object"
+                                string="Sincronizar todo"
+                                icon="fa-refresh"
+                                class="btn-success"
+                                invisible="connection_status != 'connected'"/>
                     </header>
+
                     <sheet>
-                        <div class="oe_button_box" name="button_box">
-                            <button name="sync_all_entities" 
-                                type="object" 
-                                class="oe_stat_button" 
-                                icon="fa-sitemap"
-                                invisible="connection_status != 'connected'">
+                        <widget name="web_ribbon"
+                                title="Conectado"
+                                bg_color="bg-success"
+                                invisible="connection_status != 'connected'"/>
+                        <widget name="web_ribbon"
+                                title="Error de conexión"
+                                bg_color="bg-danger"
+                                invisible="connection_status != 'error'"/>
+
+                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
+                            <div>
+                                <h1 class="mb-1">
+                                    <span class="fa fa-print me-2"/>
+                                    <field name="name" class="o_text_overflow"/>
+                                </h1>
+                                <div class="text-muted">
+                                    Integración, sincronización y diagnóstico de PrintTracker Pro
+                                </div>
+                            </div>
+
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge rounded-pill text-bg-success px-3 py-2"
+                                      invisible="connection_status != 'connected'">
+                                    <i class="fa fa-check-circle me-1"/> API conectada
+                                </span>
+                                <span class="badge rounded-pill text-bg-danger px-3 py-2"
+                                      invisible="connection_status != 'error'">
+                                    <i class="fa fa-exclamation-circle me-1"/> Error de API
+                                </span>
+                                <span class="badge rounded-pill text-bg-secondary px-3 py-2"
+                                      invisible="connection_status != 'not_tested'">
+                                    <i class="fa fa-question-circle me-1"/> Sin comprobar
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="oe_button_box mb-4" name="button_box">
+                            <button name="sync_all_entities"
+                                    type="object"
+                                    class="oe_stat_button"
+                                    icon="fa-sitemap"
+                                    invisible="connection_status != 'connected'">
                                 <div class="o_field_widget o_stat_info">
                                     <span class="o_stat_text">Sincronizar</span>
                                     <span class="o_stat_text">Entidades</span>
                                 </div>
                             </button>
-                            <button name="sync_all_devices" 
-                                type="object" 
-                                class="oe_stat_button" 
-                                icon="fa-print"
-                                invisible="connection_status != 'connected'">
+
+                            <button name="sync_all_devices"
+                                    type="object"
+                                    class="oe_stat_button"
+                                    icon="fa-print"
+                                    invisible="connection_status != 'connected'">
                                 <div class="o_field_widget o_stat_info">
                                     <span class="o_stat_text">Sincronizar</span>
                                     <span class="o_stat_text">Dispositivos</span>
                                 </div>
                             </button>
-                            <button name="sync_current_meters" 
-                                type="object" 
-                                class="oe_stat_button" 
-                                icon="fa-tachometer"
-                                invisible="connection_status != 'connected'">
+
+                            <button name="sync_current_meters"
+                                    type="object"
+                                    class="oe_stat_button"
+                                    icon="fa-tachometer"
+                                    invisible="connection_status != 'connected'">
                                 <div class="o_field_widget o_stat_info">
                                     <span class="o_stat_text">Sincronizar</span>
                                     <span class="o_stat_text">Medidores</span>
                                 </div>
                             </button>
+
+                            <button name="action_check_all_processes"
+                                    type="object"
+                                    class="oe_stat_button"
+                                    icon="fa-heartbeat">
+                                <div class="o_field_widget o_stat_info">
+                                    <span class="o_stat_text">Diagnóstico</span>
+                                    <span class="o_stat_text">Integral</span>
+                                </div>
+                            </button>
                         </div>
-                        <widget name="web_ribbon" 
-                            title="Conectado" 
-                            bg_color="bg-success" 
-                            invisible="connection_status != 'connected'"/>
-                        <widget name="web_ribbon" 
-                            title="Error" 
-                            bg_color="bg-danger" 
-                            invisible="connection_status != 'error'"/>
-                        <group>
-                            <group name="basic_config">
-                                <field name="name"/>
-                                <field name="api_url" placeholder="https://papi.printtrackerpro.com/v1"/>
-                                <field name="api_key" password="True"/>
-                                <field name="entity_bbbb_id"/>
-                                <field name="connection_status"/>
-                            </group>
-                            <group name="sync_config">
-                                <field name="sync_enabled"/>
-                                <field name="sync_interval"/>
-                                <field name="last_sync_date" readonly="True"/>
-                                <field name="incluir_entidades_hijas"/>
-                                <field name="solo_equipos_gestionados"/>
-                            </group>
-                        </group>
-                        <group name="advanced_config" string="Configuración Avanzada">
-                            <group>
-                                <field name="timeout_seconds"/>
-                                <field name="max_records_per_request"/>
-                                <field name="max_retries"/>
-                                <field name="retry_delay"/>
-                            </group>
-                        </group>
-                        <group name="error_info" 
-                           string="Información de Errores" 
-                           invisible="not last_error">
-                            <field name="last_error" readonly="True" widget="text"/>
-                        </group>
+
+                        <div class="row g-3 mb-4">
+                            <div class="col-12 col-lg-7">
+                                <div class="card h-100 border-0 shadow-sm">
+                                    <div class="card-body p-4">
+                                        <div class="d-flex align-items-center mb-3">
+                                            <div class="rounded-circle bg-primary-subtle text-primary d-flex align-items-center justify-content-center me-3"
+                                                 style="width:42px;height:42px;">
+                                                <i class="fa fa-cloud"/>
+                                            </div>
+                                            <div>
+                                                <h3 class="mb-0">Conexión API</h3>
+                                                <small class="text-muted">Credenciales y entidad principal de PrintTracker</small>
+                                            </div>
+                                        </div>
+
+                                        <group col="2">
+                                            <group>
+                                                <field name="api_url"
+                                                       string="URL API"
+                                                       placeholder="https://papi.printtrackerpro.com/v1"/>
+                                                <field name="entity_bbbb_id"
+                                                       string="Entidad principal"/>
+                                            </group>
+                                            <group>
+                                                <field name="api_key"
+                                                       string="API Key"
+                                                       password="True"/>
+                                                <field name="connection_status"
+                                                       string="Estado"
+                                                       widget="badge"
+                                                       decoration-success="connection_status == 'connected'"
+                                                       decoration-danger="connection_status == 'error'"
+                                                       decoration-muted="connection_status == 'not_tested'"/>
+                                            </group>
+                                        </group>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-12 col-lg-5">
+                                <div class="card h-100 border-0 shadow-sm">
+                                    <div class="card-body p-4">
+                                        <div class="d-flex align-items-center mb-3">
+                                            <div class="rounded-circle bg-success-subtle text-success d-flex align-items-center justify-content-center me-3"
+                                                 style="width:42px;height:42px;">
+                                                <i class="fa fa-refresh"/>
+                                            </div>
+                                            <div>
+                                                <h3 class="mb-0">Sincronización</h3>
+                                                <small class="text-muted">Frecuencia y alcance automático</small>
+                                            </div>
+                                        </div>
+
+                                        <group col="2">
+                                            <group>
+                                                <field name="sync_enabled" widget="boolean_toggle"/>
+                                                <field name="sync_interval" string="Intervalo (min)"/>
+                                                <field name="last_sync_date" readonly="True"/>
+                                            </group>
+                                            <group>
+                                                <field name="incluir_entidades_hijas" widget="boolean_toggle"/>
+                                                <field name="solo_equipos_gestionados" widget="boolean_toggle"/>
+                                            </group>
+                                        </group>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card border-0 shadow-sm mb-4">
+                            <div class="card-body p-4">
+                                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+                                    <div class="d-flex align-items-center">
+                                        <div class="rounded-circle bg-warning-subtle text-warning d-flex align-items-center justify-content-center me-3"
+                                             style="width:42px;height:42px;">
+                                            <i class="fa fa-sliders"/>
+                                        </div>
+                                        <div>
+                                            <h3 class="mb-0">Configuración avanzada</h3>
+                                            <small class="text-muted">Timeout, paginación y reintentos de la API</small>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <group col="4">
+                                    <field name="timeout_seconds" string="Timeout (seg)"/>
+                                    <field name="max_records_per_request" string="Registros por petición"/>
+                                    <field name="max_retries" string="Reintentos"/>
+                                    <field name="retry_delay" string="Espera entre reintentos (seg)"/>
+                                </group>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-danger d-flex align-items-start gap-3 mb-0"
+                             role="alert"
+                             invisible="not last_error">
+                            <i class="fa fa-exclamation-triangle fa-2x mt-1"/>
+                            <div class="flex-grow-1">
+                                <h4 class="alert-heading mb-1">Último error detectado</h4>
+                                <p class="mb-0">
+                                    <field name="last_error" readonly="True" nolabel="1"/>
+                                </p>
+                            </div>
+                        </div>
                     </sheet>
                 </form>
             </field>

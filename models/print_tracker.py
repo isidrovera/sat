@@ -1,8 +1,13 @@
-from odoo import models, fields, api
+from odoo import _, models, fields, api
+from odoo.exceptions import UserError
+
 import requests
 import logging
 import time
-from datetime import datetime
+import json
+from datetime import datetime, timedelta
+from html import escape
+from lxml import etree
 
 _logger = logging.getLogger(__name__)
 
@@ -731,6 +736,534 @@ class PrintTrackerConfig(models.Model):
                 }
             }
     
+    # ============================================================
+    # DIAGNÓSTICO INTEGRAL PRINTTRACKER - SOLO LECTURA
+    # ============================================================
+
+    @api.model
+    def get_view(self, view_id=None, view_type='form', **options):
+        """
+        Añade automáticamente el botón de diagnóstico al formulario de
+        printtracker.config sin requerir modificar la vista XML existente.
+        No reemplaza ni elimina botones/campos actuales.
+        """
+        result = super().get_view(view_id=view_id, view_type=view_type, **options)
+
+        if view_type != 'form' or not result.get('arch'):
+            return result
+
+        try:
+            arch = etree.fromstring(result['arch'])
+
+            if arch.xpath("//button[@name='action_check_all_processes']"):
+                return result
+
+            button = etree.Element(
+                'button',
+                name='action_check_all_processes',
+                string='Comprobar procesos PrintTracker',
+                type='object',
+                **{
+                    'class': 'oe_highlight',
+                    'icon': 'fa-stethoscope',
+                    'help': (
+                        'Comprueba en modo solo lectura la conexión, entidades, '
+                        'dispositivos, medidores, consumibles, events/alertas, '
+                        'clasificación Odoo, correo y cron.'
+                    ),
+                },
+            )
+
+            headers = arch.xpath('//form/header')
+            if headers:
+                headers[0].append(button)
+            else:
+                form_nodes = arch.xpath('//form')
+                if form_nodes:
+                    header = etree.Element('header')
+                    header.append(button)
+                    form_nodes[0].insert(0, header)
+
+            result['arch'] = etree.tostring(arch, encoding='unicode')
+        except Exception:
+            _logger.exception(
+                "❌ No se pudo insertar el botón de diagnóstico PrintTracker"
+            )
+
+        return result
+
+    def _diagnostic_request(self, endpoint, params=None):
+        """GET de diagnóstico. No escribe datos en Odoo ni en PrintTracker."""
+        self.ensure_one()
+
+        url = f'{self.api_url.rstrip("/")}/{endpoint.lstrip("/")}'
+        started = time.monotonic()
+
+        try:
+            response = requests.get(
+                url,
+                headers=self.get_api_headers(),
+                params=params or {},
+                timeout=self.timeout_seconds,
+            )
+            elapsed = time.monotonic() - started
+
+            try:
+                payload = response.json()
+            except Exception:
+                payload = None
+
+            return {
+                'ok': response.status_code == 200,
+                'status_code': response.status_code,
+                'elapsed': elapsed,
+                'url': response.url,
+                'payload': payload,
+                'text': response.text or '',
+            }
+
+        except requests.exceptions.Timeout as error:
+            return {
+                'ok': False,
+                'status_code': 0,
+                'elapsed': time.monotonic() - started,
+                'url': url,
+                'payload': None,
+                'text': f'Timeout: {error}',
+            }
+        except requests.exceptions.RequestException as error:
+            return {
+                'ok': False,
+                'status_code': 0,
+                'elapsed': time.monotonic() - started,
+                'url': url,
+                'payload': None,
+                'text': str(error),
+            }
+        except Exception as error:
+            _logger.exception("❌ Error inesperado en diagnóstico API")
+            return {
+                'ok': False,
+                'status_code': 0,
+                'elapsed': time.monotonic() - started,
+                'url': url,
+                'payload': None,
+                'text': str(error),
+            }
+
+    @staticmethod
+    def _diagnostic_normalize_serial(value):
+        return str(value or '').strip().upper()
+
+    @staticmethod
+    def _diagnostic_sample_text(value, max_length=180):
+        text = str(value or '').replace('\n', ' ').replace('\r', ' ').strip()
+        if len(text) > max_length:
+            return text[:max_length - 3] + '...'
+        return text
+
+    def _diagnostic_classify_event(self, event):
+        """
+        Usa el clasificador REAL de printtracker.alert cuando está disponible.
+        Si el módulo no está cargado o el método falta, no inventa clasificación.
+        """
+        try:
+            Alert = self.env['printtracker.alert'].sudo()
+            classifier = getattr(Alert, '_clasificar_event_api', None)
+            if classifier:
+                result = classifier(event)
+                if isinstance(result, dict):
+                    return result
+        except Exception as error:
+            _logger.warning(
+                "⚠️ Diagnóstico: no se pudo ejecutar clasificador de alertas: %s",
+                error,
+            )
+
+        return {
+            'tipo': 'NO_DISPONIBLE',
+            'prioridad': '-',
+            'titulo': 'Clasificador no disponible',
+        }
+
+    def _diagnostic_get_cron_status(self):
+        """Busca el cron de alertas sin depender de un XML ID concreto."""
+        self.ensure_one()
+
+        Cron = self.env['ir.cron'].sudo()
+        cron = Cron.search([
+            ('code', 'ilike', 'ejecutar_revision_automatica'),
+        ], limit=1)
+
+        if not cron:
+            try:
+                model = self.env['ir.model'].sudo().search([
+                    ('model', '=', 'printtracker.alert.manager'),
+                ], limit=1)
+                if model:
+                    cron = Cron.search([
+                        ('model_id', '=', model.id),
+                    ], limit=1)
+            except Exception:
+                cron = Cron.browse()
+
+        if not cron:
+            return {
+                'found': False,
+                'active': False,
+                'name': '-',
+                'nextcall': False,
+                'lastcall': False,
+                'interval': '-',
+            }
+
+        interval = '%s %s' % (
+            getattr(cron, 'interval_number', '') or '',
+            getattr(cron, 'interval_type', '') or '',
+        )
+
+        return {
+            'found': True,
+            'active': bool(getattr(cron, 'active', False)),
+            'name': cron.name or '-',
+            'nextcall': getattr(cron, 'nextcall', False),
+            'lastcall': getattr(cron, 'lastcall', False),
+            'interval': interval.strip() or '-',
+        }
+
+    def action_check_all_processes(self):
+        """
+        Diagnóstico integral SOLO LECTURA.
+
+        Comprueba conexión, devices, currentMeter, supplies, events de las
+        últimas 24 horas, coincidencia con equipos alquilados, clasificación
+        real de printtracker.alert, alertas existentes, correo y cron.
+
+        NO crea alertas, NO envía correos, NO cambia stock, NO crea solicitudes
+        y NO modifica historial de tóner.
+        """
+        self.ensure_one()
+
+        now_utc = datetime.utcnow()
+        start_24h = now_utc - timedelta(hours=24)
+        start_30d = now_utc - timedelta(days=30)
+
+        start_24h_str = start_24h.strftime('%Y-%m-%dT%H:%M:%S.000Z')
+        start_30d_str = start_30d.strftime('%Y-%m-%dT%H:%M:%S.000Z')
+        end_str = now_utc.strftime('%Y-%m-%dT%H:%M:%S.000Z')
+
+        include_children = bool(self.incluir_entidades_hijas)
+        exclude_disabled = bool(self.solo_equipos_gestionados)
+        large_limit = 50000
+
+        report = []
+        warnings = []
+        errors = []
+        raw_events = []
+
+        def add(title, value='', status='info'):
+            icon = {
+                'ok': '✅',
+                'warn': '⚠️',
+                'error': '❌',
+                'info': 'ℹ️',
+            }.get(status, 'ℹ️')
+            report.append(f'{icon} {title}: {value}')
+
+        report.append('=== DIAGNÓSTICO INTEGRAL PRINTTRACKER ===')
+        report.append('Fecha UTC: %s' % now_utc.strftime('%Y-%m-%d %H:%M:%S'))
+        report.append('Modo: SOLO LECTURA - no crea alertas, stock, solicitudes ni correos')
+        report.append('')
+
+        # 1. ENTIDAD / CONEXIÓN
+        report.append('--- 1. CONEXIÓN / ENTIDAD ---')
+        entity = self._diagnostic_request(
+            f'entity/{self.entity_bbbb_id}',
+            {'includeChildren': include_children},
+        )
+
+        if entity['ok'] and isinstance(entity['payload'], dict):
+            entity_name = entity['payload'].get('name') or 'Sin nombre'
+            children = entity['payload'].get('children') or []
+            add('API entidad', f"HTTP {entity['status_code']} - {entity_name} ({entity['elapsed']:.2f}s)", 'ok')
+            add('Entidades hijas visibles', len(children), 'ok')
+        else:
+            message = self._diagnostic_sample_text(entity['text'], 300)
+            add('API entidad', f"HTTP {entity['status_code']} - {message}", 'error')
+            errors.append('Falló la conexión con la entidad principal.')
+
+        report.append('')
+
+        # 2. DISPOSITIVOS
+        report.append('--- 2. DISPOSITIVOS ---')
+        devices = self._diagnostic_request(
+            f'entity/{self.entity_bbbb_id}/device',
+            {
+                'includeChildren': include_children,
+                'excludeDisabled': exclude_disabled,
+                'limit': large_limit,
+                'page': 1,
+            },
+        )
+        device_rows = devices['payload'] if isinstance(devices['payload'], list) else []
+
+        if devices['ok']:
+            add('Devices API', f"HTTP {devices['status_code']} - {len(device_rows)} registros ({devices['elapsed']:.2f}s)", 'ok')
+        else:
+            add('Devices API', f"HTTP {devices['status_code']} - {self._diagnostic_sample_text(devices['text'], 250)}", 'error')
+            errors.append('Falló la consulta de dispositivos.')
+
+        device_serials = {
+            self._diagnostic_normalize_serial(row.get('serialNumber'))
+            for row in device_rows
+            if self._diagnostic_normalize_serial(row.get('serialNumber'))
+        }
+        add('Series válidas recibidas', len(device_serials), 'info')
+        report.append('')
+
+        # 3. MEDIDORES
+        report.append('--- 3. MEDIDORES ACTUALES ---')
+        meters = self._diagnostic_request(
+            f'entity/{self.entity_bbbb_id}/currentMeter',
+            {
+                'includeChildren': include_children,
+                'excludeDisabled': exclude_disabled,
+                'limit': large_limit,
+                'page': 1,
+            },
+        )
+        meter_rows = meters['payload'] if isinstance(meters['payload'], list) else []
+
+        if meters['ok']:
+            add('CurrentMeter API', f"HTTP {meters['status_code']} - {len(meter_rows)} registros ({meters['elapsed']:.2f}s)", 'ok')
+            with_default = 0
+            with_life = 0
+            for row in meter_rows:
+                page_counts = row.get('pageCounts') or {}
+                if isinstance(page_counts, dict):
+                    if page_counts.get('default'):
+                        with_default += 1
+                    if page_counts.get('life'):
+                        with_life += 1
+            add('Medidores con pageCounts.default', with_default, 'info')
+            add('Medidores con pageCounts.life', with_life, 'info')
+        else:
+            add('CurrentMeter API', f"HTTP {meters['status_code']} - {self._diagnostic_sample_text(meters['text'], 250)}", 'error')
+            errors.append('Falló la consulta de medidores.')
+
+        report.append('')
+
+        # 4. CONSUMIBLES
+        report.append('--- 4. CONSUMIBLES / SUPPLIES ---')
+        supplies = self._diagnostic_request(
+            f'entity/{self.entity_bbbb_id}/supplies',
+            {
+                'includeChildren': include_children,
+                'replaced': False,
+                'start': start_30d_str,
+                'end': end_str,
+                'limit': large_limit,
+                'page': 1,
+            },
+        )
+        supply_rows = supplies['payload'] if isinstance(supplies['payload'], list) else []
+
+        if supplies['ok']:
+            add('Supplies API', f"HTTP {supplies['status_code']} - {len(supply_rows)} registros ({supplies['elapsed']:.2f}s)", 'ok')
+            supply_types = {}
+            for row in supply_rows:
+                key = row.get('supply') or 'sin_identificar'
+                supply_types[key] = supply_types.get(key, 0) + 1
+            if supply_types:
+                top_supplies = sorted(supply_types.items(), key=lambda item: (-item[1], item[0]))[:10]
+                add('Tipos principales', ', '.join(f'{key}={count}' for key, count in top_supplies), 'info')
+        else:
+            add('Supplies API', f"HTTP {supplies['status_code']} - {self._diagnostic_sample_text(supplies['text'], 250)}", 'error')
+            errors.append('Falló la consulta de supplies.')
+
+        report.append('')
+
+        # 5. EVENTS / ALERTAS
+        report.append('--- 5. EVENTS / ALERTAS (ÚLTIMAS 24 HORAS) ---')
+        events = self._diagnostic_request(
+            f'entity/{self.entity_bbbb_id}/events',
+            {
+                'excludeDisabled': exclude_disabled,
+                'includeChildren': include_children,
+                'start': start_24h_str,
+                'end': end_str,
+            },
+        )
+        event_rows = events['payload'] if isinstance(events['payload'], list) else []
+        raw_events = event_rows
+
+        if events['ok']:
+            add('Events API', f"HTTP {events['status_code']} - {len(event_rows)} eventos ({events['elapsed']:.2f}s)", 'ok' if event_rows else 'warn')
+            add('Rango consultado', f'{start_24h_str} → {end_str}', 'info')
+            if not event_rows:
+                warnings.append('La API respondió correctamente pero no devolvió events en las últimas 24 horas.')
+        else:
+            add('Events API', f"HTTP {events['status_code']} - {self._diagnostic_sample_text(events['text'], 300)}", 'error')
+            errors.append('Falló la consulta de events.')
+
+        # 6. EQUIPOS ALQUILADOS / COINCIDENCIAS
+        rented_serials = set()
+        try:
+            rented = self.env['alquiler'].sudo().search([
+                ('estado_alquiler_id', '=', 'alquilada'),
+            ])
+            rented_serials = {
+                self._diagnostic_normalize_serial(value)
+                for value in rented.mapped('serie')
+                if self._diagnostic_normalize_serial(value)
+            }
+            add('Equipos alquilados en Odoo', len(rented_serials), 'ok')
+        except Exception as error:
+            add('Equipos alquilados en Odoo', str(error), 'error')
+            errors.append('No se pudo consultar equipos alquilados.')
+
+        relevant_events = []
+        outside_events = []
+        for event in event_rows:
+            serial = self._diagnostic_normalize_serial(event.get('deviceSerialNumber'))
+            if serial and serial in rented_serials:
+                relevant_events.append(event)
+            else:
+                outside_events.append(event)
+
+        add('Events de equipos alquilados', len(relevant_events), 'ok' if relevant_events else 'warn')
+        add('Events fuera del filtro de alquiler', len(outside_events), 'info')
+
+        # 7. CLASIFICACIÓN REAL DE ODOO
+        report.append('')
+        report.append('--- 6. CLASIFICACIÓN ODOO ---')
+        class_counts = {}
+        classification_errors = 0
+        for event in event_rows:
+            try:
+                classification = self._diagnostic_classify_event(event)
+                alert_kind = classification.get('tipo') or 'sin_tipo'
+                class_counts[alert_kind] = class_counts.get(alert_kind, 0) + 1
+            except Exception:
+                classification_errors += 1
+
+        if class_counts:
+            for alert_kind, count in sorted(class_counts.items(), key=lambda item: (-item[1], item[0])):
+                add(alert_kind, count, 'info')
+        elif events['ok']:
+            add('Clasificación', 'Sin events para clasificar', 'warn')
+
+        if classification_errors:
+            add('Errores clasificando', classification_errors, 'error')
+            errors.append('Existen events que no pudieron clasificarse.')
+
+        # 8. DEDUPLICACIÓN / ALERTAS EXISTENTES
+        report.append('')
+        report.append('--- 7. REGISTROS DE ALERTA ODOO ---')
+        try:
+            event_ids = [str(event.get('id')) for event in event_rows if event.get('id')]
+            existing_alerts = self.env['printtracker.alert'].sudo().search([
+                ('api_event_id', 'in', event_ids),
+            ]) if event_ids else self.env['printtracker.alert'].browse()
+            add('Events del rango ya registrados', len(existing_alerts), 'info')
+            add('Events del rango aún no registrados', max(0, len(event_ids) - len(existing_alerts)), 'info')
+        except Exception as error:
+            add('Modelo printtracker.alert', str(error), 'error')
+            errors.append('No se pudo comprobar printtracker.alert.')
+
+        # 9. CORREO
+        report.append('')
+        report.append('--- 8. NOTIFICACIONES POR CORREO ---')
+        try:
+            cp = self.env['ir.config_parameter'].sudo()
+            destination = cp.get_param('printtracker.alert.email_destino', 'soporte@andescopiers.com.pe')
+            mail_servers = self.env['ir.mail_server'].sudo().search([])
+            add('Correo destino', destination or 'NO CONFIGURADO', 'ok' if destination else 'warn')
+            add('Servidores salientes configurados', len(mail_servers), 'ok' if mail_servers else 'warn')
+            if not mail_servers:
+                warnings.append('No se encontró un servidor de correo saliente en Odoo. No se envió ningún correo durante este diagnóstico.')
+        except Exception as error:
+            add('Configuración de correo', str(error), 'error')
+            errors.append('No se pudo comprobar configuración de correo.')
+
+        # 10. CRON
+        report.append('')
+        report.append('--- 9. CRON DE ALERTAS ---')
+        cron = self._diagnostic_get_cron_status()
+        if cron['found']:
+            add('Cron', cron['name'], 'ok')
+            add('Activo', 'Sí' if cron['active'] else 'No', 'ok' if cron['active'] else 'error')
+            add('Intervalo', cron['interval'], 'info')
+            add('Próxima ejecución', cron['nextcall'] or '-', 'info')
+            add('Última ejecución', cron['lastcall'] or '-', 'info')
+            if not cron['active']:
+                errors.append('El cron de alertas está desactivado.')
+        else:
+            add('Cron', 'No encontrado', 'error')
+            errors.append('No se encontró un ir.cron relacionado con ejecutar_revision_automatica.')
+
+        # 11. MUESTRA DE EVENTS
+        report.append('')
+        report.append('--- 10. MUESTRA DE EVENTS DEVUELTOS ---')
+        if event_rows:
+            for index, event in enumerate(event_rows[:25], start=1):
+                classification = self._diagnostic_classify_event(event)
+                report.append(
+                    '#%s | serie=%s | alertType=%s | supplyKey=%s | status=%s | Odoo=%s/%s | %s'
+                    % (
+                        index,
+                        event.get('deviceSerialNumber') or '-',
+                        event.get('alertType') or '-',
+                        event.get('supplyKey') or '-',
+                        event.get('resolutionStatus') or '-',
+                        classification.get('tipo') or '-',
+                        classification.get('prioridad') or '-',
+                        self._diagnostic_sample_text(event.get('description') or '-', 140),
+                    )
+                )
+        else:
+            report.append('Sin events en el rango consultado.')
+
+        # RESULTADO GENERAL
+        report.append('')
+        report.append('=== RESULTADO GENERAL ===')
+        if errors:
+            overall = 'error'
+            report.append('❌ Se encontraron problemas que requieren revisión:')
+            for item in errors:
+                report.append(f'   - {item}')
+        elif warnings:
+            overall = 'warning'
+            report.append('⚠️ Los procesos principales responden, con observaciones:')
+            for item in warnings:
+                report.append(f'   - {item}')
+        else:
+            overall = 'ok'
+            report.append('✅ Todas las comprobaciones ejecutadas respondieron correctamente.')
+
+        report_text = '\n'.join(str(line) for line in report)
+        _logger.info("🔎 === DIAGNÓSTICO PRINTTRACKER ===\n%s", report_text)
+
+        html_report = '<pre style="white-space: pre-wrap; font-family: monospace;">%s</pre>' % escape(report_text)
+        raw_events_text = json.dumps(raw_events, ensure_ascii=False, indent=2, default=str)
+
+        diagnostic = self.env['printtracker.diagnostic.result'].sudo().create({
+            'name': 'Diagnóstico PrintTracker - %s' % fields.Datetime.now(),
+            'status': overall,
+            'generated_at': fields.Datetime.now(),
+            'report_html': html_report,
+            'raw_events': raw_events_text,
+        })
+
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Diagnóstico PrintTracker',
+            'res_model': 'printtracker.diagnostic.result',
+            'res_id': diagnostic.id,
+            'view_mode': 'form',
+            'target': 'new',
+        }
+
     def get_api_headers(self):
         """Retorna headers para requests a la API"""
         return {
@@ -760,3 +1293,102 @@ class PrintTrackerConfig(models.Model):
 
         # Ejecuta tu pipeline completo (ya devuelve notificación)
         return config.sync_all_data()
+
+class PrintTrackerDiagnosticResult(models.TransientModel):
+    _name = 'printtracker.diagnostic.result'
+    _description = 'Resultado de Diagnóstico PrintTracker'
+    _rec_name = 'name'
+
+    name = fields.Char(string='Diagnóstico', readonly=True)
+    status = fields.Selection([
+        ('ok', 'Correcto'),
+        ('warning', 'Con observaciones'),
+        ('error', 'Con errores'),
+    ], string='Estado', readonly=True)
+    generated_at = fields.Datetime(string='Generado', readonly=True)
+    report_html = fields.Html(string='Resultado', readonly=True, sanitize=False)
+    raw_events = fields.Text(string='Events API - JSON bruto', readonly=True)
+
+    @api.model
+    def get_view(self, view_id=None, view_type='form', **options):
+        result = super().get_view(view_id=view_id, view_type=view_type, **options)
+
+        if view_type == 'form':
+            result['arch'] = """<form string="Diagnóstico PrintTracker" create="0" edit="0" delete="0">
+                <header>
+                    <button string="Cerrar" special="cancel" class="btn-secondary" icon="fa-times"/>
+                </header>
+                <sheet>
+                    <widget name="web_ribbon" title="Correcto" bg_color="bg-success" invisible="status != 'ok'"/>
+                    <widget name="web_ribbon" title="Observaciones" bg_color="bg-warning" invisible="status != 'warning'"/>
+                    <widget name="web_ribbon" title="Con errores" bg_color="bg-danger" invisible="status != 'error'"/>
+
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
+                        <div class="d-flex align-items-center">
+                            <div class="rounded-circle bg-primary-subtle text-primary d-flex align-items-center justify-content-center me-3"
+                                 style="width:48px;height:48px;">
+                                <i class="fa fa-stethoscope fa-lg"/>
+                            </div>
+                            <div>
+                                <h1 class="mb-1"><field name="name" readonly="1"/></h1>
+                                <div class="text-muted">Comprobación integral de la integración PrintTracker Pro</div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-2 align-items-center">
+                            <field name="status"
+                                   widget="badge"
+                                   readonly="1"
+                                   decoration-success="status == 'ok'"
+                                   decoration-warning="status == 'warning'"
+                                   decoration-danger="status == 'error'"/>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-12 col-md-6">
+                            <div class="card border-0 shadow-sm h-100">
+                                <div class="card-body p-3">
+                                    <div class="text-muted small mb-1">Generado</div>
+                                    <div class="fw-semibold"><field name="generated_at" readonly="1" nolabel="1"/></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <div class="card border-0 shadow-sm h-100">
+                                <div class="card-body p-3">
+                                    <div class="text-muted small mb-1">Modo</div>
+                                    <div class="fw-semibold text-success"><i class="fa fa-shield me-1"/> Solo lectura · Sin cambios productivos</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <notebook>
+                        <page string="Resultado" name="diagnostic_result">
+                            <div class="card border-0 shadow-sm mt-3">
+                                <div class="card-header bg-transparent border-0 pt-4 px-4">
+                                    <div class="d-flex align-items-center">
+                                        <i class="fa fa-list-alt me-2 text-primary"/>
+                                        <h3 class="mb-0">Resultado de comprobación</h3>
+                                    </div>
+                                </div>
+                                <div class="card-body px-4 pb-4">
+                                    <field name="report_html" readonly="1" nolabel="1"/>
+                                </div>
+                            </div>
+                        </page>
+
+                        <page string="Events JSON" name="diagnostic_json">
+                            <div class="alert alert-info mt-3 mb-3">
+                                <i class="fa fa-info-circle me-1"/>
+                                Respuesta JSON bruta del endpoint de eventos para diagnóstico técnico.
+                            </div>
+                            <field name="raw_events" readonly="1" nolabel="1"/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>"""
+
+        return result
+
