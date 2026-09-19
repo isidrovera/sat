@@ -226,6 +226,114 @@
                 </form>
             </field>
         </record>
+
+        <!-- =============================================== -->
+        <!-- DIAGNÓSTICO PRINTTRACKER - MODAL MODERNO -->
+        <!-- =============================================== -->
+        <record id="view_printtracker_config_diagnostic_form" model="ir.ui.view">
+            <field name="name">printtracker.config.diagnostic.form</field>
+            <field name="model">printtracker.config</field>
+            <field name="arch" type="xml">
+                <form string="Diagnóstico PrintTracker" create="0" edit="0" delete="0">
+                    <header>
+                        <button string="Cerrar"
+                                special="cancel"
+                                class="btn-secondary"
+                                icon="fa-times"/>
+                    </header>
+                    <sheet>
+                        <widget name="web_ribbon"
+                                title="Correcto"
+                                bg_color="bg-success"
+                                invisible="diagnostic_status != 'ok'"/>
+                        <widget name="web_ribbon"
+                                title="Observaciones"
+                                bg_color="bg-warning"
+                                invisible="diagnostic_status != 'warning'"/>
+                        <widget name="web_ribbon"
+                                title="Con errores"
+                                bg_color="bg-danger"
+                                invisible="diagnostic_status != 'error'"/>
+
+                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
+                            <div class="d-flex align-items-center">
+                                <div class="rounded-circle bg-primary-subtle text-primary d-flex align-items-center justify-content-center me-3"
+                                     style="width:52px;height:52px;">
+                                    <i class="fa fa-stethoscope fa-lg"/>
+                                </div>
+                                <div>
+                                    <h1 class="mb-1">Diagnóstico PrintTracker</h1>
+                                    <div class="text-muted">
+                                        Comprobación integral de API, devices, meters, supplies, events, correo y cron
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="d-flex gap-2 align-items-center">
+                                <field name="diagnostic_status"
+                                       widget="badge"
+                                       readonly="1"
+                                       decoration-success="diagnostic_status == 'ok'"
+                                       decoration-warning="diagnostic_status == 'warning'"
+                                       decoration-danger="diagnostic_status == 'error'"/>
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-4">
+                            <div class="col-12 col-md-4">
+                                <div class="card border-0 shadow-sm h-100">
+                                    <div class="card-body">
+                                        <div class="text-muted small mb-1">Configuración</div>
+                                        <div class="fw-bold"><field name="name" readonly="1"/></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <div class="card border-0 shadow-sm h-100">
+                                    <div class="card-body">
+                                        <div class="text-muted small mb-1">Entidad principal</div>
+                                        <div class="fw-bold"><field name="entity_bbbb_id" readonly="1"/></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <div class="card border-0 shadow-sm h-100">
+                                    <div class="card-body">
+                                        <div class="text-muted small mb-1">Generado</div>
+                                        <div class="fw-bold"><field name="diagnostic_generated_at" readonly="1"/></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <notebook>
+                            <page string="Resumen" name="diagnostic_summary">
+                                <div class="card border-0 shadow-sm">
+                                    <div class="card-header bg-transparent border-0 pt-3 px-3">
+                                        <h3 class="mb-0">Resultado de las comprobaciones</h3>
+                                        <small class="text-muted">La prueba no crea alertas, solicitudes ni movimientos de stock.</small>
+                                    </div>
+                                    <div class="card-body pt-2">
+                                        <field name="diagnostic_report_html"
+                                               readonly="1"
+                                               nolabel="1"/>
+                                    </div>
+                                </div>
+                            </page>
+                            <page string="Events API" name="diagnostic_events">
+                                <div class="alert alert-info mb-3" role="alert">
+                                    <i class="fa fa-info-circle me-2"/>
+                                    JSON bruto devuelto por PrintTracker para poder verificar alertType, supplyKey, resolutionStatus y serie.
+                                </div>
+                                <field name="diagnostic_raw_events"
+                                       readonly="1"
+                                       nolabel="1"
+                                       widget="text"/>
+                            </page>
+                        </notebook>
+                    </sheet>
+                </form>
+            </field>
+        </record>
         <!-- Vista List - PrintTracker Meter CORREGIDA -->
         <record id="view_printtracker_meter_list" model="ir.ui.view">
             <field name="name">printtracker.meter.list</field>

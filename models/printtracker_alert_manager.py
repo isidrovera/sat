@@ -25,7 +25,7 @@ import requests
 _logger = logging.getLogger(__name__)
 
 # Ventana hacia atrás para consultar events de la API (con overlap generoso por seguridad)
-HORAS_API_EVENTS = 6
+HORAS_API_EVENTS = 24
 
 # Intervalo de reenvío de correo para alertas con event Open
 HORAS_REENVIO = 3
@@ -299,7 +299,16 @@ class PrintTrackerAlertManager(models.TransientModel):
 
                     # Dedup: si ya existe alerta para este event_id, omitir.
                     if self._event_ya_procesado(eid):
+                        _logger.info(
+                            "⏭️ [PT EVENTS] duplicado omitido event=%s serie=%s",
+                            eid, serial,
+                        )
                         continue
+
+                    _logger.info(
+                        "🧭 [PT EVENTS] procesando event=%s serie=%s status=%s alertType=%s supplyKey=%s desc=%s",
+                        eid, serial, resolution or '-', alert_type or '-', supply_key or '-', desc,
+                    )
 
                     alerta = (
                         self.env['printtracker.alert']
@@ -310,6 +319,10 @@ class PrintTrackerAlertManager(models.TransientModel):
                     )
 
                     if alerta:
+                        _logger.info(
+                            "✅ [PT EVENTS] alerta creada id=%s event=%s serie=%s tipo=%s estado=%s",
+                            alerta.id, eid, serial, alerta.tipo_alerta, alerta.estado,
+                        )
                         alertas_nuevas += 1
                         ultimo_event_id = eid
 
@@ -331,10 +344,25 @@ class PrintTrackerAlertManager(models.TransientModel):
                                 f"⚠️ Correo pendiente para event={eid} "
                                 f"serie={serial}"
                             )
+                    else:
+                        _logger.error(
+                            "❌ [PT EVENTS] crear_alerta_desde_api_event devolvió vacío event=%s serie=%s",
+                            eid, serial,
+                        )
+                        log_lines.append(
+                            f"❌ No se creó alerta para event={eid} serie={serial}"
+                        )
+                        self.errores_encontrados = (
+                            self.errores_encontrados or 0
+                        ) + 1
 
                 except Exception as e:
                     log_lines.append(
                         f"❌ Event {event.get('id', '?')}: {e}"
+                    )
+                    _logger.error(
+                        "❌ [PT EVENTS] error event=%s: %s\n%s",
+                        event.get('id', '?'), e, traceback.format_exc(),
                     )
                     self.errores_encontrados = (
                         self.errores_encontrados or 0
@@ -675,45 +703,94 @@ class PrintTrackerAlertManager(models.TransientModel):
     # AUXILIARES API
     # ==========================================
     def _get_printtracker_api_config(self):
-        """Obtiene configuración de la API: entity_id, api_key, base_url."""
+        """
+        Obtiene SIEMPRE la misma configuración principal que usa
+        printtracker.config.
+
+        Prioridad:
+            1. printtracker.config activa (fuente oficial del módulo).
+            2. parámetros de sistema, solo como compatibilidad.
+            3. printtracker.entity, solo como último fallback.
+
+        Esto evita que el cron tome por accidente la primera entidad hija
+        activa y consulte /events en una rama distinta a la usada por el
+        diagnóstico manual.
+        """
         try:
-            entity = self.env['printtracker.entity'].search([('is_active', '=', True)], limit=1)
+            Config = self.env['printtracker.config'].sudo()
+            config = Config.search([('sync_enabled', '=', True)], order='id asc', limit=1)
+
+            if config and config.api_url and config.entity_bbbb_id and config.api_key:
+                cfg = {
+                    'base_url': config.api_url.rstrip('/'),
+                    'entity_id': str(config.entity_bbbb_id).strip(),
+                    'api_key': config.api_key,
+                    'timeout': int(config.timeout_seconds or 30),
+                    'include_children': bool(config.incluir_entidades_hijas),
+                    'exclude_disabled': bool(config.solo_equipos_gestionados),
+                    'source': 'printtracker.config',
+                    'config_id': config.id,
+                }
+                _logger.info(
+                    "🔧 PrintTracker alerts config source=%s config_id=%s entity=%s base=%s",
+                    cfg['source'], cfg['config_id'], cfg['entity_id'], cfg['base_url'],
+                )
+                return cfg
+
             cp = self.env['ir.config_parameter'].sudo()
-            base = cp.get_param('printtracker.api.base_url', 'https://papi.printtrackerpro.com/v1')
-
-            if entity and entity.pt_entity_id:
-                token = getattr(entity, 'api_token', None) or cp.get_param('printtracker.api.key')
-                if token:
-                    return {
-                        'base_url': base.rstrip('/'),
-                        'entity_id': entity.pt_entity_id,
-                        'api_key': token,
-                        'timeout': 30,
-                    }
-
+            base = cp.get_param(
+                'printtracker.api.base_url',
+                'https://papi.printtrackerpro.com/v1',
+            )
             eid = cp.get_param('printtracker.api.entity_id')
             key = cp.get_param('printtracker.api.key')
+
             if eid and key:
-                return {
+                cfg = {
                     'base_url': base.rstrip('/'),
-                    'entity_id': eid,
+                    'entity_id': str(eid).strip(),
                     'api_key': key,
                     'timeout': 30,
+                    'include_children': True,
+                    'exclude_disabled': True,
+                    'source': 'ir.config_parameter',
+                    'config_id': False,
                 }
+                _logger.warning(
+                    "⚠️ Alertas usando fallback ir.config_parameter entity=%s",
+                    cfg['entity_id'],
+                )
+                return cfg
 
-            # Fallback: usar printtracker.config si está disponible
-            config = self.env['printtracker.config'].search([('sync_enabled', '=', True)], limit=1)
-            if config:
-                return {
-                    'base_url': config.api_url.rstrip('/'),
-                    'entity_id': config.entity_bbbb_id,
-                    'api_key': config.api_key,
-                    'timeout': config.timeout_seconds or 30,
-                }
+            entity = self.env['printtracker.entity'].sudo().search(
+                [('is_active', '=', True)],
+                order='id asc',
+                limit=1,
+            )
+            if entity and entity.pt_entity_id:
+                token = getattr(entity, 'api_token', None) or key
+                if token:
+                    cfg = {
+                        'base_url': base.rstrip('/'),
+                        'entity_id': str(entity.pt_entity_id).strip(),
+                        'api_key': token,
+                        'timeout': 30,
+                        'include_children': True,
+                        'exclude_disabled': True,
+                        'source': 'printtracker.entity_fallback',
+                        'config_id': False,
+                    }
+                    _logger.warning(
+                        "⚠️ Alertas usando fallback printtracker.entity id=%s entity=%s",
+                        entity.id, cfg['entity_id'],
+                    )
+                    return cfg
 
+            _logger.error("❌ No se encontró configuración válida de PrintTracker para alertas")
             return None
+
         except Exception as e:
-            _logger.error(f"❌ Config API: {e}")
+            _logger.error("❌ Config API alertas: %s\n%s", e, traceback.format_exc())
             return None
 
     def _consultar_printtracker_events(
@@ -747,7 +824,12 @@ class PrintTrackerAlertManager(models.TransientModel):
             }
 
             params = {
-                'includeChildren': 'true',
+                'includeChildren': (
+                    'true' if cfg.get('include_children', True) else 'false'
+                ),
+                'excludeDisabled': (
+                    'true' if cfg.get('exclude_disabled', True) else 'false'
+                ),
                 'start': start_from.strftime(
                     '%Y-%m-%dT%H:%M:%S.000Z'
                 ),
@@ -758,10 +840,13 @@ class PrintTrackerAlertManager(models.TransientModel):
 
             _logger.info(
                 "🌐 API events GET %s start=%s end=%s "
-                "includeChildren=true",
+                "includeChildren=%s excludeDisabled=%s source=%s",
                 url,
                 params['start'],
                 params['end'],
+                params['includeChildren'],
+                params['excludeDisabled'],
+                cfg.get('source', '-'),
             )
 
             resp = requests.get(

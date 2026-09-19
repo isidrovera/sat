@@ -7,7 +7,6 @@ import time
 import json
 from datetime import datetime, timedelta
 from html import escape
-from lxml import etree
 
 _logger = logging.getLogger(__name__)
 
@@ -45,6 +44,23 @@ class PrintTrackerConfig(models.Model):
     ], string='Estado Conexión', default='not_tested', readonly=True)
     
     last_error = fields.Text('Último Error', readonly=True)
+
+    # Resultado del diagnóstico integral. Se guarda en la propia configuración
+    # para no depender de un modelo transient adicional ni de ACLs extra.
+    diagnostic_status = fields.Selection([
+        ('ok', 'Correcto'),
+        ('warning', 'Con observaciones'),
+        ('error', 'Con errores'),
+    ], string='Estado diagnóstico', readonly=True, copy=False)
+    diagnostic_generated_at = fields.Datetime(
+        'Fecha diagnóstico', readonly=True, copy=False
+    )
+    diagnostic_report_html = fields.Html(
+        'Resultado diagnóstico', readonly=True, sanitize=False, copy=False
+    )
+    diagnostic_raw_events = fields.Text(
+        'Events API - JSON bruto', readonly=True, copy=False
+    )
     
     # Configuración avanzada
     timeout_seconds = fields.Integer('Timeout (segundos)', default=30)
@@ -740,60 +756,8 @@ class PrintTrackerConfig(models.Model):
     # DIAGNÓSTICO INTEGRAL PRINTTRACKER - SOLO LECTURA
     # ============================================================
 
-    @api.model
-    def get_view(self, view_id=None, view_type='form', **options):
-        """
-        Añade automáticamente el botón de diagnóstico al formulario de
-        printtracker.config sin requerir modificar la vista XML existente.
-        No reemplaza ni elimina botones/campos actuales.
-        """
-        result = super().get_view(view_id=view_id, view_type=view_type, **options)
-
-        if view_type != 'form' or not result.get('arch'):
-            return result
-
-        try:
-            arch = etree.fromstring(result['arch'])
-
-            if arch.xpath("//button[@name='action_check_all_processes']"):
-                return result
-
-            button = etree.Element(
-                'button',
-                name='action_check_all_processes',
-                string='Comprobar procesos PrintTracker',
-                type='object',
-                **{
-                    'class': 'oe_highlight',
-                    'icon': 'fa-stethoscope',
-                    'help': (
-                        'Comprueba en modo solo lectura la conexión, entidades, '
-                        'dispositivos, medidores, consumibles, events/alertas, '
-                        'clasificación Odoo, correo y cron.'
-                    ),
-                },
-            )
-
-            headers = arch.xpath('//form/header')
-            if headers:
-                headers[0].append(button)
-            else:
-                form_nodes = arch.xpath('//form')
-                if form_nodes:
-                    header = etree.Element('header')
-                    header.append(button)
-                    form_nodes[0].insert(0, header)
-
-            result['arch'] = etree.tostring(arch, encoding='unicode')
-        except Exception:
-            _logger.exception(
-                "❌ No se pudo insertar el botón de diagnóstico PrintTracker"
-            )
-
-        return result
-
-    def _diagnostic_request(self, endpoint, params=None):
-        """GET de diagnóstico. No escribe datos en Odoo ni en PrintTracker."""
+    def _diagnostic_request(self, endpoint, params=None, timeout=None):
+        """GET de diagnóstico. No escribe datos operativos en Odoo ni en PrintTracker."""
         self.ensure_one()
 
         url = f'{self.api_url.rstrip("/")}/{endpoint.lstrip("/")}'
@@ -804,7 +768,7 @@ class PrintTrackerConfig(models.Model):
                 url,
                 headers=self.get_api_headers(),
                 params=params or {},
-                timeout=self.timeout_seconds,
+                timeout=(timeout or self.timeout_seconds),
             )
             elapsed = time.monotonic() - started
 
@@ -1060,11 +1024,14 @@ class PrintTrackerConfig(models.Model):
             {
                 'includeChildren': include_children,
                 'replaced': False,
+                # Diagnóstico: basta una muestra reciente; no intentamos
+                # descargar todo el histórico de suministros.
                 'start': start_30d_str,
                 'end': end_str,
-                'limit': large_limit,
+                'limit': min(int(self.max_records_per_request or 100), 200),
                 'page': 1,
             },
+            timeout=max(int(self.timeout_seconds or 30), 45),
         )
         supply_rows = supplies['payload'] if isinstance(supplies['payload'], list) else []
 
@@ -1078,8 +1045,15 @@ class PrintTrackerConfig(models.Model):
                 top_supplies = sorted(supply_types.items(), key=lambda item: (-item[1], item[0]))[:10]
                 add('Tipos principales', ', '.join(f'{key}={count}' for key, count in top_supplies), 'info')
         else:
-            add('Supplies API', f"HTTP {supplies['status_code']} - {self._diagnostic_sample_text(supplies['text'], 250)}", 'error')
-            errors.append('Falló la consulta de supplies.')
+            add(
+                'Supplies API',
+                f"HTTP {supplies['status_code']} - {self._diagnostic_sample_text(supplies['text'], 250)}",
+                'warn',
+            )
+            warnings.append(
+                'La consulta de supplies no respondió dentro del tiempo esperado. '
+                'Esto no bloquea la detección de alerts/events.'
+            )
 
         report.append('')
 
@@ -1247,22 +1221,39 @@ class PrintTrackerConfig(models.Model):
         html_report = '<pre style="white-space: pre-wrap; font-family: monospace;">%s</pre>' % escape(report_text)
         raw_events_text = json.dumps(raw_events, ensure_ascii=False, indent=2, default=str)
 
-        diagnostic = self.env['printtracker.diagnostic.result'].sudo().create({
-            'name': 'Diagnóstico PrintTracker - %s' % fields.Datetime.now(),
-            'status': overall,
-            'generated_at': fields.Datetime.now(),
-            'report_html': html_report,
-            'raw_events': raw_events_text,
+        self.sudo().write({
+            'diagnostic_status': overall,
+            'diagnostic_generated_at': fields.Datetime.now(),
+            'diagnostic_report_html': html_report,
+            'diagnostic_raw_events': raw_events_text,
         })
 
-        return {
+        action = {
             'type': 'ir.actions.act_window',
             'name': 'Diagnóstico PrintTracker',
-            'res_model': 'printtracker.diagnostic.result',
-            'res_id': diagnostic.id,
+            'res_model': 'printtracker.config',
+            'res_id': self.id,
             'view_mode': 'form',
             'target': 'new',
+            'context': dict(self.env.context, printtracker_diagnostic_mode=True),
         }
+
+        # Usar la vista moderna dedicada si está cargada. Si por alguna razón
+        # no existe todavía, Odoo abrirá el formulario normal sin romper la prueba.
+        try:
+            diagnostic_view = self.env.ref(
+                'sat.view_printtracker_config_diagnostic_form',
+                raise_if_not_found=False,
+            )
+            if diagnostic_view:
+                action['view_id'] = diagnostic_view.id
+                action['views'] = [(diagnostic_view.id, 'form')]
+        except Exception:
+            _logger.exception(
+                '⚠️ No se pudo resolver la vista moderna de diagnóstico PrintTracker'
+            )
+
+        return action
 
     def get_api_headers(self):
         """Retorna headers para requests a la API"""
@@ -1293,102 +1284,3 @@ class PrintTrackerConfig(models.Model):
 
         # Ejecuta tu pipeline completo (ya devuelve notificación)
         return config.sync_all_data()
-
-class PrintTrackerDiagnosticResult(models.TransientModel):
-    _name = 'printtracker.diagnostic.result'
-    _description = 'Resultado de Diagnóstico PrintTracker'
-    _rec_name = 'name'
-
-    name = fields.Char(string='Diagnóstico', readonly=True)
-    status = fields.Selection([
-        ('ok', 'Correcto'),
-        ('warning', 'Con observaciones'),
-        ('error', 'Con errores'),
-    ], string='Estado', readonly=True)
-    generated_at = fields.Datetime(string='Generado', readonly=True)
-    report_html = fields.Html(string='Resultado', readonly=True, sanitize=False)
-    raw_events = fields.Text(string='Events API - JSON bruto', readonly=True)
-
-    @api.model
-    def get_view(self, view_id=None, view_type='form', **options):
-        result = super().get_view(view_id=view_id, view_type=view_type, **options)
-
-        if view_type == 'form':
-            result['arch'] = """<form string="Diagnóstico PrintTracker" create="0" edit="0" delete="0">
-                <header>
-                    <button string="Cerrar" special="cancel" class="btn-secondary" icon="fa-times"/>
-                </header>
-                <sheet>
-                    <widget name="web_ribbon" title="Correcto" bg_color="bg-success" invisible="status != 'ok'"/>
-                    <widget name="web_ribbon" title="Observaciones" bg_color="bg-warning" invisible="status != 'warning'"/>
-                    <widget name="web_ribbon" title="Con errores" bg_color="bg-danger" invisible="status != 'error'"/>
-
-                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
-                        <div class="d-flex align-items-center">
-                            <div class="rounded-circle bg-primary-subtle text-primary d-flex align-items-center justify-content-center me-3"
-                                 style="width:48px;height:48px;">
-                                <i class="fa fa-stethoscope fa-lg"/>
-                            </div>
-                            <div>
-                                <h1 class="mb-1"><field name="name" readonly="1"/></h1>
-                                <div class="text-muted">Comprobación integral de la integración PrintTracker Pro</div>
-                            </div>
-                        </div>
-
-                        <div class="d-flex gap-2 align-items-center">
-                            <field name="status"
-                                   widget="badge"
-                                   readonly="1"
-                                   decoration-success="status == 'ok'"
-                                   decoration-warning="status == 'warning'"
-                                   decoration-danger="status == 'error'"/>
-                        </div>
-                    </div>
-
-                    <div class="row g-3 mb-4">
-                        <div class="col-12 col-md-6">
-                            <div class="card border-0 shadow-sm h-100">
-                                <div class="card-body p-3">
-                                    <div class="text-muted small mb-1">Generado</div>
-                                    <div class="fw-semibold"><field name="generated_at" readonly="1" nolabel="1"/></div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-12 col-md-6">
-                            <div class="card border-0 shadow-sm h-100">
-                                <div class="card-body p-3">
-                                    <div class="text-muted small mb-1">Modo</div>
-                                    <div class="fw-semibold text-success"><i class="fa fa-shield me-1"/> Solo lectura · Sin cambios productivos</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <notebook>
-                        <page string="Resultado" name="diagnostic_result">
-                            <div class="card border-0 shadow-sm mt-3">
-                                <div class="card-header bg-transparent border-0 pt-4 px-4">
-                                    <div class="d-flex align-items-center">
-                                        <i class="fa fa-list-alt me-2 text-primary"/>
-                                        <h3 class="mb-0">Resultado de comprobación</h3>
-                                    </div>
-                                </div>
-                                <div class="card-body px-4 pb-4">
-                                    <field name="report_html" readonly="1" nolabel="1"/>
-                                </div>
-                            </div>
-                        </page>
-
-                        <page string="Events JSON" name="diagnostic_json">
-                            <div class="alert alert-info mt-3 mb-3">
-                                <i class="fa fa-info-circle me-1"/>
-                                Respuesta JSON bruta del endpoint de eventos para diagnóstico técnico.
-                            </div>
-                            <field name="raw_events" readonly="1" nolabel="1"/>
-                        </page>
-                    </notebook>
-                </sheet>
-            </form>"""
-
-        return result
-
