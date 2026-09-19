@@ -477,6 +477,8 @@
                     <field name="name"/>
                     <field name="partner_id"/>
                     <field name="direccion_id_r" optional="hide"/>
+                    <field name="description" optional="hide"/>
+                    <field name="informe_id" optional="hide"/>
                     <field name="product_alquiler" string="Equipo"/>
                     <field name="serie_id_r"/>
                     <field name="tipo_servicio_id" widget="badge"/>
